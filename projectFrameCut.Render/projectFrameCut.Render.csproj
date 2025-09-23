@@ -1,12 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+		<OutputType>Library</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Platforms>AnyCPU;x64</Platforms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -44,7 +45,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="xcopy D:\code\projectFrameCut\projectFrameCut.Render\ffmpeg\* D:\code\projectFrameCut\projectFrameCut.Render\bin\x64\Debug\net8.0 /y&#xD;&#xA;exit /b 0" />
+    <Exec Command="rem xcopy D:\code\projectFrameCut\projectFrameCut.Render\ffmpeg\* D:\code\projectFrameCut\projectFrameCut.Render\bin\x64\Debug\net8.0 &#xD;&#xA;exit /b 0" />
   </Target>
 
 </Project>

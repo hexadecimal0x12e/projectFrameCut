@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"  
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"  
+             xmlns:vm="clr-namespace:projectFrameCut.ViewModels"
+             xmlns:conv="clr-namespace:projectFrameCut.Converters"
+             x:Class="projectFrameCut.MainPage"
+             Title="pjfc">
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <conv:SecondsToPixelsConverter x:Key="SecondsToPixelsConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+    <!-- Add a dedicated row for the ruler above the scrollable tracks -->
+    <Grid RowDefinitions="Auto,Auto,*,Auto,250">
+        <!-- Toolbar -->
+        <ScrollView Orientation="Horizontal">
+        <HorizontalStackLayout Padding="8" Spacing="8" Grid.Row="0">
+                <Button Text="Test page" Clicked="TestPageButton_Clicked"></Button>
+
+                <Button Text="Add Track" Clicked="OnAddTrack" />
+            <Button Text="Add Clip" Clicked="OnAddClip" />
+            <Button Text="Split" Clicked="OnSplitClip" />
+            <Button Text="Delete" Clicked="OnDeleteClip" />
+            <Button Text="-" Clicked="OnZoomOut" />
+            <Button Text="+" Clicked="OnZoomIn" />
+                <Button x:Name="CopyPrivateData" Text="Copy Private Data" Clicked="CopyPrivateData_Clicked"/>
+            </HorizontalStackLayout>
+        </ScrollView>
+        <!-- Ruler row aligned with timeline (outside ScrollView so it doesn't affect content width) -->
+        <Grid Grid.Row="1" ColumnDefinitions="140,*">
+            <!-- Left gutter to align with track headers width -->
+            <BoxView Grid.Column="0" WidthRequest="140" Color="Transparent" />
+            <!-- Ruler area -->
+            <Grid Grid.Column="1" BackgroundColor="#222" HeightRequest="24">
+                <Grid.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnRulerTapped" />
+                </Grid.GestureRecognizers>
+                <AbsoluteLayout x:Name="Ruler" />
+            </Grid>
+        </Grid>
+
+        <!-- Tracks & Timeline -->
+        <ScrollView x:Name="TimelineScroll" Grid.Row="2" Orientation="Both" Scrolled="OnTimelineScrolled">
+            <!-- Make second column Auto so it can grow wider than viewport -->
+            <Grid x:Name="TimelineGrid" ColumnDefinitions="Auto,Auto" RowSpacing="0">
+                <!-- Track headers -->
+                <VerticalStackLayout x:Name="TracksHeader" WidthRequest="140" BackgroundColor="LightGray" Spacing="1" />
+
+                <!-- Timeline canvas sized by TimelineWidth to enable horizontal scroll -->
+                <Grid Grid.Column="1" x:Name="TimelineCanvas" WidthRequest="{Binding TimelineWidth}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Tracks area -->
+                    <VerticalStackLayout Grid.Row="0" x:Name="TracksPanel" Spacing="1" />
+
+                    <!-- Playhead line -->
+                    <BoxView x:Name="Playhead" Color="Red" WidthRequest="2" HorizontalOptions="Start" VerticalOptions="Fill" />
+                </Grid>
+            </Grid>
+        </ScrollView>
+
+        <!-- Status bar -->
+        <Label Grid.Row="3" x:Name="Status" Padding="8" />
+
+        <!-- Placeholder for preview area -->
+        <Grid Grid.Row="4" BackgroundColor="#111">
+            <Label Text="Preview placeholder" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" />
+        </Grid>
+    </Grid>
+</ContentPage>

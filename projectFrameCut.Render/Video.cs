@@ -1,5 +1,6 @@
 ﻿using FFmpeg.AutoGen;
 using ILGPU.Runtime.Cuda;
+using projectFrameCut.Shared;
 using SixLabors.ImageSharp.ColorSpaces;
 using System;
 using System.Collections.Concurrent;

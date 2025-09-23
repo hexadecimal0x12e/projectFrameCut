@@ -1,10 +1,13 @@
 ﻿using FFmpeg.AutoGen;
 using ILGPU.Runtime.Cuda;
+using projectFrameCut.Shared;
 using SixLabors.ImageSharp.ColorSpaces;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using static projectFrameCut.Shared.Logger;
+
 
 namespace projectFrameCut.Render
 {
@@ -88,16 +91,6 @@ namespace projectFrameCut.Render
             ReleaseDecoder(filePath);
         }
 
-        public interface IDecoderContext : IDisposable
-        {
-            abstract void Initialize();
-            abstract Picture GetFrame(uint targetFrame, bool hasAlpha = false);        
-            public bool Disposed { get; }
-            public long TotalFrames { get; }  
-            public double Fps { get; }
-            public int Width { get; }
-            public int Height { get; }
-        }
 
         #endregion
 

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="projectFrameCut.TestPage"
+             Title="TestPage">
+    <VerticalStackLayout>
+       <!-- <Button Text="选择图片A" Clicked="OnPickImageA"/>
+        <Button Text="选择图片B" Clicked="OnPickImageB"/> -->
+        <Button x:Name="StartButton" Text="计算" Clicked="OnRunButtonClicked"/>
+        <Image x:Name="ResultImage" Aspect="AspectFit" HeightRequest="300" WidthRequest="300"/>
+        <VerticalStackLayout x:Name="ComputeView"/>
+
+
+    </VerticalStackLayout>
+</ContentPage>

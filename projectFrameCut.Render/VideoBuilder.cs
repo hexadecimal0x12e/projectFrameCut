@@ -1,9 +1,11 @@
 ﻿using FFmpeg.AutoGen;
 using ILGPU;
 using ILGPU.Runtime;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
+using static projectFrameCut.Shared.Logger;
 
 namespace projectFrameCut.Render
 {
@@ -53,7 +55,7 @@ namespace projectFrameCut.Render
                 {
                     if (Cache.Count == 0) 
                     {
-                        Thread.Sleep(100); // 添加休眠避免空转
+                        Thread.Sleep(100); 
                         continue;
                     }
 
@@ -63,15 +65,9 @@ namespace projectFrameCut.Render
                         Log($"[VideoBuilder] Frame #{index} added.");
                         index++;
                     }
-                    //else if (Cache.Keys.Count > 0 && Cache.Keys.Min() > index)
-                    //{
-                    //    // 如果缓存中最小的帧索引大于当前索引，说明前面的帧丢失了
-                    //    Log($"[VideoBuilder] WARN: Frame #{index} missing, skipping to next available frame.");
-                    //    index = Cache.Keys.Min();
-                    //}
                     else
                     {
-                        Thread.Sleep(200); // 减少等待时间以提高响应速度
+                        Thread.Sleep(200); 
                     }
                 } 
                 while (running);
@@ -86,19 +82,17 @@ namespace projectFrameCut.Render
 
         }
 
-        public void Finish(Accelerator accelerator, Clip[] clip)
+        public void Finish(IClip[] clip, Func<uint,Picture> regenerator)
         {
             running = false;
             while(!Volatile.Read(ref stopped))
                 Thread.Sleep(500);
             
-            // 收集所有缺失的帧索引
             var missingFrames = new List<uint>();
             uint currentIndex = index;
             
             while (Cache.Count > 0 || missingFrames.Count > 0)
             {
-                // 先处理已有的帧
                 if (Cache.ContainsKey(currentIndex))
                 {
                     builder.Append(Cache.TryRemove(currentIndex, out var f) ? f : throw new KeyNotFoundException());
@@ -107,10 +101,9 @@ namespace projectFrameCut.Render
                     continue;
                 }
                 
-                // 收集连续的缺失帧
                 if (missingFrames.Count == 0 && !Cache.ContainsKey(currentIndex))
                 {
-                    uint maxCheck = currentIndex + 100; // 限制一次检查的范围
+                    uint maxCheck = currentIndex + 100; 
                     for (uint i = currentIndex; i < maxCheck; i++)
                     {
                         if (!Cache.ContainsKey(i) && (Cache.Count == 0 || i <= Cache.Keys.Max()))
@@ -123,24 +116,22 @@ namespace projectFrameCut.Render
                         }
                     }
                     
-                    // 批量生成缺失帧
                     if (missingFrames.Count > 0)
                     {
                         Log($"[VideoBuilder] WARN: Frames #{missingFrames[0]}-#{missingFrames[missingFrames.Count-1]} not found, rebuilding {missingFrames.Count} frames...");
                         foreach (var frameIdx in missingFrames)
                         {
-                            Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clip, frameIdx), accelerator, frameIdx);
+                            builder.Append(regenerator(frameIdx));
                         }
                         missingFrames.Clear();
                     }
                     else if (Cache.Count == 0)
                     {
-                        break; // 没有更多帧需要处理
+                        break; 
                     }
                 }
                 else if (missingFrames.Count > 0)
                 {
-                    // 处理一个已重建的帧
                     uint frameToProcess = missingFrames[0];
                     missingFrames.RemoveAt(0);
                     
@@ -167,8 +158,8 @@ namespace projectFrameCut.Render
 
     internal sealed unsafe class VideoWriter : IDisposable
     {
-        private readonly int _width;
-        private readonly int _height;
+        public readonly int _width;
+        public readonly int _height;
         private readonly int _fps;
         private readonly string _outputPath;
         private readonly string _codecName;
@@ -205,7 +196,7 @@ namespace projectFrameCut.Render
             _codecName = codecName;
             _dstPixFmt = dstPixelFormat;
             _path = outputPath;
-            FFmpegHelper.RegisterFFmpeg();
+            //FFmpegHelper.RegisterFFmpeg();
             Init();
         }
 
@@ -544,23 +535,23 @@ namespace projectFrameCut.Render
         }
     }
 
-    internal static unsafe class FFmpegHelper
+    public static unsafe class FFmpegHelper
     {
         private static bool _registered;
 
-        public static void RegisterFFmpeg()
-        {
-            if (_registered) return;
-            if (Program.advancedFlags.Contains("ffmpeg_loglevel_debug"))
-                ffmpeg.av_log_set_level(ffmpeg.AV_LOG_DEBUG);
-            else if (Program.advancedFlags.Contains("ffmpeg_loglevel_error"))
-                ffmpeg.av_log_set_level(ffmpeg.AV_LOG_ERROR);
-            else if (Program.advancedFlags.Contains("ffmpeg_loglevel_none"))
-                ffmpeg.av_log_set_level(ffmpeg.AV_LOG_QUIET);
-            else
-                ffmpeg.av_log_set_level(ffmpeg.AV_LOG_WARNING);
-            _registered = true;
-        }
+        //public static void RegisterFFmpeg(int loglevel = ffmpeg.AV_LOG_WARNING)
+        //{
+        //    if (_registered) return;
+        //    //if (Program.advancedFlags.Contains("ffmpeg_loglevel_debug"))
+        //    //    ffmpeg.av_log_set_level(ffmpeg.AV_LOG_DEBUG);
+        //    //else if (Program.advancedFlags.Contains("ffmpeg_loglevel_error"))
+        //    //    ffmpeg.av_log_set_level(ffmpeg.AV_LOG_ERROR);
+        //    //else if (Program.advancedFlags.Contains("ffmpeg_loglevel_none"))
+        //    //    ffmpeg.av_log_set_level(ffmpeg.AV_LOG_QUIET);
+        //    //else
+        //        ffmpeg.av_log_set_level(loglevel);
+        //    _registered = true;
+        //}
 
         public static void Throw(int err, string api)
         {
