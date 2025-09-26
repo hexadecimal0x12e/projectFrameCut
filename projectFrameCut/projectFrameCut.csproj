@@ -135,10 +135,10 @@
 		<!-- Splash Screen -->
 		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
 
-		<!-- Images -->
+		<!-- Images
 		<MauiImage Include="Resources\Images\*" />
 		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
-
+		-->
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
 
@@ -150,18 +150,13 @@
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.1" />
-		<PackageReference Include="OpenTK" Version="5.0.0-pre.15" />
-		<PackageReference Include="OpenTK.Graphics" Version="5.0.0-pre.15" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
-		<PackageReference Include="SkiaSharp" Version="3.119.1-preview.1" />
-		<PackageReference Include="SkiaSharp.Views.Maui.Controls" Version="3.119.1-preview.1" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\projectFrameCut.Render.AndroidOpenGL\projectFrameCut.Render.AndroidOpenGL.csproj" />
 	  <ProjectReference Include="..\projectFrameCut.Render.CPU\projectFrameCut.Render.CPU.csproj" />
 	  <ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
 	  <ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
@@ -171,20 +166,39 @@
 	  <ProjectReference Include="..\projectFrameCut.Render.Metal\projectFrameCut.Render.Metal.csproj" />
 	</ItemGroup>
 	
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+	  <ProjectReference Include="..\projectFrameCut.Render.WindowsRender\projectFrameCut.Render.WindowsRender.csproj" />
+		<MauiAsset Include="..\projectFrameCut.Render.WindowsRender\ffmpeg\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+
+	</ItemGroup>
+
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<ProjectReference Include="..\projectFrameCut.Render.AndroidOpenGL\projectFrameCut.Render.AndroidOpenGL.csproj" />
+
+
+	</ItemGroup>
+
 	<ItemGroup>
+	  <MauiXaml Update="RPCTestPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
 	  <MauiXaml Update="TestPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="WelcomePage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	</ItemGroup>
 	
-	<ItemGroup Condition="'$(TargetFramework)' == 'net9.0-android'">
-	  <PackageReference Include="SkiaSharp.NativeAssets.Android">
-	    <Version>3.119.1-preview.1</Version>
-	  </PackageReference>
-	</ItemGroup>
+
 	
 	<ItemGroup>
-	  <Folder Include="Platforms\Android\Assets\" />
+	  <Compile Update="DraftPage.xaml.cs">
+	    <DependentUpon>DraftPage.xaml</DependentUpon>
+	  </Compile>
+	  <Compile Update="TestPage.xaml.cs">
+	    <DependentUpon>TestPage.xaml</DependentUpon>
+	  </Compile>
 	</ItemGroup>
 
 </Project>

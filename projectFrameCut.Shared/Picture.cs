@@ -205,7 +205,7 @@ namespace projectFrameCut.Shared
 
             imageEncoder = imageEncoder ?? new PngEncoder()
             {
-                BitDepth = PngBitDepth.Bit16
+                BitDepth = PngBitDepth.Bit8
             };
 
             int idx = 0, lineStart = 0;
@@ -219,15 +219,15 @@ namespace projectFrameCut.Shared
                         for (int x = 0; x < Width; x++)
                         {
                             idx = y * Width + x;
-                            ushort rr = (ushort)((r != null && r.Length > idx) ? r[idx] / 257 : 0);
-                            ushort gg = (ushort)((g != null && g.Length > idx) ? g[idx] / 257 : 0);
-                            ushort bb = (ushort)((b != null && b.Length > idx) ? b[idx] / 257 : 0);
+                            byte rr = (byte)((r != null && r.Length > idx) ? r[idx] / 257 : 0);
+                            byte gg = (byte)((g != null && g.Length > idx) ? g[idx] / 257 : 0);
+                            byte bb = (byte)((b != null && b.Length > idx) ? b[idx] / 257 : 0);
                             float aval = (hasAlphaChannel && a != null && a.Length > idx) ? a[idx] : 1f;
                             if (float.IsNaN(aval) || float.IsInfinity(aval)) aval = 1f;
                             int ai = (int)Math.Round(aval * 255f);
                             if (ai < 0) ai = 0;
                             if (ai > 255) ai = 255;
-                            ushort aa = (ushort)ai;
+                            byte aa = (byte)ai;
 
                             img[x, y] = new Rgba32(rr, gg, bb, aa);
                         }
@@ -238,7 +238,7 @@ namespace projectFrameCut.Shared
             }
             else
             {
-                using (var img = new Image<Rgb48>(Width, Height))
+                using (var img = new Image<Rgb24>(Width, Height))
                 {
                     for (int y = 0; y < Height; y++)
                     {
@@ -246,7 +246,10 @@ namespace projectFrameCut.Shared
                         for (int x = 0; x < Width; x++)
                         {
                             idx = lineStart + x;
-                            img[x, y] = new Rgb48((ushort)(r[idx] / 257), (ushort)(g[idx] / 257), (ushort)(b[idx] / 257));
+                            byte rr = (byte)(r[idx] / 257);
+                            byte gg = (byte)(g[idx] / 257);
+                            byte bb = (byte)(b[idx] / 257);
+                            img[x, y] = new Rgb24(rr, gg, bb);
 
                         }
                     }

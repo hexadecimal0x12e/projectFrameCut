@@ -10,6 +10,7 @@ namespace projectFrameCut.ViewModels
         private double _pixelsPerSecond = 100; // zoom level
         private double _playheadSeconds;
         private bool _isPlaying;
+        private double _totalSeconds = 60; // base timeline length
 
         // Snapping settings
         private bool _snapEnabled = true;
@@ -68,7 +69,13 @@ namespace projectFrameCut.ViewModels
 
         public ObservableCollection<TrackViewModel> Tracks { get; } = new();
 
-        public double TimelineWidth => 60 * PixelsPerSecond; // 60 seconds virtual length by default
+        public double TotalSeconds
+        {
+            get => _totalSeconds;
+            set { if (Math.Abs(_totalSeconds - value) > double.Epsilon) { _totalSeconds = Math.Max(1, value); OnPropertyChanged(); OnPropertyChanged(nameof(TimelineWidth)); } }
+        }
+
+        public double TimelineWidth => TotalSeconds * PixelsPerSecond; // 60 seconds virtual length by default
 
         public void AddTrack(string? name = null)
         {

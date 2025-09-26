@@ -20,8 +20,8 @@ namespace projectFrameCut
                     .UseMauiApp<App>()
                     .ConfigureFonts(fonts =>
                     {
-                        fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                        fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                        fonts.AddFont("HarmonyOS_Sans_SC_Regular.ttf", "OpenSansRegular");
+                        fonts.AddFont("HarmonyOS_Sans_SC_Bold.ttf", "OpenSansSemibold");
                     })
 #if ANDROID
                     .ConfigureMauiHandlers(handlers =>
@@ -40,7 +40,6 @@ namespace projectFrameCut
 #endif
 
                 var app = builder.Build();
-                Console.WriteLine("MAUI App built successfully");
                 Debug.WriteLine("MAUI App built successfully");
                 return app;
             }

@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Maui.ApplicationModel; // MainThread
+using Microsoft.Maui.ApplicationModel; 
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Devices;
 
@@ -17,14 +17,14 @@ public partial class TestPage : ContentPage
 
     private projectFrameCut.Shared.Picture srcA, srcB;
 
-    private async void OnRunButtonClicked(object sender, EventArgs e)
+    private async void OpenGLESStartButton_Clicked(object sender, EventArgs e)
     {
 #if ANDROID
         try
         {
-            StartButton.IsEnabled = false;
+            OpenGLESStartButton.IsEnabled = false;
             DeviceDisplay.Current.KeepScreenOn = true;
-            await Task.Delay(500); // 确保UI更新0
+            await Task.Delay(500); // 确保UI更新
 
             Task.WaitAll([
                 Task.Run(() => 
@@ -396,7 +396,7 @@ public partial class TestPage : ContentPage
         }
         finally
         {
-            StartButton.IsEnabled = true;
+            OpenGLESStartButton.IsEnabled = true;
             DeviceDisplay.Current.KeepScreenOn = false;
         }
 #else
@@ -435,6 +435,22 @@ public partial class TestPage : ContentPage
             }
         }
         """;
+
+    private void ILGPURenderStartButton_Clicked(object sender, EventArgs e)
+    {
+
+    }
+
+    private void MetalRenderStartButton_Clicked(object sender, EventArgs e)
+    {
+
+    }
+
+    private void CPURenderStartButton_Clicked(object sender, EventArgs e)
+    {
+
+    }
+
 
     public const string ShaderColorSrc =
         $$"""

@@ -11,6 +11,7 @@ namespace projectFrameCut.ViewModels
         private double _startSeconds;
         private double _durationSeconds = 5.0;
         private bool _isSelected;
+        private string? _sourcePath; // underlying asset file path
 
         public string Id
         {
@@ -27,13 +28,13 @@ namespace projectFrameCut.ViewModels
         public double StartSeconds
         {
             get => _startSeconds;
-            set { if (Math.Abs(_startSeconds - value) > double.Epsilon) { _startSeconds = Math.Max(0, value); OnPropertyChanged(); } }
+            set { if (Math.Abs(_startSeconds - value) > double.Epsilon) { _startSeconds = Math.Max(0, value); OnPropertyChanged(); OnPropertyChanged(nameof(EndSeconds)); } }
         }
 
         public double DurationSeconds
         {
             get => _durationSeconds;
-            set { if (Math.Abs(_durationSeconds - value) > double.Epsilon) { _durationSeconds = Math.Max(0.05, value); OnPropertyChanged(); } }
+            set { if (Math.Abs(_durationSeconds - value) > double.Epsilon) { _durationSeconds = Math.Max(0.05, value); OnPropertyChanged(); OnPropertyChanged(nameof(EndSeconds)); } }
         }
 
         public double EndSeconds => StartSeconds + DurationSeconds;
@@ -42,6 +43,13 @@ namespace projectFrameCut.ViewModels
         {
             get => _isSelected;
             set { if (_isSelected != value) { _isSelected = value; OnPropertyChanged(); } }
+        }
+
+        // Path to original asset file (if created from asset library)
+        public string? SourcePath
+        {
+            get => _sourcePath;
+            set { if (_sourcePath != value) { _sourcePath = value; OnPropertyChanged(); } }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

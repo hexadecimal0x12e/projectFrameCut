@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="projectFrameCut.WelcomePage"
+             Title="WelcomePage">
+    <VerticalStackLayout>
+        <Label 
+            Text="Welcome to projectFrameCut beta!"
+            VerticalOptions="Center" 
+            HorizontalOptions="Center" />
+
+        <HorizontalStackLayout>
+            <Button Text="Select draft" x:Name="SelectDraft" Clicked="SelectDraft_Clicked"/>
+            <Button Text="Create new draft" Margin="10,0,0,0" x:Name="CreateNewDraft" Clicked="CreateNewDraft_Clicked"/>
+        </HorizontalStackLayout>
+
+        <Entry IsReadOnly="True" Margin="0,0,0,0"  x:Name="SelectedDraftPath" Placeholder="No draft selected" />
+
+        <Button Text="Go to Draft Page" Margin="0,10,0,0"  x:Name="ToDraftPage" Clicked="ToDraftPage_Clicked"/>
+        
+        <Button Margin="0,50,0,0" Text=" go to render test page" Clicked="TestPageButton_Clicked" />
+
+        <Button Text="go to rpc test page" x:Name="RpcTestPage" Clicked="RpcTestPage_Clicked"       />
+
+    </VerticalStackLayout>
+</ContentPage>

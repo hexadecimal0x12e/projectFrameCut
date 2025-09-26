@@ -364,4 +364,4 @@ FodyWeavers.xsd
 
 #####
 
-/projectFrameCut.Render.RenderCLI/ffmpeg
+/projectFrameCut.Render.WindowsRender/ffmpeg
