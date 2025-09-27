@@ -33,6 +33,12 @@ namespace projectFrameCut.Shared
         public float FrameTime { get; set; } // seconds per frame (1 / framerate)
         public RenderMode MixtureMode { get; set; } = RenderMode.Overlay;
         public string? FilePath { get; set; }
+
+        [JsonExtensionData]
+        public Dictionary<string, object>? MetaData { get; set; }
+
+        
+
     }
 
     public interface IClip : IDisposable
@@ -45,7 +51,7 @@ namespace projectFrameCut.Shared
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
         public RenderMode MixtureMode { get; init; }
-        public string? filePath { get; init; }
+        public string? FilePath { get; init; }
 
         public virtual Picture GetFrame(uint targetFrame, int targetWidth, int targetHeight) => GetFrame(targetFrame - StartFrame).Resize(targetWidth, targetHeight);
 

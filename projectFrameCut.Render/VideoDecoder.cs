@@ -18,8 +18,8 @@ namespace projectFrameCut.Render
 
         public VideoDecoder(string path, bool? Is16Bit = null)
         {
+            ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(path));
             is16Bit = Is16Bit ?? Path.GetExtension(path) == ".mkv"; //只有ffv1支持16bit
-
             filePath = path ?? throw new ArgumentNullException(nameof(path));
             decoders.AddOrUpdate(
                 filePath,

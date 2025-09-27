@@ -174,7 +174,7 @@ namespace projectFrameCut.Render
 
     }
 
-    static class MemoryHelper
+    public static class MemoryHelper
     {
 
 #if WINDOWS

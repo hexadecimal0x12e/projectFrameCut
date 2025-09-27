@@ -34,7 +34,7 @@ namespace projectFrameCut.Render.RenderCLI
         static async Task<int> Main(string[] args)
         {
 
-
+            if (args.Length > 1) Thread.Sleep(800);
 
             Log($"projectFrameCut.Render - {Assembly.GetExecutingAssembly().GetName().Version} \r\n" + $"Copyright hexadecimal0x12e 2025.\r\n" +
                 $"cmdline: {Environment.GetCommandLineArgs().Aggregate((a, b) => $"{a} {b}")}");

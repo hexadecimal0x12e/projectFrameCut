@@ -79,7 +79,7 @@ namespace projectFrameCut.ViewModels
 
         public void AddTrack(string? name = null)
         {
-            Tracks.Add(new TrackViewModel { Name = name ?? $"Track {Tracks.Count + 1}" });
+            Tracks.Add(new TrackViewModel { Name = name ?? $"Track #{Tracks.Count + 1}" });
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

@@ -1,3 +1,4 @@
+using projectFrameCut.Shared;
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -12,6 +13,8 @@ namespace projectFrameCut.ViewModels
         private double _durationSeconds = 5.0;
         private bool _isSelected;
         private string? _sourcePath; // underlying asset file path
+        private Dictionary<string, object> _metadata = new();
+        private ClipMode _type = ClipMode.Special;
 
         public string Id
         {
@@ -50,6 +53,19 @@ namespace projectFrameCut.ViewModels
         {
             get => _sourcePath;
             set { if (_sourcePath != value) { _sourcePath = value; OnPropertyChanged(); } }
+        }
+
+        // Arbitrary metadata dictionary for extensibility
+        public Dictionary<string, object> Metadata
+        {
+            get => _metadata;
+            set { if (_metadata != value) { _metadata = value; OnPropertyChanged(); } }
+        }
+
+        public ClipMode Type
+        {
+            get => _type;
+            set { if (_type != value) { _type = value; OnPropertyChanged(); } }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

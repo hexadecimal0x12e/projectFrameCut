@@ -1,16 +1,31 @@
 ﻿using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Layouts;
+using projectFrameCut.Render;
+using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
 using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using projectFrameCut.Shared; 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using System.IO; 
+using Path = System.IO.Path;
+using System.Globalization;
+
+
+#if WINDOWS
+using projectFrameCut.Platforms.Windows;
+
+#endif
 
 namespace projectFrameCut
 {
@@ -37,19 +52,202 @@ namespace projectFrameCut
         private AbsoluteLayout? _ruler;
         private BoxView? _playhead;
         private Label? _status;
+        private Label _backendStatus;
         private ScrollView? _timelineScroll;
+
+        //变更监听
+        private readonly HashSet<TrackViewModel> _subscribedTracks = new();
+        private readonly HashSet<ClipViewModel> _subscribedClips = new();
+        private CancellationTokenSource? _changeDebounceCts;
+
+
+        private int frameRate = 30;
+
+#if WINDOWS
+        private RpcClient? _rpc;
+        private Process rpcProc;
+        private Timer rpcStatTimer;
+
+        private async Task BootRPC()
+        {
+            var pipeId = "pjfc_rpc_V1_" + Guid.NewGuid().ToString();
+            var tmpDir = Path.Combine(Path.GetTempPath(), "pjfc_temp");
+            Directory.CreateDirectory(tmpDir);
+            rpcProc = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Render.WindowsRender.exe"),
+                    WorkingDirectory = Path.Combine(AppContext.BaseDirectory),
+                    Arguments = $" rpc_backend  -pipe={pipeId} -output_options=3840,2160,42,AV_PIX_FMT_NONE,nope -tempFolder={tmpDir} ",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                }
+            };
+
+            Log($"Starting RPC backend with pipe ID: {pipeId}, args:{rpcProc.StartInfo.Arguments}");
+
+            rpcProc.OutputDataReceived += (sender, e) =>
+            {
+                if (e.Data != null)
+                {
+                    Log(e.Data, "Backend_STDOUT");
+
+                }
+            };
+
+            rpcProc.ErrorDataReceived += (sender, e) =>
+            {
+                if (e.Data != null)
+                {
+                    Log(e.Data, "Backend_STDERR");
+                    Dispatcher.Dispatch(() =>
+                    {
+                        _backendStatus.Text = "Backend error: " + e.Data;
+                        _backendStatus.TextColor = Colors.Red;
+                    });
+                }
+            };
+
+            rpcProc.EnableRaisingEvents = true;
+            rpcProc.Exited += (s, e) => 
+            {
+                Dispatcher.Dispatch(async () =>
+                {
+                    await DisplayAlert("Error", $"The backend exited unexpectedly with code {rpcProc.ExitCode}. Please reload project.", "ok");
+                });
+            }; 
+            rpcProc.Start();
+            rpcProc.BeginErrorReadLine();
+            rpcProc.BeginOutputReadLine();
+            Thread.Sleep(500);
+            _rpc = new RpcClient();
+            await _rpc.StartAsync(pipeId);
+            Log("RPC started");
+            BackendStateIndicator.Children.Clear();
+            BackendStateIndicator.Children.Add(new Ellipse
+            {
+                Fill = Colors.Gray,
+                WidthRequest = 16,
+                HeightRequest = 16,
+                Margin = new Thickness(4, 0, 0, 0),
+                VerticalOptions = LayoutOptions.Center
+            });
+
+            if (_backendStatus is not null)
+                _backendStatus.Text = "Waiting for backend...";
+
+            int rpcFailedCount = 0;
+
+            new Thread(async () =>
+            {
+                Thread.Sleep(500);
+                float menUsed, menTotalUsed;
+                JsonElement? state;
+                TimeSpan lantency;
+                Color color;
+                string message;
+                var nothing = JsonSerializer.SerializeToElement<object?>(null);
+                CancellationTokenSource cts = new();
+                var circle = new Ellipse
+                {
+                    Fill = Colors.Gray,
+                    WidthRequest = 16,
+                    HeightRequest = 16,
+                    Margin = new Thickness(4, 3, 0, 0),
+                    VerticalOptions = LayoutOptions.Center
+                };
+                while (!rpcProc.HasExited)
+                {
+                    menUsed = rpcProc.WorkingSet64 / 1024f / 1024f;
+                    menTotalUsed = MemoryHelper.GetUsedRAM() / 1024f / 1024f;
+
+                    cts = new();
+                    cts.CancelAfter(5000);
+                    try
+                    {
+                        state = await _rpc.SendAsync("ping", nothing, cts.Token);
+                        lantency = DateTime.Now - state.Value.GetProperty("value").GetDateTime();
+                        color = lantency.TotalMilliseconds switch
+                        {
+                            < 200 => Colors.Green,
+                            < 500 => Colors.Orange,
+                            _ => Colors.Red
+                        };
+                        message = $"Backend lantency:{lantency.TotalMilliseconds}ms. Memory used: {menUsed:n2}/{menTotalUsed:n2} MB (backend/total)";
+
+                    }
+                    catch
+                    {
+                        rpcFailedCount++;
+                        state = nothing;
+                        color = Colors.Red;
+                        message = $"Backend didn't answer application. Memory used: {menUsed:n2}/{menTotalUsed:n2} MB (backend/total)";
+                    }
+
+                    circle.Fill = color;
+
+                    if (_backendStatus is not null)
+                        Dispatcher.Dispatch(() =>
+                        {
+                            _backendStatus.Text = message;
+                            BackendStateIndicator.Children.Clear();
+                            BackendStateIndicator.Children.Add(circle);
+                        });
+
+                    if (rpcFailedCount > 5)
+                    {
+                        circle.Fill = Colors.Gray;
+                        if (_backendStatus is not null)
+                        Dispatcher.Dispatch(async () =>
+                        {
+                            _backendStatus.Text = "Backend not respond. Please try reload project...";
+                            BackendStateIndicator.Children.Clear();
+                            BackendStateIndicator.Children.Add(circle);
+                            await DisplayAlert("Error", "Backend not respond in 10 seconds. Please try reload project", "ok");
+                        });
+                        rpcProc.Kill();
+
+                    }
+                    Thread.Sleep(2500);
+                }
+
+            })
+            { CurrentCulture = CultureInfo.InvariantCulture }.Start();
+
+
+        }
+#endif
 
         // Simple asset model
         public class AssetItem
         {
             public string Name { get; set; } = string.Empty;
             public string? Path { get; set; }
-            public string Icon { get; set; }
+            public projectFrameCut.Shared.ClipMode Type { get; set; }
+            [JsonIgnore()]
+            public string? Icon
+            {
+                get => Type switch
+                {
+                    projectFrameCut.Shared.ClipMode.VideoClip => "📽️",
+                    projectFrameCut.Shared.ClipMode.PhotoClip => "🖼️",
+                    projectFrameCut.Shared.ClipMode.SolidColorClip => "🟦",
+                    _ => "❔"
+                };
+            }
+            [JsonIgnore()]
             public DateTime AddedAt { get; set; } = DateTime.Now;
         }
 
-        // Collection for asset library (bind via x:Reference)
         public ObservableCollection<AssetItem> Assets { get; } = new();
+
+        public ProjectJSONStructure ProjectInfo { get; set; } = new();
+
+
+        private string workingDirectory = string.Empty;
 
         public DraftPage()
         {
@@ -62,22 +260,86 @@ namespace projectFrameCut
             _ruler = this.FindByName<AbsoluteLayout>("Ruler");
             _playhead = this.FindByName<BoxView>("Playhead");
             _status = this.FindByName<Label>("Status");
+            _backendStatus = this.FindByName<Label>("BackendStatus");
             _timelineScroll = this.FindByName<ScrollView>("TimelineScroll");
 
             // Initialize with two tracks
-            _vm.AddTrack("Video #1");
-            _vm.AddTrack("Video #2");
+            _vm.AddTrack("Track #1");
+            _vm.AddTrack("Track #2");
 
             RebuildTracksUI();
             UpdatePlayhead();
             BuildRuler();
 
-            Title = "Blank project";
+            Title = "Untitled Project 1";
+
+            StateIndicator.Children.Clear();
+            StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
+            {
+                Stroke = Colors.Green,
+                StrokeThickness = 3,
+                Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString("M 4,12 L 9,17 L 20,6"),
+                WidthRequest = 20,
+                HeightRequest = 20,
+                Margin = new Thickness(0, -3, 0, 0)
+            });
+            SetStateOK();
+
+
+#if WINDOWS
+
+            Loaded += async (sender, e) => await BootRPC();
+#endif
         }
 
-        public DraftPage(string draftSource)
+        public void SetStateBusy()
+        {
+            StateIndicator.Children.Clear();
+            StateIndicator.Children.Add(new ActivityIndicator
+            {
+                Color = Colors.Orange,
+                IsRunning = true,
+                WidthRequest = 16, 
+                HeightRequest = 16, 
+                Margin = new(0,0,0,0)
+            });
+        }
+
+        public void SetStateOK()
+        {
+            StateIndicator.Children.Clear();
+            StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
+            {
+                Stroke = Colors.Green,
+                StrokeThickness = 3,
+                Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString("M 4,12 L 9,17 L 20,6"),
+                WidthRequest = 20,
+                HeightRequest = 20,
+                Margin = new Thickness(0, -3, 0, 0)
+
+
+            });
+        }
+        public void SetStateFail()
+        {
+            StateIndicator.Children.Clear();
+            StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
+            {
+                Stroke = Colors.Red,
+                StrokeThickness = 3,
+                Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString("M 4,4 L 20,20 M 20,4 L 4,20"),
+                WidthRequest = 20,
+                HeightRequest = 20,
+                Margin = new Thickness(0, -3, 0, 0)
+
+
+            });
+        }
+
+        public DraftPage(string workingPath)
         {
             InitializeComponent();
+            workingDirectory = workingPath;
             BindingContext = _vm; // ensure binding for TimelineWidth
 
             // Resolve named elements from XAML
@@ -86,9 +348,36 @@ namespace projectFrameCut
             _ruler = this.FindByName<AbsoluteLayout>("Ruler");
             _playhead = this.FindByName<BoxView>("Playhead");
             _status = this.FindByName<Label>("Status");
+            _backendStatus = this.FindByName<Label>("BackendStatus");
             _timelineScroll = this.FindByName<ScrollView>("TimelineScroll");
 
-            ImportDraft(draftSource);
+            if (!Directory.Exists(workingPath))
+                throw new DirectoryNotFoundException($"Working path not found: {workingPath}");
+
+            var filesShouldExist = new[] { "project.json", "timeline.json", "assets.json" };
+
+            if (filesShouldExist.Any((f) => !File.Exists(Path.Combine(workingPath, f))))
+            {
+                throw new FileNotFoundException("One or more required files are missing.", workingPath);
+            }
+
+            var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.json")));
+
+            ProjectInfo = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.json"))) ?? new();
+            var assets = JsonSerializer.Deserialize<ObservableCollection<AssetItem>>(File.ReadAllText(Path.Combine(workingPath, "assets.json"))) ?? new();
+            Title = ProjectInfo.projectName;
+            ImportDraft(File.ReadAllText(Path.Combine(workingPath, "timeline.json")));
+
+            SetStateOK();
+
+#if WINDOWS
+            Loaded += async (sender, e) =>
+            {
+                await BootRPC();
+                await UpdateClipToBackend();
+
+            };
+#endif
 
         }
 
@@ -96,9 +385,325 @@ namespace projectFrameCut
         protected override void OnNavigatedTo(NavigatedToEventArgs args)
         {
             base.OnNavigatedTo(args);
-
-            
+            // 每次进入页面确保订阅有效（会先清理再订阅，避免重复）
+            SubscribeToTimelineChanges(reset: true);
         }
+
+        protected override void OnNavigatedFrom(NavigatedFromEventArgs args)
+        {
+            base.OnNavigatedFrom(args);
+            UnsubscribeAllTimelineChanges();
+        }
+
+        private async void OnProjectChanged(string reason)
+        {
+            if (reason == "Timeline.PlayheadSeconds")
+            {
+                SetStateBusy();
+                try
+                {
+                    int frameId = (int)Math.Floor(_vm.PlayheadSeconds * frameRate);
+#if WINDOWS
+                    if (_status is not null)
+                        _status.Text = $"rendering frame {frameId} ";
+                    if (_rpc is null) return;
+                    var result = await _rpc.SendAsync("RenderOne", JsonSerializer.SerializeToElement(frameId), default);
+                    if (result is null) return;
+                    var path = result.Value.GetProperty("path").GetString();
+                    PreviewBox.Source = ImageSource.FromFile(path);
+                    if (_status is not null)
+                        _status.Text = $"render done... ";
+                    SetStateOK();
+
+#endif
+                }
+                catch (Exception ex)
+                {
+                    await DisplayAlert($"{ex.GetType()} Error", ex.Message, "ok");
+                    SetStateFail();
+                }
+
+
+
+                return;
+            }
+            if (_status is not null)
+            {
+                _status.Text = $"saving changes";
+                _status.TextColor = Colors.White;
+            }
+            SetStateBusy();
+            if (workingDirectory == string.Empty)
+            {
+#if WINDOWS
+                var picker = new Windows.Storage.Pickers.FolderPicker();
+                picker.FileTypeFilter.Add("*");
+
+                var mauiWin = Application.Current?.Windows?.FirstOrDefault();
+                if (mauiWin?.Handler?.PlatformView is Microsoft.UI.Xaml.Window window)
+                {
+                    var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
+                    WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+                }
+
+                var folder = await picker.PickSingleFolderAsync();
+                if (folder == null) return; //用户按了取消
+                workingDirectory = folder.Path;
+
+
+
+#elif MACCATALYST || IOS
+
+#elif ANDROID
+
+#endif
+
+                var projName = await DisplayPromptAsync("info", "input a name for this project", "ok", "", "project 1", -1, null, "Untitled Project 1");
+
+#if MACCATALYST || IOS
+                workingDirectory = Directory.CreateDirectory(Path.Combine(workingDirectory, projName + ".pjfc")).FullName;
+#else
+                File.WriteAllText(Path.Combine(workingDirectory, projName + ".pjfc"), "@projectFrameCut v1");
+                workingDirectory = Directory.CreateDirectory(Path.Combine(workingDirectory, projName)).FullName;
+
+#endif
+                ProjectInfo = new ProjectJSONStructure
+                {
+                    projectName = projName,
+                    ResourcePath = workingDirectory,
+
+                };
+            }
+
+
+            File.WriteAllText(Path.Combine(workingDirectory, "timeline.json"), ExportDraftToJson());
+            File.WriteAllText(Path.Combine(workingDirectory, "assets.json"), JsonSerializer.Serialize(Assets));
+            File.WriteAllText(Path.Combine(workingDirectory, "project.json"), JsonSerializer.Serialize(ProjectInfo));
+
+            if (_status is not null)
+                _status.Text = $"changes saved on {DateTime.Now:T} ";
+
+
+#if WINDOWS
+            if (await UpdateClipToBackend())
+            {
+
+                SetStateOK();
+            }
+            else
+            {
+                SetStateFail();
+            }
+#endif
+
+        }
+#if WINDOWS
+        private async Task<bool> UpdateClipToBackend()
+        {
+            {
+                CancellationTokenSource cts = new();
+                if (_rpc is null) return false;
+                if (_status is not null)
+                    _status.Text = $"applying changes to backend... ";
+                try
+                {
+                    var element = JsonSerializer.SerializeToElement(BuildDraft(ProjectInfo.projectName));
+                    cts.CancelAfter(10000);
+
+                    _ = await _rpc.SendAsync("UpdateClips", element, cts.Token);
+                    if (_status is not null)
+                        _status.Text = $"changes applied... ";
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    if (_status is not null)
+                    {
+                        _status.Text = $"failed to applying changes to backend... ";
+                        _status.TextColor = Colors.Red;
+                    }
+                    SetStateFail();
+
+                    await DisplayAlert($"{ex.GetType()} Error", ex.Message, "ok");
+                    return false;
+
+                }
+                //if (result is null) return;
+                //var path = result.Value.GetProperty("path").GetString();
+                //PreviewBox.Source = ImageSource.FromFile(path);
+            }
+        }
+#endif
+
+
+        #region listen to change
+
+
+        private void SubscribeToTimelineChanges(bool reset)
+        {
+            if (reset)
+                UnsubscribeAllTimelineChanges();
+
+            // 订阅 Timeline 自身属性变更
+            _vm.PropertyChanged -= OnTimelinePropertyChanged;
+            _vm.PropertyChanged += OnTimelinePropertyChanged;
+
+            // 订阅 Tracks 集合变更
+            _vm.Tracks.CollectionChanged -= OnTracksChanged;
+            _vm.Tracks.CollectionChanged += OnTracksChanged;
+
+            // 订阅当前已存在的轨道与片段
+            foreach (var track in _vm.Tracks)
+                AttachTrack(track);
+        }
+
+        private void UnsubscribeAllTimelineChanges()
+        {
+            _vm.PropertyChanged -= OnTimelinePropertyChanged;
+            _vm.Tracks.CollectionChanged -= OnTracksChanged;
+
+            foreach (var t in _subscribedTracks.ToArray())
+                DetachTrack(t);
+            _subscribedTracks.Clear();
+
+            foreach (var c in _subscribedClips.ToArray())
+                DetachClip(c);
+            _subscribedClips.Clear();
+        }
+
+        private void OnTimelinePropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            // 例如 PixelsPerSecond、PlayheadSeconds、Snap 设置、TotalSeconds 等
+            FireProjectChanged($"Timeline.{e.PropertyName}");
+        }
+
+        private void OnTracksChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.Action is NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Replace)
+            {
+                if (e.NewItems != null)
+                    foreach (TrackViewModel t in e.NewItems)
+                        AttachTrack(t);
+            }
+            if (e.Action is NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Replace)
+            {
+                if (e.OldItems != null)
+                    foreach (TrackViewModel t in e.OldItems)
+                        DetachTrack(t);
+            }
+            if (e.Action == NotifyCollectionChangedAction.Reset)
+            {
+                foreach (var t in _subscribedTracks.ToArray())
+                    DetachTrack(t);
+                _subscribedTracks.Clear();
+
+                foreach (var t in _vm.Tracks)
+                    AttachTrack(t);
+            }
+
+            FireProjectChanged("Tracks.CollectionChanged");
+        }
+
+        private void AttachTrack(TrackViewModel track)
+        {
+            if (!_subscribedTracks.Add(track))
+                return;
+
+            track.PropertyChanged -= OnTrackPropertyChanged;
+            track.PropertyChanged += OnTrackPropertyChanged;
+
+            track.Clips.CollectionChanged -= OnTrackClipsChanged;
+            track.Clips.CollectionChanged += OnTrackClipsChanged;
+
+            foreach (var clip in track.Clips)
+                AttachClip(clip);
+        }
+
+        private void DetachTrack(TrackViewModel track)
+        {
+            if (!_subscribedTracks.Remove(track))
+                return;
+
+            track.PropertyChanged -= OnTrackPropertyChanged;
+            track.Clips.CollectionChanged -= OnTrackClipsChanged;
+
+            foreach (var clip in track.Clips.ToArray())
+                DetachClip(clip);
+        }
+
+        private void OnTrackPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            FireProjectChanged($"Track.{e.PropertyName}");
+        }
+
+        private void OnTrackClipsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.Action is NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Replace)
+            {
+                if (e.NewItems != null)
+                    foreach (ClipViewModel c in e.NewItems)
+                        AttachClip(c);
+            }
+            if (e.Action is NotifyCollectionChangedAction.Remove or NotifyCollectionChangedAction.Replace)
+            {
+                if (e.OldItems != null)
+                    foreach (ClipViewModel c in e.OldItems)
+                        DetachClip(c);
+            }
+            if (e.Action == NotifyCollectionChangedAction.Reset && sender is TrackViewModel t)
+            {
+                foreach (var c in _subscribedClips.Where(c => t.Clips.Contains(c)).ToArray())
+                    DetachClip(c);
+                foreach (var c in t.Clips)
+                    AttachClip(c);
+            }
+
+            FireProjectChanged("Clips.CollectionChanged");
+        }
+
+        private void AttachClip(ClipViewModel clip)
+        {
+            if (!_subscribedClips.Add(clip))
+                return;
+
+            clip.PropertyChanged -= OnClipPropertyChanged;
+            clip.PropertyChanged += OnClipPropertyChanged;
+        }
+
+        private void DetachClip(ClipViewModel clip)
+        {
+            if (!_subscribedClips.Remove(clip))
+                return;
+
+            clip.PropertyChanged -= OnClipPropertyChanged;
+        }
+
+        private void OnClipPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            FireProjectChanged($"Clip.{e.PropertyName}");
+        }
+
+        private void FireProjectChanged(string reason)
+        {
+            _changeDebounceCts?.Cancel();
+            _changeDebounceCts = new CancellationTokenSource();
+            var token = _changeDebounceCts.Token;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(100, token);
+                    if (token.IsCancellationRequested) return;
+
+                    Dispatcher.Dispatch(() => OnProjectChanged(reason));
+                }
+                catch (TaskCanceledException) { }
+            }, token);
+        }
+
+
+        #endregion
 
         // Helper: determine clip type by file extension
         private static ClipMode DetermineClipMode(string? path)
@@ -106,13 +711,12 @@ namespace projectFrameCut
             if (string.IsNullOrWhiteSpace(path)) return ClipMode.Special;
             var ext = Path.GetExtension(path).ToLowerInvariant();
             // Common video extensions
-            string[] video = [".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"]; 
-            string[] image = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"]; 
+            string[] video = [".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"];
+            string[] image = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"];
             if (video.Contains(ext)) return ClipMode.VideoClip;
             if (image.Contains(ext)) return ClipMode.PhotoClip;
             return ClipMode.Special; // fallback
         }
-
         // Export timeline to DraftStructureJSON
         private DraftStructureJSON BuildDraft(string projectName = "Default Project")
         {
@@ -138,9 +742,18 @@ namespace projectFrameCut
                         Duration = durationFrames,
                         FrameTime = (float)frameTime,
                         MixtureMode = RenderMode.Overlay,
-                        FilePath = clip.SourcePath
+                        FilePath = clip.SourcePath,
+                        MetaData = clip.Metadata
                     });
                 }
+            }
+
+            List<JsonElement> elements = new();
+
+            foreach (var item in clipDtos)
+            {
+                var element = JsonSerializer.SerializeToElement(item);
+
             }
 
             return new DraftStructureJSON
@@ -153,7 +766,7 @@ namespace projectFrameCut
         // Example method to get JSON string (could be bound to a button)
         private string ExportDraftToJson()
         {
-            var draft = BuildDraft("Timeline Export");
+            var draft = BuildDraft(ProjectInfo.projectName);
             var opts = new JsonSerializerOptions { WriteIndented = true };
             return JsonSerializer.Serialize(draft, opts);
         }
@@ -164,12 +777,12 @@ namespace projectFrameCut
             try
             {
                 var json = ExportDraftToJson();
-                Debug.WriteLine(json);
-                await DisplayAlert("Draft Export", json.Length > 1000 ? json.Substring(0, 1000) + "..." : json, "OK");
+                //Log(json);
+                await DisplayAlert("Draft Export", json, "OK");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex);
+                Log(ex);
                 await DisplayAlert("Error", ex.Message, "OK");
             }
         }
@@ -189,13 +802,12 @@ namespace projectFrameCut
                     await DisplayAlert("错误", "解析 DraftStructureJSON 失败", "OK");
                     return;
                 }
-                Title = draft.Name;
 
                 ImportDraftToTimeline(draft);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex);
+                Log(ex);
                 await DisplayAlert("Error", ex.Message, "OK");
             }
         }
@@ -228,7 +840,7 @@ namespace projectFrameCut
             // Ensure enough tracks by LayerIndex
             int trackCount = dtos.Count == 0 ? 1 : (int)(dtos.Max(c => (int)c.LayerIndex) + 1);
             for (int i = 0; i < trackCount; i++)
-                _vm.AddTrack($"Video #{i + 1}");
+                _vm.AddTrack($"Track #{i + 1}");
 
             // frame time: prefer clip's FrameTime or draft.targetFrameRate
             double frameTime = 0;
@@ -240,6 +852,7 @@ namespace projectFrameCut
                 frameTime = 1.0 / 60.0;
 
             double maxEndSeconds = 0;
+            ConcurrentDictionary<projectFrameCut.Shared.ClipMode, int> clipTypeCount = new();
             foreach (var c in dtos.OrderBy(c => c.LayerIndex).ThenBy(c => c.StartFrame))
             {
                 var startSeconds = c.StartFrame * frameTime;
@@ -263,16 +876,12 @@ namespace projectFrameCut
 
                 Assets.Add(new AssetItem
                 {
-                    Name = Path.GetFileName(c.FilePath) ?? $"unknown draft@{c.Id}",
-                    Path = c.FilePath,
-                    Icon = c.ClipType switch
-                    {
-                        ClipMode.VideoClip => "📽️",
-                        ClipMode.PhotoClip => "🖼️",
-                        ClipMode.SolidColorClip => "🟦",
-                        _ => "❔"
-                    }
+                    Name = !string.IsNullOrEmpty(c.FilePath) ? Path.GetFileName(c.FilePath) ?? $"unknown draft@{c.Id}" : $"{c.ClipType} #{clipTypeCount.GetOrAdd(c.ClipType, 0)}",
+                    Type = c.ClipType,
+                    Path = c.FilePath
                 });
+
+                clipTypeCount.AddOrUpdate(c.ClipType, 1, (k, v) => v + 1);
             }
 
             // Expand timeline length to fit imported content with some padding
@@ -342,7 +951,7 @@ namespace projectFrameCut
             if (sender is Button btn && btn.CommandParameter is AssetItem asset)
             {
                 if (_vm.Tracks.Count == 0)
-                    _vm.AddTrack("Video 1");
+                    _vm.AddTrack("Video #1");
                 var track = _vm.Tracks[0]; // always first track for now
                 var clip = new ClipViewModel
                 {
@@ -386,6 +995,12 @@ namespace projectFrameCut
                 InputTransparent = false
             };
             g.Add(centerOverlay);
+
+#if WINDOWS
+            // Attach native context menu for right-click
+            AttachContextMenu(g, clip);
+            AttachContextMenu(centerOverlay, clip);
+#endif
 
             // Initial layout
             UpdateClipLayout(g, clip);
@@ -453,6 +1068,11 @@ namespace projectFrameCut
             g.Add(leftHandle);
             g.Add(rightHandle);
 
+#if WINDOWS
+            AttachContextMenu(leftHandle, clip);
+            AttachContextMenu(rightHandle, clip);
+#endif
+
             var leftPan = new PanGestureRecognizer();
             leftPan.PanUpdated += (s, e) =>
             {
@@ -506,6 +1126,52 @@ namespace projectFrameCut
             return g;
         }
 
+#if WINDOWS
+        private void AttachContextMenu(VisualElement element, ClipViewModel clip)
+        {
+            void Attach()
+            {
+                if (element?.Handler?.PlatformView is not Microsoft.UI.Xaml.FrameworkElement fe)
+                    return;
+
+                // Avoid multiple attachments
+                fe.RightTapped -= OnRightTapped;
+                fe.RightTapped += OnRightTapped;
+
+                void OnRightTapped(object? sender, Microsoft.UI.Xaml.Input.RightTappedRoutedEventArgs e)
+                {
+                    SelectClip(clip);
+                    var menu = BuildWindowsMenu(clip);
+                    var pos = e.GetPosition(fe);
+                    var opts = new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
+                    {
+                        Position = pos
+                    };
+                    menu.ShowAt(fe, opts);
+                    e.Handled = true;
+                }
+            }
+
+            if (element.Handler != null)
+                Attach();
+
+            element.HandlerChanged += (s, e) => Attach();
+        }
+
+        private Microsoft.UI.Xaml.Controls.MenuFlyout BuildWindowsMenu(ClipViewModel clip)
+        {
+            var menu = new Microsoft.UI.Xaml.Controls.MenuFlyout();
+            var itemSplit = new Microsoft.UI.Xaml.Controls.MenuFlyoutItem { Text = "spilt" };
+            itemSplit.Click += (s, e) => Dispatcher.Dispatch(() => { SelectClip(clip); OnSplitClip(s!, EventArgs.Empty); });
+            var itemDelete = new Microsoft.UI.Xaml.Controls.MenuFlyoutItem { Text = "delete" };
+            itemDelete.Click += (s, e) => Dispatcher.Dispatch(() => { SelectClip(clip); OnDeleteClip(s!, EventArgs.Empty); });
+            menu.Items.Add(itemSplit);
+            menu.Items.Add(new Microsoft.UI.Xaml.Controls.MenuFlyoutSeparator());
+            menu.Items.Add(itemDelete);
+            return menu;
+        }
+#endif
+
         private void UpdateClipLayout(Grid g, ClipViewModel clip)
         {
             var left = clip.StartSeconds * _vm.PixelsPerSecond;
@@ -517,14 +1183,20 @@ namespace projectFrameCut
 
         private void SelectClip(ClipViewModel? clip)
         {
-            if (_selectedClip == clip) return;
+            if (_selectedClip == clip || _clipToView == null) return;
             _selectedClip = clip;
 
-            foreach (var kv in _clipToView)
-                kv.Value.BackgroundColor = kv.Key == clip ? Color.FromArgb("#66AA44") : Color.FromArgb("#4466AA");
+
+            if (clip is not null && _clipToView.TryGetValue(clip, out var view))
+            {
+                view.BackgroundColor = Color.FromArgb("#66AA44");
+            }
+
+            foreach (var kv in _clipToView.Where((v) => v.Key != clip))
+                kv.Value.BackgroundColor = Color.FromArgb("#4466AA");
 
             if (_status != null)
-                _status.Text = clip == null ? "No selection" : $"Selected: {clip.Name} ({clip.StartSeconds:0.00}s - {clip.EndSeconds:0.00}s)";
+                _status.Text = clip == null ? "" : $"Selected: {clip.Name} ({clip.StartSeconds:0.00}s - {clip.EndSeconds:0.00}s)";
         }
 
         private void BuildRuler()
@@ -566,7 +1238,11 @@ namespace projectFrameCut
             var x = _vm.PlayheadSeconds * _vm.PixelsPerSecond;
             if (_playhead != null)
                 _playhead.TranslationX = x;
+
+            RenderPreview(_vm.PlayheadSeconds);
         }
+
+
 
         private void OnAddTrack(object sender, EventArgs e)
         {
@@ -589,7 +1265,7 @@ namespace projectFrameCut
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex);
+                Log(ex);
             }
 #endif
             var clip = new ClipViewModel
@@ -879,7 +1555,16 @@ namespace projectFrameCut
             }
         }
 
-       
+        private void RenderPreview(double playheadSeconds)
+        {
+#if WINDOWS
+
+#else
+            //todo: implement for other platforms
+#endif
+        }
+
+
         private async void OnAddAsset(object sender, EventArgs e)
         {
             try
@@ -903,9 +1588,36 @@ namespace projectFrameCut
             }
             catch (Exception ex)
             {
-                Debug.WriteLine(ex);
+                Log(ex);
                 await DisplayAlert("Error", ex.Message, "OK");
             }
+        }
+
+        private void AddSolidColorClip_Clicked(object sender, EventArgs e)
+        {
+            //var asset = new AssetItem
+            //{
+            //    Name = $"SolidColor #{Assets.Count(c => c.Type == Shared.ClipMode.SolidColorClip) + 1}",
+            //    Type = Shared.ClipMode.SolidColorClip,
+            //    Path = null
+            //};
+            //Assets.Add(asset);
+
+
+            var track = _vm.Tracks[0]; // always first track for now
+            var clip = new ClipViewModel
+            {
+                Name = $"SolidColor #{Assets.Count(c => c.Type == Shared.ClipMode.SolidColorClip) + 1}",
+                Type = Shared.ClipMode.SolidColorClip,
+                StartSeconds = _vm.PlayheadSeconds,
+                DurationSeconds = 3,
+                Metadata = { { "R", (ushort)11 }, { "G", (ushort)22 }, { "B", (ushort)33 }, { "A", 1f } }
+            };
+            track.Clips.Add(clip);
+            clip.StartSeconds = ResolveOverlapStart(track, clip, clip.StartSeconds, clip.DurationSeconds);
+            RebuildTracksUI();
+
+
         }
     }
 }

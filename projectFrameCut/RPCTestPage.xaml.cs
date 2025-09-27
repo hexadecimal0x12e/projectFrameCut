@@ -3,7 +3,7 @@ using projectFrameCut.Platforms.Windows;
 using projectFrameCut.Shared;
 using System.Diagnostics;
 using System.Text.Json;
-
+#endif
 namespace projectFrameCut;
 
 public partial class RPCTestPage : ContentPage
@@ -12,6 +12,7 @@ public partial class RPCTestPage : ContentPage
 	{
 		InitializeComponent();
 	}
+#if WINDOWS
 
     private RpcClient? _rpc;
     private Process rpcProc;
@@ -60,6 +61,11 @@ public partial class RPCTestPage : ContentPage
         await DisplayAlert("渲染完成", path, "ok");
         RPCResultImage.Source = ImageSource.FromFile(path);
     }
-}
+#else
+    private async void GoRender_Clicked(object sender, EventArgs e) => await DisplayAlert("提示", "仅在 Windows 平台可用", "OK");
+    private async void BootRPC_Clicked(object sender, EventArgs e)=> await DisplayAlert("提示", "仅在 Windows 平台可用", "OK");
+    private async void LoadDraft_Clicked(object sender, EventArgs e) => await DisplayAlert("提示", "仅在 Windows 平台可用", "OK");
 
 #endif
+}
+

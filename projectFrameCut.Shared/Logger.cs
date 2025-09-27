@@ -25,7 +25,7 @@ namespace projectFrameCut.Shared
         
         public static void Log(string msg, string level = "info")
         {
-            Console.WriteLine(msg);
+            Debug.WriteLine($"[{level}] {msg}");
 
 
         }

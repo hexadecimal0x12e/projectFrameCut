@@ -17,21 +17,11 @@
         </ResourceDictionary>
     </ContentPage.Resources>
     <!-- Add a dedicated row for the ruler above the scrollable tracks -->
-    <Grid RowDefinitions="Auto,Auto,*,Auto,250">
-        <!-- Toolbar -->
+    <Grid RowDefinitions="Auto,Auto,*,Auto,250,26">
+        <!-- Toolbar 
         <ScrollView Orientation="Horizontal">
-            <HorizontalStackLayout Padding="8" Spacing="8" Grid.Row="0">
-               <!-- <Button Text="导出" Clicked="OnExportDraft" />
-                <Button Text="导入" Clicked="OnImportDraft" />
-                
-                <Button Text="Add Clip" Clicked="OnAddClip" />-->
-                <Button Text="Add Track" Clicked="OnAddTrack" />
-                <Button Text="Split" Clicked="OnSplitClip" />
-                <Button Text="Delete" Clicked="OnDeleteClip" />
-                <Button Text="-" Clicked="OnZoomOut" />
-                <Button Text="+" Clicked="OnZoomIn" />
-            </HorizontalStackLayout>
-        </ScrollView>
+            
+        </ScrollView>-->
         <!-- Ruler row aligned with timeline (outside ScrollView so it doesn't affect content width) -->
         <Grid Grid.Row="1" ColumnDefinitions="140,*">
             <!-- Left gutter to align with track headers width -->
@@ -68,10 +58,37 @@
         </ScrollView>
 
         <Grid Grid.Row="3">
-            <Label  x:Name="Status" Padding="8" />
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
+            <!-- 左侧按钮组 -->
+            <HorizontalStackLayout Grid.Column="0" Padding="8" Spacing="8">
+                <Button x:Name="AddSolidColorClip" Clicked="AddSolidColorClip_Clicked" Text="Add Solid Color"/>
+                <Button Text="Add Track" Clicked="OnAddTrack" />
+                <Button Text="Split" Clicked="OnSplitClip" />
+                <Button Text="Delete" Clicked="OnDeleteClip" />
+                <Label Text="" WidthRequest="300"/>
+                <Button Text="Play/Pause" />
+
+            </HorizontalStackLayout>
+
+            <!-- 中间的播放按钮 -->
+            <Grid Grid.Column="1"  HorizontalOptions="Center" Padding="8">
+
+            </Grid>
+
+            <!-- 右侧区域：缩放按钮和状态 -->
+            <HorizontalStackLayout Grid.Column="2" Spacing="8">
+                <HorizontalStackLayout Padding="8" Spacing="8">
+                    <Button Text="-" Clicked="OnZoomOut" />
+                    <Button Text="+" Clicked="OnZoomIn" />
+                </HorizontalStackLayout>
+
+            </HorizontalStackLayout>
         </Grid>
-
         <!-- Status bar -->
 
         <!-- Preview & asset area -->
@@ -106,11 +123,42 @@
                 </Border>
                 <!-- Preview placeholder -->
                 <Border Grid.Column="2" StrokeThickness="5" Padding="4" >
-                    <Label Text="Preview placeholder" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" />
+                  <!--  <Label Text="Preview placeholder" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" />
+                    -->
 
+                    <Image x:Name="PreviewBox"/>
                 </Border>
-                
+
             </Grid>
+        </Grid>
+
+        <Grid Grid.Row="5" Padding="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="25"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            
+
+            <HorizontalStackLayout Grid.Column="0" >
+                <VerticalStackLayout x:Name="StateIndicator"/>
+            </HorizontalStackLayout>
+
+            <HorizontalStackLayout Grid.Column="1">
+                <Label x:Name="Status"
+                        LineBreakMode="NoWrap"
+                        Text="Everything fine" />
+
+            </HorizontalStackLayout>
+
+            <HorizontalStackLayout HorizontalOptions="End" Grid.Column="2">
+                <Label x:Name="BackendStatus"
+                    Text="Backend state unknown" />
+                <VerticalStackLayout x:Name="BackendStateIndicator" />
+            </HorizontalStackLayout>
+            
         </Grid>
     </Grid>
 </ContentPage>

@@ -23,7 +23,7 @@ namespace projectFrameCut.Render.ILGpu
         public float FrameTime { get; init; }
         public Effects[] Effects { get; init; } = Array.Empty<Effects>();
         public RenderMode MixtureMode { get; init; } = RenderMode.Overlay;
-        public string? filePath { get; init; } = string.Empty;
+        public string FilePath { get; init; }
 
         [System.Text.Json.Serialization.JsonIgnore]
         public IDecoderContext? Decoder { get; set; } = null;
@@ -39,7 +39,7 @@ namespace projectFrameCut.Render.ILGpu
 
         void IClip.ReInit()
         {
-            Decoder = new VideoDecoder(filePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null.")).Decoder;
+            Decoder = new VideoDecoder(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null.")).Decoder;
         }
 
 
@@ -59,7 +59,7 @@ namespace projectFrameCut.Render.ILGpu
         public float FrameTime { get; init; }
         public Effects[] Effects { get; init; } = Array.Empty<Effects>();
         public RenderMode MixtureMode { get; init; } = RenderMode.Overlay;
-        public string? filePath { get; init; } = string.Empty;
+        public string? FilePath { get; init; } = string.Empty;
 
         [System.Text.Json.Serialization.JsonIgnore]
         public Picture? source { get; set; } = null;
@@ -76,7 +76,7 @@ namespace projectFrameCut.Render.ILGpu
 
         void IClip.ReInit()
         {
-            source = new Picture(filePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null."));
+            source = new Picture(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null."));
         }
 
 
@@ -99,7 +99,7 @@ namespace projectFrameCut.Render.ILGpu
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.Special;
 
-        string? IClip.filePath { get => null; init => throw new InvalidOperationException("Set path is not supported by this type of clip."); }
+        string? IClip.FilePath { get => null; init => throw new InvalidOperationException("Set path is not supported by this type of clip."); }
 
         public ushort R { get; init; }
         public ushort G { get; init; }
@@ -134,7 +134,7 @@ namespace projectFrameCut.Render.ILGpu
                 {
                     if(result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
-                        throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame,string>(clip.filePath ?? "Clip@" + clip.Id,(a,b) => $"{a},{b.ParentClip.filePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
+                        throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame,string>(clip.FilePath ?? "Clip@" + clip.Id,(a,b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
                     result.Add(new OneFrame(targetFrame,clip, clip.GetFrame(targetFrame,targetWidth,targetHeight)));
                 }
@@ -152,7 +152,7 @@ namespace projectFrameCut.Render.ILGpu
                 {
                     if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
-                        throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.filePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.filePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
+                        throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
                     result.Add(new OneFrame(targetFrame, clip, null));
                 }

@@ -71,7 +71,7 @@ namespace projectFrameCut.Render.WindowsRender
                 NewLine = "\n"
             };
 
-            async Task Send(RpcProtocol.RpcMessage msg, Dictionary<string, string> data)
+            async Task Send(RpcProtocol.RpcMessage msg, Dictionary<string, object?> data)
             {
                 var envelope = new RpcProtocol.RpcMessage
                 {
@@ -89,130 +89,141 @@ namespace projectFrameCut.Render.WindowsRender
             var disconnect = false;
             while (!cts.IsCancellationRequested && server.IsConnected && !disconnect)
             {
-                var line = await reader.ReadLineAsync();
-                if (line is null) break;
-
-                Console.WriteLine($"[RPC] Received: {line} \r\n--- \r\n");
-
-                RpcProtocol.RpcMessage? msg = null;
                 try
                 {
-                    msg = JsonSerializer.Deserialize<RpcProtocol.RpcMessage>(line, RpcProtocol.JsonOptions);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[RPC] Bad JSON: {ex.Message}");
-                    continue;
-                }
 
-                if (msg is null || string.IsNullOrWhiteSpace(msg.Type))
-                    continue;
 
-                switch (msg.Type)
-                {
-                    case "ping":
-                        {
-                            await Send(msg, new Dictionary<string, string> { { "value", DateTime.Now.ToString() } });
-                            break;
-                        }
-                    case "RenderOne":
-                        {
-                            if (msg.Payload is null)
+                    var line = await reader.ReadLineAsync();
+                    if (line is null) break;
+
+                    Console.WriteLine($"[RPC] Received: {line} \r\n--- \r\n");
+
+                    RpcProtocol.RpcMessage? msg = null;
+                    try
+                    {
+                        msg = JsonSerializer.Deserialize<RpcProtocol.RpcMessage>(line, RpcProtocol.JsonOptions);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[RPC] Bad JSON: {ex.Message}");
+                        continue;
+                    }
+
+                    if (msg is null || string.IsNullOrWhiteSpace(msg.Type))
+                        continue;
+
+                    switch (msg.Type)
+                    {
+                        case "ping":
                             {
-                                Console.WriteLine("[RPC] RenderOne missing payload.");
+                                await Send(msg, new Dictionary<string, object?> { { "value", DateTime.Now } });
                                 break;
                             }
-                            var frameIndex = msg.Payload.Value.GetUInt32();
-                            Console.WriteLine($"[RPC] RenderOne request: frame #{frameIndex}");
-                            var frameHash = Timeline.GetFrameHash(clips, frameIndex); 
-                            var destPath = Path.Combine(tempFolder, $"projectFrameCut_Render_{frameHash}.png");
-                            Console.WriteLine($"[RPC] FrameHash:{frameHash}");
-                            if (Path.Exists(destPath))
+                        case "RenderOne":
                             {
+                                if (msg.Payload is null)
+                                {
+                                    Console.WriteLine("[RPC] RenderOne missing payload.");
+                                    break;
+                                }
+                                var frameIndex = msg.Payload.Value.GetUInt32();
+                                Console.WriteLine($"[RPC] RenderOne request: frame #{frameIndex}");
+                                var frameHash = Timeline.GetFrameHash(clips, frameIndex);
+                                var destPath = Path.Combine(tempFolder, $"projectFrameCut_Render_{frameHash}.png");
+                                Console.WriteLine($"[RPC] FrameHash:{frameHash}");
+                                if (Path.Exists(destPath))
+                                {
 
-                                Console.WriteLine($"[RPC] Frame already exist; skip");
-                                await Send(msg, new Dictionary<string, string> { { "status", "completed" }, { "path", destPath } });
+                                    Console.WriteLine($"[RPC] Frame already exist; skip");
+                                    await Send(msg, new Dictionary<string, object?> { { "status", "completed" }, { "path", destPath } });
+                                    Console.WriteLine($"[RPC] RenderOne completed");
+                                    break;
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"[RPC] Generating frame {frameHash}...");
+                                }
+                                var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height);
+                                var pic = Timeline.MixtureLayers(layers, accelerator, frameIndex, width, height);
+                                pic.SetAlpha(false).SaveAsPng8bpc(destPath, encoder);
+                                await Send(msg, new Dictionary<string, object?> { { "status", "completed" }, { "path", destPath } });
                                 Console.WriteLine($"[RPC] RenderOne completed");
                                 break;
                             }
-                            else
-                            {
-                                Console.WriteLine($"[RPC] Generating frame {frameHash}...");
-                            }
-                            var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height);
-                            var pic = Timeline.MixtureLayers(layers, accelerator, frameIndex, width, height);
-                            pic.SetAlpha(false).SaveAsPng8bpc(destPath, encoder);
-                            await Send(msg, new Dictionary<string, string> { { "status", "completed" }, { "path", destPath } });
-                            Console.WriteLine($"[RPC] RenderOne completed");
-                            break;
-                        }
 
-                    case "UpdateClips":
-                        {
-                            if (msg.Payload is null)
+                        case "UpdateClips":
                             {
-                                Console.WriteLine("[RPC] UpdateClips missing payload.");
+                                if (msg.Payload is null)
+                                {
+                                    Console.WriteLine("[RPC] UpdateClips missing payload.");
+                                    break;
+                                }
+                                Console.WriteLine("[RPC] Updating clips...");
+                                var draftSrc = msg.Payload.Value.Deserialize<DraftStructureJSON>(RpcProtocol.JsonOptions) ?? throw new Exception("An error happends.");
+
+                                List<JsonElement> clipsJson = draftSrc.Clips.Select(c => (JsonElement)c).ToList();
+
+                                var clipsList = new List<IClip>();
+
+                                foreach (var clip in clipsJson)
+                                {
+
+                                    var type = (ClipMode)clip.GetProperty("ClipType").GetInt32();
+                                    Console.WriteLine($"Found clip {type}, name: {clip.GetProperty("Name").GetString()}, id: {clip.GetProperty("Id").GetString()}");
+                                    switch (type)
+                                    {
+                                        case ClipMode.VideoClip:
+                                            {
+                                                clipsList.Add(clip.Deserialize<VideoClip>() ?? throw new NullReferenceException());
+                                                break;
+                                            }
+                                        case ClipMode.PhotoClip:
+                                            {
+                                                clipsList.Add(clip.Deserialize<PhotoClip>() ?? throw new NullReferenceException());
+                                                break;
+                                            }
+                                        case ClipMode.SolidColorClip:
+                                            {
+                                                clipsList.Add(clip.Deserialize<SolidColorClip>() ?? throw new NullReferenceException());
+                                                break;
+                                            }
+                                        default:
+                                            Log("ERROR: Unknown clip type.");
+                                            return 1;
+                                    }
+                                }
+
+                                clips = clipsList.ToArray();
+
+                                foreach (var clip in clips)
+                                {
+                                    clip.ReInit();
+                                }
+
+                                Console.WriteLine($"[RPC] Updated clips, total {clips.Length} clips.");
+                                await Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
                                 break;
                             }
-                            Console.WriteLine("[RPC] Updating clips...");
-                            var draftSrc = msg.Payload.Value.Deserialize<DraftStructureJSON>(RpcProtocol.JsonOptions) ?? throw new Exception("An error happends.");
-
-                            List<JsonElement> clipsJson = draftSrc.Clips.Select(c => (JsonElement)c).ToList();
-
-                            var clipsList = new List<IClip>();
-
-                            foreach (var clip in clipsJson)
+                        case "ShutDown":
                             {
-
-                                var type = (ClipMode)clip.GetProperty("ClipType").GetInt32();
-                                Console.WriteLine($"Found clip {type}, name: {clip.GetProperty("Name").GetString()}, id: {clip.GetProperty("Id").GetString()}");
-                                switch (type)
-                                {
-                                    case ClipMode.VideoClip:
-                                        {
-                                            clipsList.Add(clip.Deserialize<VideoClip>() ?? throw new NullReferenceException());
-                                            break;
-                                        }
-                                    case ClipMode.PhotoClip:
-                                        {
-                                            clipsList.Add(clip.Deserialize<PhotoClip>() ?? throw new NullReferenceException());
-                                            break;
-                                        }
-                                    case ClipMode.SolidColorClip:
-                                        {
-                                            clipsList.Add(clip.Deserialize<SolidColorClip>() ?? throw new NullReferenceException());
-                                            break;
-                                        }
-                                    default:
-                                        Log("ERROR: Unknown clip type.");
-                                        return 1;
-                                }
+                                Console.WriteLine("[RPC] Shutting down...");
+                                disconnect = true;
+                                await Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
+                                await server.DisposeAsync();
+                                return 0;
                             }
-
-                            clips = clipsList.ToArray();
-
-                            foreach (var clip in clips)
-                            {
-                                clip.ReInit();  
-                            }   
-
-                            Console.WriteLine($"[RPC] Updated clips, total {clips.Length} clips.");
-                            await Send(msg, new Dictionary<string, string> { { "status", "ok" } });
+                        default:
+                            Console.WriteLine($"[RPC] Unknown message type: {msg.Type}");
                             break;
-                        }
-                    case "ShutDown":
-                        {
-                            Console.WriteLine("[RPC] Shutting down...");
-                            disconnect = true;
-                            await Send(msg, new Dictionary<string, string> { { "status", "ok" } });
-                            await server.DisposeAsync();
-                            return 0;
-                        }
-                    default:
-                        Console.WriteLine($"[RPC] Unknown message type: {msg.Type}");
-                        break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"ERROR: a {ex.GetType()} exception happends:{ex.Message}");
                 }
             }
+
+
 
 
             return 0;
