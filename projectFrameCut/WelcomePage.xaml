@@ -2,10 +2,11 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.WelcomePage"
-             Title="WelcomePage">
+             xmlns:l="clr-namespace:projectFrameCut.Strings"
+             Title="{x:Static l:AppResources.AppBrand}">
     <VerticalStackLayout>
         <Label 
-            Text="Welcome to projectFrameCut beta!"
+            Text="{x:Static l:AppResources.WelcomeMessage}"
             VerticalOptions="Center" 
             HorizontalOptions="Center" />
 

@@ -154,6 +154,17 @@ namespace projectFrameCut.Render.RenderCLI
             Console.WriteLine($"Accelerator info:");
             accelerator.PrintInformation();
 
+            Log("Initiliazing FFmpeg...");
+            if (Program.advancedFlags.Contains("ffmpeg_loglevel_debug"))
+                ffmpeg.av_log_set_level(ffmpeg.AV_LOG_DEBUG);
+            else if (Program.advancedFlags.Contains("ffmpeg_loglevel_error"))
+                ffmpeg.av_log_set_level(ffmpeg.AV_LOG_ERROR);
+            else if (Program.advancedFlags.Contains("ffmpeg_loglevel_none"))
+                ffmpeg.av_log_set_level(ffmpeg.AV_LOG_QUIET);
+            else
+                ffmpeg.av_log_set_level(ffmpeg.AV_LOG_WARNING);
+
+
             if (bool.TryParse(switches.GetOrAdd("forceSync", "default"), out var fSync))
             {
                 Mixture.ForceSync = fSync;
@@ -219,6 +230,7 @@ namespace projectFrameCut.Render.RenderCLI
                 Console.WriteLine($"Output options: image sequence, mode:{yieldSaveMode}");
             }
 
+
             if (runningMode == "rpc_backend")
             {
                 return await Rpc.go_rpcAsync(switches, accelerator, width, height);
@@ -278,16 +290,7 @@ namespace projectFrameCut.Render.RenderCLI
                 Log("ERROR: No clips in the whole draft.");
                 return 1;
             }
-            Log("Initiliazing FFmpeg...");
-            if (Program.advancedFlags.Contains("ffmpeg_loglevel_debug"))
-                ffmpeg.av_log_set_level(ffmpeg.AV_LOG_DEBUG);
-            else if (Program.advancedFlags.Contains("ffmpeg_loglevel_error"))
-                ffmpeg.av_log_set_level(ffmpeg.AV_LOG_ERROR);
-            else if (Program.advancedFlags.Contains("ffmpeg_loglevel_none"))
-                ffmpeg.av_log_set_level(ffmpeg.AV_LOG_QUIET);
-            else
-                ffmpeg.av_log_set_level(ffmpeg.AV_LOG_WARNING);
-
+            
             Log("Initiliazing all source video stream...");
             for (int i = 0; i < clips.Length; i++)
             {

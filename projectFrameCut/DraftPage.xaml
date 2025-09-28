@@ -5,9 +5,10 @@
              xmlns:conv="clr-namespace:projectFrameCut.Converters"
              x:Class="projectFrameCut.DraftPage"
              x:Name="MainPageRoot"
+             xmlns:l="clr-namespace:projectFrameCut.Strings"
              Title="default draft page">
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Render" Clicked="OnExportDraft" Order="Primary" Priority="0" />
+        <ToolbarItem Text="{x:Static l:AppResources.RenderPage_GoRender}" Clicked="OnExportDraft" Order="Primary" Priority="0" />
         <ToolbarItem Text="Options"/>
     </ContentPage.ToolbarItems>
 
@@ -123,7 +124,7 @@
                 </Border>
                 <!-- Preview placeholder -->
                 <Border Grid.Column="2" StrokeThickness="5" Padding="4" >
-                  <!--  <Label Text="Preview placeholder" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" />
+                    <!--  <Label Text="Preview placeholder" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" />
                     -->
 
                     <Image x:Name="PreviewBox"/>
@@ -139,8 +140,8 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            
-            
+
+
 
             <HorizontalStackLayout Grid.Column="0" >
                 <VerticalStackLayout x:Name="StateIndicator"/>
@@ -155,10 +156,10 @@
 
             <HorizontalStackLayout HorizontalOptions="End" Grid.Column="2">
                 <Label x:Name="BackendStatus"
-                    Text="Backend state unknown" />
-                <VerticalStackLayout x:Name="BackendStateIndicator" />
+                    Text="" />
+                <Ellipse x:Name="BackendStateIndicator" WidthRequest="16" HeightRequest="16" Fill="Gray" Margin="4,3,0,0" />
             </HorizontalStackLayout>
-            
+
         </Grid>
     </Grid>
 </ContentPage>

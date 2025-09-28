@@ -1,435 +1,111 @@
-﻿using Microsoft.Maui.Controls;
-using Microsoft.Maui.Controls.Shapes;
-using Microsoft.Maui.Graphics;
+﻿using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Layouts;
-using projectFrameCut.Render;
 using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
-using System;
-using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Path = System.IO.Path;
 using System.Globalization;
+using projectFrameCut.Render;
+using System.Threading.Tasks;
+using projectFrameCut.Strings;
 
+
+#region platform usings
 
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
-
 #endif
+
+#if ANDROID 
+using projectFrameCut.Platforms.Android;
+#endif
+
+#if IOS 
+using projectFrameCut.Platforms.iOS;
+#endif
+
+#if MACCATALYST
+using projectFrameCut.Platforms.MacCatalyst;
+#endif
+
+#endregion
 
 namespace projectFrameCut
 {
     public partial class DraftPage : ContentPage
     {
-        private readonly TimelineViewModel _vm = new();
-        private readonly Dictionary<ClipViewModel, Grid> _clipToView = new();
-        private ClipViewModel? _selectedClip;
-        private double _dragStartX;
-        private double _dragStartSeconds;
-        private bool _isResizingLeft;
-        private bool _isResizingRight;
-        private double _resizeInitialStart;
-        private double _resizeInitialDuration;
+        #region handle changes
 
-        // Track drag helpers
-        private const double TrackHeight = 48; // must match lane HeightRequest
-        private int _dragStartTrackIndex = -1;
-        private int _currentDragTrackIndex = -1;
-
-        // References to named elements
-        private VerticalStackLayout? _tracksHeader;
-        private VerticalStackLayout? _tracksPanel;
-        private AbsoluteLayout? _ruler;
-        private BoxView? _playhead;
-        private Label? _status;
-        private Label _backendStatus;
-        private ScrollView? _timelineScroll;
-
-        //变更监听
-        private readonly HashSet<TrackViewModel> _subscribedTracks = new();
-        private readonly HashSet<ClipViewModel> _subscribedClips = new();
-        private CancellationTokenSource? _changeDebounceCts;
-
-
-        private int frameRate = 30;
-
-#if WINDOWS
-        private RpcClient? _rpc;
-        private Process rpcProc;
-        private Timer rpcStatTimer;
-
-        private async Task BootRPC()
+#if ANDROID
+        private async Task RenderPreviewOnAndroid(double playheadSeconds)
         {
-            var pipeId = "pjfc_rpc_V1_" + Guid.NewGuid().ToString();
-            var tmpDir = Path.Combine(Path.GetTempPath(), "pjfc_temp");
-            Directory.CreateDirectory(tmpDir);
-            rpcProc = new Process
+
+        }
+#elif IOS || MACCATALYST
+        private async Task RenderPreviewOniDevices(double playheadSeconds)
+        {
+
+        }
+#elif WINDOWS
+        private async Task RenderPreviewOnWindows(double playheadSeconds)
+        {
+            SetStateBusy();
+            int frameId = (int)Math.Floor(playheadSeconds * frameRate);
+
+            try
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Render.WindowsRender.exe"),
-                    WorkingDirectory = Path.Combine(AppContext.BaseDirectory),
-                    Arguments = $" rpc_backend  -pipe={pipeId} -output_options=3840,2160,42,AV_PIX_FMT_NONE,nope -tempFolder={tmpDir} ",
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true,
-                }
-            };
-
-            Log($"Starting RPC backend with pipe ID: {pipeId}, args:{rpcProc.StartInfo.Arguments}");
-
-            rpcProc.OutputDataReceived += (sender, e) =>
-            {
-                if (e.Data != null)
-                {
-                    Log(e.Data, "Backend_STDOUT");
-
-                }
-            };
-
-            rpcProc.ErrorDataReceived += (sender, e) =>
-            {
-                if (e.Data != null)
-                {
-                    Log(e.Data, "Backend_STDERR");
-                    Dispatcher.Dispatch(() =>
-                    {
-                        _backendStatus.Text = "Backend error: " + e.Data;
-                        _backendStatus.TextColor = Colors.Red;
-                    });
-                }
-            };
-
-            rpcProc.EnableRaisingEvents = true;
-            rpcProc.Exited += (s, e) => 
-            {
-                Dispatcher.Dispatch(async () =>
-                {
-                    await DisplayAlert("Error", $"The backend exited unexpectedly with code {rpcProc.ExitCode}. Please reload project.", "ok");
-                });
-            }; 
-            rpcProc.Start();
-            rpcProc.BeginErrorReadLine();
-            rpcProc.BeginOutputReadLine();
-            Thread.Sleep(500);
-            _rpc = new RpcClient();
-            await _rpc.StartAsync(pipeId);
-            Log("RPC started");
-            BackendStateIndicator.Children.Clear();
-            BackendStateIndicator.Children.Add(new Ellipse
-            {
-                Fill = Colors.Gray,
-                WidthRequest = 16,
-                HeightRequest = 16,
-                Margin = new Thickness(4, 0, 0, 0),
-                VerticalOptions = LayoutOptions.Center
-            });
-
-            if (_backendStatus is not null)
-                _backendStatus.Text = "Waiting for backend...";
-
-            int rpcFailedCount = 0;
-
-            new Thread(async () =>
-            {
-                Thread.Sleep(500);
-                float menUsed, menTotalUsed;
-                JsonElement? state;
-                TimeSpan lantency;
-                Color color;
-                string message;
-                var nothing = JsonSerializer.SerializeToElement<object?>(null);
                 CancellationTokenSource cts = new();
-                var circle = new Ellipse
-                {
-                    Fill = Colors.Gray,
-                    WidthRequest = 16,
-                    HeightRequest = 16,
-                    Margin = new Thickness(4, 3, 0, 0),
-                    VerticalOptions = LayoutOptions.Center
-                };
-                while (!rpcProc.HasExited)
-                {
-                    menUsed = rpcProc.WorkingSet64 / 1024f / 1024f;
-                    menTotalUsed = MemoryHelper.GetUsedRAM() / 1024f / 1024f;
+                if (_status is not null)
+                    _status.Text = AppResources.RenderPage_RenderOneFrame.Format(frameId, TimeSpan.FromSeconds(playheadSeconds).ToString("mm\\:ss\\.ff"));   
+                if (_rpc is null) return;
+                cts.CancelAfter(10000);
+                var result = await _rpc.SendAsync("RenderOne", JsonSerializer.SerializeToElement(frameId), cts.Token);
+                if (result is null) return;
+                var path = result.Value.GetProperty("path").GetString();
+                PreviewBox.Source = ImageSource.FromFile(path);
+                WorkingState = AppResources.RenderPage_RenderDone;
+                SetStateOK();
 
-                    cts = new();
-                    cts.CancelAfter(5000);
-                    try
-                    {
-                        state = await _rpc.SendAsync("ping", nothing, cts.Token);
-                        lantency = DateTime.Now - state.Value.GetProperty("value").GetDateTime();
-                        color = lantency.TotalMilliseconds switch
-                        {
-                            < 200 => Colors.Green,
-                            < 500 => Colors.Orange,
-                            _ => Colors.Red
-                        };
-                        message = $"Backend lantency:{lantency.TotalMilliseconds}ms. Memory used: {menUsed:n2}/{menTotalUsed:n2} MB (backend/total)";
-
-                    }
-                    catch
-                    {
-                        rpcFailedCount++;
-                        state = nothing;
-                        color = Colors.Red;
-                        message = $"Backend didn't answer application. Memory used: {menUsed:n2}/{menTotalUsed:n2} MB (backend/total)";
-                    }
-
-                    circle.Fill = color;
-
-                    if (_backendStatus is not null)
-                        Dispatcher.Dispatch(() =>
-                        {
-                            _backendStatus.Text = message;
-                            BackendStateIndicator.Children.Clear();
-                            BackendStateIndicator.Children.Add(circle);
-                        });
-
-                    if (rpcFailedCount > 5)
-                    {
-                        circle.Fill = Colors.Gray;
-                        if (_backendStatus is not null)
-                        Dispatcher.Dispatch(async () =>
-                        {
-                            _backendStatus.Text = "Backend not respond. Please try reload project...";
-                            BackendStateIndicator.Children.Clear();
-                            BackendStateIndicator.Children.Add(circle);
-                            await DisplayAlert("Error", "Backend not respond in 10 seconds. Please try reload project", "ok");
-                        });
-                        rpcProc.Kill();
-
-                    }
-                    Thread.Sleep(2500);
-                }
-
-            })
-            { CurrentCulture = CultureInfo.InvariantCulture }.Start();
-
-
-        }
-#endif
-
-        // Simple asset model
-        public class AssetItem
-        {
-            public string Name { get; set; } = string.Empty;
-            public string? Path { get; set; }
-            public projectFrameCut.Shared.ClipMode Type { get; set; }
-            [JsonIgnore()]
-            public string? Icon
-            {
-                get => Type switch
-                {
-                    projectFrameCut.Shared.ClipMode.VideoClip => "📽️",
-                    projectFrameCut.Shared.ClipMode.PhotoClip => "🖼️",
-                    projectFrameCut.Shared.ClipMode.SolidColorClip => "🟦",
-                    _ => "❔"
-                };
             }
-            [JsonIgnore()]
-            public DateTime AddedAt { get; set; } = DateTime.Now;
-        }
-
-        public ObservableCollection<AssetItem> Assets { get; } = new();
-
-        public ProjectJSONStructure ProjectInfo { get; set; } = new();
-
-
-        private string workingDirectory = string.Empty;
-
-        public DraftPage()
-        {
-            InitializeComponent();
-            BindingContext = _vm; // ensure binding for TimelineWidth
-
-            // Resolve named elements from XAML
-            _tracksHeader = this.FindByName<VerticalStackLayout>("TracksHeader");
-            _tracksPanel = this.FindByName<VerticalStackLayout>("TracksPanel");
-            _ruler = this.FindByName<AbsoluteLayout>("Ruler");
-            _playhead = this.FindByName<BoxView>("Playhead");
-            _status = this.FindByName<Label>("Status");
-            _backendStatus = this.FindByName<Label>("BackendStatus");
-            _timelineScroll = this.FindByName<ScrollView>("TimelineScroll");
-
-            // Initialize with two tracks
-            _vm.AddTrack("Track #1");
-            _vm.AddTrack("Track #2");
-
-            RebuildTracksUI();
-            UpdatePlayhead();
-            BuildRuler();
-
-            Title = "Untitled Project 1";
-
-            StateIndicator.Children.Clear();
-            StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
+            catch (TaskCanceledException)
             {
-                Stroke = Colors.Green,
-                StrokeThickness = 3,
-                Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString("M 4,12 L 9,17 L 20,6"),
-                WidthRequest = 20,
-                HeightRequest = 20,
-                Margin = new Thickness(0, -3, 0, 0)
-            });
-            SetStateOK();
-
-
-#if WINDOWS
-
-            Loaded += async (sender, e) => await BootRPC();
-#endif
-        }
-
-        public void SetStateBusy()
-        {
-            StateIndicator.Children.Clear();
-            StateIndicator.Children.Add(new ActivityIndicator
+                WorkingState = AppResources.RenderPage_RenderTimeout;
+                SetStateFail();
+            }
+            catch (Exception ex)
             {
-                Color = Colors.Orange,
-                IsRunning = true,
-                WidthRequest = 16, 
-                HeightRequest = 16, 
-                Margin = new(0,0,0,0)
-            });
-        }
-
-        public void SetStateOK()
-        {
-            StateIndicator.Children.Clear();
-            StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
-            {
-                Stroke = Colors.Green,
-                StrokeThickness = 3,
-                Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString("M 4,12 L 9,17 L 20,6"),
-                WidthRequest = 20,
-                HeightRequest = 20,
-                Margin = new Thickness(0, -3, 0, 0)
-
-
-            });
-        }
-        public void SetStateFail()
-        {
-            StateIndicator.Children.Clear();
-            StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
-            {
-                Stroke = Colors.Red,
-                StrokeThickness = 3,
-                Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString("M 4,4 L 20,20 M 20,4 L 4,20"),
-                WidthRequest = 20,
-                HeightRequest = 20,
-                Margin = new Thickness(0, -3, 0, 0)
-
-
-            });
-        }
-
-        public DraftPage(string workingPath)
-        {
-            InitializeComponent();
-            workingDirectory = workingPath;
-            BindingContext = _vm; // ensure binding for TimelineWidth
-
-            // Resolve named elements from XAML
-            _tracksHeader = this.FindByName<VerticalStackLayout>("TracksHeader");
-            _tracksPanel = this.FindByName<VerticalStackLayout>("TracksPanel");
-            _ruler = this.FindByName<AbsoluteLayout>("Ruler");
-            _playhead = this.FindByName<BoxView>("Playhead");
-            _status = this.FindByName<Label>("Status");
-            _backendStatus = this.FindByName<Label>("BackendStatus");
-            _timelineScroll = this.FindByName<ScrollView>("TimelineScroll");
-
-            if (!Directory.Exists(workingPath))
-                throw new DirectoryNotFoundException($"Working path not found: {workingPath}");
-
-            var filesShouldExist = new[] { "project.json", "timeline.json", "assets.json" };
-
-            if (filesShouldExist.Any((f) => !File.Exists(Path.Combine(workingPath, f))))
-            {
-                throw new FileNotFoundException("One or more required files are missing.", workingPath);
+                await DisplayAlert($"{ex.GetType()} Error", ex.Message, "ok");
+                SetStateFail();
             }
 
-            var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.json")));
 
-            ProjectInfo = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.json"))) ?? new();
-            var assets = JsonSerializer.Deserialize<ObservableCollection<AssetItem>>(File.ReadAllText(Path.Combine(workingPath, "assets.json"))) ?? new();
-            Title = ProjectInfo.projectName;
-            ImportDraft(File.ReadAllText(Path.Combine(workingPath, "timeline.json")));
 
-            SetStateOK();
-
-#if WINDOWS
-            Loaded += async (sender, e) =>
-            {
-                await BootRPC();
-                await UpdateClipToBackend();
-
-            };
+            return;
+        }
 #endif
-
-        }
-
-
-        protected override void OnNavigatedTo(NavigatedToEventArgs args)
-        {
-            base.OnNavigatedTo(args);
-            // 每次进入页面确保订阅有效（会先清理再订阅，避免重复）
-            SubscribeToTimelineChanges(reset: true);
-        }
-
-        protected override void OnNavigatedFrom(NavigatedFromEventArgs args)
-        {
-            base.OnNavigatedFrom(args);
-            UnsubscribeAllTimelineChanges();
-        }
 
         private async void OnProjectChanged(string reason)
         {
             if (reason == "Timeline.PlayheadSeconds")
             {
-                SetStateBusy();
-                try
-                {
-                    int frameId = (int)Math.Floor(_vm.PlayheadSeconds * frameRate);
 #if WINDOWS
-                    if (_status is not null)
-                        _status.Text = $"rendering frame {frameId} ";
-                    if (_rpc is null) return;
-                    var result = await _rpc.SendAsync("RenderOne", JsonSerializer.SerializeToElement(frameId), default);
-                    if (result is null) return;
-                    var path = result.Value.GetProperty("path").GetString();
-                    PreviewBox.Source = ImageSource.FromFile(path);
-                    if (_status is not null)
-                        _status.Text = $"render done... ";
-                    SetStateOK();
-
+                await RenderPreviewOnWindows(_vm.PlayheadSeconds);
+#elif ANDROID
+                await RenderPreviewOnAndroid(_vm.PlayheadSeconds);
+#elif IOS || MACCATALYST
+                await RenderPreviewOniDevices(_vm.PlayheadSeconds);
 #endif
-                }
-                catch (Exception ex)
-                {
-                    await DisplayAlert($"{ex.GetType()} Error", ex.Message, "ok");
-                    SetStateFail();
-                }
-
-
-
                 return;
             }
             if (_status is not null)
             {
-                _status.Text = $"saving changes";
+                WorkingState = $"saving changes";
                 _status.TextColor = Colors.White;
             }
             SetStateBusy();
@@ -481,7 +157,7 @@ namespace projectFrameCut
             File.WriteAllText(Path.Combine(workingDirectory, "project.json"), JsonSerializer.Serialize(ProjectInfo));
 
             if (_status is not null)
-                _status.Text = $"changes saved on {DateTime.Now:T} ";
+                WorkingState = $"changes saved on {DateTime.Now:T} ";
 
 
 #if WINDOWS
@@ -494,32 +170,457 @@ namespace projectFrameCut
             {
                 SetStateFail();
             }
+#else
+            SetStateOK();
+
 #endif
 
         }
+
+        private async void OnAddAsset(object sender, EventArgs e)
+        {
+            try
+            {
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+                var result = await FilePicker.PickAsync(new PickOptions
+                {
+                    PickerTitle = "选择素材文件"
+                });
+                if (result != null)
+                {
+                    Assets.Add(new AssetItem
+                    {
+                        Name = result.FileName,
+                        Path = result.FullPath
+                    });
+                }
+#else
+                Assets.Add(new AssetItem { Name = $"Dummy_{Assets.Count + 1}.png", Path = null });
+#endif
+            }
+            catch (Exception ex)
+            {
+                Log(ex);
+                await DisplayAlert("Error", ex.Message, "OK");
+            }
+        }
+
+        private async void AddSolidColorClip_Clicked(object sender, EventArgs e)
+        {
+            var track = _vm.Tracks[0]; // always first track for now
+            var clip = new ClipViewModel
+            {
+                Name = $"SolidColor #{Assets.Count(c => c.Type == Shared.ClipMode.SolidColorClip) + 1}",
+                Type = Shared.ClipMode.SolidColorClip,
+                StartSeconds = _vm.PlayheadSeconds,
+                DurationSeconds = 3,
+                Metadata = { { "R", (ushort)11 }, { "G", (ushort)22 }, { "B", (ushort)33 }, { "A", 1f } }
+            };
+            track.Clips.Add(clip);
+            clip.StartSeconds = ResolveOverlapStart(track, clip, clip.StartSeconds, clip.DurationSeconds);
+            await RebuildTracksUI();
+
+
+        }
+        #endregion
+
+        #region values
+
+        private readonly TimelineViewModel _vm = new();
+        private readonly Dictionary<ClipViewModel, Grid> _clipToView = new();
+        private ClipViewModel? _selectedClip;
+        private double _dragStartX;
+        private double _dragStartSeconds;
+        private bool _isResizingLeft;
+        private bool _isResizingRight;
+        private double _resizeInitialStart;
+        private double _resizeInitialDuration;
+
+        // Track drag helpers
+        private const double TrackHeight = 48; // must match lane HeightRequest
+        private int _dragStartTrackIndex = -1;
+        private int _currentDragTrackIndex = -1;
+
+        // References to named elements
+        private VerticalStackLayout? _tracksHeader;
+        private VerticalStackLayout? _tracksPanel;
+        private AbsoluteLayout? _ruler;
+        private BoxView? _playhead;
+        private Label? _status;
+        private Label _backendStatus;
+        private ScrollView? _timelineScroll;
+
+        private readonly HashSet<TrackViewModel> _subscribedTracks = new();
+        private readonly HashSet<ClipViewModel> _subscribedClips = new();
+        private CancellationTokenSource? _changeDebounceCts;
+
+        private string WorkingState
+        {
+            get
+            {
+                if (_status is not null)
+                    return _status.Text;
+                return string.Empty;
+            }
+            set
+            {
+                if (_status is not null)
+                {
+                    Dispatcher.Dispatch(() =>
+                    {
+                        _status.Text = value;
+                    });
+                }
+            }
+        }
+
+        private int frameRate = 30;
+
+        public class AssetItem
+        {
+            public string Name { get; set; } = string.Empty;
+            public string? Path { get; set; }
+            public projectFrameCut.Shared.ClipMode Type { get; set; }
+
+
+            public string? ThumbnailPath { get; set; }
+            public string? AssetId { get; set; }
+
+            [JsonIgnore()]
+            public string? Icon
+            {
+                get => Type switch
+                {
+                    projectFrameCut.Shared.ClipMode.VideoClip => "📽️",
+                    projectFrameCut.Shared.ClipMode.PhotoClip => "🖼️",
+                    projectFrameCut.Shared.ClipMode.SolidColorClip => "🟦",
+                    _ => "❔"
+                };
+            }
+
+            [JsonIgnore()]
+            public DateTime AddedAt { get; set; } = DateTime.Now;
+        }
+
+        public ObservableCollection<AssetItem> Assets { get; } = new();
+
+        public ProjectJSONStructure ProjectInfo { get; set; } = new();
+
+        private string workingDirectory = string.Empty;
+
+        #endregion
+
+        #region constructors and init
+        public DraftPage()
+        {
+            InitializeComponent();
+
+            BindingContext = _vm; // ensure binding for TimelineWidth
+
+            // Resolve named elements from XAML
+            _tracksHeader = this.FindByName<VerticalStackLayout>("TracksHeader");
+            _tracksPanel = this.FindByName<VerticalStackLayout>("TracksPanel");
+            _ruler = this.FindByName<AbsoluteLayout>("Ruler");
+            _playhead = this.FindByName<BoxView>("Playhead");
+            _status = this.FindByName<Label>("Status");
+            _backendStatus = this.FindByName<Label>("BackendStatus");
+            _timelineScroll = this.FindByName<ScrollView>("TimelineScroll");
+
+#if !WINDOWS
+            BackendStateIndicator.IsVisible = false;
+            new Thread(MemoryUsageListener).Start();
+#endif
+
+            // Initialize with two tracks
+            _vm.AddTrack(AppResources.RenderPage_Track.Format(1));
+            _vm.AddTrack(AppResources.RenderPage_Track.Format(1));
+
+            RebuildTracksUI().Wait();
+            UpdatePlayhead();
+            BuildRuler();
+
+            Title = "Untitled Project 1";
+
+            StateIndicator.Children.Clear();
+            StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
+            {
+                Stroke = Colors.Green,
+                StrokeThickness = 3,
+                Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString("M 4,12 L 9,17 L 20,6"),
+                WidthRequest = 20,
+                HeightRequest = 20,
+                Margin = new Thickness(0, -3, 0, 0)
+            });
+            SetStateOK();
+
+
 #if WINDOWS
+
+            Loaded += async (sender, e) => await BootRPC();
+#else
+            BackendStateIndicator.IsVisible = false;
+            //_backendStatus.IsVisible = false;
+#endif
+
+        }
+
+        public DraftPage(string workingPath)
+        {
+            InitializeComponent();
+            workingDirectory = workingPath;
+            BindingContext = _vm; // ensure binding for TimelineWidth
+
+            // Resolve named elements from XAML
+            _tracksHeader = this.FindByName<VerticalStackLayout>("TracksHeader");
+            _tracksPanel = this.FindByName<VerticalStackLayout>("TracksPanel");
+            _ruler = this.FindByName<AbsoluteLayout>("Ruler");
+            _playhead = this.FindByName<BoxView>("Playhead");
+            _status = this.FindByName<Label>("Status");
+            _backendStatus = this.FindByName<Label>("BackendStatus");
+            _timelineScroll = this.FindByName<ScrollView>("TimelineScroll");
+
+#if !WINDOWS
+            BackendStateIndicator.IsVisible = false;
+            new Thread(MemoryUsageListener).Start();
+#endif
+
+            if (!Directory.Exists(workingPath))
+                throw new DirectoryNotFoundException($"Working path not found: {workingPath}");
+
+            var filesShouldExist = new[] { "project.json", "timeline.json", "assets.json" };
+
+            if (filesShouldExist.Any((f) => !File.Exists(Path.Combine(workingPath, f))))
+            {
+                throw new FileNotFoundException("One or more required files are missing.", workingPath);
+            }
+
+            var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.json")));
+
+            ProjectInfo = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.json"))) ?? new();
+            var assets = JsonSerializer.Deserialize<ObservableCollection<AssetItem>>(File.ReadAllText(Path.Combine(workingPath, "assets.json"))) ?? new();
+            Title = ProjectInfo.projectName;
+            ImportDraft(File.ReadAllText(Path.Combine(workingPath, "timeline.json")));
+
+            SetStateOK();
+
+#if WINDOWS
+            Loaded += async (sender, e) =>
+            {
+                await BootRPC();
+                await UpdateClipToBackend();
+
+            };
+#else
+            BackendStateIndicator.IsVisible = false;
+            //_backendStatus.IsVisible = false;
+#endif
+        }
+
+        protected override void OnNavigatedTo(NavigatedToEventArgs args)
+        {
+            base.OnNavigatedTo(args);
+            SubscribeToTimelineChanges(reset: true);
+        }
+
+        protected override void OnNavigatedFrom(NavigatedFromEventArgs args)
+        {
+            base.OnNavigatedFrom(args);
+            UnsubscribeAllTimelineChanges();
+
+#if WINDOWS
+            try
+            {
+                _rpc.ShutdownAsync();
+
+                rpcProc.Kill();
+
+            }
+            catch
+            {
+
+            }
+#endif
+        }
+
+        #endregion
+
+        #region backend
+
+#if WINDOWS
+        private RpcClient? _rpc;
+        private Process rpcProc;
+        public bool VerboseBackendLog { get; private set; } = false;
+
+
+        private async Task BootRPC()
+        {
+            var pipeId = "pjfc_rpc_V1_" + Guid.NewGuid().ToString();
+            var tmpDir = Path.Combine(Path.GetTempPath(), "pjfc_temp");
+            Directory.CreateDirectory(tmpDir);
+            rpcProc = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Render.WindowsRender.exe"),
+                    WorkingDirectory = Path.Combine(AppContext.BaseDirectory),
+                    Arguments = $" rpc_backend  -pipe={pipeId} -output_options=3840,2160,42,AV_PIX_FMT_NONE,nope -tempFolder={tmpDir} ",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                }
+            };
+            if (VerboseBackendLog)
+            {
+                rpcProc.StartInfo.RedirectStandardError = false;
+                rpcProc.StartInfo.RedirectStandardOutput = false;
+                rpcProc.StartInfo.CreateNoWindow = false;
+                rpcProc.StartInfo.UseShellExecute = true;
+            }
+
+            Log($"Starting RPC backend with pipe ID: {pipeId}, args:{rpcProc.StartInfo.Arguments}");
+
+            rpcProc.OutputDataReceived += (sender, e) =>
+            {
+                if (e.Data != null)
+                {
+                    Log(e.Data, "Backend_STDOUT");
+
+                }
+            };
+
+            rpcProc.ErrorDataReceived += (sender, e) =>
+            {
+                if (e.Data != null)
+                {
+                    Log(e.Data, "Backend_STDERR");
+                    Dispatcher.Dispatch(() =>
+                    {
+                        _backendStatus.Text = "Backend error: " + e.Data;
+                        _backendStatus.TextColor = Colors.Red;
+                    });
+                }
+            };
+
+            rpcProc.EnableRaisingEvents = true;
+            rpcProc.Exited += (s, e) =>
+            {
+                Dispatcher.Dispatch(async () =>
+                {
+                    await DisplayAlert("Error", $"The backend exited unexpectedly with code {rpcProc.ExitCode}. Please reload project.", "ok");
+                });
+            };
+            rpcProc.Start();
+            if (!VerboseBackendLog)
+            {
+                rpcProc.BeginErrorReadLine();
+                rpcProc.BeginOutputReadLine();
+            }
+
+            Thread.Sleep(500);
+            _rpc = new RpcClient();
+            await _rpc.StartAsync(pipeId);
+            Log("RPC started");
+
+
+            if (_backendStatus is not null)
+                _backendStatus.Text = "Waiting for backend...";
+
+
+            new Thread(RpcListenerThread)
+            { CurrentCulture = CultureInfo.InvariantCulture }.Start();
+
+
+        }
+
+        async void RpcListenerThread()
+        {
+            Thread.Sleep(250);
+            int rpcFailedCount = 0;
+            float menUsed, menTotalUsed;
+            JsonElement? state;
+            TimeSpan lantency;
+            Color color, textColor;
+            string message;
+            var nothing = JsonSerializer.SerializeToElement<object?>(null);
+            CancellationTokenSource cts = new();
+
+            while (!rpcProc.HasExited)
+            {
+                menUsed = rpcProc.WorkingSet64 / 1024f / 1024f;
+                menTotalUsed = MemoryHelper.GetUsedRAM() / 1024f / 1024f;
+
+                cts = new();
+                cts.CancelAfter(5000);
+                try
+                {
+                    state = await _rpc.SendAsync("ping", nothing, cts.Token);
+                    lantency = DateTime.Now - state.Value.GetProperty("value").GetDateTime();
+                    color = lantency.TotalMilliseconds switch
+                    {
+                        < 200 => Colors.Green,
+                        < 500 => Colors.Orange,
+                        _ => Colors.Red
+                    };
+                    textColor = Colors.White;
+                    message = AppResources.RenderPage_BackendStatus.Format(lantency.TotalMilliseconds.ToString("n2"),$"{menUsed.ToString("n2").Replace(',', '\0')}/{menTotalUsed.ToString("n2").Replace(',', '\0')}");
+
+                }
+                catch
+                {
+                    rpcFailedCount++;
+                    state = nothing;
+                    color = Colors.Red;
+                    textColor = Colors.Red;
+                    message = AppResources.RenderPage_BackendStatus_NotRespond.Format($"{menUsed:n2}/{menTotalUsed:n2}");
+                }
+
+                if (_backendStatus is not null)
+                    Dispatcher.Dispatch(() =>
+                    {
+                        _backendStatus.Text = message;
+                        _backendStatus.TextColor = textColor;
+                        BackendStateIndicator.Fill = color;
+                    });
+
+                if (rpcFailedCount > 5)
+                {
+                    if (_backendStatus is not null)
+                        Dispatcher.Dispatch(async () =>
+                        {
+                            BackendStateIndicator.Fill = Colors.Gray;
+
+                            _backendStatus.Text = "Backend not respond. Please try reload project...";
+
+                            await DisplayAlert("Error", "Backend not respond in 10 seconds. Please try reload project", "ok");
+                        });
+                    rpcProc.Kill();
+
+                }
+                Thread.Sleep(2500);
+            }
+        }
+
         private async Task<bool> UpdateClipToBackend()
         {
             {
                 CancellationTokenSource cts = new();
                 if (_rpc is null) return false;
-                if (_status is not null)
-                    _status.Text = $"applying changes to backend... ";
+                WorkingState = $"applying changes to backend... ";
                 try
                 {
                     var element = JsonSerializer.SerializeToElement(BuildDraft(ProjectInfo.projectName));
                     cts.CancelAfter(10000);
 
                     _ = await _rpc.SendAsync("UpdateClips", element, cts.Token);
-                    if (_status is not null)
-                        _status.Text = $"changes applied... ";
+                    WorkingState = AppResources.RenderPage_ChangesApplied;
                     return true;
                 }
                 catch (Exception ex)
                 {
                     if (_status is not null)
                     {
-                        _status.Text = $"failed to applying changes to backend... ";
+                        WorkingState = $"failed to applying changes to backend... ";
                         _status.TextColor = Colors.Red;
                     }
                     SetStateFail();
@@ -534,10 +635,71 @@ namespace projectFrameCut
             }
         }
 #endif
+        #endregion
+
+        #region status
+        public void SetStateBusy()
+        {
+            StateIndicator.Children.Clear();
+            StateIndicator.Children.Add(new ActivityIndicator
+            {
+                Color = Colors.Orange,
+                IsRunning = true,
+                WidthRequest = 16,
+                HeightRequest = 16,
+                Margin = new(0, 0, 0, 0)
+            });
+        }
+
+        public void SetStateOK()
+        {
+            StateIndicator.Children.Clear();
+            StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
+            {
+                Stroke = Colors.Green,
+                StrokeThickness = 3,
+                Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString("M 4,12 L 9,17 L 20,6"),
+                WidthRequest = 20,
+                HeightRequest = 20,
+                Margin = new Thickness(0, -3, 0, 0)
 
 
-        #region listen to change
+            });
+        }
 
+        public void SetStateFail()
+        {
+            StateIndicator.Children.Clear();
+            StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
+            {
+                Stroke = Colors.Red,
+                StrokeThickness = 3,
+                Data = (Geometry)new PathGeometryConverter().ConvertFromInvariantString("M 4,4 L 20,20 M 20,4 L 4,20"),
+                WidthRequest = 20,
+                HeightRequest = 20,
+                Margin = new Thickness(0, -3, 0, 0)
+
+
+            });
+        }
+
+        void MemoryUsageListener()
+        {
+            float menUsed;
+            while (true)
+            {
+                menUsed = Environment.WorkingSet / 1024f / 1024f;
+                Dispatcher.Dispatch(() =>
+                {
+                    _backendStatus.Text = AppResources.RenderPage_BackendStatus_MemoryOnly.Format($"{menUsed:n2}");
+                });
+                Thread.Sleep(2000);
+            }
+        }
+
+        #endregion
+
+                #region subscribe to timeline changes
 
         private void SubscribeToTimelineChanges(bool reset)
         {
@@ -705,6 +867,8 @@ namespace projectFrameCut
 
         #endregion
 
+        #region import/export draft
+
         // Helper: determine clip type by file extension
         private static ClipMode DetermineClipMode(string? path)
         {
@@ -812,7 +976,7 @@ namespace projectFrameCut
             }
         }
 
-        public void ImportDraftToTimeline(DraftStructureJSON draft)
+        public async void ImportDraftToTimeline(DraftStructureJSON draft)
         {
             // Reset tracks
             _vm.Tracks.Clear();
@@ -840,7 +1004,7 @@ namespace projectFrameCut
             // Ensure enough tracks by LayerIndex
             int trackCount = dtos.Count == 0 ? 1 : (int)(dtos.Max(c => (int)c.LayerIndex) + 1);
             for (int i = 0; i < trackCount; i++)
-                _vm.AddTrack($"Track #{i + 1}");
+                _vm.AddTrack(AppResources.RenderPage_Track.Format(i + 1));
 
             // frame time: prefer clip's FrameTime or draft.targetFrameRate
             double frameTime = 0;
@@ -887,31 +1051,20 @@ namespace projectFrameCut
             // Expand timeline length to fit imported content with some padding
             _vm.TotalSeconds = Math.Max(60, Math.Ceiling(maxEndSeconds + 2));
 
-            RebuildTracksUI();
+            await RebuildTracksUI();
             UpdatePlayhead();
             BuildRuler();
         }
 
-        private int GetTrackIndexOfClip(ClipViewModel clip)
-        {
-            for (int i = 0; i < _vm.Tracks.Count; i++)
-            {
-                if (_vm.Tracks[i].Clips.Contains(clip))
-                    return i;
-            }
-            return -1;
-        }
+        #endregion
 
-        private void RepositionClips()
-        {
-            foreach (var kv in _clipToView)
-                UpdateClipLayout(kv.Value, kv.Key);
-            UpdatePlayhead();
-        }
-
-        private void RebuildTracksUI()
+        #region build UI
+        private async Task RebuildTracksUI()
         {
             if (_tracksHeader == null || _tracksPanel == null) return;
+            SetStateBusy();
+            WorkingState = AppResources.RenderPage_Processing;
+            await Task.Delay(45);
             _tracksHeader.Children.Clear();
             _tracksPanel.Children.Clear();
             _clipToView.Clear();
@@ -932,10 +1085,13 @@ namespace projectFrameCut
                 // Add clip views
                 foreach (var clip in track.Clips)
                 {
-                    var view = CreateClipView(clip);
-                    lane.Children.Add(view);
-                    _clipToView[clip] = view;
-                    UpdateClipLayout(view, clip);
+                    var view = await CreateClipView(clip);
+                    Dispatcher.Dispatch(() =>
+                    {
+                        lane.Children.Add(view);
+                        _clipToView[clip] = view;
+                        UpdateClipLayout(view, clip);
+                    });
                 }
 
                 _tracksPanel.Children.Add(lane);
@@ -943,187 +1099,221 @@ namespace projectFrameCut
 
             BuildRuler();
             SyncRulerScroll();
+            SetStateOK();
         }
 
-        // Example handler for adding an asset directly to the timeline
-        public void OnAddAssetToTimeline(object sender, EventArgs e)
+        private void BuildRuler()
         {
-            if (sender is Button btn && btn.CommandParameter is AssetItem asset)
+            if (_ruler == null) return;
+            _ruler.Children.Clear();
+            var totalSeconds = (int)Math.Ceiling(_vm.TotalSeconds);
+            var pps = _vm.PixelsPerSecond;
+
+            for (int s = 0; s <= totalSeconds; s++)
             {
-                if (_vm.Tracks.Count == 0)
-                    _vm.AddTrack("Video #1");
-                var track = _vm.Tracks[0]; // always first track for now
-                var clip = new ClipViewModel
+                var x = s * pps;
+                var tick = new BoxView { Color = Colors.LightGray, WidthRequest = 1, HeightRequest = 12 };
+                AbsoluteLayout.SetLayoutBounds(tick, new Rect(x, 0, 1, 12));
+                AbsoluteLayout.SetLayoutFlags(tick, AbsoluteLayoutFlags.None);
+                _ruler.Children.Add(tick);
+
+                var label = new Label { TextColor = Colors.White, FontSize = 10, Text = s.ToString() };
+                AbsoluteLayout.SetLayoutBounds(label, new Rect(x + 2, 0, 30, 12));
+                AbsoluteLayout.SetLayoutFlags(label, AbsoluteLayoutFlags.None);
+                _ruler.Children.Add(label);
+
+                if (s < totalSeconds)
                 {
-                    Name = asset.Name,
-                    StartSeconds = _vm.PlayheadSeconds,
-                    DurationSeconds = 3,
-                    SourcePath = asset.Path // capture path so it can be exported
-                };
-                track.Clips.Add(clip);
-                clip.StartSeconds = ResolveOverlapStart(track, clip, clip.StartSeconds, clip.DurationSeconds);
-                RebuildTracksUI();
+                    for (int i = 1; i < 5; i++)
+                    {
+                        var subx = x + i * (pps / 5);
+                        var subtick = new BoxView { Color = Colors.Gray, WidthRequest = 1, HeightRequest = 8 };
+                        AbsoluteLayout.SetLayoutBounds(subtick, new Rect(subx, 0, 1, 8));
+                        AbsoluteLayout.SetLayoutFlags(subtick, AbsoluteLayoutFlags.None);
+                        _ruler.Children.Add(subtick);
+                    }
+                }
             }
         }
 
-        private bool WouldCauseOverlapOnTrack(TrackViewModel track, ClipViewModel self, double start, double duration)
+        private void SyncRulerScroll()
         {
-            var end = start + duration;
-            return GetOverlappingClips(track, self, start, end).Any();
+            if (_ruler == null || _timelineScroll == null) return;
+            var x = _timelineScroll.ScrollX;
+            foreach (var child in _ruler.Children)
+            {
+                if (child is VisualElement ve)
+                {
+                    ve.TranslationX = -x;
+                }
+            }
         }
 
-        private Grid CreateClipView(ClipViewModel clip)
+        private void RepositionClips()
         {
-            var g = new Grid
-            {
-                BackgroundColor = Color.FromArgb("#4466AA"),
-                HeightRequest = 44,
-                Margin = new Thickness(0, 2),
-                HorizontalOptions = LayoutOptions.Start,
-            };
+            foreach (var kv in _clipToView)
+                UpdateClipLayout(kv.Value, kv.Key);
+            UpdatePlayhead();
+        }
+        #endregion
 
-            // Content label
-            var label = new Label { Text = clip.Name, TextColor = Colors.White, Padding = new Thickness(8, 0) };
-            g.Add(label);
+        #region clip 
 
-            // Center move overlay to avoid gesture competition with handles
-            var centerOverlay = new BoxView
+        private async Task<Grid> CreateClipView(ClipViewModel clip)
+        {
+            return await Task.Run(() =>
             {
-                BackgroundColor = Colors.Transparent,
-                HorizontalOptions = LayoutOptions.Fill,
-                VerticalOptions = LayoutOptions.Fill,
-                InputTransparent = false
-            };
-            g.Add(centerOverlay);
+                var g = new Grid
+                {
+                    BackgroundColor = Color.FromArgb("#4466AA"),
+                    HeightRequest = 44,
+                    Margin = new Thickness(0, 2),
+                    HorizontalOptions = LayoutOptions.Start,
+                };
+
+                // Content label
+                var label = new Label { Text = clip.Name, TextColor = Colors.White, Padding = new Thickness(8, 0) };
+                g.Add(label);
+
+                // Center move overlay to avoid gesture competition with handles
+                var centerOverlay = new BoxView
+                {
+                    BackgroundColor = Colors.Transparent,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Fill,
+                    InputTransparent = false
+                };
+                g.Add(centerOverlay);
 
 #if WINDOWS
-            // Attach native context menu for right-click
-            AttachContextMenu(g, clip);
-            AttachContextMenu(centerOverlay, clip);
+                // Attach native context menu for right-click
+                AttachContextMenu(g, clip);
+                AttachContextMenu(centerOverlay, clip);
 #endif
 
-            // Initial layout
-            UpdateClipLayout(g, clip);
+                // Initial layout
+                UpdateClipLayout(g, clip);
 
-            // Move pan
-            var movePan = new PanGestureRecognizer();
-            movePan.PanUpdated += (s, e) =>
-            {
-                if (e.StatusType == GestureStatus.Started)
+                // Move pan
+                var movePan = new PanGestureRecognizer();
+                movePan.PanUpdated += (s, e) =>
                 {
-                    SelectClip(clip);
-                    _dragStartX = e.TotalX;
-                    _dragStartSeconds = clip.StartSeconds;
-                    _dragStartTrackIndex = GetTrackIndexOfClip(clip);
-                    _currentDragTrackIndex = _dragStartTrackIndex;
-                }
-                else if (e.StatusType == GestureStatus.Running && !_isResizingLeft && !_isResizingRight)
-                {
-                    // horizontal move with snapping/overlap-resolve
-                    ApplyMove(clip, g, _dragStartSeconds, e.TotalX - _dragStartX);
-
-                    // cross-track move with pre-check to prevent overlap
-                    if (_tracksPanel != null && _vm.Tracks.Count > 0 && _dragStartTrackIndex >= 0)
+                    if (e.StatusType == GestureStatus.Started)
                     {
-                        int offsetTracks = (int)Math.Round(e.TotalY / TrackHeight);
-                        int newIndex = Math.Clamp(_dragStartTrackIndex + offsetTracks, 0, _vm.Tracks.Count - 1);
-                        if (newIndex != _currentDragTrackIndex)
+                        SelectClip(clip);
+                        _dragStartX = e.TotalX;
+                        _dragStartSeconds = clip.StartSeconds;
+                        _dragStartTrackIndex = GetTrackIndexOfClip(clip);
+                        _currentDragTrackIndex = _dragStartTrackIndex;
+                    }
+                    else if (e.StatusType == GestureStatus.Running && !_isResizingLeft && !_isResizingRight)
+                    {
+                        // horizontal move with snapping/overlap-resolve
+                        ApplyMove(clip, g, _dragStartSeconds, e.TotalX - _dragStartX);
+
+                        // cross-track move with pre-check to prevent overlap
+                        if (_tracksPanel != null && _vm.Tracks.Count > 0 && _dragStartTrackIndex >= 0)
                         {
-                            var targetTrack = _vm.Tracks[newIndex];
-                            var candidateStart = clip.StartSeconds;
-                            var candidateDuration = clip.DurationSeconds;
-                            if (!WouldCauseOverlapOnTrack(targetTrack, clip, candidateStart, candidateDuration))
+                            int offsetTracks = (int)Math.Round(e.TotalY / TrackHeight);
+                            int newIndex = Math.Clamp(_dragStartTrackIndex + offsetTracks, 0, _vm.Tracks.Count - 1);
+                            if (newIndex != _currentDragTrackIndex)
                             {
-                                // Move visual
-                                if (g.Parent is AbsoluteLayout oldLane && newIndex < _tracksPanel.Children.Count && _tracksPanel.Children[newIndex] is AbsoluteLayout newLane)
+                                var targetTrack = _vm.Tracks[newIndex];
+                                var candidateStart = clip.StartSeconds;
+                                var candidateDuration = clip.DurationSeconds;
+                                if (!WouldCauseOverlapOnTrack(targetTrack, clip, candidateStart, candidateDuration))
                                 {
-                                    oldLane.Children.Remove(g);
-                                    newLane.Children.Add(g);
+                                    // Move visual
+                                    if (g.Parent is AbsoluteLayout oldLane && newIndex < _tracksPanel.Children.Count && _tracksPanel.Children[newIndex] is AbsoluteLayout newLane)
+                                    {
+                                        oldLane.Children.Remove(g);
+                                        newLane.Children.Add(g);
+                                    }
+                                    // Update model
+                                    var oldTrack = _vm.Tracks[_currentDragTrackIndex];
+                                    if (oldTrack.Clips.Contains(clip)) oldTrack.Clips.Remove(clip);
+                                    if (!targetTrack.Clips.Contains(clip)) targetTrack.Clips.Add(clip);
+                                    _currentDragTrackIndex = newIndex;
                                 }
-                                // Update model
-                                var oldTrack = _vm.Tracks[_currentDragTrackIndex];
-                                if (oldTrack.Clips.Contains(clip)) oldTrack.Clips.Remove(clip);
-                                if (!targetTrack.Clips.Contains(clip)) targetTrack.Clips.Add(clip);
-                                _currentDragTrackIndex = newIndex;
-                            }
-                            else
-                            {
-                                // Do not move vertically because it would overlap; stay on current track
+                                else
+                                {
+                                    WorkingState = AppResources.RenderPage_CannotMoveBecauseOfOverlap;
+                                }
                             }
                         }
                     }
-                }
-                else if (e.StatusType == GestureStatus.Completed || e.StatusType == GestureStatus.Canceled)
-                {
-                    _isResizingLeft = _isResizingRight = false;
-                    UpdateClipLayout(g, clip);
-                    SelectClip(clip);
-                }
-            };
-            centerOverlay.GestureRecognizers.Add(movePan);
+                    else if (e.StatusType == GestureStatus.Completed || e.StatusType == GestureStatus.Canceled)
+                    {
+                        _isResizingLeft = _isResizingRight = false;
+                        UpdateClipLayout(g, clip);
+                        SelectClip(clip);
+                    }
+                };
+                centerOverlay.GestureRecognizers.Add(movePan);
 
-            // Resize handles
-            var leftHandle = new BoxView { WidthRequest = 14, HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Fill, BackgroundColor = Color.FromArgb("#55FFFFFF") };
-            var rightHandle = new BoxView { WidthRequest = 14, HorizontalOptions = LayoutOptions.End, VerticalOptions = LayoutOptions.Fill, BackgroundColor = Color.FromArgb("#55FFFFFF") };
-            g.Add(leftHandle);
-            g.Add(rightHandle);
+                // Resize handles
+                var leftHandle = new BoxView { WidthRequest = 14, HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Fill, BackgroundColor = Color.FromArgb("#55FFFFFF") };
+                var rightHandle = new BoxView { WidthRequest = 14, HorizontalOptions = LayoutOptions.End, VerticalOptions = LayoutOptions.Fill, BackgroundColor = Color.FromArgb("#55FFFFFF") };
+                g.Add(leftHandle);
+                g.Add(rightHandle);
 
 #if WINDOWS
-            AttachContextMenu(leftHandle, clip);
-            AttachContextMenu(rightHandle, clip);
+                AttachContextMenu(leftHandle, clip);
+                AttachContextMenu(rightHandle, clip);
 #endif
 
-            var leftPan = new PanGestureRecognizer();
-            leftPan.PanUpdated += (s, e) =>
-            {
-                if (e.StatusType == GestureStatus.Started)
+                var leftPan = new PanGestureRecognizer();
+                leftPan.PanUpdated += (s, e) =>
                 {
-                    SelectClip(clip);
-                    _isResizingLeft = true;
-                    _dragStartX = e.TotalX;
-                    _resizeInitialStart = clip.StartSeconds;
-                    _resizeInitialDuration = clip.DurationSeconds;
-                }
-                else if (e.StatusType == GestureStatus.Running && _isResizingLeft)
-                {
-                    ApplyResizeLeft(clip, g, _resizeInitialStart, _resizeInitialDuration, e.TotalX - _dragStartX);
-                }
-                else if (e.StatusType == GestureStatus.Completed || e.StatusType == GestureStatus.Canceled)
-                {
-                    _isResizingLeft = false;
-                    UpdateClipLayout(g, clip);
-                }
-            };
-            leftHandle.GestureRecognizers.Add(leftPan);
+                    if (e.StatusType == GestureStatus.Started)
+                    {
+                        SelectClip(clip);
+                        _isResizingLeft = true;
+                        _dragStartX = e.TotalX;
+                        _resizeInitialStart = clip.StartSeconds;
+                        _resizeInitialDuration = clip.DurationSeconds;
+                    }
+                    else if (e.StatusType == GestureStatus.Running && _isResizingLeft)
+                    {
+                        ApplyResizeLeft(clip, g, _resizeInitialStart, _resizeInitialDuration, e.TotalX - _dragStartX);
+                    }
+                    else if (e.StatusType == GestureStatus.Completed || e.StatusType == GestureStatus.Canceled)
+                    {
+                        _isResizingLeft = false;
+                        UpdateClipLayout(g, clip);
+                    }
+                };
+                leftHandle.GestureRecognizers.Add(leftPan);
 
-            var rightPan = new PanGestureRecognizer();
-            rightPan.PanUpdated += (s, e) =>
-            {
-                if (e.StatusType == GestureStatus.Started)
+                var rightPan = new PanGestureRecognizer();
+                rightPan.PanUpdated += (s, e) =>
                 {
-                    SelectClip(clip);
-                    _isResizingRight = true;
-                    _dragStartX = e.TotalX;
-                    _resizeInitialDuration = clip.DurationSeconds;
-                }
-                else if (e.StatusType == GestureStatus.Running && _isResizingRight)
-                {
-                    ApplyResizeRight(clip, g, _resizeInitialDuration, e.TotalX - _dragStartX);
-                }
-                else if (e.StatusType == GestureStatus.Completed || e.StatusType == GestureStatus.Canceled)
-                {
-                    _isResizingRight = false;
-                    UpdateClipLayout(g, clip);
-                }
-            };
-            rightHandle.GestureRecognizers.Add(rightPan);
+                    if (e.StatusType == GestureStatus.Started)
+                    {
+                        SelectClip(clip);
+                        _isResizingRight = true;
+                        _dragStartX = e.TotalX;
+                        _resizeInitialDuration = clip.DurationSeconds;
+                    }
+                    else if (e.StatusType == GestureStatus.Running && _isResizingRight)
+                    {
+                        ApplyResizeRight(clip, g, _resizeInitialDuration, e.TotalX - _dragStartX);
+                    }
+                    else if (e.StatusType == GestureStatus.Completed || e.StatusType == GestureStatus.Canceled)
+                    {
+                        _isResizingRight = false;
+                        UpdateClipLayout(g, clip);
+                    }
+                };
+                rightHandle.GestureRecognizers.Add(rightPan);
 
-            // Tap to select
-            var tap = new TapGestureRecognizer();
-            tap.Tapped += (s, e) => SelectClip(clip);
-            g.GestureRecognizers.Add(tap);
+                // Tap to select
+                var tap = new TapGestureRecognizer();
+                tap.Tapped += (s, e) => SelectClip(clip);
+                g.GestureRecognizers.Add(tap);
 
-            return g;
+                return g;
+            });
         }
 
 #if WINDOWS
@@ -1196,61 +1386,9 @@ namespace projectFrameCut
                 kv.Value.BackgroundColor = Color.FromArgb("#4466AA");
 
             if (_status != null)
-                _status.Text = clip == null ? "" : $"Selected: {clip.Name} ({clip.StartSeconds:0.00}s - {clip.EndSeconds:0.00}s)";
+                _status.Text = clip == null ? AppResources.RenderPage_EverythingFine : AppResources.RenderPage_Selected.Format($"{clip.Name} ({clip.StartSeconds:0.00}s - {clip.EndSeconds:0.00}s)");
         }
 
-        private void BuildRuler()
-        {
-            if (_ruler == null) return;
-            _ruler.Children.Clear();
-            var totalSeconds = (int)Math.Ceiling(_vm.TotalSeconds);
-            var pps = _vm.PixelsPerSecond;
-
-            for (int s = 0; s <= totalSeconds; s++)
-            {
-                var x = s * pps;
-                var tick = new BoxView { Color = Colors.LightGray, WidthRequest = 1, HeightRequest = 12 };
-                AbsoluteLayout.SetLayoutBounds(tick, new Rect(x, 0, 1, 12));
-                AbsoluteLayout.SetLayoutFlags(tick, AbsoluteLayoutFlags.None);
-                _ruler.Children.Add(tick);
-
-                var label = new Label { TextColor = Colors.White, FontSize = 10, Text = s.ToString() };
-                AbsoluteLayout.SetLayoutBounds(label, new Rect(x + 2, 0, 30, 12));
-                AbsoluteLayout.SetLayoutFlags(label, AbsoluteLayoutFlags.None);
-                _ruler.Children.Add(label);
-
-                if (s < totalSeconds)
-                {
-                    for (int i = 1; i < 5; i++)
-                    {
-                        var subx = x + i * (pps / 5);
-                        var subtick = new BoxView { Color = Colors.Gray, WidthRequest = 1, HeightRequest = 8 };
-                        AbsoluteLayout.SetLayoutBounds(subtick, new Rect(subx, 0, 1, 8));
-                        AbsoluteLayout.SetLayoutFlags(subtick, AbsoluteLayoutFlags.None);
-                        _ruler.Children.Add(subtick);
-                    }
-                }
-            }
-        }
-
-        private void UpdatePlayhead()
-        {
-            var x = _vm.PlayheadSeconds * _vm.PixelsPerSecond;
-            if (_playhead != null)
-                _playhead.TranslationX = x;
-
-            RenderPreview(_vm.PlayheadSeconds);
-        }
-
-
-
-        private void OnAddTrack(object sender, EventArgs e)
-        {
-            _vm.AddTrack();
-            RebuildTracksUI();
-        }
-
-        // Modified: async to allow file picking for SourcePath
         private async void OnAddClip(object sender, EventArgs e)
         {
             if (_vm.Tracks.Count == 0) _vm.AddTrack();
@@ -1277,10 +1415,10 @@ namespace projectFrameCut
             };
             track.Clips.Add(clip);
             clip.StartSeconds = ResolveOverlapStart(track, clip, clip.StartSeconds, clip.DurationSeconds);
-            RebuildTracksUI();
+            await RebuildTracksUI();
         }
 
-        private void OnSplitClip(object sender, EventArgs e)
+        private async void OnSplitClip(object sender, EventArgs e)
         {
             if (_selectedClip == null) return;
             var t = FindTrack(_selectedClip);
@@ -1300,61 +1438,67 @@ namespace projectFrameCut
             };
             _selectedClip.DurationSeconds = leftDur;
             t.Clips.Add(right);
-            RebuildTracksUI();
+            await RebuildTracksUI();
         }
 
-        private void OnDeleteClip(object sender, EventArgs e)
+        private async void OnDeleteClip(object sender, EventArgs e)
         {
             if (_selectedClip == null) return;
             var t = FindTrack(_selectedClip);
             if (t == null) return;
             t.Clips.Remove(_selectedClip);
             _selectedClip = null;
-            RebuildTracksUI();
+            await RebuildTracksUI();
         }
 
-        private TrackViewModel? FindTrack(ClipViewModel clip)
+        private int GetTrackIndexOfClip(ClipViewModel clip)
         {
-            foreach (var t in _vm.Tracks)
-                if (t.Clips.Contains(clip)) return t;
-            return null;
-        }
-
-        private void OnZoomIn(object sender, EventArgs e)
-        {
-            _vm.PixelsPerSecond *= 1.25;
-            BuildRuler();
-            RepositionClips();
-            SyncRulerScroll();
-        }
-
-        private void OnZoomOut(object sender, EventArgs e)
-        {
-            _vm.PixelsPerSecond /= 1.25;
-            BuildRuler();
-            RepositionClips();
-            SyncRulerScroll();
-        }
-
-        private void OnTimelineScrolled(object? sender, ScrolledEventArgs e)
-        {
-            SyncRulerScroll();
-        }
-
-        private void SyncRulerScroll()
-        {
-            if (_ruler == null || _timelineScroll == null) return;
-            var x = _timelineScroll.ScrollX;
-            foreach (var child in _ruler.Children)
+            for (int i = 0; i < _vm.Tracks.Count; i++)
             {
-                if (child is VisualElement ve)
+                if (_vm.Tracks[i].Clips.Contains(clip))
+                    return i;
+            }
+            return -1;
+        }
+
+        #endregion
+
+        #region add clip
+        public async void OnAddAssetToTimeline(object sender, EventArgs e)
+        {
+            if (sender is Button btn && btn.CommandParameter is AssetItem asset)
+            {
+                if (_vm.Tracks.Count == 0)
+                    _vm.AddTrack("Video #1");
+                var track = _vm.Tracks[0]; // always first track for now
+                var clip = new ClipViewModel
                 {
-                    ve.TranslationX = -x;
-                }
+                    Name = asset.Name,
+                    StartSeconds = _vm.PlayheadSeconds,
+                    DurationSeconds = 3,
+                    SourcePath = asset.Path // capture path so it can be exported
+                };
+                track.Clips.Add(clip);
+                clip.StartSeconds = ResolveOverlapStart(track, clip, clip.StartSeconds, clip.DurationSeconds);
+                await RebuildTracksUI();
             }
         }
 
-        // SNAP HELPERS
+        private bool WouldCauseOverlapOnTrack(TrackViewModel track, ClipViewModel self, double start, double duration)
+        {
+            var end = start + duration;
+            return GetOverlappingClips(track, self, start, end).Any();
+        }
+
+        private async void OnAddTrack(object sender, EventArgs e)
+        {
+            _vm.AddTrack();
+            await RebuildTracksUI();
+        }
+
+        #endregion
+
+        #region move clip
         private double SnapSeconds(double seconds, ClipViewModel self)
         {
             if (!_vm.SnapEnabled) return Math.Max(0, seconds);
@@ -1410,7 +1554,6 @@ namespace projectFrameCut
             return (s, e);
         }
 
-        // inject snapping into gestures
         private void ApplyMove(ClipViewModel clip, Grid view, double baseStartSeconds, double deltaPixels)
         {
             var candidate = Math.Max(0, baseStartSeconds + deltaPixels / _vm.PixelsPerSecond);
@@ -1427,6 +1570,11 @@ namespace projectFrameCut
                     clip.StartSeconds = resolved;
                     UpdateClipLayout(view, clip);
                     return;
+                }
+                else
+                {
+                    WorkingState = AppResources.RenderPage_CannotMoveBecauseOfOverlap;
+
                 }
             }
             // fallback: set snapped without overlap resolution if no track
@@ -1480,7 +1628,6 @@ namespace projectFrameCut
             UpdateClipLayout(view, clip);
         }
 
-        // Overlap helpers (added)
         private TrackViewModel? GetTrackForClip(ClipViewModel clip)
             => _vm.Tracks.FirstOrDefault(t => t.Clips.Contains(clip));
 
@@ -1544,6 +1691,45 @@ namespace projectFrameCut
             UpdateClipLayout(view, clip);
         }
 
+        #endregion
+
+        #region track UI stuffs
+
+        private void UpdatePlayhead()
+        {
+            var x = _vm.PlayheadSeconds * _vm.PixelsPerSecond;
+            if (_playhead != null)
+                _playhead.TranslationX = x;
+        }
+
+        private TrackViewModel? FindTrack(ClipViewModel clip)
+        {
+            foreach (var t in _vm.Tracks)
+                if (t.Clips.Contains(clip)) return t;
+            return null;
+        }
+
+        private void OnZoomIn(object sender, EventArgs e)
+        {
+            _vm.PixelsPerSecond *= 1.25;
+            BuildRuler();
+            RepositionClips();
+            SyncRulerScroll();
+        }
+
+        private void OnZoomOut(object sender, EventArgs e)
+        {
+            _vm.PixelsPerSecond /= 1.25;
+            BuildRuler();
+            RepositionClips();
+            SyncRulerScroll();
+        }
+
+        private void OnTimelineScrolled(object? sender, ScrolledEventArgs e)
+        {
+            SyncRulerScroll();
+        }
+
         private void OnRulerTapped(object sender, TappedEventArgs e)
         {
             if (_ruler == null) return;
@@ -1555,69 +1741,6 @@ namespace projectFrameCut
             }
         }
 
-        private void RenderPreview(double playheadSeconds)
-        {
-#if WINDOWS
-
-#else
-            //todo: implement for other platforms
-#endif
-        }
-
-
-        private async void OnAddAsset(object sender, EventArgs e)
-        {
-            try
-            {
-#if ANDROID || IOS || MACCATALYST || WINDOWS
-                var result = await FilePicker.PickAsync(new PickOptions
-                {
-                    PickerTitle = "选择素材文件"
-                });
-                if (result != null)
-                {
-                    Assets.Add(new AssetItem
-                    {
-                        Name = result.FileName,
-                        Path = result.FullPath
-                    });
-                }
-#else
-                Assets.Add(new AssetItem { Name = $"Dummy_{Assets.Count + 1}.png", Path = null });
-#endif
-            }
-            catch (Exception ex)
-            {
-                Log(ex);
-                await DisplayAlert("Error", ex.Message, "OK");
-            }
-        }
-
-        private void AddSolidColorClip_Clicked(object sender, EventArgs e)
-        {
-            //var asset = new AssetItem
-            //{
-            //    Name = $"SolidColor #{Assets.Count(c => c.Type == Shared.ClipMode.SolidColorClip) + 1}",
-            //    Type = Shared.ClipMode.SolidColorClip,
-            //    Path = null
-            //};
-            //Assets.Add(asset);
-
-
-            var track = _vm.Tracks[0]; // always first track for now
-            var clip = new ClipViewModel
-            {
-                Name = $"SolidColor #{Assets.Count(c => c.Type == Shared.ClipMode.SolidColorClip) + 1}",
-                Type = Shared.ClipMode.SolidColorClip,
-                StartSeconds = _vm.PlayheadSeconds,
-                DurationSeconds = 3,
-                Metadata = { { "R", (ushort)11 }, { "G", (ushort)22 }, { "B", (ushort)33 }, { "A", 1f } }
-            };
-            track.Clips.Add(clip);
-            clip.StartSeconds = ResolveOverlapStart(track, clip, clip.StartSeconds, clip.DurationSeconds);
-            RebuildTracksUI();
-
-
-        }
+        #endregion
     }
 }

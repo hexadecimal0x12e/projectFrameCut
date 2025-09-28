@@ -40,6 +40,7 @@
 		<DefaultLanguage>zh-CN</DefaultLanguage>
 		<Platforms>AnyCPU;x64</Platforms>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<NeutralLanguage>zh-CN</NeutralLanguage>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|AnyCPU'">
@@ -146,6 +147,8 @@
 		<MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 
+
+
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
@@ -202,6 +205,11 @@
 	  <Compile Update="DraftPage.xaml.cs">
 	    <DependentUpon>DraftPage.xaml</DependentUpon>
 	  </Compile>
+	  <Compile Update="Strings\AppResources.Designer.cs">
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>AppResources.resx</DependentUpon>
+	  </Compile>
 	  <Compile Update="TestPage.xaml.cs">
 	    <DependentUpon>TestPage.xaml</DependentUpon>
 	  </Compile>
@@ -212,11 +220,26 @@
 	<ItemGroup>
 	  <Folder Include="Services\" />
 	</ItemGroup>
+	
+
+	
+	<ItemGroup>
+	  <None Include="Strings\AppResources.resx">
+	    <Generator>ResXFileCodeGenerator</Generator>
+	    <LastGenOutput>AppResources.Designer.cs</LastGenOutput>
+	  </None>
+	</ItemGroup>
 
 	<ItemGroup>
 		<Using Include="projectFrameCut.Shared.Logger">
 			<Static>True</Static>
 		</Using>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Update="Strings\AppResources.en-US.resx">
+	    <Generator></Generator>
+	  </EmbeddedResource>
 	</ItemGroup>
 
 </Project>

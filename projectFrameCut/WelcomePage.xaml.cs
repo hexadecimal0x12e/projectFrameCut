@@ -1,3 +1,5 @@
+using projectFrameCut.Strings;
+
 namespace projectFrameCut;
 
 public partial class WelcomePage : ContentPage

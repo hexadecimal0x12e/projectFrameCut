@@ -108,7 +108,7 @@ public sealed class RpcClient : IAsyncDisposable
         {
             var json = JsonSerializer.Serialize(req, RpcProtocol.JsonOptions);
             await _writer.WriteLineAsync(json);
-            var line = await _reader.ReadLineAsync();
+            var line = await _reader.ReadLineAsync(ct);
             if (line is null) return null;
             return JsonSerializer.Deserialize<RpcProtocol.RpcMessage>(line, RpcProtocol.JsonOptions);
         }

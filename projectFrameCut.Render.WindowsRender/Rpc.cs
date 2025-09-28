@@ -1,4 +1,5 @@
-﻿using ILGPU.Runtime;
+﻿using ILGPU;
+using ILGPU.Runtime;
 using projectFrameCut.Render.ILGpu;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp.Formats.Png;
@@ -51,6 +52,18 @@ namespace projectFrameCut.Render.WindowsRender
 
             IClip[] clips = Array.Empty<IClip>();
 
+            Log("Warming up ILGPU...");
+
+            {
+                var krnl = accelerator.LoadAutoGroupedStreamKernel<Index1D, ArrayView<ushort>, ArrayView<ushort>, ArrayView<ushort>>((i, a, b, c) => c[i] = (ushort)(a[i] + b[i]));
+                var inA = accelerator.Allocate1D<ushort>(Enumerable.Range(0, 10).Select(Convert.ToUInt16).ToArray());
+                var inB = accelerator.Allocate1D<ushort>(Enumerable.Range(0, 10).Select(Convert.ToUInt16).ToArray());
+                var outC = accelerator.Allocate1D<ushort>(10);
+                krnl(10,inA.View, inB.View, outC.View);
+                accelerator.Synchronize();
+                Log("ILGPU is ready.");
+            }
+
             Log($"[RPC] Server start at pipe:{pipeName}");
 
             var server = new NamedPipeServerStream(
@@ -81,7 +94,7 @@ namespace projectFrameCut.Render.WindowsRender
                 };
 
                 var json = JsonSerializer.Serialize(envelope, RpcProtocol.JsonOptions);
-                Console.WriteLine($"[RPC] Sending: {json} \r\n--- \r\n");
+                Log($"[RPC] Sending: {json} \r\n--- \r\n");
                 await writer.WriteLineAsync(json);
             }
             var size = width * height;
@@ -91,12 +104,10 @@ namespace projectFrameCut.Render.WindowsRender
             {
                 try
                 {
-
-
                     var line = await reader.ReadLineAsync();
                     if (line is null) break;
 
-                    Console.WriteLine($"[RPC] Received: {line} \r\n--- \r\n");
+                    Log($"[RPC] Received: {line} \r\n--- \r\n");
 
                     RpcProtocol.RpcMessage? msg = null;
                     try
@@ -105,7 +116,7 @@ namespace projectFrameCut.Render.WindowsRender
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[RPC] Bad JSON: {ex.Message}");
+                        Log($"[RPC] Bad JSON: {ex.Message}");
                         continue;
                     }
 
@@ -123,31 +134,31 @@ namespace projectFrameCut.Render.WindowsRender
                             {
                                 if (msg.Payload is null)
                                 {
-                                    Console.WriteLine("[RPC] RenderOne missing payload.");
+                                    Console.Error.WriteLine("[RPC] RenderOne missing payload.");
                                     break;
                                 }
                                 var frameIndex = msg.Payload.Value.GetUInt32();
-                                Console.WriteLine($"[RPC] RenderOne request: frame #{frameIndex}");
+                                Log($"[RPC] RenderOne request: frame #{frameIndex}");
                                 var frameHash = Timeline.GetFrameHash(clips, frameIndex);
                                 var destPath = Path.Combine(tempFolder, $"projectFrameCut_Render_{frameHash}.png");
-                                Console.WriteLine($"[RPC] FrameHash:{frameHash}");
+                                Log($"[RPC] FrameHash:{frameHash}");
                                 if (Path.Exists(destPath))
                                 {
 
-                                    Console.WriteLine($"[RPC] Frame already exist; skip");
+                                    Log($"[RPC] Frame already exist; skip");
                                     await Send(msg, new Dictionary<string, object?> { { "status", "completed" }, { "path", destPath } });
-                                    Console.WriteLine($"[RPC] RenderOne completed");
+                                    Log($"[RPC] RenderOne completed");
                                     break;
                                 }
                                 else
                                 {
-                                    Console.WriteLine($"[RPC] Generating frame {frameHash}...");
+                                    Log($"[RPC] Generating frame #{frameIndex} ({frameHash})...");
                                 }
                                 var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height);
                                 var pic = Timeline.MixtureLayers(layers, accelerator, frameIndex, width, height);
                                 pic.SetAlpha(false).SaveAsPng8bpc(destPath, encoder);
                                 await Send(msg, new Dictionary<string, object?> { { "status", "completed" }, { "path", destPath } });
-                                Console.WriteLine($"[RPC] RenderOne completed");
+                                Log($"[RPC] RenderOne completed");
                                 break;
                             }
 
@@ -155,10 +166,10 @@ namespace projectFrameCut.Render.WindowsRender
                             {
                                 if (msg.Payload is null)
                                 {
-                                    Console.WriteLine("[RPC] UpdateClips missing payload.");
+                                    Log("[RPC] UpdateClips missing payload.");
                                     break;
                                 }
-                                Console.WriteLine("[RPC] Updating clips...");
+                                Log("[RPC] Updating clips...");
                                 var draftSrc = msg.Payload.Value.Deserialize<DraftStructureJSON>(RpcProtocol.JsonOptions) ?? throw new Exception("An error happends.");
 
                                 List<JsonElement> clipsJson = draftSrc.Clips.Select(c => (JsonElement)c).ToList();
@@ -169,7 +180,7 @@ namespace projectFrameCut.Render.WindowsRender
                                 {
 
                                     var type = (ClipMode)clip.GetProperty("ClipType").GetInt32();
-                                    Console.WriteLine($"Found clip {type}, name: {clip.GetProperty("Name").GetString()}, id: {clip.GetProperty("Id").GetString()}");
+                                    Log($"Found clip {type}, name: {clip.GetProperty("Name").GetString()}, id: {clip.GetProperty("Id").GetString()}");
                                     switch (type)
                                     {
                                         case ClipMode.VideoClip:
@@ -188,8 +199,7 @@ namespace projectFrameCut.Render.WindowsRender
                                                 break;
                                             }
                                         default:
-                                            Log("ERROR: Unknown clip type.");
-                                            return 1;
+                                            throw new NotSupportedException($"Clip type {type} is not suported.");
                                     }
                                 }
 
@@ -200,20 +210,20 @@ namespace projectFrameCut.Render.WindowsRender
                                     clip.ReInit();
                                 }
 
-                                Console.WriteLine($"[RPC] Updated clips, total {clips.Length} clips.");
+                                Log($"[RPC] Updated clips, total {clips.Length} clips.");
                                 await Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
                                 break;
                             }
                         case "ShutDown":
                             {
-                                Console.WriteLine("[RPC] Shutting down...");
+                                Log("[RPC] Shutting down...");
                                 disconnect = true;
                                 await Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
                                 await server.DisposeAsync();
                                 return 0;
                             }
                         default:
-                            Console.WriteLine($"[RPC] Unknown message type: {msg.Type}");
+                            Log($"[RPC] Unknown message type: {msg.Type}");
                             break;
                     }
                 }
