@@ -16,7 +16,11 @@ namespace projectFrameCut.Render.WindowsRender
 {
     public class Rpc
     {
-        public static async Task<int> go_rpcAsync(ConcurrentDictionary<string, string> switches, Accelerator accelerator, int width, int height)
+        public static int RpcReturnCode = 0;
+
+        public static CancellationTokenSource RpcCts = new CancellationTokenSource();
+
+        public static void go_rpcAsync(ConcurrentDictionary<string, string> switches, Accelerator accelerator, int width, int height)
         {
 
             var pipeName = switches.GetValueOrDefault("pipe");
@@ -26,14 +30,18 @@ namespace projectFrameCut.Render.WindowsRender
             if (pipeName is null)
             {
                 Log("ERROR: -pipe argument is required.");
-                return 1;
+                RpcReturnCode = 16;
+                RpcCts.Cancel();
+                return;
             }
 
 
             if (tempFolder is null)
             {
                 Log("ERROR: -tempFolder argument is required.");
-                return 1;
+                RpcReturnCode = 16;
+                RpcCts.Cancel(); 
+                return;
             }
 
             PngEncoder encoder = new()
@@ -48,6 +56,9 @@ namespace projectFrameCut.Render.WindowsRender
             {
                 e.Cancel = true;
                 cts.Cancel();
+                RpcCts.Cancel();
+                RpcReturnCode = 42;
+
             };
 
             IClip[] clips = Array.Empty<IClip>();
@@ -59,7 +70,7 @@ namespace projectFrameCut.Render.WindowsRender
                 var inA = accelerator.Allocate1D<ushort>(Enumerable.Range(0, 10).Select(Convert.ToUInt16).ToArray());
                 var inB = accelerator.Allocate1D<ushort>(Enumerable.Range(0, 10).Select(Convert.ToUInt16).ToArray());
                 var outC = accelerator.Allocate1D<ushort>(10);
-                krnl(10,inA.View, inB.View, outC.View);
+                krnl(10, inA.View, inB.View, outC.View);
                 accelerator.Synchronize();
                 Log("ILGPU is ready.");
             }
@@ -73,7 +84,7 @@ namespace projectFrameCut.Render.WindowsRender
                     PipeTransmissionMode.Byte,
                     PipeOptions.Asynchronous);
 
-            await server.WaitForConnectionAsync(cts.Token);
+            server.WaitForConnectionAsync(cts.Token).Wait();
 
             Log("[RPC] Client connected.");
 
@@ -84,7 +95,7 @@ namespace projectFrameCut.Render.WindowsRender
                 NewLine = "\n"
             };
 
-            async Task Send(RpcProtocol.RpcMessage msg, Dictionary<string, object?> data)
+            async void Send(RpcProtocol.RpcMessage msg, Dictionary<string, object?> data)
             {
                 var envelope = new RpcProtocol.RpcMessage
                 {
@@ -95,7 +106,7 @@ namespace projectFrameCut.Render.WindowsRender
 
                 var json = JsonSerializer.Serialize(envelope, RpcProtocol.JsonOptions);
                 Log($"[RPC] Sending: {json} \r\n--- \r\n");
-                await writer.WriteLineAsync(json);
+                writer.WriteLine(json);
             }
             var size = width * height;
 
@@ -104,7 +115,7 @@ namespace projectFrameCut.Render.WindowsRender
             {
                 try
                 {
-                    var line = await reader.ReadLineAsync();
+                    var line = reader.ReadLine();
                     if (line is null) break;
 
                     Log($"[RPC] Received: {line} \r\n--- \r\n");
@@ -127,7 +138,7 @@ namespace projectFrameCut.Render.WindowsRender
                     {
                         case "ping":
                             {
-                                await Send(msg, new Dictionary<string, object?> { { "value", DateTime.Now } });
+                                Send(msg, new Dictionary<string, object?> { { "value", DateTime.Now } });
                                 break;
                             }
                         case "RenderOne":
@@ -146,7 +157,7 @@ namespace projectFrameCut.Render.WindowsRender
                                 {
 
                                     Log($"[RPC] Frame already exist; skip");
-                                    await Send(msg, new Dictionary<string, object?> { { "status", "completed" }, { "path", destPath } });
+                                    Send(msg, new Dictionary<string, object?> { { "status", "completed" }, { "path", destPath } });
                                     Log($"[RPC] RenderOne completed");
                                     break;
                                 }
@@ -157,7 +168,7 @@ namespace projectFrameCut.Render.WindowsRender
                                 var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height);
                                 var pic = Timeline.MixtureLayers(layers, accelerator, frameIndex, width, height);
                                 pic.SetAlpha(false).SaveAsPng8bpc(destPath, encoder);
-                                await Send(msg, new Dictionary<string, object?> { { "status", "completed" }, { "path", destPath } });
+                                Send(msg, new Dictionary<string, object?> { { "status", "completed" }, { "path", destPath } });
                                 Log($"[RPC] RenderOne completed");
                                 break;
                             }
@@ -211,16 +222,17 @@ namespace projectFrameCut.Render.WindowsRender
                                 }
 
                                 Log($"[RPC] Updated clips, total {clips.Length} clips.");
-                                await Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
+                                Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
                                 break;
                             }
                         case "ShutDown":
                             {
                                 Log("[RPC] Shutting down...");
                                 disconnect = true;
-                                await Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
-                                await server.DisposeAsync();
-                                return 0;
+                                Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
+                                server.DisposeAsync();
+                                RpcCts.Cancel();
+                                return;
                             }
                         default:
                             Log($"[RPC] Unknown message type: {msg.Type}");
@@ -230,15 +242,53 @@ namespace projectFrameCut.Render.WindowsRender
                 catch (Exception ex)
                 {
                     Console.Error.WriteLine($"ERROR: a {ex.GetType()} exception happends:{ex.Message}");
+                    string innerExceptionInfo = "None";
+                    if (ex.InnerException != null)
+                    {
+                        innerExceptionInfo =
+$"""
+Type: {ex.InnerException.GetType().Name}                        
+Message: {ex.InnerException.Message}
+StackTrace:
+{ex.InnerException.StackTrace}
+
+""";
+                        Log(
+$"""
+Error in RPC server:
+
+Exception type: {ex.GetType().Name}
+Message: {ex.Message}
+
+StackTrace:
+{ex.StackTrace}
+
+From:{(ex.TargetSite is not null ? ex.TargetSite.ToString() : "unknown")}
+InnerException:
+{innerExceptionInfo}
+
+Exception data:
+{string.Join("\r\n", ex.Data.Cast<System.Collections.DictionaryEntry>().Select(k => $"{k.Key} : {k.Value}"))}
+
+Environment:
+OS version: {Environment.OSVersion}
+CLR Version:{Environment.Version}
+Command line: {Environment.CommandLine}
+Current directory: {Environment.CurrentDirectory}
+"""
+);
+                    }
                 }
+
+
+                
+
             }
 
-
-
-
-            return 0;
+            cts.Cancel();
+            RpcCts.Cancel();
+            return;
 
         }
-
     }
 }

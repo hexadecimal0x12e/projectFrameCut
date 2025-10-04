@@ -15,9 +15,11 @@ public sealed class RpcClient : IAsyncDisposable
     private Process? _proc;
     private uint _requestId = 0;
 
-    public async Task StartAsync(string pipeName, CancellationToken ct = default)
+    public async Task StartAsync(string pipeName, CancellationToken ct = default) => await StartAsync(new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous), ct);
+
+    public async Task StartAsync(NamedPipeClientStream client, CancellationToken ct = default)
     {
-        _pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        _pipe = client;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(10));
         try
@@ -25,7 +27,7 @@ public sealed class RpcClient : IAsyncDisposable
             await _pipe.ConnectAsync(cts.Token);
 
         }
-        catch(OperationCanceledException)
+        catch (OperationCanceledException)
         {
             Debug.WriteLine("连接 RPC 后端超时。");
         }
@@ -33,7 +35,6 @@ public sealed class RpcClient : IAsyncDisposable
         {
             throw new InvalidOperationException("连接 RPC 后端失败。", ex);
         }
-        // 连接命名管道
 
 
         _reader = new StreamReader(_pipe, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 8192, leaveOpen: true);

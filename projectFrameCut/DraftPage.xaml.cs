@@ -13,7 +13,8 @@ using Path = System.IO.Path;
 using System.Globalization;
 using projectFrameCut.Render;
 using System.Threading.Tasks;
-using projectFrameCut.Strings;
+using System.IO.Pipes;
+
 
 
 #region platform usings
@@ -62,20 +63,20 @@ namespace projectFrameCut
             {
                 CancellationTokenSource cts = new();
                 if (_status is not null)
-                    _status.Text = AppResources.RenderPage_RenderOneFrame.Format(frameId, TimeSpan.FromSeconds(playheadSeconds).ToString("mm\\:ss\\.ff"));   
+                    _status.Text = Localized.RenderPage_RenderOneFrame.Format(frameId, TimeSpan.FromSeconds(playheadSeconds).ToString("mm\\:ss\\.ff"));   
                 if (_rpc is null) return;
                 cts.CancelAfter(10000);
                 var result = await _rpc.SendAsync("RenderOne", JsonSerializer.SerializeToElement(frameId), cts.Token);
                 if (result is null) return;
                 var path = result.Value.GetProperty("path").GetString();
                 PreviewBox.Source = ImageSource.FromFile(path);
-                WorkingState = AppResources.RenderPage_RenderDone;
+                WorkingState = Localized.RenderPage_RenderDone;
                 SetStateOK();
 
             }
             catch (TaskCanceledException)
             {
-                WorkingState = AppResources.RenderPage_RenderTimeout;
+                WorkingState = Localized.RenderPage_RenderTimeout;
                 SetStateFail();
             }
             catch (Exception ex)
@@ -109,53 +110,7 @@ namespace projectFrameCut
                 _status.TextColor = Colors.White;
             }
             SetStateBusy();
-            if (workingDirectory == string.Empty)
-            {
-#if WINDOWS
-                var picker = new Windows.Storage.Pickers.FolderPicker();
-                picker.FileTypeFilter.Add("*");
-
-                var mauiWin = Application.Current?.Windows?.FirstOrDefault();
-                if (mauiWin?.Handler?.PlatformView is Microsoft.UI.Xaml.Window window)
-                {
-                    var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(window);
-                    WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
-                }
-
-                var folder = await picker.PickSingleFolderAsync();
-                if (folder == null) return; //用户按了取消
-                workingDirectory = folder.Path;
-
-
-
-#elif MACCATALYST || IOS
-
-#elif ANDROID
-
-#endif
-
-                var projName = await DisplayPromptAsync("info", "input a name for this project", "ok", "", "project 1", -1, null, "Untitled Project 1");
-
-#if MACCATALYST || IOS
-                workingDirectory = Directory.CreateDirectory(Path.Combine(workingDirectory, projName + ".pjfc")).FullName;
-#else
-                File.WriteAllText(Path.Combine(workingDirectory, projName + ".pjfc"), "@projectFrameCut v1");
-                workingDirectory = Directory.CreateDirectory(Path.Combine(workingDirectory, projName)).FullName;
-
-#endif
-                ProjectInfo = new ProjectJSONStructure
-                {
-                    projectName = projName,
-                    ResourcePath = workingDirectory,
-
-                };
-            }
-
-
-            File.WriteAllText(Path.Combine(workingDirectory, "timeline.json"), ExportDraftToJson());
-            File.WriteAllText(Path.Combine(workingDirectory, "assets.json"), JsonSerializer.Serialize(Assets));
-            File.WriteAllText(Path.Combine(workingDirectory, "project.json"), JsonSerializer.Serialize(ProjectInfo));
-
+            
             if (_status is not null)
                 WorkingState = $"changes saved on {DateTime.Now:T} ";
 
@@ -332,10 +287,10 @@ namespace projectFrameCut
 #endif
 
             // Initialize with two tracks
-            _vm.AddTrack(AppResources.RenderPage_Track.Format(1));
-            _vm.AddTrack(AppResources.RenderPage_Track.Format(1));
+            _vm.AddTrack(Localized.RenderPage_Processing.Format(1));
+            _vm.AddTrack(Localized.RenderPage_Track());
 
-            RebuildTracksUI().Wait();
+            RebuildTracksUI();
             UpdatePlayhead();
             BuildRuler();
 
@@ -367,6 +322,7 @@ namespace projectFrameCut
         public DraftPage(string workingPath)
         {
             InitializeComponent();
+            SetStateBusy();
             workingDirectory = workingPath;
             BindingContext = _vm; // ensure binding for TimelineWidth
 
@@ -416,6 +372,57 @@ namespace projectFrameCut
 #endif
         }
 
+#if DEBUG && WINDOWS
+        public DraftPage(string workingPath,NamedPipeClientStream npc)
+        {
+            InitializeComponent();
+            SetStateBusy();
+
+            workingDirectory = workingPath;
+            BindingContext = _vm; // ensure binding for TimelineWidth
+
+            // Resolve named elements from XAML
+            _tracksHeader = this.FindByName<VerticalStackLayout>("TracksHeader");
+            _tracksPanel = this.FindByName<VerticalStackLayout>("TracksPanel");
+            _ruler = this.FindByName<AbsoluteLayout>("Ruler");
+            _playhead = this.FindByName<BoxView>("Playhead");
+            _status = this.FindByName<Label>("Status");
+            _backendStatus = this.FindByName<Label>("BackendStatus");
+            _timelineScroll = this.FindByName<ScrollView>("TimelineScroll");
+
+
+            if (!Directory.Exists(workingPath))
+                throw new DirectoryNotFoundException($"Working path not found: {workingPath}");
+
+            var filesShouldExist = new[] { "project.json", "timeline.json", "assets.json" };
+
+            if (filesShouldExist.Any((f) => !File.Exists(Path.Combine(workingPath, f))))
+            {
+                throw new FileNotFoundException("One or more required files are missing.", workingPath);
+            }
+
+            var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.json")));
+
+            ProjectInfo = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.json"))) ?? new();
+            var assets = JsonSerializer.Deserialize<ObservableCollection<AssetItem>>(File.ReadAllText(Path.Combine(workingPath, "assets.json"))) ?? new();
+            Title = ProjectInfo.projectName;
+            ImportDraft(File.ReadAllText(Path.Combine(workingPath, "timeline.json")));
+
+            SetStateOK();
+            Loaded += async (sender, e) =>
+            {
+                await BootRPC(npc);
+                await UpdateClipToBackend();
+
+            };
+
+
+
+
+
+        }
+
+#endif
         protected override void OnNavigatedTo(NavigatedToEventArgs args)
         {
             base.OnNavigatedTo(args);
@@ -533,6 +540,32 @@ namespace projectFrameCut
 
         }
 
+#if DEBUG
+        private async Task BootRPC(NamedPipeClientStream npc)
+        {
+            var tmpDir = Path.Combine(Path.GetTempPath(), "pjfc_temp");
+            Directory.CreateDirectory(tmpDir);
+            
+
+            Thread.Sleep(500);
+            _rpc = new RpcClient();
+            await _rpc.StartAsync(npc);
+            Log("RPC started");
+
+            BackendStateIndicator.Fill = Colors.Gray;
+
+            if (_backendStatus is not null)
+                _backendStatus.Text = "You are debugging backend.";
+
+
+            //new Thread(RpcListenerThread)
+            //{ CurrentCulture = CultureInfo.InvariantCulture }.Start();
+
+
+        }
+
+#endif
+
         async void RpcListenerThread()
         {
             Thread.Sleep(250);
@@ -563,7 +596,7 @@ namespace projectFrameCut
                         _ => Colors.Red
                     };
                     textColor = Colors.White;
-                    message = AppResources.RenderPage_BackendStatus.Format(lantency.TotalMilliseconds.ToString("n2"),$"{menUsed.ToString("n2").Replace(',', '\0')}/{menTotalUsed.ToString("n2").Replace(',', '\0')}");
+                    message = Localized.RenderPage_BackendStatus.Format(lantency.TotalMilliseconds.ToString("n2"),$"{menUsed.ToString("n2").Replace(',', '\0')}/{menTotalUsed.ToString("n2").Replace(',', '\0')}");
 
                 }
                 catch
@@ -572,7 +605,7 @@ namespace projectFrameCut
                     state = nothing;
                     color = Colors.Red;
                     textColor = Colors.Red;
-                    message = AppResources.RenderPage_BackendStatus_NotRespond.Format($"{menUsed:n2}/{menTotalUsed:n2}");
+                    message = Localized.RenderPage_BackendStatus_NotRespond.Format($"{menUsed:n2}/{menTotalUsed:n2}");
                 }
 
                 if (_backendStatus is not null)
@@ -613,7 +646,7 @@ namespace projectFrameCut
                     cts.CancelAfter(10000);
 
                     _ = await _rpc.SendAsync("UpdateClips", element, cts.Token);
-                    WorkingState = AppResources.RenderPage_ChangesApplied;
+                    WorkingState = Localized.RenderPage_ChangesApplied;
                     return true;
                 }
                 catch (Exception ex)
@@ -635,11 +668,12 @@ namespace projectFrameCut
             }
         }
 #endif
-        #endregion
+#endregion
 
         #region status
         public void SetStateBusy()
         {
+            if (StateIndicator is null) return;
             StateIndicator.Children.Clear();
             StateIndicator.Children.Add(new ActivityIndicator
             {
@@ -653,6 +687,8 @@ namespace projectFrameCut
 
         public void SetStateOK()
         {
+            if (StateIndicator is null) return;
+
             StateIndicator.Children.Clear();
             StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
             {
@@ -669,6 +705,8 @@ namespace projectFrameCut
 
         public void SetStateFail()
         {
+            if (StateIndicator is null) return;
+
             StateIndicator.Children.Clear();
             StateIndicator.Children.Add(new Microsoft.Maui.Controls.Shapes.Path
             {
@@ -691,7 +729,7 @@ namespace projectFrameCut
                 menUsed = Environment.WorkingSet / 1024f / 1024f;
                 Dispatcher.Dispatch(() =>
                 {
-                    _backendStatus.Text = AppResources.RenderPage_BackendStatus_MemoryOnly.Format($"{menUsed:n2}");
+                    _backendStatus.Text = Localized.RenderPage_BackendStatus_MemoryOnly.Format($"{menUsed:n2}");
                 });
                 Thread.Sleep(2000);
             }
@@ -884,7 +922,7 @@ namespace projectFrameCut
         // Export timeline to DraftStructureJSON
         private DraftStructureJSON BuildDraft(string projectName = "Default Project")
         {
-            const uint frameRate = 60; // global framerate assumption
+            const uint frameRate = 30; // global framerate assumption
             double frameTime = 1.0 / frameRate;
             var clipDtos = new List<ClipDraftDTO>();
 
@@ -1004,7 +1042,7 @@ namespace projectFrameCut
             // Ensure enough tracks by LayerIndex
             int trackCount = dtos.Count == 0 ? 1 : (int)(dtos.Max(c => (int)c.LayerIndex) + 1);
             for (int i = 0; i < trackCount; i++)
-                _vm.AddTrack(AppResources.RenderPage_Track.Format(i + 1));
+                _vm.AddTrack(Localized.RenderPage_Track.Format(i + 1));
 
             // frame time: prefer clip's FrameTime or draft.targetFrameRate
             double frameTime = 0;
@@ -1063,7 +1101,7 @@ namespace projectFrameCut
         {
             if (_tracksHeader == null || _tracksPanel == null) return;
             SetStateBusy();
-            WorkingState = AppResources.RenderPage_Processing;
+            WorkingState = Localized.RenderPage_Processing;
             await Task.Delay(45);
             _tracksHeader.Children.Clear();
             _tracksPanel.Children.Clear();
@@ -1237,7 +1275,7 @@ namespace projectFrameCut
                                 }
                                 else
                                 {
-                                    WorkingState = AppResources.RenderPage_CannotMoveBecauseOfOverlap;
+                                    WorkingState = Localized.RenderPage_CannotMoveBecauseOfOverlap;
                                 }
                             }
                         }
@@ -1386,7 +1424,7 @@ namespace projectFrameCut
                 kv.Value.BackgroundColor = Color.FromArgb("#4466AA");
 
             if (_status != null)
-                _status.Text = clip == null ? AppResources.RenderPage_EverythingFine : AppResources.RenderPage_Selected.Format($"{clip.Name} ({clip.StartSeconds:0.00}s - {clip.EndSeconds:0.00}s)");
+                _status.Text = clip == null ? Localized.RenderPage_Ready : Localized.RenderPage_Selected.Format($"{clip.Name} ({clip.StartSeconds:0.00}s - {clip.EndSeconds:0.00}s)");
         }
 
         private async void OnAddClip(object sender, EventArgs e)
@@ -1573,7 +1611,7 @@ namespace projectFrameCut
                 }
                 else
                 {
-                    WorkingState = AppResources.RenderPage_CannotMoveBecauseOfOverlap;
+                    WorkingState = Localized.RenderPage_CannotMoveBecauseOfOverlap;
 
                 }
             }

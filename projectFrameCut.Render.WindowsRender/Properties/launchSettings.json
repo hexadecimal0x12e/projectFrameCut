@@ -2,8 +2,7 @@
   "profiles": {
     "projectFrameCut.Render.RenderCLI": {
       "commandName": "Project",
-      "commandLineArgs": "  render -output_options=3840,2160,30,AV_PIX_FMT_GBRP16LE,ffv1 -range=0-10  -acceleratorType=cuda -maxParallelThreads=32 -draft=D:\\code\\playground\\projectFrameCut\\draft.json -output=D:\\code\\playground\\projectFrameCut\\2.mkv -StrictMode=true -StopOnAnyError=true -GCOptions=2"
-
+      "commandLineArgs": "  rpc_backend  -pipe=pjfcTestPipe1 -output_options=3840,2160,42,AV_PIX_FMT_NONE,nope -tempFolder=D:\\code\\playground\\projectFrameCut\\tmp"
     }
   }
 }

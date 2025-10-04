@@ -158,7 +158,15 @@ namespace projectFrameCut.Render.ILGpu
                 }
             }
 
-            return SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(result))).Aggregate("0x", ((b,c) => b + c.ToString("x2")));
+            var f = JsonSerializer.Serialize(result);
+
+#if DEBUG
+            Log($"Frame:\r\n{f}\r\n---");
+#endif
+
+            if (f == "[]") return "nullframe";
+
+            return SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(f)).Aggregate("0x", ((b,c) => b + c.ToString("x2")));
         }
 
 

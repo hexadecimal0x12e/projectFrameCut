@@ -25,9 +25,9 @@ namespace projectFrameCut.Shared
         [DebuggerNonUserCode()]
         public static void Log(string msg, string level = "info")
         {
-            Console.WriteLine($"@Logging:[{level}] {msg}");
+            Debug.WriteLine($"@Logging:[{level}] {msg}");
 
-
+            Console.WriteLine($"[{level}] {msg}");
         }
 
 

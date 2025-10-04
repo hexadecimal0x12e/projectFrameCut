@@ -18,10 +18,14 @@
         <Entry IsReadOnly="True" Margin="0,0,0,0"  x:Name="SelectedDraftPath" Placeholder="No draft selected" />
 
         <Button Text="Go to Draft Page" Margin="0,10,0,0"  x:Name="ToDraftPage" Clicked="ToDraftPage_Clicked"/>
-        
+        <Button Text="Go to Draft Page with another backend" Margin="0,10,0,0"  x:Name="ToDraftPageWithDiagBackend" Clicked="ToDraftPageWithDiagBackend_Clicked"/>
+
+
         <Button Margin="0,50,0,0" Text=" go to render test page" Clicked="TestPageButton_Clicked" />
 
         <Button Text="go to rpc test page" x:Name="RpcTestPage" Clicked="RpcTestPage_Clicked"       />
+        
+        
 
     </VerticalStackLayout>
 </ContentPage>

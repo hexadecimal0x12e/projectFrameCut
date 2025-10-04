@@ -91,7 +91,7 @@ namespace projectFrameCut.Render.RenderCLI
             }
 
             ConcurrentDictionary<string, string> switches = new(args
-                .Skip(1)   
+                .Skip(1)
                 .Select(x => x.Split('=', 2))
                 .Where(x => x.Length == 2)
                 .Select(x => new KeyValuePair<string, string>(x[0].TrimStart('-', '/'), x[1])));
@@ -187,9 +187,9 @@ namespace projectFrameCut.Render.RenderCLI
                 }
             }
 
-            
 
-            
+
+
             var outputOptions = switches["output_options"].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 
@@ -233,7 +233,9 @@ namespace projectFrameCut.Render.RenderCLI
 
             if (runningMode == "rpc_backend")
             {
-                return await Rpc.go_rpcAsync(switches, accelerator, width, height);
+                Rpc.go_rpcAsync(switches, accelerator, width, height);
+                await Task.Delay(-1, Rpc.RpcCts.Token);
+                return Rpc.RpcReturnCode;
             }
 
             PngEncoder encoder = yieldSaveMode switch
@@ -290,7 +292,7 @@ namespace projectFrameCut.Render.RenderCLI
                 Log("ERROR: No clips in the whole draft.");
                 return 1;
             }
-            
+
             Log("Initiliazing all source video stream...");
             for (int i = 0; i < clips.Length; i++)
             {

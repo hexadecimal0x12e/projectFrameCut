@@ -205,11 +205,6 @@
 	  <Compile Update="DraftPage.xaml.cs">
 	    <DependentUpon>DraftPage.xaml</DependentUpon>
 	  </Compile>
-	  <Compile Update="Strings\AppResources.Designer.cs">
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	    <DependentUpon>AppResources.resx</DependentUpon>
-	  </Compile>
 	  <Compile Update="TestPage.xaml.cs">
 	    <DependentUpon>TestPage.xaml</DependentUpon>
 	  </Compile>
@@ -220,26 +215,14 @@
 	<ItemGroup>
 	  <Folder Include="Services\" />
 	</ItemGroup>
-	
-
-	
-	<ItemGroup>
-	  <None Include="Strings\AppResources.resx">
-	    <Generator>ResXFileCodeGenerator</Generator>
-	    <LastGenOutput>AppResources.Designer.cs</LastGenOutput>
-	  </None>
-	</ItemGroup>
 
 	<ItemGroup>
 		<Using Include="projectFrameCut.Shared.Logger">
 			<Static>True</Static>
 		</Using>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <EmbeddedResource Update="Strings\AppResources.en-US.resx">
-	    <Generator></Generator>
-	  </EmbeddedResource>
+    <Using Include="SimpleLocalizerBaseGeneratedHelper">
+      <Static>True</Static>
+    </Using>
 	</ItemGroup>
 
 </Project>

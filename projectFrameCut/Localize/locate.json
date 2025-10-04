@@ -1,0 +1,147 @@
+{
+  "DefaultLocate": "zh-CN",
+  "AdditionalUsing": "using System.CodeDom.Compiler;\r\nusing System.Diagnostics;\r\nusing System.Reflection;",
+  "NameSpaceOfLocalizerInstance": "",
+  "NameOfLocalizerInstance": "Localized",
+  "EnableDynamicGenerate": false,
+  "Values": {
+    "zh-CN": [
+      {
+        "Id": "AppBrand",
+        "Value": "projectFrameCut(\u4EEE)",
+        "Mode": "ConstString",
+        "Args": [],
+        "Comment": "@DontTranslate",
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackendStatus",
+        "Value": "\u540E\u7AEF\u5EF6\u8FDF{0}ms, \u5185\u5B58\u5360\u7528{1} MB (\u540E\u7AEF/\u6B64\u7535\u8111)",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackendStatus_MemoryOnly",
+        "Value": "\u7A0B\u5E8F\u5DF2\u4F7F\u7528\u5185\u5B58: {0}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackendStatus_NotRespond",
+        "Value": "\u540E\u7AEF\u672A\u54CD\u5E94\uFF0C \u5185\u5B58\u5360\u7528{0} MB (\u540E\u7AEF/\u6B64\u7535\u8111)",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_CannotMoveBecauseOfOverlap",
+        "Value": "\u64CD\u4F5C\u672A\u88AB\u5E94\u7528\uFF0C\u56E0\u4E3A\u6B64\u64CD\u4F5C\u4F1A\u5BFC\u81F4\u91CD\u53E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_ChangesApplied",
+        "Value": "\u66F4\u6539\u5DF2\u88AB\u5E94\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_EverythingFine",
+        "Value": "\u5C31\u7EEA",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_GoRender",
+        "Value": "\u53BB\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_Processing",
+        "Value": "\u5904\u7406\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_RenderDone",
+        "Value": "\u6E32\u67D3\u5DF2\u5B8C\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_RenderOneFrame",
+        "Value": "\u6E32\u67D3\u7B2C{0}\u5E27 ({1})...",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_RenderTimeout",
+        "Value": "\u9519\u8BEF\uFF1A\u6E32\u67D3\u8D85\u65F6",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_Selected",
+        "Value": "\u5DF2\u9009\u4E2D\uFF1A{0}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_Track",
+        "Value": "\u8F68\u9053 #{0}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "WelcomeMessage",
+        "Value": "\u6B22\u8FCE\u6765\u5230projectFrameCut beta!",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      }
+    ]
+  }
+}
