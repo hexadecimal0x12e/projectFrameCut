@@ -63,7 +63,7 @@ namespace projectFrameCut
             {
                 CancellationTokenSource cts = new();
                 if (_status is not null)
-                    _status.Text = Localized.RenderPage_RenderOneFrame.Format(frameId, TimeSpan.FromSeconds(playheadSeconds).ToString("mm\\:ss\\.ff"));   
+                    _status.Text = Localized.RenderPage_RenderOneFrame(frameId, TimeSpan.FromSeconds(playheadSeconds));
                 if (_rpc is null) return;
                 cts.CancelAfter(10000);
                 var result = await _rpc.SendAsync("RenderOne", JsonSerializer.SerializeToElement(frameId), cts.Token);
@@ -104,13 +104,18 @@ namespace projectFrameCut
 #endif
                 return;
             }
+
+            SetStateBusy();
             if (_status is not null)
             {
                 WorkingState = $"saving changes";
                 _status.TextColor = Colors.White;
             }
-            SetStateBusy();
-            
+
+            var draft = await BuildDraft(ProjectInfo.projectName);
+            var opts = new JsonSerializerOptions { WriteIndented = true };
+            await File.WriteAllTextAsync(Path.Combine(workingDirectory, "timeline.json"), JsonSerializer.Serialize(draft, opts), default);
+
             if (_status is not null)
                 WorkingState = $"changes saved on {DateTime.Now:T} ";
 
@@ -287,8 +292,8 @@ namespace projectFrameCut
 #endif
 
             // Initialize with two tracks
-            _vm.AddTrack(Localized.RenderPage_Processing.Format(1));
-            _vm.AddTrack(Localized.RenderPage_Track());
+            _vm.AddTrack(Localized.RenderPage_Processing);
+            _vm.AddTrack(Localized.RenderPage_Track(1));
 
             RebuildTracksUI();
             UpdatePlayhead();
@@ -373,7 +378,7 @@ namespace projectFrameCut
         }
 
 #if DEBUG && WINDOWS
-        public DraftPage(string workingPath,NamedPipeClientStream npc)
+        public DraftPage(string workingPath, NamedPipeClientStream npc)
         {
             InitializeComponent();
             SetStateBusy();
@@ -503,7 +508,7 @@ namespace projectFrameCut
                     Log(e.Data, "Backend_STDERR");
                     Dispatcher.Dispatch(() =>
                     {
-                        _backendStatus.Text = "Backend error: " + e.Data;
+                        _backendStatus.Text = e.Data;
                         _backendStatus.TextColor = Colors.Red;
                     });
                 }
@@ -545,7 +550,7 @@ namespace projectFrameCut
         {
             var tmpDir = Path.Combine(Path.GetTempPath(), "pjfc_temp");
             Directory.CreateDirectory(tmpDir);
-            
+
 
             Thread.Sleep(500);
             _rpc = new RpcClient();
@@ -596,7 +601,7 @@ namespace projectFrameCut
                         _ => Colors.Red
                     };
                     textColor = Colors.White;
-                    message = Localized.RenderPage_BackendStatus.Format(lantency.TotalMilliseconds.ToString("n2"),$"{menUsed.ToString("n2").Replace(',', '\0')}/{menTotalUsed.ToString("n2").Replace(',', '\0')}");
+                    message = Localized.RenderPage_BackendStatus(lantency.TotalMilliseconds, menUsed, menTotalUsed);
 
                 }
                 catch
@@ -605,7 +610,7 @@ namespace projectFrameCut
                     state = nothing;
                     color = Colors.Red;
                     textColor = Colors.Red;
-                    message = Localized.RenderPage_BackendStatus_NotRespond.Format($"{menUsed:n2}/{menTotalUsed:n2}");
+                    message = Localized.RenderPage_BackendStatus_NotRespond(menUsed, menTotalUsed);
                 }
 
                 if (_backendStatus is not null)
@@ -642,7 +647,7 @@ namespace projectFrameCut
                 WorkingState = $"applying changes to backend... ";
                 try
                 {
-                    var element = JsonSerializer.SerializeToElement(BuildDraft(ProjectInfo.projectName));
+                    var element = JsonSerializer.SerializeToElement(await BuildDraft(ProjectInfo.projectName));
                     cts.CancelAfter(10000);
 
                     _ = await _rpc.SendAsync("UpdateClips", element, cts.Token);
@@ -668,7 +673,7 @@ namespace projectFrameCut
             }
         }
 #endif
-#endregion
+        #endregion
 
         #region status
         public void SetStateBusy()
@@ -729,7 +734,7 @@ namespace projectFrameCut
                 menUsed = Environment.WorkingSet / 1024f / 1024f;
                 Dispatcher.Dispatch(() =>
                 {
-                    _backendStatus.Text = Localized.RenderPage_BackendStatus_MemoryOnly.Format($"{menUsed:n2}");
+                    _backendStatus.Text = Localized.RenderPage_BackendStatus_MemoryOnly(menUsed);
                 });
                 Thread.Sleep(2000);
             }
@@ -737,7 +742,7 @@ namespace projectFrameCut
 
         #endregion
 
-                #region subscribe to timeline changes
+        #region subscribe to timeline changes
 
         private void SubscribeToTimelineChanges(bool reset)
         {
@@ -919,8 +924,34 @@ namespace projectFrameCut
             if (image.Contains(ext)) return ClipMode.PhotoClip;
             return ClipMode.Special; // fallback
         }
+
+        private static uint GetRelativeStartFrameFromMetadata(Dictionary<string, object> metadata)
+        {
+            if (metadata == null) return 0;
+            if (metadata.TryGetValue("RelativeStartFrame", out var v) && v is not null)
+            {
+                try
+                {
+                    return v switch
+                    {
+                        uint u => u,
+                        int i => (uint)Math.Max(0, i),
+                        long l => (uint)Math.Max(0, l),
+                        double d => (uint)Math.Max(0, Math.Round(d)),
+                        float f => (uint)Math.Max(0, Math.Round(f)),
+                        string s when uint.TryParse(s, out var parsed) => parsed,
+                        JsonElement je when je.ValueKind == JsonValueKind.Number && je.TryGetUInt32(out var parsedJe) => parsedJe,
+                        _ => 0
+                    };
+                }
+                catch { return 0; }
+            }
+            return 0;
+        }
+
+
         // Export timeline to DraftStructureJSON
-        private DraftStructureJSON BuildDraft(string projectName = "Default Project")
+        private async Task<DraftStructureJSON> BuildDraft(string projectName = "Default Project")
         {
             const uint frameRate = 30; // global framerate assumption
             double frameTime = 1.0 / frameRate;
@@ -934,6 +965,7 @@ namespace projectFrameCut
                     uint startFrame = (uint)Math.Round(clip.StartSeconds * frameRate);
                     uint durationFrames = (uint)Math.Max(1, Math.Round(clip.DurationSeconds * frameRate));
                     var clipType = DetermineClipMode(clip.SourcePath);
+                    var relativeStartFrame = clip.RelativeStartFrame;
                     clipDtos.Add(new ClipDraftDTO
                     {
                         Id = clip.Id,
@@ -941,22 +973,29 @@ namespace projectFrameCut
                         ClipType = clipType,
                         LayerIndex = (uint)trackIndex,
                         StartFrame = startFrame,
+                        RelativeStartFrame = relativeStartFrame,
                         Duration = durationFrames,
                         FrameTime = (float)frameTime,
                         MixtureMode = RenderMode.Overlay,
                         FilePath = clip.SourcePath,
-                        MetaData = clip.Metadata
+                        MetaData = clip.Metadata,
                     });
                 }
             }
 
-            List<JsonElement> elements = new();
+            ConcurrentBag<JsonElement> elements = new();
+
+            List<Task> serializers = new();
 
             foreach (var item in clipDtos)
             {
-                var element = JsonSerializer.SerializeToElement(item);
-
+                serializers.Add(Task.Run(() =>
+                {
+                    elements.Add(JsonSerializer.SerializeToElement(item));
+                }));
             }
+
+            await Task.WhenAll(serializers);
 
             return new DraftStructureJSON
             {
@@ -965,20 +1004,18 @@ namespace projectFrameCut
             };
         }
 
-        // Example method to get JSON string (could be bound to a button)
-        private string ExportDraftToJson()
+        private async Task<string> ExportDraftToJson()
         {
-            var draft = BuildDraft(ProjectInfo.projectName);
+            var draft = await BuildDraft(ProjectInfo.projectName);
             var opts = new JsonSerializerOptions { WriteIndented = true };
             return JsonSerializer.Serialize(draft, opts);
         }
 
-        // Example handler (needs a Button in XAML with Clicked="OnExportDraft")
         private async void OnExportDraft(object sender, EventArgs e)
         {
             try
             {
-                var json = ExportDraftToJson();
+                var json = await ExportDraftToJson();
                 //Log(json);
                 await DisplayAlert("Draft Export", json, "OK");
             }
@@ -1042,7 +1079,7 @@ namespace projectFrameCut
             // Ensure enough tracks by LayerIndex
             int trackCount = dtos.Count == 0 ? 1 : (int)(dtos.Max(c => (int)c.LayerIndex) + 1);
             for (int i = 0; i < trackCount; i++)
-                _vm.AddTrack(Localized.RenderPage_Track.Format(i + 1));
+                _vm.AddTrack(Localized.RenderPage_Track(i + 1));
 
             // frame time: prefer clip's FrameTime or draft.targetFrameRate
             double frameTime = 0;
@@ -1066,7 +1103,10 @@ namespace projectFrameCut
                     Name = string.IsNullOrWhiteSpace(c.Name) ? Path.GetFileName(c.FilePath ?? "Clip") : c.Name,
                     StartSeconds = startSeconds,
                     DurationSeconds = durationSeconds,
-                    SourcePath = c.FilePath
+                    SourcePath = c.FilePath,
+                    RelativeStartFrame = c.RelativeStartFrame,
+                    Type = c.ClipType,
+                    Metadata = c.MetaData ?? new Dictionary<string, object>()
                 };
 
                 int idx = (int)Math.Clamp(c.LayerIndex, 0, Math.Max(0, _vm.Tracks.Count - 1));
@@ -1424,7 +1464,7 @@ namespace projectFrameCut
                 kv.Value.BackgroundColor = Color.FromArgb("#4466AA");
 
             if (_status != null)
-                _status.Text = clip == null ? Localized.RenderPage_Ready : Localized.RenderPage_Selected.Format($"{clip.Name} ({clip.StartSeconds:0.00}s - {clip.EndSeconds:0.00}s)");
+                _status.Text = clip == null ? Localized.RenderPage_EverythingFine : Localized.RenderPage_Selected($"{clip.Name} ({clip.StartSeconds:0.00}s - {clip.EndSeconds:0.00}s)");
         }
 
         private async void OnAddClip(object sender, EventArgs e)
@@ -1467,14 +1507,23 @@ namespace projectFrameCut
             var leftDur = cutPos - _selectedClip.StartSeconds;
             var rightDur = _selectedClip.EndSeconds - cutPos;
 
+            // compute frames for in-point accumulation
+            uint baseInPoint = _selectedClip.RelativeStartFrame;
+            uint leftDurFrames = (uint)Math.Max(0, Math.Round(leftDur * frameRate));
+            uint newRightInPoint = baseInPoint + leftDurFrames;
+
             var right = new ClipViewModel
             {
                 Name = _selectedClip.Name + " (2)",
                 StartSeconds = cutPos,
                 DurationSeconds = rightDur,
-                SourcePath = _selectedClip.SourcePath // inherit path
+                SourcePath = _selectedClip.SourcePath,
+                RelativeStartFrame = newRightInPoint,
+                Type = _selectedClip.Type,
+                Metadata = new Dictionary<string, object>(_selectedClip.Metadata)
             };
             _selectedClip.DurationSeconds = leftDur;
+            // left keeps its original in-point (_selectedClip.RelativeStartFrame remains unchanged)
             t.Clips.Add(right);
             await RebuildTracksUI();
         }
@@ -1592,6 +1641,27 @@ namespace projectFrameCut
             return (s, e);
         }
 
+        private double GetMaxDurationLimit(ClipViewModel clip)
+        {
+            // Timeline bound
+            double timelineLimit = Math.Max(0.05, _vm.TotalSeconds - clip.StartSeconds);
+
+            try
+            {
+                uint rel = clip.RelativeStartFrame;
+                var totalFrames = clip.TotalFrameCount;
+
+                if (totalFrames > 0 && totalFrames > rel)
+                {
+                    double assetLimit = (totalFrames - rel) / (double)frameRate;
+                    return Math.Max(0.05, Math.Min(timelineLimit, assetLimit));
+                }
+            }
+            catch { /* ignore parse */ }
+
+            return timelineLimit; // fallback only timeline bound
+        }
+
         private void ApplyMove(ClipViewModel clip, Grid view, double baseStartSeconds, double deltaPixels)
         {
             var candidate = Math.Max(0, baseStartSeconds + deltaPixels / _vm.PixelsPerSecond);
@@ -1601,6 +1671,8 @@ namespace projectFrameCut
             if (track != null)
             {
                 var resolved = ResolveOverlapStart(track, clip, snapped, clip.DurationSeconds);
+                // Clamp so that end doesn't go beyond timeline
+                resolved = Math.Min(resolved, Math.Max(0, _vm.TotalSeconds - clip.DurationSeconds));
                 // If still overlapping due to unsatisfiable space, resolved may land outside; verify
                 var end = resolved + clip.DurationSeconds;
                 if (!GetOverlappingClips(track, clip, resolved, end).Any())
@@ -1612,41 +1684,118 @@ namespace projectFrameCut
                 else
                 {
                     WorkingState = Localized.RenderPage_CannotMoveBecauseOfOverlap;
-
                 }
             }
             // fallback: set snapped without overlap resolution if no track
-            clip.StartSeconds = snapped;
+            clip.StartSeconds = Math.Min(snapped, Math.Max(0, _vm.TotalSeconds - clip.DurationSeconds));
             UpdateClipLayout(view, clip);
         }
 
         private void ApplyResizeLeft(ClipViewModel clip, Grid view, double baseStart, double baseDuration, double deltaPixels)
         {
+            const double MinDur = 0.05;
             var initialEnd = baseStart + baseDuration; // right edge fixed during gesture
             var desiredStart = Math.Max(0, baseStart + deltaPixels / _vm.PixelsPerSecond);
             var snapStart = SnapSeconds(desiredStart, clip);
+
+            // Calculate how much we're moving the start point (in seconds)
+            var startDelta = snapStart - baseStart;
+            // Convert to frames (negative when expanding left, positive when shrinking from left)
+            int frameDelta = (int)Math.Round(startDelta * frameRate);
+
+            // Calculate new RelativeStartFrame
+            // When expanding left (startDelta < 0), we need to start from an earlier frame (subtract frames)
+            // When shrinking from left (startDelta > 0), we start from a later frame (add frames)
+            int newRelativeStart = (int)clip.RelativeStartFrame + frameDelta;
+            
+            // Ensure RelativeStartFrame doesn't go negative
+            newRelativeStart = Math.Max(0, newRelativeStart);
+
+            // Calculate the maximum available frames from the asset
+            long totalFrames = clip.TotalFrameCount;
+            double maxDur = double.PositiveInfinity;
+            
+            if (totalFrames > 0)
+            {
+                // Maximum duration is limited by: (totalFrames - newRelativeStart) / frameRate
+                long availableFrames = totalFrames - newRelativeStart;
+                if (availableFrames <= 0)
+                {
+                    // Cannot expand left beyond the start of the source material
+                    return;
+                }
+                maxDur = availableFrames / (double)frameRate;
+            }
+
+            // Also respect timeline bound
+            double timelineLimit = Math.Max(MinDur, initialEnd - 0); // can go back to timeline start
+            maxDur = Math.Min(maxDur, timelineLimit);
+
+            // Adjust snapStart if it would cause duration to exceed maxDur
+            double minStartAllowed = Math.Max(0, initialEnd - maxDur);
+            if (snapStart < minStartAllowed)
+            {
+                snapStart = minStartAllowed;
+                // Recalculate frameDelta and newRelativeStart with the clamped value
+                startDelta = snapStart - baseStart;
+                frameDelta = (int)Math.Round(startDelta * frameRate);
+                newRelativeStart = (int)clip.RelativeStartFrame + frameDelta;
+                newRelativeStart = Math.Max(0, newRelativeStart);
+            }
 
             var track = GetTrackForClip(clip);
             double newStart = snapStart;
             if (track != null)
             {
                 // Resolve overlap using fixed end (duration changes)
-                var durationFromStart = Math.Max(0.05, initialEnd - snapStart);
+                var durationFromStart = Math.Max(MinDur, initialEnd - snapStart);
                 var resolvedStart = ResolveOverlapStart(track, clip, snapStart, durationFromStart);
-                // Clamp so we never pass the fixed end - min duration
-                newStart = Math.Clamp(resolvedStart, 0, initialEnd - 0.05);
+                
+                // If overlap resolution changed the start, recalculate RelativeStartFrame
+                if (Math.Abs(resolvedStart - snapStart) > 1e-6)
+                {
+                    startDelta = resolvedStart - baseStart;
+                    frameDelta = (int)Math.Round(startDelta * frameRate);
+                    newRelativeStart = (int)clip.RelativeStartFrame + frameDelta;
+                    newRelativeStart = Math.Max(0, newRelativeStart);
+                }
+                
+                newStart = Math.Clamp(resolvedStart, minStartAllowed, initialEnd - MinDur);
             }
-            var newDuration = Math.Max(0.05, initialEnd - newStart);
+            
+            var newDuration = Math.Max(MinDur, initialEnd - newStart);
+            
+            // Final validation: ensure duration doesn't exceed what's available from newRelativeStart
+            if (totalFrames > 0)
+            {
+                long availableFrames = totalFrames - newRelativeStart;
+                double maxAvailableDur = availableFrames / (double)frameRate;
+                if (newDuration > maxAvailableDur)
+                {
+                    newDuration = Math.Max(MinDur, maxAvailableDur);
+                    newStart = initialEnd - newDuration;
+                    
+                    // Re-adjust RelativeStartFrame based on final newStart
+                    startDelta = newStart - baseStart;
+                    frameDelta = (int)Math.Round(startDelta * frameRate);
+                    newRelativeStart = (int)clip.RelativeStartFrame + frameDelta;
+                    newRelativeStart = Math.Max(0, newRelativeStart);
+                }
+            }
+
             clip.StartSeconds = newStart;
             clip.DurationSeconds = newDuration;
+            clip.RelativeStartFrame = (uint)newRelativeStart;
             UpdateClipLayout(view, clip);
         }
 
         private void ApplyResizeRight(ClipViewModel clip, Grid view, double baseDuration, double deltaPixels)
         {
-            var desiredEnd = clip.StartSeconds + Math.Max(0.05, baseDuration + deltaPixels / _vm.PixelsPerSecond);
+            const double MinDur = 0.05;
+            var desiredEnd = clip.StartSeconds + Math.Max(MinDur, baseDuration + deltaPixels / _vm.PixelsPerSecond);
             var (_, snapEnd) = SnapRange(clip.StartSeconds, desiredEnd, clip);
 
+            // Limit by track next clip and bounds
             var track = GetTrackForClip(clip);
             double limitedEnd = snapEnd;
             if (track != null)
@@ -1657,11 +1806,20 @@ namespace projectFrameCut
                 if (GetOverlappingClips(track, clip, start, limitedEnd).Any())
                 {
                     // push end to the left to the nearest non-overlap (to next clip's start)
-                    limitedEnd = LimitEndToNextClip(track, clip, start + 0.05);
+                    limitedEnd = LimitEndToNextClip(track, clip, start + MinDur);
                 }
             }
 
-            var newDuration = Math.Max(0.05, limitedEnd - clip.StartSeconds);
+            // Limit by timeline and optional asset maximum
+            double maxDur = GetMaxDurationLimit(clip);
+            double maxEnd = clip.StartSeconds + maxDur;
+            limitedEnd = Math.Min(limitedEnd, maxEnd);
+            limitedEnd = Math.Min(limitedEnd, _vm.TotalSeconds);
+
+            var newDuration = Math.Max(MinDur, limitedEnd - clip.StartSeconds);
+            // Finally clamp duration within [MinDur, maxDur]
+            newDuration = Math.Clamp(newDuration, MinDur, maxDur);
+
             clip.DurationSeconds = newDuration;
             UpdateClipLayout(view, clip);
         }
@@ -1725,6 +1883,8 @@ namespace projectFrameCut
             var track = GetTrackForClip(clip);
             if (track == null) return;
             var resolved = ResolveOverlapStart(track, clip, clip.StartSeconds, clip.DurationSeconds);
+            // also ensure the clip stays within timeline bounds
+            resolved = Math.Min(resolved, Math.Max(0, _vm.TotalSeconds - clip.DurationSeconds));
             clip.StartSeconds = resolved;
             UpdateClipLayout(view, clip);
         }
@@ -1782,3 +1942,266 @@ namespace projectFrameCut
         #endregion
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -7,15 +7,20 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
+using System.Text.Json.Serialization;
 using System.Threading.Channels;
 
 namespace projectFrameCut.Shared
 {
     public class Picture
     {
+        [JsonIgnore()]
         public ushort[] r { get; set; } = Array.Empty<ushort>();
+        [JsonIgnore()]
         public ushort[] g { get; set; } = Array.Empty<ushort>();
+        [JsonIgnore()]
         public ushort[] b { get; set; } = Array.Empty<ushort>();
+        [JsonIgnore()]
         [NotNull()]
         public float[]? a { get; set; } = null;
         public int Width { get; set; }
@@ -23,6 +28,7 @@ namespace projectFrameCut.Shared
         public int Pixels { get; init; }
 
         public uint? frameIndex { get; init; } //诊断用
+        public string? filePath { get; init; } //诊断用
 
         public bool hasAlphaChannel { get; set; } = false;
 
@@ -94,6 +100,7 @@ namespace projectFrameCut.Shared
             }
 
             Pixels = checked(Width * Height);
+            filePath = imagePath;
         }
 
         public Picture SetAlpha(bool haveAlpha)

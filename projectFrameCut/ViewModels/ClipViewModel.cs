@@ -1,3 +1,4 @@
+using projectFrameCut.Render;
 using projectFrameCut.Shared;
 using System;
 using System.ComponentModel;
@@ -11,10 +12,17 @@ namespace projectFrameCut.ViewModels
         private string _name = "Clip";
         private double _startSeconds;
         private double _durationSeconds = 5.0;
+
+        private long? _totalFrameLength;
+        private double? _totalLength;
+        private double? _spf;
+        private uint _relativeFrameStart;
+
         private bool _isSelected;
         private string? _sourcePath; // underlying asset file path
         private Dictionary<string, object> _metadata = new();
         private ClipMode _type = ClipMode.Special;
+
 
         public string Id
         {
@@ -42,6 +50,34 @@ namespace projectFrameCut.ViewModels
 
         public double EndSeconds => StartSeconds + DurationSeconds;
 
+        public double TotalLength => TotalFrameCount * _spf ?? -1;
+
+        public long TotalFrameCount
+        {
+            get
+            {
+                if (_totalFrameLength is not null) return _totalFrameLength ?? -1;
+                if (_type == ClipMode.VideoClip)
+                {
+                    using var decoder = new Video(_sourcePath ?? throw new NullReferenceException($"Source video path of clip {_name} is null.")).Decoder;
+                    _totalFrameLength = decoder.TotalFrames;
+                    _spf = 1 / decoder.Fps;
+                    return decoder.TotalFrames;
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+        }
+
+        public uint RelativeStartFrame
+        {
+            get => _relativeFrameStart;
+            set { if (_relativeFrameStart != value) { _relativeFrameStart = value; OnPropertyChanged(); } }
+        }
+
+
         public bool IsSelected
         {
             get => _isSelected;
@@ -54,6 +90,8 @@ namespace projectFrameCut.ViewModels
             get => _sourcePath;
             set { if (_sourcePath != value) { _sourcePath = value; OnPropertyChanged(); } }
         }
+
+
 
         // Arbitrary metadata dictionary for extensibility
         public Dictionary<string, object> Metadata

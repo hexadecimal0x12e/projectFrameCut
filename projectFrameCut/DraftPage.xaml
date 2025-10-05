@@ -5,10 +5,10 @@
              xmlns:conv="clr-namespace:projectFrameCut.Converters"
              x:Class="projectFrameCut.DraftPage"
              x:Name="MainPageRoot"
-             xmlns:l="clr-namespace:projectFrameCut.Strings"
+             xmlns:l="clr-namespace:LocalizedResources"
              Title="default draft page">
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="{x:Static l:AppResources.RenderPage_GoRender}" Clicked="OnExportDraft" Order="Primary" Priority="0" />
+        <ToolbarItem Text="{l:Localized Key=RenderPage_GoRender}" Clicked="OnExportDraft" Order="Primary" Priority="0" />
         <ToolbarItem Text="Options"/>
     </ContentPage.ToolbarItems>
 

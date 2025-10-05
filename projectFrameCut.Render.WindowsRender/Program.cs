@@ -234,7 +234,6 @@ namespace projectFrameCut.Render.RenderCLI
             if (runningMode == "rpc_backend")
             {
                 Rpc.go_rpcAsync(switches, accelerator, width, height);
-                await Task.Delay(-1, Rpc.RpcCts.Token);
                 return Rpc.RpcReturnCode;
             }
 
@@ -400,25 +399,6 @@ namespace projectFrameCut.Render.RenderCLI
             task.ThrowOnAnyError = bool.TryParse(switches.GetOrAdd("StrictMode", "0"), out var value) ? value : false;
             task.ThrowOnErrorHappensImmediately = bool.TryParse(switches.GetOrAdd("StopOnAnyError", "0"), out var stopOnErr) ? stopOnErr : false;
             task.GCOptions = int.TryParse(switches.GetOrAdd("GCOptions", "0"), out var value1) ? value1 : 0;
-            if (switches.ContainsKey("renderManagerPipe"))
-            {
-                task.ActionAfterExectued = (uint i) =>
-                {
-                    try
-                    {
-                        if (pipeClient!.IsConnected)
-                        {
-                            byte[] buffer = Encoding.UTF8.GetBytes($"frame_done:{i}\n");
-                            pipeClient.Write(buffer, 0, buffer.Length);
-                            pipeClient.Flush();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Log($"[Pipe] ERROR: {ex.Message}");
-                    }
-                };
-            }
 
             Log("Start render...");
 

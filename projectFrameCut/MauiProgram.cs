@@ -41,7 +41,8 @@ namespace projectFrameCut
 
                 var app = builder.Build();
                 Debug.WriteLine("MAUI App built successfully");
-                Localized = SimpleLocalizer.Init(); 
+                Localized = SimpleLocalizer.Init();
+                
                 Debug.WriteLine($"Localization initialized to {Localized._LocaleId_}");
                 return app;
             }
@@ -53,4 +54,7 @@ namespace projectFrameCut
             }
         }
     }
+
 }
+
+

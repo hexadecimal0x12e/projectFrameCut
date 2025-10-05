@@ -2,11 +2,11 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.WelcomePage"
-             xmlns:l="clr-namespace:projectFrameCut.Strings"
-             Title="{x:Static l:AppResources.AppBrand}">
+             xmlns:l="clr-namespace:LocalizedResources"
+             Title="{l:Localized Key=AppBrand}">
     <VerticalStackLayout>
         <Label 
-            Text="{x:Static l:AppResources.WelcomeMessage}"
+            Text="{l:Localized Key=WelcomeMessage}"
             VerticalOptions="Center" 
             HorizontalOptions="Center" />
 

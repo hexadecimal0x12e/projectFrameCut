@@ -1,5 +1,4 @@
-﻿using projectFrameCut.Strings;
-
+﻿
 namespace projectFrameCut
 {
     public partial class AppShell : Shell
@@ -7,7 +6,7 @@ namespace projectFrameCut
         public AppShell()
         {
             InitializeComponent();
-            Title = AppResources.AppBrand;
+            Title = Localized.AppBrand;
         }
     }
 }

@@ -1,7 +1,7 @@
 {
   "DefaultLocate": "zh-CN",
   "AdditionalUsing": "using System.CodeDom.Compiler;\r\nusing System.Diagnostics;\r\nusing System.Reflection;",
-  "NameSpaceOfLocalizerInstance": "",
+  "NameSpaceOfLocalizerInstance": "LocalizedResources",
   "NameOfLocalizerInstance": "Localized",
   "EnableDynamicGenerate": false,
   "Values": {
@@ -18,27 +18,54 @@
       },
       {
         "Id": "RenderPage_BackendStatus",
-        "Value": "\u540E\u7AEF\u5EF6\u8FDF{0}ms, \u5185\u5B58\u5360\u7528{1} MB (\u540E\u7AEF/\u6B64\u7535\u8111)",
+        "Value": "\u540E\u7AEF\u5EF6\u8FDF{lantency.ToString(\u0022n2\u0022)}ms, \u5185\u5B58\u5360\u7528{menTotalUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)}/{menTotalUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)} MB (\u540E\u7AEF/\u6B64\u7535\u8111)",
         "Mode": "InterpolationString",
-        "Args": [],
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "lantency"
+          },
+          {
+            "Key": "double",
+            "Value": "menUsed"
+          },
+          {
+            "Key": "double",
+            "Value": "menTotalUsed"
+          }
+        ],
         "HasValidationErrors": false,
         "ForceDynamic": false,
         "DontTranslate": false
       },
       {
         "Id": "RenderPage_BackendStatus_MemoryOnly",
-        "Value": "\u7A0B\u5E8F\u5DF2\u4F7F\u7528\u5185\u5B58: {0}",
+        "Value": "\u7A0B\u5E8F\u5DF2\u4F7F\u7528\u5185\u5B58: {menUsed}",
         "Mode": "InterpolationString",
-        "Args": [],
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "menUsed"
+          }
+        ],
         "HasValidationErrors": false,
         "ForceDynamic": false,
         "DontTranslate": false
       },
       {
         "Id": "RenderPage_BackendStatus_NotRespond",
-        "Value": "\u540E\u7AEF\u672A\u54CD\u5E94\uFF0C \u5185\u5B58\u5360\u7528{0} MB (\u540E\u7AEF/\u6B64\u7535\u8111)",
+        "Value": "\u540E\u7AEF\u672A\u54CD\u5E94\uFF0C \u5185\u5B58\u5360\u7528{menTotalUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)}/{menTotalUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)} MB (\u540E\u7AEF/\u6B64\u7535\u8111)",
         "Mode": "InterpolationString",
-        "Args": [],
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "menUsed"
+          },
+          {
+            "Key": "double",
+            "Value": "menTotalUsed"
+          }
+        ],
         "HasValidationErrors": false,
         "ForceDynamic": false,
         "DontTranslate": false
@@ -99,9 +126,18 @@
       },
       {
         "Id": "RenderPage_RenderOneFrame",
-        "Value": "\u6E32\u67D3\u7B2C{0}\u5E27 ({1})...",
+        "Value": "\u6E32\u67D3\u7B2C{frameIndex}\u5E27 ({playheadSeconds.ToString(\u0022mm\\\\:ss\\\\.ff\u0022)})...",
         "Mode": "InterpolationString",
-        "Args": [],
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "frameIndex"
+          },
+          {
+            "Key": "TimeSpan",
+            "Value": "playheadSeconds"
+          }
+        ],
         "HasValidationErrors": false,
         "ForceDynamic": false,
         "DontTranslate": false
@@ -117,18 +153,28 @@
       },
       {
         "Id": "RenderPage_Selected",
-        "Value": "\u5DF2\u9009\u4E2D\uFF1A{0}",
+        "Value": "\u5DF2\u9009\u4E2D\uFF1A{clipName}",
         "Mode": "InterpolationString",
-        "Args": [],
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clipName"
+          }
+        ],
         "HasValidationErrors": false,
         "ForceDynamic": false,
         "DontTranslate": false
       },
       {
         "Id": "RenderPage_Track",
-        "Value": "\u8F68\u9053 #{0}",
+        "Value": "\u8F68\u9053 #{trackId}",
         "Mode": "InterpolationString",
-        "Args": [],
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "trackId"
+          }
+        ],
         "HasValidationErrors": false,
         "ForceDynamic": false,
         "DontTranslate": false
@@ -136,6 +182,190 @@
       {
         "Id": "WelcomeMessage",
         "Value": "\u6B22\u8FCE\u6765\u5230projectFrameCut beta!",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      }
+    ],
+    "en-US": [
+      {
+        "Id": "AppBrand",
+        "Value": "",
+        "Mode": "ConstString",
+        "Args": [],
+        "Comment": "@DontTranslate",
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackendStatus",
+        "Value": "",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "lantency"
+          },
+          {
+            "Key": "double",
+            "Value": "menUsed"
+          },
+          {
+            "Key": "double",
+            "Value": "menTotalUsed"
+          }
+        ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackendStatus_MemoryOnly",
+        "Value": "",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "menUsed"
+          }
+        ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_BackendStatus_NotRespond",
+        "Value": "",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "menUsed"
+          },
+          {
+            "Key": "double",
+            "Value": "menTotalUsed"
+          }
+        ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_CannotMoveBecauseOfOverlap",
+        "Value": "",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_ChangesApplied",
+        "Value": "",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_EverythingFine",
+        "Value": "",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_GoRender",
+        "Value": "",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_Processing",
+        "Value": "",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_RenderDone",
+        "Value": "",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_RenderOneFrame",
+        "Value": "",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "frameIndex"
+          },
+          {
+            "Key": "TimeSpan",
+            "Value": "playheadSeconds"
+          }
+        ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_RenderTimeout",
+        "Value": "",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_Selected",
+        "Value": "",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clipName"
+          }
+        ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_Track",
+        "Value": "",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "trackId"
+          }
+        ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "WelcomeMessage",
+        "Value": "",
         "Mode": "ConstString",
         "Args": [],
         "HasValidationErrors": false,

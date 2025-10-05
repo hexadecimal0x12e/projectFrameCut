@@ -1,6 +1,5 @@
 using Microsoft.Maui.Graphics;
 using projectFrameCut.Shared;
-using projectFrameCut.Strings;
 using projectFrameCut.ViewModels;
 using System.Diagnostics;
 using System.IO.Pipes;
@@ -15,7 +14,7 @@ public partial class WelcomePage : ContentPage
     public WelcomePage()
     {
         InitializeComponent();
-        Title = AppResources.AppBrand;
+        Title = Localized.AppBrand;
         Debug.WriteLine(Localized.WelcomeMessage);
     }
 

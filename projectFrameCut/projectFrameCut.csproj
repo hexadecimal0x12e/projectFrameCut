@@ -209,18 +209,12 @@
 	    <DependentUpon>TestPage.xaml</DependentUpon>
 	  </Compile>
 	</ItemGroup>
-	
-
-	
-	<ItemGroup>
-	  <Folder Include="Services\" />
-	</ItemGroup>
 
 	<ItemGroup>
 		<Using Include="projectFrameCut.Shared.Logger">
 			<Static>True</Static>
 		</Using>
-    <Using Include="SimpleLocalizerBaseGeneratedHelper">
+    <Using Include="LocalizedResources.SimpleLocalizerBaseGeneratedHelper">
       <Static>True</Static>
     </Using>
 	</ItemGroup>
