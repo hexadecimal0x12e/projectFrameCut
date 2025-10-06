@@ -7,6 +7,24 @@
   "Values": {
     "zh-CN": [
       {
+        "Id": "_Info",
+        "Value": "\u63D0\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "\u597D\u7684",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
         "Id": "AppBrand",
         "Value": "projectFrameCut(\u4EEE)",
         "Mode": "ConstString",
@@ -17,8 +35,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_BackendStatus",
-        "Value": "\u540E\u7AEF\u5EF6\u8FDF{lantency.ToString(\u0022n2\u0022)}ms, \u5185\u5B58\u5360\u7528{menTotalUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)}/{menTotalUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)} MB (\u540E\u7AEF/\u6B64\u7535\u8111)",
+        "Id": "DraftPage_BackendStatus",
+        "Value": "\u540E\u7AEF\u5EF6\u8FDF{lantency.ToString(\u0022n2\u0022)}ms, \u5185\u5B58\u5360\u7528{menUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)}/{menTotalUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)} MB (\u540E\u7AEF/\u6B64\u7535\u8111)",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -39,7 +57,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_BackendStatus_MemoryOnly",
+        "Id": "DraftPage_BackendStatus_MemoryOnly",
         "Value": "\u7A0B\u5E8F\u5DF2\u4F7F\u7528\u5185\u5B58: {menUsed}",
         "Mode": "InterpolationString",
         "Args": [
@@ -53,7 +71,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_BackendStatus_NotRespond",
+        "Id": "DraftPage_BackendStatus_NotRespond",
         "Value": "\u540E\u7AEF\u672A\u54CD\u5E94\uFF0C \u5185\u5B58\u5360\u7528{menTotalUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)}/{menTotalUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)} MB (\u540E\u7AEF/\u6B64\u7535\u8111)",
         "Mode": "InterpolationString",
         "Args": [
@@ -71,7 +89,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_CannotMoveBecauseOfOverlap",
+        "Id": "DraftPage_CannotMoveBecauseOfOverlap",
         "Value": "\u64CD\u4F5C\u672A\u88AB\u5E94\u7528\uFF0C\u56E0\u4E3A\u6B64\u64CD\u4F5C\u4F1A\u5BFC\u81F4\u91CD\u53E0",
         "Mode": "ConstString",
         "Args": [],
@@ -80,7 +98,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_ChangesApplied",
+        "Id": "DraftPage_ChangesApplied",
         "Value": "\u66F4\u6539\u5DF2\u88AB\u5E94\u7528",
         "Mode": "ConstString",
         "Args": [],
@@ -89,7 +107,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_EverythingFine",
+        "Id": "DraftPage_EverythingFine",
         "Value": "\u5C31\u7EEA",
         "Mode": "ConstString",
         "Args": [],
@@ -98,7 +116,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_GoRender",
+        "Id": "DraftPage_GoRender",
         "Value": "\u53BB\u6E32\u67D3",
         "Mode": "ConstString",
         "Args": [],
@@ -107,7 +125,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_Processing",
+        "Id": "DraftPage_Processing",
         "Value": "\u5904\u7406\u4E2D...",
         "Mode": "ConstString",
         "Args": [],
@@ -116,7 +134,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_RenderDone",
+        "Id": "DraftPage_RenderDone",
         "Value": "\u6E32\u67D3\u5DF2\u5B8C\u6210",
         "Mode": "ConstString",
         "Args": [],
@@ -125,7 +143,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_RenderOneFrame",
+        "Id": "DraftPage_RenderOneFrame",
         "Value": "\u6E32\u67D3\u7B2C{frameIndex}\u5E27 ({playheadSeconds.ToString(\u0022mm\\\\:ss\\\\.ff\u0022)})...",
         "Mode": "InterpolationString",
         "Args": [
@@ -143,7 +161,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_RenderTimeout",
+        "Id": "DraftPage_RenderTimeout",
         "Value": "\u9519\u8BEF\uFF1A\u6E32\u67D3\u8D85\u65F6",
         "Mode": "ConstString",
         "Args": [],
@@ -152,7 +170,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_Selected",
+        "Id": "DraftPage_Selected",
         "Value": "\u5DF2\u9009\u4E2D\uFF1A{clipName}",
         "Mode": "InterpolationString",
         "Args": [
@@ -166,7 +184,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_Track",
+        "Id": "DraftPage_Track",
         "Value": "\u8F68\u9053 #{trackId}",
         "Mode": "InterpolationString",
         "Args": [
@@ -180,10 +198,83 @@
         "DontTranslate": false
       },
       {
+        "Id": "RenderPage_ExportTitle",
+        "Value": "\u5BFC\u51FA\u9879\u76EE \uFF62{name}\uFF63 ",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_NoDraft",
+        "Value": "\u4F60\u9700\u8981\u5148\u6253\u5F00\u4E00\u4E2A\u8349\u7A3F\u624D\u80FD\u8FDB\u884C\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
         "Id": "WelcomeMessage",
         "Value": "\u6B22\u8FCE\u6765\u5230projectFrameCut beta!",
         "Mode": "ConstString",
         "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_CustomOption",
+        "Value": "\u81EA\u5B9A\u4E49",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_SelectResolution",
+        "Value": "\u9009\u62E9\u4E00\u4E2A\u5206\u8FA8\u7387",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_SelectFrameRate",
+        "Value": "\u9009\u62E9\u5E27\u7387",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_SelectEncoding",
+        "Value": "\u9009\u62E9\u7F16\u7801",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_MaxParallelThreadsCount",
+        "Value": "\u5E76\u53D1\u6570: {num}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "num"
+          }
+        ],
         "HasValidationErrors": false,
         "ForceDynamic": false,
         "DontTranslate": false
@@ -201,7 +292,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_BackendStatus",
+        "Id": "DraftPage_BackendStatus",
         "Value": "",
         "Mode": "InterpolationString",
         "Args": [
@@ -223,7 +314,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_BackendStatus_MemoryOnly",
+        "Id": "DraftPage_BackendStatus_MemoryOnly",
         "Value": "",
         "Mode": "InterpolationString",
         "Args": [
@@ -237,7 +328,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_BackendStatus_NotRespond",
+        "Id": "DraftPage_BackendStatus_NotRespond",
         "Value": "",
         "Mode": "InterpolationString",
         "Args": [
@@ -255,7 +346,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_CannotMoveBecauseOfOverlap",
+        "Id": "DraftPage_CannotMoveBecauseOfOverlap",
         "Value": "",
         "Mode": "ConstString",
         "Args": [],
@@ -264,7 +355,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_ChangesApplied",
+        "Id": "DraftPage_ChangesApplied",
         "Value": "",
         "Mode": "ConstString",
         "Args": [],
@@ -273,7 +364,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_EverythingFine",
+        "Id": "DraftPage_EverythingFine",
         "Value": "",
         "Mode": "ConstString",
         "Args": [],
@@ -282,7 +373,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_GoRender",
+        "Id": "DraftPage_GoRender",
         "Value": "",
         "Mode": "ConstString",
         "Args": [],
@@ -291,7 +382,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_Processing",
+        "Id": "DraftPage_Processing",
         "Value": "",
         "Mode": "ConstString",
         "Args": [],
@@ -300,7 +391,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_RenderDone",
+        "Id": "DraftPage_RenderDone",
         "Value": "",
         "Mode": "ConstString",
         "Args": [],
@@ -309,7 +400,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_RenderOneFrame",
+        "Id": "DraftPage_RenderOneFrame",
         "Value": "",
         "Mode": "InterpolationString",
         "Args": [
@@ -327,7 +418,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_RenderTimeout",
+        "Id": "DraftPage_RenderTimeout",
         "Value": "",
         "Mode": "ConstString",
         "Args": [],
@@ -336,7 +427,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_Selected",
+        "Id": "DraftPage_Selected",
         "Value": "",
         "Mode": "InterpolationString",
         "Args": [
@@ -350,7 +441,7 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_Track",
+        "Id": "DraftPage_Track",
         "Value": "",
         "Mode": "InterpolationString",
         "Args": [

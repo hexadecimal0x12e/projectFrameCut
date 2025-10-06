@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="projectFrameCut.RenderPage"
+             Loaded="ContentPage_Loaded"
+             xmlns:l="clr-namespace:LocalizedResources"
+             Title="RenderPage">
+    <VerticalStackLayout>
+        <VerticalStackLayout WidthRequest="500">
+            <Picker
+                x:Name="resoultionPicker"
+                Title="{l:Localized Key=RenderPage_SelectResolution}"
+                ItemsSource="{Binding ExportOptions_Resolution}"
+                SelectedItem="{Binding Resoultion, Mode=TwoWay}" />
+            <HorizontalStackLayout x:Name="CustomResolutionBox" Margin="0,8,0,8"
+                                   IsVisible="{Binding IsCustomResolutionVisible}">
+                <Entry Placeholder="Width" HeightRequest="25" WidthRequest="70" Margin="8,0,8,0"
+                       Keyboard="Numeric"
+                       Text="{Binding Width, Mode=TwoWay}" />
+                <Entry Placeholder="Height" HeightRequest="25" WidthRequest="70"
+                       Keyboard="Numeric"
+                       Text="{Binding Height, Mode=TwoWay}" />
+            </HorizontalStackLayout>
+
+            <Picker
+                x:Name="frameratePicker"
+                Title="{l:Localized Key=RenderPage_SelectFrameRate}"
+                ItemsSource="{Binding ExportOptions_Framerate}"
+                SelectedItem="{Binding FramerateDisplay, Mode=TwoWay}" />
+            <HorizontalStackLayout x:Name="CustomFramerateBox" Margin="0,8,0,8"
+                                   IsVisible="{Binding IsCustomFramerateVisible}">
+                <Entry Placeholder="Framerate" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
+                       Keyboard="Numeric"
+                       Text="{Binding Framerate, Mode=TwoWay}" />
+            </HorizontalStackLayout>
+
+            <Picker
+                x:Name="encodingPicker"
+                Title="{l:Localized Key=RenderPage_SelectEncoding}"
+                ItemsSource="{Binding ExportOptions_Encoding}"
+                SelectedItem="{Binding EncodingDisplay, Mode=TwoWay}" />
+            <HorizontalStackLayout x:Name="CustomEncodingBox" Margin="0,8,0,8"
+                                   IsVisible="{Binding IsCustomEncodingVisible}">
+                <Entry Placeholder="Encoding" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
+                       Keyboard="Text"
+                       Text="{Binding Encoding, Mode=TwoWay}" />
+            </HorizontalStackLayout>
+
+            <Label x:Name="MaxParallelThreadsCountLabel"  Margin="0,8,0,0" Text="{l:Localized Key=RenderPage_MaxParallelThreadsCount}" />
+            <Slider x:Name="MaxParallelThreadsCount" Minimum="8" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
+
+            <Button Margin="0,8,0,8"  x:Name="StartRender" Text="Start" Clicked="StartRender_Clicked" />
+        </VerticalStackLayout>
+
+        <Editor x:Name="LoggingEntry" HeightRequest="300" WidthRequest="500"  AutoSize="TextChanges" IsReadOnly="True"/>
+
+        <ProgressBar x:Name="RenderProgress" WidthRequest="500" HeightRequest="80" Progress="0" /> 
+    </VerticalStackLayout>
+</ContentPage>

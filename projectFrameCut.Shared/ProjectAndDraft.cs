@@ -10,7 +10,7 @@ namespace projectFrameCut.Shared
     {
         public string projectName { get; set; } = "Untitled Project";
         public string ResourcePath { get; set; } = string.Empty;
-
+        public uint Duration { get; set; } = 0;
     }
 
     public class DraftStructureJSON

@@ -16,6 +16,7 @@ namespace projectFrameCut.Render
         public bool ThrowOnAnyError { get; set; } = false;
         public bool ThrowOnErrorHappensImmediately { get; set; } = false;
         public bool VerboseLogging { get; set; } = true;
+        public bool InternalLogging { get; set; } = false;
 
         /// <summary>
         /// 0: GC after each new batch start (default behavior);
@@ -65,7 +66,21 @@ namespace projectFrameCut.Render
                     }
                 }).Start();
             }
-            
+
+            if (InternalLogging)
+            {
+                new Thread(() =>
+                {
+                    while (running)
+                    {
+                        int f = Volatile.Read(ref finished);
+                        int w = Volatile.Read(ref working);
+                        Console.Error.WriteLine($"@@{w},{f},{stuff.Length}");
+                        Thread.Sleep(3000);
+                    }
+                }).Start();
+            }
+
             do
             {
                 if (fulled)

@@ -6,6 +6,7 @@
              x:Class="projectFrameCut.DraftPage"
              x:Name="MainPageRoot"
              xmlns:l="clr-namespace:LocalizedResources"
+             NavigatedTo="MainPageRoot_NavigatedTo"
              Title="default draft page">
     <ContentPage.ToolbarItems>
         <ToolbarItem Text="{l:Localized Key=RenderPage_GoRender}" Clicked="OnExportDraft" Order="Primary" Priority="0" />

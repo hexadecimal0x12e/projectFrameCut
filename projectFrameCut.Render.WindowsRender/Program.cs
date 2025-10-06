@@ -33,8 +33,19 @@ namespace projectFrameCut.Render.RenderCLI
 
         static async Task<int> Main(string[] args)
         {
-
             if (args.Length > 1) Thread.Sleep(800);
+
+#if DEBUG
+            if (!Environment.GetEnvironmentVariables().Contains("pjfc_dbg")) goto run;
+            Console.WriteLine("DEBUG BUILD - Waiting for debugger. To disable: don't define 'pjfc_dbg' environment varable.");
+            Stopwatch dbg_sw = Stopwatch.StartNew();
+            while (true)
+            {
+                if (Debugger.IsAttached || dbg_sw.Elapsed.TotalSeconds > 15) break;
+                Thread.Sleep(50);
+            }
+        run:
+#endif
 
             Log($"projectFrameCut.Render - {Assembly.GetExecutingAssembly().GetName().Version} \r\n" + $"Copyright hexadecimal0x12e 2025.\r\n" +
                 $"cmdline: {Environment.GetCommandLineArgs().Aggregate((a, b) => $"{a} {b}")}");
@@ -399,6 +410,7 @@ namespace projectFrameCut.Render.RenderCLI
             task.ThrowOnAnyError = bool.TryParse(switches.GetOrAdd("StrictMode", "0"), out var value) ? value : false;
             task.ThrowOnErrorHappensImmediately = bool.TryParse(switches.GetOrAdd("StopOnAnyError", "0"), out var stopOnErr) ? stopOnErr : false;
             task.GCOptions = int.TryParse(switches.GetOrAdd("GCOptions", "0"), out var value1) ? value1 : 0;
+            task.InternalLogging = Environment.GetEnvironmentVariables().Contains("projectFrameCut");
 
             Log("Start render...");
 

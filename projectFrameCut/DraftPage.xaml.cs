@@ -63,21 +63,22 @@ namespace projectFrameCut
             {
                 CancellationTokenSource cts = new();
                 if (_status is not null)
-                    _status.Text = Localized.RenderPage_RenderOneFrame(frameId, TimeSpan.FromSeconds(playheadSeconds));
+                    _status.Text = Localized.DraftPage_RenderOneFrame(frameId, TimeSpan.FromSeconds(playheadSeconds));
                 if (_rpc is null) return;
-                cts.CancelAfter(10000);
+                cts.CancelAfter(60000);
                 var result = await _rpc.SendAsync("RenderOne", JsonSerializer.SerializeToElement(frameId), cts.Token);
                 if (result is null) return;
                 var path = result.Value.GetProperty("path").GetString();
                 PreviewBox.Source = ImageSource.FromFile(path);
-                WorkingState = Localized.RenderPage_RenderDone;
+                WorkingState = Localized.DraftPage_RenderDone;
                 SetStateOK();
 
             }
             catch (TaskCanceledException)
             {
-                WorkingState = Localized.RenderPage_RenderTimeout;
+                WorkingState = Localized.DraftPage_RenderTimeout;
                 SetStateFail();
+                return;
             }
             catch (Exception ex)
             {
@@ -115,6 +116,30 @@ namespace projectFrameCut
             var draft = await BuildDraft(ProjectInfo.projectName);
             var opts = new JsonSerializerOptions { WriteIndented = true };
             await File.WriteAllTextAsync(Path.Combine(workingDirectory, "timeline.json"), JsonSerializer.Serialize(draft, opts), default);
+
+            
+            if (reason == "leaving editor")
+            {
+                long max = 0;
+                foreach (var clip in draft.Clips)
+                {
+                    if(clip is ClipDraftDTO dto)
+                    {
+                        max = Math.Max(dto.StartFrame + dto.Duration, max);
+                    }
+                    
+                }
+
+                if(max > uint.MaxValue)
+                {
+                    throw new OverflowException($"Project duration overflow, total frames exceed {uint.MaxValue}.");
+                }
+
+                ProjectInfo.Duration = (uint)max;
+
+                SetStateOK();
+                return;
+            }
 
             if (_status is not null)
                 WorkingState = $"changes saved on {DateTime.Now:T} ";
@@ -292,8 +317,8 @@ namespace projectFrameCut
 #endif
 
             // Initialize with two tracks
-            _vm.AddTrack(Localized.RenderPage_Processing);
-            _vm.AddTrack(Localized.RenderPage_Track(1));
+            _vm.AddTrack(Localized.DraftPage_Processing);
+            _vm.AddTrack(Localized.DraftPage_Track(1));
 
             RebuildTracksUI();
             UpdatePlayhead();
@@ -316,7 +341,7 @@ namespace projectFrameCut
 
 #if WINDOWS
 
-            Loaded += async (sender, e) => await BootRPC();
+            //Loaded += async (sender, e) => await BootRPC();
 #else
             BackendStateIndicator.IsVisible = false;
             //_backendStatus.IsVisible = false;
@@ -355,7 +380,7 @@ namespace projectFrameCut
                 throw new FileNotFoundException("One or more required files are missing.", workingPath);
             }
 
-            var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.json")));
+            //var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.json")));
 
             ProjectInfo = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.json"))) ?? new();
             var assets = JsonSerializer.Deserialize<ObservableCollection<AssetItem>>(File.ReadAllText(Path.Combine(workingPath, "assets.json"))) ?? new();
@@ -367,7 +392,6 @@ namespace projectFrameCut
 #if WINDOWS
             Loaded += async (sender, e) =>
             {
-                await BootRPC();
                 await UpdateClipToBackend();
 
             };
@@ -438,7 +462,7 @@ namespace projectFrameCut
         {
             base.OnNavigatedFrom(args);
             UnsubscribeAllTimelineChanges();
-
+            OnProjectChanged("leaving editor");
 #if WINDOWS
             try
             {
@@ -454,6 +478,13 @@ namespace projectFrameCut
 #endif
         }
 
+        private async void MainPageRoot_NavigatedTo(object sender, NavigatedToEventArgs e)
+        {
+#if WINDOWS
+            await BootRPC();
+#endif
+        }
+
         #endregion
 
         #region backend
@@ -462,7 +493,6 @@ namespace projectFrameCut
         private RpcClient? _rpc;
         private Process rpcProc;
         public bool VerboseBackendLog { get; private set; } = false;
-
 
         private async Task BootRPC()
         {
@@ -515,13 +545,7 @@ namespace projectFrameCut
             };
 
             rpcProc.EnableRaisingEvents = true;
-            rpcProc.Exited += (s, e) =>
-            {
-                Dispatcher.Dispatch(async () =>
-                {
-                    await DisplayAlert("Error", $"The backend exited unexpectedly with code {rpcProc.ExitCode}. Please reload project.", "ok");
-                });
-            };
+            rpcProc.Exited += RpcProc_Exited;
             rpcProc.Start();
             if (!VerboseBackendLog)
             {
@@ -543,6 +567,14 @@ namespace projectFrameCut
             { CurrentCulture = CultureInfo.InvariantCulture }.Start();
 
 
+        }
+
+        private void RpcProc_Exited(object? sender, EventArgs e)
+        {
+            Dispatcher.Dispatch(async () =>
+            {
+                await DisplayAlert("Error", $"The backend exited unexpectedly with code {rpcProc.ExitCode}. Please reload project.", "ok");
+            });
         }
 
 #if DEBUG
@@ -601,7 +633,7 @@ namespace projectFrameCut
                         _ => Colors.Red
                     };
                     textColor = Colors.White;
-                    message = Localized.RenderPage_BackendStatus(lantency.TotalMilliseconds, menUsed, menTotalUsed);
+                    message = Localized.DraftPage_BackendStatus(lantency.TotalMilliseconds, menUsed, menTotalUsed);
 
                 }
                 catch
@@ -610,7 +642,7 @@ namespace projectFrameCut
                     state = nothing;
                     color = Colors.Red;
                     textColor = Colors.Red;
-                    message = Localized.RenderPage_BackendStatus_NotRespond(menUsed, menTotalUsed);
+                    message = Localized.DraftPage_BackendStatus_NotRespond(menUsed, menTotalUsed);
                 }
 
                 if (_backendStatus is not null)
@@ -651,7 +683,7 @@ namespace projectFrameCut
                     cts.CancelAfter(10000);
 
                     _ = await _rpc.SendAsync("UpdateClips", element, cts.Token);
-                    WorkingState = Localized.RenderPage_ChangesApplied;
+                    WorkingState = Localized.DraftPage_ChangesApplied;
                     return true;
                 }
                 catch (Exception ex)
@@ -734,7 +766,7 @@ namespace projectFrameCut
                 menUsed = Environment.WorkingSet / 1024f / 1024f;
                 Dispatcher.Dispatch(() =>
                 {
-                    _backendStatus.Text = Localized.RenderPage_BackendStatus_MemoryOnly(menUsed);
+                    _backendStatus.Text = Localized.DraftPage_BackendStatus_MemoryOnly(menUsed);
                 });
                 Thread.Sleep(2000);
             }
@@ -925,30 +957,6 @@ namespace projectFrameCut
             return ClipMode.Special; // fallback
         }
 
-        private static uint GetRelativeStartFrameFromMetadata(Dictionary<string, object> metadata)
-        {
-            if (metadata == null) return 0;
-            if (metadata.TryGetValue("RelativeStartFrame", out var v) && v is not null)
-            {
-                try
-                {
-                    return v switch
-                    {
-                        uint u => u,
-                        int i => (uint)Math.Max(0, i),
-                        long l => (uint)Math.Max(0, l),
-                        double d => (uint)Math.Max(0, Math.Round(d)),
-                        float f => (uint)Math.Max(0, Math.Round(f)),
-                        string s when uint.TryParse(s, out var parsed) => parsed,
-                        JsonElement je when je.ValueKind == JsonValueKind.Number && je.TryGetUInt32(out var parsedJe) => parsedJe,
-                        _ => 0
-                    };
-                }
-                catch { return 0; }
-            }
-            return 0;
-        }
-
 
         // Export timeline to DraftStructureJSON
         private async Task<DraftStructureJSON> BuildDraft(string projectName = "Default Project")
@@ -1004,26 +1012,15 @@ namespace projectFrameCut
             };
         }
 
-        private async Task<string> ExportDraftToJson()
-        {
-            var draft = await BuildDraft(ProjectInfo.projectName);
-            var opts = new JsonSerializerOptions { WriteIndented = true };
-            return JsonSerializer.Serialize(draft, opts);
-        }
 
         private async void OnExportDraft(object sender, EventArgs e)
         {
-            try
-            {
-                var json = await ExportDraftToJson();
-                //Log(json);
-                await DisplayAlert("Draft Export", json, "OK");
-            }
-            catch (Exception ex)
-            {
-                Log(ex);
-                await DisplayAlert("Error", ex.Message, "OK");
-            }
+#if WINDOWS
+            rpcProc.Exited -= RpcProc_Exited; //避免弹框
+
+#endif
+            await Navigation.PushAsync(new RenderPage(workingDirectory, JsonSerializer.Serialize(await BuildDraft(ProjectInfo.projectName), new JsonSerializerOptions { WriteIndented = true }), ProjectInfo));
+
         }
 
         // Import DraftStructureJSON and rebuild all tracks/clips
@@ -1079,7 +1076,7 @@ namespace projectFrameCut
             // Ensure enough tracks by LayerIndex
             int trackCount = dtos.Count == 0 ? 1 : (int)(dtos.Max(c => (int)c.LayerIndex) + 1);
             for (int i = 0; i < trackCount; i++)
-                _vm.AddTrack(Localized.RenderPage_Track(i + 1));
+                _vm.AddTrack(Localized.DraftPage_Track(i + 1));
 
             // frame time: prefer clip's FrameTime or draft.targetFrameRate
             double frameTime = 0;
@@ -1141,7 +1138,7 @@ namespace projectFrameCut
         {
             if (_tracksHeader == null || _tracksPanel == null) return;
             SetStateBusy();
-            WorkingState = Localized.RenderPage_Processing;
+            WorkingState = Localized.DraftPage_Processing;
             await Task.Delay(45);
             _tracksHeader.Children.Clear();
             _tracksPanel.Children.Clear();
@@ -1315,7 +1312,7 @@ namespace projectFrameCut
                                 }
                                 else
                                 {
-                                    WorkingState = Localized.RenderPage_CannotMoveBecauseOfOverlap;
+                                    WorkingState = Localized.DraftPage_CannotMoveBecauseOfOverlap;
                                 }
                             }
                         }
@@ -1464,7 +1461,7 @@ namespace projectFrameCut
                 kv.Value.BackgroundColor = Color.FromArgb("#4466AA");
 
             if (_status != null)
-                _status.Text = clip == null ? Localized.RenderPage_EverythingFine : Localized.RenderPage_Selected($"{clip.Name} ({clip.StartSeconds:0.00}s - {clip.EndSeconds:0.00}s)");
+                _status.Text = clip == null ? Localized.DraftPage_EverythingFine : Localized.DraftPage_Selected($"{clip.Name} ({clip.StartSeconds:0.00}s - {clip.EndSeconds:0.00}s)");
         }
 
         private async void OnAddClip(object sender, EventArgs e)
@@ -1683,7 +1680,7 @@ namespace projectFrameCut
                 }
                 else
                 {
-                    WorkingState = Localized.RenderPage_CannotMoveBecauseOfOverlap;
+                    WorkingState = Localized.DraftPage_CannotMoveBecauseOfOverlap;
                 }
             }
             // fallback: set snapped without overlap resolution if no track
@@ -1707,14 +1704,14 @@ namespace projectFrameCut
             // When expanding left (startDelta < 0), we need to start from an earlier frame (subtract frames)
             // When shrinking from left (startDelta > 0), we start from a later frame (add frames)
             int newRelativeStart = (int)clip.RelativeStartFrame + frameDelta;
-            
+
             // Ensure RelativeStartFrame doesn't go negative
             newRelativeStart = Math.Max(0, newRelativeStart);
 
             // Calculate the maximum available frames from the asset
             long totalFrames = clip.TotalFrameCount;
             double maxDur = double.PositiveInfinity;
-            
+
             if (totalFrames > 0)
             {
                 // Maximum duration is limited by: (totalFrames - newRelativeStart) / frameRate
@@ -1750,7 +1747,7 @@ namespace projectFrameCut
                 // Resolve overlap using fixed end (duration changes)
                 var durationFromStart = Math.Max(MinDur, initialEnd - snapStart);
                 var resolvedStart = ResolveOverlapStart(track, clip, snapStart, durationFromStart);
-                
+
                 // If overlap resolution changed the start, recalculate RelativeStartFrame
                 if (Math.Abs(resolvedStart - snapStart) > 1e-6)
                 {
@@ -1759,12 +1756,12 @@ namespace projectFrameCut
                     newRelativeStart = (int)clip.RelativeStartFrame + frameDelta;
                     newRelativeStart = Math.Max(0, newRelativeStart);
                 }
-                
+
                 newStart = Math.Clamp(resolvedStart, minStartAllowed, initialEnd - MinDur);
             }
-            
+
             var newDuration = Math.Max(MinDur, initialEnd - newStart);
-            
+
             // Final validation: ensure duration doesn't exceed what's available from newRelativeStart
             if (totalFrames > 0)
             {
@@ -1774,7 +1771,7 @@ namespace projectFrameCut
                 {
                     newDuration = Math.Max(MinDur, maxAvailableDur);
                     newStart = initialEnd - newDuration;
-                    
+
                     // Re-adjust RelativeStartFrame based on final newStart
                     startDelta = newStart - baseStart;
                     frameDelta = (int)Math.Round(startDelta * frameRate);
@@ -1940,268 +1937,7 @@ namespace projectFrameCut
         }
 
         #endregion
+
+
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
