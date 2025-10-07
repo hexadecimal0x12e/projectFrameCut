@@ -69,6 +69,11 @@ namespace projectFrameCut.Shared
             // Map timeline frame to source frame index: offset from clip start + in-point (RelativeStartFrame)
             long offsetFromClipStart = (long)targetFrame - StartFrame; // can be negative before the clip actually starts
 
+            if(offsetFromClipStart == Duration)
+            {
+                return Picture.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, null);
+            }
+
             if (offsetFromClipStart < 0 || offsetFromClipStart >= Duration)
             {
                 throw new IndexOutOfRangeException($"Frame #{targetFrame} is not in clip [{StartFrame}, {StartFrame + Duration}).");

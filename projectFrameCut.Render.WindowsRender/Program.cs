@@ -34,9 +34,10 @@ namespace projectFrameCut.Render.RenderCLI
         static async Task<int> Main(string[] args)
         {
             if (args.Length > 1) Thread.Sleep(800);
-
+            inprojectFrameCut = Environment.GetEnvironmentVariables().Contains("projectFrameCut");
 #if DEBUG
             if (!Environment.GetEnvironmentVariables().Contains("pjfc_dbg")) goto run;
+            SetSubProg("WaitForDbg");
             Console.WriteLine("DEBUG BUILD - Waiting for debugger. To disable: don't define 'pjfc_dbg' environment varable.");
             Stopwatch dbg_sw = Stopwatch.StartNew();
             while (true)
@@ -46,6 +47,7 @@ namespace projectFrameCut.Render.RenderCLI
             }
         run:
 #endif
+            SetSubProg("Init");
 
             Log($"projectFrameCut.Render - {Assembly.GetExecutingAssembly().GetName().Version} \r\n" + $"Copyright hexadecimal0x12e 2025.\r\n" +
                 $"cmdline: {Environment.GetCommandLineArgs().Aggregate((a, b) => $"{a} {b}")}");
@@ -56,7 +58,7 @@ namespace projectFrameCut.Render.RenderCLI
                     """
                     Usage: projectFrameCut.Render render
                             -draft=<draft file path>
-                            -range=<frame range>
+                            -duration=<frame range>
                             -output=<output file/folder>
                             [-yieldSaveMode=<video|png_16bpc|png_8bpc|png_16bpc_alpha|png_8bpc_alpha>]                 
                             -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
@@ -66,6 +68,8 @@ namespace projectFrameCut.Render.RenderCLI
                             [-maxParallelThreads=<number>]
                             [-StrictMode=true|false]
                             [-GCOptions=0|1|2|<negative integer>]
+                            [-preview=true|false]
+                            [-previewPath=<path of preview output>]
                             [-advancedFlags=<flag1>[,<flag2>,...,<flagn>]
 
                        or: projectFrameCut.Render rpc_backend
@@ -115,8 +119,6 @@ namespace projectFrameCut.Render.RenderCLI
                     advancedFlags.Add(flag);
                 }
             }
-
-            NamedPipeClientStream? pipeClient = null;
 
             Log("Initializing accelerator context...");
             Context context = Context.CreateDefault();
@@ -256,8 +258,11 @@ namespace projectFrameCut.Render.RenderCLI
 
             int maxParallelThreads = int.TryParse(switches.GetOrAdd("maxParallelThreads", "8"), out result) ? result : 8;
 
-            var frameRange = RangeParser.ParseToSequence(switches["range"]);
+            //var frameRange = RangeParser.ParseToSequence(switches["range"]);
 
+            var duration = int.Parse(switches.GetOrAdd("duration", "0"));
+
+            var frameRange = Enumerable.Range(0, duration).Select(i => (uint)i).ToArray();  
 
             var draftSrc = JsonSerializer.Deserialize<DraftStructureJSON
                 >(File.ReadAllText(switches["draft"])) ?? throw new NullReferenceException();
@@ -303,6 +308,8 @@ namespace projectFrameCut.Render.RenderCLI
                 return 1;
             }
 
+            SetSubProg("PrepareDraft");
+
             Log("Initiliazing all source video stream...");
             for (int i = 0; i < clips.Length; i++)
             {
@@ -320,7 +327,11 @@ namespace projectFrameCut.Render.RenderCLI
             {
                 case "video":
                     {
-                        builder = new VideoBuilder(switches["output"], width, height, fps, outputEncoder, outputFormat);
+                        builder = new VideoBuilder(switches["output"], width, height, fps, outputEncoder, outputFormat)
+                        {
+                            EnablePreview = bool.TryParse(switches.GetOrAdd("preview", "false"), out var preview) ? preview : false,
+                            PreviewPath = switches.GetOrAdd("previewPath", "nope"),
+                        };
                         builder.StrictMode = bool.TryParse(switches.GetOrAdd("StrictMode", "0"), out var strictMode) ? strictMode : false;
                         builder.Build().Start();
 
@@ -410,11 +421,12 @@ namespace projectFrameCut.Render.RenderCLI
             task.ThrowOnAnyError = bool.TryParse(switches.GetOrAdd("StrictMode", "0"), out var value) ? value : false;
             task.ThrowOnErrorHappensImmediately = bool.TryParse(switches.GetOrAdd("StopOnAnyError", "0"), out var stopOnErr) ? stopOnErr : false;
             task.GCOptions = int.TryParse(switches.GetOrAdd("GCOptions", "0"), out var value1) ? value1 : 0;
-            task.InternalLogging = Environment.GetEnvironmentVariables().Contains("projectFrameCut");
+            task.InternalLogging = inprojectFrameCut;
 
             Log("Start render...");
 
             sw1.Restart();
+            SetSubProg("Render");
             await task.Start(maxParallelThreads, frameRange);
 
             Log($"Render done,total elapsed {sw1}, avg elapsed {avgTime.Average() / 1000} spf");
@@ -422,8 +434,9 @@ namespace projectFrameCut.Render.RenderCLI
             GC.Collect(2, GCCollectionMode.Forced, true); //减少内存占用，防止太卡影响后续的写入操作
             GC.WaitForFullGCComplete();
 
+            SetSubProg("WriteVideo");
             Log("Finish writing video...");
-            builder?.Finish(clips.ToArray(), (i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), accelerator, i, width, height));
+            builder?.Finish(clips.ToArray(), (i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), accelerator, i, width, height), (uint)duration);
 
             Log($"Releasing resources...");
 
@@ -439,5 +452,12 @@ namespace projectFrameCut.Render.RenderCLI
             return 0;
         }
 
+        public static bool inprojectFrameCut = false;
+
+        public static void SetSubProg(string progName)
+        {
+            if (!inprojectFrameCut) return;
+            Console.Error.WriteLine($"##{progName}");
+        }
     }
 }

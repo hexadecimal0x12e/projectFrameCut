@@ -131,4 +131,9 @@ workingDirectory = "";
 
 #endif
     }
+
+    private void MoreOptions_Clicked(object sender, EventArgs e)
+    {
+
+    }
 }

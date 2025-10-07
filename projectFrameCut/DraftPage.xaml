@@ -9,7 +9,7 @@
              NavigatedTo="MainPageRoot_NavigatedTo"
              Title="default draft page">
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="{l:Localized Key=RenderPage_GoRender}" Clicked="OnExportDraft" Order="Primary" Priority="0" />
+        <ToolbarItem Text="{l:Localized Key=DraftPage_GoRender}" Clicked="OnExportDraft" Order="Primary" Priority="0" />
         <ToolbarItem Text="Options"/>
     </ContentPage.ToolbarItems>
 

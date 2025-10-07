@@ -17,7 +17,11 @@ namespace projectFrameCut.Render
         bool running = true, stopped = false;
         public bool StrictMode { get; set; } = true;
 
-        public int minFrameCountToAppend { get; set; } = 30;
+        public int minFrameCountToGeneratePreview { get; set; } = 10;
+
+        public bool EnablePreview { get; set; } = false;
+        public string? PreviewPath { get; set; } = null;
+        private uint countSinceLastPreview = 0;
 
         ConcurrentDictionary<uint,Picture> Cache = new();
 
@@ -32,8 +36,31 @@ namespace projectFrameCut.Render
 
         public void Append(uint index, Picture frame)
         {
-
             Cache.AddOrUpdate(index, frame,(_,_) => throw new InvalidOperationException($"Frame #{index} has already added."));
+            if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview)
+            {
+                AsyncSave(index, frame);
+                countSinceLastPreview = 0;
+            }
+        }
+
+        private void AsyncSave(uint index, Picture frame)
+        {
+            new Thread(() =>
+            {
+                try
+                {
+                    frame.SaveAsPng8bpc(PreviewPath ?? "preview.png");
+                }
+                catch (Exception ex)
+                {
+                    Log($"[VideoBuilder] WARN: Failed to save preview image: {ex.Message}");
+                }
+            })
+            {
+                IsBackground = true,
+                Name = "Preview Saver"
+            }.Start();
         }
 
         //public void Clear() => Cache.Clear();
@@ -82,7 +109,7 @@ namespace projectFrameCut.Render
 
         }
 
-        public void Finish(IClip[] clip, Func<uint,Picture> regenerator)
+        public void Finish(IClip[] clip, Func<uint,Picture> regenerator, uint totalFrames = 0)
         {
             running = false;
             while(!Volatile.Read(ref stopped))
@@ -93,6 +120,8 @@ namespace projectFrameCut.Render
             
             while (Cache.Count > 0 || missingFrames.Count > 0)
             {
+                Console.Error.WriteLine($"@@{currentIndex},{totalFrames}");
+
                 if (Cache.ContainsKey(currentIndex))
                 {
                     builder.Append(Cache.TryRemove(currentIndex, out var f) ? f : throw new KeyNotFoundException());
@@ -148,9 +177,10 @@ namespace projectFrameCut.Render
                 {
                     currentIndex++;
                 }
+
+
             }
-            
-            builder.Finish();
+
             Dispose();
         }
 

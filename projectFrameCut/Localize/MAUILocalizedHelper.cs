@@ -27,7 +27,7 @@ namespace LocalizedResources
             }
             catch (KeyNotFoundException)
             {
-                return $"[{Key}]"; // 返回键名作为占位符
+                return $"@{Key}"; // 返回键名作为占位符
             }
         }
 

@@ -28,8 +28,21 @@ namespace projectFrameCut.Shared
             Debug.WriteLine($"@Logging:[{level}] {msg}");
 
             Console.WriteLine($"[{level}] {msg}");
+
+            MyLoggerExtensions.Announce(msg, level);
+
         }
 
 
+    }
+
+    public static class MyLoggerExtensions
+    {
+        public static event Action<string, string>? OnLog;
+
+        public static void Announce(string msg, string level = "info")
+        {
+            OnLog?.Invoke(msg, level);
+        }
     }
 }

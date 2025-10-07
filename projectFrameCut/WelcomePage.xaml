@@ -4,6 +4,9 @@
              x:Class="projectFrameCut.WelcomePage"
              xmlns:l="clr-namespace:LocalizedResources"
              Title="{l:Localized Key=AppBrand}">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="{l:Localized Key=_Options}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/>
+    </ContentPage.ToolbarItems>
     <VerticalStackLayout>
         <Label 
             Text="{l:Localized Key=WelcomeMessage}"

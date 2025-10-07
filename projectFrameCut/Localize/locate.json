@@ -198,6 +198,24 @@
         "DontTranslate": false
       },
       {
+        "Id": "RenderPage_CustomOption",
+        "Value": "\u81EA\u5B9A\u4E49",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_Done",
+        "Value": "\u6E32\u67D3\u5B8C\u6210\uFF01",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
         "Id": "RenderPage_ExportTitle",
         "Value": "\u5BFC\u51FA\u9879\u76EE \uFF62{name}\uFF63 ",
         "Mode": "InterpolationString",
@@ -212,53 +230,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "RenderPage_NoDraft",
-        "Value": "\u4F60\u9700\u8981\u5148\u6253\u5F00\u4E00\u4E2A\u8349\u7A3F\u624D\u80FD\u8FDB\u884C\u6E32\u67D3",
-        "Mode": "ConstString",
-        "Args": [],
-        "HasValidationErrors": false,
-        "ForceDynamic": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "WelcomeMessage",
-        "Value": "\u6B22\u8FCE\u6765\u5230projectFrameCut beta!",
-        "Mode": "ConstString",
-        "Args": [],
-        "HasValidationErrors": false,
-        "ForceDynamic": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "RenderPage_CustomOption",
-        "Value": "\u81EA\u5B9A\u4E49",
-        "Mode": "ConstString",
-        "Args": [],
-        "HasValidationErrors": false,
-        "ForceDynamic": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "RenderPage_SelectResolution",
-        "Value": "\u9009\u62E9\u4E00\u4E2A\u5206\u8FA8\u7387",
-        "Mode": "ConstString",
-        "Args": [],
-        "HasValidationErrors": false,
-        "ForceDynamic": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "RenderPage_SelectFrameRate",
-        "Value": "\u9009\u62E9\u5E27\u7387",
-        "Mode": "ConstString",
-        "Args": [],
-        "HasValidationErrors": false,
-        "ForceDynamic": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "RenderPage_SelectEncoding",
-        "Value": "\u9009\u62E9\u7F16\u7801",
+        "Id": "RenderPage_LoggingLabel",
+        "Value": "\u8F93\u51FA\u65E5\u5FD7",
         "Mode": "ConstString",
         "Args": [],
         "HasValidationErrors": false,
@@ -275,6 +248,186 @@
             "Value": "num"
           }
         ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_NoDraft",
+        "Value": "\u4F60\u9700\u8981\u5148\u6253\u5F00\u4E00\u4E2A\u8349\u7A3F\u624D\u80FD\u8FDB\u884C\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_RenderMoreOptions",
+        "Value": "\u66F4\u591A\u9009\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_SelectEncoding",
+        "Value": "\u9009\u62E9\u7F16\u7801",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_SelectFrameRate",
+        "Value": "\u9009\u62E9\u5E27\u7387",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_SelectResolution",
+        "Value": "\u9009\u62E9\u4E00\u4E2A\u5206\u8FA8\u7387",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_StartRender",
+        "Value": "\u5F00\u59CB\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_SubProg_None",
+        "Value": "\u5B50\u8FC7\u7A0B\u8FDB\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_TotalProg",
+        "Value": "\u603B\u8FDB\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "WelcomeMessage",
+        "Value": "\u6B22\u8FCE\u6765\u5230projectFrameCut beta!",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_CancelRender",
+        "Value": "\u53D6\u6D88\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_SubProg_Init",
+        "Value": "\u521D\u59CB\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_SubProg_PrepareDraft",
+        "Value": "\u51C6\u5907\u9879\u76EE",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_SubProg_Render",
+        "Value": "\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_SubProg_WriteVideo",
+        "Value": "\u5199\u89C6\u9891",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\u8B66\u544A",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_CancelRender_Warn",
+        "Value": "\u4F60\u786E\u5B9A\u836F\u53D6\u6D88\u6E32\u67D3\u5417?",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Cancel",
+        "Value": "\u53D6\u6D88",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Options",
+        "Value": "\u9009\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_PreviewLabel",
+        "Value": "\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_SubProg_FinalEncoding",
+        "Value": "\u7F16\u7801\u5A92\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
         "HasValidationErrors": false,
         "ForceDynamic": false,
         "DontTranslate": false

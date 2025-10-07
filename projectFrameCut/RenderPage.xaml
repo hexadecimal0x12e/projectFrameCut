@@ -5,55 +5,98 @@
              Loaded="ContentPage_Loaded"
              xmlns:l="clr-namespace:LocalizedResources"
              Title="RenderPage">
-    <VerticalStackLayout>
-        <VerticalStackLayout WidthRequest="500">
-            <Picker
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/>
+
+    </ContentPage.ToolbarItems>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
+
+            <VerticalStackLayout  Grid.Column="1" Padding="24" x:Name="RenderOptionPanel" >
+                <Picker
                 x:Name="resoultionPicker"
                 Title="{l:Localized Key=RenderPage_SelectResolution}"
                 ItemsSource="{Binding ExportOptions_Resolution}"
                 SelectedItem="{Binding Resoultion, Mode=TwoWay}" />
-            <HorizontalStackLayout x:Name="CustomResolutionBox" Margin="0,8,0,8"
+                <HorizontalStackLayout x:Name="CustomResolutionBox" Margin="0,8,0,8"
                                    IsVisible="{Binding IsCustomResolutionVisible}">
-                <Entry Placeholder="Width" HeightRequest="25" WidthRequest="70" Margin="8,0,8,0"
+                    <Entry Placeholder="Width" HeightRequest="25" WidthRequest="70" Margin="8,0,8,0"
                        Keyboard="Numeric"
                        Text="{Binding Width, Mode=TwoWay}" />
-                <Entry Placeholder="Height" HeightRequest="25" WidthRequest="70"
+                    <Entry Placeholder="Height" HeightRequest="25" WidthRequest="70"
                        Keyboard="Numeric"
                        Text="{Binding Height, Mode=TwoWay}" />
-            </HorizontalStackLayout>
+                </HorizontalStackLayout>
 
-            <Picker
+                <Picker
+                Margin="0,8,0,0"
                 x:Name="frameratePicker"
                 Title="{l:Localized Key=RenderPage_SelectFrameRate}"
                 ItemsSource="{Binding ExportOptions_Framerate}"
                 SelectedItem="{Binding FramerateDisplay, Mode=TwoWay}" />
-            <HorizontalStackLayout x:Name="CustomFramerateBox" Margin="0,8,0,8"
+                <HorizontalStackLayout x:Name="CustomFramerateBox" Margin="0,8,0,8"
                                    IsVisible="{Binding IsCustomFramerateVisible}">
-                <Entry Placeholder="Framerate" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
+                    <Entry Placeholder="Framerate" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
                        Keyboard="Numeric"
                        Text="{Binding Framerate, Mode=TwoWay}" />
-            </HorizontalStackLayout>
+                </HorizontalStackLayout>
 
-            <Picker
+                <Picker
+                Margin="0,8,0,0"
                 x:Name="encodingPicker"
                 Title="{l:Localized Key=RenderPage_SelectEncoding}"
                 ItemsSource="{Binding ExportOptions_Encoding}"
                 SelectedItem="{Binding EncodingDisplay, Mode=TwoWay}" />
-            <HorizontalStackLayout x:Name="CustomEncodingBox" Margin="0,8,0,8"
+                <HorizontalStackLayout x:Name="CustomEncodingBox" Margin="0,8,0,8"
                                    IsVisible="{Binding IsCustomEncodingVisible}">
-                <Entry Placeholder="Encoding" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
+                    <Entry Placeholder="Encoding" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
                        Keyboard="Text"
                        Text="{Binding Encoding, Mode=TwoWay}" />
-            </HorizontalStackLayout>
+                </HorizontalStackLayout>
 
-            <Label x:Name="MaxParallelThreadsCountLabel"  Margin="0,8,0,0" Text="{l:Localized Key=RenderPage_MaxParallelThreadsCount}" />
-            <Slider x:Name="MaxParallelThreadsCount" Minimum="8" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
+                <Label x:Name="MaxParallelThreadsCountLabel"  Margin="0,8,0,0" Text="{l:Localized Key=RenderPage_MaxParallelThreadsCount}" />
+                <Slider x:Name="MaxParallelThreadsCount" Minimum="8" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
+                <Button Margin="0,8,0,8"  x:Name="StartRender" Text="{l:Localized Key=RenderPage_StartRender}" Clicked="StartRender_Clicked" />
+            </VerticalStackLayout>
 
-            <Button Margin="0,8,0,8"  x:Name="StartRender" Text="Start" Clicked="StartRender_Clicked" />
-        </VerticalStackLayout>
+            <VerticalStackLayout x:Name="PreviewLayout" IsVisible="False" Grid.Column="1" Padding="32,0">
+                <Label  Text="{l:Localized Key=RenderPage_PreviewLabel}"  Margin="0,8,0,8"/>
+                <Border StrokeThickness="5" >
+                    <Image  x:Name="PreviewImage" MaximumHeightRequest="1280" MaximumWidthRequest="720"  ></Image>
+                </Border>
+            </VerticalStackLayout>
 
-        <Editor x:Name="LoggingEntry" HeightRequest="300" WidthRequest="500"  AutoSize="TextChanges" IsReadOnly="True"/>
+        </Grid>
+        
+        <Grid Grid.Row="1" Padding="32" x:Name="ProgressBox" IsVisible="False">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            
+            <Button Grid.Row="0" Margin="0,8,0,8" IsVisible="True"  x:Name="CancelRender" Text="{l:Localized Key=RenderPage_CancelRender}" Clicked="CancelRender_Clicked" />
 
-        <ProgressBar x:Name="RenderProgress" WidthRequest="500" HeightRequest="80" Progress="0" /> 
-    </VerticalStackLayout>
+            <Label Grid.Row="1" x:Name="SubProgLabel" Text="{l:Localized Key=RenderPage_SubProg_None}" />
+            <ProgressBar Grid.Row="2" x:Name="SubProgress" Margin="0,8,0,8" Progress="0" />
+            <Label Grid.Row="3" Text="{l:Localized Key=RenderPage_TotalProg}"  Margin="0,8,0,0"/>
+
+            <ProgressBar Grid.Row="4" x:Name="TotalProgress" Margin="0,8,0,8" Progress="0" />
+            <Label Grid.Row="5" Text="{l:Localized Key=RenderPage_LoggingLabel}"  Margin="0,8,0,0"/>
+ 
+            <Editor Grid.Row="6" x:Name="LoggingBox" Margin="0,16,0,0" IsReadOnly="True"></Editor>
+        </Grid>
+    </Grid>
 </ContentPage>

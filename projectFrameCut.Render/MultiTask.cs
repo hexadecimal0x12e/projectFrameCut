@@ -75,8 +75,8 @@ namespace projectFrameCut.Render
                     {
                         int f = Volatile.Read(ref finished);
                         int w = Volatile.Read(ref working);
-                        Console.Error.WriteLine($"@@{w},{f},{stuff.Length}");
-                        Thread.Sleep(3000);
+                        Console.Error.WriteLine($"@@{f},{stuff.Length}");
+                        Thread.Sleep(1000);
                     }
                 }).Start();
             }
