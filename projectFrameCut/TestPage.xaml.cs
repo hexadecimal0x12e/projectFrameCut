@@ -1,10 +1,16 @@
-using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.Maui.ApplicationModel; 
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Devices;
+using System;
+using System.Diagnostics;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+
+#if ANDROID
+using projectFrameCut.Platforms.Android;
+
+#endif
 
 namespace projectFrameCut;
 
@@ -451,6 +457,19 @@ public partial class TestPage : ContentPage
 
     }
 
+    private async void TestFFmpegButton_Clicked(object sender, EventArgs e)
+    {
+#if ANDROID
+        FFmpegLoader.EnsureLoaded();
+        string ver = "unknown";
+        unsafe
+        {
+            ver = FFmpeg.AutoGen.ffmpeg.av_version_info();
+        }
+        await DisplayAlert("FFmpeg Version",  ver, "OK");
+
+#endif
+    }
 
     public const string ShaderColorSrc =
         $$"""

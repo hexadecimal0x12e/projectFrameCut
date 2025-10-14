@@ -34,12 +34,46 @@ namespace projectFrameCut.Shared
         public float FrameTime { get; set; } // seconds per frame (1 / framerate)
         public RenderMode MixtureMode { get; set; } = RenderMode.Overlay;
         public string? FilePath { get; set; }
+        public long? SourceDuration { get;set; } // in frames, null for infinite length source
+        public float? SourceSecondPerFrame { get; set; } 
 
         [JsonExtensionData]
         public Dictionary<string, object>? MetaData { get; set; }
 
         
 
+    }
+
+    public class AssetItem
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Path { get; set; }
+        public projectFrameCut.Shared.ClipMode Type { get; set; }
+
+        public long? FrameCount { get; set; }
+        public float SecondPerFrame { get; set; } = float.PositiveInfinity; //infinite for infinite length source
+        public string? ThumbnailPath { get; set; }
+        public string? AssetId { get; set; }
+
+        [JsonIgnore]
+        public bool isInfiniteLength => FrameCount == null || FrameCount <= 0 || float.IsPositiveInfinity(SecondPerFrame);
+
+
+
+        [JsonIgnore()]
+        public string? Icon
+        {
+            get => Type switch
+            {
+                projectFrameCut.Shared.ClipMode.VideoClip => "📽️",
+                projectFrameCut.Shared.ClipMode.PhotoClip => "🖼️",
+                projectFrameCut.Shared.ClipMode.SolidColorClip => "🟦",
+                _ => "❔"
+            };
+        }
+
+        [JsonIgnore()]
+        public DateTime AddedAt { get; set; } = DateTime.Now;
     }
 
     public interface IClip : IDisposable

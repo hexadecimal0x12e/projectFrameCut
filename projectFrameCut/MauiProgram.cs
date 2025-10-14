@@ -3,10 +3,17 @@ using projectFrameCut.Shared;
 
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
+using projectFrameCut.Platforms.Android;
+using Java.Lang;
 
 #endif
 using System;
 using System.Diagnostics;
+using FFmpeg.AutoGen;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using FFmpeg.AutoGen.Native;
+using Exception = System.Exception;
 
 namespace projectFrameCut
 {
@@ -18,20 +25,74 @@ namespace projectFrameCut
         {
             try
             {
-                Directory.CreateDirectory(System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging"));
-                LogWriter = new StreamWriter(System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging",$"log-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log"), append: true)
+                string loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging");
+//#if ANDROID
+//                // On Android, FFmpeg.AutoGen's LinuxFunctionResolver may import libdl as "libdl.so.2".
+//                // Android only ships "libdl.so". Redirect that import early before any FFmpeg calls.
+//                try
+//                {
+//                    NativeLibrary.SetDllImportResolver(typeof(ffmpeg).Assembly, (name, assembly, searchPath) =>
+//                    {
+//                        IntPtr h = IntPtr.Zero;
+//                        if (OperatingSystem.IsAndroid())
+//                        {
+//                            if (name == "libdl.so.2" || name == "libdl" || name == "dl")
+//                            {
+//                                if (NativeLibrary.TryLoad("libdl.so", assembly, searchPath, out  h)) return h;
+//                                if (NativeLibrary.TryLoad("/system/lib64/libdl.so", out h)) return h;
+//                                if (NativeLibrary.TryLoad("/system/lib/libdl.so", out h)) return h;
+//                            }
+//                        }
+//                        if (NativeLibrary.TryLoad(name, assembly, searchPath, out h)) return h;
+//                        if (NativeLibrary.TryLoad(Path.Combine(Android.App.Application.Context.ApplicationInfo.NativeLibraryDir,$"{name}.so"), out h)) return h;
+//                        if (NativeLibrary.TryLoad(Path.Combine(Android.App.Application.Context.ApplicationInfo.NativeLibraryDir, name), out h)) return h;
+//                        return IntPtr.Zero;
+
+//                    });
+//                }
+//                catch { /* best-effort redirect */ }
+//#endif
+#if ANDROID
+                try
+                {
+                    var pfn = Android.App.Application.Context.PackageName;
+                    var userAccessblePath = $"/sdcard/Android/data/{pfn}/";
+                    if (Path.Exists(userAccessblePath))
+                    {
+                        loggingDir = System.IO.Path.Combine(userAccessblePath, "logging");
+                    }
+
+                }
+                catch //do nothing, just use the default path             
+                {
+                    
+                }
+
+
+#elif IOS
+                loggingDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "logging");
+                
+#endif
+
+                Directory.CreateDirectory(loggingDir);
+                LogWriter = new StreamWriter(System.IO.Path.Combine(loggingDir, $"log-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log"), append: true)
                 {
                     AutoFlush = true
                 };
+
                 //Console.SetOut(LogWriter);
                 //Console.SetError(LogWriter);
+
+                MyLoggerExtensions.OnLog += MyLoggerExtensions_OnLog;
+
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Failed to set up log file: {ex.Message}");
             }
-                Console.WriteLine("Creating MAUI App");
-            Debug.WriteLine("Creating MAUI App");
+
+            Log($"projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture}, os version {Environment.OSVersion}, clr version {Environment.Version}, cmdline: {Environment.CommandLine} ");
+            Log("Copright hexadecimal0x12e 2025, and thanks to other open-source code's author.");
             try
             {
                 var builder = MauiApp.CreateBuilder();
@@ -82,20 +143,52 @@ namespace projectFrameCut
                     }
                 };
 
+                try
+                {
+                    var nativeLibDir = Android.App.Application.Context.ApplicationInfo.NativeLibraryDir;
+                    Log($"Native library dir: {nativeLibDir}");
+                    ffmpeg.RootPath = nativeLibDir;
+                    JavaSystem.LoadLibrary("c"); //准备加载库
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize();
+                }
+                catch (Exception ex)
+                {
+                    Log(ex);
+                    //throw; 
+                }
+
 #endif
 
-                MyLoggerExtensions.OnLog += MyLoggerExtensions_OnLog;
+#if WINDOWS
+                if (Directory.GetFiles(AppContext.BaseDirectory, "av*.dll").Length == 0)
+                {
+                    Log("ERROR: ffmpeg binaries not found. Please reinstall projectFrameCut.");
+                    Environment.FailFast("ERROR: ffmpeg binaries not found. Please reinstall projectFrameCut.",new DllNotFoundException("ERROR: ffmpeg binaries not found. Please reinstall projectFrameCut."));
+                }
 
-                var app = builder.Build();
-                Debug.WriteLine("MAUI App built successfully");
-                Localized = SimpleLocalizer.Init();
                 
-                Debug.WriteLine($"Localization initialized to {Localized._LocaleId_}");
+#endif
+                try
+                {
+                    var ver = ffmpeg.av_version_info();
+                    Log($"Internal FFmpeg version:{ver}");
+                }
+                catch (PlatformNotSupportedException _)
+                {
+                    Log("Unknown internal ffmpeg version");
+                }
+                Localized = SimpleLocalizer.Init();
+                Log($"Localization initialized to {Localized._LocaleId_}, {Localized.WelcomeMessage}");
+                Log("Everything ready!");
+                var app = builder.Build();
+                Log("App is ready!");
+                
                 return app;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error creating MAUI App: {ex.Message}");
+                Log($"Error creating MAUI App: {ex.Message}");
                 Debug.WriteLine($"Error creating MAUI App: {ex.Message}");
                 throw;
             }
@@ -105,8 +198,19 @@ namespace projectFrameCut
         {
             LogWriter.WriteLine($"[{DateTime.Now:T} @ {level}] {msg}");
         }
+
+#if ANDROID
+        [DllImport("libdl.so")]
+        private static extern IntPtr dlsym(IntPtr handle, string symbol);
+
+        [DllImport("libdl.so")]
+        private static extern IntPtr dlopen(string fileName, int flag);
+#endif
+
     }
 
+
 }
+
 
 

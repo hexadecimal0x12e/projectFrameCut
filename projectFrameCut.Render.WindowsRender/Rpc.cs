@@ -20,6 +20,8 @@ namespace projectFrameCut.Render.WindowsRender
 
         public static CancellationTokenSource RpcCts = new CancellationTokenSource();
 
+        public static bool diagMode { get; private set; }
+
         public static void go_rpcAsync(ConcurrentDictionary<string, string> switches, Accelerator accelerator, int width, int height)
         {
 
@@ -40,7 +42,7 @@ namespace projectFrameCut.Render.WindowsRender
             {
                 Log("ERROR: -tempFolder argument is required.");
                 RpcReturnCode = 16;
-                RpcCts.Cancel(); 
+                RpcCts.Cancel();
                 return;
             }
 
@@ -105,7 +107,7 @@ namespace projectFrameCut.Render.WindowsRender
                 };
 
                 var json = JsonSerializer.Serialize(envelope, RpcProtocol.JsonOptions);
-                Log($"[RPC] Sending: {json} \r\n--- \r\n");
+                if (diagMode) Log($"[RPC] Sending: {json} \r\n--- \r\n");
                 var cts = new CancellationTokenSource();
                 cts.CancelAfter(10000);
                 try
@@ -130,11 +132,11 @@ namespace projectFrameCut.Render.WindowsRender
             {
                 try
                 {
-                    Log("[RPC] Waiting for message...");
+                    if(diagMode) Log("[RPC] Waiting for message...");
                     var line = reader.ReadLine();
                     if (line is null) break;
 
-                    Log($"[RPC] Received: {line} \r\n--- \r\n");
+                    if (diagMode) Log($"[RPC] Received: {line} \r\n--- \r\n");
 
                     RpcProtocol.RpcMessage? msg = null;
                     try
@@ -183,14 +185,14 @@ namespace projectFrameCut.Render.WindowsRender
                                     {
                                         Log($"[RPC] Generating frame #{frameIndex} ({frameHash})...");
                                     }
-                                    var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height,true);
+                                    var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height, true);
                                     Log($"Clips in frame #{frameIndex}:\r\n{JsonSerializer.Serialize(layers)}\r\n---");
                                     var pic = Timeline.MixtureLayers(layers, accelerator, frameIndex, width, height);
                                     pic.SetAlpha(false).SaveAsPng8bpc(destPath, encoder);
                                     Send(msg, new Dictionary<string, object?> { { "status", "completed" }, { "path", destPath } });
                                     Log($"[RPC] RenderOne completed");
                                 }
-                                catch(Exception ex)
+                                catch (Exception ex)
                                 {
                                     Log(ex);
                                     Console.Error.WriteLine($"ERROR: a {ex.GetType()} exception happends:{ex.Message}");
@@ -254,6 +256,32 @@ namespace projectFrameCut.Render.WindowsRender
                                 Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
                                 break;
                             }
+                        case "GetVideoFileInfo":
+                            {
+                                if (msg.Payload is null)
+                                {
+                                    Log("[RPC] GetVideoFileInfo missing payload.");
+                                    break;
+                                }
+                                var path = msg.Payload.Value.GetString();
+                                if (string.IsNullOrWhiteSpace(path) || !Path.Exists(path))
+                                {
+                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", "File not found." } });
+                                    break;
+                                }
+                                try
+                                {
+                                    var vid = new VideoDecoder(path);
+                                    Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "frameCount", vid.Decoder.TotalFrames }, { "fps", vid.Decoder.Fps }, { "width", vid.Decoder.Width }, { "height", vid.Decoder.Height } });
+                                }
+                                catch (Exception ex)
+                                {
+                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", ex.Message } });
+                                }
+                                break;
+                            }
+
+
                         case "ShutDown":
                             {
                                 Log("[RPC] Shutting down...");
@@ -310,7 +338,7 @@ Current directory: {Environment.CurrentDirectory}
                 }
 
 
-                
+
 
             }
 

@@ -10,6 +10,7 @@
         <Button x:Name="OpenGLESStartButton" Text="compute by OpenGL ES (android only)" Clicked="OpenGLESStartButton_Clicked"/>
         <Button x:Name="MetalRenderStartButton" Text="compute by Metal (ios only)" Clicked="MetalRenderStartButton_Clicked"/>
         <Button x:Name="CPURenderStartButton" Text="compute by cpu (very slow)" Clicked="CPURenderStartButton_Clicked"/>
+        <Button x:Name="TestFFmpegButton" Text="Test FFmpeg" Clicked="TestFFmpegButton_Clicked"/>
         <Image x:Name="ResultImage" Aspect="AspectFit" HeightRequest="300" WidthRequest="300"/>
         <VerticalStackLayout x:Name="ComputeView"/>
 

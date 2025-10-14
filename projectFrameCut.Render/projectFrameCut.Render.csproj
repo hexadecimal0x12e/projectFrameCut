@@ -7,8 +7,9 @@
     <Nullable>enable</Nullable>
     <Platforms>AnyCPU;x64</Platforms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
-  </PropertyGroup>
+		
+
+	</PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
@@ -27,8 +28,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FFmpeg.AutoGen" Version="7.1.1" />
-    <PackageReference Include="FFmpeg.AutoGen.Abstractions" Version="7.1.1" />
+    <PackageReference Include="FFmpeg_droidFix.AutoGen" Version="7.1.1" />
     <PackageReference Include="ILGPU" Version="1.5.3" />
     <PackageReference Include="ILGPU.Algorithms" Version="1.5.3" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
@@ -36,7 +36,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
-  </ItemGroup>
+
+		<PackageReference Include="FFmpeg_droidFix.AutoGen.Abstractions" Version="7.1.1">
+			<Source>C:\Users\azert\source\repos\FFmpeg.AutoGen_droidFix\FFmpeg.AutoGen.Abstractions\bin\Release\FFmpeg.AutoGen.Abstractions.7.1.1.nupkg</Source>
+		</PackageReference>
+	<!--	<PackageReference Include="FFmpeg_droidFix.AutoGen" Version="7.1.1">
+			<Source>C:\Users\azert\source\repos\FFmpeg.AutoGen_droidFix\FFmpeg.AutoGen\bin\Release\FFmpeg.AutoGen.7.1.1.nupkg</Source>
+		</PackageReference> -->
+
+	</ItemGroup>
 
   <ItemGroup>
     <Using Include="projectFrameCut.Shared.Logger">
@@ -44,8 +52,5 @@
     </Using>
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="rem xcopy D:\code\projectFrameCut\projectFrameCut.Render\ffmpeg\* D:\code\projectFrameCut\projectFrameCut.Render\bin\x64\Debug\net8.0 &#xD;&#xA;exit /b 0" />
-  </Target>
 
 </Project>

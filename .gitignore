@@ -365,3 +365,4 @@ FodyWeavers.xsd
 #####
 
 /projectFrameCut.Render.WindowsRender/ffmpeg
+/projectFrameCut/Platforms/Android/ffmpeg/

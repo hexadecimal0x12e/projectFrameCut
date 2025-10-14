@@ -14,9 +14,10 @@ namespace projectFrameCut.ViewModels
         private double _durationSeconds = 5.0;
 
         private long? _totalFrameLength;
-        private double? _totalLength;
-        private double? _spf;
+        //private double? _totalLength;
+        private float? _spf;
         private uint _relativeFrameStart;
+        private bool _infiniteDuration = false;
 
         private bool _isSelected;
         private string? _sourcePath; // underlying asset file path
@@ -50,23 +51,52 @@ namespace projectFrameCut.ViewModels
 
         public double EndSeconds => StartSeconds + DurationSeconds;
 
-        public double TotalLength => TotalFrameCount * _spf ?? -1;
+        public double TotalLength => _infiniteDuration ? double.PositiveInfinity : TotalFrameCount * _spf ?? -1;
+
+        public float SecondPerFrame
+        {
+            get
+            {
+                if (IsInfiniteDuration || _spf == null || _spf <= 0)
+                    return float.PositiveInfinity;
+                return _spf ?? 0; 
+            }
+            init
+            {
+                _spf = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(SecondPerFrame));
+                OnPropertyChanged(nameof(TotalLength));
+            }
+        }
 
         public long TotalFrameCount
         {
             get
             {
-                if (_totalFrameLength is not null) return _totalFrameLength ?? -1;
-                if (_type == ClipMode.VideoClip)
+                return _totalFrameLength ?? -1;
+            }
+            init
+            {
+                if (_totalFrameLength != value)
                 {
-                    using var decoder = new Video(_sourcePath ?? throw new NullReferenceException($"Source video path of clip {_name} is null.")).Decoder;
-                    _totalFrameLength = decoder.TotalFrames;
-                    _spf = 1 / decoder.Fps;
-                    return decoder.TotalFrames;
+                    _totalFrameLength = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(TotalLength));
                 }
-                else
+            }
+        }
+
+        public bool IsInfiniteDuration
+        {
+            get => _infiniteDuration;
+            init
+            {
+                if (_infiniteDuration != value)
                 {
-                    return 0;
+                    _infiniteDuration = value;
+                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(TotalLength));
                 }
             }
         }

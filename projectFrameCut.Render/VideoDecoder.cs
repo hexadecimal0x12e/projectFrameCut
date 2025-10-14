@@ -284,9 +284,10 @@ namespace projectFrameCut.Render
 
                     Log($"[VideoDecoder] Successfully initialized decoder for {_path}");
                 }
-                catch
+                catch (Exception ex)
                 {
                     Dispose();
+                    Log(ex, "Init VideoDecoder", this);
                     throw;
                 }
                 finally
@@ -626,8 +627,9 @@ namespace projectFrameCut.Render
 
                     Log($"[VideoDecoder] Successfully initialized decoder for {_path}");
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Log(ex, "Init VideoDecoder", this);
                     Dispose();
                     throw;
                 }

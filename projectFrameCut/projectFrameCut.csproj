@@ -41,6 +41,9 @@
 		<Platforms>AnyCPU;x64</Platforms>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<NeutralLanguage>zh-CN</NeutralLanguage>
+
+		
+
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net9.0-android|AnyCPU'">
@@ -150,8 +153,8 @@
 
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.82" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="9.0.82" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.1" />
 	</ItemGroup>
 
@@ -177,7 +180,7 @@
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<ProjectReference Include="..\projectFrameCut.Render.AndroidOpenGL\projectFrameCut.Render.AndroidOpenGL.csproj" />
-
+		<AndroidNativeLibrary Include="Platforms\Android\ffmpeg\**\*.so" />
 
 	</ItemGroup>
 
@@ -220,6 +223,10 @@
     <Using Include="LocalizedResources.SimpleLocalizerBaseGeneratedHelper">
       <Static>True</Static>
     </Using>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Platforms\Android\ffmpeg\" />
 	</ItemGroup>
 
 </Project>

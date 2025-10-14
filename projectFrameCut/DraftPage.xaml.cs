@@ -164,30 +164,76 @@ namespace projectFrameCut
 
         private async void OnAddAsset(object sender, EventArgs e)
         {
-            try
-            {
+            //try
+            //{
 #if ANDROID || IOS || MACCATALYST || WINDOWS
-                var result = await FilePicker.PickAsync(new PickOptions
-                {
-                    PickerTitle = "选择素材文件"
-                });
-                if (result != null)
-                {
-                    Assets.Add(new AssetItem
-                    {
-                        Name = result.FileName,
-                        Path = result.FullPath
-                    });
-                }
-#else
-                Assets.Add(new AssetItem { Name = $"Dummy_{Assets.Count + 1}.png", Path = null });
-#endif
-            }
-            catch (Exception ex)
+            var result = await FilePicker.PickAsync(new PickOptions
             {
-                Log(ex);
-                await DisplayAlert("Error", ex.Message, "OK");
+                PickerTitle = "选择素材文件"
+            });
+            if (result != null)
+            {
+                var item = new AssetItem
+                {
+                    Name = result.FileName,
+                    Path = result.FullPath,
+                    Type = DetermineClipMode(result.FullPath),
+
+                };
+
+                if (item.Type != ClipMode.VideoClip)
+                {
+                    item.SecondPerFrame = float.PositiveInfinity;
+                    item.FrameCount = null;
+                }
+                else
+                {
+#if WINDOWS //防止视频打不开主程序炸掉
+                        var cts = new CancellationTokenSource();
+                        cts.CancelAfter(5000);
+                        var info = await _rpc?.SendAsync("GetVideoFileInfo", JsonSerializer.SerializeToElement(item.Path), cts.Token);
+                        if (info is not null)
+                        {
+                            info.Value.TryGetProperty("frameCount", out var fc);
+                            info.Value.TryGetProperty("fps", out var fps);
+                            if (fc.ValueKind == JsonValueKind.Number && fps.ValueKind == JsonValueKind.Number)
+                            {
+                                item.FrameCount = fc.GetInt64();
+                                item.SecondPerFrame = 1 / fps.GetSingle();
+                            }
+                        }
+#else
+                    
+                    try
+                    {
+                        var vid = new VideoDecoder(item.Path);
+                        item.FrameCount = vid.Decoder.TotalFrames;
+                        item.SecondPerFrame = (float)(1f / vid.Decoder.Fps);
+
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, "get video length", this);
+                        item.FrameCount = 1024;
+                        item.SecondPerFrame = 1 / 42f;
+                    }
+
+#endif
+                }
+                Log($"Added asset '{item.Path}'s info: {item.FrameCount} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.FrameCount * item.SecondPerFrame} s");
+                Assets.Add(item);
+
             }
+#else
+                        Assets.Add(new AssetItem { Name = $"Dummy_{Assets.Count + 1}.png", Path = null });
+#endif
+            //}
+            //catch (Exception ex)
+            //{
+            //    Log(ex);
+            //    await DisplayAlert("Error", ex.Message, "OK");
+            //}
         }
 
         private async void AddSolidColorClip_Clicked(object sender, EventArgs e)
@@ -260,32 +306,6 @@ namespace projectFrameCut
         }
 
         private int frameRate = 30;
-
-        public class AssetItem
-        {
-            public string Name { get; set; } = string.Empty;
-            public string? Path { get; set; }
-            public projectFrameCut.Shared.ClipMode Type { get; set; }
-
-
-            public string? ThumbnailPath { get; set; }
-            public string? AssetId { get; set; }
-
-            [JsonIgnore()]
-            public string? Icon
-            {
-                get => Type switch
-                {
-                    projectFrameCut.Shared.ClipMode.VideoClip => "📽️",
-                    projectFrameCut.Shared.ClipMode.PhotoClip => "🖼️",
-                    projectFrameCut.Shared.ClipMode.SolidColorClip => "🟦",
-                    _ => "❔"
-                };
-            }
-
-            [JsonIgnore()]
-            public DateTime AddedAt { get; set; } = DateTime.Now;
-        }
 
         public ObservableCollection<AssetItem> Assets { get; } = new();
 
