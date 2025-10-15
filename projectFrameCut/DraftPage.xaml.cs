@@ -39,7 +39,7 @@ using projectFrameCut.Platforms.MacCatalyst;
 
 namespace projectFrameCut
 {
-    public partial class DraftPage : ContentPage
+    public partial class DraftPageOld : ContentPage
     {
         #region handle changes
 
@@ -316,7 +316,7 @@ namespace projectFrameCut
         #endregion
 
         #region constructors and init
-        public DraftPage()
+        public DraftPageOld()
         {
             InitializeComponent();
 
@@ -369,7 +369,7 @@ namespace projectFrameCut
 
         }
 
-        public DraftPage(string workingPath)
+        public DraftPageOld(string workingPath)
         {
             InitializeComponent();
             SetStateBusy();
@@ -422,7 +422,7 @@ namespace projectFrameCut
         }
 
 #if DEBUG && WINDOWS
-        public DraftPage(string workingPath, NamedPipeClientStream npc)
+        public DraftPageOld(string workingPath, NamedPipeClientStream npc)
         {
             InitializeComponent();
             SetStateBusy();

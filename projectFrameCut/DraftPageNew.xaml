@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="projectFrameCut.DraftPage"
+             Title="DraftPage V2">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        
+
+
+        <ScrollView Grid.Row="0" HeightRequest="300" x:Name="NativeView">
+            <Grid x:Name="MainTrackContentGrid">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="8*"/>
+                </Grid.ColumnDefinitions>
+
+                <VerticalStackLayout x:Name="TrackHeadLayout" Grid.Column="0" Padding="2">
+                    <Button Margin="0,8,0,0"
+                            x:Name="AddTrackButton"
+                            Text="+"
+                            Clicked="AddTrackButton_Clicked"
+                            HeightRequest="80" />
+                </VerticalStackLayout>
+
+                
+                
+                <VerticalStackLayout x:Name="TrackContentLayout" Grid.Column="1" Padding="2" />
+            </Grid>
+
+        </ScrollView>
+
+        <HybridWebView x:Name="hybridWebView" Grid.Row="0" IsVisible="False" HeightRequest="300" />
+
+        <VerticalStackLayout Grid.Row="1">
+            <Button 
+        x:Name="AddClip"
+        Text="Add clip"
+        Clicked="AddClip_Clicked" />
+            <StackLayout Orientation="Horizontal" Padding="0,0">
+                <Button x:Name="MoveLeftButton" Text="&lt;-"  Clicked="MoveLeftButton_Clicked"/>
+                <Button x:Name="MoveRightButton" Text="-&gt;"  Clicked="MoveRightButton_Clicked"/>
+                <Button x:Name="ZoomOutButton" Text="+" Clicked="ZoomOutButton_Clicked" />
+                <Button x:Name="ZoomInButton" Text="-" Clicked="ZoomInButton_Clicked"/>
+            </StackLayout>
+            <StackLayout Orientation="Horizontal" Padding="10,0">
+						<Label Text="View Mode:" VerticalOptions="Center"/>
+						<RadioButton x:Name="NativeViewRadio" Content="Native" IsChecked="True" GroupName="ViewSelector" CheckedChanged="ViewSelector_CheckedChanged"/>
+						<RadioButton x:Name="WebViewRadio" Content="Web" GroupName="ViewSelector" CheckedChanged="ViewSelector_CheckedChanged"/>
+					</StackLayout>
+            <Label x:Name="StatusLabel" Text="Ready"/>
+
+        </VerticalStackLayout>
+
+        <AbsoluteLayout x:Name="OverlayLayer"
+                        Grid.RowSpan="0"
+                        ZIndex="1000"
+                        InputTransparent="True"
+                        IsVisible="True"
+                        HorizontalOptions="Fill"
+                        VerticalOptions="Fill">
+
+            <Label Text="Overlay"
+                   TextColor="White"
+                   BackgroundColor="#66000000"
+                   Padding="6"
+                   AbsoluteLayout.LayoutBounds="1,0,AutoSize,AutoSize"
+                   AbsoluteLayout.LayoutFlags="PositionProportional" />
+        </AbsoluteLayout>
+    </Grid>
+</ContentPage>

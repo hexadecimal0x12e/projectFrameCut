@@ -6,6 +6,39 @@ using System.Runtime.CompilerServices;
 
 namespace projectFrameCut.ViewModels
 {
+    public class ClipElementUI
+    {
+        public string Id { get; set; }
+        public Border Clip { get; set; }
+        public double layoutX { get; set; }
+        public double layoutY { get; set; }
+        public double ghostLayoutX { get; set; }
+        public double ghostLayoutY { get; set; }
+        public double defaultY { get; set; } = -1;
+    }
+
+    public class ClipUpdateEventArgs : EventArgs
+    {
+        public ClipUpdateEventArgs() { }
+
+        public string? SourceId { get; set; }
+
+        public ClipUpdateReason? Reason { get; set; }
+    }
+
+    public enum ClipUpdateReason
+    {
+        Unknown,
+        ClipItselfMove
+    }
+
+    public enum ClipMovingStatus
+    {
+        HorizontalOnly,
+        HorizontalAndVertical
+    }
+
+
     public class ClipViewModel : INotifyPropertyChanged
     {
         private string _id = Guid.NewGuid().ToString();

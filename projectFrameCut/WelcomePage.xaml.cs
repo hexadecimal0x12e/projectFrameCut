@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.IO.Pipes;
 using System.Reflection.Metadata;
 using System.Text.Json;
-using static projectFrameCut.DraftPage;
+using static projectFrameCut.DraftPageOld;
 
 namespace projectFrameCut;
 
@@ -20,7 +20,7 @@ public partial class WelcomePage : ContentPage
 
     private async void ToDraftPage_Clicked(object sender, EventArgs e)
     {
-        await Navigation.PushAsync(string.IsNullOrWhiteSpace(draftSourcePath) || !Path.Exists(draftSourcePath) ? new DraftPage() : new DraftPage(draftSourcePath));
+        await Navigation.PushAsync(string.IsNullOrWhiteSpace(draftSourcePath) || !Path.Exists(draftSourcePath) ? new DraftPageOld() : new DraftPageOld(draftSourcePath));
 
     }
 
@@ -126,7 +126,7 @@ workingDirectory = "";
     private async void ToDraftPageWithDiagBackend_Clicked(object sender, EventArgs e)
     {
 #if DEBUG && WINDOWS
-        await Navigation.PushAsync(string.IsNullOrWhiteSpace(draftSourcePath) || !Path.Exists(draftSourcePath) ? new DraftPage() : new DraftPage(draftSourcePath, new NamedPipeClientStream(".", "pjfcTestPipe1", PipeDirection.InOut, PipeOptions.Asynchronous)));
+        await Navigation.PushAsync(string.IsNullOrWhiteSpace(draftSourcePath) || !Path.Exists(draftSourcePath) ? new DraftPageOld() : new DraftPageOld(draftSourcePath, new NamedPipeClientStream(".", "pjfcTestPipe1", PipeDirection.InOut, PipeOptions.Asynchronous)));
 #else
 
 #endif
@@ -134,6 +134,12 @@ workingDirectory = "";
 
     private void MoreOptions_Clicked(object sender, EventArgs e)
     {
+
+    }
+
+    private async void ToV2DraftPageWithDiagBackend_Clicked(object sender, EventArgs e)
+    {
+        await Navigation.PushAsync(new DraftPage());
 
     }
 }

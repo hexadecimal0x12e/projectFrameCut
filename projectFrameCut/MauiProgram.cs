@@ -115,7 +115,7 @@ namespace projectFrameCut
 
 
 #if DEBUG
-                builder.Logging.AddDebug();
+                //builder.Logging.AddDebug();
                 builder.Logging.SetMinimumLevel(LogLevel.Trace);
 #endif
 
