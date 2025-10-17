@@ -5,18 +5,19 @@ using System.Diagnostics;
 using System.IO.Pipes;
 using System.Reflection.Metadata;
 using System.Text.Json;
-using static projectFrameCut.DraftPageOld;
 
 namespace projectFrameCut;
 
-public partial class WelcomePage : ContentPage
+public partial class DebuggingMainPage : ContentPage
 {
-    public WelcomePage()
+    public DebuggingMainPage()
     {
         InitializeComponent();
         Title = Localized.AppBrand;
         Debug.WriteLine(Localized.WelcomeMessage);
     }
+
+    protected override bool OnBackButtonPressed() => true;
 
     private async void ToDraftPage_Clicked(object sender, EventArgs e)
     {

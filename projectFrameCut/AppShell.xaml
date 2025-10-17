@@ -8,8 +8,9 @@
     Title="projectFrameCut">
 
     <ShellContent
+        x:Name="MainShellContent"
     Title=""    
-    ContentTemplate="{DataTemplate local:WelcomePage}"
-    Route="WelcomePage" />
+    ContentTemplate="{DataTemplate local:LandingPage}"
+    Route="LandingPage" />
 
 </Shell>

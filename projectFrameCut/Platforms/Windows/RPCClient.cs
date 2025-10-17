@@ -13,7 +13,6 @@ public sealed class RpcClient : IAsyncDisposable
     private StreamReader? _reader;
     private StreamWriter? _writer;
     private Process? _proc;
-    private uint _requestId = 0;
 
     public async Task StartAsync(string pipeName, CancellationToken ct = default) => await StartAsync(new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous), ct);
 

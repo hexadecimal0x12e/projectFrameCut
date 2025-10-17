@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+
 
 namespace projectFrameCut.Shared
 {
@@ -84,6 +86,93 @@ Exception data:
         public static void Announce(string msg, string level = "info")
         {
             Task.Run(() => OnLog?.Invoke(msg, level));
+        }
+    }
+
+    public class MyLoggerProvider : ILoggerProvider, ISupportExternalScope
+    {
+        private readonly LogLevel _minLevel;
+        private IExternalScopeProvider? _scopeProvider;
+
+        public MyLoggerProvider(LogLevel minLevel = LogLevel.Trace)
+        {
+            _minLevel = minLevel;
+        }
+
+        public ILogger CreateLogger(string categoryName)
+        {
+            return new MyLogger(categoryName, _minLevel, () => _scopeProvider);
+        }
+
+        public void Dispose()
+        {
+            // nothing to dispose
+        }
+
+        public void SetScopeProvider(IExternalScopeProvider scopeProvider)
+        {
+            _scopeProvider = scopeProvider;
+        }
+
+        private class MyLogger : ILogger
+        {
+            private readonly string _category;
+            private readonly LogLevel _minLevel;
+            private readonly Func<IExternalScopeProvider?> _scopeProviderFactory;
+
+            public MyLogger(string category, LogLevel minLevel, Func<IExternalScopeProvider?> scopeProviderFactory)
+            {
+                _category = category;
+                _minLevel = minLevel;
+                _scopeProviderFactory = scopeProviderFactory;
+            }
+
+            public IDisposable BeginScope<TState>(TState state)
+            {
+                var provider = _scopeProviderFactory();
+                return provider?.Push(state) ?? NullScope.Instance;
+            }
+
+            public bool IsEnabled(LogLevel logLevel) => logLevel != LogLevel.None && logLevel >= _minLevel;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                if (!IsEnabled(logLevel)) return;
+                if (formatter == null) return;
+
+                var message = formatter(state, exception);
+                if (string.IsNullOrEmpty(message) && exception == null) return;
+
+                var prefix = string.IsNullOrEmpty(_category) ? "" : $"[{_category}] ";
+                var eventPart = eventId.Id != 0 ? $"(EventId:{eventId.Id}) " : "";
+
+                if (exception != null)
+                {
+                    Logger.Log(exception, $"{prefix}{eventPart}{message}");
+                }
+                else
+                {
+                    Logger.Log($"{prefix}{eventPart}{message}", MapLevel(logLevel));
+                }
+            }
+
+            private static string MapLevel(LogLevel level) => "maui/" + level switch
+            {
+                LogLevel.Trace => "info",
+                LogLevel.Debug => "info",
+                LogLevel.Information => "info",
+                LogLevel.Warning => "warning",
+                LogLevel.Error => "error",
+                LogLevel.Critical => "critical",
+                _ => "info",
+            };
+        }
+
+        private class NullScope : IDisposable
+        {
+            public static NullScope Instance { get; } = new NullScope();
+            private NullScope() { }
+            public void Dispose() { }
         }
     }
 }

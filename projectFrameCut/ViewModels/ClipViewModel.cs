@@ -10,12 +10,18 @@ namespace projectFrameCut.ViewModels
     {
         public string Id { get; set; }
         public Border Clip { get; set; }
+        public Border LeftHandle { get; set; }
+        public Border RightHandle { get; set; }
+        public ClipMovingStatus MovingStatus { get; set; } = ClipMovingStatus.Free;
         public double layoutX { get; set; }
         public double layoutY { get; set; }
         public double ghostLayoutX { get; set; }
         public double ghostLayoutY { get; set; }
-        public double defaultY { get; set; } = -1;
+        public double handleLayoutX { get; set; }
+        public double defaultY { get; set; } = -1.0;
+        public int? origTrack { get; set; } = null;
     }
+
 
     public class ClipUpdateEventArgs : EventArgs
     {
@@ -29,13 +35,15 @@ namespace projectFrameCut.ViewModels
     public enum ClipUpdateReason
     {
         Unknown,
-        ClipItselfMove
+        ClipItselfMove,
+        ClipResized
     }
 
     public enum ClipMovingStatus
     {
-        HorizontalOnly,
-        HorizontalAndVertical
+        Free,
+        Move,
+        Resize
     }
 
 
@@ -92,7 +100,7 @@ namespace projectFrameCut.ViewModels
             {
                 if (IsInfiniteDuration || _spf == null || _spf <= 0)
                     return float.PositiveInfinity;
-                return _spf ?? 0; 
+                return _spf ?? 0;
             }
             init
             {

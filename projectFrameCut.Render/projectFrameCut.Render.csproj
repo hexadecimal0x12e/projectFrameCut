@@ -36,14 +36,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
-
-		<PackageReference Include="FFmpeg_droidFix.AutoGen.Abstractions" Version="7.1.1">
-			<Source>C:\Users\azert\source\repos\FFmpeg.AutoGen_droidFix\FFmpeg.AutoGen.Abstractions\bin\Release\FFmpeg.AutoGen.Abstractions.7.1.1.nupkg</Source>
-		</PackageReference>
-	<!--	<PackageReference Include="FFmpeg_droidFix.AutoGen" Version="7.1.1">
-			<Source>C:\Users\azert\source\repos\FFmpeg.AutoGen_droidFix\FFmpeg.AutoGen\bin\Release\FFmpeg.AutoGen.7.1.1.nupkg</Source>
-		</PackageReference> -->
-
 	</ItemGroup>
 
   <ItemGroup>

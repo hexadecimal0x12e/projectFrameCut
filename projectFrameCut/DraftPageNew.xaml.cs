@@ -1,9 +1,12 @@
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace projectFrameCut;
 
@@ -12,11 +15,13 @@ public partial class DraftPage : ContentPage
     public event EventHandler<ClipUpdateEventArgs>? OnClipChanged;
 
     public const int ClipHeight = 62;
+    private const double MinClipWidth = 30.0;
 
     ConcurrentDictionary<string, ClipElementUI> Clips = new();
     ConcurrentDictionary<int, AbsoluteLayout> Tracks = new();
-    //ConcurrentDictionary<string, ClipMovingStatus> MovingStatus = new();
-    ConcurrentDictionary<string, Stopwatch> HoldingTimer = new();
+    ConcurrentDictionary<string, double> HandleStartWidth = new();
+
+    ClipElementUI? _selected = null;
 
     int trackCount = 0;
     int webViewTrackCount = 1;
@@ -30,7 +35,11 @@ public partial class DraftPage : ContentPage
         hybridWebView.RawMessageReceived += HybridWebView_RawMessageReceived;
         TrackCalculator.HeightPerTrack = ClipHeight;
 
-
+        Loaded += (s, e) =>
+        {
+            AddTrackButton_Clicked(s, e);
+            AddClip_Clicked(s, e);
+        };
     }
 
     private void HybridWebView_RawMessageReceived(object? sender, HybridWebViewRawMessageReceivedEventArgs e)
@@ -55,53 +64,84 @@ public partial class DraftPage : ContentPage
         }
     }
 
-
     private void AddTrackButton_Clicked(object sender, EventArgs e)
     {
         if (WebViewRadio.IsChecked)
         {
             webViewTrackCount++;
-            hybridWebView.EvaluateJavaScriptAsync($"createTrack()");
+            hybridWebView.EvaluateJavaScriptAsync("createTrack()");
             return;
         }
 
-        var head = new Border
+        Button removeBtn = new Button
+        {
+            Text = "Remove",
+            BackgroundColor = Colors.Red,
+            TextColor = Colors.White,
+            HorizontalOptions = LayoutOptions.End
+        };
+
+        Border head = new Border
         {
             Content = new VerticalStackLayout
             {
-                Children = {
-                    new Label { Text = "New Track 1" },
-                    new Button { Text = "Remove", BackgroundColor = Colors.Red, TextColor = Colors.White, HorizontalOptions = LayoutOptions.End }
+                Children =
+                {
+                    new Label
+                    {
+                        Text = "New Track 1"
+                    },
+                    removeBtn
                 }
             },
-            HeightRequest = 60,
-            Margin = new(0, 0, 0, 2)
-
-
+            HeightRequest = 60.0,
+            Margin = new Thickness(0.0, 0.0, 0.0, 2.0)
         };
 
-        var track = new AbsoluteLayout
+        AbsoluteLayout track = new AbsoluteLayout();
+
+        var UnselectTapGesture = new TapGestureRecognizer();
+        UnselectTapGesture.Tapped += UnSelectTapGesture_Tapped;
+
+        track.GestureRecognizers.Add(UnselectTapGesture);
+
+        int currentTrack = int.Parse(Tracks.Count.ToString());
+
+        removeBtn.Clicked += (s, e) =>
         {
-
+            while (Tracks[currentTrack].Children.FirstOrDefault((IView)null) != null)
+            {
+                Tracks[currentTrack].Children.Remove(Tracks[currentTrack].Children.First());
+            }
+            Dictionary<string, ClipElementUI> dictionary = Clips.Where(c => Tracks[currentTrack].Children.Contains(c.Value.Clip)).ToDictionary();
+            while (dictionary.Count != 0)
+            {
+                string key = dictionary.First().Key;
+                Clips.Remove(key, out var _);
+                dictionary.Remove(key);
+                if (dictionary.Count <= 0)
+                {
+                    break;
+                }
+            }
+            TrackHeadLayout.Children.Remove(head);
+            TrackContentLayout.Children.RemoveAt(currentTrack);
         };
 
-        Tracks.AddOrUpdate(trackCount, track, (_, _) => track);
+        Tracks.AddOrUpdate(trackCount, track, (int _, AbsoluteLayout _) => track);
 
-        var content = new Border
+        Border content = new Border
         {
             Content = Tracks[trackCount],
-            HeightRequest = 60,
-            Margin = new(0, 0, 0, 2)
-
-
+            HeightRequest = 60.0,
+            Margin = new Thickness(0.0, 0.0, 0.0, 2.0)
         };
-
-
 
         TrackHeadLayout.Children.Insert(TrackHeadLayout.Count - 1, head);
         TrackContentLayout.Children.Add(content);
         trackCount++;
-    }
+
+    }  
 
     private void AddClip_Clicked(object sender, EventArgs e)
     {
@@ -117,7 +157,6 @@ public partial class DraftPage : ContentPage
             return;
         }
 
-
         var cid = Guid.NewGuid().ToString();
 
         var element = new ClipElementUI
@@ -130,133 +169,405 @@ public partial class DraftPage : ContentPage
                 Stroke = Colors.Gray,
                 StrokeThickness = 2,
                 Background = new SolidColorBrush(Colors.CornflowerBlue),
-                WidthRequest = 120,
+                WidthRequest = 150,
                 HeightRequest = 60,
                 StrokeShape = new RoundRectangle
                 {
-                    CornerRadius = 20
+                    CornerRadius = 20,
+                    BackgroundColor = Colors.White,
+                    StrokeThickness = 8
                 },
-                Shadow = new Shadow
+
+                //Shadow = new Shadow
+                //{
+                //    Brush = Colors.Black,
+                //    Opacity = 0.3f,
+                //    Offset = new Point(4, 4),
+                //    Radius = 6
+                //},
+            },
+            LeftHandle = new Border
+            {
+                Stroke = Colors.Gray,
+                StrokeThickness = 2,
+                Background = new SolidColorBrush(Colors.White),
+                WidthRequest = 10,
+                HeightRequest = 30,
+
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center,
+                StrokeShape = new RoundRectangle
                 {
-                    Brush = Colors.Black,
-                    Opacity = 0.3f,
-                    Offset = new Point(4, 4),
-                    Radius = 6
+                    CornerRadius = 20,
+                    BackgroundColor = Colors.White,
+                },
+
+                //Shadow = new Shadow
+                //{
+                //    Brush = Colors.Black,
+                //    Opacity = 0.7f,
+                //    Offset = new Point(4, 4),
+                //    Radius = 6
+                //},
+            },
+            RightHandle = new Border
+            {
+                Stroke = Colors.Gray,
+                StrokeThickness = 2,
+                Background = new SolidColorBrush(Colors.White),
+                WidthRequest = 10,
+                HeightRequest = 30,
+
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center,
+                StrokeShape = new RoundRectangle
+                {
+                    CornerRadius = 20,
+                    BackgroundColor = Colors.White,
+                },
+                //Shadow = new Shadow
+                //{
+                //    Brush = Colors.Black,
+                //    Opacity = 0.7f,
+                //    Offset = new Point(4, 4),
+                //    Radius = 6
+                //},
+            }
+        };
+        var cont = new HorizontalStackLayout
+        {
+            Children =
+            {
+                new Label
+                {
+                    Text = "Clip"
                 }
+            },
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center,
+        };
+
+        Grid.SetColumn(element.LeftHandle, 0);
+        Grid.SetColumn(element.RightHandle, 2);
+        Grid.SetColumn(cont, 1);
+
+        element.Clip.Content = new Grid
+        {
+            Children =
+            {
+                element.LeftHandle,
+                cont,
+                element.RightHandle
+            },
+            ColumnDefinitions =
+            {
+                new ColumnDefinition { Width = new GridLength(12, GridUnitType.Absolute) },
+                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                new ColumnDefinition { Width = new GridLength(12, GridUnitType.Absolute) }
             }
         };
 
+        element.Clip.BindingContext = element;
+        element.LeftHandle.BindingContext = element;
+        element.RightHandle.BindingContext = element;
+
         Clips.AddOrUpdate(cid, element, (_, _) => element);
 
-        var panGesture = new PanGestureRecognizer();
+        var clipPanGesture = new PanGestureRecognizer();
+        clipPanGesture.PanUpdated += ClipPaned;
 
-        panGesture.PanUpdated += PanGesture_PanUpdated;
+        var RightHandleGesture = new PanGestureRecognizer();
+        RightHandleGesture.PanUpdated += RightHandlePaned;
 
-        Clips[cid].Clip.GestureRecognizers.Add(panGesture);
+        var LeftHandleGesture = new PanGestureRecognizer();
+        LeftHandleGesture.PanUpdated += LeftHandleGesture_PanUpdated;
+
+        var SelectTapGesture = new TapGestureRecognizer();
+        SelectTapGesture.Buttons = ButtonsMask.Primary | ButtonsMask.Secondary;
+        SelectTapGesture.Tapped += SelectTapGesture_Tapped;
+
+        var DoubleTapGesture = new TapGestureRecognizer();
+        DoubleTapGesture.NumberOfTapsRequired = 2;
+        DoubleTapGesture.Tapped += DoubleTapGesture_Tapped;
+
+        
+        Clips[cid].Clip.GestureRecognizers.Add(clipPanGesture);
+        Clips[cid].Clip.GestureRecognizers.Add(SelectTapGesture);
+        Clips[cid].Clip.GestureRecognizers.Add(DoubleTapGesture);
+        Clips[cid].LeftHandle.GestureRecognizers.Add(LeftHandleGesture);
+        Clips[cid].RightHandle.GestureRecognizers.Add(RightHandleGesture);
 
 
         Tracks.Last().Value.Add(Clips[cid].Clip);
+    }
+
+    private async void DoubleTapGesture_Tapped(object? sender, TappedEventArgs e)
+    {
+        await DisplayAlert(Title, "You double clicked!", "ok");
+    }
+
+    private void SelectTapGesture_Tapped(object? sender, TappedEventArgs e)
+    {
+        if (sender is not Border border) return;
+        if (border.BindingContext is not ClipElementUI clip) return;
+        Log($"Clip {clip.Id} clicked, state:{clip.MovingStatus}");
+        if (clip.MovingStatus != ClipMovingStatus.Free) return;
+        _selected = clip;
+        clip.Clip.Background = Colors.YellowGreen;
+
 
     }
 
-    private void PanGesture_PanUpdated(object? sender, PanUpdatedEventArgs e)
+    private void UnSelectTapGesture_Tapped(object? sender, TappedEventArgs e)
     {
-        double widthOffset = TrackHeadLayout?.Width ?? 0;
-        double heightOffset = (trackCount - 1) * ClipHeight;
-        var cid = Clips.FirstOrDefault(c => c.Value.Clip == sender).Key ?? throw new KeyNotFoundException("Clip is not in tracks."); ;
-        var clip = Clips[cid];
-        int newTrack = 0;
-        if (sender is Border border)
+        if (_selected is null) return;
+        _selected.Clip.Background = new SolidColorBrush(Colors.CornflowerBlue);
+        _selected = null;
+    }
+
+    private void LeftHandleGesture_PanUpdated(object? sender, PanUpdatedEventArgs e)
+    {
+        if (sender is not Border border) return;
+        if (border.BindingContext is not ClipElementUI clip) return;
+
+        clip.MovingStatus = ClipMovingStatus.Resize;
+
+        switch (e.StatusType)
         {
+            case GestureStatus.Started:
+                clip.handleLayoutX = border.TranslationX;
+                clip.layoutX = clip.Clip.TranslationX;
+                clip.Clip.BatchBegin(); 
+                HandleStartWidth.AddOrUpdate(clip.Id, clip.Clip.WidthRequest, (_, __) => clip.Clip.WidthRequest);
+                break;
 
-            var origTrack = TrackCalculator.CalculateWhichTrackShouldIn(border.TranslationY);
+            case GestureStatus.Running:
+                double startWidth = HandleStartWidth.TryGetValue(clip.Id, out var sw) ? sw : clip.Clip.WidthRequest;
+                double newWidth = Math.Max(MinClipWidth, startWidth - e.TotalX);
 
-            switch (e.StatusType)
+                clip.Clip.TranslationX = clip.layoutX + e.TotalX;
+                clip.Clip.WidthRequest = newWidth;
+                break;
+
+            case GestureStatus.Completed:
+                HandleStartWidth.TryRemove(clip.Id, out _);
+                clip.Clip.BatchCommit();
+                OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
+                {
+                    SourceId = clip.Id,
+                    Reason = ClipUpdateReason.ClipResized
+                });
+                clip.MovingStatus = ClipMovingStatus.Free;
+                StatusLabel.Text = $"clip {clip.Id} resized. x:{border.TranslationX} width:{border.WidthRequest}";
+
+                break;
+        }
+    }
+
+    private void RightHandlePaned(object? sender, PanUpdatedEventArgs e)
+    {
+        if (sender is not Border border) return;
+        if (border.BindingContext is not ClipElementUI clip) return;
+
+        clip.MovingStatus = ClipMovingStatus.Resize;
+
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                clip.handleLayoutX = border.TranslationX;
+                clip.layoutX = clip.Clip.TranslationX;
+                clip.Clip.BatchBegin(); 
+                HandleStartWidth.AddOrUpdate(clip.Id, clip.Clip.WidthRequest, (_, __) => clip.Clip.WidthRequest);
+                break;
+
+            case GestureStatus.Running:
+                double startWidth = HandleStartWidth.TryGetValue(clip.Id, out var sw) ? sw : clip.Clip.WidthRequest;
+                double newWidth = Math.Max(MinClipWidth, startWidth + e.TotalX);
+                clip.Clip.WidthRequest = newWidth;
+                break;
+
+            case GestureStatus.Completed:
+                HandleStartWidth.TryRemove(clip.Id, out _);
+                clip.Clip.BatchCommit();
+                OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
+                {
+                    SourceId = clip.Id,
+                    Reason = ClipUpdateReason.ClipResized
+                });
+                clip.MovingStatus = ClipMovingStatus.Free;
+                StatusLabel.Text = $"clip {clip.Id} resized. x:{border.TranslationX} width:{border.WidthRequest}";
+
+                break;
+        }
+    }
+
+    private void ClipPaned(object? sender, PanUpdatedEventArgs e)
+    {
+        if (sender is not Border border) return;
+        if (border.BindingContext is not ClipElementUI clip) return;
+        if (clip.MovingStatus == ClipMovingStatus.Resize) return;
+        var cid = clip.Id;
+
+        int origTrack = TrackCalculator.CalculateWhichTrackShouldIn(border.TranslationY);
+        clip.origTrack ??= origTrack;
+
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                HandlePanStarted(border, clip);
+                break;
+
+            case GestureStatus.Running:
+                HandlePanRunning(e, border, clip, cid, origTrack);
+                break;
+
+            case GestureStatus.Completed:
+                HandlePanCompleted(border, clip, cid);
+                break;
+        }
+    }
+
+    private void HandlePanStarted(Border border, ClipElementUI clip)
+    {
+        clip.MovingStatus = ClipMovingStatus.Move;
+        clip.layoutX = border.TranslationX;
+        clip.layoutY = border.TranslationY;
+        clip.defaultY = border.TranslationY;
+    }
+
+    private void HandlePanRunning(PanUpdatedEventArgs e, Border border, ClipElementUI clip, string cid, int origTrack)
+    {
+        if (clip.MovingStatus != ClipMovingStatus.Free && clip.MovingStatus != ClipMovingStatus.Move) return;
+
+        double xToBe = clip.layoutX + e.TotalX;
+        double yToBe = clip.layoutY + e.TotalY;
+
+        border.TranslationX = xToBe;
+
+        bool ghostExists = Clips.ContainsKey("ghost_" + cid);
+
+        if (!ghostExists && Math.Abs(yToBe - clip.defaultY) > 50.0)
+        {
+            InitMoveBetweenTracks(clip, cid, border);
+        }
+        else if (ghostExists)
+        {
+            border.TranslationY = yToBe;
+            UpdateGhostAndShadow(border, cid, xToBe, origTrack);
+        }
+    }
+
+    private void UpdateGhostAndShadow(Border border, string cid, double xToBe, int origTrack)
+    {
+        ClipElementUI ghostClip = Clips["ghost_" + cid];
+        Point clipAbsolutePosition = GetAbsolutePosition(border, OverlayLayer);
+        ghostClip.Clip.TranslationX = clipAbsolutePosition.X;
+        ghostClip.Clip.TranslationY = clipAbsolutePosition.Y;
+
+        int newTrack = TrackCalculator.CalculateWhichTrackShouldIn(ghostClip.Clip.TranslationY);
+
+        ClipElementUI shadow = Clips["shadow_" + cid];
+        shadow.Clip.TranslationX = xToBe;
+
+        if (origTrack == newTrack)
+        {
+            return;
+        }
+
+        UpdateShadowTrack(shadow, newTrack);
+    }
+
+    private void UpdateShadowTrack(ClipElementUI shadow, int newTrack)
+    {
+        if (shadow.origTrack.HasValue && Tracks.TryGetValue(shadow.origTrack.Value, out var oldTrackLayout))
+        {
+            oldTrackLayout.Children.Remove(shadow.Clip);
+        }
+        else
+        {
+            Tracks.Values
+                .FirstOrDefault(t => t.Children.Contains(shadow.Clip))
+                ?.Children.Remove(shadow.Clip);
+        }
+
+        if (newTrack >= 0 && newTrack < trackCount)
+        {
+            Tracks[newTrack].Children.Add(shadow.Clip);
+            shadow.origTrack = newTrack;
+        }
+        else
+        {
+            shadow.origTrack = null;
+        }
+    }
+
+    private void HandlePanCompleted(Border border, ClipElementUI clip, string cid)
+    {
+        if (clip.MovingStatus != ClipMovingStatus.Free && clip.MovingStatus != ClipMovingStatus.Move) return;
+
+        if (Clips.TryRemove("shadow_" + cid, out var shadowClip))
+        {
+            if (shadowClip.origTrack is int sTrack && Tracks.TryGetValue(sTrack, out var sLayout))
             {
-                case GestureStatus.Started:
-                    clip.layoutX = border.TranslationX;
-                    clip.layoutY = border.TranslationY;
-                    clip.defaultY = border.TranslationY;
-                    HoldingTimer.AddOrUpdate(cid, Stopwatch.StartNew(), (_, _) => Stopwatch.StartNew());
-                    break;
+                sLayout.Children.Remove(shadowClip.Clip);
+            }
+            else
+            {
+                Tracks.Values.FirstOrDefault(t => t.Children.Contains(shadowClip.Clip))?.Children.Remove(shadowClip.Clip);
+            }
+        }
 
-                case GestureStatus.Running:
-                    StatusLabel.Text = $"moving {cid} \r\nto {clip.layoutX + e.TotalX},{clip.layoutY + e.TotalY}\r\n";
-                    var xToBe = clip.layoutX + e.TotalX;
-                    var yToBe = clip.layoutY + e.TotalY;
-                    if (xToBe < 0) break;
-                    border.TranslationX = xToBe;
-#if ANDROID
-                    border.TranslationY = yToBe;
-#endif
+        if (Clips.TryRemove("ghost_" + cid, out var ghostClip))
+        {
+            int newTrack = TrackCalculator.CalculateWhichTrackShouldIn(ghostClip.Clip.TranslationY);
+            OverlayLayer.Children.Remove(ghostClip.Clip);
 
-                    if (!Clips.ContainsKey("ghost_" + cid)
-                        && HoldingTimer.TryGetValue(cid, out var value)
-                        && value.ElapsedMilliseconds > 500
-                        && Math.Abs(Math.Abs(clip.defaultY) - Math.Abs(yToBe)) > 60)
-                    {
-                        InitMoveBetweenTracks(clip, cid, border);
-                    }
-                    else if (Clips.ContainsKey("ghost_" + cid))
-                    {
-                        var ghostClip = Clips["ghost_" + cid];
-                        
-                        var clipAbsolutePosition = GetAbsolutePosition(border, OverlayLayer);
-
-                        ghostClip.Clip.TranslationX = clipAbsolutePosition.X;
-                        ghostClip.Clip.TranslationY = clipAbsolutePosition.Y;
-
-                        border.TranslationY = yToBe;
-                        newTrack = TrackCalculator.CalculateWhichTrackShouldIn(ghostClip.Clip.TranslationY);
-                        if (origTrack != newTrack)
-                        {
-                            //todo: show a shadow
-                        }
-                        StatusLabel.Text += $"ghost clip: {Clips["ghost_" + cid].Clip.TranslationX},{Clips["ghost_" + cid].Clip.TranslationY} \r\nnew clip should in track:{TrackCalculator.CalculateWhichTrackShouldIn(ghostClip.Clip.TranslationY)} ";
-                    }
-
-
-
-
-                    break;
-
-                case GestureStatus.Completed:
-                    if (Clips.TryRemove("ghost_" + cid, out var _clip))
-                    {
-
-
-                        border.Opacity = 1;
-                        Log($"{cid} moved to {border.TranslationX},{border.TranslationY}");
-                        OnClipChanged?.Invoke(cid, new ClipUpdateEventArgs { SourceId = cid, Reason = ClipUpdateReason.ClipItselfMove });
-                        newTrack = TrackCalculator.CalculateWhichTrackShouldIn(_clip.Clip.TranslationY);
-                        if(newTrack >= trackCount || newTrack < 0) //remove
-                        {
-                            Tracks.Where((t) => t.Value.Contains(border)).ToList().ForEach((t) => t.Value.Remove(border));
-                            OverlayLayer.Children.Remove(_clip.Clip);
-                            Clips.Remove(cid, out var _);
-                            StatusLabel.Text += $"\r\n\r\n{cid} removed. x:{border.TranslationX} y:{border.TranslationY}";
-
-                            return;
-                        }
-
-                        if (origTrack != newTrack)
-                        {
-                            ClipsTrackChanged(border, clip, newTrack);
-                            Tracks.Where((t) => t.Value.Contains(border)).ToList().ForEach((t) => t.Value.Remove(border));
-                        }
-                        OverlayLayer.Children.Remove(_clip.Clip);
-
-                    }
-                    StatusLabel.Text += $"\r\n\r\nChanges on {cid} saved. now in Track {newTrack}, x:{border.TranslationX} y:{border.TranslationY}";
-
-                    break;
+            if (clip.origTrack is int oldTrack && Tracks.TryGetValue(oldTrack, out var oldTrackLayout))
+            {
+                oldTrackLayout.Children.Remove(border);
             }
 
+            if (newTrack < 0 || newTrack > trackCount)
+            {
+                Clips.TryRemove(cid, out _);
+                StatusLabel.Text = $"clip {cid} removed.";
+                return;
+            }
+            else
+            {
+                if (newTrack == trackCount)
+                {
+                    AddTrackButton_Clicked(this, EventArgs.Empty);
+                }
 
-
+                if (clip.origTrack != newTrack)
+                {
+                    ClipsTrackChanged(border, clip, newTrack);
+                }
+                else
+                {
+                    border.TranslationY = 0.0;
+                    if (Tracks.TryGetValue(newTrack, out var currentTrack))
+                    {
+                        currentTrack.Children.Add(border);
+                    }
+                }
+                Clips[cid].origTrack = newTrack;
+            }
 
         }
 
+
+        StatusLabel.Text = $"clip {cid} saved. track:{clip.origTrack} x:{border.TranslationX}";
+        Log($"{cid} moved to {border.TranslationX},{border.TranslationY}");
+        OnClipChanged?.Invoke(cid, new ClipUpdateEventArgs
+        {
+            SourceId = cid,
+            Reason = ClipUpdateReason.ClipItselfMove
+        });
+
+
+        clip.MovingStatus = ClipMovingStatus.Free;
     }
 
     private Point GetAbsolutePosition(VisualElement element, VisualElement ancestor)
@@ -275,35 +586,12 @@ public partial class DraftPage : ContentPage
         return new Point(x, y);
     }
 
-
     private void ClipsTrackChanged(Border border, ClipElementUI clip, int newTrack)
     {
-        var newBorder = new Border
-        {
-            Stroke = border.Stroke,
-            StrokeThickness = border.StrokeThickness,
-            Background = new SolidColorBrush(Colors.CornflowerBlue),
-            WidthRequest = border.WidthRequest,
-            HeightRequest = border.HeightRequest,
-            StrokeShape = border.StrokeShape,
-            Shadow = border.Shadow,
-            TranslationX = border.TranslationX,
-            TranslationY = 0
-        };
-        var panGesture = new PanGestureRecognizer();
-
-        panGesture.PanUpdated += PanGesture_PanUpdated;
-
-        newBorder.GestureRecognizers.Add(panGesture);
-
-        
-
-        Tracks[newTrack].Add(newBorder);
-        Clips[clip.Id].defaultY = newBorder.TranslationY;
-        Clips[clip.Id].Clip = newBorder;
-        
-        
-
+        border.TranslationY = 0;
+        Tracks[newTrack].Add(border);
+        Clips[clip.Id].defaultY = border.TranslationY;
+        Clips[clip.Id].Clip = border;
     }
 
     private async void AddWebViewClip(int trackIndex, string clipId, string text, int start, int duration)
@@ -312,14 +600,10 @@ public partial class DraftPage : ContentPage
         await hybridWebView.EvaluateJavaScriptAsync(script);
     }
 
-
-
-
     private void InitMoveBetweenTracks(ClipElementUI clipElementUI, string cid, Border border)
     {
         border.Stroke = Colors.Green;
-
-        var ghostBorder = new Border
+        Border ghostBorder = new Border
         {
             Stroke = border.Stroke,
             StrokeThickness = border.StrokeThickness,
@@ -327,19 +611,16 @@ public partial class DraftPage : ContentPage
             WidthRequest = border.WidthRequest,
             HeightRequest = border.HeightRequest,
             StrokeShape = border.StrokeShape,
-            Shadow = new Shadow
-            {
-                Brush = Colors.Black,
-                Offset = new Point(20, 20),
-                Radius = 40,
-                Opacity = 0.65f
-            }
+            //Shadow = new Shadow
+            //{
+            //    Brush = Colors.Black,
+            //    Offset = new Point(20.0, 20.0),
+            //    Radius = 7.5f,
+            //    Opacity = 0.65f
+            //}            
         };
 
-        border.Opacity = 0.1;
-
-
-        var ghostElement = new ClipElementUI
+        ClipElementUI ghostElement = new ClipElementUI
         {
             layoutX = clipElementUI.layoutX,
             layoutY = clipElementUI.layoutY,
@@ -349,10 +630,27 @@ public partial class DraftPage : ContentPage
 
         Clips[cid].ghostLayoutX = clipElementUI.layoutX;
         Clips[cid].ghostLayoutY = clipElementUI.layoutY;
-
-        Clips.AddOrUpdate("ghost_" + cid, ghostElement, (_, _) => ghostElement);
-
+        Clips.AddOrUpdate("ghost_" + cid, ghostElement, (string _, ClipElementUI _) => ghostElement);
         OverlayLayer.Add(ghostBorder);
+
+        Border shadowBorder = new Border
+        {
+            Stroke = border.Stroke,
+            StrokeThickness = border.StrokeThickness,
+            Background = new SolidColorBrush(Colors.DeepSkyBlue),
+            WidthRequest = border.WidthRequest,
+            HeightRequest = border.HeightRequest,
+            StrokeShape = border.StrokeShape,
+            //Shadow = border.Shadow,
+            Opacity = 0.45
+        };
+
+        ClipElementUI shadowElement = new ClipElementUI
+        {
+            Clip = shadowBorder,
+            origTrack = 0
+        };
+        Clips.AddOrUpdate("shadow_" + cid, shadowElement, (string _, ClipElementUI _) => shadowElement);
     }
 
     private void MoveLeftButton_Clicked(object sender, EventArgs e)
@@ -361,7 +659,7 @@ public partial class DraftPage : ContentPage
         {
             foreach (var border in item.Value.Children)
             {
-                if(border is Border b)
+                if (border is Border b)
                 {
                     b.TranslationX -= 50;
                 }
@@ -402,7 +700,6 @@ public partial class DraftPage : ContentPage
 
         tracksViewOffset *= 1.5;
     }
-
 
     private void ZoomInButton_Clicked(object sender, EventArgs e)
     {

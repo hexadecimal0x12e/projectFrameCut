@@ -1,7 +1,8 @@
-using Microsoft.Maui.ApplicationModel; 
+using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Devices;
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -19,6 +20,77 @@ public partial class TestPage : ContentPage
     public TestPage()
     {
         InitializeComponent();
+
+        Loaded += TestPage_Loaded;
+    }
+
+    private void TestPage_Loaded(object? sender, EventArgs e)
+    {
+        Border b = new Border
+        {
+            WidthRequest = 50,
+            HeightRequest = 80,
+            BackgroundColor = Colors.Yellow
+        };
+
+        PanGestureRecognizer g = new();
+
+        g.PanUpdated += G_PanUpdated;
+
+        b.GestureRecognizers.Add(g);
+
+        DragTester.Children.Add(b);
+    }
+
+    private ConcurrentStack<double> DraggingX = new();
+    private double _origX = 0;
+
+    private async void G_PanUpdated(object? sender, PanUpdatedEventArgs e)
+    {
+        var b = sender as Border;
+        if (b is null) return;
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                {
+                    _origX = b.TranslationX;
+                    break;
+                }
+            case GestureStatus.Running:
+                {
+                    b.TranslationX = e.TotalX + _origX;
+                    DraggingTestLabel.Text = $"Dragging X:{e.TotalX}";
+                    DraggingX.Push(e.TotalX);
+                    break;
+                }
+            case GestureStatus.Canceled:
+            case GestureStatus.Completed:
+                {
+                    var src = DraggingX.ToList();
+                    src.Reverse();
+                    List<double> delta = [src[0]];
+                    for (int i = 1; i < src.Count; i++)
+                    {
+                        if (i + 1 >= src.Count) break;
+                        delta.Add(src[i + 1] - src[i]);
+                    }
+                    //await DisplayAlert("Info", $"avg delta: {delta.Average()}", "ok");
+                    var p = Path.Combine(FileSystem.CacheDirectory, $"dragtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.csv");
+                    StreamWriter sw = new(p, append: false);
+                    sw.WriteLine("i,PositionX,DeltaX");
+                    for (int i = 0; i < delta.Count; i++)
+                    {
+                        sw.WriteLine($"{i},{src[i]},{delta[i]}");
+                    }
+                    sw.Dispose();
+                    await Share.RequestAsync(new ShareFileRequest
+                    {
+                        Title = "保存拖动测试数据",
+                        File = new ShareFile(p)
+                    });
+                    break;
+                }
+        }
     }
 
     private projectFrameCut.Shared.Picture srcA, srcB;
@@ -442,33 +514,26 @@ public partial class TestPage : ContentPage
         }
         """;
 
-    private void ILGPURenderStartButton_Clicked(object sender, EventArgs e)
-    {
-
-    }
 
     private void MetalRenderStartButton_Clicked(object sender, EventArgs e)
     {
 
     }
 
-    private void CPURenderStartButton_Clicked(object sender, EventArgs e)
+    private void TestCrashButton_Clicked(object sender, EventArgs e)
     {
-
+        Environment.FailFast("test crash");
     }
 
     private async void TestFFmpegButton_Clicked(object sender, EventArgs e)
     {
-#if ANDROID
-        FFmpegLoader.EnsureLoaded();
         string ver = "unknown";
         unsafe
         {
             ver = FFmpeg.AutoGen.ffmpeg.av_version_info();
         }
-        await DisplayAlert("FFmpeg Version",  ver, "OK");
+        await DisplayAlert("FFmpeg Version", ver, "OK");
 
-#endif
     }
 
     public const string ShaderColorSrc =

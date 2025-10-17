@@ -26,32 +26,6 @@ namespace projectFrameCut
             try
             {
                 string loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging");
-//#if ANDROID
-//                // On Android, FFmpeg.AutoGen's LinuxFunctionResolver may import libdl as "libdl.so.2".
-//                // Android only ships "libdl.so". Redirect that import early before any FFmpeg calls.
-//                try
-//                {
-//                    NativeLibrary.SetDllImportResolver(typeof(ffmpeg).Assembly, (name, assembly, searchPath) =>
-//                    {
-//                        IntPtr h = IntPtr.Zero;
-//                        if (OperatingSystem.IsAndroid())
-//                        {
-//                            if (name == "libdl.so.2" || name == "libdl" || name == "dl")
-//                            {
-//                                if (NativeLibrary.TryLoad("libdl.so", assembly, searchPath, out  h)) return h;
-//                                if (NativeLibrary.TryLoad("/system/lib64/libdl.so", out h)) return h;
-//                                if (NativeLibrary.TryLoad("/system/lib/libdl.so", out h)) return h;
-//                            }
-//                        }
-//                        if (NativeLibrary.TryLoad(name, assembly, searchPath, out h)) return h;
-//                        if (NativeLibrary.TryLoad(Path.Combine(Android.App.Application.Context.ApplicationInfo.NativeLibraryDir,$"{name}.so"), out h)) return h;
-//                        if (NativeLibrary.TryLoad(Path.Combine(Android.App.Application.Context.ApplicationInfo.NativeLibraryDir, name), out h)) return h;
-//                        return IntPtr.Zero;
-
-//                    });
-//                }
-//                catch { /* best-effort redirect */ }
-//#endif
 #if ANDROID
                 try
                 {
@@ -63,14 +37,14 @@ namespace projectFrameCut
                     }
 
                 }
-                catch //do nothing, just use the default path             
+                catch //use the default path (/data/data/...)           
                 {
                     
                 }
 
 
 #elif IOS
-                loggingDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "logging");
+                loggingDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "logging"); //files->my [iDevices]->projectFrameCut
                 
 #endif
 
@@ -79,9 +53,6 @@ namespace projectFrameCut
                 {
                     AutoFlush = true
                 };
-
-                //Console.SetOut(LogWriter);
-                //Console.SetError(LogWriter);
 
                 MyLoggerExtensions.OnLog += MyLoggerExtensions_OnLog;
 
@@ -96,9 +67,14 @@ namespace projectFrameCut
             try
             {
                 var builder = MauiApp.CreateBuilder();
-                builder
-                    .UseMauiApp<App>()
-                    .ConfigureFonts(fonts =>
+                builder.UseMauiApp<App>();
+#if DEBUG
+                builder.Logging.SetMinimumLevel(LogLevel.Trace);
+#else
+                builder.Logging.SetMinimumLevel(LogLevel.Information);
+#endif
+                builder.Logging.AddProvider(new MyLoggerProvider());
+                builder.ConfigureFonts(fonts =>
                     {
                         fonts.AddFont("HarmonyOS_Sans_SC_Regular.ttf", "OpenSansRegular");
                         fonts.AddFont("HarmonyOS_Sans_SC_Bold.ttf", "OpenSansSemibold");
@@ -106,18 +82,12 @@ namespace projectFrameCut
 #if ANDROID
                     .ConfigureMauiHandlers(handlers =>
                     {
-
                         handlers.AddHandler<NativeGLSurfaceView, NativeGLSurfaceViewHandler>();
                     });
 #else
 ; 
 #endif
 
-
-#if DEBUG
-                //builder.Logging.AddDebug();
-                builder.Logging.SetMinimumLevel(LogLevel.Trace);
-#endif
 
 #if ANDROID
                 MyLoggerExtensions.OnLog += (msg, level) =>
@@ -169,21 +139,20 @@ namespace projectFrameCut
 
                 
 #endif
-                try
-                {
-                    var ver = ffmpeg.av_version_info();
-                    Log($"Internal FFmpeg version:{ver}");
-                }
-                catch (PlatformNotSupportedException _)
-                {
-                    Log("Unknown internal ffmpeg version");
-                }
+                //try
+                //{
+                //    var ver = ffmpeg.av_version_info();
+                //    Log($"Internal FFmpeg version:{ver}");
+                //}
+                //catch (PlatformNotSupportedException _)
+                //{
+                //    Log("Unknown internal ffmpeg version");
+                //}
                 Localized = SimpleLocalizer.Init();
                 Log($"Localization initialized to {Localized._LocaleId_}, {Localized.WelcomeMessage}");
                 Log("Everything ready!");
                 var app = builder.Build();
                 Log("App is ready!");
-                
                 return app;
             }
             catch (Exception ex)
@@ -199,13 +168,6 @@ namespace projectFrameCut
             LogWriter.WriteLine($"[{DateTime.Now:T} @ {level}] {msg}");
         }
 
-#if ANDROID
-        [DllImport("libdl.so")]
-        private static extern IntPtr dlsym(IntPtr handle, string symbol);
-
-        [DllImport("libdl.so")]
-        private static extern IntPtr dlopen(string fileName, int flag);
-#endif
 
     }
 
