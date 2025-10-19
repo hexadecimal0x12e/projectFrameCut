@@ -7,6 +7,8 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.Maui.Devices;
+using projectFrameCut.PropertyPanel;
 
 namespace projectFrameCut;
 
@@ -23,47 +25,50 @@ public partial class DraftPage : ContentPage
 
     ClipElementUI? _selected = null;
 
+    //avoid when you click on blank space of popup, popup hides
+    TapGestureRecognizer nopGesture = new(); 
+
     int trackCount = 0;
     int webViewTrackCount = 1;
     double tracksViewOffset = 0;
 
+    bool isPopupShowing = false;
+    Border Popup = new();
+
+    private Size WindowSize = new(500, 500);
+
     public DraftPage()
     {
         InitializeComponent();
-        hybridWebView.DefaultFile = "index.html";
-        hybridWebView.HybridRoot = "WebClipView";
-        hybridWebView.RawMessageReceived += HybridWebView_RawMessageReceived;
+        //hybridWebView.DefaultFile = "index.html";
+        //hybridWebView.HybridRoot = "WebClipView";
+        //hybridWebView.RawMessageReceived += HybridWebView_RawMessageReceived;
         TrackCalculator.HeightPerTrack = ClipHeight;
+
+        nopGesture.Tapped += (s, e) =>
+        {
+
+        };
 
         Loaded += (s, e) =>
         {
-            AddTrackButton_Clicked(s, e);
-            AddClip_Clicked(s, e);
+            WindowSize = GetScreenSizeInDp();
+            AddTrackButton_Clicked(new(), e);
+            AddClip_Clicked(new(), e);
+            this.Window.SizeChanged += Window_SizeChanged;
+            var bgTap = new TapGestureRecognizer();
+            bgTap.Tapped += async (s, e) => await HidePopup();
+            OverlayLayer.GestureRecognizers.Clear();
+            OverlayLayer.GestureRecognizers.Add(bgTap);
         };
-    }
 
-    private void HybridWebView_RawMessageReceived(object? sender, HybridWebViewRawMessageReceivedEventArgs e)
-    {
-        // todo
-        Debug.WriteLine($"Message from JS: {e.Message}");
-    }
-
-    private void ViewSelector_CheckedChanged(object sender, CheckedChangedEventArgs e)
-    {
-        if (!e.Value) return;
-
-        if (sender == NativeViewRadio)
+        if (this.Window is not null)
         {
-            NativeView.IsVisible = true;
-            hybridWebView.IsVisible = false;
-        }
-        else if (sender == WebViewRadio)
-        {
-            NativeView.IsVisible = false;
-            hybridWebView.IsVisible = true;
+            this.Window.SizeChanged += Window_SizeChanged;
         }
     }
 
+    #region add stuff
     private void AddTrackButton_Clicked(object sender, EventArgs e)
     {
         if (WebViewRadio.IsChecked)
@@ -141,7 +146,7 @@ public partial class DraftPage : ContentPage
         TrackContentLayout.Children.Add(content);
         trackCount++;
 
-    }  
+    }
 
     private void AddClip_Clicked(object sender, EventArgs e)
     {
@@ -280,7 +285,7 @@ public partial class DraftPage : ContentPage
         RightHandleGesture.PanUpdated += RightHandlePaned;
 
         var LeftHandleGesture = new PanGestureRecognizer();
-        LeftHandleGesture.PanUpdated += LeftHandleGesture_PanUpdated;
+        LeftHandleGesture.PanUpdated += LeftHandlePanded;
 
         var SelectTapGesture = new TapGestureRecognizer();
         SelectTapGesture.Buttons = ButtonsMask.Primary | ButtonsMask.Secondary;
@@ -290,7 +295,7 @@ public partial class DraftPage : ContentPage
         DoubleTapGesture.NumberOfTapsRequired = 2;
         DoubleTapGesture.Tapped += DoubleTapGesture_Tapped;
 
-        
+
         Clips[cid].Clip.GestureRecognizers.Add(clipPanGesture);
         Clips[cid].Clip.GestureRecognizers.Add(SelectTapGesture);
         Clips[cid].Clip.GestureRecognizers.Add(DoubleTapGesture);
@@ -301,15 +306,32 @@ public partial class DraftPage : ContentPage
         Tracks.Last().Value.Add(Clips[cid].Clip);
     }
 
+    #endregion
+
+    #region select clip
     private async void DoubleTapGesture_Tapped(object? sender, TappedEventArgs e)
     {
-        await DisplayAlert(Title, "You double clicked!", "ok");
+        if (sender is not Border border) return;
+        if (border.BindingContext is not ClipElementUI clip) return;
+        Log($"Clip {clip.Id} double clicked, state:{clip.MovingStatus}");
+        try
+        {
+            await ShowClipPopup(border, clip);
+        }
+        catch (Exception ex)
+        {
+            Log($"ShowClipPopup error: {ex}");
+        }
     }
 
     private void SelectTapGesture_Tapped(object? sender, TappedEventArgs e)
     {
         if (sender is not Border border) return;
         if (border.BindingContext is not ClipElementUI clip) return;
+        if (_selected is not null)
+        {
+            _selected.Clip.Background = new SolidColorBrush(Colors.CornflowerBlue);
+        }
         Log($"Clip {clip.Id} clicked, state:{clip.MovingStatus}");
         if (clip.MovingStatus != ClipMovingStatus.Free) return;
         _selected = clip;
@@ -324,83 +346,9 @@ public partial class DraftPage : ContentPage
         _selected.Clip.Background = new SolidColorBrush(Colors.CornflowerBlue);
         _selected = null;
     }
+    #endregion
 
-    private void LeftHandleGesture_PanUpdated(object? sender, PanUpdatedEventArgs e)
-    {
-        if (sender is not Border border) return;
-        if (border.BindingContext is not ClipElementUI clip) return;
-
-        clip.MovingStatus = ClipMovingStatus.Resize;
-
-        switch (e.StatusType)
-        {
-            case GestureStatus.Started:
-                clip.handleLayoutX = border.TranslationX;
-                clip.layoutX = clip.Clip.TranslationX;
-                clip.Clip.BatchBegin(); 
-                HandleStartWidth.AddOrUpdate(clip.Id, clip.Clip.WidthRequest, (_, __) => clip.Clip.WidthRequest);
-                break;
-
-            case GestureStatus.Running:
-                double startWidth = HandleStartWidth.TryGetValue(clip.Id, out var sw) ? sw : clip.Clip.WidthRequest;
-                double newWidth = Math.Max(MinClipWidth, startWidth - e.TotalX);
-
-                clip.Clip.TranslationX = clip.layoutX + e.TotalX;
-                clip.Clip.WidthRequest = newWidth;
-                break;
-
-            case GestureStatus.Completed:
-                HandleStartWidth.TryRemove(clip.Id, out _);
-                clip.Clip.BatchCommit();
-                OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
-                {
-                    SourceId = clip.Id,
-                    Reason = ClipUpdateReason.ClipResized
-                });
-                clip.MovingStatus = ClipMovingStatus.Free;
-                StatusLabel.Text = $"clip {clip.Id} resized. x:{border.TranslationX} width:{border.WidthRequest}";
-
-                break;
-        }
-    }
-
-    private void RightHandlePaned(object? sender, PanUpdatedEventArgs e)
-    {
-        if (sender is not Border border) return;
-        if (border.BindingContext is not ClipElementUI clip) return;
-
-        clip.MovingStatus = ClipMovingStatus.Resize;
-
-        switch (e.StatusType)
-        {
-            case GestureStatus.Started:
-                clip.handleLayoutX = border.TranslationX;
-                clip.layoutX = clip.Clip.TranslationX;
-                clip.Clip.BatchBegin(); 
-                HandleStartWidth.AddOrUpdate(clip.Id, clip.Clip.WidthRequest, (_, __) => clip.Clip.WidthRequest);
-                break;
-
-            case GestureStatus.Running:
-                double startWidth = HandleStartWidth.TryGetValue(clip.Id, out var sw) ? sw : clip.Clip.WidthRequest;
-                double newWidth = Math.Max(MinClipWidth, startWidth + e.TotalX);
-                clip.Clip.WidthRequest = newWidth;
-                break;
-
-            case GestureStatus.Completed:
-                HandleStartWidth.TryRemove(clip.Id, out _);
-                clip.Clip.BatchCommit();
-                OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
-                {
-                    SourceId = clip.Id,
-                    Reason = ClipUpdateReason.ClipResized
-                });
-                clip.MovingStatus = ClipMovingStatus.Free;
-                StatusLabel.Text = $"clip {clip.Id} resized. x:{border.TranslationX} width:{border.WidthRequest}";
-
-                break;
-        }
-    }
-
+    #region move clip
     private void ClipPaned(object? sender, PanUpdatedEventArgs e)
     {
         if (sender is not Border border) return;
@@ -411,20 +359,19 @@ public partial class DraftPage : ContentPage
         int origTrack = TrackCalculator.CalculateWhichTrackShouldIn(border.TranslationY);
         clip.origTrack ??= origTrack;
 
-        switch (e.StatusType)
-        {
-            case GestureStatus.Started:
-                HandlePanStarted(border, clip);
-                break;
+        if(e.StatusType == GestureStatus.Running)
+            HandlePanRunning(e, border, clip, cid, origTrack);
+        else
+            switch (e.StatusType)
+            {
+                case GestureStatus.Started:
+                    HandlePanStarted(border, clip);
+                    break;
 
-            case GestureStatus.Running:
-                HandlePanRunning(e, border, clip, cid, origTrack);
-                break;
-
-            case GestureStatus.Completed:
-                HandlePanCompleted(border, clip, cid);
-                break;
-        }
+                case GestureStatus.Completed:
+                    HandlePanCompleted(border, clip, cid);
+                    break;
+            }
     }
 
     private void HandlePanStarted(Border border, ClipElementUI clip)
@@ -570,34 +517,12 @@ public partial class DraftPage : ContentPage
         clip.MovingStatus = ClipMovingStatus.Free;
     }
 
-    private Point GetAbsolutePosition(VisualElement element, VisualElement ancestor)
-    {
-        double x = element.X + element.TranslationX;
-        double y = element.Y + element.TranslationY;
-
-        VisualElement? parent = element.Parent as VisualElement;
-        while (parent != null && parent != ancestor)
-        {
-            x += parent.X + parent.TranslationX;
-            y += parent.Y + parent.TranslationY;
-            parent = parent.Parent as VisualElement;
-        }
-
-        return new Point(x, y);
-    }
-
     private void ClipsTrackChanged(Border border, ClipElementUI clip, int newTrack)
     {
         border.TranslationY = 0;
         Tracks[newTrack].Add(border);
         Clips[clip.Id].defaultY = border.TranslationY;
         Clips[clip.Id].Clip = border;
-    }
-
-    private async void AddWebViewClip(int trackIndex, string clipId, string text, int start, int duration)
-    {
-        var script = $"window.addClip({trackIndex}, '{clipId}', '{text}', {start}, {duration});";
-        await hybridWebView.EvaluateJavaScriptAsync(script);
     }
 
     private void InitMoveBetweenTracks(ClipElementUI clipElementUI, string cid, Border border)
@@ -651,6 +576,427 @@ public partial class DraftPage : ContentPage
             origTrack = 0
         };
         Clips.AddOrUpdate("shadow_" + cid, shadowElement, (string _, ClipElementUI _) => shadowElement);
+    }
+
+    #endregion
+
+    #region resize clip
+    private void LeftHandlePanded(object? sender, PanUpdatedEventArgs e)
+    {
+        if (sender is not Border border) return;
+        if (border.BindingContext is not ClipElementUI clip) return;
+
+        clip.MovingStatus = ClipMovingStatus.Resize;
+
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                clip.handleLayoutX = border.TranslationX;
+                clip.layoutX = clip.Clip.TranslationX;
+                clip.Clip.BatchBegin();
+                HandleStartWidth.AddOrUpdate(clip.Id, clip.Clip.WidthRequest, (_, __) => clip.Clip.WidthRequest);
+                break;
+
+            case GestureStatus.Running:
+                double startWidth = HandleStartWidth.TryGetValue(clip.Id, out var sw) ? sw : clip.Clip.WidthRequest;
+                double newWidth = Math.Max(MinClipWidth, startWidth - e.TotalX);
+
+                clip.Clip.TranslationX = clip.layoutX + e.TotalX;
+                clip.Clip.WidthRequest = newWidth;
+                break;
+
+            case GestureStatus.Completed:
+                HandleStartWidth.TryRemove(clip.Id, out _);
+                clip.Clip.BatchCommit();
+                OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
+                {
+                    SourceId = clip.Id,
+                    Reason = ClipUpdateReason.ClipResized
+                });
+                clip.MovingStatus = ClipMovingStatus.Free;
+                StatusLabel.Text = $"clip {clip.Id} resized. x:{border.TranslationX} width:{border.WidthRequest}";
+
+                break;
+        }
+    }
+
+    private void RightHandlePaned(object? sender, PanUpdatedEventArgs e)
+    {
+        if (sender is not Border border) return;
+        if (border.BindingContext is not ClipElementUI clip) return;
+
+        clip.MovingStatus = ClipMovingStatus.Resize;
+
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                clip.handleLayoutX = border.TranslationX;
+                clip.layoutX = clip.Clip.TranslationX;
+                clip.Clip.BatchBegin();
+                HandleStartWidth.AddOrUpdate(clip.Id, clip.Clip.WidthRequest, (_, __) => clip.Clip.WidthRequest);
+                break;
+
+            case GestureStatus.Running:
+                double startWidth = HandleStartWidth.TryGetValue(clip.Id, out var sw) ? sw : clip.Clip.WidthRequest;
+                double newWidth = Math.Max(MinClipWidth, startWidth + e.TotalX);
+                clip.Clip.WidthRequest = newWidth;
+                break;
+
+            case GestureStatus.Completed:
+                HandleStartWidth.TryRemove(clip.Id, out _);
+                clip.Clip.BatchCommit();
+                OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
+                {
+                    SourceId = clip.Id,
+                    Reason = ClipUpdateReason.ClipResized
+                });
+                clip.MovingStatus = ClipMovingStatus.Free;
+                StatusLabel.Text = $"clip {clip.Id} resized. x:{border.TranslationX} width:{border.WidthRequest}";
+
+                break;
+        }
+    }
+    #endregion
+
+    #region popup
+
+    private async Task ShowClipPopup(Border clipBorder, ClipElementUI clip)
+    {
+        var existing = OverlayLayer.Children.FirstOrDefault(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle");
+        if (existing != null)
+        {
+            var toRemove = OverlayLayer.Children.Where(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle").ToList();
+            foreach (var r in toRemove)
+                OverlayLayer.Children.Remove(r);
+        }
+
+        OverlayLayer.InputTransparent = false;
+
+        double desiredPopupWidth = 500;
+        double desiredPopupHeight = 400;
+        double arrowSize = 20;
+        double spacing = 8;
+        double minPopupWidth = 200;
+        double minPopupHeight = 120;
+        double margin = 8; 
+
+        Point clipAbs = GetAbsolutePosition(clipBorder, null);
+        Point overlayAbs = GetAbsolutePosition(OverlayLayer, null);
+
+        int retries = 0;
+        while ((OverlayLayer.Width <= 0 || OverlayLayer.Height <= 0 || double.IsNaN(clipAbs.Y) || clipAbs.Y <= 0) && retries < 6)
+        {
+            await Task.Delay(30);
+            clipAbs = GetAbsolutePosition(clipBorder, null);
+            overlayAbs = GetAbsolutePosition(OverlayLayer, null);
+            retries++;
+        }
+
+        double cumulativeScrollY = 0;
+        VisualElement? parent = clipBorder.Parent as VisualElement;
+        while (parent != null && parent != OverlayLayer)
+        {
+            if (parent is ScrollView sv)
+            {
+                cumulativeScrollY += sv.ScrollY;
+            }
+            parent = parent.Parent as VisualElement;
+        }
+        double clipWidth = (clipBorder.Width > 0) ? clipBorder.Width : clipBorder.WidthRequest;
+        double clipHeight = (clipBorder.Height > 0) ? clipBorder.Height : clipBorder.HeightRequest;
+
+        Point abs = new Point(clipAbs.X - overlayAbs.X, clipAbs.Y - overlayAbs.Y - cumulativeScrollY);
+
+        // for fallback 
+        double overlayW = OverlayLayer.Width > 0 ? OverlayLayer.Width : this.Width;
+        double overlayH = OverlayLayer.Height > 0 ? OverlayLayer.Height : this.Height;
+        if (double.IsNaN(overlayW) || overlayW <= 0) overlayW = 1000;
+        if (double.IsNaN(overlayH) || overlayH <= 0) overlayH = 1000;
+
+        double availableBelow = overlayH - (abs.Y + clipHeight) - spacing - arrowSize - margin;
+        double availableAbove = abs.Y - spacing - arrowSize - margin;
+        if (availableBelow < 0) availableBelow = 0;
+        if (availableAbove < 0) availableAbove = 0;
+
+        double popupWidth = Math.Min(desiredPopupWidth, Math.Max(minPopupWidth, overlayW - margin * 2));
+        double popupHeight;
+        bool popupBelow;
+
+        if (availableBelow >= desiredPopupHeight)
+        {
+            popupBelow = true;
+            popupHeight = desiredPopupHeight;
+        }
+        else if (availableAbove >= desiredPopupHeight)
+        {
+            popupBelow = false;
+            popupHeight = desiredPopupHeight;
+        }
+        else
+        {
+            if (availableBelow >= availableAbove)
+            {
+                popupBelow = true;
+                popupHeight = Math.Max(minPopupHeight, Math.Min(desiredPopupHeight, availableBelow));
+            }
+            else
+            {
+                popupBelow = false;
+                popupHeight = Math.Max(minPopupHeight, Math.Min(desiredPopupHeight, availableAbove));
+            }
+
+            popupHeight = Math.Min(popupHeight, Math.Max(minPopupHeight, overlayH - margin * 2));
+        }
+
+        double clipCenterX = abs.X + (clipWidth / 2.0);
+        double popupX = clipCenterX - (popupWidth / 2.0);
+        if (popupX < margin) popupX = margin;
+        if (popupX + popupWidth + margin > overlayW) popupX = Math.Max(margin, overlayW - popupWidth - margin);
+
+        double popupY;
+        if (popupBelow)
+        {
+            popupY = abs.Y + clipHeight + spacing + arrowSize;
+            if (popupY + popupHeight + margin > overlayH)
+            {
+                popupY = Math.Max(margin, overlayH - popupHeight - margin);
+            }
+        }
+        else
+        {
+            popupY = abs.Y - popupHeight - arrowSize - spacing;
+            if (popupY < margin)
+            {
+                popupY = margin;
+            }
+        }
+
+        double triangleLeft = clipCenterX - (arrowSize / 2.0);
+        double triangleMin = popupX + 6;
+        double triangleMax = popupX + popupWidth - arrowSize - 6;
+        triangleLeft = Math.Clamp(triangleLeft, triangleMin, triangleMax);
+        double triangleTop;
+
+        Polygon triangle;
+        if (popupBelow)
+        {
+            triangle = new Polygon
+            {
+                StyleId = "ClipPopupTriangle",
+                Fill = Colors.Grey,
+                Points = new PointCollection
+                {
+                    new Point(0, arrowSize),
+                    new Point(arrowSize / 2.0, 0),
+                    new Point(arrowSize, arrowSize)
+                }
+            };
+            triangleTop = popupY - arrowSize;
+        }
+        else
+        {
+            triangle = new Polygon
+            {
+                StyleId = "ClipPopupTriangle",
+                Fill = Colors.Grey,
+                Points = new PointCollection
+                {
+                    new Point(0, 0),
+                    new Point(arrowSize / 2.0, arrowSize),
+                    new Point(arrowSize, 0)
+                },
+                Opacity = 0.75
+            };
+            triangleTop = popupY + popupHeight;
+        }
+
+        AbsoluteLayout.SetLayoutBounds(triangle, new Rect(triangleLeft, triangleTop, arrowSize, arrowSize));
+
+        var frame = new Border
+        {
+            StyleId = "ClipPopupFrame",
+            Background = new SolidColorBrush(Colors.Grey),
+            Stroke = Colors.Black,
+            StrokeThickness = 1,
+            StrokeShape = new RoundRectangle { CornerRadius = 4 },
+            Padding = new Thickness(2),
+            Opacity = 0.95,
+            Content = new ScrollView { Content = BuildPropertyPanel(clip) }
+        };
+
+        frame.GestureRecognizers.Add(nopGesture);
+
+        AbsoluteLayout.SetLayoutBounds(frame, new Rect(popupX, popupY, popupWidth, popupHeight));
+
+        frame.Opacity = 0;
+        frame.Scale = 0.95;
+        frame.TranslationY = 5;
+
+        triangle.Opacity = 0;
+        triangle.Scale = 0.95;
+        triangle.TranslationY = 5;
+
+        OverlayLayer.Children.Add(frame);
+        OverlayLayer.Children.Add(triangle);
+
+        const uint entranceMs = 220u;
+        try
+        {
+            await Task.WhenAll(
+                frame.FadeTo(0.9, entranceMs, Easing.CubicOut),
+                frame.ScaleTo(1, entranceMs, Easing.CubicOut),
+                frame.TranslateTo(0, 0, entranceMs, Easing.CubicOut),
+                triangle.FadeTo(0.9, entranceMs, Easing.CubicOut),
+                triangle.ScaleTo(1, entranceMs, Easing.CubicOut),
+                triangle.TranslateTo(0, 0, entranceMs, Easing.CubicOut)
+            );
+        }
+        catch { }
+    }
+
+    private async Task HidePopup()
+    {
+        OverlayLayer.InputTransparent = true;
+        await Task.WhenAll(HideClipPopup(), HideFullscreenPopup());
+    }
+
+    private async Task HideClipPopup()
+    {
+        var toRemove = OverlayLayer.Children.Where(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle").ToList();
+
+        // Animate out (run all animations in parallel)
+        const uint exitMs = 220u;
+        var visuals = toRemove.OfType<VisualElement>().ToList();
+        var tasks = new List<Task>();
+        foreach (var v in visuals)
+        {
+            try
+            {
+                var t = Task.WhenAll(
+                    v.FadeTo(0, exitMs, Easing.CubicIn),
+                    v.ScaleTo(0.95, exitMs, Easing.CubicIn),
+                    v.TranslateTo(0, 10, exitMs, Easing.CubicIn)
+                );
+                tasks.Add(t);
+            }
+            catch { }
+        }
+        try { await Task.WhenAll(tasks); } catch { }
+
+        foreach (var r in toRemove)
+            OverlayLayer.Children.Remove(r);
+        OverlayLayer.InputTransparent = true;
+
+    }
+
+
+    private async void FullscreenFlyoutTestButton_Clicked(object sender, EventArgs e)
+    {
+        await ShowAFullscreenPopupInBottom(800, BuildPropertyPanel(_selected ?? new()));
+    }
+
+    private async Task ShowAFullscreenPopupInBottom(double height, View content)
+    {
+        var size = WindowSize;
+
+        Popup = new Border
+        {
+            WidthRequest = size.Width - 40,
+            HeightRequest = height,
+            TranslationX = 15,             
+            TranslationY = size.Height + 10, 
+            Background = new SolidColorBrush(Colors.Grey),
+
+            StrokeShape = new RoundRectangle
+            {
+                CornerRadius = 8,
+                StrokeThickness = 8
+            },
+            Shadow = new Shadow
+            {
+                Brush = Colors.Black,
+                Opacity = 1f,
+                Radius = 3
+            },
+            Padding = 12,
+            Content = new ScrollView { Content = content }
+        };
+        OverlayLayer.InputTransparent = false;
+        Popup.GestureRecognizers.Add(nopGesture);
+
+        OverlayLayer.Add(Popup);
+
+        var targetY = height;
+        try
+        {
+            await Popup.TranslateTo(Popup.TranslationX, size.Height - targetY, 300, Easing.SinOut);
+        }
+        catch {  }
+    }
+
+    private async Task HideFullscreenPopup()
+    {
+        var size = WindowSize;
+
+        try
+        {
+            await Popup.TranslateTo(Popup.TranslationX, size.Height + 10, 300, Easing.SinIn);
+        }
+        catch { }
+
+        OverlayLayer.Remove(Popup);
+        OverlayLayer.InputTransparent = true;
+
+    }
+
+    #endregion
+
+    #region misc
+    private View BuildPropertyPanel(ClipElementUI clip)
+    {
+        return new PropertyPanelBuilder()
+        .AddText(new TitleAndDescriptionLineLabel("ppb Test", "a example of PropertyPanelBuilder", 32))
+        .AddText("This is a test", fontSize: 16, fontAttributes: FontAttributes.Bold)
+        .AddEntry("testEntry", "Test Entry:", "text", "Enter something...", EntrySeter: (entry) =>
+        {
+            entry.WidthRequest = 200;
+        })
+        .AddSlider("testSlider", "Test Slider:", 0, 100, 50)
+        .AddSeparator(null)
+        .AddCheckbox("testCheckbox", "Test Checkbox:", false)
+        .AddSwitch("testSwitch", "Test Switch:", true)
+        .AddSeparator(null)
+        .AddButton("testButton", "Test button 1", "Click me!")
+        .AddCustomChild("pick a date", (p, c) =>
+        {
+            var picker = new DatePicker
+            {
+                WidthRequest = 200,
+                Date = DateTime.Now,
+                BindingContext = p
+            };
+            picker.DateSelected += (s, e) => c(e.NewDate.ToString("G"));
+            return picker;
+        }, "testDatePicker", DateTime.Now.ToString("G"))
+        .AddCustomChild(new Rectangle
+        {
+            WidthRequest = 100,
+            HeightRequest = 500,
+            Fill = Colors.Green
+        })
+        .ListenToChanges(async (s, e) =>
+        {
+            await DisplayAlert("Property Changed", $"Property '{e.Id}' changed from '{e.OriginValue}' to '{e.Value}'", "OK");
+        })
+        .Build();
+
+
+    }
+
+    private async void AddWebViewClip(int trackIndex, string clipId, string text, int start, int duration)
+    {
+        var script = $"window.addClip({trackIndex}, '{clipId}', '{text}', {start}, {duration});";
+        await hybridWebView.EvaluateJavaScriptAsync(script);
     }
 
     private void MoveLeftButton_Clicked(object sender, EventArgs e)
@@ -715,6 +1061,102 @@ public partial class DraftPage : ContentPage
         }
 
         tracksViewOffset /= 1.5;
+    }  
+
+    private Size GetScreenSizeInDp()
+    {
+        var info = DeviceDisplay.MainDisplayInfo;
+        double widthDp = info.Width / info.Density;
+        double heightDp = info.Height / info.Density;
+        return new Size(widthDp, heightDp);
+    }
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+
+        var size = GetScreenSizeInDp();
+        Debug.WriteLine($"Window size on appearing: {size.Width:F0} x {size.Height:F0} (DIP)");
+
+        
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+
+        HidePopup();
+
+        if (this.Window is not null)
+        {
+            this.Window.SizeChanged -= Window_SizeChanged;
+        }
+    }
+
+    private void Window_SizeChanged(object? sender, EventArgs e)
+    {
+        // 直接读取 Window.Width / Window.Height（单位为 DIP）
+        double w = this.Window?.Width ?? 0;
+        double h = this.Window?.Height ?? 0;
+        WindowSize = new(w, h);
+        Debug.WriteLine($"Window size changed: {w:F0} x {h:F0} (DIP)");
+
+        // 如需额外逻辑（例如调整 OverlayLayer），在这里处理
+    }
+
+    private Point GetAbsolutePosition(VisualElement element, VisualElement ancestor)
+    {
+        double x = element.X + element.TranslationX;
+        double y = element.Y + element.TranslationY;
+
+        VisualElement? parent = element.Parent as VisualElement;
+        while (parent != null && parent != ancestor)
+        {
+            x += parent.X + parent.TranslationX;
+            y += parent.Y + parent.TranslationY;
+            parent = parent.Parent as VisualElement;
+        }
+
+        return new Point(x, y);
+    }
+
+    private void HybridWebView_RawMessageReceived(object? sender, HybridWebViewRawMessageReceivedEventArgs e)
+    {
+        // todo
+        Debug.WriteLine($"Message from JS: {e.Message}");
+    }
+
+    private void ViewSelector_CheckedChanged(object sender, CheckedChangedEventArgs e)
+    {
+        if (!e.Value) return;
+
+        if (sender == NativeViewRadio)
+        {
+            NativeView.IsVisible = true;
+            hybridWebView.IsVisible = false;
+        }
+        else if (sender == WebViewRadio)
+        {
+            NativeView.IsVisible = false;
+            hybridWebView.IsVisible = true;
+        }
+    }
+    #endregion
+
+    private void OnExportedClick(object sender, EventArgs e)
+    {
+
+    }
+
+    private async void SettingsClick(object sender, EventArgs e)
+    {
+        await Navigation.PushAsync(new ContentPage
+        {
+            Content = new ScrollView
+            {
+                Content = BuildPropertyPanel(_selected ?? new())
+            }
+        });
     }
 }
 

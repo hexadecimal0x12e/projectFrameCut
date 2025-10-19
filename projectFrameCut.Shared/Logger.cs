@@ -79,6 +79,7 @@ Exception data:
 
     }
 
+    [DebuggerNonUserCode()]
     public static class MyLoggerExtensions
     {
         public static event Action<string, string>? OnLog;
@@ -89,6 +90,7 @@ Exception data:
         }
     }
 
+    [DebuggerNonUserCode()]
     public class MyLoggerProvider : ILoggerProvider, ISupportExternalScope
     {
         private readonly LogLevel _minLevel;
@@ -114,6 +116,7 @@ Exception data:
             _scopeProvider = scopeProvider;
         }
 
+        [DebuggerNonUserCode()]
         private class MyLogger : ILogger
         {
             private readonly string _category;

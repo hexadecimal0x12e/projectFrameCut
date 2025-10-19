@@ -4,9 +4,6 @@
              x:Class="projectFrameCut.LandingPage"
              Loaded="ContentPage_Loaded">
     <VerticalStackLayout>
-        <Label 
-            Text="please wait..."
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
+        
     </VerticalStackLayout>
 </ContentPage>

@@ -2,14 +2,19 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.DraftPage"
+             xmlns:l="clr-namespace:LocalizedResources"
              Title="DraftPage V2">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="{l:Localized Key=DraftPage_GoRender}" Order="Primary" Priority="0" Clicked="OnExportedClick" />
+        <ToolbarItem Text="{l:Localized Key=_Options}" Clicked="SettingsClick"/>
+    </ContentPage.ToolbarItems>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        
+
 
 
         <ScrollView Grid.Row="0" HeightRequest="300" x:Name="NativeView">
@@ -27,8 +32,8 @@
                             HeightRequest="80" />
                 </VerticalStackLayout>
 
-                
-                
+
+
                 <VerticalStackLayout x:Name="TrackContentLayout" Grid.Column="1" Padding="2" />
             </Grid>
 
@@ -48,16 +53,16 @@
                 <Button x:Name="ZoomInButton" Text="-" Clicked="ZoomInButton_Clicked"/>
             </StackLayout>
             <StackLayout Orientation="Horizontal" Padding="10,0">
-						<Label Text="View Mode:" VerticalOptions="Center"/>
-						<RadioButton x:Name="NativeViewRadio" Content="Native" IsChecked="True" GroupName="ViewSelector" CheckedChanged="ViewSelector_CheckedChanged"/>
-						<RadioButton x:Name="WebViewRadio" Content="Web" GroupName="ViewSelector" CheckedChanged="ViewSelector_CheckedChanged"/>
-					</StackLayout>
+                <Label Text="View Mode:" VerticalOptions="Center"/>
+                <RadioButton x:Name="NativeViewRadio" Content="Native" IsChecked="True" GroupName="ViewSelector" CheckedChanged="ViewSelector_CheckedChanged"/>
+                <RadioButton x:Name="WebViewRadio" Content="Web" GroupName="ViewSelector" CheckedChanged="ViewSelector_CheckedChanged"/>
+            </StackLayout>
             <Label x:Name="StatusLabel" Text="Ready"/>
-
+            <Button x:Name="FullscreenFlyoutTestButton" Text="Pop a flyout" Clicked="FullscreenFlyoutTestButton_Clicked"/>
         </VerticalStackLayout>
 
         <AbsoluteLayout x:Name="OverlayLayer"
-                        Grid.RowSpan="0"
+                        Grid.RowSpan="2"
                         ZIndex="1000"
                         InputTransparent="True"
                         IsVisible="True"

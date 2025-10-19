@@ -7,6 +7,16 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using projectFrameCut.DraftStuff;
+using projectFrameCut.PropertyPanel;
+using Microsoft.Maui.Controls.Shapes;
+using Path = System.IO.Path;
+using System.Text.Json;
+
+
+
+
+
 
 #if ANDROID
 using projectFrameCut.Platforms.Android;
@@ -41,6 +51,8 @@ public partial class TestPage : ContentPage
 
         DragTester.Children.Add(b);
     }
+
+    #region pan gesture test
 
     private ConcurrentStack<double> DraggingX = new();
     private double _origX = 0;
@@ -93,6 +105,10 @@ public partial class TestPage : ContentPage
         }
     }
 
+
+    #endregion
+
+    #region openGL test
     private projectFrameCut.Shared.Picture srcA, srcB;
 
     private async void OpenGLESStartButton_Clicked(object sender, EventArgs e)
@@ -105,11 +121,11 @@ public partial class TestPage : ContentPage
             await Task.Delay(500); // 确保UI更新
 
             Task.WaitAll([
-                Task.Run(() => 
+                Task.Run(() =>
                 {
                     srcA = new projectFrameCut.Shared.Picture("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_a.png");
                 }),
-                Task.Run(() => 
+                Task.Run(() =>
                 {
                     srcB = new projectFrameCut.Shared.Picture("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/@Original_track_b.png");
                 })
@@ -482,7 +498,7 @@ public partial class TestPage : ContentPage
 #endif
     }
 
-    public const string ShaderAlphaSrc =
+    public string ShaderAlphaSrc =
         $$"""
         {{"#"}}version 310 es            
         layout(local_size_x = 256) in;
@@ -514,29 +530,7 @@ public partial class TestPage : ContentPage
         }
         """;
 
-
-    private void MetalRenderStartButton_Clicked(object sender, EventArgs e)
-    {
-
-    }
-
-    private void TestCrashButton_Clicked(object sender, EventArgs e)
-    {
-        Environment.FailFast("test crash");
-    }
-
-    private async void TestFFmpegButton_Clicked(object sender, EventArgs e)
-    {
-        string ver = "unknown";
-        unsafe
-        {
-            ver = FFmpeg.AutoGen.ffmpeg.av_version_info();
-        }
-        await DisplayAlert("FFmpeg Version", ver, "OK");
-
-    }
-
-    public const string ShaderColorSrc =
+    public string ShaderColorSrc =
         $$"""
         {{"#"}}version 310 es            
         layout(local_size_x = 256) in;
@@ -582,6 +576,101 @@ public partial class TestPage : ContentPage
             }
         }
         """;
+
+    #endregion
+
+    #region PropertyPanelBuilder test
+    PropertyPanelBuilder ppb = new();
+    private void AddPPBButton_Clicked(object sender, EventArgs e)
+    {
+        ppb = new PropertyPanelBuilder()
+        {
+            DefaultPadding = new Thickness(PPBPaddingSlider.Value),
+            WidthOfContent = PPBRatioSlider.Value
+        }
+        .AddText(new TitleAndDescriptionLineLabel("ppb Test", "a example of PropertyPanelBuilder", 32))
+        .AddText("This is a test", fontSize: 16, fontAttributes: FontAttributes.Bold)
+        .AddEntry("testEntry", "Test Entry:", "text", "Enter something...", EntrySeter: (entry) =>
+        {
+            entry.WidthRequest = 200;
+        })
+        .AddSlider("testSlider", "Test Slider:", 0, 100, 50)
+        .AddSeparator(null)
+        .AddCheckbox("testCheckbox", "Test Checkbox:", false)
+        .AddSwitch("testSwitch", "Test Switch:", true)
+        .AddSeparator(null)
+        .AddCustomChild(new Button
+        {
+            Text = "Custom Button",
+            WidthRequest = 150
+        })
+        .AddButton("testButton", "Test button 1", "Click me!")
+        .AddCustomChild("pick a date", (p, c) =>
+        {
+            var picker = new DatePicker
+            {
+                WidthRequest = 200,
+                Date = DateTime.Now,
+                BindingContext = p
+            };
+            picker.DateSelected += (s, e) => c(e.NewDate.ToString("G"));
+            return picker;
+        }, "testDatePicker", DateTime.Now.ToString("G"))
+        .AddCustomChild(new Rectangle
+        {
+            WidthRequest = 100,
+            HeightRequest = 500,
+            Fill = Colors.Green
+        })
+        .ListenToChanges(async (s, e) =>
+        {
+            await DisplayAlert("Property Changed", $"Property '{e.Id}' changed from '{e.OriginValue}' to '{e.Value}'", "OK");
+        });
+        PpbTestGrid.Content = ppb.Build();
+
+
+    }
+
+    private void PPBPaddingSlider_ValueChanged(object sender, ValueChangedEventArgs e)
+    {
+        ppb.DefaultPadding = e.NewValue;
+        PpbTestGrid.Content = ppb.Build();
+    }
+
+    private async void ExportPPBDataButton_Clicked(object sender, EventArgs e)
+    {
+        await DisplayAlert("Info", JsonSerializer.Serialize(ppb.Properties), "ok");
+    }
+    #endregion
+
+
+
+    private void TestCrashButton_Clicked(object sender, EventArgs e)
+    {
+        Environment.FailFast("test crash");
+    }
+
+    private void MetalRenderStartButton_Clicked(object sender, EventArgs e)
+    {
+
+    }
+
+    
+
+    private async void TestFFmpegButton_Clicked(object sender, EventArgs e)
+    {
+        string ver = "unknown";
+        unsafe
+        {
+            ver = FFmpeg.AutoGen.ffmpeg.av_version_info();
+        }
+        await DisplayAlert("FFmpeg Version", ver, "OK");
+
+    }
+
+
+
+
 
 
 }

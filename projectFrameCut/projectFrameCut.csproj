@@ -45,6 +45,7 @@
 		<Platforms>AnyCPU;x64</Platforms>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<NeutralLanguage>zh-CN</NeutralLanguage>
+		<AndroidSigningKeyStore>0x12e.keystore</AndroidSigningKeyStore>
 
 
 
@@ -54,6 +55,9 @@
 		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
 		<JavaMaximumHeapSize>16G</JavaMaximumHeapSize>
 		<AndroidKeyStore>False</AndroidKeyStore>
+		<AndroidCreatePackagePerAbi>True</AndroidCreatePackagePerAbi>
+		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
+		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
 
 	</PropertyGroup>
 
@@ -61,6 +65,9 @@
 		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
 		<JavaMaximumHeapSize>16G</JavaMaximumHeapSize>
 		<AndroidKeyStore>False</AndroidKeyStore>
+		<AndroidCreatePackagePerAbi>True</AndroidCreatePackagePerAbi>
+		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
+		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
 
 	</PropertyGroup>
 
@@ -103,6 +110,9 @@
 		<PublishTrimmed>False</PublishTrimmed>
 		<JavaMaximumHeapSize>16G</JavaMaximumHeapSize>
 		<AndroidKeyStore>False</AndroidKeyStore>
+		<AndroidCreatePackagePerAbi>True</AndroidCreatePackagePerAbi>
+		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
+		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net9.0-android|x64'">
@@ -112,6 +122,9 @@
 		<PublishTrimmed>False</PublishTrimmed>
 		<JavaMaximumHeapSize>16G</JavaMaximumHeapSize>
 		<AndroidKeyStore>False</AndroidKeyStore>
+		<AndroidCreatePackagePerAbi>True</AndroidCreatePackagePerAbi>
+		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
+		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
 
 	</PropertyGroup>
 

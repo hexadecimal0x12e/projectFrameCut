@@ -4,7 +4,7 @@
              x:Class="projectFrameCut.TestPage"
              Title="TestPage">
     <VerticalStackLayout>
-       <!-- <Button Text="选择图片A" Clicked="OnPickImageA"/>
+        <!-- <Button Text="选择图片A" Clicked="OnPickImageA"/>
         <Button Text="选择图片B" Clicked="OnPickImageB"/> -->
         <Button x:Name="OpenGLESStartButton" Text="compute by OpenGL ES (android only)" Clicked="OpenGLESStartButton_Clicked"/>
         <Button x:Name="MetalRenderStartButton" Text="compute by Metal (ios only)" Clicked="MetalRenderStartButton_Clicked"/>
@@ -16,6 +16,24 @@
                 <AbsoluteLayout x:Name="DragTester" HeightRequest="80" />
             </VerticalStackLayout>
         </Border>
+
+        <Border StrokeThickness="4">
+            <VerticalStackLayout>
+                <Label Text="ppb test"/>
+                <ScrollView x:Name="PpbTestGrid" HeightRequest="200" />
+                <Button Text="Add ppb content" x:Name="AddPPBButton" Clicked="AddPPBButton_Clicked"/>
+                <Button Text="export ppb properties" x:Name="ExportPPBDataButton" Clicked="ExportPPBDataButton_Clicked"/>
+                <HorizontalStackLayout>
+                    <Label Margin="4,5,0,0">PPB's padding</Label>
+                    <Slider x:Name="PPBPaddingSlider" Minimum="4" Maximum="20" Value="8" WidthRequest="250" ValueChanged="PPBPaddingSlider_ValueChanged" ></Slider>
+                </HorizontalStackLayout>
+                <HorizontalStackLayout>
+                    <Label Margin="4,5,0,0">PPB's size ratio</Label>
+                    <Slider x:Name="PPBRatioSlider" Minimum="1" Maximum="10" Value="5" WidthRequest="250" ValueChanged="PPBPaddingSlider_ValueChanged" ></Slider>
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+        </Border>
+
         <Image x:Name="ResultImage" Aspect="AspectFit" HeightRequest="300" WidthRequest="300"/>
 
         <VerticalStackLayout x:Name="ComputeView"/>

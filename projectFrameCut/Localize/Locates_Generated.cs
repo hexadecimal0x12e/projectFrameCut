@@ -14,6 +14,11 @@ using System.Reflection;
 public interface ISimpleLocalizerBase
 {
     /// <summary>
+    /// Get the localized string for _Cancel (like 取消)
+    /// </summary>
+    public string _Cancel { get; }
+    
+    /// <summary>
     /// Get the localized string for _Info (like 提示)
     /// </summary>
     public string _Info { get; }
@@ -22,6 +27,16 @@ public interface ISimpleLocalizerBase
     /// Get the localized string for _OK (like 好的)
     /// </summary>
     public string _OK { get; }
+    
+    /// <summary>
+    /// Get the localized string for _Options (like 选项)
+    /// </summary>
+    public string _Options { get; }
+    
+    /// <summary>
+    /// Get the localized string for _Warn (like 警告)
+    /// </summary>
+    public string _Warn { get; }
     
     /// <summary>
     /// Get the localized string for AppBrand (like projectFrameCut(仮))
@@ -94,6 +109,31 @@ public interface ISimpleLocalizerBase
     public string DraftPage_Track(int trackId);
     
     /// <summary>
+    /// Get the localized string for LandingPage_BackToContent (like 点击这里回到主界面)
+    /// </summary>
+    public string LandingPage_BackToContent { get; }
+    
+    /// <summary>
+    /// Get the localized string for LandingPage_Loading (like 加载中...)
+    /// </summary>
+    public string LandingPage_Loading { get; }
+    
+    /// <summary>
+    /// Get the localized string for LandingPage_TakingToDraft (like 请稍后，正在打开草稿 ｢{name}｣ )
+    /// </summary>
+    public string LandingPage_TakingToDraft(string name);
+    
+    /// <summary>
+    /// Get the localized string for RenderPage_CancelRender (like 取消渲染)
+    /// </summary>
+    public string RenderPage_CancelRender { get; }
+    
+    /// <summary>
+    /// Get the localized string for RenderPage_CancelRender_Warn (like 你确定药取消渲染吗?)
+    /// </summary>
+    public string RenderPage_CancelRender_Warn { get; }
+    
+    /// <summary>
     /// Get the localized string for RenderPage_CustomOption (like 自定义)
     /// </summary>
     public string RenderPage_CustomOption { get; }
@@ -124,6 +164,11 @@ public interface ISimpleLocalizerBase
     public string RenderPage_NoDraft { get; }
     
     /// <summary>
+    /// Get the localized string for RenderPage_PreviewLabel (like 预览)
+    /// </summary>
+    public string RenderPage_PreviewLabel { get; }
+    
+    /// <summary>
     /// Get the localized string for RenderPage_RenderMoreOptions (like 更多选项)
     /// </summary>
     public string RenderPage_RenderMoreOptions { get; }
@@ -149,29 +194,19 @@ public interface ISimpleLocalizerBase
     public string RenderPage_StartRender { get; }
     
     /// <summary>
-    /// Get the localized string for RenderPage_SubProg_None (like 子过程进度)
+    /// Get the localized string for RenderPage_SubProg_FinalEncoding (like 编码媒体)
     /// </summary>
-    public string RenderPage_SubProg_None { get; }
-    
-    /// <summary>
-    /// Get the localized string for RenderPage_TotalProg (like 总进度)
-    /// </summary>
-    public string RenderPage_TotalProg { get; }
-    
-    /// <summary>
-    /// Get the localized string for WelcomeMessage (like 欢迎来到projectFrameCut beta!)
-    /// </summary>
-    public string WelcomeMessage { get; }
-    
-    /// <summary>
-    /// Get the localized string for RenderPage_CancelRender (like 取消渲染)
-    /// </summary>
-    public string RenderPage_CancelRender { get; }
+    public string RenderPage_SubProg_FinalEncoding { get; }
     
     /// <summary>
     /// Get the localized string for RenderPage_SubProg_Init (like 初始化)
     /// </summary>
     public string RenderPage_SubProg_Init { get; }
+    
+    /// <summary>
+    /// Get the localized string for RenderPage_SubProg_None (like 子过程进度)
+    /// </summary>
+    public string RenderPage_SubProg_None { get; }
     
     /// <summary>
     /// Get the localized string for RenderPage_SubProg_PrepareDraft (like 准备项目)
@@ -189,34 +224,14 @@ public interface ISimpleLocalizerBase
     public string RenderPage_SubProg_WriteVideo { get; }
     
     /// <summary>
-    /// Get the localized string for _Warn (like 警告)
+    /// Get the localized string for RenderPage_TotalProg (like 总进度)
     /// </summary>
-    public string _Warn { get; }
+    public string RenderPage_TotalProg { get; }
     
     /// <summary>
-    /// Get the localized string for RenderPage_CancelRender_Warn (like 你确定药取消渲染吗?)
+    /// Get the localized string for WelcomeMessage (like 欢迎来到projectFrameCut beta!)
     /// </summary>
-    public string RenderPage_CancelRender_Warn { get; }
-    
-    /// <summary>
-    /// Get the localized string for _Cancel (like 取消)
-    /// </summary>
-    public string _Cancel { get; }
-    
-    /// <summary>
-    /// Get the localized string for _Options (like 选项)
-    /// </summary>
-    public string _Options { get; }
-    
-    /// <summary>
-    /// Get the localized string for RenderPage_PreviewLabel (like 预览)
-    /// </summary>
-    public string RenderPage_PreviewLabel { get; }
-    
-    /// <summary>
-    /// Get the localized string for RenderPage_SubProg_FinalEncoding (like 编码媒体)
-    /// </summary>
-    public string RenderPage_SubProg_FinalEncoding { get; }
+    public string WelcomeMessage { get; }
     
     /// <summary>
     /// Get the current Locale's ID (like 'zh-CN')
@@ -235,8 +250,11 @@ public interface ISimpleLocalizerBase
     {
         return id switch
         {
+            "_Cancel" => _Cancel,
             "_Info" => _Info,
             "_OK" => _OK,
+            "_Options" => _Options,
+            "_Warn" => _Warn,
             "AppBrand" => AppBrand,
             "DraftPage_CannotMoveBecauseOfOverlap" => DraftPage_CannotMoveBecauseOfOverlap,
             "DraftPage_ChangesApplied" => DraftPage_ChangesApplied,
@@ -245,29 +263,28 @@ public interface ISimpleLocalizerBase
             "DraftPage_Processing" => DraftPage_Processing,
             "DraftPage_RenderDone" => DraftPage_RenderDone,
             "DraftPage_RenderTimeout" => DraftPage_RenderTimeout,
+            "LandingPage_BackToContent" => LandingPage_BackToContent,
+            "LandingPage_Loading" => LandingPage_Loading,
+            "RenderPage_CancelRender" => RenderPage_CancelRender,
+            "RenderPage_CancelRender_Warn" => RenderPage_CancelRender_Warn,
             "RenderPage_CustomOption" => RenderPage_CustomOption,
             "RenderPage_Done" => RenderPage_Done,
             "RenderPage_LoggingLabel" => RenderPage_LoggingLabel,
             "RenderPage_NoDraft" => RenderPage_NoDraft,
+            "RenderPage_PreviewLabel" => RenderPage_PreviewLabel,
             "RenderPage_RenderMoreOptions" => RenderPage_RenderMoreOptions,
             "RenderPage_SelectEncoding" => RenderPage_SelectEncoding,
             "RenderPage_SelectFrameRate" => RenderPage_SelectFrameRate,
             "RenderPage_SelectResolution" => RenderPage_SelectResolution,
             "RenderPage_StartRender" => RenderPage_StartRender,
-            "RenderPage_SubProg_None" => RenderPage_SubProg_None,
-            "RenderPage_TotalProg" => RenderPage_TotalProg,
-            "WelcomeMessage" => WelcomeMessage,
-            "RenderPage_CancelRender" => RenderPage_CancelRender,
+            "RenderPage_SubProg_FinalEncoding" => RenderPage_SubProg_FinalEncoding,
             "RenderPage_SubProg_Init" => RenderPage_SubProg_Init,
+            "RenderPage_SubProg_None" => RenderPage_SubProg_None,
             "RenderPage_SubProg_PrepareDraft" => RenderPage_SubProg_PrepareDraft,
             "RenderPage_SubProg_Render" => RenderPage_SubProg_Render,
             "RenderPage_SubProg_WriteVideo" => RenderPage_SubProg_WriteVideo,
-            "_Warn" => _Warn,
-            "RenderPage_CancelRender_Warn" => RenderPage_CancelRender_Warn,
-            "_Cancel" => _Cancel,
-            "_Options" => _Options,
-            "RenderPage_PreviewLabel" => RenderPage_PreviewLabel,
-            "RenderPage_SubProg_FinalEncoding" => RenderPage_SubProg_FinalEncoding,
+            "RenderPage_TotalProg" => RenderPage_TotalProg,
+            "WelcomeMessage" => WelcomeMessage,
             _ => throw new KeyNotFoundException($"Can't find the localized string for id '{id}'")
             };
         }
@@ -281,6 +298,7 @@ public interface ISimpleLocalizerBase
                 "DraftPage_RenderOneFrame" => DraftPage_RenderOneFrame((int)args[0], (TimeSpan)args[1]),
                 "DraftPage_Selected" => DraftPage_Selected((string)args[0]),
                 "DraftPage_Track" => DraftPage_Track((int)args[0]),
+                "LandingPage_TakingToDraft" => LandingPage_TakingToDraft((string)args[0]),
                 "RenderPage_ExportTitle" => RenderPage_ExportTitle((string)args[0]),
                 "RenderPage_MaxParallelThreadsCount" => RenderPage_MaxParallelThreadsCount((int)args[0]),
                 _ => throw new KeyNotFoundException($"Can't find the localized string for id '{id}' with any argument")
@@ -293,6 +311,12 @@ public interface ISimpleLocalizerBase
 public class _SimpleLocalizer_zh_CN : ISimpleLocalizerBase
 {
     /// <summary>
+    /// Get the localized string for _Cancel in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase._Cancel => _Cancel;
+    public readonly string _Cancel = @"取消";
+    
+    /// <summary>
     /// Get the localized string for _Info in zh-CN
     /// </summary>
     string ISimpleLocalizerBase._Info => _Info;
@@ -303,6 +327,18 @@ public class _SimpleLocalizer_zh_CN : ISimpleLocalizerBase
     /// </summary>
     string ISimpleLocalizerBase._OK => _OK;
     public readonly string _OK = @"好的";
+    
+    /// <summary>
+    /// Get the localized string for _Options in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase._Options => _Options;
+    public readonly string _Options = @"选项";
+    
+    /// <summary>
+    /// Get the localized string for _Warn in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase._Warn => _Warn;
+    public readonly string _Warn = @"警告";
     
     /// <summary>
     /// Get the localized string for AppBrand in zh-CN
@@ -389,6 +425,36 @@ public class _SimpleLocalizer_zh_CN : ISimpleLocalizerBase
     public string DraftPage_Track(int trackId) => @$"轨道 #{trackId}";
     
     /// <summary>
+    /// Get the localized string for LandingPage_BackToContent in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.LandingPage_BackToContent => LandingPage_BackToContent;
+    public readonly string LandingPage_BackToContent = @"点击这里回到主界面";
+    
+    /// <summary>
+    /// Get the localized string for LandingPage_Loading in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.LandingPage_Loading => LandingPage_Loading;
+    public readonly string LandingPage_Loading = @"加载中...";
+    
+    /// <summary>
+    /// Get the localized string for LandingPage_TakingToDraft in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.LandingPage_TakingToDraft(string name) => LandingPage_TakingToDraft(name);
+    public string LandingPage_TakingToDraft(string name) => @$"请稍后，正在打开草稿 ｢{name}｣ ";
+    
+    /// <summary>
+    /// Get the localized string for RenderPage_CancelRender in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.RenderPage_CancelRender => RenderPage_CancelRender;
+    public readonly string RenderPage_CancelRender = @"取消渲染";
+    
+    /// <summary>
+    /// Get the localized string for RenderPage_CancelRender_Warn in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.RenderPage_CancelRender_Warn => RenderPage_CancelRender_Warn;
+    public readonly string RenderPage_CancelRender_Warn = @"你确定药取消渲染吗?";
+    
+    /// <summary>
     /// Get the localized string for RenderPage_CustomOption in zh-CN
     /// </summary>
     string ISimpleLocalizerBase.RenderPage_CustomOption => RenderPage_CustomOption;
@@ -425,6 +491,12 @@ public class _SimpleLocalizer_zh_CN : ISimpleLocalizerBase
     public readonly string RenderPage_NoDraft = @"你需要先打开一个草稿才能进行渲染";
     
     /// <summary>
+    /// Get the localized string for RenderPage_PreviewLabel in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.RenderPage_PreviewLabel => RenderPage_PreviewLabel;
+    public readonly string RenderPage_PreviewLabel = @"预览";
+    
+    /// <summary>
     /// Get the localized string for RenderPage_RenderMoreOptions in zh-CN
     /// </summary>
     string ISimpleLocalizerBase.RenderPage_RenderMoreOptions => RenderPage_RenderMoreOptions;
@@ -455,34 +527,22 @@ public class _SimpleLocalizer_zh_CN : ISimpleLocalizerBase
     public readonly string RenderPage_StartRender = @"开始渲染";
     
     /// <summary>
-    /// Get the localized string for RenderPage_SubProg_None in zh-CN
+    /// Get the localized string for RenderPage_SubProg_FinalEncoding in zh-CN
     /// </summary>
-    string ISimpleLocalizerBase.RenderPage_SubProg_None => RenderPage_SubProg_None;
-    public readonly string RenderPage_SubProg_None = @"子过程进度";
-    
-    /// <summary>
-    /// Get the localized string for RenderPage_TotalProg in zh-CN
-    /// </summary>
-    string ISimpleLocalizerBase.RenderPage_TotalProg => RenderPage_TotalProg;
-    public readonly string RenderPage_TotalProg = @"总进度";
-    
-    /// <summary>
-    /// Get the localized string for WelcomeMessage in zh-CN
-    /// </summary>
-    string ISimpleLocalizerBase.WelcomeMessage => WelcomeMessage;
-    public readonly string WelcomeMessage = @"欢迎来到projectFrameCut beta!";
-    
-    /// <summary>
-    /// Get the localized string for RenderPage_CancelRender in zh-CN
-    /// </summary>
-    string ISimpleLocalizerBase.RenderPage_CancelRender => RenderPage_CancelRender;
-    public readonly string RenderPage_CancelRender = @"取消渲染";
+    string ISimpleLocalizerBase.RenderPage_SubProg_FinalEncoding => RenderPage_SubProg_FinalEncoding;
+    public readonly string RenderPage_SubProg_FinalEncoding = @"编码媒体";
     
     /// <summary>
     /// Get the localized string for RenderPage_SubProg_Init in zh-CN
     /// </summary>
     string ISimpleLocalizerBase.RenderPage_SubProg_Init => RenderPage_SubProg_Init;
     public readonly string RenderPage_SubProg_Init = @"初始化";
+    
+    /// <summary>
+    /// Get the localized string for RenderPage_SubProg_None in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.RenderPage_SubProg_None => RenderPage_SubProg_None;
+    public readonly string RenderPage_SubProg_None = @"子过程进度";
     
     /// <summary>
     /// Get the localized string for RenderPage_SubProg_PrepareDraft in zh-CN
@@ -503,40 +563,16 @@ public class _SimpleLocalizer_zh_CN : ISimpleLocalizerBase
     public readonly string RenderPage_SubProg_WriteVideo = @"写视频";
     
     /// <summary>
-    /// Get the localized string for _Warn in zh-CN
+    /// Get the localized string for RenderPage_TotalProg in zh-CN
     /// </summary>
-    string ISimpleLocalizerBase._Warn => _Warn;
-    public readonly string _Warn = @"警告";
+    string ISimpleLocalizerBase.RenderPage_TotalProg => RenderPage_TotalProg;
+    public readonly string RenderPage_TotalProg = @"总进度";
     
     /// <summary>
-    /// Get the localized string for RenderPage_CancelRender_Warn in zh-CN
+    /// Get the localized string for WelcomeMessage in zh-CN
     /// </summary>
-    string ISimpleLocalizerBase.RenderPage_CancelRender_Warn => RenderPage_CancelRender_Warn;
-    public readonly string RenderPage_CancelRender_Warn = @"你确定药取消渲染吗?";
-    
-    /// <summary>
-    /// Get the localized string for _Cancel in zh-CN
-    /// </summary>
-    string ISimpleLocalizerBase._Cancel => _Cancel;
-    public readonly string _Cancel = @"取消";
-    
-    /// <summary>
-    /// Get the localized string for _Options in zh-CN
-    /// </summary>
-    string ISimpleLocalizerBase._Options => _Options;
-    public readonly string _Options = @"选项";
-    
-    /// <summary>
-    /// Get the localized string for RenderPage_PreviewLabel in zh-CN
-    /// </summary>
-    string ISimpleLocalizerBase.RenderPage_PreviewLabel => RenderPage_PreviewLabel;
-    public readonly string RenderPage_PreviewLabel = @"预览";
-    
-    /// <summary>
-    /// Get the localized string for RenderPage_SubProg_FinalEncoding in zh-CN
-    /// </summary>
-    string ISimpleLocalizerBase.RenderPage_SubProg_FinalEncoding => RenderPage_SubProg_FinalEncoding;
-    public readonly string RenderPage_SubProg_FinalEncoding = @"编码媒体";
+    string ISimpleLocalizerBase.WelcomeMessage => WelcomeMessage;
+    public readonly string WelcomeMessage = @"欢迎来到projectFrameCut beta!";
     
     /// <summary>
     /// Get the current localized Id (like zh-CN)
@@ -642,6 +678,12 @@ public class _SimpleLocalizer_en_US : ISimpleLocalizerBase
     public readonly string WelcomeMessage = @"";
     
     /// <summary>
+    /// Get the localized string for _Cancel in en-US
+    /// </summary>
+    string ISimpleLocalizerBase._Cancel => _Cancel;
+    public readonly string _Cancel = @"Unset localization item:_Cancel()";
+    
+    /// <summary>
     /// Get the localized string for _Info in en-US
     /// </summary>
     string ISimpleLocalizerBase._Info => _Info;
@@ -652,6 +694,48 @@ public class _SimpleLocalizer_en_US : ISimpleLocalizerBase
     /// </summary>
     string ISimpleLocalizerBase._OK => _OK;
     public readonly string _OK = @"Unset localization item:_OK()";
+    
+    /// <summary>
+    /// Get the localized string for _Options in en-US
+    /// </summary>
+    string ISimpleLocalizerBase._Options => _Options;
+    public readonly string _Options = @"Unset localization item:_Options()";
+    
+    /// <summary>
+    /// Get the localized string for _Warn in en-US
+    /// </summary>
+    string ISimpleLocalizerBase._Warn => _Warn;
+    public readonly string _Warn = @"Unset localization item:_Warn()";
+    
+    /// <summary>
+    /// Get the localized string for LandingPage_BackToContent in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.LandingPage_BackToContent => LandingPage_BackToContent;
+    public readonly string LandingPage_BackToContent = @"Unset localization item:LandingPage_BackToContent()";
+    
+    /// <summary>
+    /// Get the localized string for LandingPage_Loading in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.LandingPage_Loading => LandingPage_Loading;
+    public readonly string LandingPage_Loading = @"Unset localization item:LandingPage_Loading()";
+    
+    /// <summary>
+    /// Get the localized string for LandingPage_TakingToDraft in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.LandingPage_TakingToDraft(string name) => LandingPage_TakingToDraft(name);
+    public string LandingPage_TakingToDraft(string name) => @$"Unset localization item:LandingPage_TakingToDraft(string name)";
+    
+    /// <summary>
+    /// Get the localized string for RenderPage_CancelRender in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.RenderPage_CancelRender => RenderPage_CancelRender;
+    public readonly string RenderPage_CancelRender = @"Unset localization item:RenderPage_CancelRender()";
+    
+    /// <summary>
+    /// Get the localized string for RenderPage_CancelRender_Warn in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.RenderPage_CancelRender_Warn => RenderPage_CancelRender_Warn;
+    public readonly string RenderPage_CancelRender_Warn = @"Unset localization item:RenderPage_CancelRender_Warn()";
     
     /// <summary>
     /// Get the localized string for RenderPage_CustomOption in en-US
@@ -690,6 +774,12 @@ public class _SimpleLocalizer_en_US : ISimpleLocalizerBase
     public readonly string RenderPage_NoDraft = @"Unset localization item:RenderPage_NoDraft()";
     
     /// <summary>
+    /// Get the localized string for RenderPage_PreviewLabel in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.RenderPage_PreviewLabel => RenderPage_PreviewLabel;
+    public readonly string RenderPage_PreviewLabel = @"Unset localization item:RenderPage_PreviewLabel()";
+    
+    /// <summary>
     /// Get the localized string for RenderPage_RenderMoreOptions in en-US
     /// </summary>
     string ISimpleLocalizerBase.RenderPage_RenderMoreOptions => RenderPage_RenderMoreOptions;
@@ -720,28 +810,22 @@ public class _SimpleLocalizer_en_US : ISimpleLocalizerBase
     public readonly string RenderPage_StartRender = @"Unset localization item:RenderPage_StartRender()";
     
     /// <summary>
-    /// Get the localized string for RenderPage_SubProg_None in en-US
+    /// Get the localized string for RenderPage_SubProg_FinalEncoding in en-US
     /// </summary>
-    string ISimpleLocalizerBase.RenderPage_SubProg_None => RenderPage_SubProg_None;
-    public readonly string RenderPage_SubProg_None = @"Unset localization item:RenderPage_SubProg_None()";
-    
-    /// <summary>
-    /// Get the localized string for RenderPage_TotalProg in en-US
-    /// </summary>
-    string ISimpleLocalizerBase.RenderPage_TotalProg => RenderPage_TotalProg;
-    public readonly string RenderPage_TotalProg = @"Unset localization item:RenderPage_TotalProg()";
-    
-    /// <summary>
-    /// Get the localized string for RenderPage_CancelRender in en-US
-    /// </summary>
-    string ISimpleLocalizerBase.RenderPage_CancelRender => RenderPage_CancelRender;
-    public readonly string RenderPage_CancelRender = @"Unset localization item:RenderPage_CancelRender()";
+    string ISimpleLocalizerBase.RenderPage_SubProg_FinalEncoding => RenderPage_SubProg_FinalEncoding;
+    public readonly string RenderPage_SubProg_FinalEncoding = @"Unset localization item:RenderPage_SubProg_FinalEncoding()";
     
     /// <summary>
     /// Get the localized string for RenderPage_SubProg_Init in en-US
     /// </summary>
     string ISimpleLocalizerBase.RenderPage_SubProg_Init => RenderPage_SubProg_Init;
     public readonly string RenderPage_SubProg_Init = @"Unset localization item:RenderPage_SubProg_Init()";
+    
+    /// <summary>
+    /// Get the localized string for RenderPage_SubProg_None in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.RenderPage_SubProg_None => RenderPage_SubProg_None;
+    public readonly string RenderPage_SubProg_None = @"Unset localization item:RenderPage_SubProg_None()";
     
     /// <summary>
     /// Get the localized string for RenderPage_SubProg_PrepareDraft in en-US
@@ -762,40 +846,10 @@ public class _SimpleLocalizer_en_US : ISimpleLocalizerBase
     public readonly string RenderPage_SubProg_WriteVideo = @"Unset localization item:RenderPage_SubProg_WriteVideo()";
     
     /// <summary>
-    /// Get the localized string for _Warn in en-US
+    /// Get the localized string for RenderPage_TotalProg in en-US
     /// </summary>
-    string ISimpleLocalizerBase._Warn => _Warn;
-    public readonly string _Warn = @"Unset localization item:_Warn()";
-    
-    /// <summary>
-    /// Get the localized string for RenderPage_CancelRender_Warn in en-US
-    /// </summary>
-    string ISimpleLocalizerBase.RenderPage_CancelRender_Warn => RenderPage_CancelRender_Warn;
-    public readonly string RenderPage_CancelRender_Warn = @"Unset localization item:RenderPage_CancelRender_Warn()";
-    
-    /// <summary>
-    /// Get the localized string for _Cancel in en-US
-    /// </summary>
-    string ISimpleLocalizerBase._Cancel => _Cancel;
-    public readonly string _Cancel = @"Unset localization item:_Cancel()";
-    
-    /// <summary>
-    /// Get the localized string for _Options in en-US
-    /// </summary>
-    string ISimpleLocalizerBase._Options => _Options;
-    public readonly string _Options = @"Unset localization item:_Options()";
-    
-    /// <summary>
-    /// Get the localized string for RenderPage_PreviewLabel in en-US
-    /// </summary>
-    string ISimpleLocalizerBase.RenderPage_PreviewLabel => RenderPage_PreviewLabel;
-    public readonly string RenderPage_PreviewLabel = @"Unset localization item:RenderPage_PreviewLabel()";
-    
-    /// <summary>
-    /// Get the localized string for RenderPage_SubProg_FinalEncoding in en-US
-    /// </summary>
-    string ISimpleLocalizerBase.RenderPage_SubProg_FinalEncoding => RenderPage_SubProg_FinalEncoding;
-    public readonly string RenderPage_SubProg_FinalEncoding = @"Unset localization item:RenderPage_SubProg_FinalEncoding()";
+    string ISimpleLocalizerBase.RenderPage_TotalProg => RenderPage_TotalProg;
+    public readonly string RenderPage_TotalProg = @"Unset localization item:RenderPage_TotalProg()";
     
     /// <summary>
     /// Get the current localized Id (like zh-CN)
