@@ -7,6 +7,10 @@ using projectFrameCut.Platforms.Android;
 using Java.Lang;
 
 #endif
+
+#if IOS || MACCATALYST
+using Foundation;
+#endif
 using System;
 using System.Diagnostics;
 using FFmpeg.AutoGen;
@@ -14,6 +18,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using FFmpeg.AutoGen.Native;
 using Exception = System.Exception;
+using System.Text;
 
 namespace projectFrameCut
 {
@@ -21,11 +26,14 @@ namespace projectFrameCut
     {
         static StreamWriter LogWriter;
 
+        public static string DataPath { get; private set; }
+
         public static MauiApp CreateMauiApp()
         {
+            var loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging");
+            DataPath = FileSystem.AppDataDirectory;
             try
             {
-                string loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging");
 #if ANDROID
                 try
                 {
@@ -33,7 +41,8 @@ namespace projectFrameCut
                     var userAccessblePath = $"/sdcard/Android/data/{pfn}/";
                     if (Path.Exists(userAccessblePath))
                     {
-                        loggingDir = System.IO.Path.Combine(userAccessblePath, "logging");
+                        DataPath = userAccessblePath;
+                        loggingDir = Path.Combine(userAccessblePath, "logging");
                     }
 
                 }
@@ -41,20 +50,45 @@ namespace projectFrameCut
                 {
                     
                 }
-
-
 #elif IOS
-                loggingDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "logging"); //files->my [iDevices]->projectFrameCut
+                //files->my [iDevices]->projectFrameCut
+                loggingDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "logging"); 
+                DataPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments); 
                 
+#elif MACCATALYST
+                loggingDir = Path.Combine(FileSystem.AppDataDirectory, "logging"); // ~/Library/Containers/<bundle>/Data/Library/Application Support/<bundle>）
+
+                DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),"projectFrameCut");
+#elif WINDOWS
+                if (IsPackaged()) //%localappdata%\Packages\<package>\LocalState
+                {
+                    loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging");
+                    DataPath = Path.Combine(FileSystem.AppDataDirectory, "Data"); //Respect the vision of store applications (no residuals after uninstallation)
+                }
+                else
+                {
+                    loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging"); //%localappdata%\hexadecimal0x12e\hexadecimal0x12e.projectFrameCut\Data
+                    DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
+                }
 #endif
 
                 Directory.CreateDirectory(loggingDir);
+                try
+                {
+                    Directory.CreateDirectory(DataPath);
+                }
+                catch(Exception ex)
+                {
+                    Log(ex, "create userdata dir", CreateMauiApp);
+                    DataPath = FileSystem.AppDataDirectory;
+                }
                 LogWriter = new StreamWriter(System.IO.Path.Combine(loggingDir, $"log-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log"), append: true)
                 {
                     AutoFlush = true
                 };
 
                 MyLoggerExtensions.OnLog += MyLoggerExtensions_OnLog;
+
 
             }
             catch (Exception ex)
@@ -64,6 +98,21 @@ namespace projectFrameCut
 
             Log($"projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture}, os version {Environment.OSVersion}, clr version {Environment.Version}, cmdline: {Environment.CommandLine} ");
             Log("Copright hexadecimal0x12e 2025, and thanks to other open-source code's author.");
+            Log($"DataPath:{DataPath}, loggingDir:{loggingDir}");
+            try
+            {
+                if (File.Exists(Path.Combine(DataPath, "OverrideUserData.txt")))
+                {
+                    var newPath = File.ReadAllText(Path.Combine(DataPath, "OverrideUserData.txt"));
+                    DataPath = newPath;
+                    Log($"User override Data path to:{DataPath}");
+                }
+            }
+            catch(Exception ex)
+            {
+                Log(ex, "set user data dir", CreateMauiApp);
+            }
+
             try
             {
                 var builder = MauiApp.CreateBuilder();
@@ -85,7 +134,7 @@ namespace projectFrameCut
                         handlers.AddHandler<NativeGLSurfaceView, NativeGLSurfaceViewHandler>();
                     });
 #else
-; 
+;
 #endif
 
 
@@ -134,10 +183,10 @@ namespace projectFrameCut
                 if (Directory.GetFiles(AppContext.BaseDirectory, "av*.dll").Length == 0)
                 {
                     Log("ERROR: ffmpeg binaries not found. Please reinstall projectFrameCut.");
-                    Environment.FailFast("ERROR: ffmpeg binaries not found. Please reinstall projectFrameCut.",new DllNotFoundException("ERROR: ffmpeg binaries not found. Please reinstall projectFrameCut."));
+                    Environment.FailFast("ERROR: ffmpeg binaries not found. Please reinstall projectFrameCut.", new DllNotFoundException("ERROR: ffmpeg binaries not found. Please reinstall projectFrameCut."));
                 }
 
-                
+
 #endif
                 //try
                 //{
@@ -163,11 +212,48 @@ namespace projectFrameCut
             }
         }
 
+        private static object locker = new();
+
         private static void MyLoggerExtensions_OnLog(string msg, string level)
         {
-            LogWriter.WriteLine($"[{DateTime.Now:T} @ {level}] {msg}");
+            lock (locker) LogWriter.WriteLine($"[{DateTime.Now:T} @ {level}] {msg}");
         }
 
+
+#if WINDOWS
+        private const int APPMODEL_ERROR_NO_PACKAGE = 15700;
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
+        private static extern int GetPackageFullName(IntPtr hProcess, ref int packageFullNameLength, StringBuilder packageFullName);
+
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr GetCurrentProcess();
+
+        public static bool IsPackaged()
+        {
+            try
+            {
+                IntPtr h = GetCurrentProcess();
+                int length = 0;
+                int rc = GetPackageFullName(h, ref length, null);
+                if (rc == APPMODEL_ERROR_NO_PACKAGE)
+                    return false;
+                if (length <= 0)
+                    return false;
+
+                var sb = new StringBuilder(length);
+                rc = GetPackageFullName(h, ref length, sb);
+                Log($"Running inside a MSIX container, pfn:{sb}");
+                return rc == 0 && sb.Length > 0;
+            }
+            catch
+            {
+                Log($"Running outside a MSIX container.");
+                return false;
+            }
+
+        }
+#endif
 
     }
 

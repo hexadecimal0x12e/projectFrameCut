@@ -46,6 +46,7 @@ StackTrace:
                 } while (inner is not null);
             }
             if (string.IsNullOrWhiteSpace(innerExceptionInfo)) innerExceptionInfo = "None";
+            MyLoggerExtensions.AnnounceException(ex);
             Log(
 $"""
 
@@ -83,10 +84,15 @@ Exception data:
     public static class MyLoggerExtensions
     {
         public static event Action<string, string>? OnLog;
+        public static event Action<Exception>? OnExceptionLog;
 
         public static void Announce(string msg, string level = "info")
         {
             Task.Run(() => OnLog?.Invoke(msg, level));
+        }
+        public static void AnnounceException(Exception exc)
+        {
+            Task.Run(() => OnExceptionLog?.Invoke(exc));
         }
     }
 

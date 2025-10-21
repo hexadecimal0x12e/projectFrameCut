@@ -19,6 +19,11 @@ public interface ISimpleLocalizerBase
     public string _Cancel { get; }
     
     /// <summary>
+    /// Get the localized string for _ExceptionTemplate (like 一个未被处理的 {ex.GetType().Name} 异常发生 ({ex.Message}))
+    /// </summary>
+    public string _ExceptionTemplate(Exception ex);
+    
+    /// <summary>
     /// Get the localized string for _Info (like 提示)
     /// </summary>
     public string _Info { get; }
@@ -84,6 +89,16 @@ public interface ISimpleLocalizerBase
     public string DraftPage_Processing { get; }
     
     /// <summary>
+    /// Get the localized string for DraftPage_ReachLimit (like 达到片段的长度限制({length}))
+    /// </summary>
+    public string DraftPage_ReachLimit(string length);
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_Removed (like 已移除)
+    /// </summary>
+    public string DraftPage_Removed { get; }
+    
+    /// <summary>
     /// Get the localized string for DraftPage_RenderDone (like 渲染已完成)
     /// </summary>
     public string DraftPage_RenderDone { get; }
@@ -107,6 +122,11 @@ public interface ISimpleLocalizerBase
     /// Get the localized string for DraftPage_Track (like 轨道 #{trackId})
     /// </summary>
     public string DraftPage_Track(int trackId);
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_WaitForUser (like 等待操作完成...)
+    /// </summary>
+    public string DraftPage_WaitForUser { get; }
     
     /// <summary>
     /// Get the localized string for LandingPage_BackToContent (like 点击这里回到主界面)
@@ -234,6 +254,21 @@ public interface ISimpleLocalizerBase
     public string WelcomeMessage { get; }
     
     /// <summary>
+    /// Get the localized string for DraftPage_ReleaseToRemove (like 松手来移除此片段...)
+    /// </summary>
+    public string DraftPage_ReleaseToRemove { get; }
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_NoJobRunning (like 没有正在执行的任务)
+    /// </summary>
+    public string DraftPage_NoJobRunning { get; }
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_JobRunning (like {count} 任务正在执行)
+    /// </summary>
+    public string DraftPage_JobRunning(int count);
+    
+    /// <summary>
     /// Get the current Locale's ID (like 'zh-CN')
     /// </summary>
     public string _LocaleId_ { get; }
@@ -261,8 +296,10 @@ public interface ISimpleLocalizerBase
             "DraftPage_EverythingFine" => DraftPage_EverythingFine,
             "DraftPage_GoRender" => DraftPage_GoRender,
             "DraftPage_Processing" => DraftPage_Processing,
+            "DraftPage_Removed" => DraftPage_Removed,
             "DraftPage_RenderDone" => DraftPage_RenderDone,
             "DraftPage_RenderTimeout" => DraftPage_RenderTimeout,
+            "DraftPage_WaitForUser" => DraftPage_WaitForUser,
             "LandingPage_BackToContent" => LandingPage_BackToContent,
             "LandingPage_Loading" => LandingPage_Loading,
             "RenderPage_CancelRender" => RenderPage_CancelRender,
@@ -285,6 +322,8 @@ public interface ISimpleLocalizerBase
             "RenderPage_SubProg_WriteVideo" => RenderPage_SubProg_WriteVideo,
             "RenderPage_TotalProg" => RenderPage_TotalProg,
             "WelcomeMessage" => WelcomeMessage,
+            "DraftPage_ReleaseToRemove" => DraftPage_ReleaseToRemove,
+            "DraftPage_NoJobRunning" => DraftPage_NoJobRunning,
             _ => throw new KeyNotFoundException($"Can't find the localized string for id '{id}'")
             };
         }
@@ -292,15 +331,18 @@ public interface ISimpleLocalizerBase
         {
             return id switch
             {
+                "_ExceptionTemplate" => _ExceptionTemplate((Exception)args[0]),
                 "DraftPage_BackendStatus" => DraftPage_BackendStatus((double)args[0], (double)args[1], (double)args[2]),
                 "DraftPage_BackendStatus_MemoryOnly" => DraftPage_BackendStatus_MemoryOnly((double)args[0]),
                 "DraftPage_BackendStatus_NotRespond" => DraftPage_BackendStatus_NotRespond((double)args[0], (double)args[1]),
+                "DraftPage_ReachLimit" => DraftPage_ReachLimit((string)args[0]),
                 "DraftPage_RenderOneFrame" => DraftPage_RenderOneFrame((int)args[0], (TimeSpan)args[1]),
                 "DraftPage_Selected" => DraftPage_Selected((string)args[0]),
                 "DraftPage_Track" => DraftPage_Track((int)args[0]),
                 "LandingPage_TakingToDraft" => LandingPage_TakingToDraft((string)args[0]),
                 "RenderPage_ExportTitle" => RenderPage_ExportTitle((string)args[0]),
                 "RenderPage_MaxParallelThreadsCount" => RenderPage_MaxParallelThreadsCount((int)args[0]),
+                "DraftPage_JobRunning" => DraftPage_JobRunning((int)args[0]),
                 _ => throw new KeyNotFoundException($"Can't find the localized string for id '{id}' with any argument")
             };
         }
@@ -315,6 +357,12 @@ public class _SimpleLocalizer_zh_CN : ISimpleLocalizerBase
     /// </summary>
     string ISimpleLocalizerBase._Cancel => _Cancel;
     public readonly string _Cancel = @"取消";
+    
+    /// <summary>
+    /// Get the localized string for _ExceptionTemplate in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase._ExceptionTemplate(Exception ex) => _ExceptionTemplate(ex);
+    public string _ExceptionTemplate(Exception ex) => @$"一个未被处理的 {ex.GetType().Name} 异常发生 ({ex.Message})";
     
     /// <summary>
     /// Get the localized string for _Info in zh-CN
@@ -395,6 +443,18 @@ public class _SimpleLocalizer_zh_CN : ISimpleLocalizerBase
     public readonly string DraftPage_Processing = @"处理中...";
     
     /// <summary>
+    /// Get the localized string for DraftPage_ReachLimit in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_ReachLimit(string length) => DraftPage_ReachLimit(length);
+    public string DraftPage_ReachLimit(string length) => @$"达到片段的长度限制({length})";
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_Removed in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_Removed => DraftPage_Removed;
+    public readonly string DraftPage_Removed = @"已移除";
+    
+    /// <summary>
     /// Get the localized string for DraftPage_RenderDone in zh-CN
     /// </summary>
     string ISimpleLocalizerBase.DraftPage_RenderDone => DraftPage_RenderDone;
@@ -423,6 +483,12 @@ public class _SimpleLocalizer_zh_CN : ISimpleLocalizerBase
     /// </summary>
     string ISimpleLocalizerBase.DraftPage_Track(int trackId) => DraftPage_Track(trackId);
     public string DraftPage_Track(int trackId) => @$"轨道 #{trackId}";
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_WaitForUser in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_WaitForUser => DraftPage_WaitForUser;
+    public readonly string DraftPage_WaitForUser = @"等待操作完成...";
     
     /// <summary>
     /// Get the localized string for LandingPage_BackToContent in zh-CN
@@ -575,6 +641,24 @@ public class _SimpleLocalizer_zh_CN : ISimpleLocalizerBase
     public readonly string WelcomeMessage = @"欢迎来到projectFrameCut beta!";
     
     /// <summary>
+    /// Get the localized string for DraftPage_ReleaseToRemove in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_ReleaseToRemove => DraftPage_ReleaseToRemove;
+    public readonly string DraftPage_ReleaseToRemove = @"松手来移除此片段...";
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_NoJobRunning in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_NoJobRunning => DraftPage_NoJobRunning;
+    public readonly string DraftPage_NoJobRunning = @"没有正在执行的任务";
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_JobRunning in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_JobRunning(int count) => DraftPage_JobRunning(count);
+    public string DraftPage_JobRunning(int count) => @$"{count} 任务正在执行";
+    
+    /// <summary>
     /// Get the current localized Id (like zh-CN)
     /// </summary>
     string ISimpleLocalizerBase._LocaleId_ => _LocaleId_;
@@ -684,6 +768,12 @@ public class _SimpleLocalizer_en_US : ISimpleLocalizerBase
     public readonly string _Cancel = @"Unset localization item:_Cancel()";
     
     /// <summary>
+    /// Get the localized string for _ExceptionTemplate in en-US
+    /// </summary>
+    string ISimpleLocalizerBase._ExceptionTemplate(Exception ex) => _ExceptionTemplate(ex);
+    public string _ExceptionTemplate(Exception ex) => @$"Unset localization item:_ExceptionTemplate(Exception ex)";
+    
+    /// <summary>
     /// Get the localized string for _Info in en-US
     /// </summary>
     string ISimpleLocalizerBase._Info => _Info;
@@ -706,6 +796,24 @@ public class _SimpleLocalizer_en_US : ISimpleLocalizerBase
     /// </summary>
     string ISimpleLocalizerBase._Warn => _Warn;
     public readonly string _Warn = @"Unset localization item:_Warn()";
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_ReachLimit in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_ReachLimit(string length) => DraftPage_ReachLimit(length);
+    public string DraftPage_ReachLimit(string length) => @$"Unset localization item:DraftPage_ReachLimit(string length)";
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_Removed in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_Removed => DraftPage_Removed;
+    public readonly string DraftPage_Removed = @"Unset localization item:DraftPage_Removed()";
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_WaitForUser in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_WaitForUser => DraftPage_WaitForUser;
+    public readonly string DraftPage_WaitForUser = @"Unset localization item:DraftPage_WaitForUser()";
     
     /// <summary>
     /// Get the localized string for LandingPage_BackToContent in en-US
@@ -850,6 +958,24 @@ public class _SimpleLocalizer_en_US : ISimpleLocalizerBase
     /// </summary>
     string ISimpleLocalizerBase.RenderPage_TotalProg => RenderPage_TotalProg;
     public readonly string RenderPage_TotalProg = @"Unset localization item:RenderPage_TotalProg()";
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_ReleaseToRemove in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_ReleaseToRemove => DraftPage_ReleaseToRemove;
+    public readonly string DraftPage_ReleaseToRemove = @"Unset localization item:DraftPage_ReleaseToRemove()";
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_NoJobRunning in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_NoJobRunning => DraftPage_NoJobRunning;
+    public readonly string DraftPage_NoJobRunning = @"Unset localization item:DraftPage_NoJobRunning()";
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_JobRunning in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_JobRunning(int count) => DraftPage_JobRunning(count);
+    public string DraftPage_JobRunning(int count) => @$"Unset localization item:DraftPage_JobRunning(int count)";
     
     /// <summary>
     /// Get the current localized Id (like zh-CN)

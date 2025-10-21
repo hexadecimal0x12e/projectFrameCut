@@ -16,6 +16,20 @@
         "DontTranslate": false
       },
       {
+        "Id": "_ExceptionTemplate",
+        "Value": "\u4E00\u4E2A\u672A\u88AB\u5904\u7406\u7684 {ex.GetType().Name} \u5F02\u5E38\u53D1\u751F ({ex.Message})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
         "Id": "_Info",
         "Value": "\u63D0\u793A",
         "Mode": "ConstString",
@@ -161,6 +175,29 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_ReachLimit",
+        "Value": "\u8FBE\u5230\u7247\u6BB5\u7684\u957F\u5EA6\u9650\u5236({length})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "length"
+          }
+        ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_Removed",
+        "Value": "\u5DF2\u79FB\u9664",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_RenderDone",
         "Value": "\u6E32\u67D3\u5DF2\u5B8C\u6210",
         "Mode": "ConstString",
@@ -220,6 +257,15 @@
             "Value": "trackId"
           }
         ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_WaitForUser",
+        "Value": "\u7B49\u5F85\u64CD\u4F5C\u5B8C\u6210...",
+        "Mode": "ConstString",
+        "Args": [],
         "HasValidationErrors": false,
         "ForceDynamic": false,
         "DontTranslate": false
@@ -460,6 +506,38 @@
         "Value": "\u6B22\u8FCE\u6765\u5230projectFrameCut beta!",
         "Mode": "ConstString",
         "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ReleaseToRemove",
+        "Value": "\u677E\u624B\u6765\u79FB\u9664\u6B64\u7247\u6BB5...",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_NoJobRunning",
+        "Value": "\u6CA1\u6709\u6B63\u5728\u6267\u884C\u7684\u4EFB\u52A1",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_JobRunning",
+        "Value": "{count} \u4EFB\u52A1\u6B63\u5728\u6267\u884C",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
         "HasValidationErrors": false,
         "ForceDynamic": false,
         "DontTranslate": false

@@ -13,11 +13,6 @@ using Microsoft.Maui.Controls.Shapes;
 using Path = System.IO.Path;
 using System.Text.Json;
 
-
-
-
-
-
 #if ANDROID
 using projectFrameCut.Platforms.Android;
 
@@ -644,10 +639,23 @@ public partial class TestPage : ContentPage
     #endregion
 
 
-
-    private void TestCrashButton_Clicked(object sender, EventArgs e)
+    private async void TestCrashButton_Clicked(object sender, EventArgs e)
     {
-        Environment.FailFast("test crash");
+        var type = await DisplayActionSheet("Choose a favour you'd like", "Cancel", null, "Native(null pointer)", "Managed(NullReferenceException)", "Environment.FailFast");
+        switch (type)
+        {
+            case "Native(null pointer)":
+                IntPtr ptr = IntPtr.Zero;
+                Marshal.WriteInt32(ptr, 42);
+                break;
+            case "Managed(NullReferenceException)":
+                throw new NullReferenceException("test crash");
+            case "Environment.FailFast":
+                Environment.FailFast("test crash");
+                break;
+        }
+
+
     }
 
     private void MetalRenderStartButton_Clicked(object sender, EventArgs e)

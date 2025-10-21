@@ -217,6 +217,7 @@
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<ProjectReference Include="..\projectFrameCut.Render.AndroidOpenGL\projectFrameCut.Render.AndroidOpenGL.csproj" />
+		<Reference Include="Platforms\Android\fishnet\FishnetBinding.dll" />
 		<AndroidNativeLibrary Include="Platforms\Android\ffmpeg\**\*.so" />
 
 	</ItemGroup>
