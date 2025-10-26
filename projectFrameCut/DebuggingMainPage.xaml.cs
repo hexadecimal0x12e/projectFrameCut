@@ -1,6 +1,8 @@
 using Microsoft.Maui.Graphics;
+using projectFrameCut.DraftStuff;
 using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Reflection.Metadata;
@@ -141,6 +143,75 @@ workingDirectory = "";
     private async void ToV2DraftPageWithDiagBackend_Clicked(object sender, EventArgs e)
     {
         await Navigation.PushAsync(new DraftPage());
+
+    }
+
+    private async void ToV2DraftPageWithSomeClips_Clicked(object sender, EventArgs e)
+    {
+        DraftPage page;
+//        #if !DEBUG
+//        try
+//#endif
+//        {
+//            var c1 = DraftPage.CreateClip(0, 500, 0, "clip1", "clip 1", null, null, 0U, 500U);
+//            var c2 = DraftPage.CreateClip(500, 500, 0, "clip2", "clip 2", null, null, 1U, 500U);
+//            var c3 = DraftPage.CreateClip(1000, 500, 0, "clip3", "clip 3", null, null, 0U, 250U);
+
+//            var clips = new ConcurrentDictionary<string, ClipElementUI>();
+//            clips.TryAdd(c1.Id, c1);
+//            clips.TryAdd(c2.Id, c2);
+//            clips.TryAdd(c3.Id, c3);
+
+//            page = new DraftPage(clips, 2);
+//        }
+//#if !DEBUG
+//        catch (Exception ex)
+//        {
+//            Log(ex, "init draft page with clips", this);
+//            await DisplayAlert("Error", ex.Message, "OK");
+//            throw;
+//        }
+//#endif
+
+       page = DraftImportAndExportHelper.ImportToDraftPage(
+            new DraftStructureJSON
+            {
+                Name = "Test Draft",
+                targetFrameRate = 60,
+                Clips = new object[]
+                {
+                    new ClipDraftDTO
+                    {
+                        Id = "clip1",
+                        Name = "clip 1",
+                        LayerIndex = 0,
+                        StartFrame = 0,
+                        Duration = 500,
+                        RelativeStartFrame = 0,
+                    },
+                    new ClipDraftDTO
+                    {
+                        Id = "clip2",
+                        Name = "clip 2",
+                        LayerIndex = 0,
+                        StartFrame = 500,
+                        Duration = 500,
+                        RelativeStartFrame = 1,
+                    },
+                    new ClipDraftDTO
+                    {
+                        Id = "clip3",
+                        Name = "clip 3",
+                        LayerIndex = 1,
+                        StartFrame = 1000,
+                        Duration = 250,
+                        RelativeStartFrame = 0,
+                    }
+                }
+            }
+        );
+
+        await Navigation.PushAsync(page);
 
     }
 }

@@ -49,8 +49,9 @@ public partial class TestPage : ContentPage
 
     #region pan gesture test
 
-    private ConcurrentStack<double> DraggingX = new();
+    private ConcurrentStack<double> DraggingX = new(), DenoisedX = new();
     private double _origX = 0;
+    private PanDeNoise denoise = new();
 
     private async void G_PanUpdated(object? sender, PanUpdatedEventArgs e)
     {
@@ -60,20 +61,40 @@ public partial class TestPage : ContentPage
         {
             case GestureStatus.Started:
                 {
+                    DraggingX = new();
+                    DenoisedX = new();
+                    denoise = new();
                     _origX = b.TranslationX;
+                    DraggingTestLabel.Text = $"origX:{_origX}";
                     break;
                 }
             case GestureStatus.Running:
                 {
-                    b.TranslationX = e.TotalX + _origX;
-                    DraggingTestLabel.Text = $"Dragging X:{e.TotalX}";
-                    DraggingX.Push(e.TotalX);
+                    if (DenoiseOptionBox.IsChecked)
+                    {
+                        var noNoise = denoise.Process(e.TotalX);
+                        b.TranslationX = noNoise + _origX;
+                        //DraggingTestLabel.Text = $"Dragging X:{e.TotalX}, denoised: {noNoise + _origX}";
+                        DraggingX.Push(e.TotalX );
+                        DenoisedX.Push(noNoise );
+                    }
+                    else
+                    {
+                        //DraggingTestLabel.Text = $"Dragging X:{e.TotalX}";
+                        b.TranslationX = e.TotalX + _origX;
+                        DraggingX.Push(e.TotalX);
+                        DenoisedX.Push(0);
+
+                    }
+
+
                     break;
                 }
             case GestureStatus.Canceled:
             case GestureStatus.Completed:
                 {
                     var src = DraggingX.ToList();
+                    var dn = DenoisedX.ToList();
                     src.Reverse();
                     List<double> delta = [src[0]];
                     for (int i = 1; i < src.Count; i++)
@@ -81,13 +102,19 @@ public partial class TestPage : ContentPage
                         if (i + 1 >= src.Count) break;
                         delta.Add(src[i + 1] - src[i]);
                     }
+                    List<double> denoiseDelta = [dn[0]];
+                    for (int i = 1; i < src.Count; i++)
+                    {
+                        if (i + 1 >= dn.Count) break;
+                        denoiseDelta.Add(dn[i + 1] - dn[i]);
+                    }
                     //await DisplayAlert("Info", $"avg delta: {delta.Average()}", "ok");
                     var p = Path.Combine(FileSystem.CacheDirectory, $"dragtest-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.csv");
                     StreamWriter sw = new(p, append: false);
-                    sw.WriteLine("i,PositionX,DeltaX");
+                    sw.WriteLine("i,PositionX,DenoisedX,DeltaX,DenoisedDeltaX");
                     for (int i = 0; i < delta.Count; i++)
                     {
-                        sw.WriteLine($"{i},{src[i]},{delta[i]}");
+                        sw.WriteLine($"{i},{src[i]},{dn[i]},{delta[i]},{denoiseDelta[i]}");
                     }
                     sw.Dispose();
                     await Share.RequestAsync(new ShareFileRequest

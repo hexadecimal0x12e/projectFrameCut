@@ -22,6 +22,7 @@
 
 
         <Button Text="Go to v2 Draft Page" Margin="0,10,0,50"  x:Name="ToV2DraftPageWithDiagBackend" Clicked="ToV2DraftPageWithDiagBackend_Clicked"/>
+        <Button Text="Go to v2 Draft Page and add some sample tracks" Margin="0,10,0,50"  x:Name="ToV2DraftPageWithSomeClips" Clicked="ToV2DraftPageWithSomeClips_Clicked"/>
 
         <Button Text="Go to Draft Page" Margin="0,10,0,0"  x:Name="ToDraftPage" Clicked="ToDraftPage_Clicked"/>
         <Button Text="Go to Draft Page with another backend" Margin="0,10,0,0"  x:Name="ToDraftPageWithDiagBackend" Clicked="ToDraftPageWithDiagBackend_Clicked"/>

@@ -1715,7 +1715,8 @@ namespace projectFrameCut
             var desiredStart = Math.Max(0, baseStart + deltaPixels / _vm.PixelsPerSecond);
             var snapStart = SnapSeconds(desiredStart, clip);
 
-            // Calculate how much we're moving the start point (in seconds)
+            // Calc
+            // ulate how much we're moving the start point (in seconds)
             var startDelta = snapStart - baseStart;
             // Convert to frames (negative when expanding left, positive when shrinking from left)
             int frameDelta = (int)Math.Round(startDelta * frameRate);

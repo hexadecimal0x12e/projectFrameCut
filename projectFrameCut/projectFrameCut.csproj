@@ -249,7 +249,7 @@
 
 
 	<ItemGroup>
-		<Compile Update="DraftPage.xaml.cs">
+		<Compile Update="DraftPageOld.xaml.cs">
 			<DependentUpon>DraftPage.xaml</DependentUpon>
 		</Compile>
 		<Compile Update="TestPage.xaml.cs">

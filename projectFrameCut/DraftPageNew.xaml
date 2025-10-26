@@ -7,7 +7,8 @@
     <ContentPage.ToolbarItems>
         <ToolbarItem x:Name="JobRunningIndicator" Text="{l:Localized Key=DraftPage_NoJobRunning}" Order="Primary" Priority="0" Clicked="OnExportedClick" />
         <ToolbarItem Text="{l:Localized Key=DraftPage_GoRender}" Order="Primary" Priority="0" Clicked="OnExportedClick" />
-        <ToolbarItem Text="{l:Localized Key=_Options}" Clicked="SettingsClick"/>
+        <ToolbarItem Text="{l:Localized Key=DraftPage_SaveAs}"  Order="Secondary" />
+        <ToolbarItem Text="{l:Localized Key=_Options}"  Order="Secondary" Clicked="SettingsClick"/>
     </ContentPage.ToolbarItems>
     <Grid>
         <Grid.RowDefinitions>
@@ -28,14 +29,19 @@
                     <Button x:Name="MoveRightButton" Text="-&gt;"  Clicked="MoveRightButton_Clicked"/>
                     <Button x:Name="ZoomOutButton" Text="+" Clicked="ZoomOutButton_Clicked" />
                     <Button x:Name="ZoomInButton" Text="-" Clicked="ZoomInButton_Clicked"/>
-                </StackLayout>
+                    <Button x:Name="SpiltButton" Text="Spilt" Clicked="Split_Clicked"/>
+                <Button x:Name="AssetPanelButton" Text="Assets" Clicked="AssetPanelButton_Clicked"/>
+            </StackLayout>
                 <StackLayout Orientation="Horizontal" Padding="10,0">
                     <Label Text="View Mode:" VerticalOptions="Center"/>
                     <RadioButton x:Name="NativeViewRadio" Content="Native" IsChecked="True" GroupName="ViewSelector" CheckedChanged="ViewSelector_CheckedChanged"/>
                     <RadioButton x:Name="WebViewRadio" Content="Web" GroupName="ViewSelector" CheckedChanged="ViewSelector_CheckedChanged"/>
                 </StackLayout>
                 <Button x:Name="FullscreenFlyoutTestButton" Text="Pop a flyout" Clicked="FullscreenFlyoutTestButton_Clicked"/>
-            </VerticalStackLayout>
+            <HorizontalStackLayout x:Name="RulerLayout" HeightRequest="12" WidthRequest="-1" BackgroundColor="Grey">
+                
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
 
         <Grid Grid.Row="1">
             <Grid.RowDefinitions>
@@ -83,18 +89,15 @@
             </HorizontalStackLayout>
 
             <HorizontalStackLayout Grid.Column="1">
-                <Label x:Name="StatusLabel"
-                       Margin="3,2,0,0"
-    LineBreakMode="NoWrap"
-    Text="Everything fine" 
-                       />
-
+                <Label x:Name="StatusLabel" Margin="3,2,0,0" LineBreakMode="NoWrap" Text="" />
             </HorizontalStackLayout>
 
-            <HorizontalStackLayout HorizontalOptions="End" Grid.Column="2">
-                <Label x:Name="BackendStatus"
-Text="" />
-                <Ellipse x:Name="BackendStateIndicator" WidthRequest="16" HeightRequest="16" Fill="Gray" Margin="10,1,0,0" />
+            <HorizontalStackLayout HorizontalOptions="Center" Grid.Column="2">
+                <Label Text="1111" ></Label>
+            </HorizontalStackLayout>
+
+            <HorizontalStackLayout HorizontalOptions="End" Grid.Column="3">
+                <Label x:Name="AlternativeStatusLabel" Text="2222" />
             </HorizontalStackLayout>
 
         </Grid>
@@ -106,6 +109,7 @@ Text="" />
                         IsVisible="True"
                         HorizontalOptions="Fill"
                         VerticalOptions="Fill">
+            <BoxView x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red"/>
 
             <Label Text="Overlay"
                    TextColor="White"

@@ -16,6 +16,11 @@
             <Border StrokeThickness="4">
                 <VerticalStackLayout>
                     <Label Text="Dragging test" x:Name="DraggingTestLabel"/>
+                    <HorizontalStackLayout>
+                        <Label HorizontalOptions="Center" VerticalOptions="Center">Denoise?</Label>
+                        <CheckBox x:Name="DenoiseOptionBox"></CheckBox>
+
+                    </HorizontalStackLayout>
                     <AbsoluteLayout x:Name="DragTester" HeightRequest="80" />
                 </VerticalStackLayout>
             </Border>
