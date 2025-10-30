@@ -166,6 +166,43 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_AddOneAsset",
+        "Value": "\u677E\u624B\u6765\u6DFB\u52A0\u300C{name ?? \u0022\u672A\u77E5\u540D\u79F0\u0022}\u300D ",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string?",
+            "Value": "name"
+          }
+        ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_JobRunning",
+        "Value": "{count} \u4EFB\u52A1\u6B63\u5728\u6267\u884C",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_NoJobRunning",
+        "Value": "\u6CA1\u6709\u6B63\u5728\u6267\u884C\u7684\u4EFB\u52A1",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_Processing",
         "Value": "\u5904\u7406\u4E2D...",
         "Mode": "ConstString",
@@ -184,6 +221,15 @@
             "Value": "length"
           }
         ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ReleaseToRemove",
+        "Value": "\u677E\u624B\u6765\u79FB\u9664\u6B64\u7247\u6BB5...",
+        "Mode": "ConstString",
+        "Args": [],
         "HasValidationErrors": false,
         "ForceDynamic": false,
         "DontTranslate": false
@@ -235,7 +281,7 @@
       },
       {
         "Id": "DraftPage_Selected",
-        "Value": "\u5DF2\u9009\u4E2D\uFF1A{clipName}",
+        "Value": "\u5DF2\u9009\u4E2D\u300C{clipName}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -290,7 +336,7 @@
       },
       {
         "Id": "LandingPage_TakingToDraft",
-        "Value": "\u8BF7\u7A0D\u540E\uFF0C\u6B63\u5728\u6253\u5F00\u8349\u7A3F \uFF62{name}\uFF63 ",
+        "Value": "\u8BF7\u7A0D\u540E\uFF0C\u6B63\u5728\u6253\u5F00\u8349\u7A3F \u300C{name}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -340,7 +386,7 @@
       },
       {
         "Id": "RenderPage_ExportTitle",
-        "Value": "\u5BFC\u51FA\u9879\u76EE \uFF62{name}\uFF63 ",
+        "Value": "\u5BFC\u51FA\u9879\u76EE\u300C{name}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -511,8 +557,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "DraftPage_ReleaseToRemove",
-        "Value": "\u677E\u624B\u6765\u79FB\u9664\u6B64\u7247\u6BB5...",
+        "Id": "DraftPage_ImportAssetNotFinished",
+        "Value": "\u677E\u624B\u6765\u5BFC\u5165\u7D20\u6750...",
         "Mode": "ConstString",
         "Args": [],
         "HasValidationErrors": false,
@@ -520,24 +566,10 @@
         "DontTranslate": false
       },
       {
-        "Id": "DraftPage_NoJobRunning",
-        "Value": "\u6CA1\u6709\u6B63\u5728\u6267\u884C\u7684\u4EFB\u52A1",
+        "Id": "DraftPage_ReleaseToCancel",
+        "Value": "\u677E\u624B\u6765\u53D6\u6D88\u64CD\u4F5C...",
         "Mode": "ConstString",
         "Args": [],
-        "HasValidationErrors": false,
-        "ForceDynamic": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_JobRunning",
-        "Value": "{count} \u4EFB\u52A1\u6B63\u5728\u6267\u884C",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "int",
-            "Value": "count"
-          }
-        ],
         "HasValidationErrors": false,
         "ForceDynamic": false,
         "DontTranslate": false

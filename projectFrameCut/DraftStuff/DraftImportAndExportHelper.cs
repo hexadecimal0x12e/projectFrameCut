@@ -1,42 +1,36 @@
-﻿using System;
+﻿using projectFrameCut.DraftStuff;
+using projectFrameCut.Shared;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using projectFrameCut.DraftStuff;
-using projectFrameCut.Shared;
+using System.Diagnostics.CodeAnalysis;
 
 namespace projectFrameCut.DraftStuff
 {
     internal static class DraftImportAndExportHelper
     {
-        /// <summary>
-        /// Export a DraftPage's current native-view clips into DraftStructureJSON.
-        /// Uses the DraftPage instance to convert pixels↔frames via its PixelToFrame method.
-        /// </summary>
+
         public static DraftStructureJSON ExportFromDraftPage(projectFrameCut.DraftPage page, uint targetFrameRate = 30)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
 
             var clips = new List<ClipDraftDTO>();
 
-            // iterate tracks in sorted order
             var trackKeys = page.Tracks.Keys.OrderBy(k => k).ToArray();
             foreach (var trackKey in trackKeys)
             {
                 if (!page.Tracks.TryGetValue(trackKey, out var layout)) continue;
 
-                // enumerate children that are Borders (clips)
                 foreach (var child in layout.Children)
                 {
                     if (child is Microsoft.Maui.Controls.Border border)
                     {
                         if (border.BindingContext is not ClipElementUI elem) continue;
 
-                        // skip ghost/shadow entries if any
                         if (elem.Id.StartsWith("ghost_") || elem.Id.StartsWith("shadow_")) continue;
 
-                        // compute start and duration in frames using page helpers
                         double startPx = border.TranslationX;
                         double widthPx = (border.Width > 0) ? border.Width : border.WidthRequest;
 
@@ -44,8 +38,7 @@ namespace projectFrameCut.DraftStuff
                         uint durationFrames = page.PixelToFrame(widthPx);
                         if (durationFrames == 0) durationFrames = 1;
 
-                        // try to extract a textual name from the clip content (if any)
-                        string name = ExtractLabelText(border) ?? elem.Id;
+                        string name = string.IsNullOrWhiteSpace(elem.displayName) ? ExtractLabelText(border) ?? elem.Id : elem.displayName;
 
                         var dto = new ClipDraftDTO
                         {
@@ -75,15 +68,20 @@ namespace projectFrameCut.DraftStuff
             };
         }
 
-        /// <summary>
-        /// Create a DraftPage (native view) from DraftStructureJSON by constructing ClipElementUI entries
-        /// and invoking the DraftPage(concurrent clips, trackCount) constructor.
-        /// </summary>
-        public static projectFrameCut.DraftPage ImportToDraftPage(DraftStructureJSON draft)
+
+
+        public static ConcurrentDictionary<string, AssetItem> ImportAssetsFromJSON(string json)
+        {
+            var assets = JsonSerializer.Deserialize<IEnumerable<AssetItem>>(json);
+            if (assets is null) return new();
+            var assetDict = assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (a) => a);
+            return new ConcurrentDictionary<string, AssetItem>(assetDict);  
+        }
+
+        public static (ConcurrentDictionary<string, ClipElementUI>, int) ImportFromJSON(DraftStructureJSON draft)
         {
             if (draft == null) throw new ArgumentNullException(nameof(draft));
 
-            // collect DTOs
             var dtos = new List<ClipDraftDTO>();
             foreach (var obj in draft.Clips ?? Array.Empty<object>())
             {
@@ -107,12 +105,9 @@ namespace projectFrameCut.DraftStuff
 
             var clipsDict = new ConcurrentDictionary<string, ClipElementUI>();
 
-            // For placement we will assume DraftPage defaults (FramePerPixel==1, tracksZoomOffest==1)
-            // so Frame -> Pixel is identity. We set reasonable fields on ClipElementUI so DraftPage.RegisterClip
-            // can place them properly.
             foreach (var dto in dtos.OrderBy(d => d.LayerIndex).ThenBy(d => d.StartFrame))
             {
-                double startPx = dto.StartFrame; // frame -> pixel (1:1)
+                double startPx = dto.StartFrame;
                 double widthPx = Math.Max(1, (double)dto.Duration);
 
                 uint maxFrames = dto.SourceDuration is null ? dto.Duration : (uint)Math.Max(dto.SourceDuration.Value, dto.Duration);
@@ -139,9 +134,7 @@ namespace projectFrameCut.DraftStuff
                 clipsDict.AddOrUpdate(element.Id, element, (_, _) => element);
             }
 
-            // create DraftPage via constructor
-            var page = new projectFrameCut.DraftPage(clipsDict, trackCount);
-            return page;
+            return (clipsDict, trackCount);
         }
 
         private static string? ExtractLabelText(Microsoft.Maui.Controls.Border border)
@@ -150,7 +143,6 @@ namespace projectFrameCut.DraftStuff
             {
                 if (border.Content is Microsoft.Maui.Controls.Grid g)
                 {
-                    // look for Label in grid children or nested layouts
                     foreach (var child in g.Children)
                     {
                         if (child is Microsoft.Maui.Controls.Label l) return l.Text;
@@ -174,5 +166,69 @@ namespace projectFrameCut.DraftStuff
             catch { }
             return null;
         }
+
+        public static List<OverlapInfo> FindOverlaps(IEnumerable<ClipDraftDTO>? clips, uint allowedOverlapFrames = 5)
+        {
+            var result = new List<OverlapInfo>();
+            if (clips == null) return result;
+
+            var groups = clips
+                .Where(c => c != null)
+                .GroupBy(c => c.LayerIndex);
+
+            foreach (var group in groups)
+            {
+                var ordered = group.OrderBy(c => c.StartFrame).ToList();
+                int n = ordered.Count;
+                for (int i = 0; i < n; i++)
+                {
+                    var a = ordered[i];
+                    long aStart = (long)a.StartFrame;
+                    long aEnd = aStart + (long)a.Duration;
+
+                    for (int j = i + 1; j < n; j++)
+                    {
+                        var b = ordered[j];
+                        long bStart = (long)b.StartFrame;
+
+                        if (bStart >= aEnd)
+                        {
+                            break;
+                        }
+
+                        long overlap = aEnd - bStart;
+                        if (overlap > (long)allowedOverlapFrames)
+                        {
+                            result.Add(new OverlapInfo(a.Id ?? string.Empty, b.Id ?? string.Empty, overlap, a.LayerIndex));
+                        }
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        public static bool HasOverlap(IEnumerable<ClipDraftDTO>? clips, uint allowedOverlapFrames = 5)
+            => FindOverlaps(clips, allowedOverlapFrames).Count > 0;
+
+        public class OverlapInfo
+        {
+            public required string ClipAId { get; set; }
+            public required string ClipBId { get; set; }
+            public required long OverlapFrames { get; set; }
+            public required uint LayerIndex { get; set; }
+
+            [SetsRequiredMembers]
+            public OverlapInfo(string clipAId, string clipBId, long overlapFrames, uint layerIndex)
+            {
+                ClipAId = clipAId;
+                ClipBId = clipBId;
+                OverlapFrames = overlapFrames;
+                LayerIndex = layerIndex;
+            }
+
+
+        }
+
     }
 }

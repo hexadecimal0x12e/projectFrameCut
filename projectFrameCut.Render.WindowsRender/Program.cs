@@ -94,6 +94,8 @@ namespace projectFrameCut.Render.RenderCLI
                 return 1;
             }
 
+            Log($"internal ffmpeg library: version {ffmpeg.av_version_info()} Copyright (c) 2000-2025 the FFmpeg developers\r\n configuration:{ffmpeg.avcodec_configuration()}");
+
             var runningMode = args[0];
 
             Log($"Running mode: {runningMode}");

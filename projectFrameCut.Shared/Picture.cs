@@ -267,72 +267,123 @@ namespace projectFrameCut.Shared
             }
         }
 
-        public Picture Resize(int targetWidth, int targetHeight, bool force = false)
+
+        /// <summary>
+        /// Resizes the picture using bilinear resampling. When <paramref name="preserveAspect"/> is true,
+        /// the image is scaled to fit within the provided target dimensions while preserving aspect ratio.
+        /// </summary>
+        /// <param name="targetWidth">The target width.</param>
+        /// <param name="targetHeight">The target height.</param>
+        /// <param name="preserveAspect">Whether to preserve aspect ratio.</param>
+        /// <returns>A new Picture instance with the resized image data.</returns>
+        public Picture Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
         {
-            if (targetWidth <= 0 || targetHeight <= 0) throw new ArgumentException("targetWidth and targetHeight must be positive");
-            if (targetWidth == Width && targetHeight == Height) return this;
-            var pixels = checked(targetWidth * targetHeight);
-            if(!force || (pixels % pixels != 0 && pixels % Pixels != 0))
+            if (targetWidth <=0 || targetHeight <=0) throw new ArgumentException("targetWidth and targetHeight must be positive");
+            if (Width <=0 || Height <=0) throw new InvalidOperationException("Source image has invalid dimensions");
+
+            int destW = targetWidth;
+            int destH = targetHeight;
+
+            if (preserveAspect)
             {
-                throw new NotSupportedException($"Cannot resize picture from {Width}x{Height} ({Pixels} pixels) to {targetWidth}x{targetHeight} ({pixels} pixels) because the number of pixels are not multiples of each other. Use EffectType.Strech instead.");
+                double sx = (double)targetWidth / Width;
+                double sy = (double)targetHeight / Height;
+                double s = Math.Min(sx, sy);
+                destW = Math.Max(1, (int)Math.Round(Width * s));
+                destH = Math.Max(1, (int)Math.Round(Height * s));
             }
-            if (pixels > Pixels)
+
+            if (destW == Width && destH == Height) return this;
+
+            var result = new Picture(destW, destH);
+            int dstPixels = checked(destW * destH);
+            result.r = new ushort[dstPixels];
+            result.g = new ushort[dstPixels];
+            result.b = new ushort[dstPixels];
+            result.a = hasAlphaChannel ? new float[dstPixels] : null;
+            result.hasAlphaChannel = hasAlphaChannel;
+
+            double xRatio = (double)Width / destW;
+            double yRatio = (double)Height / destH;
+
+            for (int y =0; y < destH; y++)
             {
-                return new Picture(targetWidth, targetHeight)
+                double srcY = (y +0.5) * yRatio -0.5;
+                int y0 = (int)Math.Floor(srcY);
+                int y1 = y0 +1;
+                double wy = srcY - y0;
+                if (y0 <0)
                 {
-                    r = ExpandArray(this.r, pixels),
-                    g = ExpandArray(this.g, pixels),
-                    b = ExpandArray(this.b, pixels),
-                    a = this.hasAlphaChannel && this.a != null ? ExpandArray(this.a, pixels) : null,
-                    hasAlphaChannel = this.hasAlphaChannel
-                };
-            }
-            else
-            {
-                return new Picture(targetWidth, targetHeight)
+                    y0 =0; y1 =0; wy =0;
+                }
+                if (y1 >= Height) { y1 = Height -1; }
+
+                for (int x =0; x < destW; x++)
                 {
-                    r = ShrinkArray(this.r, pixels),
-                    g = ShrinkArray(this.g, pixels),
-                    b = ShrinkArray(this.b, pixels),
-                    a = this.hasAlphaChannel && this.a != null ? ShrinkArray(this.a, pixels) : null,
-                    hasAlphaChannel = this.hasAlphaChannel
-                };
+                    double srcX = (x +0.5) * xRatio -0.5;
+                    int x0 = (int)Math.Floor(srcX);
+                    int x1 = x0 +1;
+                    double wx = srcX - x0;
+                    if (x0 <0)
+                    {
+                        x0 =0; x1 =0; wx =0;
+                    }
+                    if (x1 >= Width) { x1 = Width -1; }
+
+                    int k00 = y0 * Width + x0;
+                    int k10 = y0 * Width + x1;
+                    int k01 = y1 * Width + x0;
+                    int k11 = y1 * Width + x1;
+
+                    double r00 = this.r[k00];
+                    double r10 = this.r[k10];
+                    double r01 = this.r[k01];
+                    double r11 = this.r[k11];
+
+                    double g00 = this.g[k00];
+                    double g10 = this.g[k10];
+                    double g01 = this.g[k01];
+                    double g11 = this.g[k11];
+
+                    double b00 = this.b[k00];
+                    double b10 = this.b[k10];
+                    double b01 = this.b[k01];
+                    double b11 = this.b[k11];
+
+                    double rInterp = r00 * (1 - wx) * (1 - wy) + r10 * wx * (1 - wy) + r01 * (1 - wx) * wy + r11 * wx * wy;
+                    double gInterp = g00 * (1 - wx) * (1 - wy) + g10 * wx * (1 - wy) + g01 * (1 - wx) * wy + g11 * wx * wy;
+                    double bInterp = b00 * (1 - wx) * (1 - wy) + b10 * wx * (1 - wy) + b01 * (1 - wx) * wy + b11 * wx * wy;
+
+                    int dstIdx = y * destW + x;
+                    int rr = (int)Math.Round(rInterp);
+                    int gg = (int)Math.Round(gInterp);
+                    int bb = (int)Math.Round(bInterp);
+                    if (rr <0) rr =0; if (rr >65535) rr =65535;
+                    if (gg <0) gg =0; if (gg >65535) gg =65535;
+                    if (bb <0) bb =0; if (bb >65535) bb =65535;
+
+                    result.r[dstIdx] = (ushort)rr;
+                    result.g[dstIdx] = (ushort)gg;
+                    result.b[dstIdx] = (ushort)bb;
+
+                    if (hasAlphaChannel && this.a != null)
+                    {
+                        double a00 = this.a[k00];
+                        double a10 = this.a[k10];
+                        double a01 = this.a[k01];
+                        double a11 = this.a[k11];
+                        double aInterp = a00 * (1 - wx) * (1 - wy) + a10 * wx * (1 - wy) + a01 * (1 - wx) * wy + a11 * wx * wy;
+                        if (double.IsNaN(aInterp) || double.IsInfinity(aInterp)) aInterp =1.0;
+                        if (aInterp <0) aInterp =0; if (aInterp >1) aInterp =1;
+                        result.a![dstIdx] = (float)aInterp;
+                    }
+                }
             }
-           
-        }
-        private static T[] ExpandArray<T>(T[] src, int targetLength)
-        {
-            if (src.Length == targetLength) return src;
-            T[] dest = new T[targetLength];
-            int srcLen = src.Length;
-            for (int i = 0; i < targetLength; i++)
-            {
-                dest[i] = src[i % srcLen];
-            }
-            return dest;
+
+            return result;
         }
 
-        private static T[] ShrinkArray<T>(T[] src, int targetLength)
-        {
-            if (src.Length == targetLength) return src;
-            T[] dest = new T[targetLength];
-            int srcLen = src.Length;
-            int shrinkFactor = srcLen / targetLength;
-            int j = 0;
-            for (int i = 0; i < targetLength; i++)
-            {
-                if (j >= shrinkFactor)
-                {
-                    dest[i] = src[i];
-                    j = 0;
-                }
-                else
-                {
-                    j++;
-                }
-            }
-            return dest;
-        }
+     
 
         public static Picture GenerateSolidColor(int width,int height,ushort r, ushort g, ushort b, float? a)
         {

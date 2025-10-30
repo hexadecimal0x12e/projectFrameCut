@@ -51,16 +51,17 @@ namespace projectFrameCut.Shared
         public projectFrameCut.Shared.ClipMode Type { get; set; }
 
         public long? FrameCount { get; set; }
-        public float SecondPerFrame { get; set; } = float.PositiveInfinity; //infinite for infinite length source
+        public float SecondPerFrame { get; set; } = float.PositiveInfinity; 
         public string? ThumbnailPath { get; set; }
         public string? AssetId { get; set; }
 
         [JsonIgnore]
+        public object? Background { get; set; }
+
+        [JsonIgnore]
         public bool isInfiniteLength => FrameCount == null || FrameCount <= 0 || float.IsPositiveInfinity(SecondPerFrame);
 
-
-
-        [JsonIgnore()]
+        [JsonIgnore]
         public string? Icon
         {
             get => Type switch

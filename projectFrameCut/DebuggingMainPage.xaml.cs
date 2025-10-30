@@ -3,6 +3,7 @@ using projectFrameCut.DraftStuff;
 using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Reflection.Metadata;
@@ -65,7 +66,7 @@ public partial class DebuggingMainPage : ContentPage
 
     private async void CreateNewDraft_Clicked(object sender, EventArgs e)
     {
-        string workingDirectory;
+        string draftSourcePath;
 
 
 #if WINDOWS
@@ -81,42 +82,42 @@ public partial class DebuggingMainPage : ContentPage
 
         var folder = await picker.PickSingleFolderAsync();
         if (folder == null) return;
-        workingDirectory = folder.Path;
+        draftSourcePath = folder.Path;
 
 
 
 #elif MACCATALYST || IOS
-workingDirectory = "";
+draftSourcePath = "";
 #elif ANDROID
-workingDirectory = "";
+        draftSourcePath = "";
 #endif
 
         var projName = await DisplayPromptAsync("info", "input a name for this project", "ok", "", "project 1", -1, null, "Untitled Project 1");
 
 #if MACCATALYST || IOS
-                workingDirectory = Directory.CreateDirectory(Path.Combine(workingDirectory, projName + ".pjfc")).FullName;
+                draftSourcePath = Directory.CreateDirectory(Path.Combine(draftSourcePath, projName + ".pjfc")).FullName;
 #else
-        File.WriteAllText(Path.Combine(workingDirectory, projName + ".pjfc"), "@projectFrameCut v1");
-        workingDirectory = Directory.CreateDirectory(Path.Combine(workingDirectory, projName)).FullName;
+        File.WriteAllText(Path.Combine(draftSourcePath, projName + ".pjfc"), "@projectFrameCut v1");
+        draftSourcePath = Directory.CreateDirectory(Path.Combine(draftSourcePath, projName)).FullName;
 
 #endif
         var ProjectInfo = new ProjectJSONStructure
         {
             projectName = projName,
-            ResourcePath = workingDirectory,
+            ResourcePath = draftSourcePath,
 
         };
 
 
 
-        File.WriteAllText(Path.Combine(workingDirectory, "timeline.json"),
+        File.WriteAllText(Path.Combine(draftSourcePath, "timeline.json"),
         JsonSerializer.Serialize(new DraftStructureJSON
         {
             Name = projName,
             Clips = new List<ClipDraftDTO>().Cast<object>().ToArray(),
         }));
-        File.WriteAllText(Path.Combine(workingDirectory, "assets.json"), JsonSerializer.Serialize(Array.Empty<AssetItem>()));
-        File.WriteAllText(Path.Combine(workingDirectory, "project.json"), JsonSerializer.Serialize(ProjectInfo));
+        File.WriteAllText(Path.Combine(draftSourcePath, "assets.json"), JsonSerializer.Serialize(Array.Empty<AssetItem>()));
+        File.WriteAllText(Path.Combine(draftSourcePath, "project.json"), JsonSerializer.Serialize(ProjectInfo));
 
     }
 
@@ -142,44 +143,60 @@ workingDirectory = "";
 
     private async void ToV2DraftPageWithDiagBackend_Clicked(object sender, EventArgs e)
     {
-        await Navigation.PushAsync(new DraftPage());
+        try
+        {
 
+
+            DraftPage page;
+
+            if (!Directory.Exists(draftSourcePath))
+                throw new DirectoryNotFoundException($"Working path not found: {draftSourcePath}");
+
+            var filesShouldExist = new[] { "project.json", "timeline.json", "assets.json" };
+
+            if (filesShouldExist.Any((f) => !File.Exists(Path.Combine(draftSourcePath, f))))
+            {
+                throw new FileNotFoundException("One or more required files are missing.", draftSourcePath);
+            }
+
+            var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(draftSourcePath, "project.json")));
+
+            var assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(draftSourcePath, "assets.json"))) ?? new();
+            var timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(draftSourcePath, "timeline.json"))) ?? new();
+
+
+
+            var assetDict = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (a) => a));
+            (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline);
+
+            //var ovlp = DraftImportAndExportHelper.FindOverlaps(dict.Values, 5);
+
+            //if (ovlp.Count > 0)
+            //{
+            //    await DisplayAlert("Overlap", ovlp.Aggregate("", (s, i) => $"{i.ClipAId} and {i.ClipBId} overlap by {i.OverlapFrames} frames on layer {i.LayerIndex};\r\n"), "ok");
+            //}
+
+            page = new DraftPage(dict, assetDict, trackCount, draftSourcePath, project?.projectName ?? "?")
+            {
+                ProjectInfo = project ?? new(),
+            };
+
+            await Navigation.PushAsync(page);
+        }catch(Exception ex)
+        {
+            await DisplayAlert(Localized._Warn, Localized._ExceptionTemplate(ex), "ok");
+        }
     }
 
     private async void ToV2DraftPageWithSomeClips_Clicked(object sender, EventArgs e)
     {
         DraftPage page;
-//        #if !DEBUG
-//        try
-//#endif
-//        {
-//            var c1 = DraftPage.CreateClip(0, 500, 0, "clip1", "clip 1", null, null, 0U, 500U);
-//            var c2 = DraftPage.CreateClip(500, 500, 0, "clip2", "clip 2", null, null, 1U, 500U);
-//            var c3 = DraftPage.CreateClip(1000, 500, 0, "clip3", "clip 3", null, null, 0U, 250U);
-
-//            var clips = new ConcurrentDictionary<string, ClipElementUI>();
-//            clips.TryAdd(c1.Id, c1);
-//            clips.TryAdd(c2.Id, c2);
-//            clips.TryAdd(c3.Id, c3);
-
-//            page = new DraftPage(clips, 2);
-//        }
-//#if !DEBUG
-//        catch (Exception ex)
-//        {
-//            Log(ex, "init draft page with clips", this);
-//            await DisplayAlert("Error", ex.Message, "OK");
-//            throw;
-//        }
-//#endif
-
-       page = DraftImportAndExportHelper.ImportToDraftPage(
-            new DraftStructureJSON
-            {
-                Name = "Test Draft",
-                targetFrameRate = 60,
-                Clips = new object[]
-                {
+        var d = new DraftStructureJSON
+        {
+            Name = "Test Draft",
+            targetFrameRate = 60,
+            Clips =
+                [
                     new ClipDraftDTO
                     {
                         Id = "clip1",
@@ -207,9 +224,29 @@ workingDirectory = "";
                         Duration = 250,
                         RelativeStartFrame = 0,
                     }
-                }
-            }
-        );
+                    ,
+                    new ClipDraftDTO
+                    {
+                        Id = "clip4",
+                        Name = "clip 4",
+                        LayerIndex = 1,
+                        StartFrame = 1200,
+                        Duration = 250,
+                        RelativeStartFrame = 0,
+                    }
+                ]
+        };
+
+        var ovlp = DraftImportAndExportHelper.FindOverlaps(d.Clips.Cast<ClipDraftDTO>(), 5);
+
+        if (ovlp.Count > 0)
+        {
+            await DisplayAlert("Overlap", ovlp.Aggregate("", (s, i) => $"{i.ClipAId} and {i.ClipBId} overlap by {i.OverlapFrames} frames on layer {i.LayerIndex};\r\n"), "ok");
+        }
+
+        (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(d);
+        var assetJson = File.ReadAllText(@"D:\code\playground\projectFrameCut\project\Untitled Project 2\assets.json");
+        page = new DraftPage(dict, DraftImportAndExportHelper.ImportAssetsFromJSON(assetJson), trackCount, d.Name);
 
         await Navigation.PushAsync(page);
 

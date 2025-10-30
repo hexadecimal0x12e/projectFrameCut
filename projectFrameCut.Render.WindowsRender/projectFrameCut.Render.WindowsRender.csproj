@@ -2,16 +2,31 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+		<Platforms>AnyCPU;x64</Platforms>
 
 		<ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+		<AssemblyVersion>1.0.2.0</AssemblyVersion>
+		<FileVersion>1.0.2.0</FileVersion>
+		<Authors>hexadecimal0x12e</Authors>
+		<Product>projectFrameCut's independent renderer</Product>
+		<Description>projectFrameCut independent renderer</Description>
+		<Copyright>Copyright (c) hexadecimal0x12e 2025</Copyright>
+		<PackageProjectUrl>hexadecimal0x12e.com</PackageProjectUrl>
+		<Title>projectFrameCut's independent renderer</Title>
   </PropertyGroup>
 
 
   <ItemGroup>
-    <ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
-    <ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
+		<ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj">
+		</ProjectReference>
+		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" >
+		</ProjectReference>
+		<ProjectReference Include="..\projectFrameCut.Render.Effects\projectFrameCut.Render.Effects.csproj" >
+		</ProjectReference>
+		<PackageReference Include="ILGPU" Version="1.5.3" />
+		<PackageReference Include="ILGPU.Algorithms" Version="1.5.3" />
   </ItemGroup>
 
 	<ItemGroup>

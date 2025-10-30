@@ -363,7 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 
 #####
-
-/projectFrameCut.Render.WindowsRender/ffmpeg
-/projectFrameCut/Platforms/Android/ffmpeg/
 projectFrameCut/0x12e.keystore

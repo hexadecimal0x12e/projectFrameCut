@@ -3,6 +3,7 @@ using ILGPU.Runtime;
 using ILGPU.Runtime.CPU;
 using ILGPU.Runtime.OpenCL;
 using projectFrameCut.Shared;
+using projectFrameCut.Render.Effects;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
@@ -21,75 +22,61 @@ namespace projectFrameCut.Render.ILGpu
         public static bool ForceSync = false;
         private static object locker = new();
 
-        public static Picture MixtureFrames(Accelerator accelerator, RenderMode mode, Picture layerA, Picture layerB, ushort upperBond = ushort.MaxValue, bool allowOverflow = false, object? extend = null, uint frameIndex = 0)
+        public static Picture MixtureFrames(Accelerator? accelerator, RenderMode mode, Picture layerA, Picture layerB, ushort upperBond = ushort.MaxValue, bool allowOverflow = false, object? extend = null, uint frameIndex =0)
         {
-            Log($"[#{frameIndex:d6}@Mixer] start mixing 2 layer with mode {mode} with GPU...");
+            Log($"[#{frameIndex:d6}@Mixer] start mixing2 layer with mode {mode}...");
+
             if (mode == RenderMode.Overlay)
             {
-                return RenderOverlay(layerA, layerB, accelerator, frameIndex); 
+                return RenderOverlayCPU(layerA, layerB, frameIndex);
             }
+
             try
-            {               
-                Action<Index1D, ArrayView<ushort>, ArrayView<ushort>, ArrayView<ushort>, ArrayView<ushort>>? kernel = null;
+            {
+                int pixels = layerA.Pixels;
+                if (layerA.Pixels != layerB.Pixels) throw new ArgumentException("layerA and layerB must have same pixel count");
+
+                // convert channels to normalized floats
+                float[] aR = new float[pixels];
+                float[] aG = new float[pixels];
+                float[] aB = new float[pixels];
+                float[] bR = new float[pixels];
+                float[] bG = new float[pixels];
+                float[] bB = new float[pixels];
+                for (int i =0; i < pixels; i++)
+                {
+                    aR[i] = layerA.r[i] /65535f;
+                    aG[i] = layerA.g[i] /65535f;
+                    aB[i] = layerA.b[i] /65535f;
+                    bR[i] = layerB.r[i] /65535f;
+                    bG[i] = layerB.g[i] /65535f;
+                    bB[i] = layerB.b[i] /65535f;
+                }
+
+                // zero arrays for unused args
+                float[] zeros = new float[pixels];
+
+                float[] oR, oG, oB;
                 switch (mode)
                 {
                     case RenderMode.Add:
-                        kernel = accelerator.LoadAutoGroupedStreamKernel<
-                       Index1D, ArrayView<ushort>, ArrayView<ushort>, ArrayView<ushort>, ArrayView<ushort>>(RenderAdd);
+                        oR = EffectsEngine.MixtureAddComputer.Compute(MyAcceleratorType.CUDA,2, aR, bR, zeros, zeros, zeros, zeros);
+                        oG = EffectsEngine.MixtureAddComputer.Compute(MyAcceleratorType.CUDA,2, aG, bG, zeros, zeros, zeros, zeros);
+                        oB = EffectsEngine.MixtureAddComputer.Compute(MyAcceleratorType.CUDA,2, aB, bB, zeros, zeros, zeros, zeros);
                         break;
                     case RenderMode.Minus:
-                        kernel = accelerator.LoadAutoGroupedStreamKernel<
-                       Index1D, ArrayView<ushort>, ArrayView<ushort>, ArrayView<ushort>, ArrayView<ushort>>(RenderMinus);
+                        oR = EffectsEngine.MixtureMinusComputer.Compute(MyAcceleratorType.CUDA,2, aR, bR, zeros, zeros, zeros, zeros);
+                        oG = EffectsEngine.MixtureMinusComputer.Compute(MyAcceleratorType.CUDA,2, aG, bG, zeros, zeros, zeros, zeros);
+                        oB = EffectsEngine.MixtureMinusComputer.Compute(MyAcceleratorType.CUDA,2, aB, bB, zeros, zeros, zeros, zeros);
                         break;
                     case RenderMode.Multiply:
-                        kernel = accelerator.LoadAutoGroupedStreamKernel<
-                       Index1D, ArrayView<ushort>, ArrayView<ushort>, ArrayView<ushort>, ArrayView<ushort>>(RenderMultiply);
+                        oR = EffectsEngine.MixtureMultiplyComputer.Compute(MyAcceleratorType.CUDA,2, aR, bR, zeros, zeros, zeros, zeros);
+                        oG = EffectsEngine.MixtureMultiplyComputer.Compute(MyAcceleratorType.CUDA,2, aG, bG, zeros, zeros, zeros, zeros);
+                        oB = EffectsEngine.MixtureMultiplyComputer.Compute(MyAcceleratorType.CUDA,2, aB, bB, zeros, zeros, zeros, zeros);
                         break;
-                    case RenderMode.Overlay:
-                        return RenderOverlay(layerA, layerB, accelerator,frameIndex); //这个处理太复杂了，不适合在这里搞                
                     default:
                         throw new NotSupportedException($"You defined an unsupported mixture mode {mode}.");
                 }
-
-
-                using MemoryBuffer1D<ushort, Stride1D.Dense> bound = Allocate1D<ushort>(2,accelerator);
-                bound.CopyFromCPU([upperBond, allowOverflow ? ushort.MinValue : ushort.MaxValue]);
-                //0:上限，0代表不启用
-                //1:允许溢出，0代表不启用
-
-                using MemoryBuffer1D<ushort, Stride1D.Dense> aRed = Allocate1D<ushort>(layerA.Pixels, accelerator);
-                using MemoryBuffer1D<ushort, Stride1D.Dense> bRed = Allocate1D<ushort>(layerA.Pixels, accelerator);
-                using MemoryBuffer1D<ushort, Stride1D.Dense> cRed = Allocate1D<ushort>(layerA.Pixels, accelerator);
-                aRed.CopyFromCPU(layerA.r);
-                bRed.CopyFromCPU(layerB.r);
-                LockRun(() => kernel(layerA.Pixels, aRed.View, bRed.View, cRed.View, bound.View));
-                if(ForceSync) accelerator.Synchronize();
-                aRed.Dispose();
-                bRed.Dispose();
-
-                //Log($"[Render #{frameIndex:d6}] Rendering G channel...");
-
-                using MemoryBuffer1D<ushort, Stride1D.Dense> aGreen = Allocate1D<ushort>(layerA.Pixels, accelerator);
-                using MemoryBuffer1D<ushort, Stride1D.Dense> bGreen = Allocate1D<ushort>(layerA.Pixels, accelerator);
-                using MemoryBuffer1D<ushort, Stride1D.Dense> cGreen = Allocate1D<ushort>(layerA.Pixels, accelerator);
-                aGreen.CopyFromCPU(layerA.g);
-                bGreen.CopyFromCPU(layerB.g);
-                LockRun(() => kernel(layerA.Pixels, aGreen.View, bGreen.View, cGreen.View, bound.View));
-                if (ForceSync) accelerator.Synchronize();
-                aGreen.Dispose();
-                bGreen.Dispose();
-
-                //Log($"[Render #{frameIndex:d6}] Rendering B channel...");
-
-                using MemoryBuffer1D<ushort, Stride1D.Dense> aBlue = Allocate1D<ushort>(layerA.Pixels, accelerator);
-                using MemoryBuffer1D<ushort, Stride1D.Dense> bBlue = Allocate1D<ushort>(layerA.Pixels, accelerator);
-                using MemoryBuffer1D<ushort, Stride1D.Dense> cBlue = Allocate1D<ushort>(layerA.Pixels, accelerator);
-                aBlue.CopyFromCPU(layerA.b);
-                bBlue.CopyFromCPU(layerB.b);
-                LockRun(() => kernel(layerA.Pixels, aBlue.View, bBlue.View, cBlue.View, bound.View));
-                if (ForceSync) accelerator.Synchronize();
-                aBlue.Dispose();
-                bBlue.Dispose();
 
                 var result = new Picture(layerA)
                 {
@@ -98,254 +85,184 @@ namespace projectFrameCut.Render.ILGpu
                     frameIndex = frameIndex
                 };
 
-                cRed.CopyToCPU(result.r = new ushort[layerA.Pixels]);
-                cGreen.CopyToCPU(result.g = new ushort[layerA.Pixels]);
-                cBlue.CopyToCPU(result.b = new ushort[layerA.Pixels]);
-                result.a = layerA.a; //保留原图的Alpha通道
-                //Log($"[Render #{frameIndex:d6}] Rendering done.");
+                result.r = new ushort[pixels];
+                result.g = new ushort[pixels];
+                result.b = new ushort[pixels];
+
+                for (int i =0; i < pixels; i++)
+                {
+                    int rr = (int)Math.Round(oR[i] *65535f);
+                    int gg = (int)Math.Round(oG[i] *65535f);
+                    int bb = (int)Math.Round(oB[i] *65535f);
+                    if (rr <0) rr =0; if (rr >65535) rr =65535;
+                    if (gg <0) gg =0; if (gg >65535) gg =65535;
+                    if (bb <0) bb =0; if (bb >65535) bb =65535;
+                    result.r[i] = (ushort)rr;
+                    result.g[i] = (ushort)gg;
+                    result.b[i] = (ushort)bb;
+                }
+
+                // preserve alpha from layerA
+                result.a = layerA.a;
+                result.hasAlphaChannel = layerA.hasAlphaChannel;
 
                 return result;
             }
-            catch (global::ILGPU.Runtime.Cuda.CudaException cudaEx)
+            catch (Exception ex)
             {
-                if(cudaEx.Message.Contains("out of memory", StringComparison.CurrentCultureIgnoreCase))
-                {
-                    throw new OutOfMemoryException("VRAM is not enough to render this frame. Try close all programs use GPU, reboot your device, use another render accelerator, or upgrade your GPU or use CPU to render (not recommend).", cudaEx);
-                }
-            }
-            catch (global::ILGPU.Runtime.OpenCL.CLException ex)
-            {
-                throw new OutOfMemoryException("An error happens during render, probably the VRAM is not enough to render this frame. Try close all programs use GPU, reboot your device, use another render accelerator, or upgrade your GPU or use CPU to render (not recommend).", ex);
-            }
-            catch
-            {
+                // fall back to throwing original exception
                 throw;
             }
-
-
-            return new Picture(0,0);
-
         }
 
 
-
-        public static Picture MapAlphaAndUpperBond(this Picture picture, Accelerator accelerator, ushort upperBond = ushort.MaxValue)
+        public static Picture MapAlphaAndUpperBond(this Picture picture, Accelerator? accelerator, ushort upperBond = ushort.MaxValue)
         {
             if (!picture.hasAlphaChannel) return picture;
-            using MemoryBuffer1D<ushort, Stride1D.Dense> aRed = Allocate1D<ushort>(picture.Pixels, accelerator);
-            using MemoryBuffer1D<ushort, Stride1D.Dense> aGreen = Allocate1D<ushort>(picture.Pixels, accelerator);
-            using MemoryBuffer1D<ushort, Stride1D.Dense> aBlue = Allocate1D<ushort>(picture.Pixels, accelerator);
-            using MemoryBuffer1D<float, Stride1D.Dense> aAlpha = accelerator.Allocate1D<float>(picture.Pixels);
 
-            using MemoryBuffer1D<ushort, Stride1D.Dense> cRed = Allocate1D<ushort>(picture.Pixels, accelerator);
-            using MemoryBuffer1D<ushort, Stride1D.Dense> cGreen = Allocate1D<ushort>(picture.Pixels, accelerator);
-            using MemoryBuffer1D<ushort, Stride1D.Dense> cBlue = Allocate1D<ushort>(picture.Pixels, accelerator);
-
-            using MemoryBuffer1D<ushort, Stride1D.Dense> bound = accelerator.Allocate1D<ushort>(1);
-
-            var kernel = accelerator.LoadAutoGroupedStreamKernel<
-                    Index1D, ArrayView<ushort>, ArrayView<float>, ArrayView<ushort>, ArrayView<ushort>>( static (i, a, alpha, c,b) =>
-                    {
-                        c[i] = a[i] > b[0] ? b[0] : (ushort)(a[i] * alpha[i]);
-                    });
-
-            aAlpha.CopyFromCPU(picture.a);
-            bound.CopyFromCPU([upperBond]);
-
-            aRed.CopyFromCPU(picture.r);
-            LockRun(() => kernel(picture.Pixels, aRed.View, aAlpha.View, cRed.View,bound.View));
-            if (ForceSync) accelerator.Synchronize();
-            aRed.Dispose();
-
-            aGreen.CopyFromCPU(picture.g);
-            LockRun(() => kernel(picture.Pixels, aGreen.View, aAlpha.View, cGreen.View, bound.View));
-            if (ForceSync) accelerator.Synchronize();
-            aGreen.Dispose();   
-
-            aBlue.CopyFromCPU(picture.b);
-            LockRun(() => kernel(picture.Pixels, aBlue.View, aAlpha.View, cBlue.View, bound.View));
-            if (ForceSync) accelerator.Synchronize();
-            aBlue.Dispose();
-
-            var result = new Picture (picture.Width, picture.Height)
+            int pixels = picture.Pixels;
+            var result = new Picture(picture.Width, picture.Height)
             {
-                hasAlphaChannel = false,
-                //a = Array.Empty<float>()
+                hasAlphaChannel = false
             };
 
-            cRed.CopyToCPU(result.r = new ushort[picture.Pixels]);
-            cGreen.CopyToCPU(result.g = new ushort[picture.Pixels]);
-            cBlue.CopyToCPU(result.b = new ushort[picture.Pixels]);
+            result.r = new ushort[pixels];
+            result.g = new ushort[pixels];
+            result.b = new ushort[pixels];
+
+            for (int i =0; i < pixels; i++)
+            {
+                float alpha = picture.a![i];
+                int rr = (int)Math.Round(picture.r[i] * alpha);
+                int gg = (int)Math.Round(picture.g[i] * alpha);
+                int bb = (int)Math.Round(picture.b[i] * alpha);
+                if (rr > upperBond) rr = upperBond;
+                if (gg > upperBond) gg = upperBond;
+                if (bb > upperBond) bb = upperBond;
+                if (rr <0) rr =0; if (rr >65535) rr =65535;
+                if (gg <0) gg =0; if (gg >65535) gg =65535;
+                if (bb <0) bb =0; if (bb >65535) bb =65535;
+                result.r[i] = (ushort)rr;
+                result.g[i] = (ushort)gg;
+                result.b[i] = (ushort)bb;
+            }
 
             return result;
         }
 
-        public static void RenderAdd(Index1D i, ArrayView<ushort> a, ArrayView<ushort> b, ArrayView<ushort> c, ArrayView<ushort> bound)
+        private static Picture RenderOverlayCPU(Picture a, Picture b, uint frameIndex)
         {
-            uint temp = (uint)(a[i] + b[i]);
-            if (temp > ushort.MaxValue)
-            {
-                if (bound[1] == 0)
-                    c[i] = ushort.MaxValue;
-                else
-                    c[i] = (ushort)(temp - ushort.MaxValue);
-            }
-            else
-            {
-                if (bound[0] > 0)
-                    c[i] = (temp < bound[0]) ? (ushort)temp : bound[0];
-                else
-                    c[i] = (ushort)temp;
-            }
-        }
-
-        public static void RenderMinus(Index1D i, ArrayView<ushort> a, ArrayView<ushort> b, ArrayView<ushort> c, ArrayView<ushort> bound)
-        {
-            int temp = a[i] - b[i];
-            if (temp > ushort.MaxValue)
-            {
-                if (bound[1] == 0)
-                    c[i] = ushort.MaxValue;
-                else
-                    c[i] = (ushort)(MathF.Abs(temp - ushort.MaxValue));
-            }
-            else
-            {
-                if (bound[0] > 0)
-                    c[i] = (temp < bound[0]) ? (ushort)temp : bound[0];
-                else
-                    c[i] = (ushort)temp;
-            }
-        }
-
-        public static void RenderMultiply(Index1D i, ArrayView<ushort> a, ArrayView<ushort> b, ArrayView<ushort> c, ArrayView<ushort> bound)
-        {
-            uint temp = (uint)(a[i] * b[i]);
-            if (temp > ushort.MaxValue)
-            {
-                if (bound[1] == 0)
-                    c[i] = ushort.MaxValue;
-                else
-                    c[i] = (ushort)(temp - ushort.MaxValue * (ushort.MaxValue / temp));
-            }
-            else
-            {
-                if (bound[0] > 0)
-                    c[i] = (temp < bound[0]) ? (ushort)temp : bound[0];
-                else
-                    c[i] = (ushort)temp;
-            }
-        }
-
-        public static Picture RenderOverlay(Picture a, Picture b, Accelerator accelerator, uint frameIndex)
-        {
-            if (!a.hasAlphaChannel) return a; //一个图层完全不透明，再去运算完全没有意义
-            //Log($"[#{frameIndex:d6}@Mixer] start overlay 2 layer with GPU...");
+            if (!a.hasAlphaChannel) return a;
             b.EnsureAlpha();
             a.EnsureAlpha();
-            var kernel = accelerator.LoadAutoGroupedStreamKernel<Index1D, ArrayView1D<ushort, Stride1D.Dense>, ArrayView1D<float, Stride1D.Dense>, ArrayView1D<ushort, Stride1D.Dense>, ArrayView1D<float, Stride1D.Dense>, ArrayView1D<ushort, Stride1D.Dense>, ArrayView1D<float, Stride1D.Dense>>(
-                (i, a, aAlpha, b, bAlpha, c, cAlpha) =>
-                {
-                    if (aAlpha[i] == 1f)
-                    {
-                        c[i] = a[i];
-                        cAlpha[i] = 1f;
-                    }
-                    else if (aAlpha[i] <= 0.05f)
-                    {
-                        c[i] = b[i];
-                        cAlpha[i] = bAlpha[i];
-                    }
-                    else
-                    {
-                        float aA = aAlpha[i];
-                        float bA = bAlpha[i];
-                        float outA = aA + bA * (1 - aA);
-                        if (outA < 1e-6f)
-                        {
-                            c[i] = 0;
-                            cAlpha[i] = 0f;
-                        }
-                        else
-                        {
-                            float aC = a[i] * aA / outA;
-                            float bC = b[i] * bA * (1 - aA) / outA;
-                            float outC = aC + bC;
-                            if (outC < 0f) outC = 0f;
-                            if (outC > ushort.MaxValue) outC = ushort.MaxValue;
-                            c[i] = (ushort)outC;
-                            cAlpha[i] = outA;
-                        }
-                    }
-                });                   
-            
-            using MemoryBuffer1D<float, Stride1D.Dense> aAlpha = Allocate1D<float>(a.Pixels,accelerator);            
-            using MemoryBuffer1D<float, Stride1D.Dense> bAlpha = Allocate1D<float>(a.Pixels, accelerator);           
-            using MemoryBuffer1D<float, Stride1D.Dense> cAlpha = Allocate1D<float>(a.Pixels, accelerator);
-
-            aAlpha.CopyFromCPU(a.a);
-            bAlpha.CopyFromCPU(b.a);
-
-            //Log($"[Render #{frameIndex:d6}] Rendering R channel...");
-
-            using MemoryBuffer1D<ushort, Stride1D.Dense> aRed = Allocate1D<ushort>(a.Pixels, accelerator);
-            using MemoryBuffer1D<ushort, Stride1D.Dense> bRed = Allocate1D<ushort>(a.Pixels, accelerator);
-            using MemoryBuffer1D<ushort, Stride1D.Dense> cRed = Allocate1D<ushort>(a.Pixels, accelerator);
-
-            aRed.CopyFromCPU(a.r);
-            bRed.CopyFromCPU(b.r);
-
-            LockRun(() => kernel(a.Pixels, aRed.View, aAlpha.View, bRed.View, bAlpha.View, cRed.View, cAlpha.View));
-            if (ForceSync) accelerator.Synchronize();
-
-            aRed.Dispose();//避免炸显存
-            bRed.Dispose();
-
-            //Log($"[Render #{frameIndex:d6}] Rendering G channel...");
-
-            using MemoryBuffer1D<ushort, Stride1D.Dense> aGreen = Allocate1D<ushort>(a.Pixels,accelerator);
-            using MemoryBuffer1D<ushort, Stride1D.Dense> bGreen = Allocate1D<ushort>(a.Pixels, accelerator);
-            using MemoryBuffer1D<ushort, Stride1D.Dense> cGreen = Allocate1D<ushort>(a.Pixels, accelerator);
-
-            aGreen.CopyFromCPU(a.g);
-            bGreen.CopyFromCPU(b.g);
-
-            LockRun(() => kernel(a.Pixels, aGreen.View, aAlpha.View, bGreen.View, bAlpha.View, cGreen.View, cAlpha.View));
-            if (ForceSync) accelerator.Synchronize();
-
-            aGreen.Dispose();
-            bGreen.Dispose();
-
-            //Log($"[Render #{frameIndex:d6}] Rendering B channel...");
-
-            using MemoryBuffer1D<ushort, Stride1D.Dense> aBlue = Allocate1D<ushort>(a.Pixels, accelerator);
-            using MemoryBuffer1D<ushort, Stride1D.Dense> bBlue = Allocate1D<ushort>(a.Pixels, accelerator);
-            using MemoryBuffer1D<ushort, Stride1D.Dense> cBlue = Allocate1D<ushort>(a.Pixels, accelerator);
-
-            aBlue.CopyFromCPU(a.b);
-            bBlue.CopyFromCPU(b.b);
-
-            LockRun(() => kernel(a.Pixels, aBlue.View, aAlpha.View, bBlue.View, bAlpha.View, cBlue.View, cAlpha.View));
-            if (ForceSync) accelerator.Synchronize();
-
-            aBlue.Dispose();
-            bBlue.Dispose();
+            int pixels = a.Pixels;
 
             var result = new Picture(a)
             {
                 Width = a.Width,
                 Height = a.Height,
-                frameIndex = frameIndex
+                frameIndex = frameIndex,
+                r = new ushort[pixels],
+                g = new ushort[pixels],
+                b = new ushort[pixels],
+                a = new float[pixels],
+                hasAlphaChannel = true
             };
 
-            cRed.CopyToCPU(result.r = new ushort[a.Pixels]);
-            cGreen.CopyToCPU(result.g = new ushort[a.Pixels]);
-            cBlue.CopyToCPU(result.b = new ushort[a.Pixels]);
-            cAlpha.CopyToCPU(result.a = new float[a.Pixels]);
-            //Log($"[Render #{frameIndex:d6}] Rendering overlay done.");
+            for (int i =0; i < pixels; i++)
+            {
+                float aAlpha = a.a![i];
+                float bAlpha = b.a![i];
+                ushort aVal = a.r[i];
+                ushort bVal = b.r[i];
+
+                // R channel
+                if (aAlpha ==1f)
+                {
+                    result.r[i] = a.r[i];
+                    result.a[i] =1f;
+                }
+                else if (aAlpha <=0.05f)
+                {
+                    result.r[i] = b.r[i];
+                    result.a[i] = bAlpha;
+                }
+                else
+                {
+                    float outA = aAlpha + bAlpha * (1 - aAlpha);
+                    if (outA <1e-6f)
+                    {
+                        result.r[i] =0;
+                        result.a[i] =0f;
+                    }
+                    else
+                    {
+                        float aC = a.r[i] * aAlpha / outA;
+                        float bC = b.r[i] * bAlpha * (1 - aAlpha) / outA;
+                        float outC = aC + bC;
+                        if (outC <0f) outC =0f;
+                        if (outC > ushort.MaxValue) outC = ushort.MaxValue;
+                        result.r[i] = (ushort)outC;
+                        result.a[i] = outA;
+                    }
+                }
+
+                // G channel
+                if (aAlpha ==1f)
+                {
+                    result.g[i] = a.g[i];
+                }
+                else if (aAlpha <=0.05f)
+                {
+                    result.g[i] = b.g[i];
+                }
+                else
+                {
+                    float outA = result.a[i];
+                    if (outA <1e-6f)
+                    {
+                        result.g[i] =0;
+                    }
+                    else
+                    {
+                        float aC = a.g[i] * aAlpha / outA;
+                        float bC = b.g[i] * bAlpha * (1 - aAlpha) / outA;
+                        float outC = aC + bC;
+                        if (outC <0f) outC =0f;
+                        if (outC > ushort.MaxValue) outC = ushort.MaxValue;
+                        result.g[i] = (ushort)outC;
+                    }
+                }
+
+                // B channel
+                if (aAlpha ==1f)
+                {
+                    result.b[i] = a.b[i];
+                }
+                else if (aAlpha <=0.05f)
+                {
+                    result.b[i] = b.b[i];
+                }
+                else
+                {
+                    float outA = result.a[i];
+                    if (outA <1e-6f)
+                    {
+                        result.b[i] =0;
+                    }
+                    else
+                    {
+                        float aC = a.b[i] * aAlpha / outA;
+                        float bC = b.b[i] * bAlpha * (1 - aAlpha) / outA;
+                        float outC = aC + bC;
+                        if (outC <0f) outC =0f;
+                        if (outC > ushort.MaxValue) outC = ushort.MaxValue;
+                        result.b[i] = (ushort)outC;
+                    }
+                }
+            }
+
             return result;
-
-
         }
 
         private static void LockRun(Action action)

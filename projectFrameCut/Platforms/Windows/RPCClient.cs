@@ -1,5 +1,6 @@
 ﻿using projectFrameCut.Shared;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Pipes;
 using System.Text;
 using System.Text.Json;
@@ -13,6 +14,65 @@ public sealed class RpcClient : IAsyncDisposable
     private StreamReader? _reader;
     private StreamWriter? _writer;
     private Process? _proc;
+
+    public Action<JsonElement>? ErrorCallback = null;
+
+    public static string BootRPCServer(out Process rpcProc, string options = "1280,720,42,AV_PIX_FMT_NONE,nope",  bool VerboseBackendLog = false, Action<string>? stdoutCallback = null, Action<string>? stderrCallback = null)
+    {
+        var pipeId = "pjfc_rpc_V1_" + Guid.NewGuid().ToString();
+        var tmpDir = Path.Combine(Path.GetTempPath(), "pjfc_temp");
+        Directory.CreateDirectory(tmpDir);
+        rpcProc = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Render.WindowsRender.exe"),
+                WorkingDirectory = Path.Combine(AppContext.BaseDirectory),
+                Arguments = $" rpc_backend  -pipe={pipeId} -output_options={options} -tempFolder={tmpDir} ",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+            }
+        };
+        if (VerboseBackendLog)
+        {
+            rpcProc.StartInfo.RedirectStandardError = false;
+            rpcProc.StartInfo.RedirectStandardOutput = false;
+            rpcProc.StartInfo.CreateNoWindow = false;
+            rpcProc.StartInfo.UseShellExecute = true;
+        }
+
+        Log($"Starting RPC backend with pipe ID: {pipeId}, args:{rpcProc.StartInfo.Arguments}");
+
+        rpcProc.OutputDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+            {
+                Log(e.Data, "Backend_STDOUT");
+                stdoutCallback?.Invoke(e.Data);
+            }
+        };
+
+        rpcProc.ErrorDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+            {
+                Log(e.Data, "Backend_STDERR");
+                stderrCallback?.Invoke(e.Data);
+            }
+        };
+
+        rpcProc.EnableRaisingEvents = true;
+        rpcProc.Start();
+        if (!VerboseBackendLog)
+        {
+            rpcProc.BeginErrorReadLine();
+            rpcProc.BeginOutputReadLine();
+        }
+
+        return pipeId;
+    }
 
     public async Task StartAsync(string pipeName, CancellationToken ct = default) => await StartAsync(new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous), ct);
 
@@ -35,14 +95,22 @@ public sealed class RpcClient : IAsyncDisposable
             throw new InvalidOperationException("连接 RPC 后端失败。", ex);
         }
 
-
-        _reader = new StreamReader(_pipe, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 8192, leaveOpen: true);
-        _writer = new StreamWriter(_pipe, new UTF8Encoding(false), bufferSize: 8192, leaveOpen: true)
+        try
         {
-            AutoFlush = true,
-            NewLine = "\n"
-        };
-    }
+            _reader = new StreamReader(_pipe, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 8192, leaveOpen: true);
+            _writer = new StreamWriter(_pipe, new UTF8Encoding(false), bufferSize: 8192, leaveOpen: true)
+            {
+                AutoFlush = true,
+                NewLine = "\n"
+            };
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("初始化 RPC 通信失败。", ex);
+        }
+
+
+        }
 
     public async Task<JsonElement?> SendAsync(string type, JsonElement msg, CancellationToken ct = default)
     {
@@ -56,8 +124,18 @@ public sealed class RpcClient : IAsyncDisposable
         var resp = await SendReceiveAsync(req, ct);
         if (resp?.RequestId == req.RequestId && resp.Payload is { } p)
         {
+            try
+            {
+                if (resp.Payload.Value.TryGetProperty("status", out var stat) && stat.GetString() is not null && !(stat.GetString() ?? "").Equals("ok", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    ErrorCallback?.Invoke(p);
+                }
+            }
+            catch
+            {
+                //ignore
+            }
             return p;
-            //return p.Deserialize<RpcProtocol.RpcMessage>(RpcProtocol.JsonOptions);
         }
         return null;
     }

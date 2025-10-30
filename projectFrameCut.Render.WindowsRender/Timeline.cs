@@ -9,7 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using static projectFrameCut.Render.VideoDecoder;
+using static projectFrameCut.Render.Video;
 
 namespace projectFrameCut.Render.ILGpu
 {
@@ -22,9 +22,9 @@ namespace projectFrameCut.Render.ILGpu
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
-        public Effects[] Effects { get; init; } = Array.Empty<Effects>();
+        public projectFrameCut.Shared.Effects[] Effects { get; init; } = Array.Empty<projectFrameCut.Shared.Effects>();
         public RenderMode MixtureMode { get; init; } = RenderMode.Overlay;
-        public string FilePath { get; init; }
+        public string? FilePath { get; init; }
 
         [System.Text.Json.Serialization.JsonIgnore]
         public IDecoderContext? Decoder { get; set; } = null;
@@ -41,7 +41,7 @@ namespace projectFrameCut.Render.ILGpu
 
         void IClip.ReInit()
         {
-            Decoder = new VideoDecoder(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null.")).Decoder;
+            Decoder = new Video(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null.")).Decoder;
         }
 
 
@@ -62,7 +62,7 @@ namespace projectFrameCut.Render.ILGpu
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
-        public Effects[] Effects { get; init; } = Array.Empty<Effects>();
+        public projectFrameCut.Shared.Effects[] Effects { get; init; } = Array.Empty<projectFrameCut.Shared.Effects>();
         public RenderMode MixtureMode { get; init; } = RenderMode.Overlay;
         public string? FilePath { get; init; } = string.Empty;
 
@@ -102,7 +102,7 @@ namespace projectFrameCut.Render.ILGpu
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
-        public Effects[] Effects { get; init; } = Array.Empty<Effects>();
+        public projectFrameCut.Shared.Effects[] Effects { get; init; } = Array.Empty<projectFrameCut.Shared.Effects>();
         public RenderMode MixtureMode { get; init; } = RenderMode.Overlay;
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.Special;

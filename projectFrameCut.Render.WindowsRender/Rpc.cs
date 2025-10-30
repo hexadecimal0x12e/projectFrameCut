@@ -271,8 +271,53 @@ namespace projectFrameCut.Render.WindowsRender
                                 }
                                 try
                                 {
-                                    var vid = new VideoDecoder(path);
+                                    var vid = new Video(path);
                                     Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "frameCount", vid.Decoder.TotalFrames }, { "fps", vid.Decoder.Fps }, { "width", vid.Decoder.Width }, { "height", vid.Decoder.Height } });
+                                }
+                                catch (Exception ex)
+                                {
+                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", ex.Message } });
+                                }
+                                break;
+                            }
+                        case "ReadAFrame":
+                            {
+                                if (msg.Payload is null)
+                                {
+                                    Log("[RPC] GetVideoFileInfo missing payload.");
+                                    break;
+                                }
+                                var path = msg.Payload.Value.GetProperty("path").GetString();
+                                var FrameToRead = msg.Payload.Value.GetProperty("frameToRead").GetUInt32();
+                                if (string.IsNullOrWhiteSpace(path) || !Path.Exists(path))
+                                {
+                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", "File not found." } });
+                                    break;
+                                }
+                               
+                                try
+                                {
+                                    var vid = new Video(path);
+                                    if(FrameToRead > vid.Decoder.TotalFrames)
+                                    {
+                                        Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", "Invaild length." } });
+                                        break;
+                                    }
+                                    var frame = vid.Decoder.GetFrame(FrameToRead, true);
+                                    var tmpPath = Path.Combine(tempFolder, $"extractedFrame-{Path.GetFileNameWithoutExtension(path)}-{FrameToRead}.png");
+                                    if(msg.Payload.Value.TryGetProperty("size", out var destSize))
+                                    {
+                                        string? sizeStr = "";
+                                        if((sizeStr = destSize.GetString()) is not null)
+                                        {
+                                            int w = int.Parse(sizeStr.Split('x')[0]);
+                                            int h = int.Parse(sizeStr.Split('x')[1]);
+
+                                            frame = frame.Resize(w, h);
+                                        }
+                                    }
+                                    frame.SaveAsPng16bpc(tmpPath, encoder);
+                                    Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "path", tmpPath } });
                                 }
                                 catch (Exception ex)
                                 {

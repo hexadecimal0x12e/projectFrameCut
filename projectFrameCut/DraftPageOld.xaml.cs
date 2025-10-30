@@ -206,7 +206,7 @@ namespace projectFrameCut
                     
                     try
                     {
-                        var vid = new VideoDecoder(item.Path);
+                        var vid = new Video(item.Path);
                         item.FrameCount = vid.Decoder.TotalFrames;
                         item.SecondPerFrame = (float)(1f / vid.Decoder.Fps);
 
@@ -525,7 +525,7 @@ namespace projectFrameCut
                 {
                     FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Render.WindowsRender.exe"),
                     WorkingDirectory = Path.Combine(AppContext.BaseDirectory),
-                    Arguments = $" rpc_backend  -pipe={pipeId} -output_options=3840,2160,42,AV_PIX_FMT_NONE,nope -tempFolder={tmpDir} ",
+                    Arguments = $" rpc_backend  -pipe={pipeId} -output_options=1280,720,42,AV_PIX_FMT_NONE,nope -tempFolder={tmpDir} ",
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardError = true,

@@ -23,4 +23,14 @@ namespace projectFrameCut.Shared
         Multiply,
         RemoveColor
     }
+
+    public enum MyAcceleratorType
+    {
+        Auto,
+        CUDA,
+        OpenCL,
+        OpenGL,
+        Metal,
+        CPU
+    }
 }

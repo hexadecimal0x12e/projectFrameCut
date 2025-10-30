@@ -1,11 +1,8 @@
 ﻿using FFmpeg.AutoGen;
-using ILGPU;
-using ILGPU.Runtime;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
-using static projectFrameCut.Shared.Logger;
 
 namespace projectFrameCut.Render
 {

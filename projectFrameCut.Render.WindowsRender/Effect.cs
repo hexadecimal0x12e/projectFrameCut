@@ -1,6 +1,7 @@
 ﻿using ILGPU;
 using ILGPU.Runtime;
 using projectFrameCut.Shared;
+using projectFrameCut.Render.Effects;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,193 +12,106 @@ using System.Threading.Tasks;
 
 namespace projectFrameCut.Render.ILGPU
 {
-    
-
     public class Effect
     {
         private static object locker = new();
         public static bool ForceSync { get; set; } = false;
-        public static Picture RenderEffect(Picture source, EffectType mode, Accelerator accelerator, uint frameIndex, object[] arguments)
+        public static Picture RenderEffect(Picture source, EffectType mode, Accelerator? accelerator, uint frameIndex, object[] arguments)
         {
-            Log($"[#{frameIndex:d6}@Effect] start render effect '{mode}' with GPU...");
+            Log($"[#{frameIndex:d6}@Effect] start render effect '{mode}' ...");
 
             switch (mode)
             {
                 case EffectType.RemoveColor:
                     {
-#pragma warning disable CS8600 
+#pragma warning disable CS8600
                         string colorString = arguments[0] is JsonElement je ? je.GetString() : (string)arguments[0];
-#pragma warning restore CS8600 
+#pragma warning restore CS8600
                         int range = arguments[1] is JsonElement je2 ? je2.GetInt32() : (int)arguments[1];
                         ArgumentNullException.ThrowIfNull(colorString, nameof(colorString));
-                        if (colorString.Length != 8) throw new ArgumentException("Color string must be a 6-character hexadecimal string representing ARGB color, e.g., '00FF00FF' for magenta.", nameof(colorString));
+                        if (colorString.Length !=8) throw new ArgumentException("Color string must be a8-character hexadecimal string representing ARGB color, e.g., '00FF00FF' for magenta.", nameof(colorString));
 
-                        return RenderRemoveColor(
-                            source,
-                            accelerator,
-                            frameIndex,
-                            System.Drawing.Color.FromArgb(int.Parse(colorString, System.Globalization.NumberStyles.HexNumber)),
-                            range
-                        );
-
+                        var color = System.Drawing.Color.FromArgb(int.Parse(colorString, System.Globalization.NumberStyles.HexNumber));
+                        return RenderRemoveColorCPU(source, frameIndex, color, range);
                     }
-
-                default:
-                    break;
+                case EffectType.ReplaceAlpha:
+                    {
+                        // Expect argument: Picture b (replacement alpha source) or float alpha
+                        if (arguments.Length >=1 && arguments[0] is Picture bpic)
+                        {
+                            return RenderReplaceAlpha(source, bpic, accelerator!, frameIndex);
+                        }
+                        if (arguments.Length >=1 && (arguments[0] is float f))
+                        {
+                            // replace alpha with constant
+                            var dest = new Picture(source)
+                            {
+                                r = source.r,
+                                g = source.g,
+                                b = source.b,
+                                a = Enumerable.Repeat(f, source.Pixels).ToArray(),
+                                hasAlphaChannel = true,
+                                Width = source.Width,
+                                Height = source.Height,
+                                frameIndex = frameIndex
+                            };
+                            return dest;
+                        }
+                        break;
+                    }
             }
 
-
-
-            var result = (typeof(Effect).GetMethod($"Render{mode}") ?? throw new KeyNotFoundException($"Effect type '{mode}' is not supported or not exist.")).Invoke(null, Enumerable.Concat([source, accelerator, frameIndex], arguments).ToArray());
-            if(result is Picture pictureResult)
-            {
-                return pictureResult;
-            } 
+            var method = typeof(Effect).GetMethod($"Render{mode}", BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic);
+            if (method == null) throw new KeyNotFoundException($"Effect type '{mode}' is not supported or not exist.");
+            var result = method.Invoke(null, Enumerable.Concat(new object?[] { source, accelerator, frameIndex }, arguments).ToArray());
+            if (result is Picture pic) return pic;
             throw new InvalidCastException($"The result of effect render method '{mode}' is not a Picture.");
-
         }
 
-        public static Picture RenderCropAndResize(Picture a, Accelerator accelerator, uint frameIndex, int xStart, int yStart, int xEnd, int yEnd)
+        private static Picture RenderRemoveColorCPU(Picture a, uint frameIndex, System.Drawing.Color color, int range)
         {
-            throw new NotImplementedException("RenderCropAndResize is not implemented yet.");
-        }
+            int pixels = a.Pixels;
+            // convert bounds to normalized0..1
+            int lowR = Math.Max(0, (color.R *257) - range);
+            int lowG = Math.Max(0, (color.G *257) - range);
+            int lowB = Math.Max(0, (color.B *257) - range);
+            int highR = Math.Min(65535, (color.R *257) + range);
+            int highG = Math.Min(65535, (color.G *257) + range);
+            int highB = Math.Min(65535, (color.B *257) + range);
 
-        public static Picture RenderResize(Picture a, Accelerator accelerator, uint frameIndex, int newWidth, int newHeight)
-        {
-            throw new NotImplementedException("RenderResize is not implemented yet.");
-        }
+            float lowRf = lowR /65535f;
+            float lowGf = lowG /65535f;
+            float lowBf = lowB /65535f;
+            float highRf = highR /65535f;
+            float highGf = highG /65535f;
+            float highBf = highB /65535f;
 
-        public static Picture RenderColorCorrection(Picture a, Accelerator accelerator, uint frameIndex, float brightness, float contrast, float saturation)
-        {
-            throw new NotImplementedException("RenderColorCorrection is not implemented yet.");
-        }
-
-        public static Picture RenderRemoveColor(Picture a, Accelerator accelerator, uint frameIndex, System.Drawing.Color color, int range)
-        {
-            var kernel = accelerator.LoadAutoGroupedStreamKernel<
-                Index1D,                             //i 
-                ArrayView1D<ushort, Stride1D.Dense>, //r
-                ArrayView1D<ushort, Stride1D.Dense>, //lowR
-                ArrayView1D<ushort, Stride1D.Dense>, //highR
-                ArrayView1D<byte, Stride1D.Dense>   //c
-                >(static
-                (i, a, low, high, c) =>
-                {
-                    if (low[0] <= a[i] && a[i] <= high[0])
-                    {
-                        c[i] = 1;
-
-                    }
-                    else
-                    {
-                        c[i] = 0;
-
-                    }
-
-                });
-
-
-
-            //Log($"[Render #{frameIndex:d6}] Loading data...");
-
-
-
-            using MemoryBuffer1D<ushort, Stride1D.Dense> lowRed = accelerator.Allocate1D<ushort>(1);
-            using MemoryBuffer1D<ushort, Stride1D.Dense> lowGreen = accelerator.Allocate1D<ushort>(1);
-            using MemoryBuffer1D<ushort, Stride1D.Dense> lowBlue = accelerator.Allocate1D<ushort>(1);
-
-            using MemoryBuffer1D<ushort, Stride1D.Dense> highRed = accelerator.Allocate1D<ushort>(1);
-            using MemoryBuffer1D<ushort, Stride1D.Dense> highGreen = accelerator.Allocate1D<ushort>(1);
-            using MemoryBuffer1D<ushort, Stride1D.Dense> highBlue = accelerator.Allocate1D<ushort>(1);
-
-            using MemoryBuffer1D<byte, Stride1D.Dense> cAlphaR = accelerator.Allocate1D<byte>(a.Pixels);
-            using MemoryBuffer1D<byte, Stride1D.Dense> cAlphaG = accelerator.Allocate1D<byte>(a.Pixels);
-            using MemoryBuffer1D<byte, Stride1D.Dense> cAlphaB = accelerator.Allocate1D<byte>(a.Pixels);
-
-            //把8bit颜色转换到16bit
-            int lowR = (color.R * 257) - (ushort)range,
-                lowG = (color.G * 257) - (ushort)range,
-                lowB = (color.B * 257) - (ushort)range,
-                highR = (color.R * 257) + (ushort)range,
-                highG = (color.G * 257) + (ushort)range,
-                highB = (color.B * 257) + (ushort)range;
-
-            lowR = lowR < 0 ? 0 : lowR;
-            lowG = lowG < 0 ? 0 : lowG;
-            lowB = lowB < 0 ? 0 : lowB;
-            highR = highR > 65535 ? 65535 : highR;
-            highG = highG > 65535 ? 65535 : highG;
-            highB = highB > 65535 ? 65535 : highB;
-
-            checked
+            float[] aR = new float[pixels];
+            float[] aG = new float[pixels];
+            float[] aB = new float[pixels];
+            for (int i =0; i < pixels; i++)
             {
-                lowRed.CopyFromCPU([(ushort)lowR]);
-                lowGreen.CopyFromCPU([(ushort)lowG]);
-                lowBlue.CopyFromCPU([(ushort)lowB]);
-
-                highRed.CopyFromCPU([(ushort)highR]);
-                highGreen.CopyFromCPU([(ushort)highG]);
-                highBlue.CopyFromCPU([(ushort)highB]);
+                aR[i] = a.r[i] /65535f;
+                aG[i] = a.g[i] /65535f;
+                aB[i] = a.b[i] /65535f;
             }
 
+            float[] zeros = new float[pixels];
 
-            cAlphaR.CopyFromCPU(new byte[a.Pixels]);
-            cAlphaG.CopyFromCPU(new byte[a.Pixels]);
-            cAlphaB.CopyFromCPU(new byte[a.Pixels]);
-
-            using MemoryBuffer1D<ushort, Stride1D.Dense> aRed = Allocate1D<ushort>(a.Pixels,accelerator);
-            aRed.CopyFromCPU(a.r);
-            LockRun(() => kernel(a.Pixels,
-                            aRed.View,
-                            lowRed.View,
-                            highRed.View,
-                            cAlphaR.View));
-            if (ForceSync) accelerator.Synchronize();
-
-            aRed.Dispose();
-            lowRed.Dispose();
-            highRed.Dispose();
-
-            using MemoryBuffer1D<ushort, Stride1D.Dense> aGreen = Allocate1D<ushort>(a.Pixels,accelerator);
-            aGreen.CopyFromCPU(a.g);
-            LockRun(() => kernel(a.Pixels,
-                        aGreen.View,
-                        lowGreen.View,
-                        highGreen.View,
-                        cAlphaG.View));
-            if (ForceSync) accelerator.Synchronize();
-
-            aGreen.Dispose();
-            highGreen.Dispose();
-            lowGreen.Dispose();
-
-            using MemoryBuffer1D<ushort, Stride1D.Dense> aBlue = Allocate1D<ushort>(a.Pixels,accelerator);
-            aBlue.CopyFromCPU(a.b);
-            LockRun(() => kernel(a.Pixels,
-                        aBlue.View,
-                        lowBlue.View,
-                        highBlue.View,
-                        cAlphaB.View));
-            if (ForceSync) accelerator.Synchronize();
-
-            aBlue.Dispose();
-            highBlue.Dispose();
-            lowBlue.Dispose();
-
-
-            byte[] AlphaR = new byte[a.Pixels], AlphaG = new byte[a.Pixels], AlphaB = new byte[a.Pixels];
-            float[] alpha = new float[a.Pixels];
-            cAlphaR.CopyToCPU(AlphaR);
-            cAlphaG.CopyToCPU(AlphaG);
-            cAlphaB.CopyToCPU(AlphaB);
+            float[] rMask = EffectsEngine.RemoveColorComputer.Compute(MyAcceleratorType.CPU,3, aR, Enumerable.Repeat(lowRf, pixels).ToArray(), Enumerable.Repeat(highRf, pixels).ToArray(), zeros, zeros, zeros);
+            float[] gMask = EffectsEngine.RemoveColorComputer.Compute(MyAcceleratorType.CPU,3, aG, Enumerable.Repeat(lowGf, pixels).ToArray(), Enumerable.Repeat(highGf, pixels).ToArray(), zeros, zeros, zeros);
+            float[] bMask = EffectsEngine.RemoveColorComputer.Compute(MyAcceleratorType.CPU,3, aB, Enumerable.Repeat(lowBf, pixels).ToArray(), Enumerable.Repeat(highBf, pixels).ToArray(), zeros, zeros, zeros);
 
             a.EnsureAlpha();
-
-            for (int i = 0; i < a.Pixels; i++)
+            float[] newAlpha = new float[pixels];
+            for (int i =0; i < pixels; i++)
             {
-#pragma warning disable CS8602 // 这里已经保证有alpha通道了
-                alpha[i] = AlphaR[i] == 1 && AlphaG[i] == 1 && AlphaB[i] == 1 ? 0f : a.a[i];
-#pragma warning restore CS8602 
+                bool removed = rMask[i] ==0f && gMask[i] ==0f && bMask[i] ==0f;
+                newAlpha[i] = removed ?0f : a.a![i];
+                if (newAlpha[i] ==0f)
+                {
+                    a.r[i] =0; a.g[i] =0; a.b[i] =0;
+                }
             }
 
             var result = new Picture(a)
@@ -205,60 +119,11 @@ namespace projectFrameCut.Render.ILGPU
                 r = a.r,
                 g = a.g,
                 b = a.b,
-                a = alpha,
+                a = newAlpha,
                 hasAlphaChannel = true,
                 frameIndex = frameIndex
             };
-
-            ////Log($"{result.a.Count((f) => f <= 0.01f)} is almost transept, total {result.Pixels}, pctg:{result.a.Count((f) => f <= 0.01f) / result.Pixels:p2}");
-            for (int i = 0; i < a.Pixels; i++)
-            {
-                if (result.a[i] == 0)
-                {
-                    result.r[i] = 0;
-                    result.g[i] = 0;
-                    result.b[i] = 0;
-                    result.a[i] = 0f;
-                }
-            }
-
-            result.Width = a.Width;
-            result.Height = a.Height;
-            //Log($"[Render #{frameIndex:d6}] Rendering RemoveColor done.");
-
             return result;
-        }
-
-        private static MemoryBuffer1D<T, Stride1D.Dense> Allocate1D<T>(int pixels, Accelerator accelerator) where T : unmanaged
-        {
-            if (ForceSync)
-            {
-                lock (locker)
-                {
-                    return accelerator.Allocate1D<T>(pixels);
-                }
-            }
-            else
-            {
-                return accelerator.Allocate1D<T>(pixels);
-            }
-
-        }
-
-        private static void LockRun(Action action)
-        {
-            if (ForceSync)
-            {
-                lock (locker)
-                {
-                    action();
-                }
-
-            }
-            else
-            {
-                action();
-            }
         }
 
         public static Picture RenderReplaceAlpha(Picture a, Picture b, Accelerator accelerator, uint frameIndex)
@@ -278,6 +143,87 @@ namespace projectFrameCut.Render.ILGPU
             return result;
         }
 
-        
+        public static Picture RenderCropAndResize(Picture a, Accelerator accelerator, uint frameIndex, int xStart, int yStart, int xEnd, int yEnd)
+        {
+            // Use existing CPU implementations in Picture.Resize instead of GPU kernels
+            int w = xEnd - xStart;
+            int h = yEnd - yStart;
+            if (w <=0 || h <=0) throw new ArgumentException("Invalid crop rectangle");
+            Picture cropped = new Picture(w, h);
+            // naive copy
+            for (int y =0; y < h; y++)
+            {
+                for (int x =0; x < w; x++)
+                {
+                    int dst = y * w + x;
+                    int src = (y + yStart) * a.Width + (x + xStart);
+                    cropped.r[dst] = a.r[src];
+                    cropped.g[dst] = a.g[src];
+                    cropped.b[dst] = a.b[src];
+                }
+            }
+            return cropped.Resize(a.Width, a.Height);
+        }
+
+        public static Picture RenderResize(Picture a, Accelerator accelerator, uint frameIndex, int newWidth, int newHeight)
+        {
+            return a.Resize(newWidth, newHeight);
+        }
+
+        public static Picture RenderColorCorrection(Picture a, Accelerator accelerator, uint frameIndex, float brightness, float contrast, float saturation)
+        {
+            int pixels = a.Pixels;
+            float[] r = new float[pixels];
+            float[] g = new float[pixels];
+            float[] b = new float[pixels];
+            for (int i =0; i < pixels; i++)
+            {
+                r[i] = a.r[i] /65535f;
+                g[i] = a.g[i] /65535f;
+                b[i] = a.b[i] /65535f;
+            }
+            float[] br = Enumerable.Repeat(brightness, pixels).ToArray();
+            float[] co = Enumerable.Repeat(contrast, pixels).ToArray();
+            float[] sa = Enumerable.Repeat(saturation, pixels).ToArray();
+            float[] zeros = new float[pixels];
+
+            float[] or = EffectsEngine.ColorCorrectionComputer.Compute(MyAcceleratorType.CPU,3, r, br, co, sa, zeros, zeros);
+            float[] og = EffectsEngine.ColorCorrectionComputer.Compute(MyAcceleratorType.CPU,3, g, br, co, sa, zeros, zeros);
+            float[] ob = EffectsEngine.ColorCorrectionComputer.Compute(MyAcceleratorType.CPU,3, b, br, co, sa, zeros, zeros);
+
+            var result = new Picture(a)
+            {
+                r = new ushort[pixels],
+                g = new ushort[pixels],
+                b = new ushort[pixels],
+                a = a.a,
+                hasAlphaChannel = a.hasAlphaChannel,
+                Width = a.Width,
+                Height = a.Height
+            };
+            for (int i =0; i < pixels; i++)
+            {
+                result.r[i] = (ushort)Math.Clamp((int)Math.Round(or[i] *65535f),0,65535);
+                result.g[i] = (ushort)Math.Clamp((int)Math.Round(og[i] *65535f),0,65535);
+                result.b[i] = (ushort)Math.Clamp((int)Math.Round(ob[i] *65535f),0,65535);
+            }
+            return result;
+        }
+
+        private static MemoryBuffer1D<T, Stride1D.Dense> Allocate1D<T>(int pixels, Accelerator accelerator) where T : unmanaged
+        {
+            if (ForceSync)
+            {
+                lock (locker)
+                {
+                    return accelerator.Allocate1D<T>(pixels);
+                }
+            }
+            else
+            {
+                return accelerator.Allocate1D<T>(pixels);
+            }
+
+        }
     }
 }

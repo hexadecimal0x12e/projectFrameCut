@@ -96,8 +96,12 @@ namespace projectFrameCut
                 Debug.WriteLine($"Failed to set up log file: {ex.Message}");
             }
 
-            Log($"projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture}, os version {Environment.OSVersion}, clr version {Environment.Version}, cmdline: {Environment.CommandLine} ");
-            Log("Copright hexadecimal0x12e 2025, and thanks to other open-source code's author.");
+            Log($"projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version}" +
+                $"                  on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture},\r\n" +
+                $"                  os version {Environment.OSVersion},\r\n" +
+                $"                  clr version {Environment.Version},\r\n" +
+                $"                  cmdline: {Environment.CommandLine}");
+            Log("Copyright (c) hexadecimal0x12e 2025, and thanks to other open-source code's authors. This project is licensed under GNU GPL V2.");
             Log($"DataPath:{DataPath}, loggingDir:{loggingDir}");
             try
             {
@@ -125,8 +129,8 @@ namespace projectFrameCut
                 builder.Logging.AddProvider(new MyLoggerProvider());
                 builder.ConfigureFonts(fonts =>
                     {
-                        fonts.AddFont("HarmonyOS_Sans_SC_Regular.ttf", "OpenSansRegular");
-                        fonts.AddFont("HarmonyOS_Sans_SC_Bold.ttf", "OpenSansSemibold");
+                        fonts.AddFont("HarmonyOS_Sans_SC_Regular.ttf", "Font_Regular");
+                        fonts.AddFont("HarmonyOS_Sans_SC_Bold.ttf", "Font_Semibold");
                     })
 #if ANDROID
                     .ConfigureMauiHandlers(handlers =>
@@ -188,15 +192,16 @@ namespace projectFrameCut
 
 
 #endif
-                //try
-                //{
-                //    var ver = ffmpeg.av_version_info();
-                //    Log($"Internal FFmpeg version:{ver}");
-                //}
-                //catch (PlatformNotSupportedException _)
-                //{
-                //    Log("Unknown internal ffmpeg version");
-                //}
+                try
+                {
+                    Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
+                }
+                catch(Exception ex)
+                {
+                    Log(ex,"query ffmpeg version", CreateMauiApp);
+                    Log("Unknown internal FFmpeg version");
+                }
+
                 Localized = SimpleLocalizer.Init();
                 Log($"Localization initialized to {Localized._LocaleId_}, {Localized.WelcomeMessage}");
                 Log("Everything ready!");

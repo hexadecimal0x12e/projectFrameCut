@@ -23,7 +23,7 @@ namespace projectFrameCut.WinUI
 
         private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
         {
-            throw new NotImplementedException();
+            Crash(e.Exception);
         }
 
         internal static void Crash(Exception ex)
@@ -72,20 +72,21 @@ Current directory: {Environment.CurrentDirectory}
 
 (report ended here)
 """;
-                Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "crashlog"));
                 string logPath;
+
                 try
                 {
+                    Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "crashlog"));
                     logPath = Path.Combine(MauiProgram.DataPath, "crashlog\\", $"Crashlog-{DateTime.Now:yyyy-MM-dd-hh-mm-ss}.log");
                     File.WriteAllText(logPath, logMessage);
                 }
-                catch (Exception) //避免最坏的情况（整个UWP运行时都不可用）
+                catch (Exception)  
                 {
                     logPath = Path.Combine(Directory.CreateTempSubdirectory("audiocopy_").FullName, "crash.log");
                     File.WriteAllText(logPath, logMessage);
                 }
                 Thread.Sleep(100);
-                Process.Start(new ProcessStartInfo { FileName = logPath, UseShellExecute = true });
+                Process.Start(new ProcessStartInfo { FileName = logPath , UseShellExecute = true });
                 Environment.FailFast(ex.Message, ex);
                 Environment.Exit(1);
             }
