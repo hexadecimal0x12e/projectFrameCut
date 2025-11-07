@@ -10,18 +10,17 @@ namespace projectFrameCut.Shared
     {
         public string projectName { get; set; } = "Untitled Project";
         public string ResourcePath { get; set; } = string.Empty;
-        public uint Duration { get; set; } = 0;
+        public Dictionary<string, string> UserDefinedProperties = new();
     }
 
     public class DraftStructureJSON
     {
-        public string Name { get; set; }  = "Default Project";
         public uint relativeResolution { get; set; } = 1000;
         public uint targetFrameRate { get; set; } = 60;
         public object[] Clips { get; init; } = Array.Empty<string>();
+        public uint Duration { get; set; } = 0;
     }
 
-    // DTO used for exporting timeline clips from UI view models into DraftStructureJSON.Clips
     public class ClipDraftDTO
     {
         public string Id { get; set; } = string.Empty;
@@ -35,7 +34,7 @@ namespace projectFrameCut.Shared
         public RenderMode MixtureMode { get; set; } = RenderMode.Overlay;
         public string? FilePath { get; set; }
         public long? SourceDuration { get;set; } // in frames, null for infinite length source
-        public float? SourceSecondPerFrame { get; set; } 
+        public float? ActualSecondPerFrame { get; set; } 
 
         [JsonExtensionData]
         public Dictionary<string, object>? MetaData { get; set; }

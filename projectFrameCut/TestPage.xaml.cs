@@ -1,17 +1,19 @@
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
+using projectFrameCut.DraftStuff;
+using projectFrameCut.PropertyPanel;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using projectFrameCut.DraftStuff;
-using projectFrameCut.PropertyPanel;
-using Microsoft.Maui.Controls.Shapes;
-using Path = System.IO.Path;
 using System.Text.Json;
+using System.Threading.Tasks;
+using Path = System.IO.Path;
+
+
 
 #if ANDROID
 using projectFrameCut.Platforms.Android;
@@ -627,15 +629,14 @@ public partial class TestPage : ContentPage
             WidthRequest = 150
         })
         .AddButton("testButton", "Test button 1", "Click me!")
-        .AddCustomChild("pick a date", (p, c) =>
+        .AddCustomChild("pick a date", ( c) =>
         {
             var picker = new DatePicker
             {
                 WidthRequest = 200,
                 Date = DateTime.Now,
-                BindingContext = p
             };
-            picker.DateSelected += (s, e) => c(e.NewDate.ToString("G"));
+            picker.DateSelected += (s, e) => c(e.NewDate.ToString() ?? "unknown");
             return picker;
         }, "testDatePicker", DateTime.Now.ToString("G"))
         .AddCustomChild(new Rectangle
@@ -695,10 +696,16 @@ public partial class TestPage : ContentPage
     private async void TestFFmpegButton_Clicked(object sender, EventArgs e)
     {
         string ver = "unknown";
+#if !iDevices
         unsafe
         {
-            ver = FFmpeg.AutoGen.ffmpeg.av_version_info();
+            ver = $"internal FFmpeg library: version {FFmpeg.AutoGen.ffmpeg.av_version_info()}, {FFmpeg.AutoGen.ffmpeg.avcodec_license()}\r\nconfiguration:{FFmpeg.AutoGen.ffmpeg.avcodec_configuration()}";
         }
+#elif iDevices
+        var codecs = AVFoundation.AVUrlAsset.AudiovisualTypes;
+        var codecInfo = "AudiovisualTypes: "+ string.Concat(codecs,",");
+        
+#endif
         await DisplayAlert("FFmpeg Version", ver, "OK");
 
     }

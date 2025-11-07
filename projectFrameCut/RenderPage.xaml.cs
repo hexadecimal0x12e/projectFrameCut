@@ -13,8 +13,8 @@ namespace projectFrameCut;
 public partial class RenderPage : ContentPage
 {
     public string _workingPath;
-    string _draft;
     Shared.ProjectJSONStructure _project;
+    uint _duration;
 
     public bool running;
 
@@ -36,11 +36,11 @@ public partial class RenderPage : ContentPage
         InitializeLogTimer();
     }
 
-    public RenderPage(string path, string draftStructureJSON, Shared.ProjectJSONStructure projectInfo)
+    public RenderPage(string path, uint projectDuration, Shared.ProjectJSONStructure projectInfo)
     {
         InitializeComponent();
         _workingPath = path;
-        _draft = draftStructureJSON;
+        _duration = projectDuration;
         _project = projectInfo;
         Title = Localized.RenderPage_ExportTitle(projectInfo.projectName);
 
@@ -82,17 +82,17 @@ public partial class RenderPage : ContentPage
                 await Dispatcher.DispatchAsync(() =>
                 {
                     LoggingBox.Text = _logBuffer.ToString();
-                    
-//                    // 自动滚动到底部
-//                    if (LoggingBox.Handler?.PlatformView != null)
-//                    {
-//#if WINDOWS
-//                        if (LoggingBox.Handler.PlatformView is Microsoft.UI.Xaml.Controls.TextBox textBox)
-//                        {
-//                            textBox.Select(textBox.Text.Length, 0);
-//                        }
-//#endif
-//                    }
+
+                    //                    // 自动滚动到底部
+                    //                    if (LoggingBox.Handler?.PlatformView != null)
+                    //                    {
+                    //#if WINDOWS
+                    //                        if (LoggingBox.Handler.PlatformView is Microsoft.UI.Xaml.Controls.TextBox textBox)
+                    //                        {
+                    //                            textBox.Select(textBox.Text.Length, 0);
+                    //                        }
+                    //#endif
+                    //                    }
                 });
             }
         }
@@ -125,12 +125,12 @@ public partial class RenderPage : ContentPage
         MoreOptions.IsEnabled = false;
         await SubProgress.ProgressTo(0, 250, Easing.Linear);
         await TotalProgress.ProgressTo(0, 250, Easing.Linear);
-        
+
         _logBuffer.Clear();
         _logQueue.Clear();
         LoggingBox.Text = string.Empty;
         _logUpdateTimer?.Start();
-        
+
         if (BindingContext is RenderPageViewModel vm)
         {
             running = true;
@@ -144,7 +144,7 @@ public partial class RenderPage : ContentPage
             Directory.CreateDirectory(Path.GetDirectoryName(outTempFile) ?? throw new NullReferenceException());
             var args = $"render " +
                 $"\"-draft={Path.Combine(_workingPath, "timeline.json")}\" " +
-                $"-duration={_project.Duration} " +
+                $"-duration={_duration} " +
                 $"\"-output={outTempFile}\" " +
                 $"-output_options={vm.Width},{vm.Height},{vm.Framerate},AV_PIX_FMT_GBRP16LE,ffv1  " +
                 $"-maxParallelThreads={(int)MaxParallelThreadsCount.Value} " +
@@ -165,18 +165,18 @@ public partial class RenderPage : ContentPage
                     {
                         lastPreviewFileSize = new FileInfo(outPreview).Length;
                         var src = ImageSource.FromFile(outPreview);
-                        if(src is not null)
+                        if (src is not null)
                         {
                             Dispatcher.Dispatch(() =>
                             {
                                 PreviewImage.Source = src;
                             });
                         }
-                        
+
                     }
 
                 }
-                catch(Exception)
+                catch (Exception)
                 {
                     // ignored
                 }
@@ -188,7 +188,7 @@ public partial class RenderPage : ContentPage
                 {
                     await SubProgress.ProgressTo(p, 250, Easing.Linear);
                     await TotalProgress.ProgressTo(totalProg / 3d, 5, Easing.Linear);
- 
+
                 });
             };
 
@@ -222,7 +222,7 @@ public partial class RenderPage : ContentPage
                 SubProgLabel.Text = Localized.RenderPage_SubProg_FinalEncoding;
             });
 
-            ffmpeg.totalFrames = _project.Duration;
+            ffmpeg.totalFrames = _duration;
 
             ffmpeg.OnProgressChanged += (p) =>
             {
@@ -273,7 +273,7 @@ public partial class RenderPage : ContentPage
         MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)e.NewValue);
     }
 
-    
+
 
     private void MoreOptions_Clicked(object sender, EventArgs e)
     {
@@ -311,16 +311,16 @@ public partial class RenderPage : ContentPage
     private async void CancelRender_Clicked(object sender, EventArgs e)
     {
         if (!running) return;
-        var sure = await DisplayAlert(Localized._Warn, Localized.RenderPage_CancelRender_Warn,  Localized._OK, Localized._Cancel);
+        var sure = await DisplayAlert(Localized._Warn, Localized.RenderPage_CancelRender_Warn, Localized._OK, Localized._Cancel);
         if (sure)
         {
 #if WINDOWS
-             render.Cancel();
+            render.Cancel();
 
 #endif
             _logUpdateTimer?.Stop();
             await FlushLogQueue();
-            
+
             RenderOptionPanel.IsVisible = true;
             CancelRender.IsEnabled = false;
             MoreOptions.IsEnabled = true;

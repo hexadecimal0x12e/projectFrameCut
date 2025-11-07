@@ -28,11 +28,11 @@ using projectFrameCut.Platforms.Android;
 #endif
 
 #if IOS 
-using projectFrameCut.Platforms.iOS;
+//using projectFrameCut.Platforms.iOS;
 #endif
 
 #if MACCATALYST
-using projectFrameCut.Platforms.MacCatalyst;
+//using projectFrameCut.Platforms.MacCatalyst;
 #endif
 
 #endregion
@@ -135,7 +135,7 @@ namespace projectFrameCut
                     throw new OverflowException($"Project duration overflow, total frames exceed {uint.MaxValue}.");
                 }
 
-                ProjectInfo.Duration = (uint)max;
+                //ProjectInfo.Duration = (uint)max;
 
                 SetStateOK();
                 return;
@@ -1027,7 +1027,6 @@ namespace projectFrameCut
 
             return new DraftStructureJSON
             {
-                Name = projectName,
                 Clips = clipDtos.Cast<object>().ToArray()
             };
         }
@@ -1039,7 +1038,7 @@ namespace projectFrameCut
             rpcProc.Exited -= RpcProc_Exited; //避免弹框
 
 #endif
-            await Navigation.PushAsync(new RenderPage(workingDirectory, JsonSerializer.Serialize(await BuildDraft(ProjectInfo.projectName), new JsonSerializerOptions { WriteIndented = true }), ProjectInfo));
+            //await Navigation.PushAsync(new RenderPage(workingDirectory, 1 , new JsonSerializerOptions { WriteIndented = true }), ProjectInfo));
 
         }
 

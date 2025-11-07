@@ -17,29 +17,27 @@
             <RowDefinition Height="25"/>
         </Grid.RowDefinitions>
 
-        
-        <VerticalStackLayout Grid.Row="0" x:Name="UpperContent">
 
-                <Button 
-        x:Name="AddClip"
-        Text="Add clip"
-        Clicked="AddClip_Clicked" />
-                <StackLayout Orientation="Horizontal" Padding="0,0">
-                    <Button x:Name="MoveLeftButton" Text="&lt;-"  Clicked="MoveLeftButton_Clicked"/>
-                    <Button x:Name="MoveRightButton" Text="-&gt;"  Clicked="MoveRightButton_Clicked"/>
-                    <Button x:Name="ZoomOutButton" Text="+" Clicked="ZoomOutButton_Clicked" />
-                    <Button x:Name="ZoomInButton" Text="-" Clicked="ZoomInButton_Clicked"/>
-                    <Button x:Name="SpiltButton" Text="Spilt" Clicked="Split_Clicked"/>
+        <VerticalStackLayout Grid.Row="0" x:Name="UpperContent">
+            <Border StrokeThickness="5" Padding="4" HeightRequest="250"  HorizontalOptions="Start">
+                <Image x:Name="PreviewBox" Background="Black"/>
+            </Border>
+
+            <StackLayout Orientation="Horizontal" Padding="4,0">
+                <Button x:Name="MoveLeftButton" Text="&lt;-"  Clicked="MoveLeftButton_Clicked"/>
+                <Button x:Name="MoveRightButton" Text="-&gt;"  Clicked="MoveRightButton_Clicked"/>
+                <Button x:Name="ZoomOutButton" Text="+" Clicked="ZoomOutButton_Clicked" />
+                <Button x:Name="ZoomInButton" Text="-" Clicked="ZoomInButton_Clicked"/>
+                <Button x:Name="SpiltButton" Text="Spilt" Clicked="Split_Clicked"/>
                 <Button x:Name="AssetPanelButton" Text="Assets" Clicked="AssetPanelButton_Clicked"/>
+                <Button 
+x:Name="AddClip"
+Text="Add clip"
+Clicked="AddClip_Clicked" />
             </StackLayout>
-                <StackLayout Orientation="Horizontal" Padding="10,0">
-                    <Label Text="View Mode:" VerticalOptions="Center"/>
-                    <RadioButton x:Name="NativeViewRadio" Content="Native" IsChecked="True" GroupName="ViewSelector" CheckedChanged="ViewSelector_CheckedChanged"/>
-                    <RadioButton x:Name="WebViewRadio" Content="Web" GroupName="ViewSelector" CheckedChanged="ViewSelector_CheckedChanged"/>
-                </StackLayout>
-                <Button x:Name="FullscreenFlyoutTestButton" Text="Pop a flyout" Clicked="FullscreenFlyoutTestButton_Clicked"/>
+            <Button x:Name="FullscreenFlyoutTestButton" Text="Pop a flyout" Clicked="FullscreenFlyoutTestButton_Clicked"/>
             <HorizontalStackLayout x:Name="RulerLayout" HeightRequest="12" WidthRequest="-1" BackgroundColor="Grey">
-                
+
             </HorizontalStackLayout>
         </VerticalStackLayout>
 
@@ -48,7 +46,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="25"/>
             </Grid.RowDefinitions>
-            
+
             <ScrollView Grid.Row="0" x:Name="NativeView" Orientation="Vertical">
                 <Grid x:Name="MainTrackContentGrid">
                     <Grid.ColumnDefinitions>
@@ -64,16 +62,11 @@
                     HeightRequest="80" />
                     </VerticalStackLayout>
 
-
-
                     <VerticalStackLayout x:Name="TrackContentLayout" Grid.Column="1" Padding="2" />
                 </Grid>
 
             </ScrollView>
 
-            <HybridWebView x:Name="hybridWebView" Grid.Row="0" IsVisible="False" HeightRequest="300" />
-
-            
         </Grid>
 
         <Grid Grid.Row="2" x:Name="StatusBarGrid" BackgroundColor="#001122" Margin="0,2,0,0">
@@ -92,12 +85,9 @@
                 <Label x:Name="StatusLabel" Margin="3,2,0,0" LineBreakMode="NoWrap" Text="" />
             </HorizontalStackLayout>
 
-            <HorizontalStackLayout HorizontalOptions="Center" Grid.Column="2">
-                <Label Text="1111" ></Label>
-            </HorizontalStackLayout>
 
             <HorizontalStackLayout HorizontalOptions="End" Grid.Column="3">
-                <Label x:Name="AlternativeStatusLabel" Text="2222" />
+                <Label x:Name="AlternativeStatusLabel" Text="" />
             </HorizontalStackLayout>
 
         </Grid>

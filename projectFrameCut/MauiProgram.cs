@@ -96,7 +96,7 @@ namespace projectFrameCut
                 Debug.WriteLine($"Failed to set up log file: {ex.Message}");
             }
 
-            Log($"projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version}" +
+            Log($"projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} \r\n" +
                 $"                  on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture},\r\n" +
                 $"                  os version {Environment.OSVersion},\r\n" +
                 $"                  clr version {Environment.Version},\r\n" +

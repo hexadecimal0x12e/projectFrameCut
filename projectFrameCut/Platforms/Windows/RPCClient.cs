@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Shared;
+﻿using Microsoft.UI.Xaml.Media;
+using projectFrameCut.Shared;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO.Pipes;
@@ -17,7 +18,7 @@ public sealed class RpcClient : IAsyncDisposable
 
     public Action<JsonElement>? ErrorCallback = null;
 
-    public static string BootRPCServer(out Process rpcProc, string options = "1280,720,42,AV_PIX_FMT_NONE,nope",  bool VerboseBackendLog = false, Action<string>? stdoutCallback = null, Action<string>? stderrCallback = null)
+    public static string BootRPCServer(out Process rpcProc, string options = "1280,720,42,AV_PIX_FMT_NONE,nope", bool VerboseBackendLog = false, Action<string>? stdoutCallback = null, Action<string>? stderrCallback = null)
     {
         var pipeId = "pjfc_rpc_V1_" + Guid.NewGuid().ToString();
         var tmpDir = Path.Combine(Path.GetTempPath(), "pjfc_temp");
@@ -74,6 +75,62 @@ public sealed class RpcClient : IAsyncDisposable
         return pipeId;
     }
 
+    public static async Task<string> UpdateDraft(DraftStructureJSON draft, RpcClient rpcClient, CancellationToken ct = default)
+    {
+        var draftJson = JsonSerializer.SerializeToElement(draft, RpcProtocol.JsonOptions);
+        var element = JsonSerializer.SerializeToElement(draft);
+        var result = await rpcClient.SendAsync("UpdateClips", element, ct);
+        if (result.HasValue && result.Value.TryGetProperty("status", out var status))
+        {
+            Log("Draft updated.");
+            return status.GetString();
+        }
+        else
+        {
+            Log("Failed to update draft.");
+            return "failed by unknown reason";
+        }
+    }
+
+    public static async Task<string> RenderOneFrame(uint frameId, RpcClient rpcClient, CancellationToken ct = default)
+    {
+        var result = await rpcClient.SendAsync("RenderOne", JsonSerializer.SerializeToElement(frameId), ct);
+        if (result is null)
+        {
+            throw new InvalidOperationException("更新草稿失败，RPC 返回空响应。");
+        }
+        if (result.HasValue && result.Value.TryGetProperty("status", out var status))
+        {
+            if (status.GetString() == "ok")
+            {
+
+                if (result.Value.TryGetProperty("path", out var path))
+                {
+                    if (File.Exists(path.GetString() ?? ""))
+                    {
+                        //Log($"Frame {frameId} rendered to {path.GetString()}");
+                        return path.GetString() ?? "";
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException($"Frame {frameId} rendered, but output file not found.", path.GetString());
+                    }
+                }
+            }
+            else
+            {
+                throw new Exception(result.Value.GetProperty("error").GetString());
+            }
+        }
+        else
+        {
+            Log("Failed to update draft.");
+
+            throw new Exception(result.Value.GetProperty("error").GetString());
+        }
+        return "";
+    }
+
     public async Task StartAsync(string pipeName, CancellationToken ct = default) => await StartAsync(new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous), ct);
 
     public async Task StartAsync(NamedPipeClientStream client, CancellationToken ct = default)
@@ -110,7 +167,7 @@ public sealed class RpcClient : IAsyncDisposable
         }
 
 
-        }
+    }
 
     public async Task<JsonElement?> SendAsync(string type, JsonElement msg, CancellationToken ct = default)
     {
@@ -118,7 +175,7 @@ public sealed class RpcClient : IAsyncDisposable
         {
             Type = type,
             Payload = msg,
-            RequestId = (ulong)Math.Pow(2, Random.Shared.Next(4,63)),
+            RequestId = (ulong)Math.Pow(2, Random.Shared.Next(4, 63)),
         };
 
         var resp = await SendReceiveAsync(req, ct);

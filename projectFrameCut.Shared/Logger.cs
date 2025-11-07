@@ -24,7 +24,7 @@ namespace projectFrameCut.Shared
         [DebuggerNonUserCode()]
         public static void Log(Exception ex, string message = "", object? sender = null)
         {
-            Log($"{sender?.GetType().Name} happends a {ex.GetType().Name} exception when trying to {message} \r\n error message: {ex.Message}", "error");
+            Log($"{sender?.GetType().Name} happens a {ex.GetType().Name} exception when trying to {message} \r\n error message: {ex.Message}", "error");
             string innerExceptionInfo = "";
             if (ex.InnerException != null)
             {

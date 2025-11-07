@@ -76,6 +76,29 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_AddOneAsset",
+        "Value": "\u677E\u624B\u6765\u6DFB\u52A0\u300C{name ?? \u0022\u672A\u77E5\u540D\u79F0\u0022}\u300D ",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string?",
+            "Value": "name"
+          }
+        ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ApplyingChanges",
+        "Value": "\u6B63\u5728\u5E94\u7528\u66F4\u6539...",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_BackendStatus",
         "Value": "\u540E\u7AEF\u5EF6\u8FDF{lantency.ToString(\u0022n2\u0022)}ms, \u5185\u5B58\u5360\u7528{menUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)}/{menTotalUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)} MB (\u540E\u7AEF/\u6B64\u7535\u8111)",
         "Mode": "InterpolationString",
@@ -166,15 +189,10 @@
         "DontTranslate": false
       },
       {
-        "Id": "DraftPage_AddOneAsset",
-        "Value": "\u677E\u624B\u6765\u6DFB\u52A0\u300C{name ?? \u0022\u672A\u77E5\u540D\u79F0\u0022}\u300D ",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string?",
-            "Value": "name"
-          }
-        ],
+        "Id": "DraftPage_ImportAssetNotFinished",
+        "Value": "\u677E\u624B\u6765\u5BFC\u5165\u7D20\u6750...",
+        "Mode": "ConstString",
+        "Args": [],
         "HasValidationErrors": false,
         "ForceDynamic": false,
         "DontTranslate": false
@@ -221,6 +239,15 @@
             "Value": "length"
           }
         ],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_ReleaseToCancel",
+        "Value": "\u677E\u624B\u6765\u53D6\u6D88\u64CD\u4F5C...",
+        "Mode": "ConstString",
+        "Args": [],
         "HasValidationErrors": false,
         "ForceDynamic": false,
         "DontTranslate": false
@@ -557,8 +584,8 @@
         "DontTranslate": false
       },
       {
-        "Id": "DraftPage_ImportAssetNotFinished",
-        "Value": "\u677E\u624B\u6765\u5BFC\u5165\u7D20\u6750...",
+        "Id": "PropertyPanel",
+        "Value": "\u5C5E\u6027\u9762\u677F",
         "Mode": "ConstString",
         "Args": [],
         "HasValidationErrors": false,
@@ -566,8 +593,35 @@
         "DontTranslate": false
       },
       {
-        "Id": "DraftPage_ReleaseToCancel",
-        "Value": "\u677E\u624B\u6765\u53D6\u6D88\u64CD\u4F5C...",
+        "Id": "PropertyPanel_General",
+        "Value": "\u901A\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "PropertyPanel_General_SpeedRatio",
+        "Value": "\u500D\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "PropertyPanel_General_DisplayName",
+        "Value": "\u663E\u793A\u540D\u79F0",
+        "Mode": "ConstString",
+        "Args": [],
+        "HasValidationErrors": false,
+        "ForceDynamic": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Processing",
+        "Value": "\u5904\u7406\u4E2D...",
         "Mode": "ConstString",
         "Args": [],
         "HasValidationErrors": false,

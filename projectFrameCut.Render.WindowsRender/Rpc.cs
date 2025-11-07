@@ -132,7 +132,7 @@ namespace projectFrameCut.Render.WindowsRender
             {
                 try
                 {
-                    if(diagMode) Log("[RPC] Waiting for message...");
+                    if (diagMode) Log("[RPC] Waiting for message...");
                     var line = reader.ReadLine();
                     if (line is null) break;
 
@@ -177,7 +177,7 @@ namespace projectFrameCut.Render.WindowsRender
                                     {
 
                                         Log($"[RPC] Frame already exist; skip");
-                                        Send(msg, new Dictionary<string, object?> { { "status", "completed" }, { "path", destPath } });
+                                        Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "path", destPath } });
                                         Log($"[RPC] RenderOne completed");
                                         break;
                                     }
@@ -189,7 +189,7 @@ namespace projectFrameCut.Render.WindowsRender
                                     Log($"Clips in frame #{frameIndex}:\r\n{JsonSerializer.Serialize(layers)}\r\n---");
                                     var pic = Timeline.MixtureLayers(layers, accelerator, frameIndex, width, height);
                                     pic.SetAlpha(false).SaveAsPng8bpc(destPath, encoder);
-                                    Send(msg, new Dictionary<string, object?> { { "status", "completed" }, { "path", destPath } });
+                                    Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "path", destPath } });
                                     Log($"[RPC] RenderOne completed");
                                 }
                                 catch (Exception ex)
@@ -197,7 +197,7 @@ namespace projectFrameCut.Render.WindowsRender
                                     Log(ex);
                                     Console.Error.WriteLine($"ERROR: a {ex.GetType()} exception happends:{ex.Message}");
 
-                                    Send(msg, new Dictionary<string, object?> { { "status", "completed" }, { "path", Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png") } });
+                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "path", Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png") }, { "error", $"ERROR: a {ex.GetType()} exception happends:{ex.Message}" } });
 
                                 }
 
@@ -294,21 +294,21 @@ namespace projectFrameCut.Render.WindowsRender
                                     Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", "File not found." } });
                                     break;
                                 }
-                               
+
                                 try
                                 {
                                     var vid = new Video(path);
-                                    if(FrameToRead > vid.Decoder.TotalFrames)
+                                    if (FrameToRead > vid.Decoder.TotalFrames)
                                     {
                                         Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", "Invaild length." } });
                                         break;
                                     }
                                     var frame = vid.Decoder.GetFrame(FrameToRead, true);
                                     var tmpPath = Path.Combine(tempFolder, $"extractedFrame-{Path.GetFileNameWithoutExtension(path)}-{FrameToRead}.png");
-                                    if(msg.Payload.Value.TryGetProperty("size", out var destSize))
+                                    if (msg.Payload.Value.TryGetProperty("size", out var destSize))
                                     {
                                         string? sizeStr = "";
-                                        if((sizeStr = destSize.GetString()) is not null)
+                                        if ((sizeStr = destSize.GetString()) is not null)
                                         {
                                             int w = int.Parse(sizeStr.Split('x')[0]);
                                             int h = int.Parse(sizeStr.Split('x')[1]);

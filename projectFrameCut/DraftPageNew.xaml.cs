@@ -1,5 +1,6 @@
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
+using Microsoft.Maui.Storage;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.PropertyPanel;
 using projectFrameCut.Render;
@@ -20,6 +21,12 @@ using projectFrameCut.Platforms.Windows;
 
 #endif
 
+#if iDevices
+using Foundation;
+using UIKit;
+
+#endif
+
 namespace projectFrameCut;
 
 public partial class DraftPage : ContentPage
@@ -35,6 +42,7 @@ public partial class DraftPage : ContentPage
 
     public double SecondsPerFrame { get; set; } = 1 / 30d;
     public double FramePerPixel { get; set; } = 1d;
+    public uint projectDuration { get; set; } = 0;
 
     const int ClipHeight = 62;
     const double MinClipWidth = 30.0;
@@ -56,12 +64,12 @@ public partial class DraftPage : ContentPage
     DropGestureRecognizer clipDropGesture = new(), fileDropGesture = new();
 
     int trackCount = 0;
-    int webViewTrackCount = 1;
     double tracksViewOffset = 0;
     double tracksZoomOffest = 1d;
 
 
     bool isPopupShowing = false;
+    string popupShowingDirection = "none";
     Border Popup = new();
 
     private Size WindowSize = new(500, 500);
@@ -79,7 +87,7 @@ public partial class DraftPage : ContentPage
 
     public bool ShowShadow { get; private set; } = true;
     public bool LogUIMessageToLogger { get; private set; } = false;
-    public bool Denoise { get; private set; } = true;
+    public bool Denoise { get; private set; } = false;
 
 #if WINDOWS
     Process backendProc;
@@ -107,7 +115,7 @@ public partial class DraftPage : ContentPage
     }
 
 
-    private void PostInit()
+    private async void PostInit()
     {
 #if WINDOWS
         var pipeId = RpcClient.BootRPCServer(out backendProc,
@@ -135,7 +143,9 @@ public partial class DraftPage : ContentPage
                 }
             })
         };
-        _rpc.StartAsync(pipeId, ct.Token);
+        await _rpc.StartAsync(pipeId, ct.Token);
+        SetStateOK();
+        SetStatusText(Localized.DraftPage_EverythingFine);
 #endif
 
         rulerTapGesture.Tapped += PlayheadTapped;
@@ -146,18 +156,22 @@ public partial class DraftPage : ContentPage
             OverlayLayer.IsVisible = false;
 #endif
         };
-
-        foreach (var item in DirectoriesNeeded)
+        if (!string.IsNullOrWhiteSpace(workingPath))
         {
-            Directory.CreateDirectory(Path.Combine(workingPath, item));
+            foreach (var item in DirectoriesNeeded)
+            {
+                Directory.CreateDirectory(Path.Combine(workingPath, item));
+            }
         }
+
+
 
         Loaded += (s, e) =>
         {
             PlayheadLine.TranslationY = UpperContent.Height - RulerLayout.Height;
             RulerLayout.GestureRecognizers.Add(rulerTapGesture);
             PlayheadLine.HeightRequest = Tracks.Count * ClipHeight + RulerLayout.Height;
-            this.Window.SizeChanged += Window_SizeChanged;
+            Window.SizeChanged += Window_SizeChanged;
             var bgTap = new TapGestureRecognizer();
             bgTap.Tapped += async (s, e) => await HidePopup();
             OverlayLayer.GestureRecognizers.Clear();
@@ -173,28 +187,13 @@ public partial class DraftPage : ContentPage
             fileDropGesture.Drop += File_Drop;
             OverlayLayer.GestureRecognizers.Add(fileDropGesture);
 
+#if !WINDOWS
             SetStateOK();
             SetStatusText(Localized.DraftPage_EverythingFine);
-
+#endif
         };
 
-        OnClipChanged += async (s, e) =>
-        {
-            foreach (var item in Clips)
-            {
-                if (!item.Value.isInfiniteLength && item.Value.lengthInFrame > item.Value.maxFrameCount)
-                {
-                    SetStateFail($"Clip {item.Key} has a invaild length {item.Value.lengthInFrame} frames, larger than it's source {item.Value.maxFrameCount}.");
-                }
-            }
-            PlayheadLine.HeightRequest = Tracks.Count * ClipHeight + RulerLayout.Height;
-            Log($"Clips changed, Total clips: {Clips.Count}");
-            foreach (var item in Clips)
-            {
-                Log($"Clip@{item.Key}");
-            }
-            await Save();
-        };
+        OnClipChanged += DraftChanged;
 
         if (this.Window is not null)
         {
@@ -234,7 +233,7 @@ public partial class DraftPage : ContentPage
             int t = item.origTrack ?? 0;
             // ensure track exists (defensive)
             if (!Tracks.ContainsKey(t)) AddATrack(t);
-            AddAClip(item, t);
+            AddAClip(item);
             RegisterClip(item, true);
         }
 
@@ -263,131 +262,10 @@ public partial class DraftPage : ContentPage
         if (!Tracks.ContainsKey(trackIndex))
             throw new ArgumentOutOfRangeException(nameof(trackIndex));
 
-        var element = CreateClip(startX, width, trackIndex, id, labelText, background, prototype, relativeStart, maxFrames);
+        var element = ClipElementUI.CreateClip(startX, width, trackIndex, id, labelText, background, prototype, relativeStart, maxFrames);
+        element.ApplySpeedRatio();
         RegisterClip(element, resolveOverlap);
-        AddAClip(element, trackIndex);
-
-        return element;
-    }
-
-
-
-    public static ClipElementUI CreateClip(
-        double startX,
-        double width,
-        int trackIndex,
-        string? id = null,
-        string? labelText = null,
-        Brush? background = null,
-        Border? prototype = null,
-        uint relativeStart = 0,
-        uint maxFrames = 0)
-    {
-
-        string cid = id ?? Guid.NewGuid().ToString();
-
-        // Build UI
-        var clipBorder = new Border
-        {
-            Stroke = prototype?.Stroke ?? Colors.Gray,
-            StrokeThickness = prototype?.StrokeThickness ?? 2,
-            Background = background ?? prototype?.Background ?? new SolidColorBrush(Colors.CornflowerBlue),
-            WidthRequest = width,
-            HeightRequest = prototype?.HeightRequest > 0 ? prototype!.HeightRequest : ClipHeight,
-            StrokeShape = prototype?.StrokeShape ?? new RoundRectangle
-            {
-                CornerRadius = 20,
-                BackgroundColor = Colors.White,
-                StrokeThickness = 8
-            }
-        };
-
-        var leftHandle = new Border
-        {
-            Stroke = Colors.Gray,
-            StrokeThickness = 2,
-            Background = new SolidColorBrush(Colors.White),
-            WidthRequest = 25,
-            HeightRequest = 55,
-            HorizontalOptions = LayoutOptions.Center,
-            VerticalOptions = LayoutOptions.Center,
-            StrokeShape = new RoundRectangle
-            {
-                CornerRadius = 20,
-                BackgroundColor = Colors.White,
-            }
-        };
-
-        var rightHandle = new Border
-        {
-            Stroke = Colors.Gray,
-            StrokeThickness = 2,
-            Background = new SolidColorBrush(Colors.White),
-            WidthRequest = 25,
-            HeightRequest = 55,
-            HorizontalOptions = LayoutOptions.Center,
-            VerticalOptions = LayoutOptions.Center,
-            StrokeShape = new RoundRectangle
-            {
-                CornerRadius = 20,
-                BackgroundColor = Colors.White,
-            }
-        };
-
-        var element = new ClipElementUI
-        {
-            Id = cid,
-            displayName = labelText ?? "Unnamed Clip",
-            layoutX = 0,
-            layoutY = 0,
-            Clip = clipBorder,
-            LeftHandle = leftHandle,
-            RightHandle = rightHandle,
-            maxFrameCount = maxFrames,
-            relativeStartFrame = relativeStart,
-            isInfiniteLength = width <= 0,
-            origLength = width,
-            origTrack = trackIndex,
-            origX = startX
-        };
-
-        var cont = new HorizontalStackLayout
-        {
-            Children =
-            {
-                new Label
-                {
-                    Text = string.IsNullOrWhiteSpace(labelText) ? $"Clip {cid[^4..]}" : labelText
-                }
-            },
-            HorizontalOptions = LayoutOptions.Center,
-            VerticalOptions = LayoutOptions.Center,
-        };
-
-        Grid.SetColumn(element.LeftHandle, 0);
-        Grid.SetColumn(element.RightHandle, 2);
-        Grid.SetColumn(cont, 1);
-
-        element.Clip.Content = new Grid
-        {
-            Children =
-            {
-                element.LeftHandle,
-                cont,
-                element.RightHandle
-            },
-            ColumnDefinitions =
-            {
-                new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) },
-                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) }
-            }
-        };
-
-        element.Clip.BindingContext = element;
-        element.LeftHandle.BindingContext = element;
-        element.RightHandle.BindingContext = element;
-
+        AddAClip(element);
 
         return element;
     }
@@ -432,10 +310,19 @@ public partial class DraftPage : ContentPage
         Clips.AddOrUpdate(element.Id, element, (_, _) => element);
     }
 
+    private void AddAClip(ClipElementUI c)
+    {
+        if (c.origTrack is null)
+            throw new ArgumentNullException(nameof(c.origTrack));
+        if (!Tracks.ContainsKey(c.origTrack ?? 0))
+            throw new ArgumentOutOfRangeException(nameof(c.origTrack));
+
+        Tracks[c.origTrack ?? 0].Children.Add(c.Clip);
+        UpdateAdjacencyForTrack();
+    }
+
     private void Split_Clicked(object sender, EventArgs e)
     {
-        // Only for native view mode
-        if (WebViewRadio.IsChecked) return;
         var clip = _selected;
         UnSelectTapGesture_Tapped(sender, null);
         if (clip is null) { SetStatusText("No clip selected"); return; }
@@ -500,26 +387,11 @@ public partial class DraftPage : ContentPage
         }
     }
 
-    private void AddAClip(ClipElementUI c, int trackIndex)
-    {
-        if (!Tracks.ContainsKey(trackIndex))
-            throw new ArgumentOutOfRangeException(nameof(trackIndex));
 
-        Tracks[trackIndex].Children.Add(c.Clip);
-        UpdateAdjacencyForTrack();
-    }
 
 
     private void AddTrackButton_Clicked(object sender, EventArgs e)
     {
-        if (WebViewRadio.IsChecked)
-        {
-            webViewTrackCount++;
-            hybridWebView.EvaluateJavaScriptAsync("createTrack()");
-            return;
-        }
-
-
         AddATrack(Tracks.Count);
 
         OnClipChanged?.Invoke(this, new ClipUpdateEventArgs { Reason = ClipUpdateReason.TrackAdd, SourceId = trackCount.ToString() });
@@ -599,19 +471,6 @@ public partial class DraftPage : ContentPage
 
     private void AddClip_Clicked(object sender, EventArgs e)
     {
-        if (WebViewRadio.IsChecked)
-        {
-            var clipId = $"clip_{Guid.NewGuid().ToString("N").Substring(0, 8)}";
-            var text = $"Clip {Clips.Count + 1}";
-            var start = (Clips.Count % 5) * 130; // Example positioning
-            var duration = 120;
-            var trackIndex = webViewTrackCount; // Add to the last track
-
-            AddWebViewClip(trackIndex, clipId, text, start, duration);
-            return;
-        }
-
-        // Native view mode - create via helper
         int nativeTrackIndex = Tracks.Last().Key;
         _ = CreateAndAddClip(
             startX: 0,
@@ -1028,12 +887,12 @@ public partial class DraftPage : ContentPage
                 double newWidth = Math.Max(MinClipWidth, startWidth - e.TotalX);
                 if (clip.isInfiniteLength) goto go_resize;
                 //Log($"Clip's new width {newWidth}, max width {FrameToPixel(clip.maxFrameCount)}");
-                double lengthAvailable = FrameToPixel(clip.relativeStartFrame);
+                double lengthAvailable = FrameToPixel(clip.relativeStartFrame) * clip.SecondPerFrameRatio * tracksZoomOffest;
                 bool reachStartOfSrc = !clip.isInfiniteLength && startWidth + lengthAvailable - newWidth > -0.5d;
-                bool isLongerThanSrc = newWidth <= FrameToPixel(clip.maxFrameCount);
+                bool isLongerThanSrc = newWidth <= FrameToPixel(clip.maxFrameCount) * clip.SecondPerFrameRatio * tracksZoomOffest;
                 if (!reachStartOfSrc || !isLongerThanSrc)
                 {
-                    clip.Clip.TranslationX = clip.layoutX + lengthAvailable;
+                    clip.Clip.TranslationX = (clip.layoutX + lengthAvailable) * clip.SecondPerFrameRatio * tracksZoomOffest;
                     SetStatusText(Localized.DraftPage_ReachLimit($"{clip.maxFrameCount * SecondsPerFrame}s"));
                     break;
                 }
@@ -1048,7 +907,7 @@ public partial class DraftPage : ContentPage
                 HandleStartWidth.TryRemove(clip.Id, out _);
                 clip.lengthInFrame = PixelToFrame(clip.Clip.Width);
                 double deltaPx = clip.Clip.TranslationX - clip.layoutX;
-                long deltaFrames = (long)Math.Round(deltaPx * FramePerPixel * tracksZoomOffest);
+                long deltaFrames = (long)Math.Round(deltaPx * FramePerPixel * clip.SecondPerFrameRatio * tracksZoomOffest);
                 long newRel = (long)clip.relativeStartFrame + deltaFrames;
                 if (newRel < 0) newRel = 0;
                 uint maxRelAllowed = (clip.maxFrameCount >= clip.lengthInFrame) ? (clip.maxFrameCount - clip.lengthInFrame) : 0u;
@@ -1085,9 +944,7 @@ public partial class DraftPage : ContentPage
             case GestureStatus.Running:
                 double startWidth = HandleStartWidth.TryGetValue(clip.Id, out var sw) ? sw : clip.Clip.WidthRequest;
                 double newWidth = Math.Max(MinClipWidth, startWidth + e.TotalX);
-                bool isLongerThanSrc = newWidth + FrameToPixel(clip.relativeStartFrame) >= FrameToPixel(clip.maxFrameCount);
-                //Log($"longer than src:{isLongerThanSrc} Clip need {PixelToFrame(newWidth)} frames/{newWidth}px, total {clip.maxFrameCount} frames/{FrameToPixel(clip.maxFrameCount)}px");
-
+                bool isLongerThanSrc = newWidth + FrameToPixel(clip.relativeStartFrame) * clip.SecondPerFrameRatio * tracksZoomOffest >= FrameToPixel(clip.maxFrameCount) * clip.SecondPerFrameRatio * tracksZoomOffest;
                 if (clip.isInfiniteLength || !isLongerThanSrc)
                 {
                     clip.Clip.WidthRequest = newWidth;
@@ -1095,7 +952,7 @@ public partial class DraftPage : ContentPage
                 }
                 else
                 {
-                    clip.Clip.WidthRequest = FrameToPixel(clip.maxFrameCount) - FrameToPixel(clip.relativeStartFrame);
+                    clip.Clip.WidthRequest = (FrameToPixel(clip.maxFrameCount) - FrameToPixel(clip.relativeStartFrame)) * clip.SecondPerFrameRatio * tracksZoomOffest;
                     SetStatusText(Localized.DraftPage_ReachLimit($"{clip.maxFrameCount * SecondsPerFrame}s"));
                 }
                 break;
@@ -1117,7 +974,473 @@ public partial class DraftPage : ContentPage
     }
     #endregion
 
-    #region adjust(?) track and clip
+    #region properties
+    private View BuildPropertyPanel(ClipElementUI clip)
+    {
+        var ppb = new PropertyPanelBuilder()
+        .AddText(Localized.PropertyPanel_General)
+        .AddEntry("displayName", Localized.PropertyPanel_General_DisplayName, clip.displayName, "Clip 1", null)
+        .AddSlider("speedRatio", Localized.PropertyPanel_General_SpeedRatio, -5d, 10d, clip.SecondPerFrameRatio , null)  // use 50 as 1x speed
+        .AddSeparator()
+        .AddCustomChild((ivk) =>
+        {
+            var editor = new Editor
+            {
+                Text = JsonSerializer.Serialize(clip, savingOpts),
+                HeightRequest = 300,
+            };
+            editor.TextChanged += (s, e) =>
+            {
+                try
+                {
+                    if (JsonSerializer.Deserialize<ClipElementUI>(editor.Text) is not ClipElementUI updatedClip)
+                    {
+                        return;
+                    }
+                    ivk(editor.Text);
+                }
+                catch (Exception)
+                {
+                }
+            };
+            return editor;
+        }, "rawJsonEditor", JsonSerializer.Serialize(clip, savingOpts))
+        .ListenToChanges(
+            (e) =>
+            {
+                switch (e.Id)
+                {
+                    case "displayName":
+                        clip.displayName = e.Value?.ToString() ?? clip.displayName;
+                        //SetStatusText(Localized.DraftPage_ClipPropertyUpdated(clip.displayName));
+                        break;
+                    case "speedRatio":
+                        {
+                            if (e.Value is double ratio || double.TryParse(e.Value as string, out ratio))
+                            {
+                                clip.SecondPerFrameRatio = (float)ratio;
+                                //SetStatusText(Localized.DraftPage_ClipPropertyUpdated(clip.displayName));
+                            }
+
+                            break;
+                        }
+                    case "rawJsonEditor":
+                        {
+                            try
+                            {
+                                if (JsonSerializer.Deserialize<ClipElementUI>(e.Value?.ToString() ?? "") is not ClipElementUI updatedClip)
+                                {
+                                    break;
+                                }
+                                if (updatedClip.Id != clip.Id)
+                                {
+                                    SetStateFail("ClipId mismatch.");
+                                    break;
+                                }
+                                Clips[clip.Id] = updatedClip;
+                            }
+                            catch (Exception ex)
+                            {
+                                Log(ex, "Deserialize clip from rawJsonEditor", this);
+                            }
+                            break;
+                        }
+                }
+
+
+                Clips[clip.Id] = clip;
+
+                ReRenderUI();
+
+            }
+        );
+
+
+        return ppb.Build();
+
+    }
+
+
+    #endregion
+
+    #region asset
+
+    private async void AddAsset(string path)
+    {
+        try
+        {
+            var cid = Guid.NewGuid().ToString();
+            var item = new AssetItem
+            {
+                Name = System.IO.Path.GetFileNameWithoutExtension(path),
+                Path = path,
+                Type = DetermineClipMode(path),
+                AssetId = cid
+            };
+
+            if (item.Type != ClipMode.VideoClip)
+            {
+                item.SecondPerFrame = float.PositiveInfinity;
+                item.FrameCount = 0;
+            }
+            else
+            {
+#if WINDOWS //防止视频打不开主程序炸掉
+                var cts = new CancellationTokenSource();
+                cts.CancelAfter(5000);
+                var info = await _rpc.SendAsync("GetVideoFileInfo", JsonSerializer.SerializeToElement(item.Path), cts.Token);
+                if (info is not null)
+                {
+                    info.Value.TryGetProperty("frameCount", out var fc);
+                    info.Value.TryGetProperty("fps", out var fps);
+                    if (fc.ValueKind == JsonValueKind.Number && fps.ValueKind == JsonValueKind.Number)
+                    {
+                        item.FrameCount = fc.GetInt64();
+                        item.SecondPerFrame = 1 / fps.GetSingle();
+                    }
+
+                }
+                cts = new CancellationTokenSource();
+                cts.CancelAfter(5000);
+                var thumbNail = await _rpc.SendAsync("ReadAFrame", JsonSerializer.SerializeToElement(new Dictionary<string, object>
+                        {
+                            { "path", item.Path },
+                            { "frameToRead", 0U },
+                            { "size", "640x480" }
+                        }), cts.Token);
+
+                if (thumbNail.Value.TryGetProperty("path", out var tPath))
+                {
+                    var p = tPath.GetString();
+                    if (!string.IsNullOrWhiteSpace(p))
+                    {
+                        File.Move(p, Path.Combine(workingPath, "thumbs", item.AssetId + "thumb.png"), true);
+                        item.ThumbnailPath = Path.Combine(workingPath, "thumbs", item.AssetId + "thumb.png");
+                    }
+                }
+#else
+
+                try
+                {
+                    var vid = new Video(item.Path);
+                    item.FrameCount = vid.Decoder.TotalFrames;
+                    item.SecondPerFrame = (float)(1f / vid.Decoder.Fps);
+
+
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "get video length", this);
+                    item.FrameCount = 1024;
+                    item.SecondPerFrame = 1 / 42f;
+                }
+
+#endif
+            }
+            Log($"Added asset '{item.Path}'s info: {item.FrameCount} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.FrameCount * item.SecondPerFrame} s");
+            Assets.AddOrUpdate(cid, item, (_, _) => item);
+            Dispatcher.Dispatch(() =>
+            {
+                Popup.Content = new ScrollView { Content = BuildAssetPanel() };
+            });
+
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Importing file {path}", this);
+            SetStatusText(Localized._ExceptionTemplate(ex));
+        }
+    }
+
+    private async void AssetPanelButton_Clicked(object sender, EventArgs e)
+    {
+        try
+        {
+            if (WindowSize.Width > WindowSize.Height)
+            {
+                await ShowAFullscreenPopupInRight(500, BuildAssetPanel());
+            }
+            else
+            {
+                await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, BuildAssetPanel());
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Show asset panel", this);
+            throw;
+        }
+
+    }
+
+    private ScrollView BuildAssetPanel()
+    {
+        var layout = new VerticalStackLayout { Spacing = 10 };
+        foreach (var kvp in Assets)
+        {
+            var asset = kvp.Value;
+            var label = $"{asset.Icon} {asset.Name}";
+            var assetClip = ClipElementUI.CreateClip(0, 150, 0, labelText: label, background: (Brush?)asset.Background);
+            assetClip.maxFrameCount = (uint)(asset.FrameCount ?? 0U);
+            assetClip.isInfiniteLength = asset.isInfiniteLength;
+            assetClip.Clip.WidthRequest = 200;
+
+            var dragGesture = new DragGestureRecognizer();
+            dragGesture.CanDrag = true;
+            dragGesture.DragStarting += (s, args) =>
+            {
+                _draggingAsset = asset;
+                var ghostClip = ClipElementUI.CreateClip(0, 150, 0, id: "ghost_asset", labelText: label, background: (Brush?)asset.Background,
+                    maxFrames: (uint)(asset.FrameCount ?? 0U));
+                ghostClip.isInfiniteLength = asset.isInfiniteLength;
+                ghostClip.Clip.Opacity = 0.5;
+                Clips.TryAdd("ghost_asset", ghostClip);
+                args.Data.Properties.Add("ghost", ghostClip);
+#if ANDROID
+                OverlayLayer.IsVisible = true;
+#endif
+            };
+            dragGesture.DropCompleted += (s, args) =>
+            {
+                if (Clips.TryRemove("ghost_asset", out var ghost))
+                {
+                    OverlayLayer.Children.Remove(ghost.Clip);
+                }
+                _draggingAsset = null;
+                _lastDragPoint = null;
+#if ANDROID
+                OverlayLayer.IsVisible = false;
+#endif
+            };
+            assetClip.Clip.GestureRecognizers.Add(dragGesture);
+
+            var removeButton = new Button
+            {
+                Background = Colors.Red,
+                Text = "Delete"
+            };
+
+            var childLayout = new HorizontalStackLayout
+            {
+                Children =
+                {
+                    new Image
+                    {
+                        Source = File.Exists(asset.ThumbnailPath) ? ImageSource.FromFile(asset.ThumbnailPath) : null,
+                        WidthRequest = 120
+                    },
+                    assetClip.Clip,
+
+                }
+            };
+            removeButton.Clicked += (s, e) =>
+            {
+                Assets.Remove(kvp.Key, out var _asset);
+                layout.Children.Remove(childLayout);
+            };
+            childLayout.Children.Add(removeButton);
+            layout.Children.Add(childLayout);
+        }
+
+        return new ScrollView
+        {
+            Content = layout,
+            Orientation = ScrollOrientation.Horizontal
+        };
+    }
+
+
+    #endregion
+
+    #region handle change
+    private async Task RenderOneFrame(uint duration)
+    {
+        SetStateBusy();
+        SetStatusText(Localized.DraftPage_RenderOneFrame((int)duration, TimeSpan.FromSeconds(1)));
+        var cts = new CancellationTokenSource();
+#if WINDOWS
+        cts.CancelAfter(10000);
+        var path = await RpcClient.RenderOneFrame(duration, _rpc, cts.Token);
+        var src = ImageSource.FromFile(path);
+        Dispatcher.Dispatch(() =>
+        {
+            PreviewBox.Source = src;
+        });
+        SetStateOK();
+        SetStatusText(Localized.DraftPage_EverythingFine);
+#endif
+    }
+
+    private async void DraftChanged(object? sender, ClipUpdateEventArgs e)
+    {
+        foreach (var item in Clips)
+        {
+            if (!item.Value.isInfiniteLength && item.Value.lengthInFrame > item.Value.maxFrameCount)
+            {
+                SetStateFail($"Clip {item.Key} has a invaild length {item.Value.lengthInFrame} frames, larger than it's source {item.Value.maxFrameCount}.");
+            }
+        }
+        PlayheadLine.HeightRequest = Tracks.Count * ClipHeight + RulerLayout.Height;
+        var d = DraftImportAndExportHelper.ExportFromDraftPage(this);
+        await Save();
+#if WINDOWS
+        SetStateBusy();
+        SetStatusText(Localized.DraftPage_ApplyingChanges);
+        var cts = new CancellationTokenSource();
+
+        try
+        {
+            cts.CancelAfter(10000);
+
+            await RpcClient.UpdateDraft(d, _rpc, cts.Token);
+            SetStatusText(Localized.DraftPage_ChangesApplied);
+        }
+        catch (Exception ex)
+        {
+
+            SetStateFail(Localized._ExceptionTemplate(ex));
+            await DisplayAlert($"{ex.GetType()} Error", ex.Message, "ok");
+        }
+        finally
+        {
+            SetStateOK();
+        }
+
+
+
+#endif
+
+    }
+    #endregion
+
+    #region adjust track and clip
+    private void ReRenderUI()
+    {
+        SetStateBusy(Localized._Processing);
+
+        try
+        {
+            // operate on a snapshot to avoid collection-modified issues
+            var snapshot = Clips.ToList();
+
+            foreach (var kv in snapshot)
+            {
+                var key = kv.Key;
+                var clip = kv.Value;
+                if (string.IsNullOrEmpty(key)) continue;
+                if (key.StartsWith("ghost_") || key.StartsWith("shadow_")) continue;
+                if (clip == null) continue;
+
+                var border = clip.Clip;
+                if (border == null) continue;
+
+                // All visual updates must run on UI thread
+                Dispatcher.Dispatch(() =>
+                {
+                    try
+                    {
+                        // Ensure binding context points to the current ClipElementUI instance
+                        border.BindingContext = clip;
+                        clip.Clip = border;
+
+                        // Update children: find label(s) and handle borders, rebind them and update texts
+                        void UpdateLayoutChildren(Microsoft.Maui.Controls.Layout layout)
+                        {
+                            Border foundLeft = null;
+                            Border foundRight = null;
+
+                            foreach (var child in layout.Children)
+                            {
+                                if (child is Microsoft.Maui.Controls.Label lab)
+                                {
+                                    // update label text to reflect current displayName
+                                    lab.Text = clip.displayName;
+                                }
+                                else if (child is Border b)
+                                {
+                                    // rebind handle borders to current clip instance
+                                    b.BindingContext = clip;
+
+                                    // detect left/right handle by column metadata if available
+                                    try
+                                    {
+                                        var col = Grid.GetColumn(b);
+                                        if (col == 0) foundLeft = b;
+                                        else if (col == 2) foundRight = b;
+                                    }
+                                    catch { /* ignore if not in a grid */ }
+                                }
+                                else if (child is Microsoft.Maui.Controls.Layout subLayout)
+                                {
+                                    // nested layout: search for labels/handles inside
+                                    foreach (var sub in subLayout.Children)
+                                    {
+                                        if (sub is Microsoft.Maui.Controls.Label sl) sl.Text = clip.displayName;
+                                        if (sub is Border sb)
+                                        {
+                                            sb.BindingContext = clip;
+                                            try
+                                            {
+                                                var col2 = Grid.GetColumn(sb);
+                                                if (col2 == 0) foundLeft = sb;
+                                                else if (col2 == 2) foundRight = sb;
+                                            }
+                                            catch { }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Assign discovered handles back to the model so later code relying on those refs keeps working
+                            if (foundLeft != null) clip.LeftHandle = foundLeft;
+                            if (foundRight != null) clip.RightHandle = foundRight;
+                        }
+
+                        if (border.Content is Microsoft.Maui.Controls.Grid g)
+                        {
+                            // grid may contain handles and nested layout
+                            UpdateLayoutChildren(g);
+                        }
+                        else if (border.Content is Microsoft.Maui.Controls.Layout layout)
+                        {
+                            UpdateLayoutChildren(layout);
+                        }
+
+                        // Re-apply speed/width calculation and update length-in-frames
+                        try
+                        {
+                            clip.ApplySpeedRatio();
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, "ApplySpeedRatio in ReRenderUI", this);
+                        }
+
+                        // Update cached length in frames to match actual visual width
+                        try
+                        {
+                            var w = (!double.IsNaN(border.Width) && border.Width > 0) ? border.Width : border.WidthRequest;
+                            clip.lengthInFrame = PixelToFrame(w);
+                        }
+                        catch { /* non-critical */ }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, "ReRenderUI update clip", this);
+                    }
+                });
+            }
+
+            // recompute adjacency (rounded corners / adjacency) after layout updates
+            UpdateAdjacencyForTrack();
+        }
+        finally
+        {
+            SetStateOK();
+        }
+    }
+
+
     class _RoundRectangleRadiusType
     {
         public double tl { get; set; }
@@ -1133,7 +1456,7 @@ public partial class DraftPage : ContentPage
         public ClipElementUI Clip { get; set; }
     }
 
-    private void UpdateAdjacencyForTrack() => Tracks.Keys.ToList().ForEach((x) => UpdateAdjacencyForTrack(x));
+    private void UpdateAdjacencyForTrack() => Tracks.Keys.ToList().ForEach(UpdateAdjacencyForTrack);
 
 
     private void UpdateAdjacencyForTrack(int trackIndex)
@@ -1253,6 +1576,8 @@ public partial class DraftPage : ContentPage
             }
         }
     }
+
+
     #endregion
 
     #region drag and drop
@@ -1273,94 +1598,55 @@ public partial class DraftPage : ContentPage
                 }
             }
         }
+#elif ANDROID
+        return; //android not support drag and drop file yet
+#elif iDevices
+        static async Task<LoadInPlaceResult?> LoadItemAsync(NSItemProvider itemProvider, List<string> typeIdentifiers)
+        {
+            try
+            {
+                if (typeIdentifiers is null || typeIdentifiers.Count == 0)
+                    return null;
+
+                var typeIdent = typeIdentifiers.First();
+
+                if (itemProvider.HasItemConformingTo(typeIdent))
+                    return await itemProvider.LoadInPlaceFileRepresentationAsync(typeIdent);
+
+                typeIdentifiers.Remove(typeIdent);
+                return await LoadItemAsync(itemProvider, typeIdentifiers);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading item: {ex.Message}");
+                return null;
+            }
+
+
+        }
+
+        var session = e.PlatformArgs?.DropSession;
+        if (session == null)
+            return;
+
+        foreach (UIDragItem item in session.Items)
+        {
+            var result = await LoadItemAsync(item.ItemProvider, item.ItemProvider.RegisteredTypeIdentifiers.ToList());
+            if (result is not null)
+                filePaths.Add(result.FileUrl?.Path!);
+            else
+                SetStateFail("File is null.");
+        }
+
+
+
 #endif
         if (filePaths.Count > 0)
         {
             foreach (var path in filePaths)
             {
-                try
-                {
-                    var cid = Guid.NewGuid().ToString();
-                    var item = new AssetItem
-                    {
-                        Name = System.IO.Path.GetFileNameWithoutExtension(path),
-                        Path = path,
-                        Type = DetermineClipMode(path),
-                        AssetId = cid
-                    };
-
-                    if (item.Type != ClipMode.VideoClip)
-                    {
-                        item.SecondPerFrame = float.PositiveInfinity;
-                        item.FrameCount = 0;
-                    }
-                    else
-                    {
-#if WINDOWS //防止视频打不开主程序炸掉
-                        var cts = new CancellationTokenSource();
-                        cts.CancelAfter(5000);
-                        var info = await _rpc.SendAsync("GetVideoFileInfo", JsonSerializer.SerializeToElement(item.Path), cts.Token);
-                        if (info is not null)
-                        {
-                            info.Value.TryGetProperty("frameCount", out var fc);
-                            info.Value.TryGetProperty("fps", out var fps);
-                            if (fc.ValueKind == JsonValueKind.Number && fps.ValueKind == JsonValueKind.Number)
-                            {
-                                item.FrameCount = fc.GetInt64();
-                                item.SecondPerFrame = 1 / fps.GetSingle();
-                            }
-
-                        }
-                        cts = new CancellationTokenSource();
-                        cts.CancelAfter(5000);
-                        var thumbNail = await _rpc.SendAsync("ReadAFrame", JsonSerializer.SerializeToElement(new Dictionary<string, object>
-                        {
-                            { "path", item.Path },
-                            { "frameToRead", 0U },
-                            { "size", "640x480" }
-                        }), cts.Token);
-
-                        if (thumbNail.Value.TryGetProperty("path", out var tPath))
-                        {
-                            var p = tPath.GetString();
-                            if (!string.IsNullOrWhiteSpace(p))
-                            {
-                                File.Move(p, Path.Combine(workingPath, "thumbs", item.AssetId + "thumb.png"),true);
-                                item.ThumbnailPath = Path.Combine(workingPath, "thumbs", item.AssetId + "thumb.png");
-                            }
-                        }
-#else
-                    
-                    try
-                    {
-                        var vid = new Video(item.Path);
-                        item.FrameCount = vid.Decoder.TotalFrames;
-                        item.SecondPerFrame = (float)(1f / vid.Decoder.Fps);
-
-
-                    }
-                    catch (Exception ex)
-                    {
-                        Log(ex, "get video length", this);
-                        item.FrameCount = 1024;
-                        item.SecondPerFrame = 1 / 42f;
-                    }
-
-#endif
-                    }
-                    Log($"Added asset '{item.Path}'s info: {item.FrameCount} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.FrameCount * item.SecondPerFrame} s");
-                    Assets.AddOrUpdate(cid, item, (_, _) => item);
-                    Dispatcher.Dispatch(() =>
-                    {
-                        Popup.Content = new ScrollView { Content = BuildAssetPanel() };
-                    });
-
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, $"Importing file {path}", this);
-                    SetStatusText(Localized._ExceptionTemplate(ex));
-                }
+                Log($"Importing file from drag and drop: {path}");
+                AddAsset(path);
             }
         }
     }
@@ -1391,69 +1677,86 @@ public partial class DraftPage : ContentPage
         {
             platformArgs.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.None;
         }
+#else
+        e.AcceptedOperation = DataPackageOperation.Copy;
+
 #endif
     }
 
     private async void Asset_DragOver(object? sender, DragEventArgs e)
     {
-        bool ableToAdd = _draggingAsset != null;
-        //if (isPopupShowing) await HideFullscreenPopup();
-        _lastDragPoint = e.GetPosition(OverlayLayer);
-        if (_lastDragPoint is null) return;
-        if (!Clips.TryGetValue("ghost_asset", out var ghostClip)) return;
-
-        if (!OverlayLayer.Children.Contains(ghostClip.Clip))
+        try
         {
-            OverlayLayer.Add(ghostClip.Clip);
-        }
+            bool ableToAdd = _draggingAsset != null;
+            //if (isPopupShowing) await HideFullscreenPopup();
+            _lastDragPoint = e.GetPosition(OverlayLayer);
+            if (_lastDragPoint is null) return;
+            if (!Clips.TryGetValue("ghost_asset", out var ghostClip)) return;
 
-        var contentPos = GetAbsolutePosition(TrackContentLayout, OverlayLayer);
-        double dragXInContent = _lastDragPoint.Value.X - contentPos.X;
-        double dragYInContent = _lastDragPoint.Value.Y - contentPos.Y;
-
-        int trackIndex = TrackCalculator.CalculateWhichTrackShouldIn(dragYInContent);
-
-        if (trackIndex < 0 || trackIndex >= trackCount)
-        {
-            ghostClip.Clip.IsVisible = false;
-        }
-        else
-        {
-            ableToAdd = true;
-            ghostClip.Clip.IsVisible = true;
-        }
-        if (!ableToAdd) goto show_hint;
-        double width = FrameToPixel(ghostClip.maxFrameCount > 0 ? ghostClip.maxFrameCount : 150); // Default width for infinite clips
-        if (ghostClip.isInfiniteLength) width = 150;
-
-        double snappedX = SnapPixels(dragXInContent);
-        double resolvedX = ResolveOverlapStartPixels(trackIndex, "ghost_asset", snappedX, width);
-
-        ghostClip.Clip.TranslationX = resolvedX + contentPos.X;
-        ghostClip.Clip.TranslationY = trackIndex * ClipHeight + contentPos.Y;
-    show_hint:
-#if WINDOWS
-        var platformArgs = e.PlatformArgs?.DragEventArgs;
-        if (platformArgs is null)
-        {
-            return;
-        }
-
-        if (platformArgs.DataView != null)
-        {
-
-            var dragUI = platformArgs.DragUIOverride;
-            if (dragUI is not null)
+            if (!OverlayLayer.Children.Contains(ghostClip.Clip))
             {
-                dragUI.Caption = ableToAdd ? Localized.DraftPage_AddOneAsset(ghostClip.displayName) : Localized.DraftPage_ReleaseToCancel;
-                dragUI.IsCaptionVisible = true;
-                dragUI.IsContentVisible = true;
+                OverlayLayer.Add(ghostClip.Clip);
             }
-        }
+
+            var contentPos = GetAbsolutePosition(TrackContentLayout, OverlayLayer);
+            double dragXInContent = _lastDragPoint.Value.X - contentPos.X;
+            double dragYInContent = _lastDragPoint.Value.Y - contentPos.Y;
+
+            int trackIndex = TrackCalculator.CalculateWhichTrackShouldIn(dragYInContent);
+
+            if (trackIndex < 0 || trackIndex >= trackCount)
+            {
+                ghostClip.Clip.IsVisible = false;
+            }
+            else
+            {
+                ableToAdd = true;
+                ghostClip.Clip.IsVisible = true;
+            }
+            if (!ableToAdd) goto show_hint;
+            double width = FrameToPixel(ghostClip.maxFrameCount > 0 ? ghostClip.maxFrameCount : 150); // Default width for infinite clips
+            if (ghostClip.isInfiniteLength) width = 150;
+
+            double snappedX = SnapPixels(dragXInContent);
+            double resolvedX = ResolveOverlapStartPixels(trackIndex, "ghost_asset", snappedX, width);
+
+            ghostClip.Clip.TranslationX = resolvedX + contentPos.X;
+            ghostClip.Clip.TranslationY = trackIndex * ClipHeight + contentPos.Y;
+        show_hint:
+#if WINDOWS
+            var platformArgs = e.PlatformArgs?.DragEventArgs;
+            if (platformArgs is null)
+            {
+                return;
+            }
+
+            if (platformArgs.DataView != null)
+            {
+
+                var dragUI = platformArgs.DragUIOverride;
+                if (dragUI is not null)
+                {
+                    dragUI.Caption = ableToAdd ? Localized.DraftPage_AddOneAsset(ghostClip.displayName) : Localized.DraftPage_ReleaseToCancel;
+                    dragUI.IsCaptionVisible = true;
+                    dragUI.IsContentVisible = true;
+                }
+            }
 
 #else
-        SetStatusText(ableToAdd ? Localized.DraftPage_AddOneAsset(ghostClip.displayName) : Localized.DraftPage_ReleaseToCancel);
+            SetStatusText(ableToAdd ? Localized.DraftPage_AddOneAsset(ghostClip.displayName) : Localized.DraftPage_ReleaseToCancel);
 #endif
+        }
+#if iDevices
+        catch (NullReferenceException) //may be ignore on iDevices because of this method will be invoked together with File_DragOver and cause the e.GetPosition return null
+        {
+
+        }
+        
+#endif
+        catch (Exception ex)
+        {
+            Log(ex, "Drag the clip", this);
+        }
     }
 
     private async void Asset_Drop(object? sender, DropEventArgs e)
@@ -1489,18 +1792,26 @@ public partial class DraftPage : ContentPage
         {
             AddATrack(trackIndex);
         }
-        CreateAndAddClip(
+        var elem = ClipElementUI.CreateClip(
             startX: dropXInContent,
             width: width,
             trackIndex: trackIndex,
             labelText: _draggingAsset.Name,
             background: (Brush?)_draggingAsset.Background,
             maxFrames: (uint)(_draggingAsset.FrameCount ?? 0U),
-            relativeStart: 0,
-            resolveOverlap: true
+            relativeStart: 0
         );
 
-        UpdateAdjacencyForTrack(trackIndex);
+        elem.sourcePath = _draggingAsset.Path;
+        elem.ClipType = _draggingAsset.Type;
+        elem.sourceSecondPerFrame = _draggingAsset.SecondPerFrame;
+        elem.SecondPerFrameRatio = 1f;
+        elem.ExtraData = new();
+
+        RegisterClip(elem, true);
+        AddAClip(elem);
+
+        UpdateAdjacencyForTrack();
         SetStatusText($"Asset '{_draggingAsset.Name}' added to track {trackIndex + 1}.");
         await HidePopup();
 
@@ -1756,6 +2067,8 @@ public partial class DraftPage : ContentPage
 
     private async Task ShowAFullscreenPopupInBottom(double height, View content)
     {
+        isPopupShowing = true;
+        popupShowingDirection = "bottom";
 #if ANDROID
         OverlayLayer.IsVisible = true;
 #endif
@@ -1801,6 +2114,8 @@ public partial class DraftPage : ContentPage
 
     private async Task ShowAFullscreenPopupInRight(double width, View content)
     {
+        isPopupShowing = true;
+        popupShowingDirection = "right";
 #if ANDROID
         OverlayLayer.IsVisible = true;
 #endif
@@ -1848,277 +2163,41 @@ public partial class DraftPage : ContentPage
     {
         var size = WindowSize;
 
+
         try
         {
-            await Popup.TranslateTo(Popup.TranslationX, size.Height + 10, 300, Easing.SinIn);
+            switch (popupShowingDirection)
+            {
+                case "right":
+                    await Popup.TranslateTo(size.Width + 20, Popup.TranslationY, 300, Easing.SinIn);
+                    break;
+                case "bottom":
+                    await Popup.TranslateTo(Popup.TranslationX, size.Height + 10, 300, Easing.SinIn);
+                    break;
+                default:
+                    await Popup.TranslateTo(Popup.TranslationX, size.Height + 10, 300, Easing.SinIn);
+                    break;
+            }
         }
         catch { }
 
+
+
+
         OverlayLayer.Remove(Popup);
         OverlayLayer.InputTransparent = true;
+        isPopupShowing = false;
 
     }
 
     #endregion
 
-    #region misc
-    private async void AssetPanelButton_Clicked(object sender, EventArgs e)
-    {
-        await ShowAFullscreenPopupInRight(300, new ScrollView { Content = BuildAssetPanel() });
-
-    }
-
-    private VerticalStackLayout BuildAssetPanel()
-    {
-        var layout = new VerticalStackLayout { Spacing = 10 };
-        foreach (var kvp in Assets)
-        {
-            var asset = kvp.Value;
-            var label = $"{asset.Icon} {asset.Name}";
-            var assetClip = CreateClip(0, 150, 0, labelText: label, background: (Brush?)asset.Background);
-            assetClip.maxFrameCount = (uint)(asset.FrameCount ?? 0U);
-            assetClip.isInfiniteLength = asset.isInfiniteLength;
-            assetClip.Clip.WidthRequest = 200;
-
-            var dragGesture = new DragGestureRecognizer();
-            dragGesture.CanDrag = true;
-            dragGesture.DragStarting += (s, args) =>
-            {
-                _draggingAsset = asset;
-                var ghostClip = CreateClip(0, 150, 0, id: "ghost_asset", labelText: label, background: (Brush?)asset.Background,
-                    maxFrames: (uint)(asset.FrameCount ?? 0U));
-                ghostClip.isInfiniteLength = asset.isInfiniteLength;
-                ghostClip.Clip.Opacity = 0.5;
-                Clips.TryAdd("ghost_asset", ghostClip);
-                args.Data.Properties.Add("ghost", ghostClip);
-#if ANDROID
-                OverlayLayer.IsVisible = true;
-#endif
-            };
-            dragGesture.DropCompleted += (s, args) =>
-            {
-                if (Clips.TryRemove("ghost_asset", out var ghost))
-                {
-                    OverlayLayer.Children.Remove(ghost.Clip);
-                }
-                _draggingAsset = null;
-                _lastDragPoint = null;
-#if ANDROID
-                OverlayLayer.IsVisible = false;  
-#endif
-            };
-            assetClip.Clip.GestureRecognizers.Add(dragGesture);
-
-            var removeButton = new Button
-            {
-                Background = Colors.Red,
-                Text = "Delete"
-            };
-
-            var childLayout = new HorizontalStackLayout
-            {
-                Children =
-                {
-                    new Image
-                    {
-                        Source = File.Exists(asset.ThumbnailPath) ? ImageSource.FromFile(asset.ThumbnailPath) : null,
-                        WidthRequest = 120
-                    },
-                    assetClip.Clip,
-
-                }
-            };
-            removeButton.Clicked += (s, e) =>
-            {
-                Assets.Remove(kvp.Key, out var _asset);
-                layout.Children.Remove(childLayout);
-            };
-            childLayout.Children.Add(removeButton);
-            layout.Children.Add(childLayout);
-        }
-
-        return layout;
-    }
-
-
-
-    private void OnExportedClick(object sender, EventArgs e)
-    {
-
-    }
-
-    private async void SettingsClick(object sender, EventArgs e)
-    {
-        await Navigation.PushAsync(new ContentPage
-        {
-            Content = new ScrollView
-            {
-                Content = BuildPropertyPanel(_selected ?? new())
-            }
-        });
-    }
+    #region math stuff
 
     [DebuggerNonUserCode()]
     public uint PixelToFrame(double px) => (uint)(px * FramePerPixel * tracksZoomOffest);
     [DebuggerNonUserCode()]
     public double FrameToPixel(uint f) => f / (FramePerPixel * tracksZoomOffest);
-
-    private View BuildPropertyPanel(ClipElementUI clip)
-    {
-        return new Editor
-        {
-            Text = JsonSerializer.Serialize(clip, new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals,
-            }),
-            IsReadOnly = true,
-            HeightRequest = 300,
-        };
-
-    }
-
-    private async void AddWebViewClip(int trackIndex, string clipId, string text, int start, int duration)
-    {
-        var script = $"window.addClip({trackIndex}, '{clipId}', '{text}', {start}, {duration});";
-        await hybridWebView.EvaluateJavaScriptAsync(script);
-    }
-
-    private void MoveLeftButton_Clicked(object sender, EventArgs e)
-    {
-        foreach (var item in Tracks)
-        {
-            foreach (var border in item.Value.Children)
-            {
-                if (border is Border b)
-                {
-                    b.TranslationX -= 50;
-                }
-            }
-        }
-
-        tracksViewOffset -= 50;
-    }
-
-    private void MoveRightButton_Clicked(object sender, EventArgs e)
-    {
-        foreach (var item in Tracks)
-        {
-            foreach (var border in item.Value.Children)
-            {
-                if (border is Border b)
-                {
-                    b.TranslationX += 50;
-                }
-            }
-        }
-
-        tracksViewOffset += 50;
-    }
-
-    private void ZoomOutButton_Clicked(object sender, EventArgs e)
-    {
-        foreach (var item in Tracks)
-        {
-            foreach (var border in item.Value.Children)
-            {
-                if (border is Border b)
-                {
-                    b.WidthRequest *= 1.5;
-
-                    b.TranslationX += b.WidthRequest * 1.5;
-
-                }
-            }
-        }
-
-        tracksViewOffset *= 1.5;
-        tracksZoomOffest *= 1.5;
-
-    }
-
-    private void ZoomInButton_Clicked(object sender, EventArgs e)
-    {
-        foreach (var item in Tracks)
-        {
-            foreach (var border in item.Value.Children)
-            {
-                if (border is Border b)
-                {
-                    b.WidthRequest /= 1.5;
-
-                    b.TranslationX -= b.WidthRequest * 1.5;
-
-                }
-            }
-        }
-
-        tracksViewOffset /= 1.5;
-        tracksZoomOffest /= 1.5;
-        Log(new NullReferenceException(), "111", this);
-    }
-
-    private Size GetScreenSizeInDp()
-    {
-        var info = DeviceDisplay.MainDisplayInfo;
-        double widthDp = info.Width / info.Density;
-        double heightDp = info.Height / info.Density;
-        return new Size(widthDp, heightDp);
-    }
-
-    protected override async void OnAppearing()
-    {
-        base.OnAppearing();
-        MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog;
-
-        var size = GetScreenSizeInDp();
-        Log($"Window size on appearing: {size.Width:F0} x {size.Height:F0} (DIP)");
-        // 短等待，确保布局完成
-        await Task.Delay(50);
-
-        var w = this.Window?.Width ?? 0;
-        var h = this.Window?.Height ?? 0;
-        WindowSize = new Size(w, h);
-    }
-
-    private void MyLoggerExtensions_OnExceptionLog(Exception obj)
-    {
-        Dispatcher.Dispatch(() =>
-        {
-            StatusLabel.TextColor = Colors.Red;
-            StatusLabel.Text = Localized._ExceptionTemplate(obj);
-        });
-    }
-
-    protected override void OnDisappearing()
-    {
-        base.OnDisappearing();
-        HidePopup();
-        MyLoggerExtensions.OnExceptionLog -= MyLoggerExtensions_OnExceptionLog;
-        try
-        {
-            Save(true);
-        }
-        catch (Exception ex)
-        {
-            DisplayAlert("Error", $"Failed to save project on exit: {ex.Message}", "OK");
-        }
-
-
-        if (this.Window is not null)
-        {
-            this.Window.SizeChanged -= Window_SizeChanged;
-        }
-    }
-
-    private void Window_SizeChanged(object? sender, EventArgs e)
-    {
-        double w = this.Window?.Width ?? 0;
-        double h = this.Window?.Height ?? 0;
-        WindowSize = new(w, h);
-        Log($"Window size changed: {w:F0} x {h:F0} (DIP)");
-
-    }
 
     private Point GetAbsolutePosition(VisualElement element, VisualElement ancestor)
     {
@@ -2248,27 +2327,6 @@ public partial class DraftPage : ContentPage
         return Math.Max(0, s);
     }
 
-    private void HybridWebView_RawMessageReceived(object? sender, HybridWebViewRawMessageReceivedEventArgs e)
-    {
-        // todo
-        Debug.WriteLine($"Message from JS: {e.Message}");
-    }
-
-    private void ViewSelector_CheckedChanged(object sender, CheckedChangedEventArgs e)
-    {
-        if (!e.Value) return;
-
-        if (sender == NativeViewRadio)
-        {
-            NativeView.IsVisible = true;
-            hybridWebView.IsVisible = false;
-        }
-        else if (sender == WebViewRadio)
-        {
-            NativeView.IsVisible = false;
-            hybridWebView.IsVisible = true;
-        }
-    }
 
     private static ClipMode DetermineClipMode(string? path)
     {
@@ -2281,12 +2339,171 @@ public partial class DraftPage : ContentPage
         if (image.Contains(ext)) return ClipMode.PhotoClip;
         return ClipMode.Special; // fallback
     }
+    #endregion
 
-    //protected override bool OnBackButtonPressed()
-    //{
+    #region misc
 
-    //    return false;
-    //}
+    private async void OnExportedClick(object sender, EventArgs e)
+    {
+
+#if WINDOWS
+        backendProc.EnableRaisingEvents = false; //避免弹框
+
+#endif
+        await Save(true);
+        await Navigation.PushAsync(new RenderPage(workingPath, projectDuration, ProjectInfo));
+
+    }
+
+    private async void SettingsClick(object sender, EventArgs e)
+    {
+        await Navigation.PushAsync(new ContentPage
+        {
+            Content = new ScrollView
+            {
+                Content = BuildPropertyPanel(_selected ?? new())
+            }
+        });
+    }
+
+
+
+
+
+    private void MoveLeftButton_Clicked(object sender, EventArgs e)
+    {
+        foreach (var item in Tracks)
+        {
+            foreach (var border in item.Value.Children)
+            {
+                if (border is Border b)
+                {
+                    b.TranslationX -= 50;
+                }
+            }
+        }
+
+        tracksViewOffset -= 50;
+    }
+
+    private void MoveRightButton_Clicked(object sender, EventArgs e)
+    {
+        foreach (var item in Tracks)
+        {
+            foreach (var border in item.Value.Children)
+            {
+                if (border is Border b)
+                {
+                    b.TranslationX += 50;
+                }
+            }
+        }
+
+        tracksViewOffset += 50;
+    }
+
+    private void ZoomOutButton_Clicked(object sender, EventArgs e)
+    {
+        foreach (var item in Tracks)
+        {
+            foreach (var border in item.Value.Children)
+            {
+                if (border is Border b)
+                {
+                    b.WidthRequest *= 1.5;
+
+                    b.TranslationX += b.WidthRequest * 1.5;
+
+                }
+            }
+        }
+
+        tracksViewOffset *= 1.5;
+        tracksZoomOffest *= 1.5;
+
+    }
+
+    private void ZoomInButton_Clicked(object sender, EventArgs e)
+    {
+        foreach (var item in Tracks)
+        {
+            foreach (var border in item.Value.Children)
+            {
+                if (border is Border b)
+                {
+                    b.WidthRequest /= 1.5;
+
+                    b.TranslationX -= b.WidthRequest * 1.5;
+
+                }
+            }
+        }
+
+        tracksViewOffset /= 1.5;
+        tracksZoomOffest /= 1.5;
+    }
+
+    private Size GetScreenSizeInDp()
+    {
+        var info = DeviceDisplay.MainDisplayInfo;
+        double widthDp = info.Width / info.Density;
+        double heightDp = info.Height / info.Density;
+        return new Size(widthDp, heightDp);
+    }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog;
+
+        var size = GetScreenSizeInDp();
+        Log($"Window size on appearing: {size.Width:F0} x {size.Height:F0} (DIP)");
+        // 短等待，确保布局完成
+        await Task.Delay(50);
+
+        var w = this.Window?.Width ?? 0;
+        var h = this.Window?.Height ?? 0;
+        WindowSize = new Size(w, h);
+    }
+
+    private void MyLoggerExtensions_OnExceptionLog(Exception obj)
+    {
+        Dispatcher.Dispatch(() =>
+        {
+            StatusLabel.TextColor = Colors.Red;
+            StatusLabel.Text = Localized._ExceptionTemplate(obj);
+        });
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        HidePopup();
+        MyLoggerExtensions.OnExceptionLog -= MyLoggerExtensions_OnExceptionLog;
+        try
+        {
+            Save(true);
+        }
+        catch (Exception ex)
+        {
+            DisplayAlert("Error", $"Failed to save project on exit: {ex.Message}", "OK");
+        }
+
+
+        if (this.Window is not null)
+        {
+            this.Window.SizeChanged -= Window_SizeChanged;
+        }
+    }
+
+    private void Window_SizeChanged(object? sender, EventArgs e)
+    {
+        double w = this.Window?.Width ?? 0;
+        double h = this.Window?.Height ?? 0;
+        WindowSize = new(w, h);
+        Log($"Window size changed: {w:F0} x {h:F0} (DIP)");
+
+    }
 
     protected override void OnNavigatedFrom(NavigatedFromEventArgs args)
     {
@@ -2306,6 +2523,13 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region status
+    public void SetStateBusy(string text)
+    {
+        SetStateBusy();
+        SetStatusText(text);
+    }
+
+
     public void SetStateBusy()
     {
         if (StateIndicator is null) return;
@@ -2340,6 +2564,8 @@ public partial class DraftPage : ContentPage
 
 
             });
+            StatusLabel.TextColor = Colors.White;
+
         });
 
     }
@@ -2393,8 +2619,8 @@ public partial class DraftPage : ContentPage
 
     #endregion
 
-    #region track interface
-    private void PlayheadTapped(object? sender, TappedEventArgs e)
+    #region show and save changes
+    private async void PlayheadTapped(object? sender, TappedEventArgs e)
     {
         try
         {
@@ -2416,25 +2642,34 @@ public partial class DraftPage : ContentPage
             if (double.IsNaN(overlayWidth) || overlayWidth <= 0) overlayWidth = 0;
             double clampedX = Math.Clamp(snappedX, 0, Math.Max(0, overlayWidth - playheadWidth));
 
-            PlayheadLine.TranslationX = clampedX;
-            var duration = PixelToFrame(clampedX);
-            SetStatusText($"Playhead moved to {TimeSpan.FromSeconds(duration)} ({clampedX:F0}px)");
+            if (clampedX - TrackHeadLayout.Width >= 0)
+            {
+                PlayheadLine.TranslationX = clampedX;
+                var duration = PixelToFrame(clampedX - TrackHeadLayout.Width);
+                await RenderOneFrame(duration);
+            }
         }
         catch (Exception ex)
         {
-            Log($"PlayheadTapped error: {ex}");
+            Log(ex, "playhead tap", this);
         }
     }
 
 
 
-    #endregion
+
 
     bool SaveSlotIndicator = false; //false -> A, true -> B
     JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
 
     public async Task Save(bool noSlot = false)
     {
+        if (string.IsNullOrEmpty(workingPath))
+        {
+            Log("saving failed: working path is empty", "warn");
+            SetStateFail("Saving failed: working path is empty");
+            return;
+        }
         var draft = DraftImportAndExportHelper.ExportFromDraftPage(this);
         var assets = Assets.Values.ToList();
         var slot = SaveSlotIndicator ? "saveSlotB" : "saveSlotA";
@@ -2461,8 +2696,13 @@ public partial class DraftPage : ContentPage
 
         }
 
+        projectDuration = draft.Duration;
+
 
     }
+
+    #endregion
+
 
 
 }

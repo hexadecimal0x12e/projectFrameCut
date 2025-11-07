@@ -313,7 +313,7 @@ namespace projectFrameCut.PropertyPanel
         /// </summary>
         /// <remarks>
         /// If you'd like to add a Child that modify the <see cref="Properties"/>, 
-        /// please use <seealso cref="AddCustomChild(Func{PropertyPanelBuilder, Action{object}, View}, string, object)"/>, 
+        /// please use <seealso cref="AddCustomChild(Func{Action{object}, View}, string, object)"/>, 
         /// which provides a eazy-use to modify <see cref="Properties"/> call <see cref="PropertyChanged"/> safely.
         /// </remarks>
         /// <param name="child">The view to add as a child to the property panel.</param>
@@ -355,7 +355,7 @@ namespace projectFrameCut.PropertyPanel
         /// ID and default value.
         /// <code>
         /// Use it like this:
-        /// ppb.AddCustomChild((ppb, invoker) => 
+        /// ppb.AddCustomChild((invoker) => 
         /// {
         ///     var entry = new Entry 
         ///     {
@@ -376,19 +376,32 @@ namespace projectFrameCut.PropertyPanel
         /// </param>
         /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
         /// <param name="defaultValue">The default value to assign to the property identified by <paramref name="Id"/>.</param>
-        public PropertyPanelBuilder AddCustomChild(Func<PropertyPanelBuilder, Action<object>, View> maker, string Id, object defaultValue)
+        public PropertyPanelBuilder AddCustomChild(Func<Action<object>, View> maker, string Id, object defaultValue)
         {
-            layout.Children.Add(maker(this, (o) => pppcea.CreateAndInvoke(this, Id, o)));
+            layout.Children.Add(maker((o) => pppcea.CreateAndInvoke(this, Id, o)));
             Properties[Id] = defaultValue;
             return this;
         }
 
         /// <summary>
-        /// Almost same to <see cref="AddCustomChild(Func{PropertyPanelBuilder, Action{object}, View}, string, object)"/>, but with an associated label.
+        /// Almost same to <see cref="AddCustomChild(Func{Action{object}, View}, string, object)"/>, but with an associated label.
+        /// <code>
+        /// Use it like this:
+        /// ppb.AddCustomChild("A sample entry", (invoker) => 
+        /// {
+        ///     var entry = new Entry 
+        ///     {
+        ///         Text = "...",
+        ///         //...
+        ///     }
+        ///     
+        ///     entry.TextChanged += (s, e) => invoker(e.NewTextValue);
+        /// )
+        /// </code>
         /// </summary>
-        public PropertyPanelBuilder AddCustomChild(PropertyPanelItemLabel title, Func<PropertyPanelBuilder, Action<object>, View> maker, string Id, object defaultValue)
+        public PropertyPanelBuilder AddCustomChild(PropertyPanelItemLabel title, Func<Action<object>, View> maker, string Id, object defaultValue)
         {
-            var child = maker(this, (o) => pppcea.CreateAndInvoke(this, Id, o));
+            var child = maker((o) => pppcea.CreateAndInvoke(this, Id, o));
             Properties[Id] = defaultValue;
             var label = title.LabelConfigurer();
             var grid = new Grid
@@ -437,11 +450,21 @@ namespace projectFrameCut.PropertyPanel
         /// <summary>
         /// Listens to property changes on the property panel. Same as subscribing to <see cref="PropertyChanged"/> event.
         /// </summary>
+        public PropertyPanelBuilder ListenToChanges(Action<pppcea> handler)
+        {
+            PropertyChanged += (s,e) => handler(e);
+            return this;
+        }
+
+        /// <summary>
+        /// Listens to property changes on the property panel. Same as subscribing to <see cref="PropertyChanged"/> event.
+        /// </summary>
         public PropertyPanelBuilder ListenToChanges(EventHandler<pppcea> handler)
         {
             PropertyChanged += handler;
             return this;
         }
+
 
         /// <summary>
         /// Get the final <seealso cref="VerticalStackLayout"/> of the childs created by this builder.

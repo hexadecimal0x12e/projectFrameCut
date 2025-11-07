@@ -52,7 +52,7 @@ namespace projectFrameCut.Render.RenderCLI
             Log($"projectFrameCut.Render - {Assembly.GetExecutingAssembly().GetName().Version} \r\n" + $"Copyright hexadecimal0x12e 2025.\r\n" +
                 $"cmdline: {Environment.GetCommandLineArgs().Aggregate((a, b) => $"{a} {b}")}");
 
-            if (args.Length == 0 || args.Any(x => x.Equals("-h") || x.Equals("--help")))
+            if (args.Length <= 1 || args.Any(x => x.Equals("-h") || x.Equals("--help")))
             {
                 Console.WriteLine(
                     """
@@ -94,7 +94,7 @@ namespace projectFrameCut.Render.RenderCLI
                 return 1;
             }
 
-            Log($"internal ffmpeg library: version {ffmpeg.av_version_info()} Copyright (c) 2000-2025 the FFmpeg developers\r\n configuration:{ffmpeg.avcodec_configuration()}");
+            Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
 
             var runningMode = args[0];
 

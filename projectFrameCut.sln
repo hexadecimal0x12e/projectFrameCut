@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "projectFrameCut.Render.ILGP
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "projectFrameCut.Render.Effects", "projectFrameCut.Render.Effects\projectFrameCut.Render.Effects.csproj", "{829EC4F3-2E95-4C32-9A40-6FC6952FAE64}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "projectFrameCut.iDevices", "projectFrameCut.iOS\projectFrameCut.iDevices.csproj", "{1EBC857C-44E5-57D5-2855-73BE348B5593}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -128,6 +130,19 @@ Global
 		{829EC4F3-2E95-4C32-9A40-6FC6952FAE64}.Release|ARM64.Build.0 = Release|Any CPU
 		{829EC4F3-2E95-4C32-9A40-6FC6952FAE64}.Release|x64.ActiveCfg = Release|Any CPU
 		{829EC4F3-2E95-4C32-9A40-6FC6952FAE64}.Release|x64.Build.0 = Release|Any CPU
+		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Debug|x64.Build.0 = Debug|Any CPU
+		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Release|ARM64.Build.0 = Release|Any CPU
+		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Release|x64.ActiveCfg = Release|Any CPU
+		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

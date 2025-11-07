@@ -49,6 +49,16 @@ public interface ISimpleLocalizerBase
     public string AppBrand { get; }
     
     /// <summary>
+    /// Get the localized string for DraftPage_AddOneAsset (like 松手来添加「{name ?? "未知名称"}」 )
+    /// </summary>
+    public string DraftPage_AddOneAsset(string? name);
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_ApplyingChanges (like 正在应用更改...)
+    /// </summary>
+    public string DraftPage_ApplyingChanges { get; }
+    
+    /// <summary>
     /// Get the localized string for DraftPage_BackendStatus (like 后端延迟{lantency.ToString("n2")}ms, 内存占用{menUsed.ToString("n2").Replace(',', '\0')}/{menTotalUsed.ToString("n2").Replace(',', '\0')} MB (后端/此电脑))
     /// </summary>
     public string DraftPage_BackendStatus(double lantency, double menUsed, double menTotalUsed);
@@ -84,9 +94,9 @@ public interface ISimpleLocalizerBase
     public string DraftPage_GoRender { get; }
     
     /// <summary>
-    /// Get the localized string for DraftPage_AddOneAsset (like 松手来添加「{name ?? "未知名称"}」 )
+    /// Get the localized string for DraftPage_ImportAssetNotFinished (like 松手来导入素材...)
     /// </summary>
-    public string DraftPage_AddOneAsset(string? name);
+    public string DraftPage_ImportAssetNotFinished { get; }
     
     /// <summary>
     /// Get the localized string for DraftPage_JobRunning (like {count} 任务正在执行)
@@ -107,6 +117,11 @@ public interface ISimpleLocalizerBase
     /// Get the localized string for DraftPage_ReachLimit (like 达到片段的长度限制({length}))
     /// </summary>
     public string DraftPage_ReachLimit(string length);
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_ReleaseToCancel (like 松手来取消操作...)
+    /// </summary>
+    public string DraftPage_ReleaseToCancel { get; }
     
     /// <summary>
     /// Get the localized string for DraftPage_ReleaseToRemove (like 松手来移除此片段...)
@@ -274,14 +289,29 @@ public interface ISimpleLocalizerBase
     public string WelcomeMessage { get; }
     
     /// <summary>
-    /// Get the localized string for DraftPage_ImportAssetNotFinished (like 松手来导入素材...)
+    /// Get the localized string for PropertyPanel (like 属性面板)
     /// </summary>
-    public string DraftPage_ImportAssetNotFinished { get; }
+    public string PropertyPanel { get; }
     
     /// <summary>
-    /// Get the localized string for DraftPage_ReleaseToCancel (like 松手来取消操作...)
+    /// Get the localized string for PropertyPanel_General (like 通用)
     /// </summary>
-    public string DraftPage_ReleaseToCancel { get; }
+    public string PropertyPanel_General { get; }
+    
+    /// <summary>
+    /// Get the localized string for PropertyPanel_General_SpeedRatio (like 倍速)
+    /// </summary>
+    public string PropertyPanel_General_SpeedRatio { get; }
+    
+    /// <summary>
+    /// Get the localized string for PropertyPanel_General_DisplayName (like 显示名称)
+    /// </summary>
+    public string PropertyPanel_General_DisplayName { get; }
+    
+    /// <summary>
+    /// Get the localized string for _Processing (like 处理中...)
+    /// </summary>
+    public string _Processing { get; }
     
     /// <summary>
     /// Get the current Locale's ID (like 'zh-CN')
@@ -306,12 +336,15 @@ public interface ISimpleLocalizerBase
             "_Options" => _Options,
             "_Warn" => _Warn,
             "AppBrand" => AppBrand,
+            "DraftPage_ApplyingChanges" => DraftPage_ApplyingChanges,
             "DraftPage_CannotMoveBecauseOfOverlap" => DraftPage_CannotMoveBecauseOfOverlap,
             "DraftPage_ChangesApplied" => DraftPage_ChangesApplied,
             "DraftPage_EverythingFine" => DraftPage_EverythingFine,
             "DraftPage_GoRender" => DraftPage_GoRender,
+            "DraftPage_ImportAssetNotFinished" => DraftPage_ImportAssetNotFinished,
             "DraftPage_NoJobRunning" => DraftPage_NoJobRunning,
             "DraftPage_Processing" => DraftPage_Processing,
+            "DraftPage_ReleaseToCancel" => DraftPage_ReleaseToCancel,
             "DraftPage_ReleaseToRemove" => DraftPage_ReleaseToRemove,
             "DraftPage_Removed" => DraftPage_Removed,
             "DraftPage_RenderDone" => DraftPage_RenderDone,
@@ -339,8 +372,11 @@ public interface ISimpleLocalizerBase
             "RenderPage_SubProg_WriteVideo" => RenderPage_SubProg_WriteVideo,
             "RenderPage_TotalProg" => RenderPage_TotalProg,
             "WelcomeMessage" => WelcomeMessage,
-            "DraftPage_ImportAssetNotFinished" => DraftPage_ImportAssetNotFinished,
-            "DraftPage_ReleaseToCancel" => DraftPage_ReleaseToCancel,
+            "PropertyPanel" => PropertyPanel,
+            "PropertyPanel_General" => PropertyPanel_General,
+            "PropertyPanel_General_SpeedRatio" => PropertyPanel_General_SpeedRatio,
+            "PropertyPanel_General_DisplayName" => PropertyPanel_General_DisplayName,
+            "_Processing" => _Processing,
             _ => throw new KeyNotFoundException($"Can't find the localized string for id '{id}'")
             };
         }
@@ -349,10 +385,10 @@ public interface ISimpleLocalizerBase
             return id switch
             {
                 "_ExceptionTemplate" => _ExceptionTemplate((Exception)args[0]),
+                "DraftPage_AddOneAsset" => DraftPage_AddOneAsset((string?)args[0]),
                 "DraftPage_BackendStatus" => DraftPage_BackendStatus((double)args[0], (double)args[1], (double)args[2]),
                 "DraftPage_BackendStatus_MemoryOnly" => DraftPage_BackendStatus_MemoryOnly((double)args[0]),
                 "DraftPage_BackendStatus_NotRespond" => DraftPage_BackendStatus_NotRespond((double)args[0], (double)args[1]),
-                "DraftPage_AddOneAsset" => DraftPage_AddOneAsset((string?)args[0]),
                 "DraftPage_JobRunning" => DraftPage_JobRunning((int)args[0]),
                 "DraftPage_ReachLimit" => DraftPage_ReachLimit((string)args[0]),
                 "DraftPage_RenderOneFrame" => DraftPage_RenderOneFrame((int)args[0], (TimeSpan)args[1]),
@@ -413,6 +449,18 @@ public class _SimpleLocalizer_zh_CN : ISimpleLocalizerBase
     public readonly string AppBrand = @"projectFrameCut(仮)";
     
     /// <summary>
+    /// Get the localized string for DraftPage_AddOneAsset in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_AddOneAsset(string? name) => DraftPage_AddOneAsset(name);
+    public string DraftPage_AddOneAsset(string? name) => @$"松手来添加「{name ?? "未知名称"}」 ";
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_ApplyingChanges in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_ApplyingChanges => DraftPage_ApplyingChanges;
+    public readonly string DraftPage_ApplyingChanges = @"正在应用更改...";
+    
+    /// <summary>
     /// Get the localized string for DraftPage_BackendStatus in zh-CN
     /// </summary>
     string ISimpleLocalizerBase.DraftPage_BackendStatus(double lantency, double menUsed, double menTotalUsed) => DraftPage_BackendStatus(lantency,menUsed,menTotalUsed);
@@ -455,10 +503,10 @@ public class _SimpleLocalizer_zh_CN : ISimpleLocalizerBase
     public readonly string DraftPage_GoRender = @"去渲染";
     
     /// <summary>
-    /// Get the localized string for DraftPage_AddOneAsset in zh-CN
+    /// Get the localized string for DraftPage_ImportAssetNotFinished in zh-CN
     /// </summary>
-    string ISimpleLocalizerBase.DraftPage_AddOneAsset(string? name) => DraftPage_AddOneAsset(name);
-    public string DraftPage_AddOneAsset(string? name) => @$"松手来添加「{name ?? "未知名称"}」 ";
+    string ISimpleLocalizerBase.DraftPage_ImportAssetNotFinished => DraftPage_ImportAssetNotFinished;
+    public readonly string DraftPage_ImportAssetNotFinished = @"松手来导入素材...";
     
     /// <summary>
     /// Get the localized string for DraftPage_JobRunning in zh-CN
@@ -483,6 +531,12 @@ public class _SimpleLocalizer_zh_CN : ISimpleLocalizerBase
     /// </summary>
     string ISimpleLocalizerBase.DraftPage_ReachLimit(string length) => DraftPage_ReachLimit(length);
     public string DraftPage_ReachLimit(string length) => @$"达到片段的长度限制({length})";
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_ReleaseToCancel in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_ReleaseToCancel => DraftPage_ReleaseToCancel;
+    public readonly string DraftPage_ReleaseToCancel = @"松手来取消操作...";
     
     /// <summary>
     /// Get the localized string for DraftPage_ReleaseToRemove in zh-CN
@@ -683,16 +737,34 @@ public class _SimpleLocalizer_zh_CN : ISimpleLocalizerBase
     public readonly string WelcomeMessage = @"欢迎来到projectFrameCut beta!";
     
     /// <summary>
-    /// Get the localized string for DraftPage_ImportAssetNotFinished in zh-CN
+    /// Get the localized string for PropertyPanel in zh-CN
     /// </summary>
-    string ISimpleLocalizerBase.DraftPage_ImportAssetNotFinished => DraftPage_ImportAssetNotFinished;
-    public readonly string DraftPage_ImportAssetNotFinished = @"松手来导入素材...";
+    string ISimpleLocalizerBase.PropertyPanel => PropertyPanel;
+    public readonly string PropertyPanel = @"属性面板";
     
     /// <summary>
-    /// Get the localized string for DraftPage_ReleaseToCancel in zh-CN
+    /// Get the localized string for PropertyPanel_General in zh-CN
     /// </summary>
-    string ISimpleLocalizerBase.DraftPage_ReleaseToCancel => DraftPage_ReleaseToCancel;
-    public readonly string DraftPage_ReleaseToCancel = @"松手来取消操作...";
+    string ISimpleLocalizerBase.PropertyPanel_General => PropertyPanel_General;
+    public readonly string PropertyPanel_General = @"通用";
+    
+    /// <summary>
+    /// Get the localized string for PropertyPanel_General_SpeedRatio in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.PropertyPanel_General_SpeedRatio => PropertyPanel_General_SpeedRatio;
+    public readonly string PropertyPanel_General_SpeedRatio = @"倍速";
+    
+    /// <summary>
+    /// Get the localized string for PropertyPanel_General_DisplayName in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase.PropertyPanel_General_DisplayName => PropertyPanel_General_DisplayName;
+    public readonly string PropertyPanel_General_DisplayName = @"显示名称";
+    
+    /// <summary>
+    /// Get the localized string for _Processing in zh-CN
+    /// </summary>
+    string ISimpleLocalizerBase._Processing => _Processing;
+    public readonly string _Processing = @"处理中...";
     
     /// <summary>
     /// Get the current localized Id (like zh-CN)
@@ -840,6 +912,18 @@ public class _SimpleLocalizer_en_US : ISimpleLocalizerBase
     public string DraftPage_AddOneAsset(string? name) => @$"Unset localization item:DraftPage_AddOneAsset(string? name)";
     
     /// <summary>
+    /// Get the localized string for DraftPage_ApplyingChanges in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_ApplyingChanges => DraftPage_ApplyingChanges;
+    public readonly string DraftPage_ApplyingChanges = @"Unset localization item:DraftPage_ApplyingChanges()";
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_ImportAssetNotFinished in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_ImportAssetNotFinished => DraftPage_ImportAssetNotFinished;
+    public readonly string DraftPage_ImportAssetNotFinished = @"Unset localization item:DraftPage_ImportAssetNotFinished()";
+    
+    /// <summary>
     /// Get the localized string for DraftPage_JobRunning in en-US
     /// </summary>
     string ISimpleLocalizerBase.DraftPage_JobRunning(int count) => DraftPage_JobRunning(count);
@@ -856,6 +940,12 @@ public class _SimpleLocalizer_en_US : ISimpleLocalizerBase
     /// </summary>
     string ISimpleLocalizerBase.DraftPage_ReachLimit(string length) => DraftPage_ReachLimit(length);
     public string DraftPage_ReachLimit(string length) => @$"Unset localization item:DraftPage_ReachLimit(string length)";
+    
+    /// <summary>
+    /// Get the localized string for DraftPage_ReleaseToCancel in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.DraftPage_ReleaseToCancel => DraftPage_ReleaseToCancel;
+    public readonly string DraftPage_ReleaseToCancel = @"Unset localization item:DraftPage_ReleaseToCancel()";
     
     /// <summary>
     /// Get the localized string for DraftPage_ReleaseToRemove in en-US
@@ -1020,16 +1110,34 @@ public class _SimpleLocalizer_en_US : ISimpleLocalizerBase
     public readonly string RenderPage_TotalProg = @"Unset localization item:RenderPage_TotalProg()";
     
     /// <summary>
-    /// Get the localized string for DraftPage_ImportAssetNotFinished in en-US
+    /// Get the localized string for PropertyPanel in en-US
     /// </summary>
-    string ISimpleLocalizerBase.DraftPage_ImportAssetNotFinished => DraftPage_ImportAssetNotFinished;
-    public readonly string DraftPage_ImportAssetNotFinished = @"Unset localization item:DraftPage_ImportAssetNotFinished()";
+    string ISimpleLocalizerBase.PropertyPanel => PropertyPanel;
+    public readonly string PropertyPanel = @"Unset localization item:PropertyPanel()";
     
     /// <summary>
-    /// Get the localized string for DraftPage_ReleaseToCancel in en-US
+    /// Get the localized string for PropertyPanel_General in en-US
     /// </summary>
-    string ISimpleLocalizerBase.DraftPage_ReleaseToCancel => DraftPage_ReleaseToCancel;
-    public readonly string DraftPage_ReleaseToCancel = @"Unset localization item:DraftPage_ReleaseToCancel()";
+    string ISimpleLocalizerBase.PropertyPanel_General => PropertyPanel_General;
+    public readonly string PropertyPanel_General = @"Unset localization item:PropertyPanel_General()";
+    
+    /// <summary>
+    /// Get the localized string for PropertyPanel_General_SpeedRatio in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.PropertyPanel_General_SpeedRatio => PropertyPanel_General_SpeedRatio;
+    public readonly string PropertyPanel_General_SpeedRatio = @"Unset localization item:PropertyPanel_General_SpeedRatio()";
+    
+    /// <summary>
+    /// Get the localized string for PropertyPanel_General_DisplayName in en-US
+    /// </summary>
+    string ISimpleLocalizerBase.PropertyPanel_General_DisplayName => PropertyPanel_General_DisplayName;
+    public readonly string PropertyPanel_General_DisplayName = @"Unset localization item:PropertyPanel_General_DisplayName()";
+    
+    /// <summary>
+    /// Get the localized string for _Processing in en-US
+    /// </summary>
+    string ISimpleLocalizerBase._Processing => _Processing;
+    public readonly string _Processing = @"Unset localization item:_Processing()";
     
     /// <summary>
     /// Get the current localized Id (like zh-CN)

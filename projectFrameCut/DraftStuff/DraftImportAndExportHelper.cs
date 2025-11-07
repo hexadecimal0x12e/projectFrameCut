@@ -44,15 +44,17 @@ namespace projectFrameCut.DraftStuff
                         {
                             Id = elem.Id,
                             Name = name,
-                            ClipType = ClipMode.Special,
+                            ClipType = elem.ClipType,
                             LayerIndex = (uint)trackKey,
                             StartFrame = startFrame,
                             RelativeStartFrame = elem.relativeStartFrame,
                             Duration = durationFrames,
-                            FrameTime = 1f / targetFrameRate,
+                            FrameTime = elem.sourceSecondPerFrame,
                             MixtureMode = RenderMode.Overlay,
-                            FilePath = null,
+                            FilePath = elem.sourcePath,
                             SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
+                            ActualSecondPerFrame = elem.SecondPerFrameRatio,
+                            MetaData = elem.ExtraData
                         };
 
                         clips.Add(dto);
@@ -60,11 +62,28 @@ namespace projectFrameCut.DraftStuff
                 }
             }
 
+            long max = 0;
+            foreach (var clip in clips)
+            {
+                if (clip is ClipDraftDTO dto)
+                {
+                    max = Math.Max(dto.StartFrame + dto.Duration, max);
+                }
+
+            }
+
+            if (max > uint.MaxValue)
+            {
+                throw new OverflowException($"Project duration overflow, total frames exceed {uint.MaxValue}.");
+            }
+
+
+
             return new DraftStructureJSON
             {
-                Name = "Exported Draft",
                 targetFrameRate = targetFrameRate,
-                Clips = clips.Cast<object>().ToArray()
+                Clips = clips.Cast<object>().ToArray(),
+                Duration = (uint)max
             };
         }
 
@@ -75,7 +94,7 @@ namespace projectFrameCut.DraftStuff
             var assets = JsonSerializer.Deserialize<IEnumerable<AssetItem>>(json);
             if (assets is null) return new();
             var assetDict = assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (a) => a);
-            return new ConcurrentDictionary<string, AssetItem>(assetDict);  
+            return new ConcurrentDictionary<string, AssetItem>(assetDict);
         }
 
         public static (ConcurrentDictionary<string, ClipElementUI>, int) ImportFromJSON(DraftStructureJSON draft)
@@ -112,7 +131,7 @@ namespace projectFrameCut.DraftStuff
 
                 uint maxFrames = dto.SourceDuration is null ? dto.Duration : (uint)Math.Max(dto.SourceDuration.Value, dto.Duration);
 
-                var element = projectFrameCut.DraftPage.CreateClip(
+                var element = ClipElementUI.CreateClip(
                     startX: startPx,
                     width: widthPx,
                     trackIndex: (int)dto.LayerIndex,
@@ -130,7 +149,12 @@ namespace projectFrameCut.DraftStuff
                 element.relativeStartFrame = dto.RelativeStartFrame;
                 element.maxFrameCount = maxFrames;
                 element.isInfiniteLength = dto.SourceDuration is null;
-
+                element.sourcePath = dto.FilePath;
+                element.ClipType = dto.ClipType;
+                element.ExtraData = dto.MetaData ?? new();
+                element.sourceSecondPerFrame = dto.FrameTime;
+                element.SecondPerFrameRatio = dto.ActualSecondPerFrame ?? 1f;
+                element.ApplySpeedRatio();
                 clipsDict.AddOrUpdate(element.Id, element, (_, _) => element);
             }
 

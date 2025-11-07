@@ -36,7 +36,7 @@ public partial class DebuggingMainPage : ContentPage
 
 #if WINDOWS
 
-     = @"D:\code\playground\projectFrameCut\project\Untitled Project 2";
+     = @"D:\code\playground\projectFrameCut\project\test";
 
 #elif ANDROID
         = "/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/drafts/Untitled Project 1";
@@ -113,7 +113,6 @@ draftSourcePath = "";
         File.WriteAllText(Path.Combine(draftSourcePath, "timeline.json"),
         JsonSerializer.Serialize(new DraftStructureJSON
         {
-            Name = projName,
             Clips = new List<ClipDraftDTO>().Cast<object>().ToArray(),
         }));
         File.WriteAllText(Path.Combine(draftSourcePath, "assets.json"), JsonSerializer.Serialize(Array.Empty<AssetItem>()));
@@ -139,6 +138,12 @@ draftSourcePath = "";
     private void MoreOptions_Clicked(object sender, EventArgs e)
     {
 
+    }
+
+    private void ToV2DraftPageWithNoDraft_Clicked(object sender, EventArgs e)
+    {
+        var page = new DraftPage();
+        Navigation.PushAsync(page);
     }
 
     private async void ToV2DraftPageWithDiagBackend_Clicked(object sender, EventArgs e)
@@ -193,7 +198,6 @@ draftSourcePath = "";
         DraftPage page;
         var d = new DraftStructureJSON
         {
-            Name = "Test Draft",
             targetFrameRate = 60,
             Clips =
                 [
@@ -246,7 +250,7 @@ draftSourcePath = "";
 
         (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(d);
         var assetJson = File.ReadAllText(@"D:\code\playground\projectFrameCut\project\Untitled Project 2\assets.json");
-        page = new DraftPage(dict, DraftImportAndExportHelper.ImportAssetsFromJSON(assetJson), trackCount, d.Name);
+        page = new DraftPage(dict, DraftImportAndExportHelper.ImportAssetsFromJSON(assetJson), trackCount, "1");
 
         await Navigation.PushAsync(page);
 
