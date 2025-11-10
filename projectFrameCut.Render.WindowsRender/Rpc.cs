@@ -256,6 +256,42 @@ namespace projectFrameCut.Render.WindowsRender
                                 Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
                                 break;
                             }
+                        case "GetAFrameData":
+                            {
+                                try
+                                {
+                                    if (msg.Payload is null)
+                                    {
+                                        Console.Error.WriteLine("[RPC] RenderOne missing payload.");
+                                        break;
+                                    }
+                                    var frameIndex = msg.Payload.Value.GetUInt32();
+                                    Log($"[RPC] RenderOne request: frame #{frameIndex}");
+                                    var frameHash = Timeline.GetFrameHash(clips, frameIndex);
+                                    var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height, true);
+                                    Log($"Clips in frame #{frameIndex}:\r\n{JsonSerializer.Serialize(layers)}\r\n---");
+                                    
+                                    Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "json", JsonSerializer.Serialize(layers, new JsonSerializerOptions
+                                    {
+                                        WriteIndented = true,
+                                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                                        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
+
+                                    } ) } });
+                                    Log($"[RPC] RenderOne completed");
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log(ex);
+                                    Console.Error.WriteLine($"ERROR: a {ex.GetType()} exception happends:{ex.Message}");
+
+                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "path", Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png") }, { "error", $"ERROR: a {ex.GetType()} exception happends:{ex.Message}" } });
+
+                                }
+
+                                break;
+                            }
+
                         case "GetVideoFileInfo":
                             {
                                 if (msg.Payload is null)

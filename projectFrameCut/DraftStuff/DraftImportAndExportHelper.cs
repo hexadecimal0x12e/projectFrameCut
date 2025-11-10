@@ -34,8 +34,8 @@ namespace projectFrameCut.DraftStuff
                         double startPx = border.TranslationX;
                         double widthPx = (border.Width > 0) ? border.Width : border.WidthRequest;
 
-                        uint startFrame = page.PixelToFrame(startPx);
-                        uint durationFrames = page.PixelToFrame(widthPx);
+                        uint startFrame = (uint)Math.Round(page.PixelToFrame(startPx) / elem.SecondPerFrameRatio);
+                        uint durationFrames = (uint)Math.Round(page.PixelToFrame(widthPx) / elem.SecondPerFrameRatio);
                         if (durationFrames == 0) durationFrames = 1;
 
                         string name = string.IsNullOrWhiteSpace(elem.displayName) ? ExtractLabelText(border) ?? elem.Id : elem.displayName;
@@ -53,7 +53,7 @@ namespace projectFrameCut.DraftStuff
                             MixtureMode = RenderMode.Overlay,
                             FilePath = elem.sourcePath,
                             SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
-                            ActualSecondPerFrame = elem.SecondPerFrameRatio,
+                            SecondPerFrameRatio = elem.SecondPerFrameRatio,
                             MetaData = elem.ExtraData
                         };
 
@@ -143,6 +143,7 @@ namespace projectFrameCut.DraftStuff
                     maxFrames: maxFrames
                 );
 
+                element.displayName = string.IsNullOrWhiteSpace(dto.Name) ? element.Id : dto.Name;
                 element.origTrack = (int)dto.LayerIndex;
                 element.origLength = widthPx;
                 element.origX = startPx;
@@ -153,7 +154,7 @@ namespace projectFrameCut.DraftStuff
                 element.ClipType = dto.ClipType;
                 element.ExtraData = dto.MetaData ?? new();
                 element.sourceSecondPerFrame = dto.FrameTime;
-                element.SecondPerFrameRatio = dto.ActualSecondPerFrame ?? 1f;
+                element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
                 element.ApplySpeedRatio();
                 clipsDict.AddOrUpdate(element.Id, element, (_, _) => element);
             }
@@ -223,7 +224,7 @@ namespace projectFrameCut.DraftStuff
                         long overlap = aEnd - bStart;
                         if (overlap > (long)allowedOverlapFrames)
                         {
-                            result.Add(new OverlapInfo(a.Id ?? string.Empty, b.Id ?? string.Empty, overlap, a.LayerIndex));
+                            result.Add(new OverlapInfo($"{a.Id ?? "unknown ID"} ({a.Name ?? "unknown Name"})", $"{b.Id ?? "unknown ID"} ({b.Name ?? "unknown Name"})", overlap, a.LayerIndex));
                         }
                     }
                 }

@@ -98,9 +98,9 @@ namespace projectFrameCut.Render.ILGPU
 
             float[] zeros = new float[pixels];
 
-            float[] rMask = EffectsEngine.RemoveColorComputer.Compute(MyAcceleratorType.CPU,3, aR, Enumerable.Repeat(lowRf, pixels).ToArray(), Enumerable.Repeat(highRf, pixels).ToArray(), zeros, zeros, zeros);
-            float[] gMask = EffectsEngine.RemoveColorComputer.Compute(MyAcceleratorType.CPU,3, aG, Enumerable.Repeat(lowGf, pixels).ToArray(), Enumerable.Repeat(highGf, pixels).ToArray(), zeros, zeros, zeros);
-            float[] bMask = EffectsEngine.RemoveColorComputer.Compute(MyAcceleratorType.CPU,3, aB, Enumerable.Repeat(lowBf, pixels).ToArray(), Enumerable.Repeat(highBf, pixels).ToArray(), zeros, zeros, zeros);
+            float[] rMask = ComputerSource.RemoveColorComputer.Compute(MyAcceleratorType.CPU,3, aR, Enumerable.Repeat(lowRf, pixels).ToArray(), Enumerable.Repeat(highRf, pixels).ToArray(), zeros, zeros, zeros);
+            float[] gMask = ComputerSource.RemoveColorComputer.Compute(MyAcceleratorType.CPU,3, aG, Enumerable.Repeat(lowGf, pixels).ToArray(), Enumerable.Repeat(highGf, pixels).ToArray(), zeros, zeros, zeros);
+            float[] bMask = ComputerSource.RemoveColorComputer.Compute(MyAcceleratorType.CPU,3, aB, Enumerable.Repeat(lowBf, pixels).ToArray(), Enumerable.Repeat(highBf, pixels).ToArray(), zeros, zeros, zeros);
 
             a.EnsureAlpha();
             float[] newAlpha = new float[pixels];
@@ -187,9 +187,9 @@ namespace projectFrameCut.Render.ILGPU
             float[] sa = Enumerable.Repeat(saturation, pixels).ToArray();
             float[] zeros = new float[pixels];
 
-            float[] or = EffectsEngine.ColorCorrectionComputer.Compute(MyAcceleratorType.CPU,3, r, br, co, sa, zeros, zeros);
-            float[] og = EffectsEngine.ColorCorrectionComputer.Compute(MyAcceleratorType.CPU,3, g, br, co, sa, zeros, zeros);
-            float[] ob = EffectsEngine.ColorCorrectionComputer.Compute(MyAcceleratorType.CPU,3, b, br, co, sa, zeros, zeros);
+            float[] or = ComputerSource.ColorCorrectionComputer.Compute(MyAcceleratorType.CPU,3, r, br, co, sa, zeros, zeros);
+            float[] og = ComputerSource.ColorCorrectionComputer.Compute(MyAcceleratorType.CPU,3, g, br, co, sa, zeros, zeros);
+            float[] ob = ComputerSource.ColorCorrectionComputer.Compute(MyAcceleratorType.CPU,3, b, br, co, sa, zeros, zeros);
 
             var result = new Picture(a)
             {

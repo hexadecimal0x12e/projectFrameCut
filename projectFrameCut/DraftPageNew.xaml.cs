@@ -24,7 +24,8 @@ using projectFrameCut.Platforms.Windows;
 #if iDevices
 using Foundation;
 using UIKit;
-
+using projectFrameCut.iDevicesAPI;
+using MobileCoreServices;
 #endif
 
 namespace projectFrameCut;
@@ -53,7 +54,8 @@ public partial class DraftPage : ContentPage
         "saveSlotB",
         "thumbs",
         "assets",
-        "export"
+        "export",
+        "temp"
     ];
 
     ConcurrentDictionary<string, double> HandleStartWidth = new();
@@ -117,8 +119,10 @@ public partial class DraftPage : ContentPage
 
     private async void PostInit()
     {
+        infoBuilder = new ClipInfoBuilder(this);
 #if WINDOWS
         var pipeId = RpcClient.BootRPCServer(out backendProc,
+            tmpPath: Path.Combine(workingPath,"temp"),
             stderrCallback: new Action<string>((s) =>
          {
              SetStateFail("Backend:" + s);
@@ -257,12 +261,23 @@ public partial class DraftPage : ContentPage
         Border? prototype = null,
         bool resolveOverlap = true,
         uint relativeStart = 0,
-        uint maxFrames = 0)
+        uint maxFrames = 0,
+        ClipElementUI? sourceElement = null)
     {
         if (!Tracks.ContainsKey(trackIndex))
             throw new ArgumentOutOfRangeException(nameof(trackIndex));
 
         var element = ClipElementUI.CreateClip(startX, width, trackIndex, id, labelText, background, prototype, relativeStart, maxFrames);
+        if (sourceElement is not null)
+        {
+            element.ClipType = sourceElement.ClipType;
+            element.SecondPerFrameRatio = sourceElement.SecondPerFrameRatio;
+            element.sourcePath = sourceElement.sourcePath;
+            element.maxFrameCount = sourceElement.maxFrameCount;
+            element.isInfiniteLength = sourceElement.isInfiniteLength;
+            element.ExtraData = sourceElement.ExtraData;
+
+        }
         element.ApplySpeedRatio();
         RegisterClip(element, resolveOverlap);
         AddAClip(element);
@@ -364,14 +379,15 @@ public partial class DraftPage : ContentPage
                 width: rightWidth,
                 trackIndex: trackIdx,
                 id: null,
-                labelText: $"Clip {clip.Id[^4..]} (2)",
+                labelText: $"{clip.displayName} (2)",
                 background: border.Background,
                 prototype: border,
                 resolveOverlap: true,
                 // pass source total frames (or Infinity) so resize checks use frames
                 maxFrames: clip.maxFrameCount,
                 // relative start for right clip = original in-point + frames consumed by left clip
-                relativeStart: (uint)(clip.relativeStartFrame + framesOffset));
+                relativeStart: (uint)(clip.relativeStartFrame + framesOffset),
+                sourceElement: clip);
 
             UpdateAdjacencyForTrack();
             SetStatusText("Split done");
@@ -975,105 +991,134 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region properties
+    ClipInfoBuilder infoBuilder;
+
     private View BuildPropertyPanel(ClipElementUI clip)
     {
-        var ppb = new PropertyPanelBuilder()
-        .AddText(Localized.PropertyPanel_General)
-        .AddEntry("displayName", Localized.PropertyPanel_General_DisplayName, clip.displayName, "Clip 1", null)
-        .AddSlider("speedRatio", Localized.PropertyPanel_General_SpeedRatio, -5d, 10d, clip.SecondPerFrameRatio , null)  // use 50 as 1x speed
-        .AddSeparator()
-        .AddCustomChild((ivk) =>
-        {
-            var editor = new Editor
-            {
-                Text = JsonSerializer.Serialize(clip, savingOpts),
-                HeightRequest = 300,
-            };
-            editor.TextChanged += (s, e) =>
-            {
-                try
-                {
-                    if (JsonSerializer.Deserialize<ClipElementUI>(editor.Text) is not ClipElementUI updatedClip)
-                    {
-                        return;
-                    }
-                    ivk(editor.Text);
-                }
-                catch (Exception)
-                {
-                }
-            };
-            return editor;
-        }, "rawJsonEditor", JsonSerializer.Serialize(clip, savingOpts))
-        .ListenToChanges(
-            (e) =>
-            {
-                switch (e.Id)
-                {
-                    case "displayName":
-                        clip.displayName = e.Value?.ToString() ?? clip.displayName;
-                        //SetStatusText(Localized.DraftPage_ClipPropertyUpdated(clip.displayName));
-                        break;
-                    case "speedRatio":
-                        {
-                            if (e.Value is double ratio || double.TryParse(e.Value as string, out ratio))
-                            {
-                                clip.SecondPerFrameRatio = (float)ratio;
-                                //SetStatusText(Localized.DraftPage_ClipPropertyUpdated(clip.displayName));
-                            }
-
-                            break;
-                        }
-                    case "rawJsonEditor":
-                        {
-                            try
-                            {
-                                if (JsonSerializer.Deserialize<ClipElementUI>(e.Value?.ToString() ?? "") is not ClipElementUI updatedClip)
-                                {
-                                    break;
-                                }
-                                if (updatedClip.Id != clip.Id)
-                                {
-                                    SetStateFail("ClipId mismatch.");
-                                    break;
-                                }
-                                Clips[clip.Id] = updatedClip;
-                            }
-                            catch (Exception ex)
-                            {
-                                Log(ex, "Deserialize clip from rawJsonEditor", this);
-                            }
-                            break;
-                        }
-                }
-
-
-                Clips[clip.Id] = clip;
-
-                ReRenderUI();
-
-            }
-        );
-
-
-        return ppb.Build();
+        return infoBuilder.Build(clip, OnClipPropertiesChanged);
 
     }
+
+    private void OnClipPropertiesChanged(object? sender,PropertyPanelPropertyChangedEventArgs e)
+    {
+        if (_selected is null) return;
+        var clip = _selected;
+        SetStatusText($"{clip.displayName}'s property '{e.Id}' changed from {e.OriginValue} to {e.Value}");
+        switch (e.Id)
+        {
+            case "displayName":
+                clip.displayName = e.Value?.ToString() ?? clip.displayName;
+                //SetStatusText(Localized.DraftPage_ClipPropertyUpdated(clip.displayName));
+                break;
+            case "speedRatio":
+                {
+                    if (e.Value is double ratio || double.TryParse(e.Value as string, out ratio))
+                    {
+                        if (ratio != 0f)
+                            clip.SecondPerFrameRatio = (float)ratio;
+                        //SetStatusText(Localized.DraftPage_ClipPropertyUpdated(clip.displayName));
+                    }
+
+                    break;
+                }
+            //case "effectsEditor":
+            //    {
+            //        try
+            //        {
+            //            var json = e.Value?.ToString() ?? string.Empty;
+            //            var updated = JsonSerializer.Deserialize<Dictionary<string, projectFrameCut.Shared.Effects>>(json);
+            //            if (updated is not null)
+            //            {
+            //                clip.Effects = updated;
+            //            }
+            //        }
+            //        catch (Exception ex)
+            //        {
+            //            Log(ex, "Deserialize Effects from effectsEditor", this);
+            //        }
+            //        break;
+            //    }
+            case "rawJsonEditor":
+                {
+                    try
+                    {
+                        if (JsonSerializer.Deserialize<ClipElementUI>(e.Value?.ToString() ?? "") is not ClipElementUI updatedClip)
+                        {
+                            break;
+                        }
+                        if (updatedClip.Id != clip.Id)
+                        {
+                            SetStateFail("ClipId mismatch.");
+                            break;
+                        }
+                        Clips[clip.Id] = updatedClip;
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, "Deserialize clip from rawJsonEditor", this);
+                    }
+                    break;
+                }
+            default:
+                {
+
+                    break;
+                }
+        }
+
+
+        Clips[clip.Id] = clip;
+
+        ReRenderUI();
+
+    }
+
 
 
     #endregion
 
     #region asset
 
-    private async void AddAsset(string path)
+    private async Task AddAsset(string path)
     {
+        SetStateBusy(Localized.DraftPage_PrepareAsset);
         try
         {
+            var srcHash = await HashServices.ComputeFileSHA512Async(path, null);
+            Log($"New asset {path}'s hash: {srcHash}");
+            if (Assets.Values.Any((v) => v.SourceHash == srcHash))
+            {
+                var opt = await DisplayActionSheet(
+                    Localized.DraftPage_DuplicatedAsset(Path.GetFileNameWithoutExtension(path), Assets.Values.First((v) => v.SourceHash == srcHash).Name),
+                    null,
+                    null,
+                    [Localized.DraftPage_DuplicatedAsset_Relpace, Localized.DraftPage_DuplicatedAsset_Skip, Localized.DraftPage_DuplicatedAsset_Together]
+                );
+
+                if (opt == Localized.DraftPage_DuplicatedAsset_Relpace)
+                {
+                    var existing = Assets.Values.First((v) => v.SourceHash == srcHash);
+                    Assets.TryRemove(existing.AssetId, out _);
+                    Log($"Replaced existing asset {existing.Name} with new one from {path}");
+                }
+                else if (opt == Localized.DraftPage_DuplicatedAsset_Skip)
+                {
+                    Log($"Skipped adding duplicated asset from {path}");
+                    SetStateOK(Localized.DraftPage_AssetAdded(Path.GetFileNameWithoutExtension(path)));
+                    return;
+                }
+                else
+                {
+                    Log($"Adding duplicated asset from {path} together with existing one.");
+                }
+            }
+
             var cid = Guid.NewGuid().ToString();
             var item = new AssetItem
             {
                 Name = System.IO.Path.GetFileNameWithoutExtension(path),
                 Path = path,
+                SourceHash = srcHash,
                 Type = DetermineClipMode(path),
                 AssetId = cid
             };
@@ -1143,6 +1188,7 @@ public partial class DraftPage : ContentPage
             {
                 Popup.Content = new ScrollView { Content = BuildAssetPanel() };
             });
+            SetStateOK(Localized.DraftPage_AssetAdded(Path.GetFileNameWithoutExtension(path)));
 
         }
         catch (Exception ex)
@@ -1242,6 +1288,52 @@ public partial class DraftPage : ContentPage
             layout.Children.Add(childLayout);
         }
 
+        var addBtn = new Button
+        {
+            Text = "Add",
+            FontSize = 32,
+
+        };
+
+        addBtn.Clicked += async (s, e) =>
+        {
+            var result = await FilePicker.PickAsync(new PickOptions
+            {
+                PickerTitle = "选择素材文件",
+                FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+                {
+                    { DevicePlatform.WinUI,[ ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v",".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"] },
+                    { DevicePlatform.Android, [ "image/*", "video/*"] },
+#if iDevices
+                    {DevicePlatform.iOS , [UTType.Image, UTType.MPEG4, UTType.Video, UTType.AVIMovie, UTType.AppleProtectedMPEG4Video, "mp4", "m4v", "mpg", "mpeg", "mp2", "mov", "avi", "mkv", "flv", "gifv", "qt"]},
+                    {DevicePlatform.MacCatalyst , [UTType.Image, UTType.MPEG4, UTType.Video, UTType.AVIMovie, UTType.AppleProtectedMPEG4Video, "mp4", "m4v", "mpg", "mpeg", "mp2", "mov", "avi", "mkv", "flv", "gifv", "qt"]}
+#endif
+                })
+            });
+            string resultPath = "";
+            if (result is not null)
+            {
+                if (!OperatingSystem.IsWindows()) //todo: setting
+                {
+                    resultPath = Path.Combine(workingPath, "assets", $"imported-{result.FileName}");
+                    if (!string.IsNullOrWhiteSpace(workingPath))
+                    {
+                        File.Move(result.FullPath, resultPath, true);
+                    }
+                }
+                else
+                {
+                    resultPath = result.FullPath;
+                }
+
+                AddAsset(resultPath);
+
+            }
+
+        };
+
+        layout.Add(addBtn);
+
         return new ScrollView
         {
             Content = layout,
@@ -1256,7 +1348,7 @@ public partial class DraftPage : ContentPage
     private async Task RenderOneFrame(uint duration)
     {
         SetStateBusy();
-        SetStatusText(Localized.DraftPage_RenderOneFrame((int)duration, TimeSpan.FromSeconds(1)));
+        SetStatusText(Localized.DraftPage_RenderOneFrame((int)duration, TimeSpan.FromSeconds(duration * SecondsPerFrame)));
         var cts = new CancellationTokenSource();
 #if WINDOWS
         cts.CancelAfter(10000);
@@ -1266,6 +1358,26 @@ public partial class DraftPage : ContentPage
         {
             PreviewBox.Source = src;
         });
+#if DEBUG
+        FrameIndexEntry.Text = duration.ToString();
+
+        //var data = await _rpc.SendAsync("GetAFrameData", JsonSerializer.SerializeToElement(duration), default);
+        //if (data.Value.TryGetProperty("json", out var json))
+        //{
+        //    Dispatcher.Dispatch(() =>
+        //    {
+        //        FrameContentEditor.Text = json.GetString();
+        //    });
+        //}
+        //else
+        //{
+        //    Dispatcher.Dispatch(() =>
+        //    {
+        //        FrameContentEditor.Text = JsonSerializer.Serialize(DraftImportAndExportHelper.ExportFromDraftPage(this), savingOpts);
+        //    });
+        //}
+#endif
+
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
 #endif
@@ -2341,193 +2453,8 @@ public partial class DraftPage : ContentPage
     }
     #endregion
 
-    #region misc
-
-    private async void OnExportedClick(object sender, EventArgs e)
-    {
-
-#if WINDOWS
-        backendProc.EnableRaisingEvents = false; //避免弹框
-
-#endif
-        await Save(true);
-        await Navigation.PushAsync(new RenderPage(workingPath, projectDuration, ProjectInfo));
-
-    }
-
-    private async void SettingsClick(object sender, EventArgs e)
-    {
-        await Navigation.PushAsync(new ContentPage
-        {
-            Content = new ScrollView
-            {
-                Content = BuildPropertyPanel(_selected ?? new())
-            }
-        });
-    }
-
-
-
-
-
-    private void MoveLeftButton_Clicked(object sender, EventArgs e)
-    {
-        foreach (var item in Tracks)
-        {
-            foreach (var border in item.Value.Children)
-            {
-                if (border is Border b)
-                {
-                    b.TranslationX -= 50;
-                }
-            }
-        }
-
-        tracksViewOffset -= 50;
-    }
-
-    private void MoveRightButton_Clicked(object sender, EventArgs e)
-    {
-        foreach (var item in Tracks)
-        {
-            foreach (var border in item.Value.Children)
-            {
-                if (border is Border b)
-                {
-                    b.TranslationX += 50;
-                }
-            }
-        }
-
-        tracksViewOffset += 50;
-    }
-
-    private void ZoomOutButton_Clicked(object sender, EventArgs e)
-    {
-        foreach (var item in Tracks)
-        {
-            foreach (var border in item.Value.Children)
-            {
-                if (border is Border b)
-                {
-                    b.WidthRequest *= 1.5;
-
-                    b.TranslationX += b.WidthRequest * 1.5;
-
-                }
-            }
-        }
-
-        tracksViewOffset *= 1.5;
-        tracksZoomOffest *= 1.5;
-
-    }
-
-    private void ZoomInButton_Clicked(object sender, EventArgs e)
-    {
-        foreach (var item in Tracks)
-        {
-            foreach (var border in item.Value.Children)
-            {
-                if (border is Border b)
-                {
-                    b.WidthRequest /= 1.5;
-
-                    b.TranslationX -= b.WidthRequest * 1.5;
-
-                }
-            }
-        }
-
-        tracksViewOffset /= 1.5;
-        tracksZoomOffest /= 1.5;
-    }
-
-    private Size GetScreenSizeInDp()
-    {
-        var info = DeviceDisplay.MainDisplayInfo;
-        double widthDp = info.Width / info.Density;
-        double heightDp = info.Height / info.Density;
-        return new Size(widthDp, heightDp);
-    }
-
-    protected override async void OnAppearing()
-    {
-        base.OnAppearing();
-        MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog;
-
-        var size = GetScreenSizeInDp();
-        Log($"Window size on appearing: {size.Width:F0} x {size.Height:F0} (DIP)");
-        // 短等待，确保布局完成
-        await Task.Delay(50);
-
-        var w = this.Window?.Width ?? 0;
-        var h = this.Window?.Height ?? 0;
-        WindowSize = new Size(w, h);
-    }
-
-    private void MyLoggerExtensions_OnExceptionLog(Exception obj)
-    {
-        Dispatcher.Dispatch(() =>
-        {
-            StatusLabel.TextColor = Colors.Red;
-            StatusLabel.Text = Localized._ExceptionTemplate(obj);
-        });
-    }
-
-    protected override void OnDisappearing()
-    {
-        base.OnDisappearing();
-        HidePopup();
-        MyLoggerExtensions.OnExceptionLog -= MyLoggerExtensions_OnExceptionLog;
-        try
-        {
-            Save(true);
-        }
-        catch (Exception ex)
-        {
-            DisplayAlert("Error", $"Failed to save project on exit: {ex.Message}", "OK");
-        }
-
-
-        if (this.Window is not null)
-        {
-            this.Window.SizeChanged -= Window_SizeChanged;
-        }
-    }
-
-    private void Window_SizeChanged(object? sender, EventArgs e)
-    {
-        double w = this.Window?.Width ?? 0;
-        double h = this.Window?.Height ?? 0;
-        WindowSize = new(w, h);
-        Log($"Window size changed: {w:F0} x {h:F0} (DIP)");
-
-    }
-
-    protected override void OnNavigatedFrom(NavigatedFromEventArgs args)
-    {
-        base.OnNavigatedFrom(args);
-
-#if WINDOWS
-        try
-        {
-            _rpc.ShutdownAsync();
-        }
-        catch
-        {
-
-        }
-#endif
-    }
-    #endregion
-
     #region status
-    public void SetStateBusy(string text)
-    {
-        SetStateBusy();
-        SetStatusText(text);
-    }
+
 
 
     public void SetStateBusy()
@@ -2545,6 +2472,12 @@ public partial class DraftPage : ContentPage
                 Margin = new(6, 3, 0, 0)
             });
         });
+    }
+
+    public void SetStateBusy(string text)
+    {
+        SetStateBusy();
+        SetStatusText(text);
     }
 
     public void SetStateOK()
@@ -2568,6 +2501,12 @@ public partial class DraftPage : ContentPage
 
         });
 
+    }
+
+    public void SetStateOK(string text)
+    {
+        SetStateOK();
+        SetStatusText(text);
     }
 
     public void SetStateFail()
@@ -2703,6 +2642,246 @@ public partial class DraftPage : ContentPage
 
     #endregion
 
+    #region misc
+
+    private async void OnExportedClick(object sender, EventArgs e)
+    {
+
+#if WINDOWS
+        backendProc.EnableRaisingEvents = false; //避免弹框
+
+#endif
+        await Save(true);
+        await Navigation.PushAsync(new RenderPage(workingPath, projectDuration, ProjectInfo));
+
+    }
+
+    private async void SettingsClick(object sender, EventArgs e)
+    {
+        await Navigation.PushAsync(new ContentPage
+        {
+            Content = new ScrollView
+            {
+                Content = BuildPropertyPanel(_selected ?? new())
+            }
+        });
+    }
 
 
+
+
+
+    private void MoveLeftButton_Clicked(object sender, EventArgs e)
+    {
+        foreach (var item in Tracks)
+        {
+            foreach (var border in item.Value.Children)
+            {
+                if (border is Border b)
+                {
+                    b.TranslationX -= 50;
+                }
+            }
+        }
+
+        tracksViewOffset -= 50;
+    }
+
+    private void MoveRightButton_Clicked(object sender, EventArgs e)
+    {
+        foreach (var item in Tracks)
+        {
+            foreach (var border in item.Value.Children)
+            {
+                if (border is Border b)
+                {
+                    b.TranslationX += 50;
+                }
+            }
+        }
+
+        tracksViewOffset += 50;
+    }
+
+    private void ZoomOutButton_Clicked(object sender, EventArgs e)
+    {
+        foreach (var item in Tracks)
+        {
+            foreach (var border in item.Value.Children)
+            {
+                if (border is Border b)
+                {
+                    b.WidthRequest *= 1.5;
+
+                    b.TranslationX += b.WidthRequest * 1.5;
+
+                }
+            }
+        }
+
+        tracksViewOffset *= 1.5;
+        tracksZoomOffest *= 1.5;
+
+    }
+
+    private void ZoomInButton_Clicked(object sender, EventArgs e)
+    {
+        foreach (var item in Tracks)
+        {
+            foreach (var border in item.Value.Children)
+            {
+                if (border is Border b)
+                {
+                    b.WidthRequest /= 1.5;
+
+                    b.TranslationX -= b.WidthRequest * 1.5;
+
+                }
+            }
+        }
+
+        tracksViewOffset /= 1.5;
+        tracksZoomOffest /= 1.5;
+    }
+
+    private Size GetScreenSizeInDp()
+    {
+        var info = DeviceDisplay.MainDisplayInfo;
+        double widthDp = info.Width / info.Density;
+        double heightDp = info.Height / info.Density;
+        return new Size(widthDp, heightDp);
+    }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+        MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog;
+
+        var size = GetScreenSizeInDp();
+        Log($"Window size on appearing: {size.Width:F0} x {size.Height:F0} (DIP)");
+        // 短等待，确保布局完成
+        await Task.Delay(50);
+
+        var w = this.Window?.Width ?? 0;
+        var h = this.Window?.Height ?? 0;
+        WindowSize = new Size(w, h);
+    }
+
+    private void MyLoggerExtensions_OnExceptionLog(Exception obj)
+    {
+        Dispatcher.Dispatch(() =>
+        {
+            StatusLabel.TextColor = Colors.Red;
+            StatusLabel.Text = Localized._ExceptionTemplate(obj);
+        });
+    }
+
+    private async void FrameIndexEntry_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (uint.TryParse(e.NewTextValue, out var frameIndex))
+        {
+#if WINDOWS
+
+            var data = await _rpc.SendAsync("GetAFrameData", JsonSerializer.SerializeToElement(frameIndex), default);
+            if(data.Value.TryGetProperty("json", out var json))
+            {
+                Dispatcher.Dispatch(() =>
+                {
+                    FrameContentEditor.Text = json.GetString();
+                });
+            }
+            else
+            {
+                Dispatcher.Dispatch(() =>
+                {
+                    FrameContentEditor.Text = JsonSerializer.Serialize(DraftImportAndExportHelper.ExportFromDraftPage(this), savingOpts);
+                });
+            }
+
+#endif
+
+        }
+        else
+        {
+            string result =
+$"""
+Total {Clips.Count} clips, draft spf:{SecondsPerFrame};
+View offset: {tracksViewOffset}, zoom offset: {tracksZoomOffest};
+
+
+""";
+            foreach (var clip in Clips.Values)
+            {
+                var border = clip.Clip;
+                double startPx = border.TranslationX;
+                double widthPx = (border.Width > 0) ? border.Width : border.WidthRequest;
+                uint startFrame = (uint)MathF.Round(PixelToFrame(startPx * clip.SecondPerFrameRatio));
+                uint durationFrames = (uint)MathF.Round(PixelToFrame(widthPx * clip.SecondPerFrameRatio));
+                result +=
+$"""
+
+Clip {clip.displayName}({clip.Id}):
+- length {widthPx}px/{durationFrames} frames, length ratio:{clip.SecondPerFrameRatio};
+- range with ratio: {startFrame} - {startFrame + durationFrames}
+- Start in {startPx}px/{startFrame} frame;
+- max frame: {clip.maxFrameCount} (orig) / {clip.maxFrameCount * clip.SecondPerFrameRatio} (with ratio)
+- relative started in {clip.relativeStartFrame};
+""";
+            }
+
+            Dispatcher.Dispatch(() =>
+            {
+                FrameContentEditor.Text = result;
+            });
+        }
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        HidePopup();
+        MyLoggerExtensions.OnExceptionLog -= MyLoggerExtensions_OnExceptionLog;
+        try
+        {
+            Save(true);
+        }
+        catch (Exception ex)
+        {
+            DisplayAlert("Error", $"Failed to save project on exit: {ex.Message}", "OK");
+        }
+
+
+        if (this.Window is not null)
+        {
+            this.Window.SizeChanged -= Window_SizeChanged;
+        }
+    }
+
+    private void Window_SizeChanged(object? sender, EventArgs e)
+    {
+        double w = this.Window?.Width ?? 0;
+        double h = this.Window?.Height ?? 0;
+        WindowSize = new(w, h);
+        Log($"Window size changed: {w:F0} x {h:F0} (DIP)");
+
+    }
+
+    protected override void OnNavigatedFrom(NavigatedFromEventArgs args)
+    {
+        base.OnNavigatedFrom(args);
+
+#if WINDOWS
+        try
+        {
+            _rpc.ShutdownAsync();
+        }
+        catch
+        {
+
+        }
+#endif
+    }
+
+
+    #endregion
 }

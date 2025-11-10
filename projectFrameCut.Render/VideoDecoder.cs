@@ -236,7 +236,7 @@ namespace projectFrameCut.Render
                                     if (_currentFrameNumber++ == targetFrame) goto found;
 
                                 }
-                                else if (_totalFrames <= _currentFrameNumber)
+                                else if (_totalFrames < _currentFrameNumber)
                                 {
                                     goto not_found;
                                 }
@@ -257,6 +257,10 @@ namespace projectFrameCut.Render
             }
 
         not_found:
+            if(Math.Abs(targetFrame - TotalFrames) < 5)//a little bit overlength due to rounding
+            {
+                return GetFrame((uint)TotalFrames, hasAlpha);
+            }
             double fps = _fps > 0 ? _fps : 1.0;
             double seconds = targetFrame / fps;
             throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_path}'.");
@@ -598,7 +602,7 @@ namespace projectFrameCut.Render
 
                             continue;
                         }
-                        else if (_totalFrames <= _currentFrameNumber)
+                        else if (_totalFrames < _currentFrameNumber)
                         {
                             goto not_found;
                         }

@@ -10,6 +10,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using static projectFrameCut.Render.Video;
+using projectFrameCut.Render.Effects; // ComputerSource
+using projectFrameCut.VideoMakeEngine; // SimpleMixture & MixtureMode
 
 namespace projectFrameCut.Render.ILGpu
 {
@@ -22,7 +24,8 @@ namespace projectFrameCut.Render.ILGpu
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
-        public projectFrameCut.Shared.Effects[] Effects { get; init; } = Array.Empty<projectFrameCut.Shared.Effects>();
+        public float SecondPerFrameRatio { get; init; }
+        public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
         public RenderMode MixtureMode { get; init; } = RenderMode.Overlay;
         public string? FilePath { get; init; }
 
@@ -37,7 +40,7 @@ namespace projectFrameCut.Render.ILGpu
 
         }
 
-        public Picture GetFrame(uint targetFrame) => (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame);
+        public Picture GetFrameRelativeToStartPointOfSource(uint targetFrame) => (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame);
 
         void IClip.ReInit()
         {
@@ -62,7 +65,8 @@ namespace projectFrameCut.Render.ILGpu
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
-        public projectFrameCut.Shared.Effects[] Effects { get; init; } = Array.Empty<projectFrameCut.Shared.Effects>();
+        public float SecondPerFrameRatio { get; init; }
+        public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
         public RenderMode MixtureMode { get; init; } = RenderMode.Overlay;
         public string? FilePath { get; init; } = string.Empty;
 
@@ -71,13 +75,14 @@ namespace projectFrameCut.Render.ILGpu
 
         public ClipMode ClipType => ClipMode.PhotoClip;
 
+
         public PhotoClip()
         {
 
         }
 
 
-        public Picture GetFrame(uint targetFrame) => source ?? throw new NullReferenceException("Source is null. Please init it.");
+        public Picture GetFrameRelativeToStartPointOfSource(uint targetFrame) => source ?? throw new NullReferenceException("Source is null. Please init it.");
 
         void IClip.ReInit()
         {
@@ -102,7 +107,8 @@ namespace projectFrameCut.Render.ILGpu
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
-        public projectFrameCut.Shared.Effects[] Effects { get; init; } = Array.Empty<projectFrameCut.Shared.Effects>();
+        public float SecondPerFrameRatio { get; init; }
+        public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
         public RenderMode MixtureMode { get; init; } = RenderMode.Overlay;
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.Special;
@@ -114,9 +120,12 @@ namespace projectFrameCut.Render.ILGpu
         public ushort B { get; init; }
         public float? A { get; init; } = null;
 
-        public Picture GetFrame(uint targetFrame, int targetWidth, int targetHeight) => Picture.GenerateSolidColor(targetWidth, targetHeight, R, G, B, A);
+        public int targetWidth { get; init; } = 1920;
+        public int targetHeight { get; init; } = 1080;
 
-        public Picture GetFrame(uint frameIndex) => Picture.GenerateSolidColor(1920, 1080, R, G, B, A);
+        public Picture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight) => Picture.GenerateSolidColor(tWidth, tHeight, R, G, B, A);
+
+        public Picture GetFrameRelativeToStartPointOfSource(uint frameIndex) => Picture.GenerateSolidColor(targetWidth, targetHeight, R, G, B, A);
 
         public void ReInit()
         {
@@ -140,7 +149,7 @@ namespace projectFrameCut.Render.ILGpu
             List<OneFrame> result = new List<OneFrame>();
             foreach (var clip in video)
             {
-                if(clip.StartFrame <= targetFrame && clip.Duration + clip.StartFrame >= targetFrame)
+                if(clip.StartFrame * clip.SecondPerFrameRatio <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame * clip.SecondPerFrameRatio >= targetFrame)
                 {
                     if(result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
@@ -158,7 +167,7 @@ namespace projectFrameCut.Render.ILGpu
             List<OneFrame> result = new List<OneFrame>();
             foreach (var clip in video)
             {
-                if (clip.StartFrame <= targetFrame && clip.Duration + clip.StartFrame >= targetFrame)
+                if (clip.StartFrame * clip.SecondPerFrameRatio <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame * clip.SecondPerFrameRatio >= targetFrame)
                 {
                     if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
@@ -198,10 +207,22 @@ namespace projectFrameCut.Render.ILGpu
                         {
                             foreach (var effect in frame.Effects)
                             {
-                                effected = Effect.RenderEffect(effected, effect.Type, accelerator, frameIndex, effect.Arguments);
+                                effected = effect.Render(effected);
                             }
                         }
-                        result = Mixture.MixtureFrames(accelerator, frame.MixtureMode, effected, result, 65535, true, null, frameIndex);
+                        // Map legacy RenderMode to new MixtureMode
+                        var mixtureMode = frame.MixtureMode switch
+                        {
+                            RenderMode.Add => MixtureMode.Add,
+                            RenderMode.Minus => MixtureMode.Minus,
+                            RenderMode.Multiply => MixtureMode.Multiply,
+                            RenderMode.Overlay => MixtureMode.Overlay,
+                            _ => MixtureMode.Overlay
+                        };
+
+                        var mixture = new SimpleMixture { Mode = mixtureMode };
+                        // legacy order: layerA (top/effected) minus layerB (current result) for Minus etc.
+                        result = mixture.Mix(effected, result);
                     }
                 }
 

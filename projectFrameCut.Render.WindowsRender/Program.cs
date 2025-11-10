@@ -5,6 +5,7 @@ using ILGPU.Runtime;
 using ILGPU.Runtime.CPU;
 using ILGPU.Runtime.Cuda;
 using ILGPU.Runtime.OpenCL;
+using projectFrameCut.Render.Effects;
 using projectFrameCut.Render.ILGpu;
 using projectFrameCut.Render.ILGPU;
 using projectFrameCut.Render.WindowsRender;
@@ -182,31 +183,28 @@ namespace projectFrameCut.Render.RenderCLI
 
             if (bool.TryParse(switches.GetOrAdd("forceSync", "default"), out var fSync))
             {
-                Mixture.ForceSync = fSync;
-                Effect.ForceSync = fSync;
                 Console.WriteLine($"Force synchronize is set to {fSync}");
             }
             else //默认值
             {
                 if (accelerator.AcceleratorType == AcceleratorType.OpenCL)
                 {
-                    Mixture.ForceSync = true;
-                    Effect.ForceSync = true;
+                    fSync = true;
                     Console.WriteLine($"Force synchronize is default set to true because of OpenCL accelerator is selected.");//不这么做Render会炸
                 }
                 else
                 {
-                    Mixture.ForceSync = false;
-                    Effect.ForceSync = false;
-                    Console.WriteLine($"Force synchronize is set to false");
+                    fSync = false;
+                    Console.WriteLine($"Force synchronize is default set to false");
                 }
             }
 
+            Mixture.ForceSync = fSync;
+            Effect.ForceSync = fSync;
 
-
+            ComputerSource.ILGpuAccelerator = new ILGPUAccelerator() { accelerator = accelerator, Sync = fSync };
 
             var outputOptions = switches["output_options"].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
 
             var yieldSaveMode = switches.GetOrAdd("yieldSaveMode", "video").ToLower();
 
@@ -264,7 +262,7 @@ namespace projectFrameCut.Render.RenderCLI
 
             var duration = int.Parse(switches.GetOrAdd("duration", "0"));
 
-            var frameRange = Enumerable.Range(0, duration).Select(i => (uint)i).ToArray();  
+            var frameRange = Enumerable.Range(0, duration).Select(i => (uint)i).ToArray();
 
             var draftSrc = JsonSerializer.Deserialize<DraftStructureJSON
                 >(File.ReadAllText(switches["draft"])) ?? throw new NullReferenceException();

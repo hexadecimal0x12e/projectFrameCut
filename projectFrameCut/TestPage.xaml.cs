@@ -9,6 +9,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Path = System.IO.Path;
@@ -666,7 +667,6 @@ public partial class TestPage : ContentPage
     }
     #endregion
 
-
     private async void TestCrashButton_Clicked(object sender, EventArgs e)
     {
         var type = await DisplayActionSheet("Choose a favour you'd like", "Cancel", null, "Native(null pointer)", "Managed(NullReferenceException)", "Environment.FailFast");
@@ -691,7 +691,6 @@ public partial class TestPage : ContentPage
 
     }
 
-    
 
     private async void TestFFmpegButton_Clicked(object sender, EventArgs e)
     {
@@ -701,10 +700,14 @@ public partial class TestPage : ContentPage
         {
             ver = $"internal FFmpeg library: version {FFmpeg.AutoGen.ffmpeg.av_version_info()}, {FFmpeg.AutoGen.ffmpeg.avcodec_license()}\r\nconfiguration:{FFmpeg.AutoGen.ffmpeg.avcodec_configuration()}";
         }
-#elif iDevices
+#elif IOS || MACCATALYST
+#if IOS26_0_OR_GREATER || MACCATALYST26_0_OR_GREATER
+        var codecs = AVFoundation.AVUrlAsset.AudiovisualContentTypes;
+        ver = "AudiovisualContentTypes: "+ string.Concat(codecs,",");
+#else
         var codecs = AVFoundation.AVUrlAsset.AudiovisualTypes;
-        var codecInfo = "AudiovisualTypes: "+ string.Concat(codecs,",");
-        
+        ver = "AudiovisualTypes: "+ string.Concat(codecs,",");
+#endif
 #endif
         await DisplayAlert("FFmpeg Version", ver, "OK");
 

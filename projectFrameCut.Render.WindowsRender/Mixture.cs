@@ -24,18 +24,56 @@ namespace projectFrameCut.Render.ILGpu
 
         public static Picture MixtureFrames(Accelerator? accelerator, RenderMode mode, Picture layerA, Picture layerB, ushort upperBond = ushort.MaxValue, bool allowOverflow = false, object? extend = null, uint frameIndex =0)
         {
+            int pixels = layerA.Pixels;
+            if (layerA.Pixels != layerB.Pixels) throw new ArgumentException("layerA and layerB must have same pixel count");
+            float[] zeros = new float[pixels];
+
             Log($"[#{frameIndex:d6}@Mixer] start mixing2 layer with mode {mode}...");
 
             if (mode == RenderMode.Overlay)
             {
-                return RenderOverlayCPU(layerA, layerB, frameIndex);
+                var aR  = layerA.r.Select(Convert.ToSingle).ToArray();
+                var aG  = layerA.g.Select(Convert.ToSingle).ToArray();
+                var aB  = layerA.b.Select(Convert.ToSingle).ToArray();
+                var bR  = layerB.r.Select(Convert.ToSingle).ToArray();
+                var bG  = layerB.g.Select(Convert.ToSingle).ToArray();
+                var bB  = layerB.b.Select(Convert.ToSingle).ToArray();
+
+                var oR = ComputerSource.OverlayComputer.Compute(MyAcceleratorType.CUDA, 2, aR, bR, zeros, zeros, zeros, zeros);
+                var oG = ComputerSource.OverlayComputer.Compute(MyAcceleratorType.CUDA, 2, aG, bG, zeros, zeros, zeros, zeros);
+                var oB = ComputerSource.OverlayComputer.Compute(MyAcceleratorType.CUDA, 2, aB, bB, zeros, zeros, zeros, zeros);
+
+                return new Picture(layerA.Width, layerA.Height)
+                {
+                    r = oR.Select(v =>
+                    {
+                        int rr = (int)Math.Round(v);
+                        if (rr < 0) rr = 0;
+                        if (rr > 65535) rr = 65535;
+                        return (ushort)rr;
+                    }).ToArray(),
+                    g = oG.Select(v =>
+                    {
+                        int gg = (int)Math.Round(v);
+                        if (gg < 0) gg = 0;
+                        if (gg > 65535) gg = 65535;
+                        return (ushort)gg;
+                    }).ToArray(),
+                    b = oB.Select(v =>
+                    {
+                        int bb = (int)Math.Round(v);
+                        if (bb < 0) bb = 0;
+                        if (bb > 65535) bb = 65535;
+                        return (ushort)bb;
+                    }).ToArray(),
+                    hasAlphaChannel = false
+                };
+
             }
 
             try
             {
-                int pixels = layerA.Pixels;
-                if (layerA.Pixels != layerB.Pixels) throw new ArgumentException("layerA and layerB must have same pixel count");
-
+               
                 // convert channels to normalized floats
                 float[] aR = new float[pixels];
                 float[] aG = new float[pixels];
@@ -54,25 +92,24 @@ namespace projectFrameCut.Render.ILGpu
                 }
 
                 // zero arrays for unused args
-                float[] zeros = new float[pixels];
 
                 float[] oR, oG, oB;
                 switch (mode)
                 {
                     case RenderMode.Add:
-                        oR = EffectsEngine.MixtureAddComputer.Compute(MyAcceleratorType.CUDA,2, aR, bR, zeros, zeros, zeros, zeros);
-                        oG = EffectsEngine.MixtureAddComputer.Compute(MyAcceleratorType.CUDA,2, aG, bG, zeros, zeros, zeros, zeros);
-                        oB = EffectsEngine.MixtureAddComputer.Compute(MyAcceleratorType.CUDA,2, aB, bB, zeros, zeros, zeros, zeros);
+                        oR = ComputerSource.MixtureAddComputer.Compute(MyAcceleratorType.CUDA,2, aR, bR, zeros, zeros, zeros, zeros);
+                        oG = ComputerSource.MixtureAddComputer.Compute(MyAcceleratorType.CUDA,2, aG, bG, zeros, zeros, zeros, zeros);
+                        oB = ComputerSource.MixtureAddComputer.Compute(MyAcceleratorType.CUDA,2, aB, bB, zeros, zeros, zeros, zeros);
                         break;
                     case RenderMode.Minus:
-                        oR = EffectsEngine.MixtureMinusComputer.Compute(MyAcceleratorType.CUDA,2, aR, bR, zeros, zeros, zeros, zeros);
-                        oG = EffectsEngine.MixtureMinusComputer.Compute(MyAcceleratorType.CUDA,2, aG, bG, zeros, zeros, zeros, zeros);
-                        oB = EffectsEngine.MixtureMinusComputer.Compute(MyAcceleratorType.CUDA,2, aB, bB, zeros, zeros, zeros, zeros);
+                        oR = ComputerSource.MixtureMinusComputer.Compute(MyAcceleratorType.CUDA,2, aR, bR, zeros, zeros, zeros, zeros);
+                        oG = ComputerSource.MixtureMinusComputer.Compute(MyAcceleratorType.CUDA,2, aG, bG, zeros, zeros, zeros, zeros);
+                        oB = ComputerSource.MixtureMinusComputer.Compute(MyAcceleratorType.CUDA,2, aB, bB, zeros, zeros, zeros, zeros);
                         break;
                     case RenderMode.Multiply:
-                        oR = EffectsEngine.MixtureMultiplyComputer.Compute(MyAcceleratorType.CUDA,2, aR, bR, zeros, zeros, zeros, zeros);
-                        oG = EffectsEngine.MixtureMultiplyComputer.Compute(MyAcceleratorType.CUDA,2, aG, bG, zeros, zeros, zeros, zeros);
-                        oB = EffectsEngine.MixtureMultiplyComputer.Compute(MyAcceleratorType.CUDA,2, aB, bB, zeros, zeros, zeros, zeros);
+                        oR = ComputerSource.MixtureMultiplyComputer.Compute(MyAcceleratorType.CUDA,2, aR, bR, zeros, zeros, zeros, zeros);
+                        oG = ComputerSource.MixtureMultiplyComputer.Compute(MyAcceleratorType.CUDA,2, aG, bG, zeros, zeros, zeros, zeros);
+                        oB = ComputerSource.MixtureMultiplyComputer.Compute(MyAcceleratorType.CUDA,2, aB, bB, zeros, zeros, zeros, zeros);
                         break;
                     default:
                         throw new NotSupportedException($"You defined an unsupported mixture mode {mode}.");

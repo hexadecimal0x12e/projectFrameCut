@@ -3,13 +3,15 @@ using projectFrameCut.Shared;
 namespace projectFrameCut.Render.Effects
 {
 
-    public static class EffectsEngine
+    public static class ComputerSource
     {
         public const string _version = "1.0.0";
 
         public static IAcceleratedComputer? ILGpuAccelerator { get; set; }
         public static IAcceleratedComputer? OpenGLAccelerator { get; set; }
         public static IAcceleratedComputer? MetalAccelerator { get; set; }
+
+        public static readonly AcceleratedComputer OverlayComputer;
 
 
         // Crop and Resize are geometry operations and do not change per-pixel values; keep a pass-through ManagedSource.
@@ -26,7 +28,7 @@ namespace projectFrameCut.Render.Effects
         public static readonly AcceleratedComputer MixtureMinusComputer;
         public static readonly AcceleratedComputer MixtureMultiplyComputer;
 
-        static EffectsEngine()
+        static ComputerSource()
         {
             // Crop and Resize: identity per-pixel function
             CropComputer = CreateComputer((a, b, c, d, e, f) => a);
@@ -82,6 +84,20 @@ namespace projectFrameCut.Render.Effects
                 if (v < 0f) v = 0f;
                 if (v > 1f) v = 1f;
                 return v;
+            });
+
+            // Overlay: A = base pixel (normalized0..1), B = overlay pixel (normalized0..1)
+            OverlayComputer = CreateComputer((a, b, c, d, e, f) =>
+            {
+                // Simple overlay algorithm
+                if (b < 0.5f)
+                {
+                    return 2f * a * b;
+                }
+                else
+                {
+                    return 1f - 2f * (1f - a) * (1f - b);
+                }
             });
         }
 

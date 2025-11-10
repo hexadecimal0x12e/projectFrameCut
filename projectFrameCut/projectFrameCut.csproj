@@ -3,7 +3,8 @@
 	<PropertyGroup>
 		<TargetFrameworks>net10.0-android;net10.0-windows10.0.19041.0</TargetFrameworks>
 
-
+		
+		
 		<!-- Note for MacCatalyst:
 		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
 		When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
@@ -36,8 +37,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">13.1</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
-		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
+
 		<WindowsPackageType>None</WindowsPackageType>
 		<DefaultLanguage>zh-CN</DefaultLanguage>
 		<Platforms>AnyCPU;x64</Platforms>
@@ -55,32 +55,9 @@
 		<Title>codename 'projectFrameCut'</Title>
 
 
-		<ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
-
-
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-android|AnyCPU'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-		<JavaMaximumHeapSize>16G</JavaMaximumHeapSize>
-		<AndroidKeyStore>False</AndroidKeyStore>
-		<AndroidCreatePackagePerAbi>True</AndroidCreatePackagePerAbi>
-		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
-		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
-
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-android|x64'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-		<JavaMaximumHeapSize>16G</JavaMaximumHeapSize>
-		<AndroidKeyStore>False</AndroidKeyStore>
-		<AndroidCreatePackagePerAbi>True</AndroidCreatePackagePerAbi>
-		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
-		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
-
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-ios|AnyCPU'">
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
 		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
 		<BuildIpa>True</BuildIpa>
 		<MtouchNoSymbolStrip>True</MtouchNoSymbolStrip>
@@ -88,31 +65,7 @@
 		<IpaIncludeArtwork>False</IpaIncludeArtwork>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-ios|x64'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-		<BuildIpa>True</BuildIpa>
-		<MtouchNoSymbolStrip>True</MtouchNoSymbolStrip>
-		<MtouchDebug>True</MtouchDebug>
-		<IpaIncludeArtwork>False</IpaIncludeArtwork>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-maccatalyst|AnyCPU'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-maccatalyst|x64'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-windows10.0.19041.0|AnyCPU'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net10.0-windows10.0.19041.0|x64'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-android|AnyCPU'">
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
 		<AndroidPackageFormat>apk</AndroidPackageFormat>
 		<RunAOTCompilation>False</RunAOTCompilation>
@@ -123,67 +76,18 @@
 		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
 		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
 	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-android|x64'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-		<AndroidPackageFormat>apk</AndroidPackageFormat>
-		<RunAOTCompilation>False</RunAOTCompilation>
-		<PublishTrimmed>False</PublishTrimmed>
-		<JavaMaximumHeapSize>16G</JavaMaximumHeapSize>
-		<AndroidKeyStore>False</AndroidKeyStore>
-		<AndroidCreatePackagePerAbi>True</AndroidCreatePackagePerAbi>
-		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
-		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
-
+	
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<ApplicationId>hexadecimal0x12e.projectframecut</ApplicationId>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-ios|AnyCPU'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-		<BuildIpa>True</BuildIpa>
-		<MtouchUseLlvm>False</MtouchUseLlvm>
-		<MtouchLink>None</MtouchLink>
-		<MtouchNoSymbolStrip>True</MtouchNoSymbolStrip>
-		<MtouchDebug>True</MtouchDebug>
-		<IpaIncludeArtwork>False</IpaIncludeArtwork>
-
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-ios|x64'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-		<BuildIpa>True</BuildIpa>
-		<MtouchUseLlvm>False</MtouchUseLlvm>
-		<MtouchLink>None</MtouchLink>
-		<MtouchNoSymbolStrip>True</MtouchNoSymbolStrip>
-		<MtouchDebug>True</MtouchDebug>
-		<IpaIncludeArtwork>False</IpaIncludeArtwork>
-
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-maccatalyst|AnyCPU'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-maccatalyst|x64'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-windows10.0.19041.0|AnyCPU'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net10.0-windows10.0.19041.0|x64'">
-		<ApplicationId>com.hexadecimal0x12e.projectframecut</ApplicationId>
-	</PropertyGroup>
-
+	
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#FFD272" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+		<MauiSplashScreen Include="Resources\AppIcon\appiconfg.svg" Color="#FFD272" BaseSize="128,128" />
 
 		<!-- Images
 		<MauiImage Include="Resources\Images\*" />
@@ -206,7 +110,6 @@
 
 	<ItemGroup>
 		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
-		<PackageReference Include="StreamJsonRpc" Version="2.22.23" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -224,6 +127,7 @@
 
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<ProjectReference Include="..\projectFrameCut.Render.WindowsRender\projectFrameCut.Render.WindowsRender.csproj" />
 		<MauiAsset Include="Platforms\Windows\ffmpeg\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 	</ItemGroup>
 
@@ -232,7 +136,9 @@
 		<ProjectReference Include="..\projectFrameCut.Render.AndroidOpenGL\projectFrameCut.Render.AndroidOpenGL.csproj" />
 		<Reference Include="Platforms\Android\fishnet\FishnetBinding.dll" />
 		<AndroidNativeLibrary Include="Platforms\Android\ffmpeg\**\*.so" />
-
+	 <!--	<PackageReference Include="Xamarin.Google.Android.Material">
+			<Version>1.13.0</Version>
+		</PackageReference> -->
 	</ItemGroup>
 
 	<ItemGroup>
@@ -310,11 +216,5 @@
 	  </None>
 	</ItemGroup>
 
-	<Target Name="BuildAndCopy_WindowsRender_Release" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'" BeforeTargets="Compile">
-		<MSBuild Projects="..\projectFrameCut.Render.WindowsRender\projectFrameCut.Render.WindowsRender.csproj" Targets="Build" Properties="Configuration=Release;RuntimeIdentifiers=win-x64" />
-		<Exec Command="dotnet build ..\projectFrameCut.Render.WindowsRender\projectFrameCut.Render.WindowsRender.csproj -c Release -r win-x64 -o ..\projectFrameCut.Render.WindowsRender\bin\Release\net10.0-windows10.0.19041.0\win-x64" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" />
-		<Exec Command="xcopy ..\projectFrameCut.Render.WindowsRender\bin\Release\net10.0-windows10.0.19041.0\win-x64\*.* $(OutputPath) /e /q /y" StdOutEncoding="UTF-8" StdErrEncoding="UTF-8" />
-
-	</Target>
 
 </Project>

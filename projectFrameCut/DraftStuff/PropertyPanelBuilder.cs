@@ -6,7 +6,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+#pragma warning disable CS8981 // 该类型名称仅包含小写 ascii 字符。此类名称可能会成为该语言的保留值。
 using pppcea = projectFrameCut.PropertyPanel.PropertyPanelPropertyChangedEventArgs; //make code shorter
+#pragma warning restore CS8981 // 该类型名称仅包含小写 ascii 字符。此类名称可能会成为该语言的保留值。
 
 namespace projectFrameCut.PropertyPanel
 {
@@ -35,7 +37,7 @@ namespace projectFrameCut.PropertyPanel
         /// Gets or sets the default padding applied to the control's outer grid,
         /// </summary>
         /// <remarks>
-        /// Except <see cref="AddSeparator(Action{BoxView}?)"/>, <see cref="AddCustomChild(View)"/>, and <see cref="AddCustomChild(Func{PropertyPanelBuilder, Action{object}, View}, string, object)"/>.
+        /// Except <see cref="AddSeparator(Action{BoxView}?)"/>, <see cref="AddCustomChild(View)"/>, and <see cref="AddCustomChild(Func{Action{object}, View}, string, object)"/>.
         /// </remarks>
         public Thickness DefaultPadding { get; set; } = new Thickness(0, 8, 0, 0);
 
@@ -47,8 +49,8 @@ namespace projectFrameCut.PropertyPanel
 
         /// <summary>
         /// Triggered when any property of the child items created by the preset creator changes, 
-        /// or when they are added via <see cref="AddCustomChild(Func{PropertyPanelBuilder, Action{object}, View}, string, object)"/>, 
-        /// provided you have correctly set up the target view's BindingContext and event invoker.        
+        /// or when they are added via <see cref="AddCustomChild(Func{Action{object}, View}, string, object)"/>, 
+        /// provided you have correctly set up the target view's event invoker.        
         /// </summary>
         public event EventHandler<pppcea>? PropertyChanged;
 
@@ -94,7 +96,7 @@ namespace projectFrameCut.PropertyPanel
             {
                 Placeholder = placeholder,
                 Text = defaultValue,
-                HorizontalOptions = LayoutOptions.End,
+                HorizontalOptions = LayoutOptions.Fill,
                 BindingContext = this
             };
             var label = title.LabelConfigurer();
@@ -364,7 +366,8 @@ namespace projectFrameCut.PropertyPanel
         ///     }
         ///     
         ///     entry.TextChanged += (s, e) => invoker(e.NewTextValue);
-        /// )
+        /// },
+        /// "sampleEntry","text");
         /// </code>
         /// </summary>
         /// <param name="maker">
@@ -430,7 +433,7 @@ namespace projectFrameCut.PropertyPanel
         /// builder's collection. 
         /// </summary>
         /// <remarks>
-        /// The method will modify the source builder because of one View can't appering in 2 containers.
+        /// The method will modify the source builder because of one View can't appearing in 2 containers.
         /// This method also clone the source's <see cref="PropertyChanged"/> event.
         /// </remarks>
         /// <param name="another">The builder whose property panel items will be added to this builder. Cannot be null.</param>
@@ -467,7 +470,7 @@ namespace projectFrameCut.PropertyPanel
 
 
         /// <summary>
-        /// Get the final <seealso cref="VerticalStackLayout"/> of the childs created by this builder.
+        /// Get the final <seealso cref="VerticalStackLayout"/> of the panel created by this builder.
         /// </summary>
         public VerticalStackLayout Build()
         {
@@ -657,23 +660,6 @@ namespace projectFrameCut.PropertyPanel
         {
             Grid views = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection(),
-            };
-
-            foreach (var item in _children)
-            {
-                Grid.SetColumn(item.Item1, views.ColumnDefinitions.Count);
-                views.Add(item.Item1);
-                views.ColumnDefinitions.Add(new ColumnDefinition { Width = item.Item2 });
-            }
-
-            return views;
-        }
-
-        public View ToVerticalLayout()
-        {
-            Grid views = new Grid
-            {
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = GridLength.Star }
@@ -687,6 +673,26 @@ namespace projectFrameCut.PropertyPanel
                 views.RowDefinitions.Add(new RowDefinition { Height = item.Item2 });
             }
             return views;
+        }
+
+        public View ToVerticalLayout()
+        {
+
+            Grid views = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitionCollection(),
+            };
+
+            foreach (var item in _children)
+            {
+                Grid.SetColumn(item.Item1, views.ColumnDefinitions.Count);
+                views.Add(item.Item1);
+                views.ColumnDefinitions.Add(new ColumnDefinition { Width = item.Item2 });
+            }
+
+
+            return views;
+            
 
         }
     }
@@ -728,7 +734,7 @@ namespace projectFrameCut.PropertyPanel
 
     public class SingleLineLabel(string text, int fontsize = 14, FontAttributes fontAttributes = FontAttributes.None) : PropertyPanelItemLabel
     {
-        public override View LabelConfigurer() => new Label { Text = text, FontSize = fontsize, FontAttributes = fontAttributes };
+        public override View LabelConfigurer() => new Label { Text = text, FontSize = fontsize, FontAttributes = fontAttributes, VerticalOptions= LayoutOptions.Center };
 
         public static implicit operator SingleLineLabel(string text) => new SingleLineLabel(text);
     }

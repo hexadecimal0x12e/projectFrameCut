@@ -41,6 +41,8 @@ namespace projectFrameCut.DraftStuff
 
         public ClipMode ClipType { get; set; } = ClipMode.Special;
         public string? sourcePath { get; set; } = null;
+
+        public Dictionary<string, projectFrameCut.Shared.IEffect> Effects { get; set; } = new();
         public Dictionary<string, object> ExtraData { get; set; } = new();
 
         public void ApplySpeedRatio()

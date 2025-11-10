@@ -19,9 +19,22 @@
 
 
         <VerticalStackLayout Grid.Row="0" x:Name="UpperContent">
-            <Border StrokeThickness="5" Padding="4" HeightRequest="250"  HorizontalOptions="Start">
-                <Image x:Name="PreviewBox" Background="Black"/>
-            </Border>
+            <HorizontalStackLayout>
+                <Border StrokeThickness="5" Padding="4" HeightRequest="250"  HorizontalOptions="Start">
+                    <Image x:Name="PreviewBox" Background="Black"/>
+                </Border>
+
+                <Border StrokeThickness="5" Padding="4" HeightRequest="250" WidthRequest="500" Margin="10,0,0,0" HorizontalOptions="End">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="50"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Entry x:Name="FrameIndexEntry" Placeholder="Frame index to view" Grid.Row="0" TextChanged="FrameIndexEntry_TextChanged"/>
+                        <Editor x:Name="FrameContentEditor" Placeholder="Content" Grid.Row="1" IsReadOnly="True"  />
+                    </Grid>
+                </Border>
+            </HorizontalStackLayout>
 
             <StackLayout Orientation="Horizontal" Padding="4,0">
                 <Button x:Name="MoveLeftButton" Text="&lt;-"  Clicked="MoveLeftButton_Clicked"/>

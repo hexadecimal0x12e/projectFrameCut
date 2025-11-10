@@ -564,22 +564,6 @@ namespace projectFrameCut.Render
 
     public static unsafe class FFmpegHelper
     {
-        private static bool _registered;
-
-        //public static void RegisterFFmpeg(int loglevel = ffmpeg.AV_LOG_WARNING)
-        //{
-        //    if (_registered) return;
-        //    //if (Program.advancedFlags.Contains("ffmpeg_loglevel_debug"))
-        //    //    ffmpeg.av_log_set_level(ffmpeg.AV_LOG_DEBUG);
-        //    //else if (Program.advancedFlags.Contains("ffmpeg_loglevel_error"))
-        //    //    ffmpeg.av_log_set_level(ffmpeg.AV_LOG_ERROR);
-        //    //else if (Program.advancedFlags.Contains("ffmpeg_loglevel_none"))
-        //    //    ffmpeg.av_log_set_level(ffmpeg.AV_LOG_QUIET);
-        //    //else
-        //        ffmpeg.av_log_set_level(loglevel);
-        //    _registered = true;
-        //}
-
         public static void Throw(int err, string api)
         {
             if (err >= 0) return;

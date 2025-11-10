@@ -240,7 +240,7 @@ public partial class RenderPage : ContentPage
 
             var ffArgs = $"-i \"{outTempFile}\" " +
                 //$"-i \"{audio}\" " +
-                $"-c:v h264_qsv " +
+                $"-c:v libx264 " +
                 $"-pix_fmt yuv420p " +
                 $"\"{outputPath}\" " +
             /*    -b:v {avg}M -maxrate {max}M -bufsize {buf}M //vbr

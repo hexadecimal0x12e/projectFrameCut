@@ -18,10 +18,10 @@ public sealed class RpcClient : IAsyncDisposable
 
     public Action<JsonElement>? ErrorCallback = null;
 
-    public static string BootRPCServer(out Process rpcProc, string options = "1280,720,42,AV_PIX_FMT_NONE,nope", bool VerboseBackendLog = false, Action<string>? stdoutCallback = null, Action<string>? stderrCallback = null)
+    public static string BootRPCServer(out Process rpcProc, string tmpPath = "", string options = "1280,720,42,AV_PIX_FMT_NONE,nope", bool VerboseBackendLog = false, Action<string>? stdoutCallback = null, Action<string>? stderrCallback = null)
     {
         var pipeId = "pjfc_rpc_V1_" + Guid.NewGuid().ToString();
-        var tmpDir = Path.Combine(Path.GetTempPath(), "pjfc_temp");
+        var tmpDir = Path.Combine(tmpPath, "pjfc_temp");
         Directory.CreateDirectory(tmpDir);
         rpcProc = new Process
         {

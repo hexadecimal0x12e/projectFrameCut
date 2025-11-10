@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
+using projectFrameCut.iDevicesAPI;
 using projectFrameCut.Shared;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
+
 
 namespace projectFrameCut
 {
@@ -55,6 +57,10 @@ namespace projectFrameCut
                 fonts.AddFont("HarmonyOS_Sans_SC_Bold.ttf", "Font_Semibold");
             });
 
+#if iDevices
+            builder.Services.AddSingleton<IDeviceThermalService, DeviceThermalService>();
+            builder.Services.AddSingleton<IDeviceMemoryPressureService, DeviceMemoryPressureService>();
+#endif
             return builder.Build();
         }
     }
