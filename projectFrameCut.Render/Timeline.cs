@@ -1,6 +1,5 @@
-﻿using ILGPU.Runtime;
-using projectFrameCut.Render.ILGPU;
-using projectFrameCut.Shared;
+﻿using projectFrameCut.Shared;
+using projectFrameCut.VideoMakeEngine;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,10 +9,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using static projectFrameCut.Render.Video;
-using projectFrameCut.Render.Effects; // ComputerSource
-using projectFrameCut.VideoMakeEngine; // SimpleMixture & MixtureMode
 
-namespace projectFrameCut.Render.ILGpu
+namespace projectFrameCut.Render
 {
     public class VideoClip : IClip
     {
@@ -130,7 +127,7 @@ namespace projectFrameCut.Render.ILGpu
         public void ReInit()
         {
 
-        }      
+        }
 
         public void Dispose()
         {
@@ -149,13 +146,13 @@ namespace projectFrameCut.Render.ILGpu
             List<OneFrame> result = new List<OneFrame>();
             foreach (var clip in video)
             {
-                if(clip.StartFrame * clip.SecondPerFrameRatio <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame * clip.SecondPerFrameRatio >= targetFrame)
+                if (clip.StartFrame * clip.SecondPerFrameRatio <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame * clip.SecondPerFrameRatio >= targetFrame)
                 {
-                    if(result.Any((c) => c.LayerIndex == clip.LayerIndex))
+                    if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
-                        throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame,string>(clip.FilePath ?? "Clip@" + clip.Id,(a,b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
+                        throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
-                    result.Add(new OneFrame(targetFrame,clip, clip.GetFrame(targetFrame,targetWidth,targetHeight,forceResize)));
+                    result.Add(new OneFrame(targetFrame, clip, clip.GetFrame(targetFrame, targetWidth, targetHeight, forceResize)));
                 }
             }
 
@@ -185,11 +182,11 @@ namespace projectFrameCut.Render.ILGpu
 
             if (f == "[]") return "nullframe";
 
-            return SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(f)).Aggregate("0x", ((b,c) => b + c.ToString("x2")));
+            return SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(f)).Aggregate("0x", ((b, c) => b + c.ToString("x2")));
         }
 
 
-        public static Picture MixtureLayers(IEnumerable<OneFrame> frames, Accelerator accelerator, uint frameIndex, int targetWidth, int targetHeight)
+        public static Picture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight)
         {
             try
             {
@@ -207,22 +204,28 @@ namespace projectFrameCut.Render.ILGpu
                         {
                             foreach (var effect in frame.Effects)
                             {
-                                effected = effect.Render(effected);
+                                effected = effect.Render(effected, null);
                             }
                         }
-                        // Map legacy RenderMode to new MixtureMode
-                        var mixtureMode = frame.MixtureMode switch
-                        {
-                            RenderMode.Add => MixtureMode.Add,
-                            RenderMode.Minus => MixtureMode.Minus,
-                            RenderMode.Multiply => MixtureMode.Multiply,
-                            RenderMode.Overlay => MixtureMode.Overlay,
-                            _ => MixtureMode.Overlay
-                        };
 
-                        var mixture = new SimpleMixture { Mode = mixtureMode };
+                        var computer = AcceleratedComputerBridge.RequireAComputer?.Invoke(frame.MixtureMode.ToString());
+
+                        if(computer is not IComputer)
+                        {
+                            throw new NotSupportedException($"Mixture mode {frame.MixtureMode} is not supported in accelerated computer bridge.");
+                        }
+
+                        switch (frame.MixtureMode)
+                        {
+                            case RenderMode.Overlay:
+                                var mixer = new OverlayMixture();
+                                result = mixer.Mix(effected, result,(IComputer)computer);
+                                break;
+                            default:
+                                throw new NotSupportedException();
+                        }
+
                         // legacy order: layerA (top/effected) minus layerB (current result) for Minus etc.
-                        result = mixture.Mix(effected, result);
                     }
                 }
 
@@ -233,7 +236,7 @@ namespace projectFrameCut.Render.ILGpu
                 Log(ex);
                 return new Picture(Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png")).Resize(targetHeight, targetHeight, true);
             }
-            
+
         }
 
 

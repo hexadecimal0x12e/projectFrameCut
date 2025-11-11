@@ -19,16 +19,12 @@
 
 
   <ItemGroup>
-		<ProjectReference Include="..\projectFrameCut.Render.ILGPU\projectFrameCut.Render.ILGPU.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj">
 		</ProjectReference>
 		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj">
 		</ProjectReference>
-		<ProjectReference Include="..\projectFrameCut.Render.Effects\projectFrameCut.VideoMakeEngine.csproj">
-		</ProjectReference>
 		<PackageReference Include="ILGPU" Version="1.5.3" />
 		<PackageReference Include="ILGPU.Algorithms" Version="1.5.3" />
-		<PackageReference Include="StreamJsonRpc" Version="2.22.23" />
 	</ItemGroup>
 
 	<ItemGroup>

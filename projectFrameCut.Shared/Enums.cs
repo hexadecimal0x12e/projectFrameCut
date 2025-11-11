@@ -27,8 +27,7 @@ namespace projectFrameCut.Shared
     public enum MyAcceleratorType
     {
         Auto,
-        CUDA,
-        OpenCL,
+        ILGPU,
         OpenGL,
         Metal,
         CPU

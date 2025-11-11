@@ -5,9 +5,6 @@ using ILGPU.Runtime;
 using ILGPU.Runtime.CPU;
 using ILGPU.Runtime.Cuda;
 using ILGPU.Runtime.OpenCL;
-using projectFrameCut.Render.Effects;
-using projectFrameCut.Render.ILGpu;
-using projectFrameCut.Render.ILGPU;
 using projectFrameCut.Render.WindowsRender;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp.Formats;
@@ -24,13 +21,15 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Accelerator = ILGPU.Runtime.Accelerator;
 using Device = ILGPU.Runtime.Device;
-using Effect = projectFrameCut.Render.ILGPU.Effect;
 
 namespace projectFrameCut.Render.RenderCLI
 {
     internal class Program
     {
         public static ConcurrentBag<string> advancedFlags = new();
+
+        public static object globalLocker = new object();
+
 
         static async Task<int> Main(string[] args)
         {
@@ -199,10 +198,8 @@ namespace projectFrameCut.Render.RenderCLI
                 }
             }
 
-            Mixture.ForceSync = fSync;
-            Effect.ForceSync = fSync;
 
-            ComputerSource.ILGpuAccelerator = new ILGPUAccelerator() { accelerator = accelerator, Sync = fSync };
+            RegisterComputerGetter(accelerator,fSync);
 
             var outputOptions = switches["output_options"].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
@@ -340,7 +337,7 @@ namespace projectFrameCut.Render.RenderCLI
                             Log($"[#{i:d6}] Start processing frame {i}...");
                             Stopwatch sw = Stopwatch.StartNew();
                             builder.Append(i,
-                                Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), accelerator, i, width, height)
+                                Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height)
                             );
 
                             sw.Stop();
@@ -356,7 +353,7 @@ namespace projectFrameCut.Render.RenderCLI
                         {
                             Log($"[#{i:d6}] Start processing frame {i}...");
                             Stopwatch sw = Stopwatch.StartNew();
-                            Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), accelerator, i, width, height).SetAlpha(false).SaveAsPng16bpc($"{switches["output"]}frame_{i:D6}.png", encoder);
+                            Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height).SetAlpha(false).SaveAsPng16bpc($"{switches["output"]}frame_{i:D6}.png", encoder);
 
                             sw.Stop();
                             avgTime.Add(sw.ElapsedMilliseconds);
@@ -371,7 +368,7 @@ namespace projectFrameCut.Render.RenderCLI
                         {
                             Log($"[#{i:d6}] Start processing frame {i}...");
                             Stopwatch sw = Stopwatch.StartNew();
-                            Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), accelerator, i, width, height).SetAlpha(false).SaveAsPng8bpc($"{switches["output"]}_{i:D6}.png", encoder);
+                            Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height).SetAlpha(false).SaveAsPng8bpc($"{switches["output"]}_{i:D6}.png", encoder);
 
                             sw.Stop();
                             avgTime.Add(sw.ElapsedMilliseconds);
@@ -386,7 +383,7 @@ namespace projectFrameCut.Render.RenderCLI
                         {
                             Log($"[#{i:d6}] Start processing frame {i}...");
                             Stopwatch sw = Stopwatch.StartNew();
-                            Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), accelerator, i, width, height).SetAlpha(true).SaveAsPng16bpc($"{switches["output"]}_{i:D6}.png", encoder);
+                            Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height).SetAlpha(true).SaveAsPng16bpc($"{switches["output"]}_{i:D6}.png", encoder);
 
                             sw.Stop();
                             avgTime.Add(sw.ElapsedMilliseconds);
@@ -401,7 +398,7 @@ namespace projectFrameCut.Render.RenderCLI
                         {
                             Log($"[#{i:d6}] Start processing frame {i}...");
                             Stopwatch sw = Stopwatch.StartNew();
-                            Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), accelerator, i, width, height).SetAlpha(true).SaveAsPng8bpc($"{switches["output"]}_{i:D6}.png", encoder);
+                            Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height).SetAlpha(true).SaveAsPng8bpc($"{switches["output"]}_{i:D6}.png", encoder);
 
                             sw.Stop();
                             avgTime.Add(sw.ElapsedMilliseconds);
@@ -436,7 +433,7 @@ namespace projectFrameCut.Render.RenderCLI
 
             SetSubProg("WriteVideo");
             Log("Finish writing video...");
-            builder?.Finish(clips.ToArray(), (i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), accelerator, i, width, height), (uint)duration);
+            builder?.Finish(clips.ToArray(), (i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), (uint)duration);
 
             Log($"Releasing resources...");
 
@@ -450,6 +447,22 @@ namespace projectFrameCut.Render.RenderCLI
             Log($"All done! Total elapsed {sw1}.");
 
             return 0;
+        }
+
+        private static void RegisterComputerGetter(Accelerator accel, bool sync)
+        {
+            AcceleratedComputerBridge.RequireAComputer = new((name) =>
+            {
+                switch (name)
+                {
+                    case "Overlay":
+                        return new OverlayComputer(accel, sync);
+                    default:
+                        Log($"Computer {name} not found.","Error");
+                        return null;
+
+                }
+            });
         }
 
         public static bool inprojectFrameCut = false;

@@ -1,6 +1,5 @@
 ﻿using ILGPU;
 using ILGPU.Runtime;
-using projectFrameCut.Render.ILGpu;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp.Formats.Png;
 using System;
@@ -187,7 +186,7 @@ namespace projectFrameCut.Render.WindowsRender
                                     }
                                     var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height, true);
                                     Log($"Clips in frame #{frameIndex}:\r\n{JsonSerializer.Serialize(layers)}\r\n---");
-                                    var pic = Timeline.MixtureLayers(layers, accelerator, frameIndex, width, height);
+                                    var pic = Timeline.MixtureLayers(layers, frameIndex, width, height);
                                     pic.SetAlpha(false).SaveAsPng8bpc(destPath, encoder);
                                     Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "path", destPath } });
                                     Log($"[RPC] RenderOne completed");

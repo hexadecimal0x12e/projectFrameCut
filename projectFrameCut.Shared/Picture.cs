@@ -276,6 +276,7 @@ namespace projectFrameCut.Shared
         /// <param name="targetHeight">The target height.</param>
         /// <param name="preserveAspect">Whether to preserve aspect ratio.</param>
         /// <returns>A new Picture instance with the resized image data.</returns>
+        [DebuggerNonUserCode()]
         public Picture Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
         {
             if (targetWidth <=0 || targetHeight <=0) throw new ArgumentException("targetWidth and targetHeight must be positive");

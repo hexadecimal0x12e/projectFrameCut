@@ -13,11 +13,9 @@ namespace projectFrameCut.Shared
         public Dictionary<string, object> Parameters { get; }
         public Dictionary<string, string> ParametersType { get; }
 
-        public AcceleratedComputer Computer { get; set; }
+        public Picture Render(Picture source, IComputer computer);
 
-        public Picture Render(Picture source);
-
-        public IEffect FromParametersDictionary(Dictionary<string, object> parameters, IAcceleratedComputer computer);
+        public IEffect FromParametersDictionary(Dictionary<string, object> parameters);
     }
 
     public interface IMixture
@@ -26,11 +24,14 @@ namespace projectFrameCut.Shared
         public Dictionary<string, object> Parameters { get; }
         public Dictionary<string, string> ParametersType { get; }
 
-        public AcceleratedComputer Computer { get; set; }
+        public Picture Mix(Picture basePicture, Picture topPicture, IComputer computer);
 
-        public Picture Mix(Picture basePicture, Picture topPicture);
+        public IMixture FromParametersDictionary(Dictionary<string, object> parameters);
 
-        public IMixture FromParametersDictionary(Dictionary<string, object> parameters, IAcceleratedComputer computer);
+    }
 
+    public interface IComputer
+    {
+        public float[][] Compute(float[][] args);
     }
 }

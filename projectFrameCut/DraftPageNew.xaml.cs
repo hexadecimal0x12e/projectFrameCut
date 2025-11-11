@@ -1351,7 +1351,9 @@ public partial class DraftPage : ContentPage
         SetStatusText(Localized.DraftPage_RenderOneFrame((int)duration, TimeSpan.FromSeconds(duration * SecondsPerFrame)));
         var cts = new CancellationTokenSource();
 #if WINDOWS
+#if !DEBUG
         cts.CancelAfter(10000);
+#endif
         var path = await RpcClient.RenderOneFrame(duration, _rpc, cts.Token);
         var src = ImageSource.FromFile(path);
         Dispatcher.Dispatch(() =>
@@ -1423,7 +1425,7 @@ public partial class DraftPage : ContentPage
 #endif
 
     }
-    #endregion
+#endregion
 
     #region adjust track and clip
     private void ReRenderUI()

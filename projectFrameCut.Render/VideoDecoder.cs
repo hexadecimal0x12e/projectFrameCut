@@ -553,6 +553,7 @@ namespace projectFrameCut.Render
             }
         }
 
+        [DebuggerNonUserCode()]
         public Picture GetFrame(uint targetFrame, bool hasAlpha)
         {
             lock (locker)
