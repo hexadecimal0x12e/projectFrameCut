@@ -9,29 +9,30 @@ namespace projectFrameCut.Shared
 {
     public interface IEffect
     {
-        public List<string> ParametersNeeded { get; }
+        public string TypeName { get; }
         public Dictionary<string, object> Parameters { get; }
-        public Dictionary<string, string> ParametersType { get; }
 
         public Picture Render(Picture source, IComputer computer);
-
-        public IEffect FromParametersDictionary(Dictionary<string, object> parameters);
     }
 
     public interface IMixture
     {
-        public List<string> ParametersNeeded { get; }
         public Dictionary<string, object> Parameters { get; }
-        public Dictionary<string, string> ParametersType { get; }
 
         public Picture Mix(Picture basePicture, Picture topPicture, IComputer computer);
-
-        public IMixture FromParametersDictionary(Dictionary<string, object> parameters);
 
     }
 
     public interface IComputer
     {
         public float[][] Compute(float[][] args);
+    }
+
+    public class EffectAndMixtureJSONStructure
+    {
+        public bool IsMixture { get; set; } = false;    
+        public string TypeName { get; set; } = string.Empty;
+        public Dictionary<string, object>? Parameters { get; set; }
+
     }
 }

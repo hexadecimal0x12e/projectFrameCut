@@ -10,13 +10,14 @@ namespace projectFrameCut.VideoMakeEngine
 {
     public class OverlayMixture : IMixture
     {
-        List<string> IMixture.ParametersNeeded => [];
+        public static List<string> ParametersNeeded = new();
 
-        Dictionary<string, object> IMixture.Parameters => new();
 
-        Dictionary<string, string> IMixture.ParametersType => new();
+        public static Dictionary<string, string> ParametersType = new();
 
-        IMixture IMixture.FromParametersDictionary(Dictionary<string, object> parameters)
+        public Dictionary<string, object> Parameters => new();
+
+        public static IMixture FromParametersDictionary(Dictionary<string, object> parameters)
         {
             return new OverlayMixture();
         }
@@ -56,4 +57,6 @@ namespace projectFrameCut.VideoMakeEngine
 
         }
     }
+
+
 }

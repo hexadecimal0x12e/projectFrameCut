@@ -4,7 +4,7 @@
 		<TargetFrameworks>net10.0-android;net10.0-windows10.0.19041.0</TargetFrameworks>
 
 		
-		
+
 		<!-- Note for MacCatalyst:
 		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
 		When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
@@ -63,6 +63,7 @@
 		<MtouchNoSymbolStrip>True</MtouchNoSymbolStrip>
 		<MtouchDebug>True</MtouchDebug>
 		<IpaIncludeArtwork>False</IpaIncludeArtwork>
+		<DefineConstants>$(DefineConstants);iDevices</DefineConstants>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
@@ -76,12 +77,12 @@
 		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
 		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
 	</PropertyGroup>
-	
+
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<ApplicationId>hexadecimal0x12e.projectframecut</ApplicationId>
 	</PropertyGroup>
 
-	
+
 	<ItemGroup>
 		<!-- App Icon -->
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#FFD272" />
@@ -89,10 +90,11 @@
 		<!-- Splash Screen -->
 		<MauiSplashScreen Include="Resources\AppIcon\appiconfg.svg" Color="#FFD272" BaseSize="128,128" />
 
-		<!-- Images
-		<MauiImage Include="Resources\Images\*" />
-		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
-		-->
+		<!-- Images -->
+		<MauiImage Include="Resources\Images\*.png" />
+		<MauiImage Include="Resources\Images\*.jpg" />
+		<MauiImage Include="Resources\Images\*.svg" Resize="false" />
+		
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
 
@@ -101,15 +103,15 @@
 	</ItemGroup>
 
 
-
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.10" />
-		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.82" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="9.0.82" />
+	  <AndroidResource Remove="Platforms\Android\Resources\values\styles.xml" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.10" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.10" />
+		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.10" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -123,12 +125,15 @@
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION</DefineConstants>
+	<ShouldImportMsixCommonTargets>false</ShouldImportMsixCommonTargets>
 	</PropertyGroup>
-
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<ProjectReference Include="..\projectFrameCut.Render.WindowsRender\projectFrameCut.Render.WindowsRender.csproj" />
 		<MauiAsset Include="Platforms\Windows\ffmpeg\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Update="AppShell_Windows.xaml.cs">
+			<DependentUpon>AppShell_Windows.xaml</DependentUpon>
+		</Compile>
 	</ItemGroup>
 
 
@@ -136,13 +141,16 @@
 		<ProjectReference Include="..\projectFrameCut.Render.AndroidOpenGL\projectFrameCut.Render.AndroidOpenGL.csproj" />
 		<Reference Include="Platforms\Android\fishnet\FishnetBinding.dll" />
 		<AndroidNativeLibrary Include="Platforms\Android\ffmpeg\**\*.so" />
-	 <!--	<PackageReference Include="Xamarin.Google.Android.Material">
-			<Version>1.13.0</Version>
-		</PackageReference> -->
+		<Compile Update="AppShell_Android.xaml.cs">
+			<DependentUpon>AppShell_Android.xaml</DependentUpon>
+		</Compile>
 	</ItemGroup>
 
 	<ItemGroup>
-		<MauiXaml Update="LandingPage.xaml">
+		<MauiXaml Update="AssetsLibraryPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="HomePage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="MainPage.xaml">
@@ -153,6 +161,9 @@
 		</MauiXaml>
 		<MauiXaml Update="RPCTestPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="SettingPages\MainSettingsPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="TestPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
@@ -168,8 +179,12 @@
 
 
 	<ItemGroup>
-		<Compile Update="DraftPageOld.xaml.cs">
+		
+		<Compile Update="DraftPage.xaml.cs">
 			<DependentUpon>DraftPage.xaml</DependentUpon>
+		</Compile>
+		<Compile Update="SettingPages\MainSettingsPage.xaml.cs">
+		  <DependentUpon>MainSettingsPage.xaml</DependentUpon>
 		</Compile>
 		<Compile Update="TestPage.xaml.cs">
 			<DependentUpon>TestPage.xaml</DependentUpon>
@@ -193,28 +208,43 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Update="DebuggingMainPage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </None>
-	  <None Update="DraftPageNew.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </None>
-	  <None Update="DraftPageOld.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </None>
-	  <None Update="LandingPage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </None>
-	  <None Update="RenderPage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </None>
-	  <None Update="RPCTestPage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </None>
-	  <None Update="TestPage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </None>
+		<None Update="DebuggingMainPage.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="DraftPageNew.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="DraftPageOld.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="LandingPage.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="RenderPage.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="RPCTestPage.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</None>
+		<None Update="TestPage.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</None>
 	</ItemGroup>
 
+	
+	<!-- Platform-specific: exclude Android AppShell from Windows builds and exclude Windows AppShell from Android builds -->
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<!-- Remove Android-specific XAML and codebehind so it's not processed on Windows -->
+		<MauiXaml Remove="AppShell_Android.xaml" />
+		<None Remove="AppShell_Android.xaml" />
+		<Compile Remove="AppShell_Android.xaml.cs" />
+	</ItemGroup>
+
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<!-- Remove Windows-specific XAML and codebehind so it's not processed on Android -->
+		<MauiXaml Remove="AppShell_Windows.xaml" />
+		<None Remove="AppShell_Windows.xaml" />
+		<Compile Remove="AppShell_Windows.xaml.cs" />
+	</ItemGroup>
 
 </Project>

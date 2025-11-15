@@ -1,4 +1,6 @@
-﻿using System;
+﻿using projectFrameCut.VideoMakeEngine;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,8 +12,11 @@ namespace projectFrameCut.Shared
     public class ProjectJSONStructure
     {
         public string projectName { get; set; } = "Untitled Project";
-        public string ResourcePath { get; set; } = string.Empty;
         public Dictionary<string, string> UserDefinedProperties = new();
+        public int SaveSlotIndicator = -1;
+
+        public DateTime? LastChanged { get; set; }
+        public bool NormallyExited { get; set; } = false;
     }
 
     public class DraftStructureJSON
@@ -33,9 +38,10 @@ namespace projectFrameCut.Shared
         public uint Duration { get; set; }
         public float FrameTime { get; set; } // seconds per frame (1 / framerate)
         public float SecondPerFrameRatio { get; set; }
-        public RenderMode MixtureMode { get; set; } = RenderMode.Overlay;
+        public MixtureMode MixtureMode { get; set; } = MixtureMode.Overlay;
         public string? FilePath { get; set; }
         public long? SourceDuration { get;set; } // in frames, null for infinite length source
+        public EffectAndMixtureJSONStructure[]? Effects { get; set; }
 
         [JsonExtensionData]
         public Dictionary<string, object>? MetaData { get; set; }
@@ -117,7 +123,43 @@ namespace projectFrameCut.Shared
         /// The final frame time used to do any calculation is by (FrameTime * SpeedRatio)
         /// </remarks>
         public float SecondPerFrameRatio { get; init; }
-        public RenderMode MixtureMode { get; init; }
+        /// <summary>
+        /// Get the mixture mode applied to this clip.
+        /// </summary>
+        public MixtureMode MixtureMode { get; init; }
+        /// <summary>
+        /// 
+        /// </summary>
+        public Dictionary<string, object>? MixtureArgs { get; init; }
+        /// <summary>
+        /// 
+        /// </summary>
+        public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+
+        private static ConcurrentDictionary<string, IEffect[]> _effectsInstances = new();
+
+        public virtual IEffect[] GetEffectsInstances()
+        {
+            if( Effects is null || Effects.Length == 0)
+            {
+                return Array.Empty<IEffect>();
+            }
+            if(_effectsInstances.TryGetValue(Id, out var existingEffects))
+            {
+                return existingEffects;
+            }
+            List<IEffect> effects = new();
+            foreach (var item in Effects)
+            {
+                effects.Add(EffectHelper.CreateFromJSONStructure(item));
+            }
+            _effectsInstances.AddOrUpdate(Id, effects.ToArray(), (_, _) => effects.ToArray());
+            return effects.ToArray();
+        }
+
+        /// <summary>
+        /// Get the path of the source file for this clip. May be null for some kind of clips.
+        /// </summary>
         public string? FilePath { get; init; }
 
         /// <summary>
@@ -236,7 +278,7 @@ namespace projectFrameCut.Shared
         public uint FrameNumber { get; init; }
         public Picture Clip { get; init; }
         public uint LayerIndex { get; init; } = 0;
-        public RenderMode MixtureMode { get; init; } = RenderMode.Overlay;
+        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
         public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
         public IClip ParentClip { get; init; }
         public OneFrame(uint frameNumber, IClip parent, Picture pic)
@@ -246,6 +288,7 @@ namespace projectFrameCut.Shared
             Clip = pic;
             LayerIndex = parent.LayerIndex;
             MixtureMode = parent.MixtureMode;
+            Effects = parent.GetEffectsInstances();
         }
     }
 

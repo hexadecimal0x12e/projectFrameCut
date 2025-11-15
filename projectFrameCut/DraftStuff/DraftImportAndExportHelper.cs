@@ -6,12 +6,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Diagnostics.CodeAnalysis;
+using projectFrameCut.VideoMakeEngine;
 
 namespace projectFrameCut.DraftStuff
 {
     internal static class DraftImportAndExportHelper
     {
-
         public static DraftStructureJSON ExportFromDraftPage(projectFrameCut.DraftPage page, uint targetFrameRate = 30)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
@@ -50,11 +50,17 @@ namespace projectFrameCut.DraftStuff
                             RelativeStartFrame = elem.relativeStartFrame,
                             Duration = durationFrames,
                             FrameTime = elem.sourceSecondPerFrame,
-                            MixtureMode = RenderMode.Overlay,
+                            MixtureMode = MixtureMode.Overlay,
                             FilePath = elem.sourcePath,
                             SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
                             SecondPerFrameRatio = elem.SecondPerFrameRatio,
-                            MetaData = elem.ExtraData
+                            MetaData = elem.ExtraData,
+                            Effects = elem.Effects?.Select((kv) => 
+                            new EffectAndMixtureJSONStructure
+                            {
+                                TypeName = kv.Key,
+                                Parameters = kv.Value.Parameters
+                            }).ToArray()
                         };
 
                         clips.Add(dto);
@@ -156,6 +162,15 @@ namespace projectFrameCut.DraftStuff
                 element.sourceSecondPerFrame = dto.FrameTime;
                 element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
                 element.ApplySpeedRatio();
+                element.Effects = dto.Effects?.ToDictionary(
+                    e => e.TypeName,
+                    EffectHelper.CreateFromJSONStructure
+                );
+
+                if(element.Effects is null ) 
+                {
+                    element.Effects = new Dictionary<string, IEffect>();
+                }
                 clipsDict.AddOrUpdate(element.Id, element, (_, _) => element);
             }
 
@@ -235,6 +250,10 @@ namespace projectFrameCut.DraftStuff
 
         public static bool HasOverlap(IEnumerable<ClipDraftDTO>? clips, uint allowedOverlapFrames = 5)
             => FindOverlaps(clips, allowedOverlapFrames).Count > 0;
+
+
+
+
 
         public class OverlapInfo
         {

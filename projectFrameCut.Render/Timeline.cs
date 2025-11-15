@@ -1,6 +1,7 @@
 ﻿using projectFrameCut.Shared;
 using projectFrameCut.VideoMakeEngine;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -22,9 +23,10 @@ namespace projectFrameCut.Render
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
-        public RenderMode MixtureMode { get; init; } = RenderMode.Overlay;
+        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
         public string? FilePath { get; init; }
+        public Dictionary<string, object>? MixtureArgs { get; init; }
+        public EffectAndMixtureJSONStructure[]? Effects { get; init; }
 
         [System.Text.Json.Serialization.JsonIgnore]
         public IDecoderContext? Decoder { get; set; } = null;
@@ -63,8 +65,7 @@ namespace projectFrameCut.Render
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
-        public RenderMode MixtureMode { get; init; } = RenderMode.Overlay;
+        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
         public string? FilePath { get; init; } = string.Empty;
 
         [System.Text.Json.Serialization.JsonIgnore]
@@ -72,6 +73,9 @@ namespace projectFrameCut.Render
 
         public ClipMode ClipType => ClipMode.PhotoClip;
 
+
+        public Dictionary<string, object>? MixtureArgs { get; init; }
+        public EffectAndMixtureJSONStructure[]? Effects { get; init; }
 
         public PhotoClip()
         {
@@ -105,10 +109,11 @@ namespace projectFrameCut.Render
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
-        public RenderMode MixtureMode { get; init; } = RenderMode.Overlay;
+        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.Special;
+        public Dictionary<string, object>? MixtureArgs { get; init; }
+        public EffectAndMixtureJSONStructure[]? Effects { get; init; }
 
         string? IClip.FilePath { get => null; init => throw new InvalidOperationException("Set path is not supported by this type of clip."); }
 
@@ -141,6 +146,10 @@ namespace projectFrameCut.Render
 
     public class Timeline
     {
+        public static ConcurrentDictionary<string,IComputer> ComputerCache = new();
+        public static ConcurrentDictionary<MixtureMode,IMixture> MixtureCache = new();
+
+
         public static IEnumerable<OneFrame> GetFramesInOneFrame(IClip[] video, uint targetFrame, int targetWidth, int targetHeight, bool forceResize = false)
         {
             List<OneFrame> result = new List<OneFrame>();
@@ -193,39 +202,34 @@ namespace projectFrameCut.Render
                 Picture? result = null;
                 foreach (var frame in frames)
                 {
+                    Picture effected = frame.Clip;
+                    if (frame.Effects.Length > 0)
+                    {
+                        foreach (var effect in frame.Effects)
+                        {
+                            effected = effect.Render(
+                                effected,
+                                ComputerCache.GetOrAdd(
+                                    effect.TypeName,
+                                    AcceleratedComputerBridge.RequireAComputer?.Invoke(effect.TypeName)
+                                        is IComputer c1 ? c1 :
+                                        throw new NotSupportedException($"Mixture mode {frame.MixtureMode} is not supported in accelerated computer bridge.")));
+                        }
+                    }
+
                     if (result == null)
                     {
-                        result = frame.Clip;
+                        result = effected;
                     }
                     else
                     {
-                        Picture effected = frame.Clip;
-                        if (frame.Effects.Length > 0)
-                        {
-                            foreach (var effect in frame.Effects)
-                            {
-                                effected = effect.Render(effected, null);
-                            }
-                        }
-
-                        var computer = AcceleratedComputerBridge.RequireAComputer?.Invoke(frame.MixtureMode.ToString());
-
-                        if(computer is not IComputer)
-                        {
-                            throw new NotSupportedException($"Mixture mode {frame.MixtureMode} is not supported in accelerated computer bridge.");
-                        }
-
-                        switch (frame.MixtureMode)
-                        {
-                            case RenderMode.Overlay:
-                                var mixer = new OverlayMixture();
-                                result = mixer.Mix(effected, result,(IComputer)computer);
-                                break;
-                            default:
-                                throw new NotSupportedException();
-                        }
-
-                        // legacy order: layerA (top/effected) minus layerB (current result) for Minus etc.
+                        result = MixtureCache.GetOrAdd(
+                            frame.MixtureMode, GetMixer(frame.MixtureMode))
+                                .Mix(effected, result, 
+                                    ComputerCache.GetOrAdd(frame.MixtureMode.ToString(), 
+                                        AcceleratedComputerBridge.RequireAComputer?.Invoke(frame.MixtureMode.ToString()) 
+                                            is IComputer c ? c : 
+                                            throw new NotSupportedException($"Mixture mode {frame.MixtureMode} is not supported in accelerated computer bridge.")));
                     }
                 }
 
@@ -239,6 +243,15 @@ namespace projectFrameCut.Render
 
         }
 
-
+        private static IMixture GetMixer(MixtureMode mixtureMode)
+        {
+            switch (mixtureMode)
+            {
+                case MixtureMode.Overlay:
+                    return new OverlayMixture();
+                default:
+                    throw new NotSupportedException($"Mixture mode {mixtureMode} is not supported.");
+            }
+        }
     }
 }

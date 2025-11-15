@@ -2,7 +2,6 @@
 
 	<PropertyGroup>
 		<TargetFrameworks>net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
-
 		<!-- Note for MacCatalyst:
 		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
 		When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
@@ -37,7 +36,7 @@
 
 	<ItemGroup>
 		<!-- App Icon -->
-		<MauiIcon Include="..\pjfc.png" Color="#FFD272" />
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#FFD272" />
 
 		<!-- Splash Screen -->
 		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#FFD272" BaseSize="128,128" />
@@ -72,39 +71,27 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.8" />
 	</ItemGroup>
 
 
 	<ItemGroup>
-		<MauiXaml Include="..\projectFrameCut\**\*.xaml" Exclude="..\projectFrameCut\bin\**;..\projectFrameCut\obj\**;..\projectFrameCut\Platforms\**;..\projectFrameCut\App.xaml;..\projectFrameCut\AppShell.xaml" Link="SharedPages\%(RecursiveDir)%(Filename)%(Extension)" />
-
-	</ItemGroup>
-
-	<ItemGroup>
-		<Compile Include="..\projectFrameCut\**\*.xaml.cs" Exclude="..\projectFrameCut\bin\**;..\projectFrameCut\obj\**;..\projectFrameCut\Platforms\**;..\projectFrameCut\App.xaml.cs;..\projectFrameCut\AppShell.xaml.cs" Link="SharedPages\%(RecursiveDir)%(Filename)%(Extension)">
+		<MauiXaml Include="..\projectFrameCut\**\*.xaml" Exclude="..\projectFrameCut\bin\**;..\projectFrameCut\obj\**;..\projectFrameCut\Platforms\**;..\projectFrameCut\App.xaml;..\projectFrameCut\AppShell*.xaml" Link="SharedPages\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut\**\*.xaml.cs" Exclude="..\projectFrameCut\bin\**;..\projectFrameCut\obj\**;..\projectFrameCut\Platforms\**;..\projectFrameCut\App.xaml.cs;..\projectFrameCut\AppShell*.xaml.cs" Link="SharedPages\%(RecursiveDir)%(Filename)%(Extension)">
 			<DependentUpon>%(Filename).xaml</DependentUpon>
 		</Compile>
-	</ItemGroup>
 
-	<ItemGroup>
 		<Compile Include="..\projectFrameCut\Localize\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\ViewModels\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\DraftStuff\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Converters\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		
 		<Compile Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'" Include="..\projectFrameCut\Platforms\iOS\**\*.cs" Exclude="..\projectFrameCut\Platforms\iOS\AppDelegate.cs;..\projectFrameCut\Platforms\iOS\Program.cs" Link="Platforms\iOS\%(RecursiveDir)%(Filename)%(Extension)" />
-		
 		<Compile Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'" Include="..\projectFrameCut\Platforms\MacCatalyst\**\*.cs" Exclude="..\projectFrameCut\Platforms\MacCatalyst\AppDelegate.cs;..\projectFrameCut\Platforms\MacCatalyst\Program.cs" Link="Platforms\MacCatalyst\%(RecursiveDir)%(Filename)%(Extension)" />
-	</ItemGroup>
 
-	<ItemGroup>
 		<ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
 	</ItemGroup>
-	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' Or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
-		<ProjectReference Include="..\projectFrameCut.Render.Metal\projectFrameCut.Render.Metal.csproj" />
-	</ItemGroup>
+
 
 	<ItemGroup>
 		<Using Include="projectFrameCut.Shared.Logger">
@@ -115,9 +102,6 @@
 		</Using>
 	</ItemGroup>
 	<ItemGroup>
-	  <MauiXaml Update="LandingPage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
 	  <MauiXaml Update="Resources\Styles\Colors.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>

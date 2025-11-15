@@ -11,6 +11,11 @@ using Java.Lang;
 #if IOS || MACCATALYST
 using Foundation;
 #endif
+
+#if WINDOWS
+using projectFrameCut.Platforms.Windows;
+
+#endif
 using System;
 using System.Diagnostics;
 using FFmpeg.AutoGen;
@@ -27,6 +32,12 @@ namespace projectFrameCut
         static StreamWriter LogWriter;
 
         public static string DataPath { get; private set; }
+
+        private static readonly string[] FoldersNeedInUserdata =   
+            [
+            "My Drafts",
+            "My Assets"
+            ];
 
         public static MauiApp CreateMauiApp()
         {
@@ -105,16 +116,21 @@ namespace projectFrameCut
             Log($"DataPath:{DataPath}, loggingDir:{loggingDir}");
             try
             {
-                if (File.Exists(Path.Combine(DataPath, "OverrideUserData.txt")))
+                if (File.Exists(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt")))
                 {
-                    var newPath = File.ReadAllText(Path.Combine(DataPath, "OverrideUserData.txt"));
+                    var newPath = File.ReadAllText(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt"));
                     DataPath = newPath;
                     Log($"User override Data path to:{DataPath}");
+                }
+
+                foreach (var item in FoldersNeedInUserdata)
+                {
+                    Directory.CreateDirectory(Path.Combine(DataPath, item));
                 }
             }
             catch(Exception ex)
             {
-                Log(ex, "set user data dir", CreateMauiApp);
+                Log(ex, "setup user data dir", CreateMauiApp);
             }
 
             try
@@ -125,6 +141,9 @@ namespace projectFrameCut
                 builder.Logging.SetMinimumLevel(LogLevel.Trace);
 #else
                 builder.Logging.SetMinimumLevel(LogLevel.Information);
+#endif
+#if WINDOWS
+                builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
 #endif
                 builder.Logging.AddProvider(new MyLoggerProvider());
                 builder.ConfigureFonts(fonts =>

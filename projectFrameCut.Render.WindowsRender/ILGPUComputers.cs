@@ -25,7 +25,6 @@ namespace projectFrameCut.Render.WindowsRender
         public required Accelerator accelerator { get; init; }
         public bool Sync { get; set; } = false;
 
-
         public float[][] Compute(float[][] args)
         {
             var A = args[0];
@@ -99,12 +98,12 @@ namespace projectFrameCut.Render.WindowsRender
         }
     }
 
-    public class RemoveColorEffect : IComputer
+    public class RemoveColorComputer : IComputer
     {
 
 
         [SetsRequiredMembers]
-        public RemoveColorEffect(Accelerator accel, bool sync)
+        public RemoveColorComputer(Accelerator accel, bool sync)
         {
             this.accelerator = accel;
             ForceSync = sync;
@@ -118,11 +117,11 @@ namespace projectFrameCut.Render.WindowsRender
             var Nullable_aR = args[0];
             var Nullable_aG = args[1];
             var Nullable_aB = args[2];
-            var toRemoveR = (ushort)args[3][0];
-            var toRemoveG = (ushort)args[4][0];
-            var toRemoveB = (ushort)args[5][0];
-            var range = (ushort)args[6][0];
-            var Nullable_sourceA = args[7];
+            var Nullable_sourceA = args[3];
+            var toRemoveR = (ushort)args[4][0];
+            var toRemoveG = (ushort)args[5][0];
+            var toRemoveB = (ushort)args[6][0];
+            var range = (ushort)args[7][0];
 
             float[] aR, aG, aB,sourceA;
 
@@ -283,4 +282,5 @@ namespace projectFrameCut.Render.WindowsRender
             }
         }
     }
+
 }

@@ -2,6 +2,7 @@ using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
+
 using projectFrameCut.DraftStuff;
 using projectFrameCut.PropertyPanel;
 using System;
@@ -18,6 +19,10 @@ using Path = System.IO.Path;
 
 #if ANDROID
 using projectFrameCut.Platforms.Android;
+
+#endif
+
+#if WINDOWS
 
 #endif
 
@@ -78,8 +83,8 @@ public partial class TestPage : ContentPage
                         var noNoise = denoise.Process(e.TotalX);
                         b.TranslationX = noNoise + _origX;
                         //DraggingTestLabel.Text = $"Dragging X:{e.TotalX}, denoised: {noNoise + _origX}";
-                        DraggingX.Push(e.TotalX );
-                        DenoisedX.Push(noNoise );
+                        DraggingX.Push(e.TotalX);
+                        DenoisedX.Push(noNoise);
                     }
                     else
                     {
@@ -630,7 +635,7 @@ public partial class TestPage : ContentPage
             WidthRequest = 150
         })
         .AddButton("testButton", "Test button 1", "Click me!")
-        .AddCustomChild("pick a date", ( c) =>
+        .AddCustomChild("pick a date", (c) =>
         {
             var picker = new DatePicker
             {
@@ -684,6 +689,28 @@ public partial class TestPage : ContentPage
         }
 
 
+    }
+
+    private async void WinUIDiagTestBtn_Clicked(object sender, EventArgs e)
+    {
+#if WINDOWS
+        Microsoft.UI.Xaml.Controls.ContentDialog diag = new Microsoft.UI.Xaml.Controls.ContentDialog
+        {
+            Title = "WinUI ContentDialog Test",
+            Content = "This is a test of WinUI ContentDialog in .NET MAUI.",
+            CloseButtonText = "Close",
+            PrimaryButtonText = "Primary",
+            SecondaryButtonText = "Secondary"
+        };
+
+        var services = Application.Current?.Handler?.MauiContext?.Services;
+        var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
+        if (dialogueHelper != null)
+        {
+            var r = await dialogueHelper.ShowContentDialogue(diag);
+            await DisplayAlert(Title, $"You selected {r}", "ok");
+        }
+#endif
     }
 
     private void MetalRenderStartButton_Clicked(object sender, EventArgs e)

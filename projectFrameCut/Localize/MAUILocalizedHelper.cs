@@ -4,6 +4,7 @@ using LocalizedResources;
 namespace LocalizedResources
 {
     [ContentProperty(nameof(Key))]
+    [AcceptEmptyServiceProvider]    
     public class LocalizedExtension : IMarkupExtension<string>
     {
         public string Key { get; set; } = string.Empty;

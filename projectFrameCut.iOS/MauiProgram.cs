@@ -4,6 +4,10 @@ using projectFrameCut.Shared;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
+using Microsoft.Maui.LifecycleEvents;
+#if IOS
+using UIKit;
+#endif
 
 
 namespace projectFrameCut
@@ -16,7 +20,6 @@ namespace projectFrameCut
         public static MauiApp CreateMauiApp()
         {
 #if WINDOWS
-            Environment.FailFast("This is the iOS/MacCatalyst version of projectFrameCut, please run the correct platform project.");
 #elif IOS
             //files->my [iDevices]->projectFrameCut
             DataPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -61,7 +64,10 @@ namespace projectFrameCut
             builder.Services.AddSingleton<IDeviceThermalService, DeviceThermalService>();
             builder.Services.AddSingleton<IDeviceMemoryPressureService, DeviceMemoryPressureService>();
 #endif
+
             return builder.Build();
         }
+
+
     }
 }

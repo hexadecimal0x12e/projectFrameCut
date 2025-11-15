@@ -6,16 +6,7 @@ using System.Threading.Tasks;
 
 namespace projectFrameCut.Shared
 {
-    public enum EffectType
-    {
-        Crop,
-        Resize,
-        RemoveColor,
-        ReplaceAlpha,
-        ColorCorrection,
-    }
-
-    public enum RenderMode
+    public enum MixtureMode
     {
         Overlay,
         Add,
@@ -24,12 +15,12 @@ namespace projectFrameCut.Shared
         RemoveColor
     }
 
-    public enum MyAcceleratorType
+    public enum EffectType
     {
-        Auto,
-        ILGPU,
-        OpenGL,
-        Metal,
-        CPU
+        Crop,
+        Resize,
+        RemoveColor,
+        ReplaceAlpha,
+        ColorCorrection,
     }
 }

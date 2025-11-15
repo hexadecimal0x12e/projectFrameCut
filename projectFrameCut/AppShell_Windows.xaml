@@ -9,8 +9,7 @@
 
     <ShellContent
         x:Name="MainShellContent"
-    Title=""    
-    ContentTemplate="{DataTemplate local:LandingPage}"
-    Route="LandingPage" />
+        ContentTemplate="{DataTemplate local:HomePage}"
+        Route="HomePage" />
 
 </Shell>

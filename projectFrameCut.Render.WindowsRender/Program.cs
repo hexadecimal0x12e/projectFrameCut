@@ -244,6 +244,7 @@ namespace projectFrameCut.Render.RenderCLI
             if (runningMode == "rpc_backend")
             {
                 Rpc.go_rpcAsync(switches, accelerator, width, height);
+                Console.WriteLine($"RPC server exited with code {Rpc.RpcReturnCode}. Exiting...");
                 return Rpc.RpcReturnCode;
             }
 
@@ -457,6 +458,8 @@ namespace projectFrameCut.Render.RenderCLI
                 {
                     case "Overlay":
                         return new OverlayComputer(accel, sync);
+                    case "RemoveColor":
+                        return new RemoveColorComputer(accel, sync);
                     default:
                         Log($"Computer {name} not found.","Error");
                         return null;

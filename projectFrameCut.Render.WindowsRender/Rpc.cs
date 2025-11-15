@@ -87,6 +87,14 @@ namespace projectFrameCut.Render.WindowsRender
 
             server.WaitForConnectionAsync(cts.Token).Wait();
 
+            if (!server.IsConnected)
+            {
+                Log("ERROR: client connection timeout. Exiting");
+                RpcReturnCode = 32;
+                RpcCts.Cancel();
+                return;
+            }
+
             Log("[RPC] Client connected.");
 
             using var reader = new StreamReader(server, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, bufferSize: 8192, leaveOpen: true);

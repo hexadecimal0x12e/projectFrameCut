@@ -15,6 +15,7 @@ public sealed class RpcClient : IAsyncDisposable
     private StreamReader? _reader;
     private StreamWriter? _writer;
     private Process? _proc;
+    private string _pipeName = "";
 
     public Action<JsonElement>? ErrorCallback = null;
 
@@ -29,7 +30,7 @@ public sealed class RpcClient : IAsyncDisposable
             {
                 FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Render.WindowsRender.exe"),
                 WorkingDirectory = Path.Combine(AppContext.BaseDirectory),
-                Arguments = $" rpc_backend  -pipe={pipeId} -output_options={options} -tempFolder={tmpDir} ",
+                Arguments = $""" rpc_backend  "-pipe={pipeId}" "-output_options={options}" "-tempFolder={tmpDir}" """,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardError = true,
@@ -131,11 +132,12 @@ public sealed class RpcClient : IAsyncDisposable
         return "";
     }
 
-    public async Task StartAsync(string pipeName, CancellationToken ct = default) => await StartAsync(new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous), ct);
+    public async Task StartAsync(string pipeName, CancellationToken ct = default) => await StartAsync(new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous),pipeName, ct);
 
-    public async Task StartAsync(NamedPipeClientStream client, CancellationToken ct = default)
+    public async Task StartAsync(NamedPipeClientStream client, string pipeName, CancellationToken ct = default)
     {
         _pipe = client;
+        _pipeName = pipeName;
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(10));
         try
@@ -247,6 +249,11 @@ public sealed class RpcClient : IAsyncDisposable
             if (line is null) return null;
             return JsonSerializer.Deserialize<RpcProtocol.RpcMessage>(line, RpcProtocol.JsonOptions);
         }
+        catch(Exception ex)
+        {
+            Log(ex, "SendReceive", this);
+            return null;
+        }
         finally
         {
             _ioLock.Release();
@@ -267,4 +274,6 @@ public sealed class RpcClient : IAsyncDisposable
     {
         return Task.Run(() => p.WaitForExit((int)timeout.TotalMilliseconds));
     }
+
+    public override string ToString() => $"RpcClient {_pipeName} (Connected: {_pipe?.IsConnected ?? false})";
 }

@@ -4,37 +4,37 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:projectFrameCut"
-                 xmlns:l="clr-namespace:LocalizedResources"
+    xmlns:l="clr-namespace:LocalizedResources"
     Shell.NavBarIsVisible="True"
     Title="projectFrameCut">
 
     <TabBar x:Name="MainTabBar">
-        <Tab x:Name="ProjectsTab" Title="{l:Localized Key=AppShell_ProjectsTab}">
+        <Tab x:Name="ProjectsTab" Icon="icon_project" Title="{l:Localized Key=AppShell_ProjectsTab}">
             <ShellContent
                 Route="home"
                 ContentTemplate="{DataTemplate local:HomePage}"
                 Title="{l:Localized Key=AppShell_ProjectsTab}" />
         </Tab>
 
-        <Tab x:Name="AssetsTab" Title="{l:Localized Key=AppShell_AssetsTab}">
+        <Tab x:Name="AssetsTab" Icon="icon_asset" Title="{l:Localized Key=AppShell_AssetsTab}">
             <ShellContent
                 Route="assets"
                 ContentTemplate="{DataTemplate local:AssetsLibraryPage}"
                 Title="{l:Localized Key=AppShell_AssetsTab}" />
         </Tab>
 
-        <Tab x:Name="DebugTab" Title="{l:Localized Key=AppShell_DebugTab}">
+        <Tab x:Name="DebugTab" Icon="icon_debug" Title="{l:Localized Key=AppShell_DebugTab}">
             <ShellContent
                 Route="test"
                 ContentTemplate="{DataTemplate local:DebuggingMainPage}"
                 Title="{l:Localized Key=AppShell_DebugTab}" />
         </Tab>
 
-        <Tab x:Name="SettingTab" Title="{l:Localized Key=_Options}">
+        <Tab x:Name="SettingTab" Icon="icon_setting" Title="{l:Localized Key=_Options}">
             <ShellContent
-        Route="options"
-        ContentTemplate="{DataTemplate local:MainSettingsPage}"
-        Title="{l:Localized Key=_Options}" />
+            Route="options"
+            ContentTemplate="{DataTemplate local:MainSettingsPage}"
+            Title="{l:Localized Key=_Options}" />
         </Tab>
     </TabBar>
 

@@ -5,7 +5,6 @@ using projectFrameCut.DraftStuff;
 using projectFrameCut.PropertyPanel;
 using projectFrameCut.Render;
 using projectFrameCut.Shared;
-using projectFrameCut.ViewModels;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -13,6 +12,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Path = System.IO.Path;
+using System.Diagnostics.CodeAnalysis;
+
 
 #if WINDOWS
 using Windows.ApplicationModel.DataTransfer;
@@ -32,8 +33,7 @@ namespace projectFrameCut;
 
 public partial class DraftPage : ContentPage
 {
-    public ProjectJSONStructure ProjectInfo { get; set; } = new();
-
+    #region const
     public ConcurrentDictionary<string, ClipElementUI> Clips = new();
     public ConcurrentDictionary<int, AbsoluteLayout> Tracks = new();
     public ConcurrentDictionary<string, AssetItem> Assets = new();
@@ -50,13 +50,19 @@ public partial class DraftPage : ContentPage
 
     public readonly string[] DirectoriesNeeded =
     [
-        "saveSlotA",
-        "saveSlotB",
+        "saveSlots",
         "thumbs",
         "assets",
         "export",
         "temp"
     ];
+
+    readonly JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
+    #endregion
+
+
+    #region members
+    public ProjectJSONStructure ProjectInfo { get; set; } = new();
 
     ConcurrentDictionary<string, double> HandleStartWidth = new();
 
@@ -69,8 +75,6 @@ public partial class DraftPage : ContentPage
     double tracksViewOffset = 0;
     double tracksZoomOffest = 1d;
 
-
-    bool isPopupShowing = false;
     string popupShowingDirection = "none";
     Border Popup = new();
 
@@ -87,14 +91,23 @@ public partial class DraftPage : ContentPage
 
     PanDeNoise Xdenoiser = new(), Ydenoiser = new();
 
-    public bool ShowShadow { get; private set; } = true;
-    public bool LogUIMessageToLogger { get; private set; } = false;
-    public bool Denoise { get; private set; } = false;
-
 #if WINDOWS
     Process backendProc;
     RpcClient _rpc;
 #endif
+
+    ClipInfoBuilder infoBuilder;
+
+    #endregion
+
+    #region public members (mostly settings)
+    public bool ShowShadow { get; set; } = true;
+    public bool LogUIMessageToLogger { get; set; } = false;
+    public bool Denoise { get; set; } = false;
+    public int MaximumSaveSlot { get; set; } = 8;
+    public int CurrentSaveSlotIndex { get; set; } = 0;
+    public bool IsReadonly { get; set; } = false;
+    #endregion
 
     public DraftPage()
     {
@@ -104,11 +117,8 @@ public partial class DraftPage : ContentPage
         OverlayLayer.InputTransparent = false;
 #endif
 
-
-        //hybridWebView.DefaultFile = "index.html";
-        //hybridWebView.HybridRoot = "WebClipView";
-        //hybridWebView.RawMessageReceived += HybridWebView_RawMessageReceived;
         TrackCalculator.HeightPerTrack = ClipHeight;
+        infoBuilder = new ClipInfoBuilder(this);
 
         PostInit();
         AddTrackButton_Clicked(new object(), EventArgs.Empty);
@@ -116,22 +126,75 @@ public partial class DraftPage : ContentPage
 
     }
 
+    public DraftPage(ProjectJSONStructure info, ConcurrentDictionary<string, ClipElementUI> clips, ConcurrentDictionary<string, AssetItem> assets, int initialTrackCount, string workingDir, string title = "Untitled draft", bool isReadonly = false)
+    {
+        InitializeComponent();
+#if ANDROID
+        OverlayLayer.IsVisible = false;
+        OverlayLayer.InputTransparent = false;
+#endif
+
+        workingPath = workingDir;
+        TrackCalculator.HeightPerTrack = ClipHeight;
+
+        SetStateBusy();
+        Clips = clips;
+        Assets = assets;
+        Tracks = new ConcurrentDictionary<int, AbsoluteLayout>();
+
+        for (int i = 0; i < initialTrackCount; i++)
+        {
+            if (!Tracks.ContainsKey(i)) AddATrack(i);
+        }
+
+        foreach (var kv in Clips.OrderBy(kv => kv.Value.origTrack ?? 0).ThenBy(kv => kv.Value.origX))
+        {
+            var item = kv.Value;
+            int t = item.origTrack ?? 0;
+            // ensure track exists (defensive)
+            if (!Tracks.ContainsKey(t)) AddATrack(t);
+            AddAClip(item);
+            RegisterClip(item, true);
+        }
+
+        trackCount = initialTrackCount;
+        Title = isReadonly ? Localized.DraftPage_IsInMode_Readonly(title) : title;
+
+        PostInit();
+        IsReadonly = isReadonly;
+    }
 
     private async void PostInit()
     {
-        infoBuilder = new ClipInfoBuilder(this);
+        ProjectInfo.NormallyExited = false;
 #if WINDOWS
         var pipeId = RpcClient.BootRPCServer(out backendProc,
-            tmpPath: Path.Combine(workingPath,"temp"),
+            tmpPath: Path.Combine(workingPath, "temp"),
             stderrCallback: new Action<string>((s) =>
-         {
-             SetStateFail("Backend:" + s);
-         }));
+            {
+                SetStateFail("Backend:" + s);
+            }));
         backendProc.Exited += (s, e) =>
         {
             Dispatcher.Dispatch(async () =>
             {
-                await DisplayAlert("Error", $"The backend exited unexpectedly with code {backendProc.ExitCode}. Please reload project.", "ok");
+                if (await DisplayAlert(Localized._Info, Localized.DraftPage_BackendExited, Localized._OK, Localized._Cancel))
+                {
+                    var ct = new CancellationTokenSource();
+                    ct.CancelAfter(10000);
+                    _rpc = new()
+                    {
+                        ErrorCallback = new Action<JsonElement>((b) =>
+                        {
+                            if (b.TryGetProperty("message", out var m))
+                            {
+                                var msg = b.GetString();
+                                if (msg is not null) SetStateFail("Backend: " + msg);
+                            }
+                        })
+                    };
+                    await _rpc.StartAsync(pipeId, ct.Token);
+                }
             });
         };
         var ct = new CancellationTokenSource();
@@ -148,6 +211,7 @@ public partial class DraftPage : ContentPage
             })
         };
         await _rpc.StartAsync(pipeId, ct.Token);
+        await Task.Delay(25);
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
 #endif
@@ -190,7 +254,7 @@ public partial class DraftPage : ContentPage
             fileDropGesture.DragOver += File_DragOver;
             fileDropGesture.Drop += File_Drop;
             OverlayLayer.GestureRecognizers.Add(fileDropGesture);
-
+            DraftChanged(s, new());
 #if !WINDOWS
             SetStateOK();
             SetStatusText(Localized.DraftPage_EverythingFine);
@@ -203,49 +267,9 @@ public partial class DraftPage : ContentPage
         {
             this.Window.SizeChanged += Window_SizeChanged;
         }
+        if (!Directory.Exists(workingPath)) Title = Localized.DraftPage_IsInMode_Special(Title);
+
     }
-
-
-
-    public DraftPage(ConcurrentDictionary<string, ClipElementUI> clips, ConcurrentDictionary<string, AssetItem> assets, int initialTrackCount, string workingDir, string title = "Untitled draft")
-    {
-        InitializeComponent();
-#if ANDROID
-        OverlayLayer.IsVisible = false;
-        OverlayLayer.InputTransparent = false;
-#endif
-
-        workingPath = workingDir;
-        //hybridWebView.DefaultFile = "index.html";
-        //hybridWebView.HybridRoot = "WebClipView";
-        //hybridWebView.RawMessageReceived += HybridWebView_RawMessageReceived;
-        TrackCalculator.HeightPerTrack = ClipHeight;
-
-        SetStateBusy();
-        Clips = clips;
-        Assets = assets;
-        Tracks = new ConcurrentDictionary<int, AbsoluteLayout>();
-
-        for (int i = 0; i < initialTrackCount; i++)
-        {
-            if (!Tracks.ContainsKey(i)) AddATrack(i);
-        }
-
-        foreach (var kv in Clips.OrderBy(kv => kv.Value.origTrack ?? 0).ThenBy(kv => kv.Value.origX))
-        {
-            var item = kv.Value;
-            int t = item.origTrack ?? 0;
-            // ensure track exists (defensive)
-            if (!Tracks.ContainsKey(t)) AddATrack(t);
-            AddAClip(item);
-            RegisterClip(item, true);
-        }
-
-        trackCount = initialTrackCount;
-        Title = title;
-        PostInit();
-    }
-
 
 
     #region add stuff
@@ -991,7 +1015,6 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region properties
-    ClipInfoBuilder infoBuilder;
 
     private View BuildPropertyPanel(ClipElementUI clip)
     {
@@ -999,7 +1022,7 @@ public partial class DraftPage : ContentPage
 
     }
 
-    private void OnClipPropertiesChanged(object? sender,PropertyPanelPropertyChangedEventArgs e)
+    private void OnClipPropertiesChanged(object? sender, PropertyPanelPropertyChangedEventArgs e)
     {
         if (_selected is null) return;
         var clip = _selected;
@@ -1021,23 +1044,6 @@ public partial class DraftPage : ContentPage
 
                     break;
                 }
-            //case "effectsEditor":
-            //    {
-            //        try
-            //        {
-            //            var json = e.Value?.ToString() ?? string.Empty;
-            //            var updated = JsonSerializer.Deserialize<Dictionary<string, projectFrameCut.Shared.Effects>>(json);
-            //            if (updated is not null)
-            //            {
-            //                clip.Effects = updated;
-            //            }
-            //        }
-            //        catch (Exception ex)
-            //        {
-            //            Log(ex, "Deserialize Effects from effectsEditor", this);
-            //        }
-            //        break;
-            //    }
             case "rawJsonEditor":
                 {
                     try
@@ -1088,13 +1094,39 @@ public partial class DraftPage : ContentPage
             Log($"New asset {path}'s hash: {srcHash}");
             if (Assets.Values.Any((v) => v.SourceHash == srcHash))
             {
-                var opt = await DisplayActionSheet(
+                string opt = Localized.DraftPage_DuplicatedAsset_Skip;
+#if WINDOWS
+                var diag = new Microsoft.UI.Xaml.Controls.ContentDialog
+                {
+                    Title = Localized._Info,
+                    Content = Localized.DraftPage_DuplicatedAsset(Path.GetFileNameWithoutExtension(path), Assets.Values.First((v) => v.SourceHash == srcHash).Name),
+                    PrimaryButtonText = Localized.DraftPage_DuplicatedAsset_Relpace,
+                    SecondaryButtonText = Localized.DraftPage_DuplicatedAsset_Together,
+                    CloseButtonText = Localized.DraftPage_DuplicatedAsset_Skip
+                };
+
+                var services = Application.Current?.Handler?.MauiContext?.Services;
+                var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
+                if (dialogueHelper != null)
+                {
+                    var r = await dialogueHelper.ShowContentDialogue(diag);
+                    opt = r switch
+                    {
+                        Microsoft.UI.Xaml.Controls.ContentDialogResult.None => Localized.DraftPage_DuplicatedAsset_Skip,
+                        Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary => Localized.DraftPage_DuplicatedAsset_Relpace,
+                        Microsoft.UI.Xaml.Controls.ContentDialogResult.Secondary => Localized.DraftPage_DuplicatedAsset_Together,
+                        _ => Localized.DraftPage_DuplicatedAsset_Skip
+                    };
+                }
+#else
+
+                opt = await DisplayActionSheet(
                     Localized.DraftPage_DuplicatedAsset(Path.GetFileNameWithoutExtension(path), Assets.Values.First((v) => v.SourceHash == srcHash).Name),
                     null,
                     null,
                     [Localized.DraftPage_DuplicatedAsset_Relpace, Localized.DraftPage_DuplicatedAsset_Skip, Localized.DraftPage_DuplicatedAsset_Together]
                 );
-
+#endif
                 if (opt == Localized.DraftPage_DuplicatedAsset_Relpace)
                 {
                     var existing = Assets.Values.First((v) => v.SourceHash == srcHash);
@@ -1387,16 +1419,24 @@ public partial class DraftPage : ContentPage
 
     private async void DraftChanged(object? sender, ClipUpdateEventArgs e)
     {
+        if (string.IsNullOrEmpty(workingPath))
+        {
+            SetStateFail(Localized.DraftPage_CannotSave_NoPath);
+        }
+        if (IsReadonly)
+        {
+            SetStateFail(Localized.DraftPage_CannotSave_Readonly);
+        }
         foreach (var item in Clips)
         {
             if (!item.Value.isInfiniteLength && item.Value.lengthInFrame > item.Value.maxFrameCount)
             {
-                SetStateFail($"Clip {item.Key} has a invaild length {item.Value.lengthInFrame} frames, larger than it's source {item.Value.maxFrameCount}.");
+                SetStateFail($"Clip {item.Key} has a invalid length {item.Value.lengthInFrame} frames, larger than it's source {item.Value.maxFrameCount}.");
             }
         }
+        await Save();
         PlayheadLine.HeightRequest = Tracks.Count * ClipHeight + RulerLayout.Height;
         var d = DraftImportAndExportHelper.ExportFromDraftPage(this);
-        await Save();
 #if WINDOWS
         SetStateBusy();
         SetStatusText(Localized.DraftPage_ApplyingChanges);
@@ -1404,7 +1444,9 @@ public partial class DraftPage : ContentPage
 
         try
         {
+#if !DEBUG
             cts.CancelAfter(10000);
+#endif
 
             await RpcClient.UpdateDraft(d, _rpc, cts.Token);
             SetStatusText(Localized.DraftPage_ChangesApplied);
@@ -1417,6 +1459,7 @@ public partial class DraftPage : ContentPage
         }
         finally
         {
+            SetStatusText(Localized.DraftPage_ChangesApplied);
             SetStateOK();
         }
 
@@ -1425,7 +1468,7 @@ public partial class DraftPage : ContentPage
 #endif
 
     }
-#endregion
+    #endregion
 
     #region adjust track and clip
     private void ReRenderUI()
@@ -1943,6 +1986,9 @@ public partial class DraftPage : ContentPage
 #if ANDROID
         OverlayLayer.IsVisible = true;
 #endif
+#if iDevices
+        OverlayLayer.InputTransparent = false;
+#endif
         var existing = OverlayLayer.Children.FirstOrDefault(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle");
         if (existing != null)
         {
@@ -2143,6 +2189,9 @@ public partial class DraftPage : ContentPage
 #if ANDROID
         OverlayLayer.IsVisible = false;
 #endif
+#if iDevices
+        OverlayLayer.InputTransparent = true;
+#endif
     }
 
     private async Task HideClipPopup()
@@ -2170,7 +2219,6 @@ public partial class DraftPage : ContentPage
 
         foreach (var r in toRemove)
             OverlayLayer.Children.Remove(r);
-        OverlayLayer.InputTransparent = true;
 
     }
 
@@ -2181,10 +2229,12 @@ public partial class DraftPage : ContentPage
 
     private async Task ShowAFullscreenPopupInBottom(double height, View content)
     {
-        isPopupShowing = true;
         popupShowingDirection = "bottom";
 #if ANDROID
         OverlayLayer.IsVisible = true;
+#endif
+#if iDevices
+        OverlayLayer.InputTransparent = false;
 #endif
         var size = WindowSize;
 
@@ -2228,10 +2278,12 @@ public partial class DraftPage : ContentPage
 
     private async Task ShowAFullscreenPopupInRight(double width, View content)
     {
-        isPopupShowing = true;
         popupShowingDirection = "right";
 #if ANDROID
         OverlayLayer.IsVisible = true;
+#endif
+#if iDevices
+        OverlayLayer.InputTransparent = false;
 #endif
         var size = WindowSize;
 
@@ -2300,7 +2352,6 @@ public partial class DraftPage : ContentPage
 
         OverlayLayer.Remove(Popup);
         OverlayLayer.InputTransparent = true;
-        isPopupShowing = false;
 
     }
 
@@ -2457,8 +2508,6 @@ public partial class DraftPage : ContentPage
 
     #region status
 
-
-
     public void SetStateBusy()
     {
         if (StateIndicator is null) return;
@@ -2542,13 +2591,16 @@ public partial class DraftPage : ContentPage
 
         });
         Log(text, "UI err");
+
     }
 
 
     public void SetStatusText(string text)
     {
+
         Dispatcher.Dispatch(() =>
         {
+
             StatusLabel.TextColor = Colors.White;
             StatusLabel.Text = text;
 
@@ -2600,45 +2652,60 @@ public partial class DraftPage : ContentPage
 
 
 
-    bool SaveSlotIndicator = false; //false -> A, true -> B
-    JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
 
     public async Task Save(bool noSlot = false)
     {
         if (string.IsNullOrEmpty(workingPath))
         {
             Log("saving failed: working path is empty", "warn");
-            SetStateFail("Saving failed: working path is empty");
+            SetStateFail(Localized.DraftPage_CannotSave_NoPath);
+            return;
+        }
+        if (IsReadonly)
+        {
+            Log("saving failed: project is read-only", "warn");
+            SetStateFail(Localized.DraftPage_CannotSave_Readonly);
             return;
         }
         var draft = DraftImportAndExportHelper.ExportFromDraftPage(this);
         var assets = Assets.Values.ToList();
-        var slot = SaveSlotIndicator ? "saveSlotB" : "saveSlotA";
+        string slot = ".";
         if (noSlot)
         {
+            ProjectInfo.NormallyExited = true;
             await File.WriteAllTextAsync(Path.Combine(workingPath, "timeline.json"), JsonSerializer.Serialize(draft, savingOpts), default);
             await File.WriteAllTextAsync(Path.Combine(workingPath, "assets.json"), JsonSerializer.Serialize(assets, savingOpts), default);
-            await File.WriteAllTextAsync(Path.Combine(workingPath, "project.json"), JsonSerializer.Serialize(ProjectInfo, savingOpts), default);
         }
-        else
+        else //avoid worst condition (crashes while saving)
         {
+            if (CurrentSaveSlotIndex + 1 < MaximumSaveSlot)
+            {
+                slot = $"slot_{CurrentSaveSlotIndex + 1}";
+                CurrentSaveSlotIndex++;
+            }
+            else
+            {
+                slot = "slot_0";
+                CurrentSaveSlotIndex = 0;
+            }
+            ProjectInfo.SaveSlotIndicator = CurrentSaveSlotIndex;
             try
             {
-                await File.WriteAllTextAsync(Path.Combine(workingPath, slot, "timeline.json"), JsonSerializer.Serialize(draft, savingOpts), default);
-                await File.WriteAllTextAsync(Path.Combine(workingPath, slot, "assets.json"), JsonSerializer.Serialize(assets, savingOpts), default);
-                await File.WriteAllTextAsync(Path.Combine(workingPath, slot, "project.json"), JsonSerializer.Serialize(ProjectInfo, savingOpts), default);
-                SaveSlotIndicator = !SaveSlotIndicator; //avoid worst condition (crashes while saving)
+                Directory.CreateDirectory(Path.Combine(workingPath, "saveSlots", slot));
+                await File.WriteAllTextAsync(Path.Combine(workingPath, "saveSlots", slot, "timeline.json"), JsonSerializer.Serialize(draft, savingOpts), default);
+                await File.WriteAllTextAsync(Path.Combine(workingPath, "saveSlots", slot, "assets.json"), JsonSerializer.Serialize(assets, savingOpts), default);
             }
             catch (Exception ex)
             {
                 Log(ex, "saving draft failed", this);
-                SetStateFail(Localized._ExceptionTemplate(ex));
+                SetStateFail(Localized.DraftPage_CannotSave_Exception(ex));
             }
 
         }
 
         projectDuration = draft.Duration;
-
+        ProjectInfo.LastChanged = DateTime.Now;
+        await File.WriteAllTextAsync(Path.Combine(workingPath, "project.json"), JsonSerializer.Serialize(ProjectInfo, savingOpts), default);
 
     }
 
@@ -2785,7 +2852,7 @@ public partial class DraftPage : ContentPage
 #if WINDOWS
 
             var data = await _rpc.SendAsync("GetAFrameData", JsonSerializer.SerializeToElement(frameIndex), default);
-            if(data.Value.TryGetProperty("json", out var json))
+            if (data.Value.TryGetProperty("json", out var json))
             {
                 Dispatcher.Dispatch(() =>
                 {

@@ -1,5 +1,8 @@
-﻿using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media;
 using System.Diagnostics;
+using WinRT.Interop;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -20,6 +23,15 @@ namespace projectFrameCut.WinUI
             this.InitializeComponent();
             UnhandledException += App_UnhandledException;
         }
+
+        //protected override void OnLaunched(LaunchActivatedEventArgs args)
+        //{
+        //    base.OnLaunched(args);
+        //    var window = Application.Windows[0].Handler?.PlatformView as MauiWinUIWindow;
+
+
+
+        //}
 
         private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
         {
@@ -51,7 +63,10 @@ StackTrace:
 
                 var logMessage =
 $"""
-Sorry, the application has encountered an unhandled exception and needs to close.
+Sorry, the application has encountered an unhandled exception and needs to close now.
+Your works have been saved automatically when you make any change on the UI, so you won't lose your work.
+If you want to help the development of this application, please consider to submit an issue or send this report to me:
+
 Exception type: {ex.GetType().Name}
 Message: {ex.Message}
 StackTrace:
@@ -82,7 +97,7 @@ Current directory: {Environment.CurrentDirectory}
                 }
                 catch (Exception)  
                 {
-                    logPath = Path.Combine(Directory.CreateTempSubdirectory("audiocopy_").FullName, "crash.log");
+                    logPath = Path.Combine(Directory.CreateTempSubdirectory("projectFrameCut_").FullName, "crash.log");
                     File.WriteAllText(logPath, logMessage);
                 }
                 Thread.Sleep(100);

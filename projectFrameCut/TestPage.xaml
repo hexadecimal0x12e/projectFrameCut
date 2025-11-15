@@ -7,12 +7,11 @@
 
 
         <VerticalStackLayout>
-            <!-- <Button Text="选择图片A" Clicked="OnPickImageA"/>
-        <Button Text="选择图片B" Clicked="OnPickImageB"/> -->
             <Button x:Name="OpenGLESStartButton" Text="compute by OpenGL ES (android only)" Clicked="OpenGLESStartButton_Clicked"/>
             <Button x:Name="MetalRenderStartButton" Text="compute by Metal (ios only)" Clicked="MetalRenderStartButton_Clicked"/>
             <Button x:Name="TestFFmpegButton" Text="Test FFmpeg" Clicked="TestFFmpegButton_Clicked"/>
             <Button x:Name="TestCrashButton" Text="Crash" Clicked="TestCrashButton_Clicked"/>
+            <Button x:Name="WinUIDiagTestBtn" Text="Test WinUI3 diag" Clicked="WinUIDiagTestBtn_Clicked"/>
             <Border StrokeThickness="4">
                 <VerticalStackLayout>
                     <Label Text="Dragging test" x:Name="DraggingTestLabel"/>

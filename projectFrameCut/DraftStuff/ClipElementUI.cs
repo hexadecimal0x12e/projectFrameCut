@@ -5,6 +5,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
+#if iDevices
+using projectFrameCut.Platforms.iOS;
+#endif
+
 namespace projectFrameCut.DraftStuff
 {
     public class ClipElementUI
@@ -42,7 +46,7 @@ namespace projectFrameCut.DraftStuff
         public ClipMode ClipType { get; set; } = ClipMode.Special;
         public string? sourcePath { get; set; } = null;
 
-        public Dictionary<string, projectFrameCut.Shared.IEffect> Effects { get; set; } = new();
+        public Dictionary<string, projectFrameCut.Shared.IEffect>? Effects { get; set; } = new();
         public Dictionary<string, object> ExtraData { get; set; } = new();
 
         public void ApplySpeedRatio()
@@ -156,6 +160,11 @@ namespace projectFrameCut.DraftStuff
             Grid.SetColumn(element.LeftHandle, 0);
             Grid.SetColumn(element.RightHandle, 2);
             Grid.SetColumn(cont, 1);
+
+#if iDevices
+            element.LeftHandle.AddGlassEffect("SystemUltraThinMaterial", 20, 0.5);
+            element.RightHandle.AddGlassEffect("SystemUltraThinMaterial", 20, 0.5);
+#endif
 
             element.Clip.Content = new Grid
             {

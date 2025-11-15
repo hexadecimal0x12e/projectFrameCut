@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Main app theme for Android. Ensures no native ActionBar and normal status bar handling -->
+  <style name="MainTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- remove native title bar so MAUI controls layout correctly -->
+    <item name="android:windowNoTitle">true</item>
+    <item name="windowNoTitle">true</item>
+
+    <!-- do not use a translucent status bar (prevents content being placed under it) -->
+    <item name="android:windowTranslucentStatus">false</item>
+
+    <!-- set a proper status bar color (match colors.xml) -->
+    <item name="android:statusBarColor">@color/colorPrimaryDark</item>
+
+    <!-- navigation bar color (optional) -->
+    <item name="android:navigationBarColor">#000000</item>
+
+    <!-- let the system decide light/dark status bar icons where appropriate -->
+    <item name="android:windowLightStatusBar">true</item>
+  </style>
+</resources>
