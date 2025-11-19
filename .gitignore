@@ -364,3 +364,14 @@ FodyWeavers.xsd
 
 #####
 projectFrameCut/0x12e.keystore
+projectFrameCut/Platforms/Windows/ffmpeg
+/projectFrameCut/Platforms/Windows/ffmpeg/avcodec-62.dll
+/projectFrameCut/Platforms/Windows/ffmpeg/avdevice-62.dll
+/projectFrameCut/Platforms/Windows/ffmpeg/avfilter-11.dll
+/projectFrameCut/Platforms/Windows/ffmpeg/avformat-62.dll
+/projectFrameCut/Platforms/Windows/ffmpeg/avutil-60.dll
+/projectFrameCut/Platforms/Windows/ffmpeg/ffmpeg.exe
+/projectFrameCut/Platforms/Windows/ffmpeg/ffplay.exe
+/projectFrameCut/Platforms/Windows/ffmpeg/ffprobe.exe
+/projectFrameCut/Platforms/Windows/ffmpeg/swresample-6.dll
+/projectFrameCut/Platforms/Windows/ffmpeg/swscale-9.dll
