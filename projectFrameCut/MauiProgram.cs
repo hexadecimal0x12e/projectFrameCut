@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿#pragma warning disable CS8974 //log a exception will cause this
+using Microsoft.Extensions.Logging;
 using projectFrameCut.Shared;
 
 #if ANDROID
@@ -24,6 +25,9 @@ using System.Runtime.InteropServices;
 using FFmpeg.AutoGen.Native;
 using Exception = System.Exception;
 using System.Text;
+using System.Text.Json;
+using projectFrameCut.Setting.SettingManager;
+using System.Globalization;
 
 namespace projectFrameCut
 {
@@ -33,11 +37,18 @@ namespace projectFrameCut
 
         public static string DataPath { get; private set; }
 
-        private static readonly string[] FoldersNeedInUserdata =   
+        public static string BasicDataPath { get; private set; }
+
+        private static readonly string[] FoldersNeedInUserdata =
             [
             "My Drafts",
             "My Assets"
             ];
+
+#if WINDOWS
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
+#endif
 
         public static MauiApp CreateMauiApp()
         {
@@ -55,12 +66,9 @@ namespace projectFrameCut
                         DataPath = userAccessblePath;
                         loggingDir = Path.Combine(userAccessblePath, "logging");
                     }
-
                 }
                 catch //use the default path (/data/data/...)           
-                {
-                    
-                }
+                { }
 #elif IOS
                 //files->my [iDevices]->projectFrameCut
                 loggingDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "logging"); 
@@ -71,7 +79,7 @@ namespace projectFrameCut
 
                 DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),"projectFrameCut");
 #elif WINDOWS
-                if (IsPackaged()) //%localappdata%\Packages\<package>\LocalState
+                if (IsPackaged()) //%localappdata%\Packages\<pfn>\LocalState
                 {
                     loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging");
                     DataPath = Path.Combine(FileSystem.AppDataDirectory, "Data"); //Respect the vision of store applications (no residuals after uninstallation)
@@ -82,13 +90,13 @@ namespace projectFrameCut
                     DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
                 }
 #endif
-
+                BasicDataPath = new string(DataPath.ToArray()); //avoid any reference change
                 Directory.CreateDirectory(loggingDir);
                 try
                 {
                     Directory.CreateDirectory(DataPath);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     Log(ex, "create userdata dir", CreateMauiApp);
                     DataPath = FileSystem.AppDataDirectory;
@@ -100,11 +108,15 @@ namespace projectFrameCut
 
                 MyLoggerExtensions.OnLog += MyLoggerExtensions_OnLog;
 
-
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Failed to set up log file: {ex.Message}");
+#if ANDROID
+                Android.Util.Log.Wtf("projectFrameCut", $"Failed to init the basic user data because of a {ex.GetType().Name} exception:{ex.Message}");           
+#elif WINDOWS
+                _ = MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot init the basic user data because of a {ex.GetType().Name} exception:\r\n{ex.Message}\r\n\r\nApplication may work abnormally.\r\nTo help us fix this problem, please submit a issue with a screenshot of this dialogue.", "projectFrameCut", 0U);
+#endif
             }
 
             Log($"projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} \r\n" +
@@ -116,21 +128,58 @@ namespace projectFrameCut
             Log($"DataPath:{DataPath}, loggingDir:{loggingDir}");
             try
             {
+                if (File.Exists(Path.Combine(DataPath, "settings.json")))
+                {
+                    var json = File.ReadAllText(Path.Combine(DataPath, "settings.json"));
+                    SettingsManager.Settings = new(JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? []);
+                    Log($"Settings inited. Count: {SettingsManager.Settings.Count}");
+                }
+                else
+                {
+                    SettingsManager.Settings = new();
+                    Log("Settings inited with empty.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "load settings", CreateMauiApp);
+#if ANDROID
+                Android.Util.Log.Wtf("projectFrameCut", $"Failed to init the settings because of a {ex.GetType().Name} exception:{ex.Message}");       
+#elif WINDOWS
+                _ = MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot init the settings because of a {ex.GetType().Name} exception:{ex.Message}\r\nYour settings will be reset temporarily.\r\nTry fix the setting.json manually, or submit a issue with a screenshot of this dialogue.", "projectFrameCut", 0U);
+#endif
+                SettingsManager.Settings = new();
+
+            }
+
+            try
+            {
                 if (File.Exists(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt")))
                 {
                     var newPath = File.ReadAllText(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt"));
-                    DataPath = newPath;
-                    Log($"User override Data path to:{DataPath}");
-                }
+                    if (!Directory.Exists(newPath))
+                    {
+#if WINDOWS
+                        _ = MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot setup the UserData because of the path your defined is not exist now.\r\nYou may found your drafts disappeared.\r\nTry reset the data directory path later.", "projectFrameCut", 0U);
+#endif
+                    }
+                        DataPath = newPath;
+                        Log($"User override Data path to:{DataPath}");
+                    }
 
-                foreach (var item in FoldersNeedInUserdata)
-                {
-                    Directory.CreateDirectory(Path.Combine(DataPath, item));
+                    foreach (var item in FoldersNeedInUserdata)
+                    {
+                        Directory.CreateDirectory(Path.Combine(DataPath, item));
+                    }
                 }
-            }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Log(ex, "setup user data dir", CreateMauiApp);
+#if ANDROID
+                Android.Util.Log.Wtf("projectFrameCut", $"Failed to init the settings because of a {ex.GetType().Name} exception:{ex.Message}");         
+#elif WINDOWS
+                _ = MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot init the UserData directory because of a {ex.GetType().Name} exception:{ex.Message}\r\nYou may found your drafts disappeared.\r\nTry reset the data directory path.", "projectFrameCut", 0U);
+#endif
             }
 
             try
@@ -215,14 +264,20 @@ namespace projectFrameCut
                 {
                     Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
-                    Log(ex,"query ffmpeg version", CreateMauiApp);
+                    Log(ex, "query ffmpeg version", CreateMauiApp);
                     Log("Unknown internal FFmpeg version");
                 }
 
-                Localized = SimpleLocalizer.Init();
+                var locate = SettingsManager.GetSetting("locale", "default"); 
+                Log($"Your culture: {CultureInfo.CurrentCulture.Name}, UI culture: {CultureInfo.CurrentUICulture.Name}, locate defined in settings:{locate} ");
+                if (locate == "default") locate = CultureInfo.CurrentCulture.Name;
+                System.Threading.Thread.CurrentThread.CurrentCulture = CultureInfo.CreateSpecificCulture(locate);
+                System.Threading.Thread.CurrentThread.CurrentUICulture = CultureInfo.CreateSpecificCulture(locate);
+                Localized = SimpleLocalizer.Init(locate);
                 Log($"Localization initialized to {Localized._LocaleId_}, {Localized.WelcomeMessage}");
+
                 Log("Everything ready!");
                 var app = builder.Build();
                 Log("App is ready!");
@@ -243,6 +298,7 @@ namespace projectFrameCut
             lock (locker) LogWriter.WriteLine($"[{DateTime.Now:T} @ {level}] {msg}");
         }
 
+       
 
 #if WINDOWS
         private const int APPMODEL_ERROR_NO_PACKAGE = 15700;

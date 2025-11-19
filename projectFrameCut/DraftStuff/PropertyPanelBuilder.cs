@@ -201,6 +201,43 @@ namespace projectFrameCut.PropertyPanel
         }
 
         /// <summary>
+        /// Adds a <seealso cref="Picker"/> with an associated label to the property panel.
+        /// </summary>
+        /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
+        /// <param name="defaultValue">The default value to assign to the property identified by <paramref name="Id"/>.</param>
+        public PropertyPanelBuilder AddPicker(string Id, PropertyPanelItemLabel title, string[] values, string? defaultOne = null, Action<Picker>? PickerSetter = null)
+        {
+            var picker = new Picker
+            {
+            };
+            picker.ItemsSource = values;
+            picker.SelectedIndex = Array.IndexOf(values, defaultOne);
+
+            var label = title.LabelConfigurer();
+            Properties[Id] = defaultOne;
+            picker.SelectedIndexChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, picker.SelectedItem as string);
+            PickerSetter?.Invoke(picker);
+            var grid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitionCollection
+                {
+                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                },
+                RowDefinitions = new RowDefinitionCollection
+                {
+                    new RowDefinition { Height = GridLength.Auto }
+                },
+                Padding = DefaultPadding
+            };
+            grid.Children.Add(label);
+            grid.Children.Add(picker);
+            Grid.SetColumn(picker, 1);
+            layout.Children.Add(grid);
+            return this;
+        }
+
+        /// <summary>
         /// Adds a <seealso cref="Slider"/> with an associated label to the property panel.
         /// </summary>
         /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
@@ -448,6 +485,11 @@ namespace projectFrameCut.PropertyPanel
             another.PropertyChanged += (_, e) => PropertyChanged?.Invoke(another, e);
             return this;
 
+        }
+
+        public void ModifyProperties(string id, Action<View> caller)
+        {
+            
         }
 
         /// <summary>

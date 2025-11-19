@@ -15,6 +15,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Reflection;
+using System.Runtime;
 using System.Security.AccessControl;
 using System.Text;
 using System.Text.Json;
@@ -58,16 +59,13 @@ namespace projectFrameCut.Render.RenderCLI
                     """
                     Usage: projectFrameCut.Render render
                             -draft=<draft file path>
-                            -duration=<frame range>
                             -output=<output file/folder>
-                            [-yieldSaveMode=<video|png_16bpc|png_8bpc|png_16bpc_alpha|png_8bpc_alpha>]                 
                             -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
-                            [-acceleratorType=<auto|cuda|opencl|cpu>]
-                            [-acceleratorDeviceId=<device id>]
+                            [-maxParallelThreads=<number> or -oneByOneRender=<true|false>]
+                            [-multiAccelerator=<true|false>]
+                            [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids>]
                             [-forceSync=<true|false|default>]
-                            [-maxParallelThreads=<number>]
-                            [-StrictMode=true|false]
-                            [-GCOptions=0|1|2|<negative integer>]
+                            [-GCOptions=doLOHCompression|doNormalCollection|letCLRDoCollection]
                             [-preview=true|false]
                             [-previewPath=<path of preview output>]
                             [-advancedFlags=<flag1>[,<flag2>,...,<flagn>]
@@ -79,8 +77,12 @@ namespace projectFrameCut.Render.RenderCLI
                             [-acceleratorDeviceId=<device id>]
                             [-forceSync=<true|false|default>]
                             [-advancedFlags=<flag1>[,<flag2>,...,<flagn>]
+
+                       or: projectFrameCut.Render list_accels
+
+                       or: projectFrameCut.Render -h | --help
                     
-                    Example: projectFrameCut.Render.exe -draft=draft.json -range=0-299 -output=output.mkv -output_options=3840,2160,30,AV_PIX_FMT_GBRP16LE,ffv1 -acceleratorType=cuda -acceleratorDeviceId=0 -maxParallelThreads=8
+                    Example: projectFrameCut.Render.exe -draft=draft.json -output=output.mkv -output_options=3840,2160,30,AV_PIX_FMT_GBRP16LE,ffv1 -acceleratorType=cuda -acceleratorDeviceId=0 -maxParallelThreads=8
 
                     See more at the document.
                     """);
@@ -94,18 +96,18 @@ namespace projectFrameCut.Render.RenderCLI
                 return 1;
             }
 
-            Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
 
             var runningMode = args[0];
 
             Log($"Running mode: {runningMode}");
 
-            if (runningMode != "render" && runningMode != "rpc_backend")
+            if (runningMode != "render" && runningMode != "rpc_backend" && runningMode != "list_accels")
             {
                 Log($"ERROR: Mode {runningMode} doesn't defined.");
                 Console.ReadLine();
                 return 16;
             }
+
 
             ConcurrentDictionary<string, string> switches = new(args
                 .Skip(1)
@@ -124,50 +126,79 @@ namespace projectFrameCut.Render.RenderCLI
 
             Log("Initializing accelerator context...");
             Context context = Context.CreateDefault();
-
-            var acceleratorId = int.TryParse(switches.GetOrAdd("acceleratorDeviceId", "-1"), out var result) ? result : -1;
-            var accelType = switches.GetOrAdd("acceleratorType", "auto");
             var devices = context.Devices.ToList();
+            List<Device> picked = new();
             for (int i = 0; i < devices.Count; i++)
             {
                 Console.WriteLine($"Accelerator device #{i}: {devices[i].Name} ({devices[i].AcceleratorType})");
             }
 
-            Device? pick = null;
-            if (acceleratorId >= 0)
-                pick = devices[acceleratorId];
-            else if (accelType == "cuda")
-                pick = devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.Cuda);
-            else if (accelType == "opencl")
-                pick = devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.OpenCL
-                            && (d.Name.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase) || d.Name.Contains("AMD", StringComparison.OrdinalIgnoreCase))) //优先用独显
-                        ?? devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.OpenCL);
-            else if (accelType == "cpu")
-                pick = devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.CPU);
-            else if (accelType == "auto")
-                pick =
-                    devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.Cuda)
-                    ?? devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.OpenCL && (d.Name.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase) || d.Name.Contains("AMD", StringComparison.OrdinalIgnoreCase)))
-                    ?? devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.OpenCL)
-                    ?? devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.CPU);
+            if (runningMode == "list_accels")
+            {
+                List<AcceleratorInfo> listAccels = new();
+                for (uint i = 0; i < devices.Count; i++)
+                {
+                    var item = devices[(int)i];
+                    listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
+                }
+                Console.Error.WriteLine(JsonSerializer.Serialize(listAccels, new JsonSerializerOptions { WriteIndented = true })
+                    );
+                return 0;
+            }
+
+
+            var multiAccel = bool.TryParse(switches.GetOrAdd("multiAccelerator", "false"), out var ma) ? ma : false;
+            if (!multiAccel)
+            {
+                var acceleratorId = int.TryParse(switches.GetOrAdd("acceleratorDeviceId", "-1"), out var result1) ? result1 : -1;
+                var accelType = switches.GetOrAdd("acceleratorType", "auto");
+                var acc = PickOneAccel(accelType, acceleratorId, devices);
+                if (acc is null)
+                {
+                    return 2;
+                }
+                picked.Add(acc);
+                Console.WriteLine($"Selecting accelerator device #{devices.IndexOf(acc)}: {acc.Name} ({acc.AcceleratorType})");
+
+            }
             else
             {
-                Log($"ERROR: acceleratorType {accelType} is not supported.");
-                return 2;
+                var accelsIdsStr = switches.GetOrAdd("acceleratorDeviceIds", "");
+                if (string.IsNullOrWhiteSpace(accelsIdsStr))
+                {
+                    Log("ERROR: multiAccelerator is set to true, but no acceleratorDeviceIds provided.");
+                    return 2;
+                }
+                var accelsIds = accelsIdsStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(s => int.TryParse(s, out var id) ? id : -1)
+                    .Where(id => id >= 0)
+                    .ToList();
+                picked = accelsIds.Select(id =>
+                {
+                    var acc = PickOneAccel("auto", id, devices);
+                    if (acc is null)
+                    {
+                        Log($"ERROR: Cannot pick accelerator device with id {id}.");
+                    }
+                    return acc;
+                }).ToList()!;
+
             }
 
-            if (pick == null)
+            if (picked == null || picked.Count == 0)
             {
-                Log($"ERROR: No accelerator device found.");
+                Log($"ERROR: No accelerator device picked. Check the configuration.");
                 return 2;
             }
 
-            Console.WriteLine($"Selecting accelerator device #{devices.IndexOf(pick)}: {pick.Name} ({pick.AcceleratorType})");
+            foreach (var item in picked)
+            {
+                Console.WriteLine($"Picked accelerator {item.Name} : {item.AcceleratorType}");
+                item.PrintInformation();
+                Console.WriteLine();
+            }
 
-            Accelerator accelerator = (pick ?? devices.First()).CreateAccelerator(context);
-
-            Console.WriteLine($"Accelerator info:");
-            accelerator.PrintInformation();
+            Accelerator[] accelerators = picked.Select(d => d.CreateAccelerator(context)).ToArray();
 
             Log("Initiliazing FFmpeg...");
             if (Program.advancedFlags.Contains("ffmpeg_loglevel_debug"))
@@ -178,92 +209,83 @@ namespace projectFrameCut.Render.RenderCLI
                 ffmpeg.av_log_set_level(ffmpeg.AV_LOG_QUIET);
             else
                 ffmpeg.av_log_set_level(ffmpeg.AV_LOG_WARNING);
+            Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
 
-
-            if (bool.TryParse(switches.GetOrAdd("forceSync", "default"), out var fSync))
+            bool fSync = false;
+            foreach (var accelerator in accelerators)
             {
-                Console.WriteLine($"Force synchronize is set to {fSync}");
-            }
-            else //默认值
-            {
-                if (accelerator.AcceleratorType == AcceleratorType.OpenCL)
+                if (bool.TryParse(switches.GetOrAdd("forceSync", "default"), out fSync))
                 {
-                    fSync = true;
-                    Console.WriteLine($"Force synchronize is default set to true because of OpenCL accelerator is selected.");//不这么做Render会炸
+                    Console.WriteLine($"Force synchronize is set to {fSync}");
                 }
-                else
+                else //默认值
                 {
-                    fSync = false;
-                    Console.WriteLine($"Force synchronize is default set to false");
+                    if (accelerator.AcceleratorType == AcceleratorType.OpenCL)
+                    {
+                        fSync = true;
+                        Console.WriteLine($"Force synchronize is default set to true because of OpenCL accelerator is selected.");//不这么做Render会炸
+                    }
+                    else
+                    {
+                        fSync = false;
+                        Console.WriteLine($"Force synchronize is default set to false");
+                    }
                 }
             }
 
 
-            RegisterComputerGetter(accelerator,fSync);
+
+            RegisterComputerGetter(accelerators, fSync);
 
             var outputOptions = switches["output_options"].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-            var yieldSaveMode = switches.GetOrAdd("yieldSaveMode", "video").ToLower();
 
             int width = 0, height = 0, fps = 0;
             FFmpeg.AutoGen.AVPixelFormat outputFormat = AVPixelFormat.AV_PIX_FMT_NONE;
             string outputEncoder = "";
 
-            if (yieldSaveMode == "video")
+            if (outputOptions.Length != 5)
             {
-                if (outputOptions.Length != 5)
-                {
-                    Log("ERROR: output_options must contain 5 values: width,height,fps,pixel format,encoder");
-                    return 1;
-                }
-                width = int.Parse(outputOptions[0]);
-                height = int.Parse(outputOptions[1]);
-                fps = int.Parse(outputOptions[2]);
-
-                Type pxfmtEnumType = typeof(FFmpeg.AutoGen.AVPixelFormat);
-                var pxfmtFields = pxfmtEnumType.GetFields(BindingFlags.Public | BindingFlags.Static);
-                var pxfmtInfo = pxfmtFields.Where((s) => s.Name == outputOptions[3]).FirstOrDefault(defaultValue: null);
-                if (pxfmtInfo == null)
-                {
-                    Log($"ERROR: Pixel format {outputOptions[3]} not found in AVPixelFormat.");
-                    return 1;
-                }
-
-                outputFormat = (FFmpeg.AutoGen.AVPixelFormat)Convert.ToInt64(pxfmtInfo.GetValue(null)!);
-                outputEncoder = outputOptions[4];
-
-                Console.WriteLine($"Output options: video, {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}");
-
+                Log("ERROR: output_options must contain 5 values: width,height,fps,pixel format,encoder");
+                return 1;
             }
-            else
+            width = int.Parse(outputOptions[0]);
+            height = int.Parse(outputOptions[1]);
+            fps = int.Parse(outputOptions[2]);
+
+            Type pxfmtEnumType = typeof(FFmpeg.AutoGen.AVPixelFormat);
+            var pxfmtFields = pxfmtEnumType.GetFields(BindingFlags.Public | BindingFlags.Static);
+            var pxfmtInfo = pxfmtFields.Where((s) => s.Name == outputOptions[3]).FirstOrDefault(defaultValue: null);
+            if (pxfmtInfo == null)
             {
-                Console.WriteLine($"Output options: image sequence, mode:{yieldSaveMode}");
+                Log($"ERROR: Pixel format {outputOptions[3]} not found in AVPixelFormat.");
+                return 1;
             }
+
+            outputFormat = (FFmpeg.AutoGen.AVPixelFormat)Convert.ToInt64(pxfmtInfo.GetValue(null)!);
+            outputEncoder = outputOptions[4];
+
+            Console.WriteLine($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}");
 
 
             if (runningMode == "rpc_backend")
             {
-                Rpc.go_rpcAsync(switches, accelerator, width, height);
+                Rpc.go_rpcAsync(switches, accelerators[0], width, height);
                 Console.WriteLine($"RPC server exited with code {Rpc.RpcReturnCode}. Exiting...");
                 return Rpc.RpcReturnCode;
             }
 
-            PngEncoder encoder = yieldSaveMode switch
-            {
-                "png_8bpc" or "png_8bpc_alpha" => new PngEncoder { BitDepth = PngBitDepth.Bit8 },
-                _ => new PngEncoder { BitDepth = PngBitDepth.Bit16 }
-            };
-
-            int maxParallelThreads = int.TryParse(switches.GetOrAdd("maxParallelThreads", "8"), out result) ? result : 8;
-
-            //var frameRange = RangeParser.ParseToSequence(switches["range"]);
-
-            var duration = int.Parse(switches.GetOrAdd("duration", "0"));
-
-            var frameRange = Enumerable.Range(0, duration).Select(i => (uint)i).ToArray();
 
             var draftSrc = JsonSerializer.Deserialize<DraftStructureJSON
                 >(File.ReadAllText(switches["draft"])) ?? throw new NullReferenceException();
+
+            Console.WriteLine($"Draft loaded: duration {draftSrc.Duration}, saved on {draftSrc.SavedAt}, {draftSrc.Clips.Length} clips.");
+
+
+            var duration = draftSrc.Duration;
+
+            var frameRange = Enumerable.Range(0, (int)duration).Select(i => (uint)i).ToArray();
+
 
             List<JsonElement> clipsJson = draftSrc.Clips.Select(c => (JsonElement)c).ToList();
 
@@ -308,133 +330,77 @@ namespace projectFrameCut.Render.RenderCLI
 
             SetSubProg("PrepareDraft");
 
-            Log("Initiliazing all source video stream...");
+            Log("Initializing all source video stream...");
             for (int i = 0; i < clips.Length; i++)
             {
                 clips[i].ReInit();
             }
 
-
-
-            Stopwatch sw1 = new();
-            ConcurrentBag<long> avgTime = new();
-            Action<uint> render;
-            VideoBuilder? builder = null;
-
-            switch (yieldSaveMode)
+            VideoBuilder builder = new VideoBuilder(switches["output"], width, height, fps, outputEncoder, outputFormat, true)
             {
-                case "video":
-                    {
-                        builder = new VideoBuilder(switches["output"], width, height, fps, outputEncoder, outputFormat)
-                        {
-                            EnablePreview = bool.TryParse(switches.GetOrAdd("preview", "false"), out var preview) ? preview : false,
-                            PreviewPath = switches.GetOrAdd("previewPath", "nope"),
-                        };
-                        builder.StrictMode = bool.TryParse(switches.GetOrAdd("StrictMode", "0"), out var strictMode) ? strictMode : false;
-                        builder.Build().Start();
+                EnablePreview = bool.TryParse(switches.GetOrAdd("preview", "false"), out var preview) ? preview : false,
+                PreviewPath = switches.GetOrAdd("previewPath", "nope"),
+            };
 
-                        render = new((uint i) =>
-                        {
-                            Log($"[#{i:d6}] Start processing frame {i}...");
-                            Stopwatch sw = Stopwatch.StartNew();
-                            builder.Append(i,
-                                Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height)
-                            );
+            builder.Duration = duration;
+            int maxParallelThreads = int.TryParse(switches.GetOrAdd("maxParallelThreads", "8"), out var result) ? result : 8;
 
-                            sw.Stop();
-                            avgTime.Add(sw.ElapsedMilliseconds);
-                            Log($"[#{i:d6}] frame {i} render done, elapsed {sw.Elapsed}");
-                        });
-                        break;
-                    }
-
-                case "png_16bpc":
-                    {
-                        render = new((uint i) =>
-                        {
-                            Log($"[#{i:d6}] Start processing frame {i}...");
-                            Stopwatch sw = Stopwatch.StartNew();
-                            Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height).SetAlpha(false).SaveAsPng16bpc($"{switches["output"]}frame_{i:D6}.png", encoder);
-
-                            sw.Stop();
-                            avgTime.Add(sw.ElapsedMilliseconds);
-                            Log($"[#{i:d6}] frame {i} render done, elapsed {sw.Elapsed}");
-                        });
-                        break;
-                    }
-
-                case "png_8bpc":
-                    {
-                        render = new((uint i) =>
-                        {
-                            Log($"[#{i:d6}] Start processing frame {i}...");
-                            Stopwatch sw = Stopwatch.StartNew();
-                            Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height).SetAlpha(false).SaveAsPng8bpc($"{switches["output"]}_{i:D6}.png", encoder);
-
-                            sw.Stop();
-                            avgTime.Add(sw.ElapsedMilliseconds);
-                            Log($"[#{i:d6}] frame {i} render done, elapsed {sw.Elapsed}");
-                        });
-                        break;
-                    }
-
-                case "png_16bpc_alpha":
-                    {
-                        render = new((uint i) =>
-                        {
-                            Log($"[#{i:d6}] Start processing frame {i}...");
-                            Stopwatch sw = Stopwatch.StartNew();
-                            Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height).SetAlpha(true).SaveAsPng16bpc($"{switches["output"]}_{i:D6}.png", encoder);
-
-                            sw.Stop();
-                            avgTime.Add(sw.ElapsedMilliseconds);
-                            Log($"[#{i:d6}] frame {i} render done, elapsed {sw.Elapsed}");
-                        });
-                        break;
-                    }
-
-                case "png_8bpc_alpha":
-                    {
-                        render = new((uint i) =>
-                        {
-                            Log($"[#{i:d6}] Start processing frame {i}...");
-                            Stopwatch sw = Stopwatch.StartNew();
-                            Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height).SetAlpha(true).SaveAsPng8bpc($"{switches["output"]}_{i:D6}.png", encoder);
-
-                            sw.Stop();
-                            avgTime.Add(sw.ElapsedMilliseconds);
-                            Log($"[#{i:d6}] frame {i} render done, elapsed {sw.Elapsed}");
-                        });
-                        break;
-                    }
-                default:
-                    {
-                        Log($"ERROR: yieldSaveMode {yieldSaveMode} is not supported.");
-                        return 1;
-                    }
-
+            if (bool.TryParse(switches.GetOrAdd("oneByOneRender", "false"), out var oneByOneRender) && oneByOneRender)
+            {
+                maxParallelThreads = 1;
+                builder.BlockWrite = true;
+            }
+            else
+            {
+                builder.BlockWrite = false;
             }
 
-            MultiTask<uint> task = new MultiTask<uint>(render);
-            task.ThrowOnAnyError = bool.TryParse(switches.GetOrAdd("StrictMode", "0"), out var value) ? value : false;
-            task.ThrowOnErrorHappensImmediately = bool.TryParse(switches.GetOrAdd("StopOnAnyError", "0"), out var stopOnErr) ? stopOnErr : false;
-            task.GCOptions = int.TryParse(switches.GetOrAdd("GCOptions", "0"), out var value1) ? value1 : 0;
-            task.InternalLogging = inprojectFrameCut;
+            Renderer renderer = new Renderer();
+            renderer.builder = builder;
+            renderer.Clips = clips;
+            renderer.Duration = duration;
+            renderer.MaxThreads = maxParallelThreads;
+            renderer.Duration = duration;
+            renderer.LogState = inprojectFrameCut;
 
+            switch (switches.GetOrAdd("GCOptions", "doLOHCompression"))
+            {
+                case "letCLRDoCollection":
+                    builder.DoGCAfterEachWrite = false;
+                    renderer.GCOption = 0;
+                    break;
+                case "doNormalCollection":
+                    builder.DoGCAfterEachWrite = false;
+                    renderer.GCOption = 1;
+                    break;
+                case "doLOHCompression":
+                doLOHCompression:
+                    builder.DoGCAfterEachWrite = true;
+                    renderer.GCOption = 2;
+                    GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce; //avoid Picture eating too much memory cause hang or crash
+                    break;
+                default:
+                    Console.WriteLine($"WARN: Undefined GC option {switches["GCOptions"]}, use doLOHCompression.");
+                    goto doLOHCompression;
+            }
+
+            builder?.Build()?.Start();
+
+            Stopwatch sw1 = new();
+            SetSubProg("Render");
             Log("Start render...");
 
             sw1.Restart();
-            SetSubProg("Render");
-            await task.Start(maxParallelThreads, frameRange);
+            await renderer.GoRender();
 
-            Log($"Render done,total elapsed {sw1}, avg elapsed {avgTime.Average() / 1000} spf");
+            Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
 
             GC.Collect(2, GCCollectionMode.Forced, true); //减少内存占用，防止太卡影响后续的写入操作
             GC.WaitForFullGCComplete();
 
             SetSubProg("WriteVideo");
             Log("Finish writing video...");
-            builder?.Finish(clips.ToArray(), (i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), (uint)duration);
+            builder?.Finish((i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), duration);
 
             Log($"Releasing resources...");
 
@@ -442,7 +408,10 @@ namespace projectFrameCut.Render.RenderCLI
             {
                 item?.Dispose();
             }
-            accelerator.Dispose();
+            foreach (var item in accelerators)
+            {
+                item?.Dispose();
+            }
             context.Dispose();
 
             Log($"All done! Total elapsed {sw1}.");
@@ -450,18 +419,44 @@ namespace projectFrameCut.Render.RenderCLI
             return 0;
         }
 
-        private static void RegisterComputerGetter(Accelerator accel, bool sync)
+        private static Device? PickOneAccel(string accelType, int acceleratorId, List<Device> devices)
+        {
+            Device? pick = null;
+            if (acceleratorId >= 0)
+                pick = devices[acceleratorId];
+            else if (accelType == "cuda")
+                pick = devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.Cuda);
+            else if (accelType == "opencl")
+                pick = devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.OpenCL
+                            && (d.Name.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase) || d.Name.Contains("AMD", StringComparison.OrdinalIgnoreCase))) //优先用独显
+                        ?? devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.OpenCL);
+            else if (accelType == "cpu")
+                pick = devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.CPU);
+            else if (accelType == "auto")
+                pick =
+                    devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.Cuda)
+                    ?? devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.OpenCL && (d.Name.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase) || d.Name.Contains("AMD", StringComparison.OrdinalIgnoreCase)))
+                    ?? devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.OpenCL)
+                    ?? devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.CPU);
+            else
+            {
+                Log($"ERROR: acceleratorType {accelType} is not supported.");
+            }
+            return pick;
+        }
+
+        private static void RegisterComputerGetter(Accelerator[] accels, bool sync)
         {
             AcceleratedComputerBridge.RequireAComputer = new((name) =>
             {
                 switch (name)
                 {
                     case "Overlay":
-                        return new OverlayComputer(accel, sync);
+                        return new OverlayComputer(accels, sync);
                     case "RemoveColor":
-                        return new RemoveColorComputer(accel, sync);
+                        return new RemoveColorComputer(accels, sync);
                     default:
-                        Log($"Computer {name} not found.","Error");
+                        Log($"Computer {name} not found.", "Error");
                         return null;
 
                 }

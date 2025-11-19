@@ -16,17 +16,30 @@ namespace projectFrameCut.Render.WindowsRender
     {
 
         [SetsRequiredMembers]
-        public OverlayComputer(Accelerator accel, bool sync)
+        public OverlayComputer(Accelerator[] accel, bool sync)
         {
-            this.accelerator = accel;
+            this.accelerators = accel;
             Sync = sync;
         }
 
-        public required Accelerator accelerator { get; init; }
+        public required Accelerator[] accelerators { get; init; }
         public bool Sync { get; set; } = false;
+
+        private int accelIdx = 0;
 
         public float[][] Compute(float[][] args)
         {
+            Accelerator accelerator;
+            if (accelerators.Length > 1)
+            {
+                if (accelIdx >= accelerators.Length) accelIdx = 0;
+                accelerator = accelerators[accelIdx++];
+            }
+            else
+            {
+                accelerator = accelerators[0];
+            }
+
             var A = args[0];
             var B = args[1];
             var aAlpha = args[2];
@@ -103,17 +116,30 @@ namespace projectFrameCut.Render.WindowsRender
 
 
         [SetsRequiredMembers]
-        public RemoveColorComputer(Accelerator accel, bool sync)
+        public RemoveColorComputer(Accelerator[] accel, bool sync)
         {
-            this.accelerator = accel;
+            this.accelerators = accel;
             ForceSync = sync;
         }
 
-        public required Accelerator accelerator { get; init; }
+        public required Accelerator[] accelerators { get; init; }
         public bool ForceSync { get; set; } = false;
+
+        private int accelIdx = 0;
 
         public float[][] Compute(float[][] args)
         {
+            Accelerator accelerator;
+            if (accelerators.Length > 1)
+            {
+                if (accelIdx >= accelerators.Length) accelIdx = 0;
+                accelerator = accelerators[accelIdx++];
+            }
+            else
+            {
+                accelerator = accelerators[0];
+            }
+
             var Nullable_aR = args[0];
             var Nullable_aG = args[1];
             var Nullable_aB = args[2];
@@ -123,9 +149,9 @@ namespace projectFrameCut.Render.WindowsRender
             var toRemoveB = (ushort)args[6][0];
             var range = (ushort)args[7][0];
 
-            float[] aR, aG, aB,sourceA;
+            float[] aR, aG, aB, sourceA;
 
-            if(Nullable_aR is float[] arrR && Nullable_aG is float[] arrG && Nullable_aB is float[] arrB && Nullable_sourceA is float[] arrA)
+            if (Nullable_aR is float[] arrR && Nullable_aG is float[] arrG && Nullable_aB is float[] arrB && Nullable_sourceA is float[] arrA)
             {
                 aR = arrR;
                 aG = arrG;

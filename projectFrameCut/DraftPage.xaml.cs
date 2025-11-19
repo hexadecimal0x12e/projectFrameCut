@@ -7,12 +7,12 @@ using projectFrameCut.Render;
 using projectFrameCut.Shared;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Path = System.IO.Path;
-using System.Diagnostics.CodeAnalysis;
 
 
 #if WINDOWS
@@ -133,7 +133,7 @@ public partial class DraftPage : ContentPage
         OverlayLayer.IsVisible = false;
         OverlayLayer.InputTransparent = false;
 #endif
-
+        infoBuilder = new ClipInfoBuilder(this);
         workingPath = workingDir;
         TrackCalculator.HeightPerTrack = ClipHeight;
 
@@ -254,6 +254,9 @@ public partial class DraftPage : ContentPage
             fileDropGesture.DragOver += File_DragOver;
             fileDropGesture.Drop += File_Drop;
             OverlayLayer.GestureRecognizers.Add(fileDropGesture);
+
+
+
             DraftChanged(s, new());
 #if !WINDOWS
             SetStateOK();
@@ -532,7 +535,7 @@ public partial class DraftPage : ContentPage
     {
         if (sender is not Border border) return;
         if (border.BindingContext is not ClipElementUI clip) return;
-        Log($"Clip {clip.Id} double clicked, state:{clip.MovingStatus}");
+        LogDiagnostic($"Clip {clip.Id} double clicked, state:{clip.MovingStatus}");
         try
         {
             if (WindowSize.Width > WindowSize.Height)
@@ -559,12 +562,12 @@ public partial class DraftPage : ContentPage
         {
             _selected.Clip.Background = new SolidColorBrush(Colors.CornflowerBlue);
         }
-        Log($"Clip {clip.Id} clicked, state:{clip.MovingStatus}");
+        LogDiagnostic($"Clip {clip.Id} clicked, state:{clip.MovingStatus}");
         if (clip.MovingStatus != ClipMovingStatus.Free) return;
         _selected = clip;
         clip.Clip.Background = Colors.YellowGreen;
         SetStatusText(Localized.DraftPage_Selected(clip.displayName));
-
+        CustomContent2 = (VerticalStackLayout)BuildPropertyPanel(clip);
     }
 
     private void UnSelectTapGesture_Tapped(object? sender, TappedEventArgs e)
@@ -573,6 +576,8 @@ public partial class DraftPage : ContentPage
         _selected.Clip.Background = new SolidColorBrush(Colors.CornflowerBlue);
         _selected = null;
         SetStatusText(Localized.DraftPage_EverythingFine);
+        CustomContent2 = new VerticalStackLayout();
+
     }
     #endregion
 
@@ -760,7 +765,7 @@ public partial class DraftPage : ContentPage
                 Clips.TryRemove(cid, out _);
                 SetStatusText(Localized.DraftPage_Removed);
                 SetStateOK();
-                Log($"clip {cid} removed.");
+                LogDiagnostic($"clip {cid} removed.");
                 return;
             }
             else
@@ -805,7 +810,7 @@ public partial class DraftPage : ContentPage
         }
 
 
-        Log($"{cid} moved to {border.TranslationX},{border.TranslationY} in track:{clip.origTrack} ");
+        LogDiagnostic($"{cid} moved to {border.TranslationX},{border.TranslationY} in track:{clip.origTrack} ");
         OnClipChanged?.Invoke(cid, new ClipUpdateEventArgs
         {
             SourceId = cid,
@@ -1263,34 +1268,48 @@ public partial class DraftPage : ContentPage
             assetClip.isInfiniteLength = asset.isInfiniteLength;
             assetClip.Clip.WidthRequest = 200;
 
-            var dragGesture = new DragGestureRecognizer();
-            dragGesture.CanDrag = true;
-            dragGesture.DragStarting += (s, args) =>
+            //TODO: fix drag and drop
+            //I have no idea on why drag and drop make program hang just a day passed.
+
+            //            var dragGesture = new DragGestureRecognizer();
+            //            dragGesture.CanDrag = true;
+            //            dragGesture.DragStarting += (s, args) =>
+            //            {
+            //                _draggingAsset = asset;
+            //                var ghostClip = ClipElementUI.CreateClip(0, 150, 0, id: "ghost_asset", labelText: label, background: (Brush?)asset.Background,
+            //                    maxFrames: (uint)(asset.FrameCount ?? 0U));
+            //                ghostClip.isInfiniteLength = asset.isInfiniteLength;
+            //                ghostClip.Clip.Opacity = 0.5;
+            //                Clips.TryAdd("ghost_asset", ghostClip);
+            //                args.Data.Properties.Add("ghost", ghostClip);
+            //                args.Data.Text = "This is a projectFrameCut asset.";
+            //                if (File.Exists(asset.ThumbnailPath))
+            //                {
+            //                    args.Data.Image = ImageSource.FromFile(asset.ThumbnailPath);
+            //                }
+            //#if ANDROID
+            //                OverlayLayer.IsVisible = true;
+            //#endif
+            //            };
+            //            dragGesture.DropCompleted += (s, args) =>
+            //            {
+            //                if (Clips.TryRemove("ghost_asset", out var ghost))
+            //                {
+            //                    OverlayLayer.Children.Remove(ghost.Clip);
+            //                }
+            //                _draggingAsset = null;
+            //                _lastDragPoint = null;
+            //#if ANDROID
+            //                OverlayLayer.IsVisible = false;
+            //#endif
+            //            };
+            //            assetClip.Clip.GestureRecognizers.Add(dragGesture);
+
+            var addButton = new Button
             {
-                _draggingAsset = asset;
-                var ghostClip = ClipElementUI.CreateClip(0, 150, 0, id: "ghost_asset", labelText: label, background: (Brush?)asset.Background,
-                    maxFrames: (uint)(asset.FrameCount ?? 0U));
-                ghostClip.isInfiniteLength = asset.isInfiniteLength;
-                ghostClip.Clip.Opacity = 0.5;
-                Clips.TryAdd("ghost_asset", ghostClip);
-                args.Data.Properties.Add("ghost", ghostClip);
-#if ANDROID
-                OverlayLayer.IsVisible = true;
-#endif
+                Background = Colors.Green,
+                Text = "Add"
             };
-            dragGesture.DropCompleted += (s, args) =>
-            {
-                if (Clips.TryRemove("ghost_asset", out var ghost))
-                {
-                    OverlayLayer.Children.Remove(ghost.Clip);
-                }
-                _draggingAsset = null;
-                _lastDragPoint = null;
-#if ANDROID
-                OverlayLayer.IsVisible = false;
-#endif
-            };
-            assetClip.Clip.GestureRecognizers.Add(dragGesture);
 
             var removeButton = new Button
             {
@@ -1316,6 +1335,33 @@ public partial class DraftPage : ContentPage
                 Assets.Remove(kvp.Key, out var _asset);
                 layout.Children.Remove(childLayout);
             };
+            addButton.Clicked += async (s, e) =>
+            {
+                var elem = ClipElementUI.CreateClip(
+                            startX: 0,
+                            width: FrameToPixel((uint)(asset.FrameCount ?? 1024)),
+                            trackIndex: Tracks.Last().Key,
+                            labelText: asset.Name,
+                            background: (Brush?)asset.Background,
+                            maxFrames: (uint)(asset.FrameCount ?? 0U),
+                            relativeStart: 0
+                           );
+
+                elem.sourcePath = asset.Path;
+                elem.ClipType = asset.Type;
+                elem.sourceSecondPerFrame = asset.SecondPerFrame;
+                elem.SecondPerFrameRatio = 1f;
+                elem.ExtraData = new();
+
+                RegisterClip(elem, true);
+                AddAClip(elem);
+
+                UpdateAdjacencyForTrack();
+                SetStatusText($"Asset '{asset.Name}' added to track.");
+                await HidePopup();
+
+            };
+            childLayout.Children.Add(addButton      );
             childLayout.Children.Add(removeButton);
             layout.Children.Add(childLayout);
         }
@@ -1393,7 +1439,7 @@ public partial class DraftPage : ContentPage
             PreviewBox.Source = src;
         });
 #if DEBUG
-        FrameIndexEntry.Text = duration.ToString();
+        //FrameIndexEntry.Text = duration.ToString();
 
         //var data = await _rpc.SendAsync("GetAFrameData", JsonSerializer.SerializeToElement(duration), default);
         //if (data.Value.TryGetProperty("json", out var json))
@@ -2849,25 +2895,25 @@ public partial class DraftPage : ContentPage
     {
         if (uint.TryParse(e.NewTextValue, out var frameIndex))
         {
-#if WINDOWS
+//#if WINDOWS
 
-            var data = await _rpc.SendAsync("GetAFrameData", JsonSerializer.SerializeToElement(frameIndex), default);
-            if (data.Value.TryGetProperty("json", out var json))
-            {
-                Dispatcher.Dispatch(() =>
-                {
-                    FrameContentEditor.Text = json.GetString();
-                });
-            }
-            else
-            {
-                Dispatcher.Dispatch(() =>
-                {
-                    FrameContentEditor.Text = JsonSerializer.Serialize(DraftImportAndExportHelper.ExportFromDraftPage(this), savingOpts);
-                });
-            }
+//            var data = await _rpc.SendAsync("GetAFrameData", JsonSerializer.SerializeToElement(frameIndex), default);
+//            if (data.Value.TryGetProperty("json", out var json))
+//            {
+//                Dispatcher.Dispatch(() =>
+//                {
+//                    FrameContentEditor.Text = json.GetString();
+//                });
+//            }
+//            else
+//            {
+//                Dispatcher.Dispatch(() =>
+//                {
+//                    FrameContentEditor.Text = JsonSerializer.Serialize(DraftImportAndExportHelper.ExportFromDraftPage(this), savingOpts);
+//                });
+//            }
 
-#endif
+//#endif
 
         }
         else
@@ -2898,10 +2944,10 @@ Clip {clip.displayName}({clip.Id}):
 """;
             }
 
-            Dispatcher.Dispatch(() =>
-            {
-                FrameContentEditor.Text = result;
-            });
+            //Dispatcher.Dispatch(() =>
+            //{
+            //    FrameContentEditor.Text = result;
+            //});
         }
     }
 
@@ -2931,7 +2977,7 @@ Clip {clip.displayName}({clip.Id}):
         double w = this.Window?.Width ?? 0;
         double h = this.Window?.Height ?? 0;
         WindowSize = new(w, h);
-        Log($"Window size changed: {w:F0} x {h:F0} (DIP)");
+        LogDiagnostic($"Window size changed: {w:F0} x {h:F0} (DIP)");
 
     }
 

@@ -1,5 +1,6 @@
 using Microsoft.Maui.Graphics;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Render;
 using projectFrameCut.Shared;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
@@ -28,7 +29,7 @@ public partial class DebuggingMainPage : ContentPage
 #endif
     }
 
-    protected override bool OnBackButtonPressed() => true;
+    protected override bool OnBackButtonPressed() => false;
 
 
     private async void TestPageButton_Clicked(object sender, EventArgs e)
@@ -237,7 +238,7 @@ draftSourcePath = "";
                 ]
         };
 
-        var ovlp = DraftImportAndExportHelper.FindOverlaps(d.Clips.Cast<ClipDraftDTO>(), 5);
+        var ovlp = Timeline.FindOverlaps(d.Clips.Cast<ClipDraftDTO>(), 5);
 
         if (ovlp.Count > 0)
         {

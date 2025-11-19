@@ -2,7 +2,7 @@
   "profiles": {
     "projectFrameCut.Render.RenderCLI": {
       "commandName": "Project",
-      "commandLineArgs": "  rpc_backend  -pipe=pjfcTestPipe1 -output_options=3840,2160,42,AV_PIX_FMT_NONE,nope -tempFolder=D:\\code\\playground\\projectFrameCut\\tmp"
+      "commandLineArgs": "render \"-draft=D:\\code\\playground\\projectFrameCut\\My Drafts\\test.pjfc\\timeline.json\" -duration 500 -output=D:\\code\\playground\\projectFrameCut\\output.mkv -output_options=3840,2160,30,AV_PIX_FMT_GBRP16LE,ffv1 -maxParallelThreads=32 -multiAccelerator=true -acceleratorDeviceIds=1,2"
     }
   }
 }

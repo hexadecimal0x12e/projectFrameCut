@@ -63,8 +63,8 @@ namespace projectFrameCut.Platforms.Windows
                         var parts = e.Data.Trim('@').Split(',', 2, StringSplitOptions.TrimEntries);
                         if(int.TryParse(parts[0], out var working) && int.TryParse(parts[1], out var total))
                         {
-
-                            OnProgressChanged?.Invoke((working / (float)total));
+                            if(total > 0)
+                                OnProgressChanged?.Invoke((working / (float)total));
                         }
                     }
                     else if (e.Data.StartsWith("##"))

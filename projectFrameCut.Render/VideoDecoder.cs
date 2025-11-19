@@ -41,6 +41,8 @@ namespace projectFrameCut.Render
 
         public int Height => _height;
 
+        public uint Index { get; set; } = 0;
+
         public DecoderContext16Bit(string path)
         {
             _path = path ?? throw new ArgumentNullException(nameof(path));
@@ -60,7 +62,8 @@ namespace projectFrameCut.Render
 
                 fixed (AVFormatContext** fmtPtr = &_fmt)
                 {
-                    if (ffmpeg.avformat_open_input(fmtPtr, _path, null, null) != 0)
+                    int averr = ffmpeg.avformat_open_input(fmtPtr, _path, null, null);
+                    if (averr != 0)
                     {
                         var fi = new FileInfo(_path);
                         if (!fi.Exists)
@@ -85,7 +88,8 @@ namespace projectFrameCut.Render
                         }
                         catch (NotSupportedException)
                         {
-                            throw;
+                            var errstr = FFmpegHelper.GetErrorString(averr);
+                            throw new InvalidOperationException($"Cannot open the video file '{_path}' because of '{errstr}'");
                         }
                         catch (IOException ex)
                         {
@@ -176,7 +180,8 @@ namespace projectFrameCut.Render
                 _sws = ffmpeg.sws_getContext(
                         _width, _height, _codec->pix_fmt,
                         _width, _height, AVPixelFormat.AV_PIX_FMT_BGR48LE,
-                        ffmpeg.SWS_BICUBIC, null, null, null);
+                        4, null, null, null);
+                // SWS_BICUBIC == 4
 
                 if (_sws == null)
                     throw new InvalidOperationException("Failed to alloc a context for the Renderer. Please try reboot your device, or reinstall projectFrameCut.");
@@ -210,54 +215,52 @@ namespace projectFrameCut.Render
 
         public Picture GetFrame(uint targetFrame, bool hasAlpha = false)
         {
-            lock (locker)
+            if (targetFrame < _currentFrameNumber)
             {
-                if (targetFrame < _currentFrameNumber)
-                {
-                    ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
-                    ffmpeg.avcodec_flush_buffers(_codec);
-                    _currentFrameNumber = 0;
-                }
+                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                ffmpeg.avcodec_flush_buffers(_codec);
+                _currentFrameNumber = 0;
+            }
 
-                while (ffmpeg.av_read_frame(_fmt, _pkt) >= 0)
-                {
+            while (ffmpeg.av_read_frame(_fmt, _pkt) >= 0)
+            {
 
-                    try
+                try
+                {
+                    if (_pkt->stream_index == _videoStreamIndex)
                     {
-                        if (_pkt->stream_index == _videoStreamIndex)
+                        if (ffmpeg.avcodec_send_packet(_codec, _pkt) < 0) continue;
+
+                        while (true)
                         {
-                            if (ffmpeg.avcodec_send_packet(_codec, _pkt) < 0) continue;
-
-                            while (true)
+                            ffmpeg.av_frame_unref(_frm);
+                            if (ffmpeg.avcodec_receive_frame(_codec, _frm) == 0)
                             {
-                                ffmpeg.av_frame_unref(_frm);
-                                if (ffmpeg.avcodec_receive_frame(_codec, _frm) == 0)
-                                {
-                                    if (_currentFrameNumber++ == targetFrame) goto found;
-
-                                }
-                                else if (_totalFrames < _currentFrameNumber)
-                                {
-                                    goto not_found;
-                                }
-                                break;
+                                if (_currentFrameNumber++ == targetFrame) goto found;
 
                             }
+                            else if (_totalFrames < _currentFrameNumber)
+                            {
+                                goto not_found;
+                            }
+                            break;
+
                         }
                     }
-                    catch (Exception)
-                    {
-                        throw;
-                    }
-                    finally
-                    {
-                        ffmpeg.av_packet_unref(_pkt);
-                    }
                 }
+                catch (Exception)
+                {
+                    throw;
+                }
+                finally
+                {
+                    ffmpeg.av_packet_unref(_pkt);
+                }
+
             }
 
         not_found:
-            if(Math.Abs(targetFrame - TotalFrames) < 5)//a little bit overlength due to rounding
+            if (Math.Abs(targetFrame - TotalFrames) < 5)//a little bit overlength due to rounding
             {
                 return GetFrame((uint)TotalFrames, hasAlpha);
             }
@@ -266,6 +269,7 @@ namespace projectFrameCut.Render
             throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_path}'.");
 
         found:
+            Index++;
             ffmpeg.sws_scale(
                              _sws,
                              _frm->data,
@@ -364,6 +368,7 @@ namespace projectFrameCut.Render
 
         public int Height => _height;
 
+        public uint Index { get; set; } = 0;
 
         public DecoderContext8Bit(string path)
         {
@@ -398,9 +403,9 @@ namespace projectFrameCut.Render
                         try
                         {
                             FileStream fs = new FileStream(_path, FileMode.Open);
-#pragma warning disable CA2022 // 避免使用 "Stream.Read" 进行不准确读取
+#pragma warning disable CA2022 
                             fs.Read(new byte[16]);
-#pragma warning restore CA2022 // 避免使用 "Stream.Read" 进行不准确读取
+#pragma warning restore CA2022
                             throw new NotSupportedException($"File '{_path}' seems not like a video file. Try install the codec extension. \r\nIf you continuously encountering this issue, try install ffmpeg toolkit on your computer, then run this command and observe whether there is any error message:\r\nffprobe {Path.GetFullPath(_path)}");
 
 
@@ -502,7 +507,8 @@ namespace projectFrameCut.Render
                 _sws = ffmpeg.sws_getContext(
                     _width, _height, _codec->pix_fmt,
                     _width, _height, AVPixelFormat.AV_PIX_FMT_BGR24,
-                    ffmpeg.SWS_BICUBIC, null, null, null);
+                    4, null, null, null);
+                // SWS_BICUBIC == 4
 
                 if (_sws == null)
                     throw new InvalidOperationException("Failed to alloc a context for the Renderer. Please try reboot your device, or reinstall projectFrameCut.");
@@ -556,82 +562,82 @@ namespace projectFrameCut.Render
         [DebuggerNonUserCode()]
         public Picture GetFrame(uint targetFrame, bool hasAlpha)
         {
-            lock (locker)
-            {
-                if (targetFrame < _currentFrameNumber)
-                {
-                    ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
-                    ffmpeg.avcodec_flush_buffers(_codec);
-                    _currentFrameNumber = 0;
-                    _eof = false;
-                }
 
+            if (targetFrame < _currentFrameNumber)
+            {
+                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                ffmpeg.avcodec_flush_buffers(_codec);
+                _currentFrameNumber = 0;
+                _eof = false;
+            }
+
+
+            while (true)
+            {
+                if (!_eof)
+                {
+                    if (ffmpeg.av_read_frame(_fmt, _pkt) < 0)
+                    {
+                        _eof = true;
+                        ffmpeg.av_packet_unref(_pkt);
+                    }
+                    else
+                    {
+                        if (_pkt->stream_index == _videoStreamIndex)
+                        {
+                            ffmpeg.avcodec_send_packet(_codec, _pkt);
+                        }
+                        ffmpeg.av_packet_unref(_pkt);
+                    }
+                }
+                else if (!flushSent)
+                {
+                    ffmpeg.avcodec_send_packet(_codec, null);
+                    flushSent = true;
+                }
 
                 while (true)
                 {
-                    if (!_eof)
+                    ffmpeg.av_frame_unref(_frm);
+                    if (ffmpeg.avcodec_receive_frame(_codec, _frm) == 0)
                     {
-                        if (ffmpeg.av_read_frame(_fmt, _pkt) < 0)
+                        if (_currentFrameNumber++ == targetFrame)
                         {
-                            _eof = true;
-                            ffmpeg.av_packet_unref(_pkt);
+                            goto found;
                         }
-                        else
-                        {
-                            if (_pkt->stream_index == _videoStreamIndex)
-                            {
-                                ffmpeg.avcodec_send_packet(_codec, _pkt);
-                            }
-                            ffmpeg.av_packet_unref(_pkt);
-                        }
+
+                        continue;
                     }
-                    else if (!flushSent)
+                    else if (_totalFrames < _currentFrameNumber)
                     {
-                        ffmpeg.avcodec_send_packet(_codec, null);
-                        flushSent = true;
+                        goto not_found;
                     }
 
-                    while (true)
-                    {
-                        ffmpeg.av_frame_unref(_frm);
-                        if (ffmpeg.avcodec_receive_frame(_codec, _frm) == 0)
-                        {
-                            if (_currentFrameNumber++ == targetFrame)
-                            {
-                                goto found;
-                            }
-
-                            continue;
-                        }
-                        else if (_totalFrames < _currentFrameNumber)
-                        {
-                            goto not_found;
-                        }
-
-                        break;
-                    }
-
-                    if (_eof && flushSent)
-                        break;
+                    break;
                 }
 
-            not_found:
-                double fps = _fps > 0 ? _fps : 1.0;
-                double seconds = targetFrame / fps;
-                throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_path}'.");
-
-            found:
-                ffmpeg.sws_scale(
-                                    _sws,
-                                    _frm->data,
-                                    _frm->linesize,
-                                    0,
-                                    _height,
-                                    _rgb->data,
-                                    _rgb->linesize);
-                return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha);
-
+                if (_eof && flushSent)
+                    break;
             }
+
+        not_found:
+            double fps = _fps > 0 ? _fps : 1.0;
+            double seconds = targetFrame / fps;
+            throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_path}'.");
+
+        found:
+            Index++;
+            ffmpeg.sws_scale(
+                                _sws,
+                                _frm->data,
+                                _frm->linesize,
+                                0,
+                                _height,
+                                _rgb->data,
+                                _rgb->linesize);
+            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha);
+
+
         }
 
         [DebuggerNonUserCode()]

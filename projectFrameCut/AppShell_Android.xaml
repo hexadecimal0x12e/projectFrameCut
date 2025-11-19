@@ -30,11 +30,11 @@
                 Title="{l:Localized Key=AppShell_DebugTab}" />
         </Tab>
 
-        <Tab x:Name="SettingTab" Icon="icon_setting" Title="{l:Localized Key=_Options}">
+        <Tab x:Name="SettingTab" Icon="icon_setting" Title="{l:Localized Key=_Settings}">
             <ShellContent
             Route="options"
             ContentTemplate="{DataTemplate local:MainSettingsPage}"
-            Title="{l:Localized Key=_Options}" />
+            Title="{l:Localized Key=_Settings}" />
         </Tab>
     </TabBar>
 

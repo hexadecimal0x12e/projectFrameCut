@@ -20,13 +20,16 @@ public static class SimpleLocalizer
         }
         if (!ISimpleLocalizerBase.GetMapping().TryGetValue(locateCode, out var localizer))
         {
-            localizer = ISimpleLocalizerBase.GetMapping().First().Value;
+            localizer = ISimpleLocalizerBase.GetMapping().First().Value;       
             if(localizer is null) throw new InvalidOperationException("Can't find any localizer. Make sure you initialized the project correctly.");
+            IsFallbackMatched = true;
         }
 
         return localizer;
 
     }
+
+    public static bool IsFallbackMatched = false;
 
     public static ISimpleLocalizerBase GetSpecificLocalizer(string locateCode)
     {

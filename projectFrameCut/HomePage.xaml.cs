@@ -1,8 +1,11 @@
+using Microsoft.Maui.Graphics;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO.Compression;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -22,10 +25,13 @@ public partial class HomePage : ContentPage
         vm = new ProjectsListViewModel();
         vm.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
         BindingContext = vm;
+#if !ANDROID
+        ProjectsCollection.SelectionChanged += CollectionView_SelectionChanged;
+#endif
 
     }
 
-    private async void CollectionView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void CollectionView_SelectionChanged(object sender, Microsoft.Maui.Controls.SelectionChangedEventArgs e)
     {
         try
         {
@@ -37,7 +43,7 @@ public partial class HomePage : ContentPage
             else
             {
 #if WINDOWS
-                if(lastItem == selected.Name)
+                if (lastItem == selected.Name)
                 {
                     ProjectsCollection.SelectedItem = null;
                     if (selected._name == "!!CreateButton!!")
@@ -48,12 +54,15 @@ public partial class HomePage : ContentPage
                     {
                         await GoDraft(vm.Projects.First(s => s.Name == lastItem));
                     }
+                    lastItem = "";
+
                 }
                 else
-                { 
+                {
                     lastItem = selected.Name;
                     ProjectsCollection.SelectedItem = null;
                 }
+
 #else
                 if (selected._name == "!!CreateButton!!")
                 {
@@ -69,9 +78,12 @@ public partial class HomePage : ContentPage
 #endif
             }
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Log(ex, "open draft", this);
+        }
+        finally
+        {
         }
     }
 
@@ -81,8 +93,13 @@ public partial class HomePage : ContentPage
 
         var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, "Untitled Project 1", 1024, null, "Untitled Project 1");
         if (projName is null) return;
-        draftSourcePath = Directory.CreateDirectory(Path.Combine(draftSourcePath, projName + ".pjfc")).FullName;
-
+        draftSourcePath = Path.Combine(draftSourcePath, projName + ".pjfc") ;
+        if (Directory.Exists(draftSourcePath))
+        {
+            await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
+            return;
+        }
+        Directory.CreateDirectory(draftSourcePath);
         var ProjectInfo = new ProjectJSONStructure
         {
             projectName = projName,
@@ -94,13 +111,13 @@ public partial class HomePage : ContentPage
             Path.Combine(draftSourcePath, "timeline.json"),
             JsonSerializer.Serialize(new DraftStructureJSON
             {
-                Clips = new List<ClipDraftDTO>().Cast<object>().ToArray(),        
+                Clips = new List<ClipDraftDTO>().Cast<object>().ToArray(),
             }));
         File.WriteAllText(
-            Path.Combine(draftSourcePath, "assets.json"), 
+            Path.Combine(draftSourcePath, "assets.json"),
             JsonSerializer.Serialize(Array.Empty<AssetItem>()));
         File.WriteAllText(
-            Path.Combine(draftSourcePath, "project.json"), 
+            Path.Combine(draftSourcePath, "project.json"),
             JsonSerializer.Serialize(ProjectInfo));
 
         vm.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
@@ -108,7 +125,58 @@ public partial class HomePage : ContentPage
 
     }
 
-    private async Task GoDraft(ProjectsViewModel projectsViewModel)
+    private async Task CloneDraft(ProjectsViewModel viewModel)
+    {
+        string draftSourcePath = Path.Combine(MauiProgram.DataPath, "My Drafts");
+
+        var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, viewModel.Name + " (2)", 1024, null, viewModel.Name + " (2)");
+        if (projName is null) return;
+        draftSourcePath = Path.Combine(draftSourcePath, projName + ".pjfc");
+        if (Directory.Exists(draftSourcePath))
+        {
+            await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
+            return;
+        }
+        Directory.CreateDirectory(draftSourcePath);
+
+        CopyDirectory(viewModel._projectPath, draftSourcePath);
+
+        var ProjectInfo = new ProjectJSONStructure
+        {
+            projectName = projName,
+            NormallyExited = true,
+            LastChanged = DateTime.Now
+        };
+
+        File.WriteAllText(
+            Path.Combine(draftSourcePath, "project.json"),
+            JsonSerializer.Serialize(ProjectInfo));
+
+        vm.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+
+
+    }
+
+
+
+    public static void CopyDirectory(string sourceDir, string destDir)
+    {
+        Directory.CreateDirectory(destDir);
+
+        foreach (string file in Directory.GetFiles(sourceDir))
+        {
+            string targetFile = Path.Combine(destDir, Path.GetFileName(file));
+            File.Copy(file, targetFile, overwrite: true);
+        }
+
+        foreach (string directory in Directory.GetDirectories(sourceDir))
+        {
+            string targetSubDir = Path.Combine(destDir, Path.GetFileName(directory));
+            CopyDirectory(directory, targetSubDir);
+        }
+    }
+
+    private async Task GoDraft(ProjectsViewModel projectsViewModel, bool isReadonly = false)
     {
         var draftSourcePath = projectsViewModel._projectPath;
         if (Directory.Exists(draftSourcePath))
@@ -129,23 +197,76 @@ public partial class HomePage : ContentPage
 
                 var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(draftSourcePath, "project.json")));
 
-                if (!(project?.NormallyExited ?? true))
-                {
-                    var resume = await DisplayAlert(Localized._Warn, Localized.HomePage_GoDraft_ResumeLastTimeWarning(), Localized._OK, Localized._Cancel);
-                    if (!resume) return;
-                    var lastSlotPath = Path.Combine(draftSourcePath, "saveSlots", $"slot_{project.SaveSlotIndicator}");
-                    File.Copy(Path.Combine(lastSlotPath, "timeline.json"), Path.Combine(draftSourcePath, "timeline.json"), true);
-                    File.Copy(Path.Combine(lastSlotPath, "assets.json"), Path.Combine(draftSourcePath, "assets.json"), true);
-                }
+                List<AssetItem> assets = new();
+                DraftStructureJSON timeline = new();
 
-                var assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(draftSourcePath, "assets.json"))) ?? new();
+                try
+                {
+                    if (!(project?.NormallyExited ?? true)) throw new Exception("draft not saved correctly.");
+                    assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(draftSourcePath, "assets.json"))) ?? new();
+                    timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(draftSourcePath, "timeline.json"))) ?? new();
+                }
+                catch (Exception ex)
+                {
+                    try
+                    {
+                        Log(ex, "read draft", this);
+                        var conf = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken, Localized._Confirm, Localized._Cancel);
+                        if (!conf) return;
+
+                        Dictionary<string, DraftStructureJSON?> tmls = new();
+                        foreach (var item in Directory.GetDirectories(Path.Combine(draftSourcePath, "saveSlots")))
+                        {
+                            if (File.Exists(Path.Combine(item, "timeline.json")))
+                            {
+                                try
+                                {
+                                    var tml = JsonSerializer.Deserialize<DraftStructureJSON?>(File.ReadAllText(Path.Combine(item, "timeline.json")));
+                                    if (tml is not null)
+                                    {
+                                        tmls.Add(item, tml);
+                                    }
+                                }
+                                catch (Exception exInner)
+                                {
+                                    Log(exInner, "read draft from save slot", this);
+                                }
+                            }
+                        }
+
+                        var newest = tmls.OrderByDescending((t) => t.Value.SavedAt).FirstOrDefault(new KeyValuePair<string, DraftStructureJSON?>("", null));
+                        if (newest.Value is null)
+                        {
+                            await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Fail, Localized._OK);
+                            return;
+                        }
+                        else
+                        {
+
+                            var result = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Confirm(newest.Value.SavedAt), Localized._Confirm, Localized._Cancel);
+
+                            if (result)
+                            {
+                                assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(newest.Key, "assets.json"))) ?? new();
+                                timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(newest.Key, "timeline.json"))) ?? new();
+                                await DisplayAlertAsync(Localized._Info, Localized.HomePage_GoDraft_DraftBroken_Success, Localized._OK);
+                            }
+                            else return;
+
+
+                        }
+                    }
+                    catch (Exception exInner)
+                    {
+                        Log(exInner, "read draft from save slot confirm", this);
+                        await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Fail, Localized._OK);
+                        return;
+                    }
+                }
+                (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline);
                 var assetDict = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (a) => a));
 
-                var timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(draftSourcePath, "timeline.json"))) ?? new();
-
-                (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline);
-
-                page = new DraftPage(project ?? new(), dict, assetDict, trackCount, draftSourcePath, project?.projectName ?? "?");
+                page = new DraftPage(project ?? new(), dict, assetDict, trackCount, draftSourcePath, project?.projectName ?? "?", isReadonly);
 
 #if WINDOWS || ANDROID
                 AppShell.instance.HideNavView();
@@ -166,6 +287,228 @@ public partial class HomePage : ContentPage
         AppShell.instance.ShowNavView();
 #endif
     }
+
+    private async void MenuOpen_Clicked(object sender, EventArgs e)
+    {
+        ProjectsViewModel? pvm = null;
+        if (sender is Microsoft.Maui.Controls.VisualElement ve && ve.BindingContext is ProjectsViewModel pv3) pvm = pv3;
+
+        if (pvm is null) return;
+
+        try
+        {
+            await GoDraft(pvm);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "open from context menu", this);
+        }
+    }
+
+    private async Task DeleteProject(ProjectsViewModel pvm)
+    {
+
+        try
+        {
+            var confirm0 = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm0(pvm.Name), Localized._Confirm, Localized._Cancel);
+            if (!confirm0) return;
+            var confirm1 = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm1(pvm.Name), Localized._Confirm, Localized._Cancel);
+            if (!confirm1) return;
+#if WINDOWS
+            bool confirm2 = false;
+            Microsoft.UI.Xaml.Controls.ContentDialog lastDiag = new Microsoft.UI.Xaml.Controls.ContentDialog
+            {
+                Title = Localized._Warn,
+                Content = Localized.HomePage_ProjectContextMenu_Delete_Confirm2(pvm.Name),
+                PrimaryButtonText = Localized.HomePage_ProjectContextMenu_Delete_Confirm3(pvm.Name),
+                CloseButtonText = Localized._Cancel,
+                PrimaryButtonStyle = new Microsoft.UI.Xaml.Style(typeof(Microsoft.UI.Xaml.Controls.Button))
+                {
+                    Setters =
+                    {
+                        new Microsoft.UI.Xaml.Setter(
+                            Microsoft.UI.Xaml.Controls.Control.BackgroundProperty,
+                            Microsoft.UI.Xaml.Application.Current.Resources["SystemFillColorCriticalBackgroundBrush"]
+                        )
+                    }
+                }
+            };
+            var services = Application.Current?.Handler?.MauiContext?.Services;
+            var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
+            if (dialogueHelper != null)
+            {
+                var result = await dialogueHelper.ShowContentDialogue(lastDiag);
+                confirm2 = result == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary;
+            }
+#else
+            var confirm2 = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm2(pvm.Name), Localized.HomePage_ProjectContextMenu_Delete_Confirm3(pvm.Name), Localized._Cancel);
+#endif
+            if (!confirm2) return;
+
+            if (Directory.Exists(pvm._projectPath))
+            {
+                Directory.Delete(pvm._projectPath, true);
+            }
+            vm.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+            await DisplayAlertAsync(Localized._Info, Localized.HomePage_ProjectContextMenu_Delete_Deleted(pvm.Name), Localized._OK);
+
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "delete project", this);
+        }
+    }
+
+
+    private async Task ExportProject(ProjectsViewModel vmItem)
+    {
+        var fileName = new string(vmItem.Name.Select(s => char.IsAsciiLetterOrDigit(s) ? s : '_').ToArray()) + ".pjfc";
+        var tmpPath = Path.Combine(FileSystem.CacheDirectory, fileName);
+        await Task.Run(() =>
+        {
+            ZipFile.CreateFromDirectory(vmItem._projectPath, tmpPath, CompressionLevel.SmallestSize, includeBaseDirectory: false);
+        });
+        await Share.RequestAsync(new ShareFileRequest()
+        {
+            File = new ShareFile(tmpPath),
+            Title = fileName
+        });
+    }
+
+    private async Task RenameProject(ProjectsViewModel vmItem)
+    {
+        var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, vmItem.Name, 1024, null, vmItem.Name);
+        if (projName is null) return;
+        var newPath = Path.Combine(Path.GetDirectoryName(vmItem._projectPath) ?? "", projName + ".pjfc");
+        if (Directory.Exists(newPath))
+        {
+            await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
+            return;
+        }
+        Directory.Move(vmItem._projectPath, newPath);
+
+        var info = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(newPath, "project.json")));
+        if (info is not null)
+        {
+            info.projectName = projName;
+            File.WriteAllText(
+                Path.Combine(newPath, "project.json"),
+                JsonSerializer.Serialize(info));
+        }
+
+        vm.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+    }
+
+    private async void ItemBorder_Loaded(object sender, EventArgs e)
+    {
+        if (sender is Microsoft.Maui.Controls.Border border && border.BindingContext is ProjectsViewModel vmItem)
+        {
+#if WINDOWS
+            // Windows: Right-click to show context menu
+            var tap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Secondary };
+            tap.Tapped += async (_, _) =>
+            {
+                await ShowContextMenu(vmItem);
+            };
+
+            // remove existing tap to avoid duplicates
+            var existing = border.GestureRecognizers.OfType<TapGestureRecognizer>().FirstOrDefault();
+            if (existing is not null) border.GestureRecognizers.Remove(existing);
+            border.GestureRecognizers.Add(tap);
+#elif ANDROID || IOS
+            // Android/iOS: Single tap to open, long press (>500ms) to show context menu
+            var pointerGesture = new PointerGestureRecognizer();
+            DateTime pointerDownTime = DateTime.MinValue;
+            
+            pointerGesture.PointerPressed += (s, e) =>
+            {
+                pointerDownTime = DateTime.Now;
+            };
+            
+            pointerGesture.PointerReleased += async (s, e) =>
+            {
+                var duration = (DateTime.Now - pointerDownTime).TotalMilliseconds;
+                // If held for more than 500ms, show context menu
+                if (duration >= 500)
+                {
+                    await ShowContextMenu(vmItem);
+                }
+                else if (duration > 0)
+                {
+                    // Short tap to open
+                    if (vmItem._name == "!!CreateButton!!")
+                    {
+                        await CreateDraft();
+                    }
+                    else
+                    {
+                        await GoDraft(vmItem);
+                    }
+                }
+            };
+
+            // Remove any existing pointer gesture recognizer to avoid duplicates
+            var existingPointer = border.GestureRecognizers.OfType<PointerGestureRecognizer>().FirstOrDefault();
+            if (existingPointer is not null) border.GestureRecognizers.Remove(existingPointer);
+            
+            border.GestureRecognizers.Add(pointerGesture);
+#endif
+        }
+    }
+
+    private async Task ShowContextMenu(ProjectsViewModel vmItem)
+    {
+        if (vmItem._name == "!!CreateButton!!")
+        {
+            return;
+        }
+
+        string[] verbs = [
+            Localized.HomePage_ProjectContextMenu_Open,
+                    Localized.HomePage_ProjectContextMenu_OpenReadonly,
+                    Localized.HomePage_ProjectContextMenu_Export,
+                    Localized.HomePage_ProjectContextMenu_OpenInFileManager,
+                    Localized.HomePage_ProjectContextMenu_Clone,
+                    Localized.HomePage_ProjectContextMenu_Rename,
+                    Localized.HomePage_ProjectContextMenu_Delete
+                    ];
+
+        var action = await DisplayActionSheetAsync(vmItem.Name, Localized._Cancel, null, verbs);
+
+
+        switch (Array.IndexOf(verbs, action))
+        {
+            case 0: //Open
+                await GoDraft(vmItem);
+                break;
+            case 1: //OpenReadonly
+                await GoDraft(vmItem, true);
+                break;
+            case 2: //Export
+                await ExportProject(vmItem);
+                break;
+            case 3: //OpenInFileManager
+#if WINDOWS
+                Process.Start(new ProcessStartInfo { FileName = vmItem._projectPath, UseShellExecute = true });
+#elif ANDROID
+
+#elif iDevices
+
+#endif
+                break;
+            case 4: //Clone
+                await CloneDraft(vmItem);
+                break;
+            case 5: //Rename
+                await RenameProject(vmItem);
+                break;
+            case 6: //Delete
+                await DeleteProject(vmItem);
+                break;
+            default: //unknown/cancel
+                break;
+        }
+    }
 }
 
 public class ProjectsListViewModel
@@ -176,7 +519,7 @@ public class ProjectsListViewModel
     public ProjectsListViewModel()
     {
         //LoadSample();
-        
+
     }
 
     public void LoadDrafts(string sourcePath)

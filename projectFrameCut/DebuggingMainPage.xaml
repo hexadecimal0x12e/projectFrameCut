@@ -3,10 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.DebuggingMainPage"
              xmlns:l="clr-namespace:LocalizedResources"
-             Title="{l:Localized Key=AppBrand}">
-    <ContentPage.ToolbarItems>
-        <ToolbarItem Text="{l:Localized Key=_Options}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/>
-    </ContentPage.ToolbarItems>
+             Title="{l:Localized Key=AppShell_DebugTab}">
     <VerticalStackLayout>
         <Label 
             Text="{l:Localized Key=WelcomeMessage}"

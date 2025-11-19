@@ -21,5 +21,7 @@ namespace projectFrameCut.Platforms.Android
         }
 
         protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
+
+        
     }
 }

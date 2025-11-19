@@ -3,6 +3,8 @@ using Android.Content.PM;
 using Android.OS;
 using Android.Runtime;
 using AndroidX.Core.View;
+using projectFrameCut.Setting.SettingManager;
+using System;
 
 namespace projectFrameCut.Platforms.Android
 {
@@ -29,6 +31,23 @@ namespace projectFrameCut.Platforms.Android
             catch
             {
                 // ignore on older platforms
+            }
+        }
+
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+
+            // Best-effort flush settings on activity destroy. Block briefly to increase chance of persistence.
+            try
+            {
+                var flushTask = SettingsManager.FlushAndStopAsync();
+                // Wait up to 2 seconds for flush to complete to avoid long ANR.
+                flushTask.Wait(TimeSpan.FromSeconds(2));
+            }
+            catch
+            {
+                // ignore errors during shutdown
             }
         }
     }

@@ -76,6 +76,17 @@ Exception data:
             MyLoggerExtensions.Announce(msg, level);
 
         }
+        [DebuggerNonUserCode()]
+        public static void LogDiagnostic(string msg)
+        {
+#if DEBUG
+            Debug.WriteLine($"log:[Diag] {msg}");
+#endif
+
+            if (MyLoggerExtensions.LoggingDiagnosticInfo)
+                MyLoggerExtensions.Announce(msg, "Diag");
+
+        }
 
 
     }
@@ -83,6 +94,8 @@ Exception data:
     [DebuggerNonUserCode()]
     public static class MyLoggerExtensions
     {
+        public static bool LoggingDiagnosticInfo = false;
+
         public static event Action<string, string>? OnLog;
         public static event Action<Exception>? OnExceptionLog;
 

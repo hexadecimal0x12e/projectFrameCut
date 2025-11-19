@@ -89,7 +89,8 @@ namespace projectFrameCut.DraftStuff
             {
                 targetFrameRate = targetFrameRate,
                 Clips = clips.Cast<object>().ToArray(),
-                Duration = (uint)max
+                Duration = (uint)max,
+                SavedAt = DateTime.Now
             };
         }
 
@@ -207,72 +208,7 @@ namespace projectFrameCut.DraftStuff
             return null;
         }
 
-        public static List<OverlapInfo> FindOverlaps(IEnumerable<ClipDraftDTO>? clips, uint allowedOverlapFrames = 5)
-        {
-            var result = new List<OverlapInfo>();
-            if (clips == null) return result;
-
-            var groups = clips
-                .Where(c => c != null)
-                .GroupBy(c => c.LayerIndex);
-
-            foreach (var group in groups)
-            {
-                var ordered = group.OrderBy(c => c.StartFrame).ToList();
-                int n = ordered.Count;
-                for (int i = 0; i < n; i++)
-                {
-                    var a = ordered[i];
-                    long aStart = (long)a.StartFrame;
-                    long aEnd = aStart + (long)a.Duration;
-
-                    for (int j = i + 1; j < n; j++)
-                    {
-                        var b = ordered[j];
-                        long bStart = (long)b.StartFrame;
-
-                        if (bStart >= aEnd)
-                        {
-                            break;
-                        }
-
-                        long overlap = aEnd - bStart;
-                        if (overlap > (long)allowedOverlapFrames)
-                        {
-                            result.Add(new OverlapInfo($"{a.Id ?? "unknown ID"} ({a.Name ?? "unknown Name"})", $"{b.Id ?? "unknown ID"} ({b.Name ?? "unknown Name"})", overlap, a.LayerIndex));
-                        }
-                    }
-                }
-            }
-
-            return result;
-        }
-
-        public static bool HasOverlap(IEnumerable<ClipDraftDTO>? clips, uint allowedOverlapFrames = 5)
-            => FindOverlaps(clips, allowedOverlapFrames).Count > 0;
-
-
-
-
-
-        public class OverlapInfo
-        {
-            public required string ClipAId { get; set; }
-            public required string ClipBId { get; set; }
-            public required long OverlapFrames { get; set; }
-            public required uint LayerIndex { get; set; }
-
-            [SetsRequiredMembers]
-            public OverlapInfo(string clipAId, string clipBId, long overlapFrames, uint layerIndex)
-            {
-                ClipAId = clipAId;
-                ClipBId = clipBId;
-                OverlapFrames = overlapFrames;
-                LayerIndex = layerIndex;
-            }
-
-
-        }
+       
 
     }
 }

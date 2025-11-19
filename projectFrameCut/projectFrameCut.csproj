@@ -124,7 +124,7 @@
 	</ItemGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
-		<DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION</DefineConstants>
+		<DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN;DISABLE_XAML_GENERATED_BREAK_ON_UNHANDLED_EXCEPTION</DefineConstants>
 	<ShouldImportMsixCommonTargets>false</ShouldImportMsixCommonTargets>
 	</PropertyGroup>
 
@@ -162,7 +162,25 @@
 		<MauiXaml Update="RPCTestPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
-		<MauiXaml Update="SettingPages\MainSettingsPage.xaml">
+		<MauiXaml Update="Setting\SettingPages\AboutSettingPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Setting\SettingPages\AssetSettingPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Setting\SettingPages\EditSettingPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Setting\SettingPages\GeneralSettingPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Setting\SettingPages\MainSettingsPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Setting\SettingPages\MiscSettingPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Setting\SettingPages\RenderSettingPage.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="TestPage.xaml">
@@ -183,7 +201,7 @@
 		<Compile Update="DraftPage.xaml.cs">
 			<DependentUpon>DraftPage.xaml</DependentUpon>
 		</Compile>
-		<Compile Update="SettingPages\MainSettingsPage.xaml.cs">
+		<Compile Update="Setting\SettingPages\MainSettingsPage.xaml.cs">
 		  <DependentUpon>MainSettingsPage.xaml</DependentUpon>
 		</Compile>
 		<Compile Update="TestPage.xaml.cs">
@@ -201,10 +219,14 @@
 		<Using Include="LocalizedResources.SimpleLocalizerBaseGeneratedHelper">
 			<Static>True</Static>
 		</Using>
+		<Using Include="projectFrameCut.Setting.SettingManager">
+			<Static>False</Static>
+		</Using>
 	</ItemGroup>
 
 	<ItemGroup>
 		<Folder Include="Platforms\Android\ffmpeg\" />
+		<Folder Include="Setting\SettingsLocalizedResources\" />
 	</ItemGroup>
 
 	<ItemGroup>

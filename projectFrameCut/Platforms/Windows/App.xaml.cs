@@ -1,7 +1,10 @@
 ﻿using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
+using projectFrameCut.Setting.SettingManager;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using WinRT.Interop;
 
 // To learn more about WinUI, the WinUI project structure,
@@ -79,7 +82,9 @@ InnerException:
 Exception data:
 {string.Join("\r\n", ex.Data.Cast<System.Collections.DictionaryEntry>().Select(k => $"{k.Key} : {k.Value}"))}
 
+
 Environment:
+Application: {AppInfo.PackageName},{AppInfo.VersionString} ({AppInfo.BuildString})
 OS version: {Environment.OSVersion}
 CLR Version:{Environment.Version}
 Command line: {Environment.CommandLine}
@@ -91,8 +96,8 @@ Current directory: {Environment.CurrentDirectory}
 
                 try
                 {
-                    Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "crashlog"));
-                    logPath = Path.Combine(MauiProgram.DataPath, "crashlog\\", $"Crashlog-{DateTime.Now:yyyy-MM-dd-hh-mm-ss}.log");
+                    Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "Crashlogs"));
+                    logPath = Path.Combine(MauiProgram.DataPath, "Crashlogs", $"Crashlog-{DateTime.Now:yyyy-MM-dd-hh-mm-ss}.log");
                     File.WriteAllText(logPath, logMessage);
                 }
                 catch (Exception)  
@@ -102,12 +107,44 @@ Current directory: {Environment.CurrentDirectory}
                 }
                 Thread.Sleep(100);
                 Process.Start(new ProcessStartInfo { FileName = logPath , UseShellExecute = true });
-                Environment.FailFast(ex.Message, ex);
-                Environment.Exit(1);
+                Environment.FailFast(logMessage, ex);
+                Environment.Exit(-1);
             }
         }
 
+        
+
         protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
     }
+    public static class Program
+    {
+        static async Task Main(string[] args)
+        {
+            try
+            {
+                WinRT.ComWrappersSupport.InitializeComWrappers();
+                Microsoft.UI.Xaml.Application.Start((p) =>
+                {
+                    var context = new Microsoft.UI.Dispatching.DispatcherQueueSynchronizationContext(
+                        Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+                    SynchronizationContext.SetSynchronizationContext(context);
+                    new App();
+                });
 
+                await SettingsManager.FlushAndStopAsync();
+            }
+            catch (Exception ex)
+            {
+                [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+                static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
+
+                _ = MessageBox(IntPtr.Zero,
+                    $"Application suffered from a unrecoverable early-boot {ex.GetType().Name} exception:\n{ex}\r\n\r\nTry reinstall application.",
+                    "Fatal error",
+                    0);
+                App.Crash(ex);
+            }
+            
+        }
+    }
 }

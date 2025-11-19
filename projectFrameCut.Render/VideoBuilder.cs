@@ -13,32 +13,53 @@ namespace projectFrameCut.Render
         uint index;
         bool running = true, stopped = false;
         public bool StrictMode { get; set; } = true;
+        public bool DoGCAfterEachWrite { get; set; } = true;
 
         public int minFrameCountToGeneratePreview { get; set; } = 10;
 
+        public bool BlockWrite { get; set; } = false;
         public bool EnablePreview { get; set; } = false;
         public string? PreviewPath { get; set; } = null;
         private uint countSinceLastPreview = 0;
 
+        public int Width => builder._width;
+        public int Height => builder._height;
+        public uint Duration { get; set; }
+
         ConcurrentDictionary<uint,Picture> Cache = new();
 
-        public VideoBuilder(string path,  int width, int height, int framerate,string encoder, AVPixelFormat fmt)
+        public VideoBuilder(string path,  int width, int height, int framerate,string encoder, AVPixelFormat fmt, bool disposeAfterWrite)
         {
             outputPath = path;
             index = 0;
-            builder = new(path,width,height,framerate,encoder,fmt);
+            builder = new(path,width,height,framerate,encoder,fmt,disposeAfterWrite);
         }
         
         public bool Disposed { get; private set; }
 
         public void Append(uint index, Picture frame)
         {
-            Cache.AddOrUpdate(index, frame,(_,_) => throw new InvalidOperationException($"Frame #{index} has already added."));
-            if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview)
+            if(index > Duration)
             {
-                AsyncSave(index, frame);
-                countSinceLastPreview = 0;
+                Console.WriteLine($"[VideoBuilder] WARN: Frame #{index} is out of duration {Duration}, ignored.");
+                frame.Dispose();    
+                return;
             }
+            if (!BlockWrite)
+            {
+                Cache.AddOrUpdate(index, frame, (_, _) => throw new InvalidOperationException($"Frame #{index} has already added."));
+                if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview)
+                {
+                    AsyncSave(index, frame);
+                    countSinceLastPreview = 0;
+                }
+            }
+            else
+            {
+                builder.Append(frame);
+                Log($"[VideoBuilder] Frame #{index} added.");
+            }
+            
         }
 
         private void AsyncSave(uint index, Picture frame)
@@ -88,6 +109,11 @@ namespace projectFrameCut.Render
                         builder.Append(Cache.TryRemove(index, out var f) ? f : throw new KeyNotFoundException());
                         Log($"[VideoBuilder] Frame #{index} added.");
                         index++;
+                        if (DoGCAfterEachWrite)
+                        {
+                            GC.Collect(2, GCCollectionMode.Forced, true, true);
+                            GC.WaitForFullGCComplete();
+                        }
                     }
                     else
                     {
@@ -106,7 +132,7 @@ namespace projectFrameCut.Render
 
         }
 
-        public void Finish(IClip[] clip, Func<uint,Picture> regenerator, uint totalFrames = 0)
+        public void Finish(Func<uint,Picture> regenerator, uint totalFrames = 0)
         {
             running = false;
             while(!Volatile.Read(ref stopped))
@@ -132,7 +158,7 @@ namespace projectFrameCut.Render
                     uint maxCheck = currentIndex + 100; 
                     for (uint i = currentIndex; i < maxCheck; i++)
                     {
-                        if (!Cache.ContainsKey(i) && (Cache.Count == 0 || i <= Cache.Keys.Max()))
+                        if (!Cache.ContainsKey(i) && (Cache.Count == 0 || i <= Cache.Keys.Max()) && i <= totalFrames)
                         {
                             missingFrames.Add(i);
                         }
@@ -206,13 +232,17 @@ namespace projectFrameCut.Render
 
         public bool IsOpened => _fmtCtx != null;
 
+        public bool DisposeThePictureAfterWrite { get; set; } = false;
+        public uint Index { get; set; } = 0;
+
         public VideoWriter(
             string outputPath,
             int width,
             int height,
             int fps = 30,
             string codecName = "libx264",
-            AVPixelFormat dstPixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P)
+            AVPixelFormat dstPixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P,
+            bool disposeAfterWrite = false)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(outputPath, nameof(outputPath));
             if (width <= 0 || height <= 0 || fps <= 0) throw new ArgumentOutOfRangeException("You set an invalid width, height or fps.");
@@ -223,6 +253,7 @@ namespace projectFrameCut.Render
             _codecName = codecName;
             _dstPixFmt = dstPixelFormat;
             _path = outputPath;
+            DisposeThePictureAfterWrite = disposeAfterWrite;
             //FFmpegHelper.RegisterFFmpeg();
             Init();
         }
@@ -329,7 +360,9 @@ namespace projectFrameCut.Render
             _sws = ffmpeg.sws_getContext(
                 _width, _height, srcPixFmt,
                 _width, _height, _dstPixFmt,
-                ffmpeg.SWS_BILINEAR, null, null, null);
+                4, null, null, null);
+            // SWS_BICUBIC == 4
+
             if (_sws == null) throw new InvalidOperationException("Couldn't get the SWS context.");
             Console.WriteLine($"[VideoBuilder] Successfully initialized encoder for {_path}");
 
@@ -432,6 +465,9 @@ namespace projectFrameCut.Render
             _frameDst->pts = _frameIndex++;
 
             EncodeFrame(_frameDst);
+
+            if(DisposeThePictureAfterWrite) picture.Dispose();
+            Index++;
         }
 
         private void EnsureHeader()
@@ -491,7 +527,7 @@ namespace projectFrameCut.Render
                 FFmpegHelper.Throw(ffmpeg.av_write_trailer(_fmtCtx), "av_write_trailer");
             }
 
-            Log($"[VideoBuilder] Successfully finished video writer for {_path}");
+            Log($"[VideoBuilder] Successfully finished video writer for {_path}, total {Index} frame written.");
 
         }
 
@@ -562,25 +598,5 @@ namespace projectFrameCut.Render
         }
     }
 
-    public static unsafe class FFmpegHelper
-    {
-        public static void Throw(int err, string api)
-        {
-            if (err >= 0) return;
-            var msg = GetErrorString(err);
-            throw new InvalidOperationException
-            ($"'{api}' failed during writing the video,{(msg is not null ? $" probably because '{msg}'." : " but we don't know what thing it happens.")} (FFmpeg internal error code:{err})")
-            {
-                HResult = err
-            };
-        }
-
-        public static string? GetErrorString(int err)
-        {
-            const int AV_ERROR_MAX_STRING_SIZE = 1024;
-            byte* buffer = stackalloc byte[AV_ERROR_MAX_STRING_SIZE];
-            ffmpeg.av_strerror(err, buffer, (ulong)AV_ERROR_MAX_STRING_SIZE);
-            return Marshal.PtrToStringAnsi((IntPtr)buffer);
-        }
-    }
+   
 }

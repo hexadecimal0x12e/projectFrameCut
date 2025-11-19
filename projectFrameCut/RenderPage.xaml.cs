@@ -181,6 +181,7 @@ public partial class RenderPage : ContentPage
                     // ignored
                 }
 
+                if (!double.IsNormal(p)) return;
 
                 totalProg = p + lastProg;
 
@@ -240,7 +241,7 @@ public partial class RenderPage : ContentPage
 
             var ffArgs = $"-i \"{outTempFile}\" " +
                 //$"-i \"{audio}\" " +
-                $"-c:v libx264 " +
+                $"-c:v h264_qsv " +
                 $"-pix_fmt yuv420p " +
                 $"\"{outputPath}\" " +
             /*    -b:v {avg}M -maxrate {max}M -bufsize {buf}M //vbr

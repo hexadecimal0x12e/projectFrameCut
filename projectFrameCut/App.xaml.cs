@@ -23,6 +23,7 @@ namespace projectFrameCut
 
 #if WINDOWS
         public static NavigationView MainNavView;
+        public static NavigationViewItem homeItem, assetItem, debugItem, settingItem;
 #endif
 
         protected override Microsoft.Maui.Controls.Window CreateWindow(IActivationState? activationState)
@@ -34,6 +35,7 @@ namespace projectFrameCut
             {
                 MakeWindow(mauiWindow);
             };
+
 #endif
 
             return mauiWindow;
@@ -83,20 +85,20 @@ namespace projectFrameCut
                 MainNavView = nav;
 
 
-                var homeItem = new NavigationViewItem { Content = Localized.AppShell_ProjectsTab, Tag = "HomePage", Height = 36, Padding = new(4) };
+                homeItem = new NavigationViewItem { Content = Localized.AppShell_ProjectsTab, Tag = "HomePage", Height = 36, Padding = new(4) };
                 homeItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Folder };
 
-                var assetItem = new NavigationViewItem { Content = Localized.AppShell_AssetsTab, Tag = "Assets", Height = 36, Padding = new(4) };
+                assetItem = new NavigationViewItem { Content = Localized.AppShell_AssetsTab, Tag = "Assets", Height = 36, Padding = new(4) };
                 assetItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.MapDrive };
 
-                var debugItem = new NavigationViewItem { Content = Localized.AppShell_DebugTab, Tag = "Debug", Height = 36, Padding = new(4) };
+                debugItem = new NavigationViewItem { Content = Localized.AppShell_DebugTab, Tag = "Debug", Height = 36, Padding = new(4) };
                 debugItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Repair };
 
                 nav.MenuItems.Add(homeItem);
                 nav.MenuItems.Add(assetItem);
                 nav.MenuItems.Add(debugItem);
 
-                var settingItem = new NavigationViewItem { Content = Localized._Options, Tag = "Setting", Height = 36, Padding = new(4) };
+                settingItem = new NavigationViewItem { Content = Localized._Settings, Tag = "Setting", Height = 36, Padding = new(4) };
                 settingItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Setting };
                 nav.FooterMenuItems.Add(settingItem);
 

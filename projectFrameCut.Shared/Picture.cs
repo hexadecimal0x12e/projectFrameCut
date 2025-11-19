@@ -12,7 +12,10 @@ using System.Threading.Channels;
 
 namespace projectFrameCut.Shared
 {
-    public class Picture
+    /// <summary>
+    /// The projectFrameCut's 16-bit Picture structure. It's the base of everything you see in the final video.
+    /// </summary>
+    public class Picture : IDisposable
     {
         [JsonIgnore()]
         public ushort[] r { get; set; } = Array.Empty<ushort>();
@@ -31,6 +34,8 @@ namespace projectFrameCut.Shared
         public string? filePath { get; init; } //诊断用
 
         public bool hasAlphaChannel { get; set; } = false;
+
+       
 
         /// <summary>
         /// Initializes a new instance of the Picture class by copying the properties of an existing Picture.
@@ -105,28 +110,34 @@ namespace projectFrameCut.Shared
 
         public Picture SetAlpha(bool haveAlpha)
         {
-            if(haveAlpha == hasAlphaChannel)
+            lock (this)
             {
+                if (haveAlpha == hasAlphaChannel)
+                {
+                    return this;
+                }
+                hasAlphaChannel = haveAlpha;
+                if (!haveAlpha)
+                {
+                    a = null;
+                }
+                else
+                {
+                    a = Enumerable.Repeat(1f, Pixels).ToArray();
+                }
                 return this;
             }
-            hasAlphaChannel = haveAlpha;
-            if (!haveAlpha)
-            {
-                a = null;
-            }
-            else
-            {
-                a = Enumerable.Repeat(1f, Pixels).ToArray();
-            }
-            return this;
         }
 
         public void EnsureAlpha()
         {
-            if (!hasAlphaChannel || a == null || a.Length != Pixels)
+            lock (this)
             {
-                a = Enumerable.Repeat(1f, Pixels).ToArray();
-                hasAlphaChannel = true;
+                if (!hasAlphaChannel || a == null || a.Length != Pixels)
+                {
+                    a = Enumerable.Repeat(1f, Pixels).ToArray();
+                    hasAlphaChannel = true;
+                }
             }
         }
         
@@ -145,60 +156,63 @@ namespace projectFrameCut.Shared
         [DebuggerNonUserCode()]
         public void SaveAsPng16bpc(string path, IImageEncoder? imageEncoder = null)
         {
-            //if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("path is null or empty", nameof(path));
-            //if (width <= 0 || height <= 0) throw new ArgumentException("width and height must be positive");
-            //if (checked(width * height) != r.Length) throw new ArgumentException("width * height must equal pixels");
-
-            imageEncoder = imageEncoder ?? new PngEncoder()
+            lock (this)
             {
-                BitDepth = PngBitDepth.Bit16
-            };
+                //if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("path is null or empty", nameof(path));
+                //if (width <= 0 || height <= 0) throw new ArgumentException("width and height must be positive");
+                //if (checked(width * height) != r.Length) throw new ArgumentException("width * height must equal pixels");
 
-            int idx = 0, lineStart = 0;
-
-            if (hasAlphaChannel && (a != null && a.Length >= Pixels))
-            {
-                using (var img = new Image<Rgba64>(Width, Height))
+                imageEncoder = imageEncoder ?? new PngEncoder()
                 {
-                    for (int y = 0; y < Height; y++)
-                    {
-                        for (int x = 0; x < Width; x++)
-                        {
-                            idx = y * Width + x;
-                            ushort rr = (r != null && r.Length > idx) ? r[idx] : (ushort)0;
-                            ushort gg = (g != null && g.Length > idx) ? g[idx] : (ushort)0;
-                            ushort bb = (b != null && b.Length > idx) ? b[idx] : (ushort)0;
-                            float aval = (hasAlphaChannel && a != null && a.Length > idx) ? a[idx] : 1f;
-                            if (float.IsNaN(aval) || float.IsInfinity(aval)) aval = 1f;
-                            int ai = (int)Math.Round(aval * 65535f);
-                            if (ai < 0) ai = 0;
-                            if (ai > 65535) ai = 65535;
-                            ushort aa = (ushort)ai;
+                    BitDepth = PngBitDepth.Bit16
+                };
 
-                            img[x, y] = new Rgba64(rr, gg, bb, aa);
+                int idx = 0, lineStart = 0;
+
+                if (hasAlphaChannel && (a != null && a.Length >= Pixels))
+                {
+                    using (var img = new Image<Rgba64>(Width, Height))
+                    {
+                        for (int y = 0; y < Height; y++)
+                        {
+                            for (int x = 0; x < Width; x++)
+                            {
+                                idx = y * Width + x;
+                                ushort rr = (r != null && r.Length > idx) ? r[idx] : (ushort)0;
+                                ushort gg = (g != null && g.Length > idx) ? g[idx] : (ushort)0;
+                                ushort bb = (b != null && b.Length > idx) ? b[idx] : (ushort)0;
+                                float aval = (hasAlphaChannel && a != null && a.Length > idx) ? a[idx] : 1f;
+                                if (float.IsNaN(aval) || float.IsInfinity(aval)) aval = 1f;
+                                int ai = (int)Math.Round(aval * 65535f);
+                                if (ai < 0) ai = 0;
+                                if (ai > 65535) ai = 65535;
+                                ushort aa = (ushort)ai;
+
+                                img[x, y] = new Rgba64(rr, gg, bb, aa);
+                            }
                         }
+                        img.Save(path, imageEncoder);
+                        return;
                     }
-                    img.Save(path, imageEncoder);
-                    return;
                 }
-            }
-            else
-            {
-                using (var img = new Image<Rgb48>(Width, Height))
+                else
                 {
-                    for (int y = 0; y < Height; y++)
+                    using (var img = new Image<Rgb48>(Width, Height))
                     {
-                        lineStart = y * Width;
-                        for (int x = 0; x < Width; x++)
+                        for (int y = 0; y < Height; y++)
                         {
-                            idx = lineStart + x;
-                            img[x, y] = new Rgb48(r[idx], g[idx], b[idx]);
+                            lineStart = y * Width;
+                            for (int x = 0; x < Width; x++)
+                            {
+                                idx = lineStart + x;
+                                img[x, y] = new Rgb48(r[idx], g[idx], b[idx]);
 
+                            }
                         }
-                    }
 
-                    img.Save(path, imageEncoder);
-                    return;
+                        img.Save(path, imageEncoder);
+                        return;
+                    }
                 }
             }
         }
@@ -206,63 +220,66 @@ namespace projectFrameCut.Shared
         [DebuggerNonUserCode()]
         public void SaveAsPng8bpc(string path, IImageEncoder? imageEncoder = null)
         {
-            //if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("path is null or empty", nameof(path));
-            //if (width <= 0 || height <= 0) throw new ArgumentException("width and height must be positive");
-            //if (checked(width * height) != r.Length) throw new ArgumentException("width * height must equal pixels");
-
-            imageEncoder = imageEncoder ?? new PngEncoder()
+            lock (this)
             {
-                BitDepth = PngBitDepth.Bit8
-            };
+                //if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("path is null or empty", nameof(path));
+                //if (width <= 0 || height <= 0) throw new ArgumentException("width and height must be positive");
+                //if (checked(width * height) != r.Length) throw new ArgumentException("width * height must equal pixels");
 
-            int idx = 0, lineStart = 0;
-
-            if (hasAlphaChannel && (a != null && a.Length >= Pixels))
-            {
-                using (var img = new Image<Rgba32>(Width, Height))
+                imageEncoder = imageEncoder ?? new PngEncoder()
                 {
-                    for (int y = 0; y < Height; y++)
-                    {
-                        for (int x = 0; x < Width; x++)
-                        {
-                            idx = y * Width + x;
-                            byte rr = (byte)((r != null && r.Length > idx) ? r[idx] / 257 : 0);
-                            byte gg = (byte)((g != null && g.Length > idx) ? g[idx] / 257 : 0);
-                            byte bb = (byte)((b != null && b.Length > idx) ? b[idx] / 257 : 0);
-                            float aval = (hasAlphaChannel && a != null && a.Length > idx) ? a[idx] : 1f;
-                            if (float.IsNaN(aval) || float.IsInfinity(aval)) aval = 1f;
-                            int ai = (int)Math.Round(aval * 255f);
-                            if (ai < 0) ai = 0;
-                            if (ai > 255) ai = 255;
-                            byte aa = (byte)ai;
+                    BitDepth = PngBitDepth.Bit8
+                };
 
-                            img[x, y] = new Rgba32(rr, gg, bb, aa);
+                int idx = 0, lineStart = 0;
+
+                if (hasAlphaChannel && (a != null && a.Length >= Pixels))
+                {
+                    using (var img = new Image<Rgba32>(Width, Height))
+                    {
+                        for (int y = 0; y < Height; y++)
+                        {
+                            for (int x = 0; x < Width; x++)
+                            {
+                                idx = y * Width + x;
+                                byte rr = (byte)((r != null && r.Length > idx) ? r[idx] / 257 : 0);
+                                byte gg = (byte)((g != null && g.Length > idx) ? g[idx] / 257 : 0);
+                                byte bb = (byte)((b != null && b.Length > idx) ? b[idx] / 257 : 0);
+                                float aval = (hasAlphaChannel && a != null && a.Length > idx) ? a[idx] : 1f;
+                                if (float.IsNaN(aval) || float.IsInfinity(aval)) aval = 1f;
+                                int ai = (int)Math.Round(aval * 255f);
+                                if (ai < 0) ai = 0;
+                                if (ai > 255) ai = 255;
+                                byte aa = (byte)ai;
+
+                                img[x, y] = new Rgba32(rr, gg, bb, aa);
+                            }
                         }
+                        img.Save(path, imageEncoder);
+                        return;
                     }
-                    img.Save(path, imageEncoder);
-                    return;
                 }
-            }
-            else
-            {
-                using (var img = new Image<Rgb24>(Width, Height))
+                else
                 {
-                    for (int y = 0; y < Height; y++)
+                    using (var img = new Image<Rgb24>(Width, Height))
                     {
-                        lineStart = y * Width;
-                        for (int x = 0; x < Width; x++)
+                        for (int y = 0; y < Height; y++)
                         {
-                            idx = lineStart + x;
-                            byte rr = (byte)(r[idx] / 257);
-                            byte gg = (byte)(g[idx] / 257);
-                            byte bb = (byte)(b[idx] / 257);
-                            img[x, y] = new Rgb24(rr, gg, bb);
+                            lineStart = y * Width;
+                            for (int x = 0; x < Width; x++)
+                            {
+                                idx = lineStart + x;
+                                byte rr = (byte)(r[idx] / 257);
+                                byte gg = (byte)(g[idx] / 257);
+                                byte bb = (byte)(b[idx] / 257);
+                                img[x, y] = new Rgb24(rr, gg, bb);
 
+                            }
                         }
-                    }
 
-                    img.Save(path, imageEncoder);
-                    return;
+                        img.Save(path, imageEncoder);
+                        return;
+                    }
                 }
             }
         }
@@ -279,109 +296,112 @@ namespace projectFrameCut.Shared
         [DebuggerNonUserCode()]
         public Picture Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
         {
-            if (targetWidth <=0 || targetHeight <=0) throw new ArgumentException("targetWidth and targetHeight must be positive");
-            if (Width <=0 || Height <=0) throw new InvalidOperationException("Source image has invalid dimensions");
-
-            int destW = targetWidth;
-            int destH = targetHeight;
-
-            if (preserveAspect)
+            lock (this)
             {
-                double sx = (double)targetWidth / Width;
-                double sy = (double)targetHeight / Height;
-                double s = Math.Min(sx, sy);
-                destW = Math.Max(1, (int)Math.Round(Width * s));
-                destH = Math.Max(1, (int)Math.Round(Height * s));
-            }
+                if (targetWidth <= 0 || targetHeight <= 0) throw new ArgumentException("targetWidth and targetHeight must be positive");
+                if (Width <= 0 || Height <= 0) throw new InvalidOperationException("Source image has invalid dimensions");
 
-            if (destW == Width && destH == Height) return this;
+                int destW = targetWidth;
+                int destH = targetHeight;
 
-            var result = new Picture(destW, destH);
-            int dstPixels = checked(destW * destH);
-            result.r = new ushort[dstPixels];
-            result.g = new ushort[dstPixels];
-            result.b = new ushort[dstPixels];
-            result.a = hasAlphaChannel ? new float[dstPixels] : null;
-            result.hasAlphaChannel = hasAlphaChannel;
-
-            double xRatio = (double)Width / destW;
-            double yRatio = (double)Height / destH;
-
-            for (int y =0; y < destH; y++)
-            {
-                double srcY = (y +0.5) * yRatio -0.5;
-                int y0 = (int)Math.Floor(srcY);
-                int y1 = y0 +1;
-                double wy = srcY - y0;
-                if (y0 <0)
+                if (preserveAspect)
                 {
-                    y0 =0; y1 =0; wy =0;
+                    double sx = (double)targetWidth / Width;
+                    double sy = (double)targetHeight / Height;
+                    double s = Math.Min(sx, sy);
+                    destW = Math.Max(1, (int)Math.Round(Width * s));
+                    destH = Math.Max(1, (int)Math.Round(Height * s));
                 }
-                if (y1 >= Height) { y1 = Height -1; }
 
-                for (int x =0; x < destW; x++)
+                if (destW == Width && destH == Height) return this;
+
+                var result = new Picture(destW, destH);
+                int dstPixels = checked(destW * destH);
+                result.r = new ushort[dstPixels];
+                result.g = new ushort[dstPixels];
+                result.b = new ushort[dstPixels];
+                result.a = hasAlphaChannel ? new float[dstPixels] : null;
+                result.hasAlphaChannel = hasAlphaChannel;
+
+                double xRatio = (double)Width / destW;
+                double yRatio = (double)Height / destH;
+
+                for (int y = 0; y < destH; y++)
                 {
-                    double srcX = (x +0.5) * xRatio -0.5;
-                    int x0 = (int)Math.Floor(srcX);
-                    int x1 = x0 +1;
-                    double wx = srcX - x0;
-                    if (x0 <0)
+                    double srcY = (y + 0.5) * yRatio - 0.5;
+                    int y0 = (int)Math.Floor(srcY);
+                    int y1 = y0 + 1;
+                    double wy = srcY - y0;
+                    if (y0 < 0)
                     {
-                        x0 =0; x1 =0; wx =0;
+                        y0 = 0; y1 = 0; wy = 0;
                     }
-                    if (x1 >= Width) { x1 = Width -1; }
+                    if (y1 >= Height) { y1 = Height - 1; }
 
-                    int k00 = y0 * Width + x0;
-                    int k10 = y0 * Width + x1;
-                    int k01 = y1 * Width + x0;
-                    int k11 = y1 * Width + x1;
-
-                    double r00 = this.r[k00];
-                    double r10 = this.r[k10];
-                    double r01 = this.r[k01];
-                    double r11 = this.r[k11];
-
-                    double g00 = this.g[k00];
-                    double g10 = this.g[k10];
-                    double g01 = this.g[k01];
-                    double g11 = this.g[k11];
-
-                    double b00 = this.b[k00];
-                    double b10 = this.b[k10];
-                    double b01 = this.b[k01];
-                    double b11 = this.b[k11];
-
-                    double rInterp = r00 * (1 - wx) * (1 - wy) + r10 * wx * (1 - wy) + r01 * (1 - wx) * wy + r11 * wx * wy;
-                    double gInterp = g00 * (1 - wx) * (1 - wy) + g10 * wx * (1 - wy) + g01 * (1 - wx) * wy + g11 * wx * wy;
-                    double bInterp = b00 * (1 - wx) * (1 - wy) + b10 * wx * (1 - wy) + b01 * (1 - wx) * wy + b11 * wx * wy;
-
-                    int dstIdx = y * destW + x;
-                    int rr = (int)Math.Round(rInterp);
-                    int gg = (int)Math.Round(gInterp);
-                    int bb = (int)Math.Round(bInterp);
-                    if (rr <0) rr =0; if (rr >65535) rr =65535;
-                    if (gg <0) gg =0; if (gg >65535) gg =65535;
-                    if (bb <0) bb =0; if (bb >65535) bb =65535;
-
-                    result.r[dstIdx] = (ushort)rr;
-                    result.g[dstIdx] = (ushort)gg;
-                    result.b[dstIdx] = (ushort)bb;
-
-                    if (hasAlphaChannel && this.a != null)
+                    for (int x = 0; x < destW; x++)
                     {
-                        double a00 = this.a[k00];
-                        double a10 = this.a[k10];
-                        double a01 = this.a[k01];
-                        double a11 = this.a[k11];
-                        double aInterp = a00 * (1 - wx) * (1 - wy) + a10 * wx * (1 - wy) + a01 * (1 - wx) * wy + a11 * wx * wy;
-                        if (double.IsNaN(aInterp) || double.IsInfinity(aInterp)) aInterp =1.0;
-                        if (aInterp <0) aInterp =0; if (aInterp >1) aInterp =1;
-                        result.a![dstIdx] = (float)aInterp;
+                        double srcX = (x + 0.5) * xRatio - 0.5;
+                        int x0 = (int)Math.Floor(srcX);
+                        int x1 = x0 + 1;
+                        double wx = srcX - x0;
+                        if (x0 < 0)
+                        {
+                            x0 = 0; x1 = 0; wx = 0;
+                        }
+                        if (x1 >= Width) { x1 = Width - 1; }
+
+                        int k00 = y0 * Width + x0;
+                        int k10 = y0 * Width + x1;
+                        int k01 = y1 * Width + x0;
+                        int k11 = y1 * Width + x1;
+
+                        double r00 = this.r[k00];
+                        double r10 = this.r[k10];
+                        double r01 = this.r[k01];
+                        double r11 = this.r[k11];
+
+                        double g00 = this.g[k00];
+                        double g10 = this.g[k10];
+                        double g01 = this.g[k01];
+                        double g11 = this.g[k11];
+
+                        double b00 = this.b[k00];
+                        double b10 = this.b[k10];
+                        double b01 = this.b[k01];
+                        double b11 = this.b[k11];
+
+                        double rInterp = r00 * (1 - wx) * (1 - wy) + r10 * wx * (1 - wy) + r01 * (1 - wx) * wy + r11 * wx * wy;
+                        double gInterp = g00 * (1 - wx) * (1 - wy) + g10 * wx * (1 - wy) + g01 * (1 - wx) * wy + g11 * wx * wy;
+                        double bInterp = b00 * (1 - wx) * (1 - wy) + b10 * wx * (1 - wy) + b01 * (1 - wx) * wy + b11 * wx * wy;
+
+                        int dstIdx = y * destW + x;
+                        int rr = (int)Math.Round(rInterp);
+                        int gg = (int)Math.Round(gInterp);
+                        int bb = (int)Math.Round(bInterp);
+                        if (rr < 0) rr = 0; if (rr > 65535) rr = 65535;
+                        if (gg < 0) gg = 0; if (gg > 65535) gg = 65535;
+                        if (bb < 0) bb = 0; if (bb > 65535) bb = 65535;
+
+                        result.r[dstIdx] = (ushort)rr;
+                        result.g[dstIdx] = (ushort)gg;
+                        result.b[dstIdx] = (ushort)bb;
+
+                        if (hasAlphaChannel && this.a != null)
+                        {
+                            double a00 = this.a[k00];
+                            double a10 = this.a[k10];
+                            double a01 = this.a[k01];
+                            double a11 = this.a[k11];
+                            double aInterp = a00 * (1 - wx) * (1 - wy) + a10 * wx * (1 - wy) + a01 * (1 - wx) * wy + a11 * wx * wy;
+                            if (double.IsNaN(aInterp) || double.IsInfinity(aInterp)) aInterp = 1.0;
+                            if (aInterp < 0) aInterp = 0; if (aInterp > 1) aInterp = 1;
+                            result.a![dstIdx] = (float)aInterp;
+                        }
                     }
                 }
-            }
 
-            return result;
+                return result;
+            }
         }
 
      
@@ -403,6 +423,33 @@ namespace projectFrameCut.Shared
                 pic.hasAlphaChannel = false;
             }
             return pic;
+        }
+
+        private bool disposedValue;
+
+        protected virtual void Dispose(bool disposing)
+        {
+            lock (this)
+            {
+                if (!disposedValue)
+                {
+                    if (disposing)
+                    {
+                        r = null!;
+                        g = null!;
+                        b = null!;
+                        a = null;
+                    }
+
+                    disposedValue = true;
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -25,6 +25,7 @@ namespace projectFrameCut.Shared
         public uint targetFrameRate { get; set; } = 60;
         public object[] Clips { get; init; } = Array.Empty<string>();
         public uint Duration { get; set; } = 0;
+        public DateTime SavedAt { get; set; } = DateTime.MinValue;
     }
 
     public class ClipDraftDTO
@@ -40,7 +41,7 @@ namespace projectFrameCut.Shared
         public float SecondPerFrameRatio { get; set; }
         public MixtureMode MixtureMode { get; set; } = MixtureMode.Overlay;
         public string? FilePath { get; set; }
-        public long? SourceDuration { get;set; } // in frames, null for infinite length source
+        public long? SourceDuration { get; set; } // in frames, null for infinite length source
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
 
         [JsonExtensionData]
@@ -56,7 +57,7 @@ namespace projectFrameCut.Shared
         public projectFrameCut.Shared.ClipMode Type { get; set; }
 
         public long? FrameCount { get; set; }
-        public float SecondPerFrame { get; set; } = float.PositiveInfinity; 
+        public float SecondPerFrame { get; set; } = float.PositiveInfinity;
         public string? ThumbnailPath { get; set; }
         public string? AssetId { get; set; }
 
@@ -109,7 +110,7 @@ namespace projectFrameCut.Shared
         /// </summary>
         public uint RelativeStartFrame { get; init; } // in-point within the source
         /// <summary>
-        /// Total duration of the source clip in frames.
+        /// Total duration of the source clip in frames. 0 will be treated as infinite length.
         /// </summary>
         public uint Duration { get; init; }
         /// <summary>
@@ -136,24 +137,19 @@ namespace projectFrameCut.Shared
         /// </summary>
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
 
-        private static ConcurrentDictionary<string, IEffect[]> _effectsInstances = new();
+        public IEffect[]? EffectsInstances { get; init; }
 
-        public virtual IEffect[] GetEffectsInstances()
+        public static IEffect[] GetEffectsInstances(EffectAndMixtureJSONStructure[]? Effects)
         {
-            if( Effects is null || Effects.Length == 0)
+            if (Effects is null || Effects.Length == 0)
             {
                 return Array.Empty<IEffect>();
-            }
-            if(_effectsInstances.TryGetValue(Id, out var existingEffects))
-            {
-                return existingEffects;
             }
             List<IEffect> effects = new();
             foreach (var item in Effects)
             {
                 effects.Add(EffectHelper.CreateFromJSONStructure(item));
             }
-            _effectsInstances.AddOrUpdate(Id, effects.ToArray(), (_, _) => effects.ToArray());
             return effects.ToArray();
         }
 
@@ -227,8 +223,8 @@ namespace projectFrameCut.Shared
         /// <returns>the target clip,or be the last frame if the frame you want is 1 frame longer than the range (probably because of little overlap caused by rounding)</returns>
         /// <remarks>you may override this method if you source can generate the frame directly with a specific size.</remarks>
         /// <exception cref="IndexOutOfRangeException">Frame is not exist in this clip.</exception>
-        public virtual Picture GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool forceResize = false) 
-            => GetFrameRelativeToStartPointOfSource(GetRelativeFrameIndex(targetFrame) ?? Duration, targetWidth, targetHeight,forceResize);
+        public virtual Picture GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool forceResize = false)
+            => GetFrameRelativeToStartPointOfSource(GetRelativeFrameIndex(targetFrame) ?? Duration, targetWidth, targetHeight, forceResize);
 
         /// <summary>
         /// Get the frame at the specified index relative to the start of the clip.
@@ -248,14 +244,14 @@ namespace projectFrameCut.Shared
         /// </remarks>
         /// <param name="frameIndex">frame index related to the source clip</param>
         /// <returns>the result frame</returns>
-        public virtual Picture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize) 
-            => GetFrameRelativeToStartPointOfSource(frameIndex).Resize(targetHeight, targetHeight, forceResize);
+        public virtual Picture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
+            => GetFrameRelativeToStartPointOfSource(frameIndex).Resize(targetWidth, targetHeight, forceResize);
 
         /// <summary>
         /// Get the length of this clip in frames. use null for infinite length.
         /// </summary>
         /// <returns>any positive integer represented the total length of the clip, or null for infinite length</returns>
-        [Obsolete("Use Duration property instead.",false)]
+        [Obsolete("Use Duration property instead.", false)]
         public uint? GetClipLength();
 
         /// <summary>
@@ -288,7 +284,7 @@ namespace projectFrameCut.Shared
             Clip = pic;
             LayerIndex = parent.LayerIndex;
             MixtureMode = parent.MixtureMode;
-            Effects = parent.GetEffectsInstances();
+            Effects = IClip.GetEffectsInstances(parent.Effects);
         }
     }
 
