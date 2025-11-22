@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="projectFrameCut.Setting.SettingPages.DebugSettingPage"
+             Title="DebugSettingPage">
+    <VerticalStackLayout>
+        <HorizontalStackLayout>
+            <Entry x:Name="KeyEntry" Placeholder="Key" MinimumWidthRequest="150" TextChanged="KeyEntry_TextChanged"/>
+            <Entry x:Name="ValueEntry" Placeholder="Value" MinimumWidthRequest="150" Margin="10,0,0,0"/>
+            <Button x:Name="SaveSettingBtn" Text="Save setting" Margin="10,0,0,0" Clicked="SaveSettingBtn_Clicked"/>
+            <Button x:Name="DeleteSettingBtn" Text="Delete setting" Margin="10,0,0,0" Clicked="DeleteSettingBtn_Clicked"/>
+        </HorizontalStackLayout>
+        <Label Margin="0,10,0,0"/>
+        <HorizontalStackLayout>
+            <Switch x:Name="LogDiagnostics" Toggled="OptionsChanged"/>
+
+            <Label Text="Enable diagnostic logging"/>
+        </HorizontalStackLayout>
+        <HorizontalStackLayout>
+            <Switch x:Name="DontPanicOnUnhandledException" Toggled="OptionsChanged"/>
+
+            <Label Text="Try don't panic on global unhandled exception"/>
+        </HorizontalStackLayout>
+    </VerticalStackLayout>
+</ContentPage>

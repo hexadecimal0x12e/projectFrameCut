@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<TabbedPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-            xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-            x:Class="projectFrameCut.MainSettingsPage"
-            xmlns:pages="clr-namespace:projectFrameCut.Setting.SettingPages;assembly=projectFrameCut"
-            xmlns:l="clr-namespace:LocalizedResources"
-            Title="{l:Localized Key=_Settings}">
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="projectFrameCut.MainSettingsPage"
+             xmlns:l="clr-namespace:LocalizedResources"
+             Title="{l:Localized Key=_Settings}">
+    <!-- Simple navigation hub without TabbedPage -->
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="12">
+            <Label FontSize="32" Text="{l:Localized Key=_Settings}"/>
 
-    <pages:GeneralSettingPage/>
-    <pages:EditSettingPage/>
-    <pages:RenderSettingPage/>
-    <pages:AssetSettingPage/>
-    <pages:MiscSettingPage/>
-    <pages:AboutSettingPage/>
-
-</TabbedPage>
+            <VerticalStackLayout Spacing="8">
+                <Button x:Name="GeneralSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_General}" Clicked="OnGeneralSettingClicked" />
+                <Button x:Name="EditSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Edit}" Clicked="OnEditSettingClicked" />
+                <Button x:Name="RenderSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Render}" Clicked="OnRenderSettingClicked" />
+                <Button x:Name="MiscSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Misc}" Clicked="OnMiscSettingClicked" />
+                <Button x:Name="AboutSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_About}" Clicked="OnAboutSettingClicked" />
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

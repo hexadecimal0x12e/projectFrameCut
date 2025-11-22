@@ -19,10 +19,11 @@ public sealed class RpcClient : IAsyncDisposable
 
     public Action<JsonElement>? ErrorCallback = null;
 
-    public static string BootRPCServer(out Process rpcProc, string tmpPath = "", string options = "1280,720,42,AV_PIX_FMT_NONE,nope", bool VerboseBackendLog = false, Action<string>? stdoutCallback = null, Action<string>? stderrCallback = null)
+    public static string BootRPCServer(out Process rpcProc, out string backendAccessToken, out int backendPort, string tmpDir = "", string options = "1280,720,42,AV_PIX_FMT_NONE,nope", bool VerboseBackendLog = false, Action<string>? stdoutCallback = null, Action<string>? stderrCallback = null)
     {
         var pipeId = "pjfc_rpc_V1_" + Guid.NewGuid().ToString();
-        var tmpDir = Path.Combine(tmpPath, "pjfc_temp");
+        backendAccessToken = Guid.NewGuid().ToString().Replace("-", "");
+        backendPort = GenerateBackendPort();
         Directory.CreateDirectory(tmpDir);
         rpcProc = new Process
         {
@@ -30,7 +31,7 @@ public sealed class RpcClient : IAsyncDisposable
             {
                 FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Render.WindowsRender.exe"),
                 WorkingDirectory = Path.Combine(AppContext.BaseDirectory),
-                Arguments = $""" rpc_backend  "-pipe={pipeId}" "-output_options={options}" "-tempFolder={tmpDir}" """,
+                Arguments = $""" rpc_backend  "-pipe={pipeId}" "-output_options={options}" "-tempFolder={tmpDir}" "-accessToken={backendAccessToken}" "-port={backendPort}" """,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardError = true,
@@ -76,6 +77,39 @@ public sealed class RpcClient : IAsyncDisposable
         return pipeId;
     }
 
+    private static int GenerateBackendPort()
+    {
+        bool IsPortAvailable(int port)
+        {
+            try
+            {
+                var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, port);
+                listener.Start();
+                listener.Stop();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        var random = new Random();
+        int minPort = 23457;
+        int maxPort = 65000;
+        int port;
+        bool isAvailable = false;
+
+        for (int i = 0; i < 100; i++)
+        {
+            port = random.Next(minPort, maxPort + 1);
+            if (IsPortAvailable(port))
+            {
+                return port;
+            }
+        }
+        return -1;
+    }
+
     public static async Task<string> UpdateDraft(DraftStructureJSON draft, RpcClient rpcClient, CancellationToken ct = default)
     {
         var draftJson = JsonSerializer.SerializeToElement(draft, RpcProtocol.JsonOptions);
@@ -98,7 +132,7 @@ public sealed class RpcClient : IAsyncDisposable
         var result = await rpcClient.SendAsync("RenderOne", JsonSerializer.SerializeToElement(frameId), ct);
         if (result is null)
         {
-            throw new InvalidOperationException("更新草稿失败，RPC 返回空响应。");
+            throw new InvalidOperationException("RPC doesn't return anything.");
         }
         if (result.HasValue && result.Value.TryGetProperty("status", out var status))
         {
@@ -107,15 +141,8 @@ public sealed class RpcClient : IAsyncDisposable
 
                 if (result.Value.TryGetProperty("path", out var path))
                 {
-                    if (File.Exists(path.GetString() ?? ""))
-                    {
-                        //Log($"Frame {frameId} rendered to {path.GetString()}");
-                        return path.GetString() ?? "";
-                    }
-                    else
-                    {
-                        throw new FileNotFoundException($"Frame {frameId} rendered, but output file not found.", path.GetString());
-                    }
+                    return path.GetString() ?? "";
+
                 }
             }
             else
@@ -132,7 +159,7 @@ public sealed class RpcClient : IAsyncDisposable
         return "";
     }
 
-    public async Task StartAsync(string pipeName, CancellationToken ct = default) => await StartAsync(new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous),pipeName, ct);
+    public async Task StartAsync(string pipeName, CancellationToken ct = default) => await StartAsync(new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous), pipeName, ct);
 
     public async Task StartAsync(NamedPipeClientStream client, string pipeName, CancellationToken ct = default)
     {
@@ -249,7 +276,7 @@ public sealed class RpcClient : IAsyncDisposable
             if (line is null) return null;
             return JsonSerializer.Deserialize<RpcProtocol.RpcMessage>(line, RpcProtocol.JsonOptions);
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Log(ex, "SendReceive", this);
             return null;

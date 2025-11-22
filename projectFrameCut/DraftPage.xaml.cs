@@ -15,10 +15,12 @@ using System.Threading.Tasks;
 using Path = System.IO.Path;
 
 
+
 #if WINDOWS
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using projectFrameCut.Platforms.Windows;
+using Microsoft.UI.Xaml.Media.Imaging;
 
 #endif
 
@@ -94,6 +96,8 @@ public partial class DraftPage : ContentPage
 #if WINDOWS
     Process backendProc;
     RpcClient _rpc;
+    string backendAccessToken;
+    int backendPort = -1;
 #endif
 
     ClipInfoBuilder infoBuilder;
@@ -168,8 +172,9 @@ public partial class DraftPage : ContentPage
     {
         ProjectInfo.NormallyExited = false;
 #if WINDOWS
-        var pipeId = RpcClient.BootRPCServer(out backendProc,
-            tmpPath: Path.Combine(workingPath, "temp"),
+        PreviewBox.IsVisible = false;
+        var pipeId = RpcClient.BootRPCServer(out backendProc, out backendAccessToken, out backendPort,
+            tmpDir: Path.Combine(workingPath, "thumbs"),
             stderrCallback: new Action<string>((s) =>
             {
                 SetStateFail("Backend:" + s);
@@ -212,6 +217,11 @@ public partial class DraftPage : ContentPage
         };
         await _rpc.StartAsync(pipeId, ct.Token);
         await Task.Delay(25);
+        var nanoInfo = await _rpc.SendAsync("GetNanoHostInfo", default, default);
+        if (nanoInfo is not null && nanoInfo.Value.TryGetProperty("port", out var portElem))
+        {
+            backendPort = portElem.GetInt32();
+        }
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
 #endif
@@ -1361,7 +1371,7 @@ public partial class DraftPage : ContentPage
                 await HidePopup();
 
             };
-            childLayout.Children.Add(addButton      );
+            childLayout.Children.Add(addButton);
             childLayout.Children.Add(removeButton);
             layout.Children.Add(childLayout);
         }
@@ -1433,30 +1443,11 @@ public partial class DraftPage : ContentPage
         cts.CancelAfter(10000);
 #endif
         var path = await RpcClient.RenderOneFrame(duration, _rpc, cts.Token);
-        var src = ImageSource.FromFile(path);
-        Dispatcher.Dispatch(() =>
-        {
-            PreviewBox.Source = src;
-        });
-#if DEBUG
-        //FrameIndexEntry.Text = duration.ToString();
 
-        //var data = await _rpc.SendAsync("GetAFrameData", JsonSerializer.SerializeToElement(duration), default);
-        //if (data.Value.TryGetProperty("json", out var json))
-        //{
-        //    Dispatcher.Dispatch(() =>
-        //    {
-        //        FrameContentEditor.Text = json.GetString();
-        //    });
-        //}
-        //else
-        //{
-        //    Dispatcher.Dispatch(() =>
-        //    {
-        //        FrameContentEditor.Text = JsonSerializer.Serialize(DraftImportAndExportHelper.ExportFromDraftPage(this), savingOpts);
-        //    });
-        //}
-#endif
+        await Task.Delay(2000);
+        var src = ImageSource.FromFile(path);
+
+        await ForceLoadPNGToAImage(PreviewOverlayImage, path);
 
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
@@ -2721,6 +2712,20 @@ public partial class DraftPage : ContentPage
             ProjectInfo.NormallyExited = true;
             await File.WriteAllTextAsync(Path.Combine(workingPath, "timeline.json"), JsonSerializer.Serialize(draft, savingOpts), default);
             await File.WriteAllTextAsync(Path.Combine(workingPath, "assets.json"), JsonSerializer.Serialize(assets, savingOpts), default);
+            try
+            {
+#if WINDOWS
+                CancellationTokenSource cts = new();
+                cts.CancelAfter(10000);
+                var thumbPath = await RpcClient.RenderOneFrame(0, _rpc, cts.Token);
+                if (!string.IsNullOrEmpty(thumbPath) && File.Exists(thumbPath))
+                {
+                    var destPath = Path.Combine(workingPath, "thumbs", "_project.png");
+                    File.Copy(thumbPath, destPath, true);
+                }
+#endif
+            }
+            catch { }
         }
         else //avoid worst condition (crashes while saving)
         {
@@ -2895,25 +2900,25 @@ public partial class DraftPage : ContentPage
     {
         if (uint.TryParse(e.NewTextValue, out var frameIndex))
         {
-//#if WINDOWS
+            //#if WINDOWS
 
-//            var data = await _rpc.SendAsync("GetAFrameData", JsonSerializer.SerializeToElement(frameIndex), default);
-//            if (data.Value.TryGetProperty("json", out var json))
-//            {
-//                Dispatcher.Dispatch(() =>
-//                {
-//                    FrameContentEditor.Text = json.GetString();
-//                });
-//            }
-//            else
-//            {
-//                Dispatcher.Dispatch(() =>
-//                {
-//                    FrameContentEditor.Text = JsonSerializer.Serialize(DraftImportAndExportHelper.ExportFromDraftPage(this), savingOpts);
-//                });
-//            }
+            //            var data = await _rpc.SendAsync("GetAFrameData", JsonSerializer.SerializeToElement(frameIndex), default);
+            //            if (data.Value.TryGetProperty("json", out var json))
+            //            {
+            //                Dispatcher.Dispatch(() =>
+            //                {
+            //                    FrameContentEditor.Text = json.GetString();
+            //                });
+            //            }
+            //            else
+            //            {
+            //                Dispatcher.Dispatch(() =>
+            //                {
+            //                    FrameContentEditor.Text = JsonSerializer.Serialize(DraftImportAndExportHelper.ExportFromDraftPage(this), savingOpts);
+            //                });
+            //            }
 
-//#endif
+            //#endif
 
         }
         else
@@ -2997,6 +3002,126 @@ Clip {clip.displayName}({clip.Id}):
 #endif
     }
 
+    public async void OnRefreshButtonClicked(object sender, EventArgs e)
+    {
+        var path = @"D:\code\projectFrameCut\projectFrameCut\Resources\Raw\FallbackResources\NoContent.png"; //Ëæ±ã
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            PreviewBox.Source = ImageSource.FromFile(path);
+        });
+        LogDiagnostic("PreviewBox actual width=" + PreviewBox.Width);
+        LogDiagnostic("PreviewBox actual height=" + PreviewBox.Height);
+        LogDiagnostic("PreviewBox actual measure=" + PreviewBox.Measure(1000, 1000));
+        var src1 = ImageSource.FromFile(path);
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            PreviewOverlayImage.Source = src1;
+        });
+        LogDiagnostic("PreviewOverlayImage actual width=" + PreviewOverlayImage.Width);
+        LogDiagnostic("PreviewOverlayImage actual height=" + PreviewOverlayImage.Height);
+        LogDiagnostic("PreviewOverlayImage actual measure=" + PreviewOverlayImage.Measure(1000, 1000));
+
+    }
+
+    public async Task ForceLoadPNGToAImage(Image source, string path)
+    {
+#if WINDOWS
+        try
+        {
+            var exists = System.IO.File.Exists(path);
+            LogDiagnostic("File.Exists: " + exists + " path=" + path);
+            if (!exists)
+            {
+                throw new FileNotFoundException("Source image not exist.", path);
+            }
+
+            var fi = new System.IO.FileInfo(path);
+            LogDiagnostic("File length: " + fi.Length + " bytes");
+
+            byte[] header = new byte[8];
+            using (var fs = System.IO.File.OpenRead(path))
+            {
+                var read = await fs.ReadAsync(header, 0, header.Length);
+                LogDiagnostic("Read header bytes: " + read);
+            }
+            LogDiagnostic("Header hex: " + BitConverter.ToString(header));
+            bool looksLikePng = header.Length >= 4 && header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47;
+            LogDiagnostic("looksLikePng: " + looksLikePng);
+
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                LogDiagnostic("PreviewOverlayImage Width=" + source.Width + " Height=" + source.Height);
+                LogDiagnostic("PreviewOverlayImage Measure=" + source.Measure(10000, 10000));
+            });
+
+            var fileUri = new Uri("file:///" + path.Replace('\\', '/'));
+            LogDiagnostic("fileUri = " + fileUri);
+
+            await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                try
+                {
+                    var handler = source.Handler;
+                    if (handler == null)
+                    {
+                        LogDiagnostic("PreviewOverlayImage.Handler is null");
+                    }
+
+                    var native = handler?.PlatformView as Microsoft.UI.Xaml.Controls.Image;
+                    if (native == null)
+                    {
+                        LogDiagnostic("PlatformView is null or not a WinUI Image. Use ImageSource.FromStream.");
+                        PreviewOverlayImage.Source = ImageSource.FromStream(() => System.IO.File.OpenRead(path));
+                        return;
+                    }
+
+                    LogDiagnostic("native image control obtained");
+
+                    var bmp = new BitmapImage();
+                    try
+                    {
+                        bmp.UriSource = fileUri;
+                        native.Source = bmp;
+                        LogDiagnostic("Successfully to use Uri to load.");
+                    }
+                    catch (Exception exUri)
+                    {
+                        LogDiagnostic("Failed to use UriSource: " + exUri);
+                        using (var fs2 = System.IO.File.OpenRead(path))
+                        {
+                            var randomAccess = fs2.AsRandomAccessStream();
+                            await bmp.SetSourceAsync(randomAccess);
+                            native.Source = bmp;
+                            LogDiagnostic("Successfully to use SetSourceAsync(stream) ");
+                        }
+                    }
+
+                    native.InvalidateMeasure();
+                    native.UpdateLayout();
+                    LogDiagnostic("Successfully to update layout.");
+                }
+                catch (Exception exNative)
+                {
+                    Log(exNative, $"load image to {source.Id}", this);
+                }
+            });
+
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                LogDiagnostic("AFTER load PreviewOverlayImage Width=" + PreviewOverlayImage.Width + " Height=" + PreviewOverlayImage.Height);
+                LogDiagnostic("AFTER load PreviewOverlayImage Measure=" + PreviewOverlayImage.Measure(10000, 10000));
+            });
+
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"load image to {source.Id}", this);
+        }
+#else
+        PreviewOverlayImage.Source = ImageSource.FromStream(() => System.IO.File.OpenRead(path));
+        return;
+#endif
+    }
 
     #endregion
 }

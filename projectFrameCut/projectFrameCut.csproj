@@ -3,8 +3,6 @@
 	<PropertyGroup>
 		<TargetFrameworks>net10.0-android;net10.0-windows10.0.19041.0</TargetFrameworks>
 
-		
-
 		<!-- Note for MacCatalyst:
 		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
 		When specifying both architectures, use the plural <RuntimeIdentifiers> instead of the singular <RuntimeIdentifier>.
@@ -45,8 +43,8 @@
 		<NeutralLanguage>zh-CN</NeutralLanguage>
 		<AndroidSigningKeyStore>0x12e.keystore</AndroidSigningKeyStore>
 
-		<AssemblyVersion>1.0.1.0</AssemblyVersion>
-		<FileVersion>1.0.1.0</FileVersion>
+		<AssemblyVersion>1.1.0.0</AssemblyVersion>
+		<FileVersion>1.1.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>codename 'projectFrameCut'</Product>
 		<Description>app projectFrameCut</Description>
@@ -112,6 +110,7 @@
 		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.10" />
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.10" />
 		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.10" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -130,7 +129,7 @@
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<ProjectReference Include="..\projectFrameCut.Render.WindowsRender\projectFrameCut.Render.WindowsRender.csproj" />
-		<MauiAsset Include="Platforms\Windows\ffmpeg\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+		<MauiAsset Include="..\..\playground\FFmpeg\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Update="AppShell_Windows.xaml.cs">
 			<DependentUpon>AppShell_Windows.xaml</DependentUpon>
 		</Compile>
@@ -165,16 +164,19 @@
 		<MauiXaml Update="Setting\SettingPages\AboutSettingPage.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
+		<MauiXaml Update="Setting\SettingPages\AboutSettingPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
 		<MauiXaml Update="Setting\SettingPages\AssetSettingPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Setting\SettingPages\DebugSettingPage.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="Setting\SettingPages\EditSettingPage.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="Setting\SettingPages\GeneralSettingPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-		<MauiXaml Update="Setting\SettingPages\MainSettingsPage.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="Setting\SettingPages\MiscSettingPage.xaml">
@@ -201,8 +203,9 @@
 		<Compile Update="DraftPage.xaml.cs">
 			<DependentUpon>DraftPage.xaml</DependentUpon>
 		</Compile>
-		<Compile Update="Setting\SettingPages\MainSettingsPage.xaml.cs">
-		  <DependentUpon>MainSettingsPage.xaml</DependentUpon>
+		
+		<Compile Update="Setting\SettingPages\AboutSettingPage.xaml.cs">
+		  <DependentUpon>AboutSettingPage.xaml</DependentUpon>
 		</Compile>
 		<Compile Update="TestPage.xaml.cs">
 			<DependentUpon>TestPage.xaml</DependentUpon>
@@ -226,7 +229,6 @@
 
 	<ItemGroup>
 		<Folder Include="Platforms\Android\ffmpeg\" />
-		<Folder Include="Setting\SettingsLocalizedResources\" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -256,14 +258,12 @@
 	
 	<!-- Platform-specific: exclude Android AppShell from Windows builds and exclude Windows AppShell from Android builds -->
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
-		<!-- Remove Android-specific XAML and codebehind so it's not processed on Windows -->
 		<MauiXaml Remove="AppShell_Android.xaml" />
 		<None Remove="AppShell_Android.xaml" />
 		<Compile Remove="AppShell_Android.xaml.cs" />
 	</ItemGroup>
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-		<!-- Remove Windows-specific XAML and codebehind so it's not processed on Android -->
 		<MauiXaml Remove="AppShell_Windows.xaml" />
 		<None Remove="AppShell_Windows.xaml" />
 		<Compile Remove="AppShell_Windows.xaml.cs" />

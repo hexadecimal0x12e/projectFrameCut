@@ -19,6 +19,7 @@
 
 
   <ItemGroup>
+		<ProjectReference Include="..\projectFrameCut.Render.WindowsRender.NanoHost\projectFrameCut.Render.WindowsRender.NanoHost.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj">
 		</ProjectReference>
 		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj">

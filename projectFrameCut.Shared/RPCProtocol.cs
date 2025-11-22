@@ -3,6 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Shared;
 
+
+
 public static class RpcProtocol
 {
     
@@ -22,6 +24,18 @@ public static class RpcProtocol
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         PropertyNameCaseInsensitive = true,
-        WriteIndented = false
+        WriteIndented = false,
+        //TypeInfoResolver = RpcMessageJsonContext.Default
     };
+
+   
+}
+
+[JsonSerializable(typeof(RpcProtocol.RpcMessage))]
+[JsonSerializable(typeof(string))]
+[JsonSerializable(typeof(ulong))]
+[JsonSerializable(typeof(JsonElement?))]
+[JsonSourceGenerationOptions(WriteIndented = true)]
+public partial class RpcMessageJsonContext : JsonSerializerContext
+{
 }

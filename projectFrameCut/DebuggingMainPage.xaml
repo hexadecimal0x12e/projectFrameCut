@@ -23,9 +23,9 @@
         <Button Text="Go to Draft Page, special" Margin="0,10,0,0"  x:Name="ToV2DraftPageWithNoDraft" Clicked="ToV2DraftPageWithNoDraft_Clicked"/>
 
 
-        <Button Margin="0,50,0,0" Text=" go to test page" Clicked="TestPageButton_Clicked" />
-
-        <Button Text="go to rpc test page" x:Name="RpcTestPage" Clicked="RpcTestPage_Clicked"       />
+        <Button Margin="0,50,0,0" Text="go to test page" Clicked="TestPageButton_Clicked" />
+        <Button Text="manage setting" x:Name="SettingMgntBtn" Clicked="SettingMgntBtn_Clicked" />
+        <Button Text="go to rpc test page" x:Name="RpcTestPage" Clicked="RpcTestPage_Clicked" />
         
         
 

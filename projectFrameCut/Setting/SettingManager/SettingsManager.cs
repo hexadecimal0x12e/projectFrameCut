@@ -1,11 +1,13 @@
-﻿using System;
+﻿using Microsoft.Maui.Controls.PlatformConfiguration;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
-using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace projectFrameCut.Setting.SettingManager
 {
@@ -17,6 +19,7 @@ namespace projectFrameCut.Setting.SettingManager
             set
             {
                 if (field is null) field = value;
+                else if (value is null) value = new();
                 else throw new ArgumentNullException(nameof(Settings), "Settings has been already inited.");
 
                 // start background save worker when settings are initialized
@@ -24,6 +27,7 @@ namespace projectFrameCut.Setting.SettingManager
             }
         } = null!;
 
+        [DebuggerNonUserCode()]
         public static string GetSetting(string key, string defaultValue = "")
         {
             if (Settings.TryGetValue(key, out var value))
@@ -33,22 +37,24 @@ namespace projectFrameCut.Setting.SettingManager
             return Settings.GetOrAdd(key, defaultValue);
         }
 
+        [DebuggerNonUserCode()]
         public static void WriteSetting(string key, string value)
         {
             Settings.AddOrUpdate(key, value, (k, v) => value);
 
-            // signal background worker to save (non-blocking)
             saveSignal.Set();
         }
 
+        [DebuggerNonUserCode()]
         public static bool IsSettingExists(string key) => Settings.ContainsKey(key);
+
+        public static void ToggleSaveSignal() => saveSignal.Set();
 
         private static JsonSerializerOptions serializerOptions = new JsonSerializerOptions
         {
             WriteIndented = true,
         };
 
-        // Background saving infrastructure
         private static readonly TimeSpan SaveDelay = TimeSpan.FromSeconds(1);
         private static readonly AutoResetEvent saveSignal = new(false);
         private static CancellationTokenSource? saveCts;
@@ -70,8 +76,6 @@ namespace projectFrameCut.Setting.SettingManager
                     {
                         while (!token.IsCancellationRequested)
                         {
-                            // Wait for a signal or timeout to debounce writes.
-                            // This call blocks only the background thread, not callers of WriteSetting.
                             saveSignal.WaitOne(SaveDelay);
 
                             if (token.IsCancellationRequested) break;
@@ -84,20 +88,18 @@ namespace projectFrameCut.Setting.SettingManager
                             {
                                 break;
                             }
-                            catch
+                            catch (Exception ex)
                             {
-                                // Swallow exceptions to keep background loop alive. Consider logging if available.
+                                Log(ex, "save settings");
                             }
                         }
 
-                        // Ensure final write on shutdown
                         try
                         {
                             await SaveSettingAsync(CancellationToken.None).ConfigureAwait(false);
                         }
                         catch
                         {
-                            // ignore
                         }
                     }
                     finally
@@ -134,6 +136,9 @@ namespace projectFrameCut.Setting.SettingManager
             {
                 saveCts = null;
                 saveTask = null;
+                var path = Path.Combine(MauiProgram.BasicDataPath, "settings.json");
+                var json = JsonSerializer.Serialize(Settings, serializerOptions);
+                File.WriteAllText(path, json);
             }
         }
 
@@ -145,6 +150,7 @@ namespace projectFrameCut.Setting.SettingManager
             await File.WriteAllTextAsync(path, json, token).ConfigureAwait(false);
         }
 
+        public static ISimpleLocalizerBase_Settings SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().First().Value;
 
     }
 }

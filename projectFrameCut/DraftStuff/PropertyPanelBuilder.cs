@@ -2,12 +2,13 @@
 using Microsoft.Maui.Controls;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 #pragma warning disable CS8981 // 该类型名称仅包含小写 ascii 字符。此类名称可能会成为该语言的保留值。
-using pppcea = projectFrameCut.PropertyPanel.PropertyPanelPropertyChangedEventArgs; //make code shorter
+using pppcea = projectFrameCut.PropertyPanel.PropertyPanelPropertyChangedEventArgs;
+using Switch = Microsoft.Maui.Controls.Switch; //make code shorter
 #pragma warning restore CS8981 // 该类型名称仅包含小写 ascii 字符。此类名称可能会成为该语言的保留值。
 
 namespace projectFrameCut.PropertyPanel
@@ -18,6 +19,7 @@ namespace projectFrameCut.PropertyPanel
     /// <remarks>
     /// This builder supports a uniform event-based property change notifications.
     /// </remarks>
+    [System.Diagnostics.DebuggerNonUserCode()]
     public class PropertyPanelBuilder
     {
 
@@ -174,7 +176,8 @@ namespace projectFrameCut.PropertyPanel
             {
                 IsToggled = defaultValue,
                 HorizontalOptions = LayoutOptions.End,
-                BindingContext = this
+                BindingContext = this,
+
             };
             var label = title.LabelConfigurer();
             Properties[Id] = defaultValue;
@@ -199,6 +202,7 @@ namespace projectFrameCut.PropertyPanel
             layout.Children.Add(grid);
             return this;
         }
+
 
         /// <summary>
         /// Adds a <seealso cref="Picker"/> with an associated label to the property panel.
@@ -298,7 +302,7 @@ namespace projectFrameCut.PropertyPanel
         /// Adds a <seealso cref="Button"/> with an associated label to the property panel.
         /// </summary>
         /// <remarks>
-        /// Please note that <see cref="PropertyChanged"/> will be triggered with a meaningless <see cref="pppcea.Value"/> and <see cref="pppcea.OriginValue"/> (both are new object()) when you click on the button.
+        /// Please note that <see cref="PropertyChanged"/> will be triggered, and <see cref="pppcea.Value"/> and <see cref="pppcea.OriginValue"/> will be <see langword="null"/> when you click on the button.
         /// </remarks>
         /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
         public PropertyPanelBuilder AddButton(string Id, PropertyPanelItemLabel title, string buttonText, Action<Button>? ButtonSetter = null)
@@ -309,9 +313,9 @@ namespace projectFrameCut.PropertyPanel
                 HorizontalOptions = LayoutOptions.Fill
             };
             var label = title.LabelConfigurer();
-            Properties[Id] = new();
+            Properties[Id] = null!;
             ButtonSetter?.Invoke(button);
-            button.Clicked += (s, e) => pppcea.CreateAndInvoke(this, Id, new());
+            button.Clicked += (s, e) => pppcea.CreateAndInvoke(this, Id, null!);
             var grid = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitionCollection
@@ -489,7 +493,7 @@ namespace projectFrameCut.PropertyPanel
 
         public void ModifyProperties(string id, Action<View> caller)
         {
-            
+
         }
 
         /// <summary>
@@ -497,7 +501,7 @@ namespace projectFrameCut.PropertyPanel
         /// </summary>
         public PropertyPanelBuilder ListenToChanges(Action<pppcea> handler)
         {
-            PropertyChanged += (s,e) => handler(e);
+            PropertyChanged += (s, e) => handler(e);
             return this;
         }
 
@@ -525,6 +529,7 @@ namespace projectFrameCut.PropertyPanel
         }
     }
 
+    [DebuggerNonUserCode()]
     public class PropertyPanelChildrenBuilder
     {
         private List<Tuple<View, GridLength>> _children = new();
@@ -734,7 +739,7 @@ namespace projectFrameCut.PropertyPanel
 
 
             return views;
-            
+
 
         }
     }
@@ -748,7 +753,7 @@ namespace projectFrameCut.PropertyPanel
         /// <summary>
         /// The new value of the child. In most cases this shouldn't be null.
         /// </summary>
-        [NotNull]
+        [System.Diagnostics.CodeAnalysis.NotNull]
         public object? Value { get; set; } = newVal;
         /// <summary>
         /// The origin value of the child. This may be null, or the default value provided by <see cref="PropertyPanelBuilder"/> if this event is triggered for the first time.
@@ -776,7 +781,7 @@ namespace projectFrameCut.PropertyPanel
 
     public class SingleLineLabel(string text, int fontsize = 14, FontAttributes fontAttributes = FontAttributes.None) : PropertyPanelItemLabel
     {
-        public override View LabelConfigurer() => new Label { Text = text, FontSize = fontsize, FontAttributes = fontAttributes, VerticalOptions= LayoutOptions.Center };
+        public override View LabelConfigurer() => new Label { Text = text, FontSize = fontsize, FontAttributes = fontAttributes, VerticalOptions = LayoutOptions.Center };
 
         public static implicit operator SingleLineLabel(string text) => new SingleLineLabel(text);
     }

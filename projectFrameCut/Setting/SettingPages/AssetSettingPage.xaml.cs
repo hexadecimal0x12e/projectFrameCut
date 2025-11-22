@@ -4,5 +4,7 @@ public partial class AssetSettingPage : ContentPage
 {
 	public AssetSettingPage()
 	{
-	}
+        Title = Localized.MainSettingsPage_Tab_Asset;
+
+    }
 }

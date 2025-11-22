@@ -91,18 +91,21 @@ namespace projectFrameCut
                 assetItem = new NavigationViewItem { Content = Localized.AppShell_AssetsTab, Tag = "Assets", Height = 36, Padding = new(4) };
                 assetItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.MapDrive };
 
-                debugItem = new NavigationViewItem { Content = Localized.AppShell_DebugTab, Tag = "Debug", Height = 36, Padding = new(4) };
-                debugItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Repair };
+                
 
                 nav.MenuItems.Add(homeItem);
                 nav.MenuItems.Add(assetItem);
-                nav.MenuItems.Add(debugItem);
 
                 settingItem = new NavigationViewItem { Content = Localized._Settings, Tag = "Setting", Height = 36, Padding = new(4) };
                 settingItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Setting };
                 nav.FooterMenuItems.Add(settingItem);
 
-
+                if (bool.TryParse(SettingsManager.GetSetting("DeveloperMode", false.ToString()), out var dbg) ? dbg : false)
+                {
+                    debugItem = new NavigationViewItem { Content = Localized.AppShell_DebugTab, Tag = "Debug", Height = 36, Padding = new(4) };
+                    debugItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Repair };
+                    nav.MenuItems.Add(debugItem);
+                }
 
                 try
                 {
@@ -149,6 +152,8 @@ namespace projectFrameCut
                         catch (System.Exception ex)
                         {
                             Log(ex, $"Navigate to {tag} failed", this);
+                            await AppShell.instance.DisplayAlertAsync(Localized._Info, Localized.AppShell_NavFailed(ex, tag), Localized._OK);
+                            
                         }
                     });
                 };

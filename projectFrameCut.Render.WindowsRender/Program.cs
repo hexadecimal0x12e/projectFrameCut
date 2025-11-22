@@ -53,7 +53,7 @@ namespace projectFrameCut.Render.RenderCLI
             Log($"projectFrameCut.Render - {Assembly.GetExecutingAssembly().GetName().Version} \r\n" + $"Copyright hexadecimal0x12e 2025.\r\n" +
                 $"cmdline: {Environment.GetCommandLineArgs().Aggregate((a, b) => $"{a} {b}")}");
 
-            if (args.Length <= 1 || args.Any(x => x.Equals("-h") || x.Equals("--help")))
+            if (args.Length == 0 || args.Any(x => x.Equals("-h") || x.Equals("--help")))
             {
                 Console.WriteLine(
                     """
@@ -89,13 +89,6 @@ namespace projectFrameCut.Render.RenderCLI
                 Console.ReadLine();
                 return 0;
             }
-
-            if (Directory.GetFiles(Environment.CurrentDirectory, "av*.dll").Length == 0)
-            {
-                Log("ERROR: ffmpeg binaries not found. Please reinstall projectFrameCut.");
-                return 1;
-            }
-
 
             var runningMode = args[0];
 
@@ -201,6 +194,9 @@ namespace projectFrameCut.Render.RenderCLI
             Accelerator[] accelerators = picked.Select(d => d.CreateAccelerator(context)).ToArray();
 
             Log("Initiliazing FFmpeg...");
+            ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
+            FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+            FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize();
             if (Program.advancedFlags.Contains("ffmpeg_loglevel_debug"))
                 ffmpeg.av_log_set_level(ffmpeg.AV_LOG_DEBUG);
             else if (Program.advancedFlags.Contains("ffmpeg_loglevel_error"))

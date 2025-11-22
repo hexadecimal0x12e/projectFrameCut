@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using Microsoft.Maui.LifecycleEvents;
+using projectFrameCut.iOS;
+
 #if IOS
 using UIKit;
 #endif
@@ -15,6 +17,14 @@ namespace projectFrameCut
     public static class MauiProgram
     {
         public static string DataPath { get; private set; }
+
+        public static string BasicDataPath { get; private set; }
+
+        private static readonly string[] FoldersNeedInUserdata =
+            [
+            "My Drafts",
+            "My Assets"
+            ]; 
         public static StreamWriter LogWriter { get; internal set; }
 
         public static MauiApp CreateMauiApp()
@@ -27,10 +37,14 @@ namespace projectFrameCut
 #elif MACCATALYST
             DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),"projectFrameCut");
 #endif
-
+            BasicDataPath = DataPath;
             try
             {
                 Directory.CreateDirectory(DataPath);
+                foreach (var item in FoldersNeedInUserdata)
+                {
+                    Directory.CreateDirectory(Path.Combine(DataPath, item));
+                }
             }
             catch (Exception ex)
             {
@@ -64,8 +78,12 @@ namespace projectFrameCut
             builder.Services.AddSingleton<IDeviceThermalService, DeviceThermalService>();
             builder.Services.AddSingleton<IDeviceMemoryPressureService, DeviceMemoryPressureService>();
 #endif
-
             return builder.Build();
+        }
+
+        public static void Crash(Exception ex)
+        {
+            Program.Crash(ex);
         }
 
 

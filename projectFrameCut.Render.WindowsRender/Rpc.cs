@@ -1,10 +1,12 @@
 ﻿using ILGPU;
 using ILGPU.Runtime;
 using projectFrameCut.Shared;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO.Pipes;
 using System.Linq;
 using System.Text;
@@ -27,6 +29,8 @@ namespace projectFrameCut.Render.WindowsRender
             var pipeName = switches.GetValueOrDefault("pipe");
             var rawDataPipeName = switches.GetValueOrDefault("rawDataPipe");
             var tempFolder = switches.GetValueOrDefault("tempFolder");
+            //var accessToken = switches.GetValueOrDefault("accessToken");
+            //var backendPort = switches.GetValueOrDefault("port");
 
             if (pipeName is null)
             {
@@ -47,7 +51,7 @@ namespace projectFrameCut.Render.WindowsRender
 
             PngEncoder encoder = new()
             {
-                BitDepth = PngBitDepth.Bit8
+                BitDepth = PngBitDepth.Bit8,
             };
 
 
@@ -75,6 +79,9 @@ namespace projectFrameCut.Render.WindowsRender
                 accelerator.Synchronize();
                 Log("ILGPU is ready.");
             }
+
+            //Log($"[RPC] Booting nanohost...");
+            //BootBackendNanoHost(int.TryParse(backendPort, out var p) ? p : -1, tempFolder, accessToken);
 
             Log($"[RPC] Server start at pipe:{pipeName}");
 
@@ -182,7 +189,6 @@ namespace projectFrameCut.Render.WindowsRender
                                     Log($"[RPC] FrameHash:{frameHash}");
                                     if (Path.Exists(destPath))
                                     {
-
                                         Log($"[RPC] Frame already exist; skip");
                                         Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "path", destPath } });
                                         Log($"[RPC] RenderOne completed");
@@ -195,8 +201,9 @@ namespace projectFrameCut.Render.WindowsRender
                                     var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height, true);
                                     Log($"Clips in frame #{frameIndex}:\r\n{JsonSerializer.Serialize(layers)}\r\n---");
                                     var pic = Timeline.MixtureLayers(layers, frameIndex, width, height);
-                                    pic.SetAlpha(false).SaveAsPng8bpc(destPath, encoder);
-                                    Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "path", destPath } });
+                                    pic.SaveAsPng8bpc(destPath, encoder);
+                                    Thread.Sleep(500);
+                                    Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "frameHash", frameHash } , { "path", destPath } });
                                     Log($"[RPC] RenderOne completed");
                                 }
                                 catch (Exception ex)
@@ -376,9 +383,11 @@ namespace projectFrameCut.Render.WindowsRender
                                 disconnect = true;
                                 Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
                                 server.DisposeAsync();
+                                nanoHostProc?.Kill();
                                 RpcCts.Cancel();
                                 return;
                             }
+
                         default:
                             Log($"[RPC] Unknown message type: {msg.Type}");
                             break;
@@ -435,5 +444,35 @@ Current directory: {Environment.CurrentDirectory}
             return;
 
         }
+
+        private static Process nanoHostProc;
+        private static int backendPort = -1;
+
+        private static void BootBackendNanoHost(int port, string tempDir, string token)
+        {
+            var backendPath = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Render.WindowsRender.NanoHost.exe");
+
+            if (port == -1)
+            {
+                throw new InvalidOperationException("No port available.");
+            }
+            var info = new ProcessStartInfo
+            {
+                FileName = backendPath,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                RedirectStandardInput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            info.EnvironmentVariables.Add("ASPNETCORE_URLS", $"http://+:{port}");
+            info.EnvironmentVariables.Add("ThumbServicesBasePath", tempDir);
+            info.EnvironmentVariables.Add("AccessToken", token);
+            nanoHostProc = Process.Start(info);
+            Log($"Backend NanoHost started on port {port}");
+
+        }
+
+
     }
 }

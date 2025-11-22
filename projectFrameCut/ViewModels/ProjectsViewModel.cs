@@ -40,7 +40,7 @@ namespace projectFrameCut.ViewModels
                 : DateTime.Now.Ticks - _lastChanged.Ticks >= 0 ?
                 TimeSpan.FromTicks(DateTime.Now.Ticks - _lastChanged.Ticks) switch
                 {
-                    var t when t.TotalHours < 4 => Localized.HomePage_LastChangedOnMinutes(t.Minutes),
+                    var t when t.TotalHours < 2 => Localized.HomePage_LastChangedOnMinutes(t.Minutes),
                     var t when t.TotalHours < 48 => Localized.HomePage_LastChangedOnHours((int)t.TotalHours),
                     var t when t.TotalDays < 14 => Localized.HomePage_LastChangedOnDays((int)t.TotalDays),
                     _ => Localized.HomePage_LastChangedOnExactTimeSpan(_lastChanged)
@@ -67,7 +67,7 @@ namespace projectFrameCut.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    Log(ex, $"Get thumb for {_thumbPath}", this);
+                    //Log(ex, $"Get thumb for {_thumbPath}", this); //this is okay for not logging
                     return ImageSource.FromFile("icon_unknown_png");
                 }
             }

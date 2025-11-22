@@ -211,21 +211,19 @@ namespace projectFrameCut.Render
             try
             {
                 Picture? result = null;
-                foreach (var frame in frames)
+                foreach (var srcFrame in frames)
                 {
-                    Picture effected = frame.Clip;
-                    if (frame.Effects.Length > 0)
+                    var frame = srcFrame.Clip.Resize(targetWidth, targetHeight, true);
+                    Picture effected = frame;
+                    foreach (var effect in srcFrame?.Effects ?? [])
                     {
-                        foreach (var effect in frame.Effects)
-                        {
-                            effected = effect.Render(
-                                effected,
-                                ComputerCache.GetOrAdd(
-                                    effect.TypeName,
-                                    AcceleratedComputerBridge.RequireAComputer?.Invoke(effect.TypeName)
-                                        is IComputer c1 ? c1 :
-                                        throw new NotSupportedException($"Mixture mode {frame.MixtureMode} is not supported in accelerated computer bridge.")));
-                        }
+                        effected = effect.Render(
+                            effected,
+                            ComputerCache.GetOrAdd(
+                                effect.TypeName,
+                                AcceleratedComputerBridge.RequireAComputer?.Invoke(effect.TypeName)
+                                    is IComputer c1 ? c1 :
+                                    throw new NotSupportedException($"Mixture mode {srcFrame.MixtureMode} is not supported in accelerated computer bridge.")));
                     }
 
                     if (result == null)
@@ -235,12 +233,13 @@ namespace projectFrameCut.Render
                     else
                     {
                         result = MixtureCache.GetOrAdd(
-                            frame.MixtureMode, GetMixer(frame.MixtureMode))
+                            srcFrame!.MixtureMode, GetMixer(srcFrame.MixtureMode))
                                 .Mix(effected, result, 
-                                    ComputerCache.GetOrAdd(frame.MixtureMode.ToString(), 
-                                        AcceleratedComputerBridge.RequireAComputer?.Invoke(frame.MixtureMode.ToString()) 
+                                    ComputerCache.GetOrAdd(srcFrame.MixtureMode.ToString(), 
+                                        AcceleratedComputerBridge.RequireAComputer?.Invoke(srcFrame.MixtureMode.ToString()) 
                                             is IComputer c ? c : 
-                                            throw new NotSupportedException($"Mixture mode {frame.MixtureMode} is not supported in accelerated computer bridge.")));
+                                            throw new NotSupportedException($"Mixture mode {srcFrame.MixtureMode} is not supported in accelerated computer bridge.")))
+                                .Resize(targetWidth, targetHeight, true);
                     }
                 }
 

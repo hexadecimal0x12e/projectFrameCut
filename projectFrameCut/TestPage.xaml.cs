@@ -678,8 +678,14 @@ public partial class TestPage : ContentPage
         switch (type)
         {
             case "Native(null pointer)":
+#if ANDROID
+                throw new Java.Lang.NullPointerException("test crash from native code");
+#elif iDevices
+
+#elif WINDOWS
                 IntPtr ptr = IntPtr.Zero;
                 Marshal.WriteInt32(ptr, 42);
+#endif
                 break;
             case "Managed(NullReferenceException)":
                 throw new NullReferenceException("test crash");

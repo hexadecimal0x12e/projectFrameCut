@@ -1,10 +1,12 @@
 ﻿using Microsoft.Maui.Controls.Xaml;
 using LocalizedResources;
+using System.Diagnostics;
 
 namespace LocalizedResources
 {
     [ContentProperty(nameof(Key))]
-    [AcceptEmptyServiceProvider]    
+    [AcceptEmptyServiceProvider]
+    [DebuggerNonUserCode()]
     public class LocalizedExtension : IMarkupExtension<string>
     {
         public string Key { get; set; } = string.Empty;
@@ -14,21 +16,19 @@ namespace LocalizedResources
             if (string.IsNullOrEmpty(Key))
                 return string.Empty;
 
-            // 使用你现有的本地化系统
-            if (SimpleLocalizerBaseGeneratedHelper.Localized == null)
+            if (Localized == null)
             {
-                // 如果还没有初始化，使用默认的本地化器
-                SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+                return $"@{Key}(Localized not inited yet.)";
             }
 
             try
             {
-                // 使用反射或动态查找来获取本地化字符串
-                return SimpleLocalizerBaseGeneratedHelper.Localized.DynamicLookup(Key);
+                var key = Localized.DynamicLookup(Key);
+                return key;
             }
-            catch (KeyNotFoundException)
+            catch (Exception)
             {
-                return $"@{Key}"; // 返回键名作为占位符
+                return $"@{Key}"; 
             }
         }
 

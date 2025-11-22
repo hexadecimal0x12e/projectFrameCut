@@ -17,14 +17,60 @@ namespace projectFrameCut.Shared
 
         [DebuggerNonUserCode()]
         public static void Log(string msg) => Log(msg, "info"); //fix the vs auto completion
-        //[DebuggerNonUserCode()]
-        //public static void Log(Exception e) => Log(e, false);
-        //[DebuggerNonUserCode()]
-        //public static void Log(Exception e, bool isCritical) => Log($"{(isCritical ? "A critical " : "")}{e.GetType().Name} error: {e.Message} {e.StackTrace}", isCritical ? "Critical" : "error");
         [DebuggerNonUserCode()]
-        public static void Log(Exception ex, string message = "", object? sender = null)
+        public static void Log(Exception ex, string? message = "", object? sender = null)
         {
-            Log($"{sender?.GetType().Name} happens a {ex.GetType().Name} exception when trying to {message} \r\n error message: {ex.Message}", "error");
+            Log($"{sender?.GetType().Name} happens a {ex.GetType().Name} exception when trying to {message ?? "do undefined action"} \r\nerror message: {ex.Message}", "error");
+
+            MyLoggerExtensions.AnnounceException(ex);
+            try
+            {
+                string info = "";
+                if (ex is AggregateException agex)
+                {
+                    foreach (var item in agex.InnerExceptions)
+                    {
+                        try
+                        {
+                            info += $"AggregateException info:\r\n{GetExceptionMessages(item)}\r\n";
+                        }
+                        catch (Exception ex2)
+                        {
+                            info += $"AggregateException info:\r\n Unable to get info: {ex2.Message}\r\n";
+                        }
+                    }
+
+                }
+
+                if (ex.InnerException is AggregateException inneragex)
+                {
+                    foreach (var item in inneragex.InnerExceptions)
+                    {
+                        try
+                        {
+                            info += $"Inner AggregateException info:\r\n{GetExceptionMessages(item)}\r\n";
+                        }
+                        catch (Exception ex2)
+                        {
+                            info += $"Inner AggregateException info:\r\n Unable to get info: {ex2.Message}\r\n";
+                        }
+                    }
+                }
+
+                Log($"{GetExceptionMessages(ex, false)}{info}", "error");
+
+            }
+            catch (Exception e)
+            {
+                var ex1 = new InvalidDataException($"An error occurred while trying to log the {ex.GetType().Name}'s detailed information.", new AggregateException(ex, e));
+                Log(ex1, message, sender);
+            }
+
+
+        }
+
+        private static string GetExceptionMessages(Exception ex, bool includeMessage = true)
+        {
             string innerExceptionInfo = "";
             if (ex.InnerException != null)
             {
@@ -46,9 +92,28 @@ StackTrace:
                 } while (inner is not null);
             }
             if (string.IsNullOrWhiteSpace(innerExceptionInfo)) innerExceptionInfo = "None";
-            MyLoggerExtensions.AnnounceException(ex);
-            Log(
+            if (!includeMessage)
+            {
+                return 
 $"""
+StackTrace:
+{ex.StackTrace}
+
+From:{(ex.TargetSite is not null ? ex.TargetSite.ToString() : "unknown")}
+InnerException:
+{innerExceptionInfo}
+
+Exception data:
+{string.Join("\r\n", ex.Data.Cast<System.Collections.DictionaryEntry>().Select(k => $"{k.Key} : {k.Value}"))}
+
+""";
+            }
+            else
+            {
+                return
+$"""
+Message:
+{ex.Message}
 
 StackTrace:
 {ex.StackTrace}
@@ -60,8 +125,8 @@ InnerException:
 Exception data:
 {string.Join("\r\n", ex.Data.Cast<System.Collections.DictionaryEntry>().Select(k => $"{k.Key} : {k.Value}"))}
 
-"""
-);
+""";
+            }
 
         }
 

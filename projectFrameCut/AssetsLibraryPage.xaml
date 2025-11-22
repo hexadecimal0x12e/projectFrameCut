@@ -6,7 +6,7 @@
             Title="{l:Localized Key=AppShell_AssetsTab}">
     <VerticalStackLayout>
         <Label 
-            Text="some assets"
+            Text="Assets will be available in next release!"
             VerticalOptions="Center" 
             HorizontalOptions="Center" />
     </VerticalStackLayout>

@@ -135,7 +135,7 @@ namespace projectFrameCut.Render
                         continue;
                     }
 
-                    var frame = item.GetFrameRelativeToStartPointOfSource(idx);
+                    var frame = item.GetFrameRelativeToStartPointOfSource(idx,_width,_height,true);
                     if (frame != null)
                     {
                         var cache = FrameCache.GetOrAdd(item.Id, (_) => new());
@@ -192,12 +192,10 @@ namespace projectFrameCut.Render
                 {
                     foreach (var item in clip.EffectsInstances ?? IClip.GetEffectsInstances(clip.Effects))
                     {
-                        frame = item.Render(
-                            frame,
-                            ComputerCache.GetOrAdd
-                                (item.TypeName,
-                                AcceleratedComputerBridge.RequireAComputer?.Invoke(item.TypeName) is IComputer c1 ? c1 :
-                                throw new NotSupportedException($"Effect mode {item.TypeName} is not supported in accelerated computer bridge.")));
+                        frame = item.Render(frame,
+                                        ComputerCache.GetOrAdd(item.TypeName, AcceleratedComputerBridge.RequireAComputer?.Invoke(item.TypeName)
+                                        is IComputer c1 ? c1 : throw new NotSupportedException($"Effect mode {item.TypeName} is not supported in accelerated computer bridge.")))
+                                    .Resize(_width, _height, true);
                     }
                 }
 
@@ -210,7 +208,8 @@ namespace projectFrameCut.Render
                                                 clip.MixtureMode.ToString(),
                                                 AcceleratedComputerBridge.RequireAComputer
                                                     ?.Invoke(clip.MixtureMode.ToString()) is IComputer c2 ? c2 :
-                                                    throw new NotSupportedException($"Mixture mode {clip.MixtureMode} is not supported in accelerated computer bridge.")));
+                                                    throw new NotSupportedException($"Mixture mode {clip.MixtureMode} is not supported in accelerated computer bridge.")))
+                                         .Resize(_width, _height, true);
                 }
             }
 

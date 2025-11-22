@@ -7,7 +7,6 @@
     <ContentPage.ToolbarItems>
         <ToolbarItem x:Name="JobRunningIndicator" Text="{l:Localized Key=DraftPage_NoJobRunning}" Order="Primary" Priority="0" Clicked="OnExportedClick" />
         <ToolbarItem Text="{l:Localized Key=DraftPage_GoRender}" Order="Primary" Priority="0" Clicked="OnExportedClick" />
-        <ToolbarItem Text="{l:Localized Key=DraftPage_SaveAs}"  Order="Secondary" />
         <ToolbarItem Text="{l:Localized Key=_Options}"  Order="Secondary" Clicked="SettingsClick"/>
     </ContentPage.ToolbarItems>
     <Grid>
@@ -21,17 +20,21 @@
         <VerticalStackLayout Grid.Row="0" x:Name="UpperContent">
             <Grid Padding="4" HeightRequest="250" >
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="800"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" StrokeThickness="5" HorizontalOptions="Fill">
-                    <Image x:Name="PreviewBox" Background="Black"/>
-                </Border>
-                <Border Grid.Column="1" StrokeThickness="5" HorizontalOptions="Fill">
+                <VerticalStackLayout Grid.Column="0">
+                    <Image x:Name="PreviewBox" 
+                            Background="Black"
+                            HeightRequest="240"
+                            Aspect="AspectFit" 
+                            ZIndex="9999"/>
+                </VerticalStackLayout>
+                <Border ZIndex="0" Grid.Column="1" StrokeThickness="5" HorizontalOptions="Fill">
                     <VerticalStackLayout x:Name="CustomContent1" />
                 </Border>
-                <Border Grid.Column="2" StrokeThickness="5" HorizontalOptions="Fill">
+                <Border  ZIndex="0" Grid.Column="2" StrokeThickness="5" HorizontalOptions="Fill">
                     <VerticalStackLayout x:Name="CustomContent2"/>
                 </Border>
 
@@ -55,6 +58,7 @@
                 <Button x:Name="ZoomInButton" Text="-" Clicked="ZoomInButton_Clicked"/>
                 <Button x:Name="SpiltButton" Text="Spilt" Clicked="Split_Clicked"/>
                 <Button x:Name="AssetPanelButton" Text="Assets" Clicked="AssetPanelButton_Clicked"/>
+                <Button Clicked="OnRefreshButtonClicked" Text="Refresh"/>
                 <Button 
 x:Name="AddClip"
 Text="Add clip"
@@ -117,14 +121,23 @@ Clicked="AddClip_Clicked" />
 
         </Grid>
 
-        <AbsoluteLayout x:Name="OverlayLayer"
+       <AbsoluteLayout x:Name="OverlayLayer"
                         Grid.RowSpan="3"
                         ZIndex="1000"
                         InputTransparent="True"
+                       BackgroundColor="Transparent"
                         IsVisible="True"
                         HorizontalOptions="Fill"
                         VerticalOptions="Fill">
             <BoxView x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red"/>
+            <Image x:Name="PreviewOverlayImage"
+           BackgroundColor="#112233"
+           Aspect="AspectFit"
+           InputTransparent="True"
+           WidthRequest="800"
+           HeightRequest="240"
+           AbsoluteLayout.LayoutBounds="0,0,800,240"
+           AbsoluteLayout.LayoutFlags="None" />
 
             <Label Text="Overlay"
                    TextColor="White"

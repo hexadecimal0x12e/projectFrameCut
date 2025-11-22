@@ -38,6 +38,23 @@ namespace projectFrameCut.WinUI
 
         private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
         {
+            try
+            {
+                if (SettingsManager.Settings is not null)
+                {
+                    if (SettingsManager.IsSettingExists("DontPanicOnUnhandledException"))
+                    {
+                        if (bool.TryParse(SettingsManager.GetSetting("DontPanicOnUnhandledException", "False"), out var p) ? p : false)
+                        {
+                            e.Handled = true;
+                            Log(e.Exception, "Global unhandled exception", this);
+                            AppShell.instance.CurrentPage?.DisplayAlertAsync("Global unhandled exception", Localized._ExceptionTemplate(e.Exception), "ok");
+                            return;
+                        }
+                    }
+                }
+            }
+            catch { }
             Crash(e.Exception);
         }
 
@@ -63,13 +80,20 @@ StackTrace:
 """;
                 }
 
-
-                var logMessage =
-$"""
+                string header =
+"""
 Sorry, the application has encountered an unhandled exception and needs to close now.
 Your works have been saved automatically when you make any change on the UI, so you won't lose your work.
-If you want to help the development of this application, please consider to submit an issue or send this report to me:
+If you want to help the development of this application, please consider to submit an issue or send this report to me.
+""";
+                try
+                {
+                    if (Localized is not null) header = Localized.AppCrashed;
+                }
+                catch { }
 
+                var content =
+$"""
 Exception type: {ex.GetType().Name}
 Message: {ex.Message}
 StackTrace:
@@ -82,9 +106,8 @@ InnerException:
 Exception data:
 {string.Join("\r\n", ex.Data.Cast<System.Collections.DictionaryEntry>().Select(k => $"{k.Key} : {k.Value}"))}
 
-
 Environment:
-Application: {AppInfo.PackageName},{AppInfo.VersionString} ({AppInfo.BuildString})
+Application: {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} ({AppInfo.BuildString})
 OS version: {Environment.OSVersion}
 CLR Version:{Environment.Version}
 Command line: {Environment.CommandLine}
@@ -92,30 +115,32 @@ Current directory: {Environment.CurrentDirectory}
 
 (report ended here)
 """;
-                string logPath;
+                string logPath, logMessage;
 
                 try
                 {
                     Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "Crashlogs"));
                     logPath = Path.Combine(MauiProgram.DataPath, "Crashlogs", $"Crashlog-{DateTime.Now:yyyy-MM-dd-hh-mm-ss}.log");
+                    logMessage = $"{header}\r\nthis log is in: {logPath}\r\n\r\n{content}";
                     File.WriteAllText(logPath, logMessage);
                 }
                 catch (Exception)  
                 {
                     logPath = Path.Combine(Directory.CreateTempSubdirectory("projectFrameCut_").FullName, "crash.log");
+                    logMessage = $"{header}\r\nthis log is in: {logPath}\r\n\r\n{content}";
                     File.WriteAllText(logPath, logMessage);
                 }
                 Thread.Sleep(100);
                 Process.Start(new ProcessStartInfo { FileName = logPath , UseShellExecute = true });
                 Environment.FailFast(logMessage, ex);
-                Environment.Exit(-1);
+                Environment.Exit(ex.HResult);
             }
         }
 
-        
 
         protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
     }
+
     public static class Program
     {
         static async Task Main(string[] args)
@@ -139,7 +164,7 @@ Current directory: {Environment.CurrentDirectory}
                 static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
 
                 _ = MessageBox(IntPtr.Zero,
-                    $"Application suffered from a unrecoverable early-boot {ex.GetType().Name} exception:\n{ex}\r\n\r\nTry reinstall application.",
+                    $"Oh no! projectFrameCut cannot start because a unrecoverable early-boot {ex.GetType().Name} exception happends.\r\nFor more information, please see the crash report popped up later.\r\n\r\n({ex})",
                     "Fatal error",
                     0);
                 App.Crash(ex);

@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO.Pipes;
 using System.Reflection.Metadata;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace projectFrameCut;
 
@@ -298,5 +299,10 @@ draftSourcePath = "";
         {
             await DisplayAlert(Localized._Warn, Localized._ExceptionTemplate(ex), "ok");
         }
+    }
+
+    private async void SettingMgntBtn_Clicked(object sender, EventArgs e)
+    {
+        await Navigation.PushAsync(new Setting.SettingPages.DebugSettingPage());
     }
 }

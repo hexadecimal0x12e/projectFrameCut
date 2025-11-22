@@ -10,6 +10,64 @@
   "Values": {
     "zh-CN": [
       {
+        "Id": "CommonStr_Go",
+        "Value": "\u524D\u5F80\u9875\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Make",
+        "Value": "\u751F\u6210...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_RebootRequired",
+        "Value": "\u8981\u5E94\u7528\u8FD9\u4E9B\u66F4\u6539\uFF0C\u4F60\u9700\u8981\u91CD\u542F {Localized.AppBrand}\u3002\u8981\u73B0\u5728\u91CD\u542F\u5417\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Reset",
+        "Value": "\u91CD\u7F6E...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Select",
+        "Value": "\u9009\u62E9...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Sure",
+        "Value": "\u6B64\u64CD\u4F5C({name})\u5B58\u5728\u98CE\u9669\uFF0C\u8981\u7EE7\u7EED\u5417?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "General_Language",
         "Value": "\u8BED\u8A00/Language",
         "Mode": "ConstString",
@@ -19,7 +77,23 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "General_UserDataPath",
+        "Id": "General_UserData",
+        "Value": "\u6570\u636E\u4E0E\u914D\u7F6E\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_ManagePageOpen",
+        "Value": "\u7BA1\u7406\u7528\u6237\u6570\u636E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Path",
         "Value": "\u7528\u6237\u6570\u636E\u76EE\u5F55",
         "Mode": "ConstString",
         "Args": [],
@@ -27,11 +101,1262 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "CommonStr_Select",
-        "Value": "",
+        "Id": "General_UserData_SelectFolder_Confirm",
+        "Value": "\u786E\u8BA4\u8981\u628A\u7528\u6237\u6570\u636E\u76EE\u5F55\u8BBE\u7F6E\u4E3A\u300C{path}\u300D\u5417\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmButton",
+        "Value": "\u70B9\u51FB\u8FD9\u91CC\u9009\u62E9\uFF0C\u6216\u8005\u9009\u62E9\u8FB9\u4E0A\u7684\u201C\u53D6\u6D88\u201D\u6765\u6062\u590D\u5230\u9ED8\u8BA4\u8DEF\u5F84",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmMigrateData",
+        "Value": "\u662F\u5426\u8981\u8FC1\u79FB\u5DF2\u6709\u7684\u6570\u636E\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmReset",
+        "Value": "\u786E\u8BA4\u8981\u628A\u7528\u6237\u6570\u636E\u6062\u590D\u4E3A\u9ED8\u8BA4\u503C\u5417\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DebugMode",
+        "Value": "\u5F00\u53D1\u8005\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_MakeDiagReport",
+        "Value": "\u751F\u6210\u8BCA\u65AD\u62A5\u544A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ResetSettings",
+        "Value": "\u91CD\u7F6E\u6240\u6709\u7684\u8BBE\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsNotSupported",
+        "Value": "\u62B1\u6B49\uFF0C\u4F60\u7684\u5E73\u53F0\u4E0D\u652F\u6301\u914D\u7F6E\u786C\u4EF6\u52A0\u901F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsSubTitle",
+        "Value": "\u7BA1\u7406\u786C\u4EF6\u52A0\u901F\u7684\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsTitle",
+        "Value": "\u786C\u4EF6\u52A0\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableMultiAccel",
+        "Value": "\u542F\u7528\u591A\u52A0\u901F\u5668\uFF08\u4EC5\u9650\u6E32\u67D3\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_LoadingAccels",
+        "Value": "\u83B7\u53D6\u53EF\u7528\u7684\u52A0\u901F\u5668\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel",
+        "Value": "\u9009\u62E9\u7528\u4E8E\u6E32\u67D3/\u7F16\u8F91\u65F6\u786C\u4EF6\u52A0\u901F\u7684GPU",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      }
+    ],
+    "en-US": [
+      {
+        "Id": "CommonStr_Go",
+        "Value": "Go to page",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Make",
+        "Value": "Generating...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_RebootRequired",
+        "Value": "To apply these changes, you need to restart {Localized.AppBrand}. Restart now?",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Prompt asking user to restart the application to apply changes",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Reset",
+        "Value": "Resetting...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Select",
+        "Value": "Select...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Sure",
+        "Value": "This operation ({name}) involves risks. Would you like to continue?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Warning text for risk confirmation dialog",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language",
+        "Value": "Language/Language",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translated the Chinese part while preserving the \u0027/Language\u0027 suffix as instructed",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData",
+        "Value": "Data and Configuration Management",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_ManagePageOpen",
+        "Value": "Manage User Data",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Path",
+        "Value": "User Data Directory",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Refers to the directory where user data is stored",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_Confirm",
+        "Value": "Confirm setting the user data directory to \u0022{path}\u0022?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmButton",
+        "Value": "Click here to select, or choose \u0022Cancel\u0022 nearby to revert to the default path",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Instruction for folder selection confirmation button",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmMigrateData",
+        "Value": "Do you want to migrate existing data?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmReset",
+        "Value": "Are you sure you want to reset user data to default values?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DebugMode",
+        "Value": "Developer Mode",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of \u0027\u5F00\u53D1\u8005\u6A21\u5F0F\u0027 to indicate a special mode for developers with debugging features.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_MakeDiagReport",
+        "Value": "Generate Diagnostic Report",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ResetSettings",
+        "Value": "Reset all settings",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Button/label text for restoring all configurations to default values",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsSubTitle",
+        "Value": "Manage hardware acceleration configurations",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsTitle",
+        "Value": "Hardware Acceleration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableMultiAccel",
+        "Value": "Enable Multi-Accelerator (Render Only)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Activates multiple accelerators specifically for rendering purposes",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel",
+        "Value": "Select GPU for hardware acceleration during rendering/editing",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_LoadingAccels",
+        "Value": "Loading available accelerators...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsNotSupported",
+        "Value": "Sorry, your platform does not support hardware acceleration configuration.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Informs the user that their system cannot enable hardware acceleration options",
+        "HasValidationErrors": false
+      }
+    ],
+    "zh-TW": [
+      {
+        "Id": "CommonStr_Go",
+        "Value": "\u524D\u5F80\u9801\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Make",
+        "Value": "\u7522\u751F\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_RebootRequired",
+        "Value": "\u8981\u5957\u7528\u9019\u4E9B\u8B8A\u66F4\uFF0C\u60A8\u9700\u8981\u91CD\u65B0\u555F\u52D5 {Localized.AppBrand}\u3002\u662F\u5426\u7ACB\u5373\u91CD\u65B0\u555F\u52D5\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Reset",
+        "Value": "\u91CD\u7F6E...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Select",
+        "Value": "\u9078\u64C7...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Sure",
+        "Value": "\u6B64\u64CD\u4F5C({name})\u5B58\u5728\u98A8\u96AA\uFF0C\u8981\u7E7C\u7E8C\u55CE\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language",
+        "Value": "\u8A9E\u8A00/Language",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4FDD\u6301\u539F\u6587\u7684\u540E\u7F00\u683C\u5F0F\uFF0C\u4EC5\u8F6C\u6362\u7B80\u4F53\u4E2D\u6587\u90E8\u5206\u4E3A\u7E41\u4F53\u4E2D\u6587",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData",
+        "Value": "\u6578\u64DA\u8207\u914D\u7F6E\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_ManagePageOpen",
+        "Value": "\u7BA1\u7406\u4F7F\u7528\u8005\u8CC7\u6599",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Path",
+        "Value": "\u4F7F\u7528\u8005\u8CC7\u6599\u76EE\u9304",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_Confirm",
+        "Value": "\u78BA\u8A8D\u8981\u628A\u4F7F\u7528\u8005\u8CC7\u6599\u76EE\u9304\u8A2D\u5B9A\u70BA\u300C{path}\u300D\u55CE\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmButton",
+        "Value": "\u9EDE\u9078\u9019\u88E1\u9078\u64C7\uFF0C\u6216\u662F\u9078\u64C7\u65C1\u908A\u7684\u300C\u53D6\u6D88\u300D\u4F86\u9084\u539F\u5230\u9810\u8A2D\u8DEF\u5F91",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmMigrateData",
+        "Value": "\u662F\u5426\u8981\u9077\u79FB\u73FE\u6709\u7684\u8CC7\u6599\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmReset",
+        "Value": "\u78BA\u8A8D\u8981\u628A\u7528\u6236\u8CC7\u6599\u6062\u5FA9\u70BA\u9810\u8A2D\u503C\u55CE\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DebugMode",
+        "Value": "\u958B\u767C\u8005\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_MakeDiagReport",
+        "Value": "\u751F\u6210\u8A3A\u65B7\u5831\u544A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ResetSettings",
+        "Value": "\u91CD\u8A2D\u6240\u6709\u7684\u8A2D\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsSubTitle",
+        "Value": "\u7BA1\u7406\u786C\u9AD4\u52A0\u901F\u7684\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsTitle",
+        "Value": "\u786C\u9AD4\u52A0\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableMultiAccel",
+        "Value": "\u555F\u7528\u591A\u52A0\u901F\u5668\uFF08\u50C5\u9650\u6E32\u67D3\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C07\u7C21\u9AD4\u4E2D\u6587\u8853\u8A9E\u8F49\u63DB\u70BA\u7E41\u9AD4\u4E2D\u6587\uFF0C\u4FDD\u6301\u6280\u8853\u8853\u8A9E\u6E96\u78BA\u6027\u3002\u300C\u6E32\u67D3\u300D\u70BA\u8A08\u7B97\u6A5F\u5716\u5F62\u5B78\u6A19\u6E96\u8B6F\u540D\uFF0C\u300C\u52A0\u901F\u5668\u300D\u5728\u6B64\u4E0A\u4E0B\u6587\u6307\u786C\u9AD4\u52A0\u901F\u529F\u80FD\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel",
+        "Value": "\u9078\u53D6\u7528\u65BC\u6E32\u67D3/\u7DE8\u8F2F\u6642\u786C\u9AD4\u52A0\u901F\u7684GPU",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_LoadingAccels",
+        "Value": "\u6B63\u5728\u53D6\u5F97\u53EF\u7528\u7684\u52A0\u901F\u5668\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsNotSupported",
+        "Value": "\u5C0D\u4E0D\u8D77\uFF0C\u4F60\u7684\u5E73\u53F0\u4E0D\u652F\u63F4\u914D\u7F6E\u786C\u9AD4\u52A0\u901F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      }
+    ],
+    "ja-JP": [
+      {
+        "Id": "CommonStr_Go",
+        "Value": "\u30DA\u30FC\u30B8\u306B\u9032\u3080",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Make",
+        "Value": "\u751F\u6210\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_RebootRequired",
+        "Value": "\u3053\u308C\u3089\u306E\u5909\u66F4\u3092\u9069\u7528\u3059\u308B\u306B\u306F\u3001{Localized.AppBrand}\u3092\u518D\u8D77\u52D5\u3059\u308B\u5FC5\u8981\u304C\u3042\u308A\u307E\u3059\u3002\u4ECA\u3059\u3050\u518D\u8D77\u52D5\u3057\u307E\u3059\u304B\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Changes require restart - asking user to confirm immediate restart",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Reset",
+        "Value": "\u30EA\u30BB\u30C3\u30C8...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Select",
+        "Value": "\u9078\u629E...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Sure",
+        "Value": "\u3053\u306E\u64CD\u4F5C({name})\u306B\u306F\u30EA\u30B9\u30AF\u304C\u3042\u308A\u307E\u3059\u3002\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Risk warning for operation confirmation",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language",
+        "Value": "\u8A00\u8A9E/Language",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of \u0027Language\u0027 with preserved \u0027/Language\u0027 suffix as requested",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData",
+        "Value": "\u30C7\u30FC\u30BF\u3068\u8A2D\u5B9A\u306E\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_ManagePageOpen",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u306E\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Path",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_Confirm",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u3092\u300C{path}\u300D\u306B\u8A2D\u5B9A\u3057\u307E\u3059\u304B\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "User data directory setting confirmation prompt",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmButton",
+        "Value": "\u3053\u3053\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u9078\u629E\u3001\u307E\u305F\u306F\u96A3\u306E\u300C\u30AD\u30E3\u30F3\u30BB\u30EB\u300D\u3067\u65E2\u5B9A\u306E\u30D1\u30B9\u306B\u623B\u308A\u307E\u3059",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u30D5\u30A9\u30EB\u30C0\u9078\u629E\u78BA\u8A8D\u30DC\u30BF\u30F3\u306E\u64CD\u4F5C\u8AAC\u660E",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmMigrateData",
+        "Value": "\u65E2\u5B58\u306E\u30C7\u30FC\u30BF\u3092\u79FB\u884C\u3057\u307E\u3059\u304B\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmReset",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u3092\u30C7\u30D5\u30A9\u30EB\u30C8\u5024\u306B\u5FA9\u5143\u3057\u307E\u3059\u304B\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Confirm resetting user data to default values",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DebugMode",
+        "Value": "\u958B\u767A\u8005\u30E2\u30FC\u30C9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_MakeDiagReport",
+        "Value": "\u8A3A\u65AD\u30EC\u30DD\u30FC\u30C8\u3092\u751F\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ResetSettings",
+        "Value": "\u3059\u3079\u3066\u306E\u8A2D\u5B9A\u3092\u30EA\u30BB\u30C3\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Reset all settings to their default values",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsSubTitle",
+        "Value": "\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u8A2D\u5B9A\u306E\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsTitle",
+        "Value": "\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableMultiAccel",
+        "Value": "\u30DE\u30EB\u30C1\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30BF\u3092\u6709\u52B9\u5316\uFF08\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u306E\u307F\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel",
+        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0/\u7DE8\u96C6\u6642\u306E\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u306B\u4F7F\u7528\u3059\u308BGPU\u3092\u9078\u629E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_LoadingAccels",
+        "Value": "\u5229\u7528\u53EF\u80FD\u306A\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30BF\u30FC\u3092\u53D6\u5F97\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Loading available accelerators",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsNotSupported",
+        "Value": "\u7533\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093\u304C\u3001\u304A\u4F7F\u3044\u306E\u30D7\u30E9\u30C3\u30C8\u30D5\u30A9\u30FC\u30E0\u306F\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u306E\u8A2D\u5B9A\u3092\u30B5\u30DD\u30FC\u30C8\u3057\u3066\u3044\u307E\u305B\u3093\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      }
+    ],
+    "ko-KR": [
+      {
+        "Id": "CommonStr_Go",
+        "Value": "\uD398\uC774\uC9C0\uB85C \uC774\uB3D9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Make",
+        "Value": "\uC0DD\uC131 \uC911...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_RebootRequired",
+        "Value": "\uC774 \uBCC0\uACBD \uC0AC\uD56D\uC744 \uC801\uC6A9\uD558\uB824\uBA74 {Localized.AppBrand}\uB97C \uC7AC\uC2DC\uC791\uD574\uC57C \uD569\uB2C8\uB2E4. \uC9C0\uAE08 \uC7AC\uC2DC\uC791\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "App rebooting prompt for applying changes",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Reset",
+        "Value": "\uC7AC\uC124\uC815 \uC911...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Select",
+        "Value": "\uC120\uD0DD...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Sure",
+        "Value": "\uC774 \uC791\uC5C5({name})\uC5D0\uB294 \uC704\uD5D8\uC774 \uC788\uC2B5\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Risk warning prompt for user confirmation",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language",
+        "Value": "\uC5B8\uC5B4/Language",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of \u0027Language\u0027 while preserving the \u0027/Language\u0027 suffix as requested",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData",
+        "Value": "\uB370\uC774\uD130 \uBC0F \uC124\uC815 \uAD00\uB9AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_ManagePageOpen",
+        "Value": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uAD00\uB9AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uAD00\uB9AC \uD398\uC774\uC9C0\uB97C \uB098\uD0C0\uB0B4\uB294 \uC81C\uBAA9",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Path",
+        "Value": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uB514\uB809\uD1A0\uB9AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_Confirm",
+        "Value": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uD3F4\uB354\uB97C \u0027{path}\u0027\uB85C \uC124\uC815\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "Asks for confirmation to set the user data directory to the specified path",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmButton",
+        "Value": "\uC5EC\uAE30\uB97C \uD074\uB9AD\uD558\uC5EC \uC120\uD0DD\uD558\uAC70\uB098 \uC606\uC758 \u0027\uCDE8\uC18C\u0027\uB97C \uC120\uD0DD\uD558\uC5EC \uAE30\uBCF8 \uACBD\uB85C\uB85C \uBCF5\uC6D0\uD558\uC138\uC694",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Folder selection interface guidance text",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmMigrateData",
+        "Value": "\uAE30\uC874 \uB370\uC774\uD130\uB97C \uB9C8\uC774\uADF8\uB808\uC774\uC158\uD560\uAE4C\uC694?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Confirm whether to migrate existing user data",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmReset",
+        "Value": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130\uB97C \uAE30\uBCF8\uAC12\uC73C\uB85C \uBCF5\uC6D0\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DebugMode",
+        "Value": "\uAC1C\uBC1C\uC790 \uBAA8\uB4DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Indicates the software is running in developer/debug mode",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_MakeDiagReport",
+        "Value": "\uC9C4\uB2E8 \uBCF4\uACE0\uC11C \uC0DD\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ResetSettings",
+        "Value": "\uBAA8\uB4E0 \uC124\uC815 \uCD08\uAE30\uD654",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Reset all settings to default values",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsSubTitle",
+        "Value": "\uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D \uC124\uC815 \uAD00\uB9AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsTitle",
+        "Value": "\uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableMultiAccel",
+        "Value": "\uB2E4\uC911 \uAC00\uC18D\uAE30 \uC0AC\uC6A9 (\uB80C\uB354\uB9C1 \uC804\uC6A9)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Enable multi-accelerator for rendering only",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel",
+        "Value": "\uB80C\uB354\uB9C1/\uD3B8\uC9D1 \uC2DC \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D\uC5D0 \uC0AC\uC6A9\uD560 GPU \uC120\uD0DD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_LoadingAccels",
+        "Value": "\uC0AC\uC6A9 \uAC00\uB2A5\uD55C \uAC00\uC18D\uAE30 \uAC00\uC838\uC624\uB294 \uC911...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsNotSupported",
+        "Value": "\uC8C4\uC1A1\uD569\uB2C8\uB2E4. \uC0AC\uC6A9 \uC911\uC778 \uD50C\uB7AB\uD3FC\uC5D0\uC11C \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D \uAD6C\uC131\uC744 \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Hardware acceleration configuration not supported on current platform",
+        "HasValidationErrors": false
+      }
+    ],
+    "fr-FR": [
+      {
+        "Id": "CommonStr_Go",
+        "Value": "Aller \u00E0 la page",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Make",
+        "Value": "G\u00E9n\u00E9ration...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_RebootRequired",
+        "Value": "Pour appliquer ces modifications, vous devez red\u00E9marrer {Localized.AppBrand}. Voulez-vous red\u00E9marrer maintenant ?",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Reset",
+        "Value": "R\u00E9initialiser...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Select",
+        "Value": "S\u00E9lectionner...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Texte par d\u00E9faut pour les menus d\u00E9roulants ou les zones de s\u00E9lection",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CommonStr_Sure",
+        "Value": "L\u0027op\u00E9ration {name} pr\u00E9sente un risque. Voulez-vous continuer ?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Warning dialog for risky operation confirmation",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language",
+        "Value": "Langue/Language",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Keep the /Language suffix as specified in the comment",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData",
+        "Value": "Gestion des donn\u00E9es et configurations",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of \u0027\u6570\u636E\u4E0E\u914D\u7F6E\u7BA1\u7406\u0027 maintaining the formal software UI tone while adapting to French technical terminology conventions",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_ManagePageOpen",
+        "Value": "G\u00E9rer les donn\u00E9es utilisateur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Traduction directe de \u0027\u7BA1\u7406\u7528\u6237\u6570\u636E\u0027 en fran\u00E7ais, correspondant \u00E0 l\u0027action d\u0027administration des donn\u00E9es d\u0027utilisateur dans une interface logicielle.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Path",
+        "Value": "R\u00E9pertoire des donn\u00E9es utilisateur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_Confirm",
+        "Value": "Confirmez-vous que le r\u00E9pertoire de donn\u00E9es utilisateur doit \u00EAtre d\u00E9fini sur \u00AB\u202F{path}\u202F\u00BB\u202F?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "Dialog de confirmation pour changer le r\u00E9pertoire des donn\u00E9es utilisateur",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmButton",
+        "Value": "Cliquez ici pour s\u00E9lectionner, ou sur \u0022Annuler\u0022 \u00E0 c\u00F4t\u00E9 pour revenir au chemin par d\u00E9faut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmMigrateData",
+        "Value": "Voulez-vous migrer les donn\u00E9es existantes ?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_ConfirmReset",
+        "Value": "Confirmer la r\u00E9initialisation des donn\u00E9es utilisateur aux valeurs par d\u00E9faut ?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Confirmation prompt for resetting user data to default values",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DebugMode",
+        "Value": "Mode d\u00E9veloppeur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of \u0027\u5F00\u53D1\u8005\u6A21\u5F0F\u0027 to French, maintaining the formal software UI context",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_MakeDiagReport",
+        "Value": "G\u00E9n\u00E9rer un rapport de diagnostic",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ResetSettings",
+        "Value": "R\u00E9initialiser tous les param\u00E8tres",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsSubTitle",
+        "Value": "Gestion de la configuration de l\u0027acc\u00E9l\u00E9ration mat\u00E9rielle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsTitle",
+        "Value": "Acc\u00E9l\u00E9ration mat\u00E9rielle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableMultiAccel",
+        "Value": "Activer multi-acc\u00E9l\u00E9rateur (rendu uniquement)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Option pour activer la prise en charge de plusieurs acc\u00E9l\u00E9rateurs, limit\u00E9e au rendu",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel",
+        "Value": "S\u00E9lectionnez le GPU pour l\u0027acc\u00E9l\u00E9ration mat\u00E9rielle lors du rendu/\u00E9dition",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_LoadingAccels",
+        "Value": "R\u00E9cup\u00E9ration des acc\u00E9l\u00E9rateurs disponibles...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Indicateur de chargement pendant la r\u00E9cup\u00E9ration des acc\u00E9l\u00E9rateurs",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsNotSupported",
+        "Value": "D\u00E9sol\u00E9, votre plateforme ne prend pas en charge la configuration de l\u0027acc\u00E9l\u00E9ration mat\u00E9rielle.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Error message indicating that hardware acceleration configuration is not supported on the user\u0027s platform",
         "HasValidationErrors": false
       }
     ]
