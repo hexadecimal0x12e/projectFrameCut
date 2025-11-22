@@ -41,6 +41,20 @@
 
 - [ ] ...
 
+### 支持的平台
+要使用projectFrameCut，你的设备需要至少有8GB的运行内存和至少10GB的可用存储空间；要渲染视频，你的设备必须拥有大于16GB的内存或者50GB的可用存储空间来存储渲染途中的数据。
+
+projectFrameCut性能的差异不会随着CPU或者GPU的变化而差异很大，但是你的CPU或者GPU越好，渲染就越快。
+
+对于Windows目标，我们支持**Windows 10 2004或者更新**的系统，并且你还需要安装WinUI3的必要组件（系统会提示你安装它）。要使用硬件加速，你的电脑上还要有一张/多张支持CUDA或者OpenCL的图形处理器（这涵盖了你在市面上能买到的99%的显卡）。
+
+对于安卓目标，目前我们只保证projectFrameCut能够**在Android 12或者更新系统**，搭载至少8GB的运行内存，使用Arm64架构的CPU上运行。要使用硬件加速，你的设备的GPU必须支持OpenGL ES 3.1 或者更新。
+
+对于iOS目标，我们支持iOS 17.0 或者更新。请注意，**projectFrameCut不支持运行内存小于4GB的iOS设备**。
+如果你使用iPhone，建议使用iPhone 12/13/14 Pro \(Max\)，或者iPhone 15及更新的各款机型。
+如果你使用iPad，建议使用 iPad 11th Generation或者更新、Pad mini 5th Generation或者更新、以及使用Apple M系列芯片的各款iPad Air/Pro。
+
+对于MacCatalyst目标，我们支持MacOS 14.0\(macOS Sonoma\) 或者更新的系统上运行，同时支持Intel或者Apple芯片的Mac。**我们建议使用至少有16GB的统一内存Apple芯片的Mac。**
 
 ### 如何编译
 
@@ -50,9 +64,9 @@
    按照下列结构放置文件
 
 ```
-c:\\\\path\\\\to\\\\your\\\\folder
+c:\path\to\your\folder
 └─FFmpeg
-    └─8.x\\\_internal
+    └─8.x\_internal
             avcodec-62.dll
             avdevice-62.dll
             avfilter-11.dll
@@ -68,7 +82,7 @@ c:\\\\path\\\\to\\\\your\\\\folder
 2. 修改projectFrameCut.csproj里的这一行：
 
 ```xml
-<MauiAsset Include="你的路径\\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+<MauiAsset Include="你的路径\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 ```
 
 把Include里的内容替换成你的路径，**确保在文件夹路径的末尾添加一个反斜杠和两个星号。**
