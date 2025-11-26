@@ -59,6 +59,7 @@
                 <Button x:Name="SpiltButton" Text="Spilt" Clicked="Split_Clicked"/>
                 <Button x:Name="AssetPanelButton" Text="Assets" Clicked="AssetPanelButton_Clicked"/>
                 <Button Clicked="OnRefreshButtonClicked" Text="Refresh"/>
+                <Button x:Name="AddTextButton" Text="Add a text" Clicked="AddTextButton_Clicked"/>
                 <Button 
 x:Name="AddClip"
 Text="Add clip"

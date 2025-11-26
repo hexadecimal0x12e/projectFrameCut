@@ -634,7 +634,7 @@ public partial class TestPage : ContentPage
             Text = "Custom Button",
             WidthRequest = 150
         })
-        .AddButton("testButton", "Test button 1", "Click me!")
+        .AddButton("testButton",  "Click me!")
         .AddCustomChild("pick a date", (c) =>
         {
             var picker = new DatePicker

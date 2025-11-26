@@ -290,30 +290,7 @@ namespace projectFrameCut.Render.RenderCLI
 
             foreach (var clip in clipsJson)
             {
-
-                var type = (ClipMode)clip.GetProperty("ClipType").GetInt32();
-                Console.WriteLine($"Found clip {type}, name: {clip.GetProperty("Name").GetString()}, id: {clip.GetProperty("Id").GetString()}");
-                switch (type)
-                {
-                    case ClipMode.VideoClip:
-                        {
-                            clipsList.Add(clip.Deserialize<VideoClip>() ?? throw new NullReferenceException());
-                            break;
-                        }
-                    case ClipMode.PhotoClip:
-                        {
-                            clipsList.Add(clip.Deserialize<PhotoClip>() ?? throw new NullReferenceException());
-                            break;
-                        }
-                    case ClipMode.SolidColorClip:
-                        {
-                            clipsList.Add(clip.Deserialize<SolidColorClip>() ?? throw new NullReferenceException());
-                            break;
-                        }
-                    default:
-                        Log("ERROR: Unknown clip type.");
-                        return 1;
-                }
+                clipsList.Add(IClip.FromJSON(clip));
             }
 
             var clips = clipsList.ToArray();

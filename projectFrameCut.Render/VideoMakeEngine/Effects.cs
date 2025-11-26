@@ -11,6 +11,9 @@ namespace projectFrameCut.VideoMakeEngine
 {
     public class RemoveColorEffect : IEffect
     {
+        public bool Enabled { get; init; } = true;
+        public int Index { get; init; }
+
         public ushort R { get; init; }
         public ushort G { get; init; }
         public ushort B { get; init; }
@@ -26,6 +29,8 @@ namespace projectFrameCut.VideoMakeEngine
             { "Tolerance", Tolerance },
         };
 
+        List<string> IEffect.ParametersNeeded => ParametersNeeded;
+        Dictionary<string, string> IEffect.ParametersType => ParametersType;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -46,7 +51,7 @@ namespace projectFrameCut.VideoMakeEngine
         };
 
         public string TypeName => "RemoveColor";
-        public static string s_TypeName => "RemoveColor";
+        public static string s_TypeName => "RemoveColor";  
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
         {
@@ -71,6 +76,7 @@ namespace projectFrameCut.VideoMakeEngine
             };
         }
 
+        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public Picture Render(Picture source, IComputer computer)
         {
@@ -109,57 +115,6 @@ namespace projectFrameCut.VideoMakeEngine
         }
     }
 
-    public static class EffectHelper
-    {
-        public static IEffect CreateFromJSONStructure(EffectAndMixtureJSONStructure item)
-        {
-            IEffect effect;
-            switch (item.TypeName)
-            {
-                case "RemoveColorEffect":
-                    effect = new RemoveColorEffect();
-                    RemoveColorEffect.FromParametersDictionary(ConvertElementDictToObjectDict(item.Parameters!, RemoveColorEffect.ParametersType));
-                    break;
-                default:
-                    throw new NotImplementedException($"Effect type '{item.TypeName}' is not implemented.");
-            }
-            return effect;
-        }
-
-        public static Dictionary<string, object> ConvertElementDictToObjectDict(Dictionary<string, object> elements, Dictionary<string, string> ParametersType)
-        {
-            var result = new Dictionary<string, object>();
-            foreach (var kvp in elements)
-            {
-                object value = null;
-                JsonElement source = (JsonElement)kvp.Value;
-                switch(ParametersType[kvp.Key])
-                {
-                    case "ushort":
-                        value = source.GetUInt16();
-                        break;
-                    case "int":
-                        value = source.GetInt32();
-                        break;
-                    case "float":
-                        value = source.GetSingle();
-                        break;
-                    case "double":
-                        value = source.GetDouble();
-                        break;
-                    case "string":
-                        value = source.GetString()!;
-                        break;
-                    case "bool":
-                        value = source.GetBoolean();
-                        break;
-                    default:
-                        throw new NotImplementedException($"Parameter type '{ParametersType[kvp.Key]}' is not implemented.");
-                }
-                result.Add(kvp.Key, value);
-            }
-            return result;
-        }
-    }
+   
     
 }

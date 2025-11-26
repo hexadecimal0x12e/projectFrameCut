@@ -9,6 +9,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using projectFrameCut.Setting.SettingManager;
 
 namespace projectFrameCut;
 
@@ -93,7 +94,7 @@ public partial class HomePage : ContentPage
 
         var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, "Untitled Project 1", 1024, null, "Untitled Project 1");
         if (projName is null) return;
-        draftSourcePath = Path.Combine(draftSourcePath, projName + ".pjfc") ;
+        draftSourcePath = Path.Combine(draftSourcePath, projName + ".pjfc");
         if (Directory.Exists(draftSourcePath))
         {
             await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
@@ -176,7 +177,7 @@ public partial class HomePage : ContentPage
         }
     }
 
-    private async Task GoDraft(ProjectsViewModel projectsViewModel, bool isReadonly = false)
+    private async Task GoDraft(ProjectsViewModel projectsViewModel, bool isReadonly = false, bool throwOnException = false)
     {
         var draftSourcePath = projectsViewModel._projectPath;
         if (Directory.Exists(draftSourcePath))
@@ -210,8 +211,9 @@ public partial class HomePage : ContentPage
                 {
                     try
                     {
+                        bool skipAsk = SettingsManager.IsBoolSettingTrue("AutoRecoverDraft");
                         Log(ex, "read draft", this);
-                        var conf = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken, Localized._Confirm, Localized._Cancel);
+                        var conf = !skipAsk ? await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken, Localized._Confirm, Localized._Cancel) : true;
                         if (!conf) return;
 
                         Dictionary<string, DraftStructureJSON?> tmls = new();
@@ -243,12 +245,13 @@ public partial class HomePage : ContentPage
                         else
                         {
 
-                            var result = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Confirm(newest.Value.SavedAt), Localized._Confirm, Localized._Cancel);
+                            var result = !skipAsk ? await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Confirm(newest.Value.SavedAt), Localized._Confirm, Localized._Cancel) : true;
 
                             if (result)
                             {
                                 assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(newest.Key, "assets.json"))) ?? new();
                                 timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(newest.Key, "timeline.json"))) ?? new();
+                                if (skipAsk) goto open;
                                 await DisplayAlertAsync(Localized._Info, Localized.HomePage_GoDraft_DraftBroken_Success, Localized._OK);
                             }
                             else return;
@@ -263,6 +266,7 @@ public partial class HomePage : ContentPage
                         return;
                     }
                 }
+            open:
                 (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline);
                 var assetDict = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (a) => a));
 
@@ -275,6 +279,7 @@ public partial class HomePage : ContentPage
             }
             catch (Exception ex)
             {
+                if (throwOnException) throw;
                 await DisplayAlert(Localized._Warn, Localized._ExceptionTemplate(ex), "ok");
             }
         }
@@ -362,12 +367,20 @@ public partial class HomePage : ContentPage
 
     private async Task ExportProject(ProjectsViewModel vmItem)
     {
-        var fileName = new string(vmItem.Name.Select(s => char.IsAsciiLetterOrDigit(s) ? s : '_').ToArray()) + ".pjfc";
+        var origCont = Content;
+        Content = new ActivityIndicator
+        {
+            IsRunning = true,
+            WidthRequest = 200,
+            HeightRequest = 200
+        };
+        var fileName = $"{new string(vmItem.Name.Select(s => char.IsAsciiLetterOrDigit(s) ? s : '_').ToArray())}_{Guid.NewGuid()}.pjfc";
         var tmpPath = Path.Combine(FileSystem.CacheDirectory, fileName);
         await Task.Run(() =>
         {
             ZipFile.CreateFromDirectory(vmItem._projectPath, tmpPath, CompressionLevel.SmallestSize, includeBaseDirectory: false);
         });
+        Content = origCont;
         await Share.RequestAsync(new ShareFileRequest()
         {
             File = new ShareFile(tmpPath),
@@ -419,12 +432,12 @@ public partial class HomePage : ContentPage
             // Android/iOS: Single tap to open, long press (>500ms) to show context menu
             var pointerGesture = new PointerGestureRecognizer();
             DateTime pointerDownTime = DateTime.MinValue;
-            
+
             pointerGesture.PointerPressed += (s, e) =>
             {
                 pointerDownTime = DateTime.Now;
             };
-            
+
             pointerGesture.PointerReleased += async (s, e) =>
             {
                 var duration = (DateTime.Now - pointerDownTime).TotalMilliseconds;
@@ -450,7 +463,7 @@ public partial class HomePage : ContentPage
             // Remove any existing pointer gesture recognizer to avoid duplicates
             var existingPointer = border.GestureRecognizers.OfType<PointerGestureRecognizer>().FirstOrDefault();
             if (existingPointer is not null) border.GestureRecognizers.Remove(existingPointer);
-            
+
             border.GestureRecognizers.Add(pointerGesture);
 #endif
         }
@@ -473,16 +486,36 @@ public partial class HomePage : ContentPage
                     Localized.HomePage_ProjectContextMenu_Delete
                     ];
 
+        if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+        {
+            verbs = verbs.Append("Debug: throw the exceptions while opening").ToArray();
+        }
+
         var action = await DisplayActionSheetAsync(vmItem.Name, Localized._Cancel, null, verbs);
 
+        if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+        {
+            switch (action)
+            {
+                case "Debug: throw the exceptions while opening":
+                    {
+                        await GoDraft(vmItem, throwOnException: true);
+                        return;
+                    }
+                default:
+                    {
+                        break;
+                    }
+            }
+        }
 
         switch (Array.IndexOf(verbs, action))
         {
             case 0: //Open
                 await GoDraft(vmItem);
                 break;
-            case 1: //OpenReadonly
-                await GoDraft(vmItem, true);
+            case 1: //OpenReadonly 
+                await GoDraft(vmItem, isReadonly:true);
                 break;
             case 2: //Export
                 await ExportProject(vmItem);

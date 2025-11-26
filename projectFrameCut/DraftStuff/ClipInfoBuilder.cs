@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using projectFrameCut.VideoMakeEngine;
+using projectFrameCut.Shared;
 using Microsoft.Maui.Platform;
 
 #if WINDOWS
@@ -34,45 +35,123 @@ namespace projectFrameCut.DraftStuff
 
         public View Build(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
-            RemoveColorEffect? existingRce = null;
-
-            if (clip.Effects is not null)
-            {
-                existingRce = clip.Effects.TryGetValue("removeColor", out var existingEffect) && existingEffect is RemoveColorEffect rce ? rce : null;
-
-            }
-            bool hasRemoveColor = existingRce != null;
-            string defaultR = hasRemoveColor ? existingRce!.R.ToString() : "0";
-            string defaultG = hasRemoveColor ? existingRce!.G.ToString() : "0";
-            string defaultB = hasRemoveColor ? existingRce!.B.ToString() : "0";
-            string defaultA = hasRemoveColor ? existingRce!.A.ToString() : "0";
-            string defaultTolerance = hasRemoveColor ? existingRce!.Tolerance.ToString() : "0";
-
             var ppb = new PropertyPanelBuilder()
         .AddText(new TitleAndDescriptionLineLabel(Localized.PropertyPanel_General, "general stuff"))
-        .AddEntry("displayName", Localized.PropertyPanel_General_DisplayName, clip.displayName, "Clip 1", null)
-        .AddEntry("speedRatio", Localized.PropertyPanel_General_SpeedRatio, clip.SecondPerFrameRatio.ToString(), "1", null)
-        .AddSeparator(null)
-        .AddText("effect")
-        .AddCheckbox("removeColorBox", "enable remove color", hasRemoveColor)
-        .AddChildrensInALine((c) =>
-        {
-            c
-            .AddText("R")
-            .AddEntry("removeColor_color", defaultR, "0")
-            .AddText("G")
-            .AddEntry("removeColor_channelG", defaultG, "0")
-            .AddText("B")
-            .AddEntry("removeColor_channelB", defaultB, "0")
-            .AddText("A")
-            .AddEntry("removeColor_channelA", defaultA, "0")
-            .AddText("Tolerance")
-            .AddEntry("removeColor_tolerance", defaultTolerance, "0")
-            ;
+        .AddEntry("displayName", Localized.PropertyPanel_General_DisplayName, clip.displayName, "Clip 1")
+        .AddEntry("speedRatio", Localized.PropertyPanel_General_SpeedRatio, clip.SecondPerFrameRatio.ToString(), "1")
+        .AddSeparator(null);
 
-        })
-        .AddSeparator()
-        .AddCustomChild((ivk) =>
+            if (clip.Effects != null)
+            {
+                foreach (var effectKvp in clip.Effects)
+                {
+                    var effectKey = effectKvp.Key;
+                    var effect = effectKvp.Value;
+                    ppb.AddText(new TitleAndDescriptionLineLabel(effect.TypeName, effectKey));
+
+                    foreach (var paramName in effect.ParametersNeeded)
+                    {
+                        if (!effect.ParametersType.TryGetValue(paramName, out var paramType)) continue;
+
+                        var currentVal = effect.Parameters.ContainsKey(paramName) ? effect.Parameters[paramName] : null;
+                        string controlId = $"Effect|{effectKey}|{paramName}";
+
+                        if (paramType == "bool")
+                        {
+                            bool val = currentVal is bool b ? b : false;
+                            ppb.AddCheckbox(controlId, paramName, val);
+                        }
+                        else
+                        {
+                            // Assume numeric or string
+                            string valStr = currentVal?.ToString() ?? "";
+                            ppb.AddEntry(controlId, paramName, valStr, "");
+                        }
+                    }
+                    ppb.AddButton($"Effect|{effectKey}|Remove", "Remove this effect");
+                    ppb.AddSeparator();
+                }
+            }
+
+            ppb.AddText(new TitleAndDescriptionLineLabel("Add Effect", "Add a new effect"));
+            ppb.AddPicker("NewEffectType", "Effect Type", new[] { "RemoveColor" }, "RemoveColor");
+            ppb.AddButton("AddEffect", "Add Effect");
+
+            ppb.PropertyChanged += (s, e) =>
+            {
+                if (e.Id.StartsWith("Effect|"))
+                {
+                    var parts = e.Id.Split('|');
+                    if (parts.Length >= 3)
+                    {
+                        string effectKey = parts[1];
+                        string paramName = parts[2];
+
+                        if (paramName == "Remove")
+                        {
+                            if (clip.Effects != null && clip.Effects.ContainsKey(effectKey))
+                            {
+                                clip.Effects.Remove(effectKey);
+                                handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                                return;
+                            }
+                        }
+
+                        if (clip.Effects != null && clip.Effects.TryGetValue(effectKey, out var effect))
+                        {
+                            if (effect.ParametersType.TryGetValue(paramName, out var paramType))
+                            {
+                                try
+                                {
+                                    object? typedValue = null;
+                                    string strVal = e.Value?.ToString() ?? "";
+
+                                    switch (paramType)
+                                    {
+                                        case "ushort": typedValue = ushort.Parse(strVal); break;
+                                        case "int": typedValue = int.Parse(strVal); break;
+                                        case "float": typedValue = float.Parse(strVal); break;
+                                        case "double": typedValue = double.Parse(strVal); break;
+                                        case "bool": typedValue = e.Value is bool b ? b : bool.Parse(strVal); break;
+                                        case "string": typedValue = strVal; break;
+                                    }
+
+                                    if (typedValue != null)
+                                    {
+                                        var newParams = new Dictionary<string, object>(effect.Parameters);
+                                        newParams[paramName] = typedValue;
+                                        clip.Effects[effectKey] = effect.WithParameters(newParams);
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+                }
+                else if (e.Id == "AddEffect")
+                {
+                    if (ppb.Properties.TryGetValue("NewEffectType", out var typeObj) && typeObj is string typeName)
+                    {
+                        IEffect? newEffect = null;
+                        if (typeName == "RemoveColor")
+                        {
+                            newEffect = new RemoveColorEffect();
+                        }
+
+                        if (newEffect != null)
+                        {
+                            string newKey = typeName + "@" + Guid.NewGuid().ToString().Substring(0, 8);
+                            if (clip.Effects == null) clip.Effects = new Dictionary<string, IEffect>();
+                            clip.Effects[newKey] = newEffect;
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                            return;
+                        }
+                    }
+                }
+                handler?.Invoke(s, e);
+            };
+
+            ppb.AddCustomChild((ivk) =>
         {
             var editor = new Editor
             {
@@ -96,40 +175,6 @@ namespace projectFrameCut.DraftStuff
             return editor;
         }, "rawJsonEditor", JsonSerializer.Serialize(clip, savingOpts));
 
-            ppb.ListenToChanges((s, e) =>
-            {
-                if (e.Id == "removeColorBox")
-                {
-                    if ((bool)e.Value)
-                    {
-                        if (ushort.TryParse(ppb.Properties["removeColor_color"].ToString(), out var r) &&
-                            ushort.TryParse(ppb.Properties["removeColor_channelG"].ToString(), out var g) &&
-                            ushort.TryParse(ppb.Properties["removeColor_channelB"].ToString(), out var b) &&
-                            ushort.TryParse(ppb.Properties["removeColor_channelA"].ToString(), out var a) &&
-                            ushort.TryParse(ppb.Properties["removeColor_tolerance"].ToString(), out var tol))
-                        {
-                            clip.Effects["RemoveColorEffect"] = new RemoveColorEffect { R = r, G = g, B = b, A = a, Tolerance = tol };
-                        }
-                    }
-                    else
-                    {
-                        clip.Effects.Remove("RemoveColorEffect");
-                    }
-                }
-                else if (e.Id.StartsWith("removeColor_") && e.Id != "removeColorBox")
-                {
-                    if (clip.Effects.TryGetValue("RemoveColorEffect", out var eff) && eff is RemoveColorEffect &&
-                        ushort.TryParse(ppb.Properties["removeColor_color"].ToString(), out var r) &&
-                        ushort.TryParse(ppb.Properties["removeColor_channelG"].ToString(), out var g) &&
-                        ushort.TryParse(ppb.Properties["removeColor_channelB"].ToString(), out var b) &&
-                        ushort.TryParse(ppb.Properties["removeColor_channelA"].ToString(), out var a) &&
-                        ushort.TryParse(ppb.Properties["removeColor_tolerance"].ToString(), out var tol))
-                    {
-                        clip.Effects["RemoveColorEffect"] = new RemoveColorEffect { R = r, G = g, B = b, A = a, Tolerance = tol };
-                    }
-                }
-                handler(s, e);
-            });
 
             var panel = ppb.Build();
 
@@ -142,7 +187,7 @@ namespace projectFrameCut.DraftStuff
 
         }
 #if WINDOWS
-        private void ApplyAcrylic(VerticalStackLayout panel)
+        private void ApplyAcrylic(Layout panel)
         {
             var acrylicBrush = new Microsoft.UI.Xaml.Media.AcrylicBrush
             {

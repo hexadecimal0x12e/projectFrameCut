@@ -14,151 +14,11 @@ using static projectFrameCut.Render.Video;
 
 namespace projectFrameCut.Render
 {
-    public class VideoClip : IClip
-    {
-        public required string Id { get; init; }
-        public required string Name { get; init; }
-        public uint LayerIndex { get; init; } = 0;
-        public uint StartFrame { get; init; }
-        public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
-        public float FrameTime { get; init; }
-        public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
-        public string? FilePath { get; init; }
-        public Dictionary<string, object>? MixtureArgs { get; init; }
-        public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
-
-        [System.Text.Json.Serialization.JsonIgnore]
-        public IDecoderContext? Decoder { get; set; } = null;
-
-        public ClipMode ClipType => ClipMode.VideoClip;
-
-
-        public VideoClip()
-        {
-            EffectsInstances = IClip.GetEffectsInstances(Effects);
-
-        }
-
-        public Picture GetFrameRelativeToStartPointOfSource(uint targetFrame) => (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame);
-
-        void IClip.ReInit()
-        {
-            Decoder = new Video(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null.")).Decoder;
-        }
-
-
-        void IDisposable.Dispose()
-        {
-            Decoder?.Dispose();
-        }
-
-        public uint? GetClipLength() => null;
-    }
-
-    public class PhotoClip : IClip
-    {
-        public required string Id { get; init; }
-        public required string Name { get; init; }
-        public uint LayerIndex { get; init; } = 0;
-        public uint StartFrame { get; init; }
-        public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
-        public float FrameTime { get; init; }
-        public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
-        public string? FilePath { get; init; } = string.Empty;
-
-        [System.Text.Json.Serialization.JsonIgnore]
-        public Picture? source { get; set; } = null;
-
-        public ClipMode ClipType => ClipMode.PhotoClip;
-
-
-        public Dictionary<string, object>? MixtureArgs { get; init; }
-        public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
-
-        public PhotoClip()
-        {
-            EffectsInstances = IClip.GetEffectsInstances(Effects);
-
-        }
-
-
-        public Picture GetFrameRelativeToStartPointOfSource(uint targetFrame) => source ?? throw new NullReferenceException("Source is null. Please init it.");
-
-        void IClip.ReInit()
-        {
-            source = new Picture(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null."));
-        }
-
-
-        void IDisposable.Dispose()
-        {
-            //nothing to dispose
-        }
-
-        public uint? GetClipLength() => Duration;
-    }
-
-    public class SolidColorClip : IClip
-    {
-        public required string Id { get; init; }
-        public required string Name { get; init; }
-        public uint LayerIndex { get; init; } = 0;
-        public uint StartFrame { get; init; }
-        public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
-        public float FrameTime { get; init; }
-        public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
-        public string? filePath { get; } = null;
-        public ClipMode ClipType => ClipMode.Special;
-        public Dictionary<string, object>? MixtureArgs { get; init; }
-        public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
-
-        string? IClip.FilePath { get => null; init => throw new InvalidOperationException("Set path is not supported by this type of clip."); }
-
-        public ushort R { get; init; }
-        public ushort G { get; init; }
-        public ushort B { get; init; }
-        public float? A { get; init; } = null;
-
-        public int targetWidth { get; init; } = 1920;
-        public int targetHeight { get; init; } = 1080;
-
-        public Picture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight) => Picture.GenerateSolidColor(tWidth, tHeight, R, G, B, A);
-
-        public Picture GetFrameRelativeToStartPointOfSource(uint frameIndex) => Picture.GenerateSolidColor(targetWidth, targetHeight, R, G, B, A);
-
-        public SolidColorClip()
-        {
-            EffectsInstances = IClip.GetEffectsInstances(Effects);
-        }
-
-        public void ReInit()
-        {
-
-        }
-
-        public void Dispose()
-        {
-
-        }
-
-        public uint? GetClipLength() => Duration;
-    }
-
-
-
     public class Timeline
     {
-        public static ConcurrentDictionary<string,IComputer> ComputerCache = new();
-        public static ConcurrentDictionary<MixtureMode,IMixture> MixtureCache = new();
+        public static ConcurrentDictionary<string, IComputer> ComputerCache = new();
+        public static ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
+        public static Func<int, int, Picture> FallBackImageGetter = (w, h) => Picture.GenerateSolidColor(w, h, 0, 0, 0, null);
 
 
         public static IEnumerable<OneFrame> GetFramesInOneFrame(IClip[] video, uint targetFrame, int targetWidth, int targetHeight, bool forceResize = false)
@@ -210,7 +70,7 @@ namespace projectFrameCut.Render
         {
             try
             {
-                Picture? result = null;
+                Picture? result = FallBackImageGetter(targetWidth, targetHeight);
                 foreach (var srcFrame in frames)
                 {
                     var frame = srcFrame.Clip.Resize(targetWidth, targetHeight, true);
@@ -226,24 +86,17 @@ namespace projectFrameCut.Render
                                     throw new NotSupportedException($"Mixture mode {srcFrame.MixtureMode} is not supported in accelerated computer bridge.")));
                     }
 
-                    if (result == null)
-                    {
-                        result = effected;
-                    }
-                    else
-                    {
-                        result = MixtureCache.GetOrAdd(
+                    result = MixtureCache.GetOrAdd(
                             srcFrame!.MixtureMode, GetMixer(srcFrame.MixtureMode))
-                                .Mix(effected, result, 
-                                    ComputerCache.GetOrAdd(srcFrame.MixtureMode.ToString(), 
-                                        AcceleratedComputerBridge.RequireAComputer?.Invoke(srcFrame.MixtureMode.ToString()) 
-                                            is IComputer c ? c : 
+                                .Mix(effected, result,
+                                    ComputerCache.GetOrAdd(srcFrame.MixtureMode.ToString(),
+                                        AcceleratedComputerBridge.RequireAComputer?.Invoke(srcFrame.MixtureMode.ToString())
+                                            is IComputer c ? c :
                                             throw new NotSupportedException($"Mixture mode {srcFrame.MixtureMode} is not supported in accelerated computer bridge.")))
                                 .Resize(targetWidth, targetHeight, true);
-                    }
                 }
 
-                return result ?? Picture.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, null);
+                return result ?? FallBackImageGetter(targetWidth, targetHeight);
             }
             catch (Exception ex)
             {
@@ -263,8 +116,6 @@ namespace projectFrameCut.Render
                     throw new NotSupportedException($"Mixture mode {mixtureMode} is not supported.");
             }
         }
-
-
 
         public static List<OverlapInfo> FindOverlaps(IEnumerable<ClipDraftDTO>? clips, uint allowedOverlapFrames = 5)
         {
@@ -309,10 +160,6 @@ namespace projectFrameCut.Render
 
         public static bool HasOverlap(IEnumerable<ClipDraftDTO>? clips, uint allowedOverlapFrames = 5)
             => FindOverlaps(clips, allowedOverlapFrames).Count > 0;
-
-
-
-
 
         public class OverlapInfo
         {

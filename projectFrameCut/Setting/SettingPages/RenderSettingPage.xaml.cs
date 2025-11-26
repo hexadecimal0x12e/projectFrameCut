@@ -68,7 +68,7 @@ public partial class RenderSettingPage : ContentPage
         string[] accels = ["Unknown"];
         try
         {
-            accels = AcceleratorInfos?.Select(a => $"Accelerator #{a.index}:{a.name} ({a.Type})").ToArray() ?? ["Unknown"];
+            accels = AcceleratorInfos?.Select(a => $"#{a.index}: {a.name} ({a.Type})").ToArray() ?? ["Unknown"];
         }
         catch (Exception ex) { Log(ex); }
 
@@ -86,7 +86,7 @@ public partial class RenderSettingPage : ContentPage
             .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Render_AccelOptsNotSupported, 14))
 #endif
             .ListenToChanges(SettingInvoker);
-        Content = rootPPB.Build();
+        Content = new ScrollView { Content = rootPPB.Build() };
     }
 #if WINDOWS
     private void GetAccelInfo()

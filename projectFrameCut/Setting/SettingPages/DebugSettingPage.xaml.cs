@@ -8,10 +8,19 @@ public partial class DebugSettingPage : ContentPage
     public DebugSettingPage()
     {
         InitializeComponent();
+        LogDiagnostics.IsToggled = SettingManager.SettingsManager.IsBoolSettingTrue("LogDiagnostics");
+        DontPanicOnUnhandledException.IsToggled = SettingManager.SettingsManager.IsBoolSettingTrue("DontPanicOnUnhandledException");
+        AutoRecoverDraft.IsToggled = SettingManager.SettingsManager.IsBoolSettingTrue("AutoRecoverDraft");
     }
 
     private void KeyEntry_TextChanged(object sender, TextChangedEventArgs e)
     {
+        if (string.IsNullOrWhiteSpace(KeyEntry.Text))
+        {
+            ValueEntry.Text = "";
+            ValueEntry.Placeholder = "Type a key, and you'll see the value.";
+            return;
+        }
         if (SettingManager.SettingsManager.IsSettingExists(KeyEntry.Text))
         {
             ValueEntry.Text = SettingsManager.GetSetting(KeyEntry.Text);
@@ -19,6 +28,7 @@ public partial class DebugSettingPage : ContentPage
         else
         {
             ValueEntry.Text = string.Empty;
+            ValueEntry.Placeholder = "Key not found.";
         }
     }
 
@@ -39,6 +49,7 @@ public partial class DebugSettingPage : ContentPage
     {
         SettingsManager.WriteSetting("LogDiagnostics", LogDiagnostics.IsToggled.ToString());
         SettingsManager.WriteSetting("DontPanicOnUnhandledException", DontPanicOnUnhandledException.IsToggled.ToString());
+        SettingsManager.WriteSetting("AutoRecoverDraft", AutoRecoverDraft.IsToggled.ToString());
     }
 
     private async void DeleteSettingBtn_Clicked(object sender, EventArgs e)

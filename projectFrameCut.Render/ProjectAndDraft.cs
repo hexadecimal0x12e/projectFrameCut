@@ -1,9 +1,12 @@
-﻿using projectFrameCut.VideoMakeEngine;
+﻿using projectFrameCut.Render;
+using projectFrameCut.VideoMakeEngine;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
@@ -54,7 +57,7 @@ namespace projectFrameCut.Shared
         public string Name { get; set; } = string.Empty;
         public string? Path { get; set; }
         public string? SourceHash { get; set; }
-        public projectFrameCut.Shared.ClipMode Type { get; set; }
+        public ClipMode Type { get; set; }
 
         public long? FrameCount { get; set; }
         public float SecondPerFrame { get; set; } = float.PositiveInfinity;
@@ -137,6 +140,7 @@ namespace projectFrameCut.Shared
         /// </summary>
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
 
+        [JsonIgnore]
         public IEffect[]? EffectsInstances { get; init; }
 
         public static IEffect[] GetEffectsInstances(EffectAndMixtureJSONStructure[]? Effects)
@@ -150,7 +154,7 @@ namespace projectFrameCut.Shared
             {
                 effects.Add(EffectHelper.CreateFromJSONStructure(item));
             }
-            return effects.ToArray();
+            return effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray();
         }
 
         /// <summary>
@@ -164,6 +168,7 @@ namespace projectFrameCut.Shared
         /// <param name="targetFrame">the frame index in the whole clip you'd like to get</param>
         /// <returns>the index of frame relative to the source, or null if the frame you want is not available (probably because of little overlap caused by rounding) </returns>
         /// <exception cref="IndexOutOfRangeException">Frame is not exist in this clip.</exception>
+        [DebuggerNonUserCode()]
         public uint? GetRelativeFrameIndex(uint targetFrame)
         {
             uint duration = Duration;
@@ -259,6 +264,35 @@ namespace projectFrameCut.Shared
         /// </summary>
         public void ReInit();
 
+        public static IClip FromJSON(JsonElement clip)
+        {
+            var type = (ClipMode)clip.GetProperty("ClipType").GetInt32();
+            Console.WriteLine($"Found clip {type}, name: {clip.GetProperty("Name").GetString()}, id: {clip.GetProperty("Id").GetString()}");
+            switch (type)
+            {
+                case ClipMode.VideoClip:
+                    {
+                        return clip.Deserialize<VideoClip>() ?? throw new NullReferenceException();
+                    }
+                case ClipMode.PhotoClip:
+                    {
+                        return clip.Deserialize<PhotoClip>() ?? throw new NullReferenceException();
+
+                    }
+                case ClipMode.SolidColorClip:
+                    {
+                        return clip.Deserialize<SolidColorClip>() ?? throw new NullReferenceException();
+                    }
+                case ClipMode.TextClip:
+                    {
+                        return clip.Deserialize<TextClip>() ?? throw new NullReferenceException();
+                    }
+                default:
+                    throw new NotSupportedException($"Unknown or unsupported clip type {type}.");
+                    
+            }
+        }
+
     }
 
     public enum ClipMode
@@ -266,6 +300,7 @@ namespace projectFrameCut.Shared
         VideoClip,
         PhotoClip,
         SolidColorClip,
+        TextClip,
         Special
     }
 

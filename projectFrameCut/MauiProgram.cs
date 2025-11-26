@@ -136,6 +136,8 @@ namespace projectFrameCut
                     SettingsManager.ToggleSaveSignal();
                     Log("Settings inited with empty.");
                 }
+
+                if (!SettingsManager.IsSettingExists("UserID")) SettingsManager.Settings.TryAdd("UserID", Guid.NewGuid().ToString());
             }
             catch (Exception ex)
             {
@@ -280,38 +282,55 @@ namespace projectFrameCut
                 {
                     var locate = SettingsManager.GetSetting("locate", "default");
                     CultureInfo culture = CultureInfo.CurrentCulture;
-                    Log($"Your culture: {culture.Name}, locate defined in settings:{locate} ");
+                    Log($"Your current culture: {culture.Name}, locate defined in settings:{locate} ");
                     if (locate == "default") locate = CultureInfo.CurrentCulture.Name;
                     try
                     {
-                        if (locate == "zh-TW")
+                        var cul = CultureInfo.GetCultures(CultureTypes.NeutralCultures);
+                        switch (locate)
                         {
-                            var cul = CultureInfo.GetCultures(CultureTypes.NeutralCultures);
-                            if (!cul.Any((c) => CultureInfo.CreateSpecificCulture(c.Name).Name == "zh-TW"))
-                            {
-                                Log("zh-TW culture not found, fallback to zh-HK");
-                                culture = CultureInfo.CreateSpecificCulture("zh-HK");
-                            }
-                            else
-                            {
-                                culture = CultureInfo.CreateSpecificCulture(locate);
-                            }
+                            case "zh-TW":
+                                {
+                                    if (!cul.Any((c) => CultureInfo.CreateSpecificCulture(c.Name).Name == "zh-TW"))
+                                    {
+                                        Log("zh-TW culture not found, fallback to zh-HK");
+                                        culture = CultureInfo.CreateSpecificCulture("zh-HK");
+                                    }
+                                    else
+                                    {
+                                        culture = CultureInfo.CreateSpecificCulture(locate);
+                                    }
+                                    break;
+                                }
+                            case "文言文":
+                                {
+                                    culture = CultureInfo.CreateSpecificCulture("zh-HK");
+                                    break;
+                                }
+                            default:
+                                {
+                                    if (!cul.Any((c) => CultureInfo.CreateSpecificCulture(c.Name).Name == locate))
+                                    {
+                                        Log($"{locate} culture not found, fallback to en-US");
+                                        culture = CultureInfo.CreateSpecificCulture("en-US");
+                                    }
+                                    else
+                                    {
+                                        culture = CultureInfo.CreateSpecificCulture(locate);
+                                    }
+                                    break;  
+                                }
+
                         }
-                        else
-                        {
-                            culture = CultureInfo.CreateSpecificCulture(locate);
-                        }
-                        System.Threading.Thread.CurrentThread.CurrentCulture = culture;
-                        System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+                        
                     }
                     catch (Exception ex)
                     {
                         Log(ex, "init culture");
                     }
 
-                    Localized = SimpleLocalizer.Init(locate);
+                    Localized = SimpleLocalizer.Init(locate);    
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
-                    Log($"Localization initialized to {Localized._LocaleId_}, {Localized.WelcomeMessage}");
 
                     try
                     {
@@ -326,12 +345,31 @@ namespace projectFrameCut
                         });
                     }
 
+                    if (!SettingsManager.IsSettingExists("OverrideCulture") || SettingsManager.GetSetting("OverrideCulture", "default") == "default") //resolve IME not work when locate isn't them
+                    {
+                        System.Threading.Thread.CurrentThread.CurrentCulture = culture;
+                        System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+                    }
+                    else
+                    {
+                        culture = CultureInfo.CreateSpecificCulture(SettingsManager.GetSetting("OverrideCulture"));
+                        System.Threading.Thread.CurrentThread.CurrentCulture = culture;
+                        System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+                    }
+
+                    Log($"Culture:{System.Threading.Thread.CurrentThread.CurrentCulture}, locate:{Localized._LocaleId_}, {Localized.WelcomeMessage}");
                 }
                 catch (Exception ex)
                 {
                     Log(ex, "init localization", CreateMauiApp);
+                    SimpleLocalizer.IsFallbackMatched = true;
                     Localized = ISimpleLocalizerBase.GetMapping().First().Value;
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+                    builder.ConfigureFonts(fonts =>
+                    {
+                        fonts.AddFont("HarmonyOS_Sans_Regular.ttf", "Font_Regular");
+                        fonts.AddFont("HarmonyOS_Sans_Bold.ttf", "Font_Semibold");
+                    });
                 }
 
                 Log("Everything ready!");
@@ -343,12 +381,11 @@ namespace projectFrameCut
             {
                 Debug.WriteLine($"FATAL Error creating MAUI App: {ex.Message}");
 #if ANDROID
-                Android.Util.Log.Wtf("projectFrameCut", $"Oh no! application can't be because of a {ex.GetType().Name} exception:{ex.Message} ");
+                Android.Util.Log.Wtf("projectFrameCut", $"Oh no! application can't be launched because of a {ex.GetType().Name} exception:{ex.Message}.");
 #elif WINDOWS
                 _ = MessageBox(new nint(0), $"Oh no! projectFrameCut cannot start because of a {ex.GetType().Name} exception:\r\n{ex.Message}\r\n\r\nApplication will exit now, and you'll see the detailed info later in the crash report.", "projectFrameCut", 0U);
                 projectFrameCut.WinUI.App.Crash(ex);
 #endif
-
                 throw;
             }
         }

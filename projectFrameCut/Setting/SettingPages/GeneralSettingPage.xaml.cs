@@ -1,7 +1,9 @@
 using Microsoft.Maui.Storage;
 using projectFrameCut.PropertyPanel;
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -12,28 +14,49 @@ using static SettingManager.SettingsManager;
 public partial class GeneralSettingPage : ContentPage
 {
     public PropertyPanel.PropertyPanelBuilder rootPPB;
-
+    private string[] locates;
+    private Dictionary<string, string> overrideOpts;
+    private Dictionary<string, string> locateDisplayNameMapping = new();
     public GeneralSettingPage()
     {
         Title = Localized.MainSettingsPage_Tab_General;
+        locates = new List<string>([$"{Localized._Default} / Default"]).Concat(ISimpleLocalizerBase.GetMapping().Select(l => l.Value._LocateDisplayName)).ToArray();
+        locateDisplayNameMapping = new(ISimpleLocalizerBase.GetMapping().ToDictionary(k => k.Value._LocateDisplayName, v => v.Key).Append(new KeyValuePair<string, string>("OS Default", "default")));
         BuildPPB();
     }
 
     public void BuildPPB()
     {
         Content = new VerticalStackLayout();
-        rootPPB = new();
+        Title = Localized.MainSettingsPage_Tab_General;
+        overrideOpts = new Dictionary<string, string>
+        {
+            {"default",  SettingLocalizedResources.General_Language_OverrideCulture_DontOverride},
+            {"zh-CN", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
+                    (ISimpleLocalizerBase.GetMapping()["zh-CN"]._LocateDisplayName) },
+            {"ja-JP", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
+                    (ISimpleLocalizerBase.GetMapping()["ja-JP"]._LocateDisplayName) },
+            {"ko-KR", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
+                    (ISimpleLocalizerBase.GetMapping()["ko-KR"]._LocateDisplayName) },
+        };
+        var currentLocate = GetSetting("locate", "default");
+        rootPPB = new()
+        {
+            WidthOfContent = 3
+        };
         rootPPB
-            .AddPicker("locate", SettingLocalizedResources.General_Language, new List<string>(["default"]).Concat(ISimpleLocalizerBase.GetMapping().Select(l => l.Key)).ToArray(), GetSetting("locate", "default"), null)
+            .AddPicker("locate", SettingLocalizedResources.General_Language, locates, currentLocate != "default" ? Localized._LocateDisplayName : $"{Localized._Default} / Default", null)
+            .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts[GetSetting("OverrideCulture", "default")], null)
             .AddSeparator()
             .AddText(SettingLocalizedResources.General_UserData)
 #if WINDOWS
-            .AddButton("userDataSelectButton", SettingLocalizedResources.General_UserData_Path, MauiProgram.DataPath)
+            .AddButton("userDataSelectButton", SettingLocalizedResources.General_UserData_Path)
+            .AddButton("openUserDataButton", SettingLocalizedResources.General_UserData_Open(MauiProgram.DataPath))
 #endif
-            .AddButton("manageUsedDataButton", SettingLocalizedResources.General_UserData_ManagePageOpen, SettingLocalizedResources.CommonStr_Go, null)
-            
+            .AddButton("manageUsedDataButton", SettingLocalizedResources.General_UserData_ManagePageOpen, null)
+
             .ListenToChanges(SettingInvoker);
-        Content = rootPPB.Build();
+        Content = new ScrollView { Content = rootPPB.Build() };
     }
 
     private async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args)
@@ -75,6 +98,7 @@ public partial class GeneralSettingPage : ContentPage
                             }
                             else
                             {
+                                goto done;
                             }
                         }
                         var fullPath = folder.Path;
@@ -105,8 +129,8 @@ public partial class GeneralSettingPage : ContentPage
                                 return;
                             }
                         }
-                        
-                        
+
+
 
 
 
@@ -115,11 +139,94 @@ public partial class GeneralSettingPage : ContentPage
 #endif
                 case "manageUsedDataButton":
                     //todo: manage userdata
-                    break;
+                    goto done;
+                case "openUserDataButton":
+#if WINDOWS
+                    Process.Start(new ProcessStartInfo { FileName = MauiProgram.DataPath, UseShellExecute = true });
+#elif ANDROID
+
+#elif iDevices
+
+#endif
+                    goto done;
 
                 case "locate":
-                    needReboot = true;
-                    break;
+                    {
+                        var locateDispName = args.Value?.ToString() ?? "default";
+                        var mapping = ISimpleLocalizerBase.GetMapping();
+                        var locate = mapping.FirstOrDefault(l => l.Value._LocateDisplayName == locateDispName).Key;
+                        if (string.IsNullOrEmpty(locate)) locate = "default";
+                        WriteSetting("locate", locate);
+                        CultureInfo culture = CultureInfo.CurrentCulture;
+                        Log($"Your culture: {culture.Name}, locate defined in settings:{locate} ");
+                        try
+                        {
+                            var cul = CultureInfo.GetCultures(CultureTypes.NeutralCultures);
+                            switch (locate)
+                            {
+                                case "zh-TW":
+                                    {
+                                        if (!cul.Any((c) => CultureInfo.CreateSpecificCulture(c.Name).Name == "zh-TW"))
+                                        {
+                                            Log("zh-TW culture not found, fallback to zh-HK");
+                                            culture = CultureInfo.CreateSpecificCulture("zh-HK");
+                                        }
+                                        else
+                                        {
+                                            culture = CultureInfo.CreateSpecificCulture(locate);
+                                        }
+                                        break;
+                                    }
+                                case "ндятнд":
+                                    {
+                                        culture = CultureInfo.CreateSpecificCulture("zh-HK");
+                                        break;
+                                    }
+                                case "default":
+                                    {
+                                        culture = CultureInfo.InstalledUICulture;
+                                        break;
+                                    }
+                                default:
+                                    {
+                                        if (!cul.Any((c) => CultureInfo.CreateSpecificCulture(c.Name).Name == locate))
+                                        {
+                                            Log($"{locate} culture not found, fallback to en-US");
+                                            culture = CultureInfo.CreateSpecificCulture("en-US");
+                                        }
+                                        else
+                                        {
+                                            culture = CultureInfo.CreateSpecificCulture(locate);
+                                        }
+                                        break;
+                                    }
+
+                            }
+
+                            System.Threading.Thread.CurrentThread.CurrentCulture = culture;
+                            System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, "init culture");
+                        }
+
+                        Localized = SimpleLocalizer.Init(locate);
+                        SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+                        App.Current?.Windows?.First()?.Title = Localized.AppBrand;
+                        Log($"Localization initialized to {Localized._LocaleId_}, {Localized.WelcomeMessage}");
+                        needReboot = true;
+                        goto done;
+                    }
+                case "OverrideCulture":
+                    {
+                        var DispName = args.Value?.ToString() ?? "default";
+                        var overrideLocate = overrideOpts.First(p => p.Value == DispName).Key;
+                        WriteSetting("OverrideCulture", overrideLocate);
+                        needReboot = true;
+                        goto done;
+                    }
+
             }
 
             if (args.Value != null)
@@ -127,9 +234,10 @@ public partial class GeneralSettingPage : ContentPage
                 WriteSetting(args.Id, args.Value?.ToString() ?? "");
             }
 
-
+        done:
             if (needReboot)
                 RebootApp();
+
             BuildPPB();
         }
         catch (Exception ex)
@@ -150,7 +258,7 @@ public partial class GeneralSettingPage : ContentPage
             await FlushAndStopAsync();
 #if WINDOWS
             string path = "projectFrameCut_Protocol:";
-            if (MauiProgram.IsPackaged() == false)
+            if (!MauiProgram.IsPackaged())
             {
                 var exePath = Process.GetCurrentProcess().MainModule?.FileName;
                 if (exePath != null)
@@ -161,7 +269,7 @@ public partial class GeneralSettingPage : ContentPage
             var script =
     $$"""
 
-Clear-Host;Write-Output "projectFrameCut is now rebooting, please wait for a while...";Start-Sleep 2;Start-Process "{{path}}";exit
+Clear-Host;Write-Output "projectFrameCut is now rebooting, please wait for a while...";Start-Process "{{path}}";exit
 
 """;
             var proc = new Process();
@@ -176,8 +284,9 @@ Clear-Host;Write-Output "projectFrameCut is now rebooting, please wait for a whi
                 procWriter.AutoFlush = true;
                 procWriter.WriteLine(script);
             }
-            Environment.Exit(0);
 #endif
+            Environment.Exit(0);
+
         }
     }
 }

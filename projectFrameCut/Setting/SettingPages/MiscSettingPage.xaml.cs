@@ -11,6 +11,7 @@ public partial class MiscSettingPage : ContentPage
     {
         Title = Localized.MainSettingsPage_Tab_Misc;
         BuildPPB();
+
     }
     public PropertyPanel.PropertyPanelBuilder rootPPB;
 
@@ -19,21 +20,26 @@ public partial class MiscSettingPage : ContentPage
         Content = new VerticalStackLayout();
         rootPPB = new();
         rootPPB
-            .AddButton("makeDiagReport", SettingLocalizedResources.Misc_MakeDiagReport, SettingLocalizedResources.CommonStr_Make, null)
-            .AddSwitch("DeveloperMode", SettingLocalizedResources.Misc_DebugMode, bool.TryParse(GetSetting("DeveloperMode","false"), out var devMode) ? devMode : false, null)
-            .AddSeparator((b) =>
-            {
-                b.HeightRequest = 200;
-                b.BackgroundColor = Colors.Transparent;
-            })
-            .AddButton("reset_Settings", SettingLocalizedResources.Misc_ResetSettings, SettingLocalizedResources.CommonStr_Reset, 
+            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Misc_UserInfo, SettingLocalizedResources.Misc_UserInfo_Subtitle, 20, 12))
+            .AddEntry("UserName", SettingLocalizedResources.Misc_UserDisplayName, GetSetting("UserName", Environment.UserName), Environment.UserName)
+            .AddCustomChild(SettingLocalizedResources.Misc_UserID, new Label { Text = GetSetting("UserID") })
+            .AddSeparator()
+            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Misc_DiagOptions, SettingLocalizedResources.Misc_DiagOptions_Subtitle, 20, 12))
+            .AddButton("makeDiagReport", SettingLocalizedResources.Misc_MakeDiagReport, null)
+            .AddButton("openSettingsButton", SettingLocalizedResources.Misc_OpenSettingsJson, null!)
+#if !iDevices || (iDevices && !DEBUG) //appstore not allow developers put developer settings in release version of apps
+            .AddSwitch("DeveloperMode", SettingLocalizedResources.Misc_DebugMode, bool.TryParse(GetSetting("DeveloperMode", "false"), out var devMode) ? devMode : false, null)
+#endif
+            .AddSeparator()
+            .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Misc_Reset, 20, default))
+            .AddButton("reset_Settings", SettingLocalizedResources.Misc_ResetSettings,
             (b) =>
             {
                 b.BackgroundColor = Color.FromRgba("CC0000FF");
                 b.TextColor = Colors.Black;
             })
             .ListenToChanges(SettingInvoker);
-        Content = rootPPB.Build();
+        Content = new ScrollView { Content = rootPPB.Build() };
     }
 
     private async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args)
@@ -45,8 +51,13 @@ public partial class MiscSettingPage : ContentPage
             {
                 case var t when t.StartsWith("reset_"):
                     {
+                        var tag = t switch
+                        {
+                            "reset_Settings" => SettingLocalizedResources.Misc_ResetSettings,
+                            _ => "Unknown"
+                        };
                         var conf = await MainSettingsPage.instance.DisplayAlertAsync(Localized._Warn,
-                                    SettingLocalizedResources.CommonStr_Sure(t),
+                                    SettingLocalizedResources.CommonStr_Sure(tag),
                                     Localized._Confirm,
                                     Localized._Cancel);
                         if (conf)
@@ -62,9 +73,20 @@ public partial class MiscSettingPage : ContentPage
                 case "makeDiagReport":
                     //todo
                     goto done;
+                case "openSettingsButton":
+                    var jsonPath = Path.Combine(MauiProgram.BasicDataPath, "settings.json");
+#if WINDOWS
+                    Process.Start(new ProcessStartInfo { FileName = jsonPath, UseShellExecute = true });
+#elif ANDROID
+
+#elif iDevices
+
+#endif
+                    goto done;
                 case "DeveloperMode":
                     needReboot = true;
                     break;
+
             }
 
             if (args.Value != null)

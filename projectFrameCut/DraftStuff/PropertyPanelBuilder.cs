@@ -23,7 +23,10 @@ namespace projectFrameCut.PropertyPanel
     public class PropertyPanelBuilder
     {
 
-        private VerticalStackLayout layout;
+        //private VerticalStackLayout layout;
+
+        private List<View> children = new();
+        public Dictionary<string, View> Components { get; private init; } = new();
 
         /// <summary>
         /// Gets a collection of custom properties associated with the object.
@@ -39,7 +42,7 @@ namespace projectFrameCut.PropertyPanel
         /// Gets or sets the default padding applied to the control's outer grid,
         /// </summary>
         /// <remarks>
-        /// Except <see cref="AddSeparator(Action{BoxView}?)"/>, <see cref="AddCustomChild(View)"/>, and <see cref="AddCustomChild(Func{Action{object}, View}, string, object)"/>.
+        /// Except <see cref="AddSeparator(Action{BoxView}?, string)"/>, <see cref="AddCustomChild(View)"/>, and <see cref="AddCustomChild(Func{Action{object}, View}, string, object)"/>.
         /// </remarks>
         public Thickness DefaultPadding { get; set; } = new Thickness(0, 8, 0, 0);
 
@@ -59,17 +62,17 @@ namespace projectFrameCut.PropertyPanel
         public PropertyPanelBuilder()
         {
             childBuilder = new PropertyPanelChildrenBuilder(this);
-            layout = new VerticalStackLayout
-            {
-                Spacing = 10,
-                Padding = new Thickness(10)
-            };
+            //layout = new VerticalStackLayout
+            //{
+            //    Spacing = 10,
+            //    Padding = new Thickness(10)
+            //};
         }
 
         /// <summary>
         /// Adds a <seealso cref="Label"/> to the property panel.
         /// </summary>
-        public PropertyPanelBuilder AddText(string content, double fontSize = 14, FontAttributes fontAttributes = FontAttributes.None)
+        public PropertyPanelBuilder AddText(string content, string Id = "",double fontSize = 14, FontAttributes fontAttributes = FontAttributes.None)
         {
             var label = new Label
             {
@@ -77,13 +80,16 @@ namespace projectFrameCut.PropertyPanel
                 FontSize = fontSize,
                 FontAttributes = fontAttributes
             };
-            layout.Children.Add(label);
+            if(!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, label);
+            children.Add(label);
             return this;
         }
 
-        public PropertyPanelBuilder AddText(PropertyPanelItemLabel label)
+        public PropertyPanelBuilder AddText(PropertyPanelItemLabel label, string Id = "")
         {
-            layout.Children.Add(label.LabelConfigurer());
+            var l = label.LabelConfigurer();
+            if (!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, l);
+            children.Add(l);
             return this;
         }
 
@@ -92,7 +98,7 @@ namespace projectFrameCut.PropertyPanel
         /// </summary>
         /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
         /// <param name="defaultValue">The default value to assign to the property identified by <paramref name="Id"/>.</param>
-        public PropertyPanelBuilder AddEntry(string Id, PropertyPanelItemLabel title, string defaultValue, string placeholder, Action<Entry>? EntrySeter = null)
+        public PropertyPanelBuilder AddEntry(string Id, PropertyPanelItemLabel title, string defaultValue, string placeholder, Action<Entry>? EntrySeter = null, EntryUpdateEventCallMode mode = EntryUpdateEventCallMode.OnUnfocusedAndUnchanged)
         {
             var entry = new Entry
             {
@@ -104,8 +110,21 @@ namespace projectFrameCut.PropertyPanel
             var label = title.LabelConfigurer();
 
             Properties[Id] = defaultValue;
-
-            entry.TextChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, e.NewTextValue);
+            switch (mode)
+            {
+                case EntryUpdateEventCallMode.OnAnyTextChange:
+                    entry.TextChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, e.NewTextValue);
+                    break;
+                case EntryUpdateEventCallMode.OnUnfocusedAndUnchanged:
+                    entry.Unfocused += (s, e) =>
+                    {
+                        if (entry.Text != Properties[Id] as string)
+                        {
+                            pppcea.CreateAndInvoke(this, Id, entry.Text);
+                        }
+                    };
+                    break;
+            }
             EntrySeter?.Invoke(entry);
 
             var grid = new Grid
@@ -125,7 +144,8 @@ namespace projectFrameCut.PropertyPanel
             grid.Children.Add(entry);
             Grid.SetColumn(entry, 1);
 
-            layout.Children.Add(grid);
+            children.Add(grid);
+            Components.Add(Id, entry);
             return this;
         }
 
@@ -162,7 +182,8 @@ namespace projectFrameCut.PropertyPanel
             grid.Children.Add(label);
             grid.Children.Add(checkbox);
             Grid.SetColumn(checkbox, 1);
-            layout.Children.Add(grid);
+            children.Add(grid); 
+            Components.Add(Id, checkbox);
             return this;
         }
         /// <summary>
@@ -199,7 +220,8 @@ namespace projectFrameCut.PropertyPanel
             grid.Children.Add(label);
             grid.Children.Add(swtch);
             Grid.SetColumn(swtch, 1);
-            layout.Children.Add(grid);
+            children.Add(grid);
+            Components.Add(Id, swtch);
             return this;
         }
 
@@ -208,7 +230,7 @@ namespace projectFrameCut.PropertyPanel
         /// Adds a <seealso cref="Picker"/> with an associated label to the property panel.
         /// </summary>
         /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
-        /// <param name="defaultValue">The default value to assign to the property identified by <paramref name="Id"/>.</param>
+        /// <param name="defaultOne">The default value to assign to the property identified by <paramref name="Id"/>.</param>
         public PropertyPanelBuilder AddPicker(string Id, PropertyPanelItemLabel title, string[] values, string? defaultOne = null, Action<Picker>? PickerSetter = null)
         {
             var picker = new Picker
@@ -237,7 +259,8 @@ namespace projectFrameCut.PropertyPanel
             grid.Children.Add(label);
             grid.Children.Add(picker);
             Grid.SetColumn(picker, 1);
-            layout.Children.Add(grid);
+            children.Add(grid); 
+            Components.Add(Id, picker);
             return this;
         }
 
@@ -278,14 +301,15 @@ namespace projectFrameCut.PropertyPanel
             grid.Children.Add(label);
             grid.Children.Add(slider);
             Grid.SetColumn(slider, 1);
-            layout.Children.Add(grid);
+            children.Add(grid);
+            Components.Add(Id, slider);
             return this;
         }
 
         /// <summary>
         /// Adds a separate line (based on <seealso cref="BoxView"/>) to the property panel.
         /// </summary>
-        public PropertyPanelBuilder AddSeparator(Action<BoxView>? BoxViewSetter = null)
+        public PropertyPanelBuilder AddSeparator(Action<BoxView>? BoxViewSetter = null, string id = "")
         {
             var boxView = new BoxView
             {
@@ -294,7 +318,8 @@ namespace projectFrameCut.PropertyPanel
                 HorizontalOptions = LayoutOptions.Fill
             };
             BoxViewSetter?.Invoke(boxView);
-            layout.Children.Add(boxView);
+            if (!string.IsNullOrWhiteSpace(id)) Components.Add(id, boxView);
+            children.Add(boxView);
             return this;
         }
 
@@ -305,42 +330,44 @@ namespace projectFrameCut.PropertyPanel
         /// Please note that <see cref="PropertyChanged"/> will be triggered, and <see cref="pppcea.Value"/> and <see cref="pppcea.OriginValue"/> will be <see langword="null"/> when you click on the button.
         /// </remarks>
         /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
-        public PropertyPanelBuilder AddButton(string Id, PropertyPanelItemLabel title, string buttonText, Action<Button>? ButtonSetter = null)
+        public PropertyPanelBuilder AddButton(string Id, string buttonText, Action<Button>? ButtonSetter = null)
         {
             var button = new Button
             {
                 Text = buttonText,
                 HorizontalOptions = LayoutOptions.Fill
             };
-            var label = title.LabelConfigurer();
+            //var label = title.LabelConfigurer();
             Properties[Id] = null!;
             ButtonSetter?.Invoke(button);
             button.Clicked += (s, e) => pppcea.CreateAndInvoke(this, Id, null!);
-            var grid = new Grid
-            {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
-                },
-                RowDefinitions = new RowDefinitionCollection
-                {
-                    new RowDefinition { Height = GridLength.Auto }
-                },
-                Padding = DefaultPadding
-            };
-            grid.Children.Add(label);
-            grid.Children.Add(button);
-            Grid.SetColumn(button, 1);
-            layout.Children.Add(grid);
+            //var grid = new Grid
+            //{
+            //    ColumnDefinitions = new ColumnDefinitionCollection
+            //    {
+            //        new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+            //        new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+            //    },
+            //    RowDefinitions = new RowDefinitionCollection
+            //    {
+            //        new RowDefinition { Height = GridLength.Auto }
+            //    },
+            //    Padding = DefaultPadding
+            //};
+            //grid.Children.Add(label);
+            //grid.Children.Add(button);
+            //Grid.SetColumn(button, 1);
+            children.Add(button); 
+            Components.Add(Id, button);
             return this;
         }
 
-        public PropertyPanelBuilder AddChildrensInALine(Action<PropertyPanelChildrenBuilder> childrenMaker)
+        public PropertyPanelBuilder AddChildrensInALine(Action<PropertyPanelChildrenBuilder> childrenMaker, string id = "")
         {
             var cb = new PropertyPanelChildrenBuilder(this);
             childrenMaker(cb);
-            layout.Children.Add(cb.ToVerticalLayout());
+            if(!string.IsNullOrWhiteSpace(id)) Components.Add(id, cb.ToHorizentalLayout());
+            children.Add(cb.ToVerticalLayout());
             return this;
         }
 
@@ -362,14 +389,14 @@ namespace projectFrameCut.PropertyPanel
         /// <param name="child">The view to add as a child to the property panel.</param>
         public PropertyPanelBuilder AddCustomChild(View child)
         {
-            layout.Children.Add(child);
+            children.Add(child);
             return this;
         }
 
         /// <summary>
         /// Almost same to <see cref="AddCustomChild(View)"/>, but with an associated label.
         /// </summary>
-        public PropertyPanelBuilder AddCustomChild(PropertyPanelItemLabel title, View child)
+        public PropertyPanelBuilder AddCustomChild(PropertyPanelItemLabel title, View child, string id = "")
         {
             var label = title.LabelConfigurer();
 
@@ -389,7 +416,8 @@ namespace projectFrameCut.PropertyPanel
             grid.Children.Add(label);
             grid.Children.Add(child);
             Grid.SetColumn(child, 1);
-            layout.Children.Add(grid);
+            children.Add(grid); 
+            if(!string.IsNullOrWhiteSpace(id)) Components.Add(id, child);
             return this;
         }
 
@@ -422,7 +450,9 @@ namespace projectFrameCut.PropertyPanel
         /// <param name="defaultValue">The default value to assign to the property identified by <paramref name="Id"/>.</param>
         public PropertyPanelBuilder AddCustomChild(Func<Action<object>, View> maker, string Id, object defaultValue)
         {
-            layout.Children.Add(maker((o) => pppcea.CreateAndInvoke(this, Id, o)));
+            var view = maker((o) => pppcea.CreateAndInvoke(this, Id, o));
+            Components.Add(Id, view);
+            children.Add(view);
             Properties[Id] = defaultValue;
             return this;
         }
@@ -464,7 +494,7 @@ namespace projectFrameCut.PropertyPanel
             grid.Children.Add(label);
             grid.Children.Add(child);
             Grid.SetColumn(child, 1);
-            layout.Children.Add(grid);
+            children.Add(grid); Components.Add(Id, child);
             return this;
         }
 
@@ -480,19 +510,13 @@ namespace projectFrameCut.PropertyPanel
         /// <param name="another">The builder whose property panel items will be added to this builder. Cannot be null.</param>
         public PropertyPanelBuilder AddFromAnother(PropertyPanelBuilder another)
         {
-            var c = another.Build();
-            View? t = null;
-            while (c.Children.Remove(t = (View?)c.Children.FirstOrDefault((View?)null)))
+            foreach (var item in another.children)
             {
-                if (t is not null) AddCustomChild(t);
+                AddCustomChild(item);
             }
+            
             another.PropertyChanged += (_, e) => PropertyChanged?.Invoke(another, e);
             return this;
-
-        }
-
-        public void ModifyProperties(string id, Action<View> caller)
-        {
 
         }
 
@@ -518,8 +542,30 @@ namespace projectFrameCut.PropertyPanel
         /// <summary>
         /// Get the final <seealso cref="VerticalStackLayout"/> of the panel created by this builder.
         /// </summary>
-        public VerticalStackLayout Build()
+        public Layout Build()
         {
+            var layout = new VerticalStackLayout
+            {
+                Spacing = 10,
+                Padding = new Thickness(10)
+            };
+            foreach (var item in children)
+            {
+                layout.Children.Add(item);
+            }
+            return layout;
+        }
+
+        /// <summary>
+        /// Get the final <seealso cref="Layout"/> of the panel created by this builder.
+        /// </summary>
+        /// <param name="layout">The source layout you'd like to use.</param>
+        public Layout Build(Layout layout)
+        {
+            foreach (var item in children)
+            {
+                layout.Children.Add(item);
+            }
             return layout;
         }
 
@@ -678,7 +724,7 @@ namespace projectFrameCut.PropertyPanel
         /// Adds a <seealso cref="Button"/> with an associated label to the property panel.
         /// </summary>
         /// <remarks>
-        /// Please note that <see cref="PropertyChanged"/> will be triggered with a meaningless <see cref="pppcea.Value"/> and <see cref="pppcea.OriginValue"/> (both are new object()) when you click on the button.
+        /// Please note that PropertyChanged will be triggered with a meaningless <see cref="pppcea.Value"/> and <see cref="pppcea.OriginValue"/> (both are new object()) when you click on the button.
         /// </remarks>
         /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
         public PropertyPanelChildrenBuilder AddButton(string Id, string buttonText, GridLength? width = null, Action<Button>? ButtonSetter = null)
@@ -779,6 +825,12 @@ namespace projectFrameCut.PropertyPanel
 
     }
 
+    public enum EntryUpdateEventCallMode
+    {
+        OnAnyTextChange,
+        OnUnfocusedAndUnchanged
+    }
+
     public class SingleLineLabel(string text, int fontsize = 14, FontAttributes fontAttributes = FontAttributes.None) : PropertyPanelItemLabel
     {
         public override View LabelConfigurer() => new Label { Text = text, FontSize = fontsize, FontAttributes = fontAttributes, VerticalOptions = LayoutOptions.Center };
@@ -786,7 +838,7 @@ namespace projectFrameCut.PropertyPanel
         public static implicit operator SingleLineLabel(string text) => new SingleLineLabel(text);
     }
 
-    public class TitleAndDescriptionLineLabel(string title, string description, int titleFontSize = 18, int contentFontSize = 14) : PropertyPanelItemLabel
+    public class TitleAndDescriptionLineLabel(string title, string description, int titleFontSize = 20, int contentFontSize = 12) : PropertyPanelItemLabel
     {
         public override View LabelConfigurer() => new VerticalStackLayout
         {

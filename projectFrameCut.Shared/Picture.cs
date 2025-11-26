@@ -108,6 +108,70 @@ namespace projectFrameCut.Shared
             filePath = imagePath;
         }
 
+        public Picture(SixLabors.ImageSharp.Image source)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            Width = source.Width;
+            Height = source.Height;
+            Pixels = checked(Width * Height);
+            r = new ushort[Pixels];
+            g = new ushort[Pixels];
+            b = new ushort[Pixels];
+            if (source.PixelType.BitsPerPixel == 64) //Rgba32
+            {
+                hasAlphaChannel = true;
+                a = new float[Pixels];
+                var img = source.CloneAs<Rgba64>();
+                for (int y = 0; y < Height; y++)
+                {
+                    for (int x = 0; x < Width; x++)
+                    {
+                        int k = y * Width + x;
+                        Rgba64 px = img[x, y];
+                        r[k] = px.R;
+                        g[k] = px.G;
+                        b[k] = px.B;
+                        a[k] = px.A / 65535f;
+                    }
+                }
+            }
+            else if (source.PixelType.BitsPerPixel == 32) //Rgba32
+            {
+                hasAlphaChannel = true;
+                a = new float[Pixels];
+                var img = source.CloneAs<Rgba32>();
+                for (int y = 0; y < Height; y++)
+                {
+                    for (int x = 0; x < Width; x++)
+                    {
+                        int k = y * Width + x;
+                        Rgba32 px = img[x, y];
+                        r[k] = (ushort)(px.R * 257);
+                        g[k] = (ushort)(px.G * 257);
+                        b[k] = (ushort)(px.B * 257);
+                        a[k] = px.A / 255f;
+                    }
+                }
+            }
+            else //Rgb24
+            {
+                hasAlphaChannel = false;
+                a = null;
+                var img = source.CloneAs<Rgb24>();
+                for (int y = 0; y < Height; y++)
+                {
+                    for (int x = 0; x < Width; x++)
+                    {
+                        int k = y * Width + x;
+                        Rgb24 px = img[x, y];
+                        r[k] = (ushort)(px.R * 257);
+                        g[k] = (ushort)(px.G * 257);
+                        b[k] = (ushort)(px.B * 257);
+                    }
+                }
+            }
+        }
+
         public Picture SetAlpha(bool haveAlpha)
         {
             lock (this)

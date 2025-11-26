@@ -1,19 +1,19 @@
-codename 'projectFrameCut' �ˤĤ���
+codename 'projectFrameCut' について
 
-������ (c) hexadecimal0x12e 2025��
+著作権 (c) hexadecimal0x12e 2025。
 
-projectFrameCut �� GNU GPL v2���ޤ��Ϥ����Խ����ǹ��_���줿���`�ץ󥽩`���ץ��������ȤǤ������`�����`�ɤϴΤΥ�󥯤Ǵ_�J�Ǥ��ޤ��� https://github.com/hexadecimal0x12e/projectFrameCut
+projectFrameCut は GNU GPL v2（またはそれ以降）で公開されたオープンソースプロジェクトです。ソースコードは次のリンクで確認できます： https://github.com/hexadecimal0x12e/projectFrameCut
 
-projectFrameCut �Ϥޤ��_�k�ФǤ� �� �����h���Ǥ�ʹ�äϱܤ��Ƥ��������������եȥ������ˤ���`���ե��`���жϤ��줿���ϤǤ⡢�����ʤ뱣�^�⤤�����ޤ���
+projectFrameCut はまだ開発中です — 本番環境での使用は避けてください。本ソフトウェアによりワークフローが中断された場合でも、いかなる保証もいたしません。
 
-���եȥ������_�k���L�����y�Ǥ��뤳�Ȥϳ�֪���Ƥ��ޤ����Х���Ҋ�Ĥ��������������ǥ�������С�issue ��Ͷ�夷�Ƥ��������� https://github.com/hexadecimal0x12e/projectFrameCut/issues/new
+ソフトウェア開発が長く困難であることは承知しています。バグを見つけたり良いアイデアがあれば、issue を投稿してください： https://github.com/hexadecimal0x12e/projectFrameCut/issues/new
 
-projectFrameCut ��Ŀ�ˤϡ�������ʹ���䤹������ȫ�����ɤʄӻ��������եȤˤʤ뤳�ȤǤ���˽�����Ϥ��Όg�F���򤱤�Ŭ�����Ƥ��ޤ���
+projectFrameCut の目標は、強力で使いやすく、完全に自由な動画編集ソフトになることです。私たちはその実現に向けて努力しています。
 
-���`�ɥѩ`�ƥ��饤�֥����x��
+サードパーティライブラリと謝辞
 
-���Υץ��������ȤǤϡ��ե�`�����ȄI���Τ���� FFmpeg �� SixLabors.ImageSharp��������v�B�饤�֥�꣩��ʹ�ä���FFmpeg �κ��ӳ����ˤ� FFmpeg_droidFix.AutoGen ��ʹ�ä��Ƥ��ޤ���
+このプロジェクトでは、フレーム抽出と処理のために FFmpeg と SixLabors.ImageSharp（および関連ライブラリ）を使用し、FFmpeg の呼び出しには FFmpeg_droidFix.AutoGen を使用しています。
 
-Windows �򤱤ˤ� ILGPU ��ʹ�ä��ƥϩ`�ɥ��������������`�������ФäƤ��ޤ���
+Windows 向けには ILGPU を使用してハードウェアアクセラレーションを行っています。
 
-Android �Ǥ� Fishnet �򥯥�å����ݩ`�Ȥ�ʹ�ä��Ƥ��ޤ���
+Android では Fishnet をクラッシュレポートに使用しています。

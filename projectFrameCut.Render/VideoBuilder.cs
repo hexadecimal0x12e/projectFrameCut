@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace projectFrameCut.Render
 {
-    public class VideoBuilder :IDisposable    
+    public class VideoBuilder : IDisposable    
     {
         string outputPath;
         VideoWriter builder;

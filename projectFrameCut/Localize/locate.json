@@ -1,5 +1,5 @@
 {
-  "DefaultLocate": "en-US",
+  "DefaultLocate": "\u6587\u8A00\u6587",
   "AdditionalUsing": "System.Reflection",
   "NameSpaceOfLocalizerInstance": "LocalizedResources",
   "ClassNameSpaceOfLocalizerInstance": "SimpleLocalizerBaseGeneratedHelper",
@@ -23,6 +23,15 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Default",
+        "Value": "\u9ED8\u8BA4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u67D0\u4E2A\u4E1C\u897F\u7684\u9ED8\u8BA4\u503C",
         "HasValidationErrors": false
       },
       {
@@ -57,7 +66,7 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u7FFB\u8BD1\u65F6\uFF0C\u8BF7\u6309\u7167\u4E0B\u5217\u683C\u5F0F\u8F93\u51FA\u7ED3\u679C\uFF1A\r\u76EE\u6807\u8BED\u8A00\u5728\u76EE\u6807\u8BED\u8A00\u7684\u540D\u5B57 / \u76EE\u6807\u8BED\u8A00\u5728\u82F1\u8BED\uFF08\u82F1\u56FD\uFF09\u7684\u540D\u5B57\uFF0C\r\u6BD4\u5982\u5F53TargetLanguage\u662F\u0022ja-JP\u0022\u65F6\u8F93\u51FA \u201C\u65E5\u672C\u8A9E / Japanese\u201D",
+        "Comment": "\u7FFB\u8BD1\u65F6\uFF0C\u8BF7\u6309\u7167\u4E0B\u5217\u683C\u5F0F\u8F93\u51FA\u7ED3\u679C\uFF1A\r\u76EE\u6807\u8BED\u8A00\u5728\u76EE\u6807\u8BED\u8A00\u7684\u540D\u5B57 / \u76EE\u6807\u8BED\u8A00\u5728\u82F1\u8BED\uFF08\u82F1\u56FD\uFF09\u7684\u540D\u5B57\uFF0C\r\u6BD4\u5982\u5F53TargetLanguage\u662F\u0022ja-JP\u0022\u65F6\u8F93\u51FA \u201C\u65E5\u672C\u8A9E / Japanese\u201D\u3001\rTargetLanguage\u662F\u0022fr-FR\u0022\u65F6\u8F93\u51FA \u201CFran\u00E7ais / French\u201D\uFF0C\u4EE5\u6B64\u7C7B\u63A8\u3002",
         "HasValidationErrors": false
       },
       {
@@ -1357,11 +1366,11 @@
       },
       {
         "Id": "AppCrashed",
-        "Value": "Unset localization item:AppCrashed()",
+        "Value": "We\u0027re sorry, the application encountered an unhandled exception and needs to close immediately.\r\nYour work will be automatically saved when you make any changes on the interface, so you won\u0027t lose any content.\r\nIf you\u0027d like to help improve this application, please consider submitting an Issue or sending this report to us.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Application crash notification with auto-save reassurance and feedback request",
         "HasValidationErrors": false
       },
       {
@@ -1384,7 +1393,7 @@
       },
       {
         "Id": "AppShell_NavFailed",
-        "Value": "Unset localization item:AppShell_NavFailed(Exception  ex, string page)",
+        "Value": "Sorry, navigation to the \u0027{page}\u0027 page failed due to an unhandled {ex.GetType().Name} exception.\r({ex.Message})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1406,7 +1415,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Error message when navigation fails due to an exception",
         "HasValidationErrors": false
       },
       {
@@ -1789,7 +1798,7 @@
           }
         ],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Rendering progress prompt",
         "HasValidationErrors": false
       },
       {
@@ -2575,6 +2584,15 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "_Default",
+        "Value": "Default",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Indicates the default value of something",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -2934,7 +2952,7 @@
       },
       {
         "Id": "DraftPage_RenderOneFrame",
-        "Value": "\u6B63\u5728\u6E32\u67D3\u7B2C {frameIndex} \u5E27\uFF08\u6642\u9593\u8EF8\u4F4D\u7F6E\uFF1A{playheadSeconds}\uFF09...",
+        "Value": "\u6B63\u5728\u6E32\u67D3\u7B2C {frameIndex} \u5E40\uFF08{playheadSeconds}\uFF09...",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2947,7 +2965,7 @@
           }
         ],
         "ArgsComment": [],
-        "Comment": "\u5F71\u7247\u6E32\u67D3\u9032\u5EA6\u63D0\u793A",
+        "Comment": "\u6E32\u67D3\u9032\u5EA6\u63D0\u793A\u4FE1\u606F",
         "HasValidationErrors": false
       },
       {
@@ -3874,16 +3892,16 @@
       },
       {
         "Id": "AppCrashed",
-        "Value": "Unset localization item:AppCrashed()",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C\u61C9\u7528\u7A0B\u5F0F\u9047\u5230\u672A\u8655\u7406\u7684\u7570\u5E38\uFF0C\u9700\u8981\u7ACB\u5373\u95DC\u9589\u3002\r\u7576\u60A8\u5728\u4ECB\u9762\u4E0A\u9032\u884C\u4EFB\u4F55\u66F4\u6539\u6642\uFF0C\u7CFB\u7D71\u6703\u81EA\u52D5\u5132\u5B58\u60A8\u7684\u5DE5\u4F5C\uFF0C\u56E0\u6B64\u60A8\u4E0D\u6703\u907A\u5931\u5DE5\u4F5C\u5167\u5BB9\u3002\r\u5982\u679C\u60A8\u60F3\u5E6B\u52A9\u6539\u9032\u6B64\u61C9\u7528\u7A0B\u5F0F\uFF0C\u8ACB\u8003\u616E\u63D0\u4EA4\u4E00\u500BIssue\u6216\u5C07\u6B64\u5831\u544A\u50B3\u9001\u7D66\u6211\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AppShell_NavFailed",
-        "Value": "Unset localization item:AppShell_NavFailed(Exception  ex, string page)",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C\u7531\u65BC\u4E00\u500B\u672A\u8655\u7406\u7684 {ex.GetType().Name} \u7570\u5E38\u767C\u751F\uFF0C\u5C0E\u81F4\u7121\u6CD5\u5C0E\u822A\u81F3 \u0027{page}\u0027 \u9801\u9762\u3002\r({ex.Message})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3905,7 +3923,16 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Default",
+        "Value": "\u9810\u8A2D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -3976,7 +4003,7 @@
       },
       {
         "Id": "_Options",
-        "Value": "\u30AA\u30D7\u30B7\u30E7\u30F3",
+        "Value": "\u8A2D\u5B9A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4075,7 +4102,7 @@
       },
       {
         "Id": "AppShell_ProjectsTab",
-        "Value": "\u30DE\u30A4\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4458,7 +4485,7 @@
       },
       {
         "Id": "DraftPage_RenderOneFrame",
-        "Value": "\u30D5\u30EC\u30FC\u30E0 {frameIndex} \u3092\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u4E2D ({playheadSeconds})...",
+        "Value": "\u7B2C {frameIndex} \u30D5\u30EC\u30FC\u30E0\u3092\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u4E2D\uFF08{playheadSeconds}\uFF09...",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -4471,7 +4498,7 @@
           }
         ],
         "ArgsComment": [],
-        "Comment": "\u6307\u5B9A\u3055\u308C\u305F\u30D5\u30EC\u30FC\u30E0\u3092\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u4E2D\u306E\u9032\u6357\u8868\u793A\u30E1\u30C3\u30BB\u30FC\u30B8",
+        "Comment": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u9032\u6357\u8868\u793A",
         "HasValidationErrors": false
       },
       {
@@ -5016,7 +5043,7 @@
       },
       {
         "Id": "PropertyPanel",
-        "Value": "\u30D7\u30ED\u30D1\u30C6\u30A3\u30D1\u30CD\u30EB",
+        "Value": "\u5C5E\u6027\u30D1\u30CD\u30EB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5257,6 +5284,15 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "_Default",
+        "Value": "\u30C7\u30D5\u30A9\u30EB\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Indicates the default value of something",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -5308,7 +5344,7 @@
       },
       {
         "Id": "_LocateDisplayName",
-        "Value": "\uAC04\uCCB4 \uC911\uAD6D\uC5B4 / Simplified Chinese",
+        "Value": "\uD55C\uAD6D\uC5B4 / Korean",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5362,7 +5398,7 @@
       },
       {
         "Id": "AppBrand",
-        "Value": "projectFrameCut(\u5047)",
+        "Value": "projectFrameCut(\u4EEE)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5808,7 +5844,7 @@
       },
       {
         "Id": "DraftPage_RenderOneFrame",
-        "Value": "{frameIndex}\uD504\uB808\uC784 \uB80C\uB354\uB9C1\uD558\uB294 \uC911 ({playheadSeconds})...",
+        "Value": "{frameIndex}\uD504\uB808\uC784({playheadSeconds}) \uB80C\uB354\uB9C1 \uC911...",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -5821,7 +5857,7 @@
           }
         ],
         "ArgsComment": [],
-        "Comment": "Frame rendering progress message in video editing/rendering software",
+        "Comment": "\uB80C\uB354\uB9C1 \uC9C4\uD589 \uC0C1\uD0DC \uD45C\uC2DC",
         "HasValidationErrors": false
       },
       {
@@ -6607,6 +6643,15 @@
         "ArgsComment": [],
         "Comment": "Software welcome message, \u0027projectFrameCut\u0027 should not be translated as it\u0027s the software name",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "_Default",
+        "Value": "\uAE30\uBCF8\uAC12",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Indicates the default value of something",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -6658,7 +6703,7 @@
       },
       {
         "Id": "_LocateDisplayName",
-        "Value": "Anglais (\u00C9tats-Unis)",
+        "Value": "Fran\u00E7ais / French",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6721,11 +6766,11 @@
       },
       {
         "Id": "AppCrashed",
-        "Value": "\u00C9l\u00E9ment de localisation non d\u00E9fini : AppCrashed()",
+        "Value": "Nous sommes d\u00E9sol\u00E9s, l\u0027application a rencontr\u00E9 une exception non g\u00E9r\u00E9e et doit \u00EAtre ferm\u00E9e imm\u00E9diatement.\r\nLorsque vous effectuez des modifications sur l\u0027interface, le syst\u00E8me sauvegarde automatiquement votre travail, vous ne perdrez donc aucun contenu.\r\nSi vous souhaitez contribuer \u00E0 l\u0027am\u00E9lioration de cette application, veuillez envisager de soumettre un Issue ou de nous envoyer ce rapport.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u00C9l\u00E9ment de localisation manquant g\u00E9n\u00E9r\u00E9 automatiquement",
+        "Comment": "Message d\u0027erreur affich\u00E9 lorsqu\u0027une application plante, comprenant des excuses, une explication sur la sauvegarde automatique et une invitation \u00E0 signaler le probl\u00E8me",
         "HasValidationErrors": false
       },
       {
@@ -6748,7 +6793,7 @@
       },
       {
         "Id": "AppShell_NavFailed",
-        "Value": "\u00C9l\u00E9ment de localisation non d\u00E9fini : AppShell_NavFailed({ex}, {page})",
+        "Value": "D\u00E9sol\u00E9, une exception {ex.GetType().Name} non g\u00E9r\u00E9e s\u0027est produite, emp\u00EAchant la navigation vers la page \u0027{page}\u0027.\r({ex.Message})",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -6770,7 +6815,7 @@
             "Value": ""
           }
         ],
-        "Comment": "\u00C9l\u00E9ment de localisation manquant g\u00E9n\u00E9r\u00E9 automatiquement",
+        "Comment": "Error message shown when navigation fails due to an unhandled exception",
         "HasValidationErrors": false
       },
       {
@@ -7140,7 +7185,7 @@
       },
       {
         "Id": "DraftPage_RenderOneFrame",
-        "Value": "Rendu de la frame {frameIndex} ({playheadSeconds})...",
+        "Value": "Rendu de la frame {frameIndex} en cours ({playheadSeconds})...",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -7153,7 +7198,7 @@
           }
         ],
         "ArgsComment": [],
-        "Comment": "Progress indicator for frame rendering with frame index and playhead time",
+        "Comment": "Message d\u0027indication de progression du rendu",
         "HasValidationErrors": false
       },
       {
@@ -7502,7 +7547,7 @@
       },
       {
         "Id": "HomePage_ProjectContextMenu_Delete_Confirm3",
-        "Value": "[Erreur de traduction] : Une erreur s\u0027est produite lors de l\u0027envoi de la requ\u00EAte.",
+        "Value": "Oui, supprimer \u00AB\u202F{name}\u202F\u00BB",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -7516,7 +7561,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Error message indicating translation failure during request transmission",
+        "Comment": "Confirmation de suppression dans une bo\u00EEte de dialogue",
         "HasValidationErrors": false
       },
       {
@@ -7934,6 +7979,1374 @@
       {
         "Id": "WelcomeMessage",
         "Value": "Bienvenue dans la version b\u00EAta de projectFrameCut !",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Default",
+        "Value": "Par d\u00E9faut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Indique la valeur par d\u00E9faut de quelque chose",
+        "HasValidationErrors": false
+      }
+    ],
+    "\u6587\u8A00\u6587": [
+      {
+        "Id": "_Cancel",
+        "Value": "\u6B62\u4E4B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Cancel operation in classical Chinese",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Confirm",
+        "Value": "\u786E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Default",
+        "Value": "\u9ED8\u8BA4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u7269\u4E4B\u5E38\u503C",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_ExceptionTemplate",
+        "Value": "\u672A\u5904 {ex.GetType().Name} \u5F02\u751F ({ex.Message})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "Exception",
+            "Value": "\u5F02\u5E38"
+          }
+        ],
+        "Comment": "\u5F02\u5E38\u4FE1\u606F\u663E\u793A\u6A21\u677F",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u754C\u9762\u63D0\u793A\u4FE1\u606F\u4E4B\u6587\u8A00\u8868\u8FBE",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_LocateDisplayName",
+        "Value": "\u6587\u8A00\u6587 / Classical Chinese",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8BED\u8A00\u663E\u793A\u540D\u79F0\u683C\u5F0F\uFF1A\u76EE\u6807\u8BED\u8A00\u5728\u76EE\u6807\u8BED\u8A00\u4E2D\u7684\u540D\u79F0 / \u76EE\u6807\u8BED\u8A00\u5728\u82F1\u8BED\u4E2D\u7684\u540D\u79F0",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "\u5584",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Options",
+        "Value": "\u62E9\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Processing",
+        "Value": "\u65B9\u7406\u4E4B...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u4E8B\u52A1\u6B63\u5728\u5904\u7406\u4E2D\u4E4B\u72B6\u6001",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Settings",
+        "Value": "\u8BBE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8F6F\u4EF6\u8BBE\u7F6E\u4E4B\u9009\u9879",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Warn",
+        "Value": "\u544A\u8B66",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AppBrand",
+        "Value": "projectFrameCut(\u4EEE)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8F6F\u4EF6\u540D\u79F0\u4FDD\u6301\u539F\u6837\u672A\u7FFB\u8BD1",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AppCrashed",
+        "Value": "\u6B49\u751A\uFF0C\u7A0B\u5F0F\u906D\u672A\u5904\u4E4B\u5F02\uFF0C\u987B\u7ACB\u95ED\u3002\r\u5C14\u4E8E\u754C\u9762\u66F4\u6613\u65F6\uFF0C\u7CFB\u7EDF\u81EA\u5B58\u5C14\u5DE5\uFF0C\u6545\u4E0D\u5931\u4F5C\u4E1A\u3002\r\u82E5\u6B32\u52A9\u76CA\u6B64\u7A0B\u5F0F\uFF0C\u53EF\u8651\u5448Issue\u6216\u4F20\u6B64\u62A5\u4E8E\u543E\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Application crash notification message translated into classical Chinese",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_AssetsTab",
+        "Value": "\u8D44\u6750\u5E93",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_DebugTab",
+        "Value": "\u6821\u52D8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8C03\u8BD5\u529F\u80FD\u6807\u7B7E",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_NavFailed",
+        "Value": "\u6B49\u751A\uFF0C\u56E0\u672A\u5904\u7406\u4E4B {ex.GetType().Name} \u5F02\u5E38\u751F\uFF0C\u81F4\u672A\u80FD\u5BFC\u822A\u81F3 \u0027{page}\u0027 \u9875\u3002\r({ex.Message})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception ",
+            "Value": "ex"
+          },
+          {
+            "Key": "string",
+            "Value": "page"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          },
+          {
+            "Key": "page",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6587\u8A00\u6587\u8868\u8FBE\u5BFC\u822A\u5931\u8D25\u4E4B\u9519\u8BEF\u63D0\u793A\uFF0C\u4FDD\u6301\u6280\u672F\u672F\u8BED\u51C6\u786E",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_ProjectsTab",
+        "Value": "\u543E\u4E4B\u9879\u76EE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5E94\u7528\u754C\u9762\u4E2D\u4E4B\u9879\u76EE\u6807\u7B7E\u540D\u79F0",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddOneAsset",
+        "Value": "\u91CA\u624B\u4EE5\u6DFB\u300E{name ?? \u0022\u672A\u77E5\u540D\u79F0\u0022}\u300F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string?",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": "\u7D20\u6750\u7684\u540D\u5B57"
+          }
+        ],
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u5206\u6790\u8FD9\u4E2A\u672C\u5730\u5316\u8D44\u6E90\uFF1A\n- \u76EE\u6807\u8BED\u8A00\uFF1A\u6587\u8A00\u6587\n- \u539F\u6587\uFF1A\u0022\u677E\u624B\u6765\u6DFB\u52A0\u300E{name ?? \u0022\u672A\u77E5\u540D\u79F0\u0022}\u300F\u0022\n- \u6A21\u5F0F\uFF1A\u63D2\u503C\u5B57\u7B26\u4E32\uFF0C\u9700\u8981\u4FDD\u6301 {name} \u53C2\u6570\u4E0D\u53D8\n- \u4E0A\u4E0B\u6587\uFF1A\u7528\u6237\u754C\u9762\u64CD\u4F5C\u63D0\u793A\uFF0C\u8868\u793A\u901A\u8FC7\u62D6\u653E\u6216\u91CA\u653E\u64CD\u4F5C\u6765\u6DFB\u52A0\u7D20\u6750\n\n\u8003\u8651\u5230\u6587\u8A00\u6587\u7684\u8868\u8FBE\u4E60\u60EF\u548C\u8F6F\u4EF6\u754C\u9762\u7684\u7B80\u6D01\u6027\u8981\u6C42\uFF0C\u6211\u4F1A\u5C06\u0022\u677E\u624B\u6765\u6DFB\u52A0\u0022\u8BD1\u4E3A\u66F4\u7B26\u5408\u6587\u8A00\u6587\u98CE\u683C\u7684\u8868\u8FBE\uFF0C\u540C\u65F6\u4FDD\u6301\u53C2\u6570\u5360\u4F4D\u7B26\u4E0D\u53D8\u3002\n\n\u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\u91CA\u624B\u4EE5\u6DFB\u300E{name ?? \u0022\u672A\u77E5\u540D\u79F0\u0022}\u300F\u0022,\n    \u0022Comment\u0022: \u0022\u62D6\u653E\u64CD\u4F5C\u5B8C\u6210\u65F6\u6DFB\u52A0\u7D20\u6750\u4E4B\u63D0\u793A\u0022\n}\n\u0060\u0060\u0060",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ApplyingChanges",
+        "Value": "\u65B9\u65BD\u66F4\u6613\u2026\u2026",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AssetAdded",
+        "Value": "\u529F\u6210\u6DFB\u6599\u300E{name}\u300F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_BackendExited",
+        "Value": "\u8BEF\uFF1A\u540E\u7AEF\u907D\u9000\u3002\u51FB\u300C\u5584\u300D\u4EE5\u91CD\u5174\u4E4B\uFF0C\u6216\u51FB\u300C\u7F62\u300D\u4EE5\u5FFD\u4E4B\u3002\u82E5\u6B32\u8BE6\u77E5\uFF0C\u8BF7\u9605\u65E5\u5FD7\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Converted modern Chinese error message to classical Chinese style while preserving technical terms and interactive elements",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_BackendStatus",
+        "Value": "\u540E\u7AEF\u5EF6\u8FDF{lantency.ToString(\u0022n2\u0022)}\u6BEB\u79D2\uFF0C\u5185\u5B58\u5360\u7528{menUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)}/{menTotalUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)}\u5146\u5B57\u8282\uFF08\u540E\u7AEF/\u6B64\u7535\u8111\uFF09",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "lantency"
+          },
+          {
+            "Key": "double",
+            "Value": "menUsed"
+          },
+          {
+            "Key": "double",
+            "Value": "menTotalUsed"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "double",
+            "Value": ""
+          },
+          {
+            "Key": "double",
+            "Value": ""
+          },
+          {
+            "Key": "double",
+            "Value": ""
+          }
+        ],
+        "Comment": "Display backend status information including latency and memory usage",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_BackendStatus_MemoryOnly",
+        "Value": "\u7A0B\u5F0F\u5DF2\u8017\u7528\u8BB0\u5B58\uFF1A{menUsed}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "menUsed"
+          }
+        ],
+        "ArgsComment": [],
+        "Comment": "\u663E\u793A\u5185\u5B58\u4F7F\u7528\u91CF",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_BackendStatus_NotRespond",
+        "Value": "\u540E\u7AEF\u672A\u54CD\u5E94\uFF0C\u5185\u5B58\u5360\u7528{menUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)}/{menTotalUsed.ToString(\u0022n2\u0022).Replace(\u0027,\u0027, \u0027\\0\u0027)} MB\uFF08\u540E\u7AEF/\u6B64\u7535\u8111\uFF09",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "menUsed"
+          },
+          {
+            "Key": "double",
+            "Value": "menTotalUsed"
+          }
+        ],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u8868\u8FBE\u9700\u4FDD\u6301\u6280\u672F\u672F\u8BED\u51C6\u786E\u6027\uFF0C\u540C\u65F6\u7B26\u5408\u6587\u8A00\u7B80\u6D01\u7279\u70B9\u3002\u0027\u540E\u7AEF\u0027\u3001\u0027MB\u0027\u7B49\u73B0\u4EE3\u672F\u8BED\u76F4\u63A5\u4FDD\u7559\uFF0C\u6570\u5B57\u683C\u5F0F\u4FDD\u6301\u4E0D\u53D8\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CannotMoveBecauseOfOverlap",
+        "Value": "\u64CD\u672A\u884C\uFF0C\u76D6\u81F4\u53E0\u4E5F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Explanation for untaken action due to overlap concern",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CannotSave_Exception",
+        "Value": "\u4FDD\u5B58\u8349\u7A3F\u5931\u8D25\uFF0C\u76D6\u56E0\u672A\u5904\u7406\u4E4B{ex.GetType().Name}\u5F02\u5E38\uFF08{ex.Message}\uFF09\u3002\uFF08\u541B\u5C82\u672A\u6388\u8DB3\u6743\u4EE5\u4E66\u8349\u7A3F\u6587\u4EF6\u8036\uFF1F\uFF09",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6587\u8A00\u6587\u7248\u672C\u7684\u7CFB\u7EDF\u5F02\u5E38\u63D0\u793A\uFF0C\u4FDD\u7559\u539F\u6280\u672F\u53C2\u6570\u548C\u7591\u95EE\u53E5\u5F0F",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CannotSave_NoPath",
+        "Value": "\u7A3F\u672C\u5904\u6B8A\u5F0F\uFF0C\u51E1\u6240\u66F4\u6613\uFF0C\u7686\u4E0D\u5B58\u7109\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Indicates that the draft is in a special mode where changes cannot be saved",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CannotSave_Readonly",
+        "Value": "\u8349\u7A3F\u4E0D\u53EF\u5B58\u3002\u8BF7\u4EE5\u975E\u53EA\u8BFB\u4E4B\u5F0F\u542F\u4E4B\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u7248\u672C\uFF0C\u0027\u5B58\u0027\u66FF\u4EE3\u0027\u4FDD\u5B58\u0027\uFF0C\u0027\u542F\u0027\u66FF\u4EE3\u0027\u6253\u5F00\u0027\uFF0C\u0027\u5F0F\u0027\u66FF\u4EE3\u0027\u6A21\u5F0F\u0027\uFF0C\u7B26\u5408\u6587\u8A00\u6587\u7B80\u6D01\u7279\u5F81",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ChangesApplied",
+        "Value": "\u66F4\u6539\u5DF2\u65BD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u8868\u8FBE\uFF0C\u610F\u4E3A\u4FEE\u6539\u5DF2\u7ECF\u5B9E\u65BD\u751F\u6548",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DuplicatedAsset",
+        "Value": "\u7D20\u6750{newAsset}\u4F3C\u4E0E{existed}\u76F8\u91CD\u21B5\u6B32\u4F5C\u4F55\u5982\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "newAsset"
+          },
+          {
+            "Key": "string",
+            "Value": "existed"
+          }
+        ],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u7248\u672C\uFF0C\u4FDD\u7559\u53C2\u6570\u5360\u4F4D\u7B26\uFF0C\u4F7F\u7528\u4F20\u7EDF\u5206\u9694\u7B26\u21B5\u8868\u793A\u6362\u884C",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DuplicatedAsset_Relpace",
+        "Value": "\u4EE5\u65B0\u6613\u65E7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Replace old with new",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DuplicatedAsset_Skip",
+        "Value": "\u5B58\u65E7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4FDD\u7559\u539F\u6709\u4E4B\u610F\uFF0C\u7528\u4E8E\u5904\u7406\u91CD\u590D\u8D44\u6E90\u65F6\u9009\u62E9\u4FDD\u7559\u65E7\u6709\u6587\u4EF6",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DuplicatedAsset_Together",
+        "Value": "\u5E76\u5B58",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u4E24\u7269\u540C\u65F6\u4FDD\u7559\u4E4B\u610F",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_EverythingFine",
+        "Value": "\u5907\u77E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u7CFB\u7EDF\u51C6\u5907\u5C31\u7EEA\u4E4B\u72B6\u6001",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GoRender",
+        "Value": "\u5F80\u6E32\u4E4B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6309\u94AE\u6807\u7B7E\uFF0C\u610F\u4E3A\u524D\u5F80\u6E32\u67D3\u9875\u9762\u6267\u884C\u6E32\u67D3\u64CD\u4F5C",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ImportAssetNotFinished",
+        "Value": "\u91CA\u624B\u4EE5\u5165\u7D20\u6750...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u677E\u5F00\u624B\u5373\u53EF\u5BFC\u5165\u7D20\u6750\u4E4B\u64CD\u4F5C\u63D0\u793A",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_IsInMode_Readonly",
+        "Value": "\u540D\u518C\u66F0{name}\uFF0C\u552F\u9605\u4E4B",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": "\u8349\u7A3F\u7684\u540D\u5B57"
+          }
+        ],
+        "Comment": "\u8868\u793A\u8349\u7A3F\u540D\u79F0\u53CA\u53EA\u8BFB\u72B6\u6001\u4E4B\u6587\u8A00\u6587\u8868\u8FF0",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_IsInMode_Special",
+        "Value": "{DraftPage_CannotSave_NoPath} - {name}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": "\u8349\u7A3F\u7684\u540D\u5B57"
+          }
+        ],
+        "Comment": "\u663E\u793A\u8349\u7A3F\u540D\u79F0\u53CA\u5176\u65E0\u6CD5\u4FDD\u5B58\u4E4B\u72B6\u6001",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_JobRunning",
+        "Value": "{count}\u52A1\u65B9\u884C",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "count"
+          }
+        ],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u8868\u8FBE\uFF0C\u0027\u52A1\u0027\u6307\u4EFB\u52A1\uFF0C\u0027\u65B9\u884C\u0027\u8868\u793A\u6B63\u5728\u8FDB\u884C",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_NoJobRunning",
+        "Value": "\u65E0\u6267\u884C\u4E2D\u4E4B\u52A1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_PrepareAsset",
+        "Value": "\u5907\u6599...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u6B63\u5728\u51C6\u5907\u7D20\u6750\u4E4B\u72B6\u6001",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Processing",
+        "Value": "\u65B9\u7406\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u4E8B\u52A1\u6B63\u5728\u529E\u7406\u4E2D\u4E4B\u72B6\u6001",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ReachLimit",
+        "Value": "\u5DF2\u8FBE\u7BC7\u6BB5\u4E4B\u9650({length})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "length"
+          }
+        ],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u6587\u672C\u7247\u6BB5\u5DF2\u8FBE\u5230\u957F\u5EA6\u9650\u5236",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ReleaseToCancel",
+        "Value": "\u91CA\u624B\u4EE5\u7F62\u64CD\u4F5C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Modern Chinese: \u677E\u5F00\u624B\u6765\u53D6\u6D88\u64CD\u4F5C\u3002Elegant classical Chinese translation meaning \u0027release hand to cancel operation\u0027, concise and appropriate for user interface.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ReleaseToRemove",
+        "Value": "\u91CA\u4E4B\u4E43\u9664\u6B64\u6BB5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u677E\u624B\u5373\u53EF\u5220\u9664\u5F53\u524D\u7247\u6BB5\u4E4B\u610F",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Removed",
+        "Value": "\u5DF2\u9664",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u6761\u76EE\u5DF2\u88AB\u79FB\u9664\u4E4B\u72B6\u6001",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_RenderDone",
+        "Value": "\u6E32\u67D3\u5DF2\u6BD5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u7ED8\u5236\u5B8C\u6210\u4E4B\u72B6\u6001",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_RenderOneFrame",
+        "Value": "\u65B9\u6E32\u67D3\u7B2C {frameIndex} \u5E27\uFF08{playheadSeconds}\uFF09...",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "frameIndex"
+          },
+          {
+            "Key": "TimeSpan",
+            "Value": "playheadSeconds"
+          }
+        ],
+        "ArgsComment": [],
+        "Comment": "\u6E32\u67D3\u8FDB\u5EA6\u4E4B\u63D0\u793A",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_RenderTimeout",
+        "Value": "\u8C2C\uFF1A\u7ED8\u4E8B\u903E\u65F6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u8BD1\u6CD5\uFF0C\u610F\u4E3A\u6E32\u67D3\u8FC7\u7A0B\u8D85\u65F6\u51FA\u9519",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Selected",
+        "Value": "\u5DF2\u62E9\u300A{clipName}\u300B",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clipName"
+          }
+        ],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u5DF2\u9009\u62E9\u6307\u5B9A\u540D\u79F0\u4E4B\u6761\u76EE",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Track",
+        "Value": "\u7B2C{trackId}\u8F68",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "trackId"
+          }
+        ],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u8F68\u9053\u7F16\u53F7\uFF0C\u6587\u8A00\u6587\u8868\u8FBE",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_WaitForUser",
+        "Value": "\u4FDF\u64CD\u4F5C\u6BD5...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Waiting for operation to complete",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_CreateAProject",
+        "Value": "\u7ACB\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Establish a project",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_CreateAProject_Exists",
+        "Value": "\u5C14\u6240\u8F93\u4E4B\u9879\u76EE\u5DF2\u5B58\u7109\u3002\u8BF7\u6613\u4EE5\u4ED6\u540D\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u63D0\u793A\u7528\u6237\u9879\u76EE\u540D\u79F0\u5DF2\u5B58\u5728\uFF0C\u9700\u6539\u7528\u5176\u4ED6\u540D\u79F0",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_CreateAProject_Hint",
+        "Value": "\u53CC\u51FB\u6B64\u5904\u4EE5\u589E\u4E4B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u754C\u9762\u63D0\u793A\u8BED\uFF0C\u6307\u5BFC\u7528\u6237\u901A\u8FC7\u53CC\u51FB\u64CD\u4F5C\u6DFB\u52A0\u5185\u5BB9",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_CreateAProject_Hint_Tap",
+        "Value": "\u70B9\u6B64\u6DFB\u4E4B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u64CD\u4F5C\u63D0\u793A\u8BED\uFF0C\u6587\u8A00\u6587\u7248\u672C\u4FDD\u6301\u7B80\u7EC3",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_CreateAProject_InputName",
+        "Value": "\u4E3A\u65B0\u9879\u76EE\u547D\u540D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6307\u5BFC\u7528\u6237\u4E3A\u65B0\u5EFA\u9879\u76EE\u8F93\u5165\u540D\u79F0\u7684\u63D0\u793A\u8BED",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DraftBroken",
+        "Value": "\u6C5D\u4E4B\u8349\u7A3F\u4F3C\u6709\u635F\uFF0C\u543E\u7B49\u53EF\u8BD5\u4EE5\u672B\u6B21\u5B58\u7559\u4E4B\u7A3F\u5C1D\u8BD5\u4FEE\u590D\u3002\u62E9\u0027\u786E\u8BA4\u0027\u4EE5\u8BD5\u81EA\u590D\uFF0C\u6216\u62E9\u0027\u53D6\u6D88\u0027\u4EE5\u6B62\u5F00\u7A0B\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u544A\u77E5\u7528\u6237\u8349\u7A3F\u635F\u574F\u53CA\u6062\u590D\u9009\u9879",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DraftBroken_Confirm",
+        "Value": "\u543E\u7B49\u5C06\u7531 {timespan:G} \u6240\u5B58\u4E4B\u7A3F\u800C\u4FEE\u4E4B\uFF0C\u6B32\u7EED\u4E4E\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "DateTime",
+            "Value": "timespan"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "timespan",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u8BE2\u95EE\u7528\u6237\u662F\u5426\u8981\u4ECE\u6307\u5B9A\u65F6\u95F4\u4FDD\u5B58\u7684\u8349\u7A3F\u7EE7\u7EED\u4FEE\u590D",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DraftBroken_Fail",
+        "Value": "\u543E\u7B49\u672A\u80FD\u4EE5\u672B\u6B21\u6240\u5B58\u8349\u7A3F\u590D\u539F\u3002\u541B\u6216\u9700\u53C2\u9605\u6587\u4E66\u4EE5\u8BD5\u624B\u4FEE\u3002\u82E5\u6B32\u6DF1\u7A76\uFF0C\u8BF7\u67E5\u65E5\u5FD7\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u7248\u672C\u4FDD\u6301\u539F\u6587\u529F\u80FD\u63D0\u793A\u4E4B\u610F\uFF0C\u91C7\u7528\u0027\u543E\u7B49\u0027\u8868\u7CFB\u7EDF\u81EA\u79F0\uFF0C\u0027\u541B\u0027\u5C0A\u79F0\u7528\u6237\uFF0C\u0027\u6587\u4E66\u0027\u4EE3\u6307\u6587\u6863\uFF0C\u0027\u624B\u4FEE\u0027\u5373\u624B\u52A8\u4FEE\u590D\uFF0C\u0027\u6DF1\u7A76\u0027\u5BF9\u5E94\u4E86\u89E3\u8BE6\u60C5",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_GoDraft_DraftBroken_Success",
+        "Value": "\u5DF2\u590D\u6C5D\u4E4B\u7A3F\u672C\u3002\u6C5D\u6216\u9700\u5165\u7F16\u7E82\u754C\u9762\u540E\u624B\u5B58\u4E4B\uFF0C\u6539\u6613\u65B9\u5F55\u4E8E\u78C1\u76D8\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u6301\u539F\u6587\u610F\u601D\u800C\u7B26\u5408\u6587\u8A00\u8868\u8FBE\u4E60\u60EF",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_GoDraft_ResumeLastTimeWarning",
+        "Value": "\u524D\u5EA6\u7A0B\u5F0F\u4F3C\u672A\u59A5\u95ED\uFF0C\u543E\u7B49\u5C06\u81EA\u672B\u6B21\u529F\u6210\u4E4B\u50A8\u4F4D\uFF08\u5B58\u4E8E{timespan:G}\uFF09\u53D6\u8349\u7A3F\u4EE5\u7EED\u3002\u64A4\u6D88/\u8FD8\u539F\u4E4B\u529F\u4ECD\u53EF\u7528\uFF0C\u82E5\u6570\u636E\u672A\u635F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "DateTime",
+            "Value": "timespan"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "timespan",
+            "Value": ""
+          }
+        ],
+        "Comment": "Technical notice about resuming from last successful save",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_GoDraft_ResumeLastTimeWarning_Failed",
+        "Value": "\u543E\u7B49\u672A\u80FD\u81EA\u4E3A\u4FEE\u5C14\u7A3F\u672C\u3002\u5C14\u5F53\u53C2\u9605\u6587\u4E66\uFF0C\u77E5\u624B\u4E3A\u4FEE\u7A3F\u4E4B\u6CD5\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u8BD1\u672C\uFF0C\u0027\u7A3F\u672C\u0027\u5BF9\u5E94\u539F\u0027\u8349\u7A3F\u0027\uFF0C\u0027\u81EA\u4E3A\u0027\u8868\u81EA\u52A8\uFF0C\u0027\u624B\u4E3A\u0027\u8868\u624B\u52A8\uFF0C\u53E5\u5F0F\u4ECE\u7B80\u7B26\u5408\u6587\u8A00\u7279\u5F81",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_LastChangedOnDays",
+        "Value": "\u7EC8\u4FEE\u4E8E {day} \u65E5\u524D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "day"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "day",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6587\u8A00\u6587\u8868\u8FBE\u0027\u6700\u540E\u4FEE\u6539\u4E8EX\u5929\u524D\u0027\uFF0C\u0027\u7EC8\u4FEE\u0027\u5373\u6700\u540E\u4FEE\u6539\uFF0C\u0027\u65E5\u524D\u0027\u5373\u5929\u6570\u4E4B\u524D",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_LastChangedOnExactTimeSpan",
+        "Value": "\u672B\u6539\u4E8E {timespan:G}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "DateTime",
+            "Value": "timespan"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "timespan",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_LastChangedOnFuture",
+        "Value": "\u7EC8\u4FEE\u4E8E\u5C06\u6765\u4E4B\u65F6\uFF08\u5C82\u975E\u66F4\u5C14\u5668\u4E4B\u65F6\u533A\u4E4E\uFF1F\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u0027\u7EC8\u4FEE\u0027\u8868\u6700\u540E\u4FEE\u6539\uFF0C\u0027\u5C06\u6765\u4E4B\u65F6\u0027\u8868\u672A\u6765\u65F6\u95F4\u70B9\uFF0C\u0027\u5C82\u975E...\u4E4E\u0027\u4E3A\u6587\u8A00\u53CD\u95EE\u53E5\u5F0F\uFF0C\u0027\u66F4\u5C14\u5668\u4E4B\u65F6\u533A\u0027\u5373\u4FEE\u6539\u8BBE\u5907\u65F6\u533A\u4E4B\u610F",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_LastChangedOnHours",
+        "Value": "\u7EC8\u4FEE\u4E8E {hour} \u65F6\u8FB0\u524D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "hour"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "hour",
+            "Value": ""
+          }
+        ],
+        "Comment": "Indicates the time interval since last modification in classical Chinese",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_LastChangedOnMinutes",
+        "Value": "\u7EC8\u4FEE\u4E8E {minute} \u5206\u524D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "minute"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "minute",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6587\u8A00\u6587\u8868\u8FBE\uFF0C\u610F\u4E3A\u6700\u540E\u4FEE\u6539\u4E8E\u82E5\u5E72\u5206\u949F\u524D",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu",
+        "Value": "\u300A{name}\u300B\u8FDB\u9636\u4E4B\u9009",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u8868\u793A\u9879\u76EE\u9AD8\u7EA7\u8BBE\u7F6E\u9009\u9879\uFF0C\u6587\u8A00\u6587\u8868\u8FBE\u9700\u7B80\u7EC3\u5178\u96C5",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Clone",
+        "Value": "[Translation Error]: The SSL connection could not be established, see inner exception.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: The SSL connection could not be established, see inner exception.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Delete",
+        "Value": "\u9664",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5220\u9664\u64CD\u4F5C\u4E4B\u6587\u8A00\u8868\u8FBE",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Delete_Confirm0",
+        "Value": "\u5C14\u786E\u6B32\u5220\u4E4B\u300C{name}\u300D\u4E4E\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Confirm deletion prompt in classical Chinese",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Delete_Confirm1",
+        "Value": "\u5C14\u786E\u6B32\u5220\u300A{name}\u300B\u4E4E\uFF1F{Environment.NewLine}\u6B64\u64CD\u4F5C\u4E0D\u53EF\u9006\uFF01",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u5220\u9664\u786E\u8BA4\u63D0\u793A\uFF0C\u542B\u4E0D\u53EF\u64A4\u9500\u8B66\u544A",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Delete_Confirm2",
+        "Value": "\u5C14\u786E\u6B32\u5220\u300E{name}\u300F\u4E4E\uFF1F{Environment.NewLine}\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\uFF01{Environment.NewLine}\u300E{name}\u300F\u4E4B\u8BF8\u6570\u636E\u5C06\u6C38\u901D\u4E8E\u5C14\u8BBE\u5907\uFF01\uFF01\uFF01",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u5220\u9664\u786E\u8BA4\u63D0\u793A\u6587\u8A00\u4E4B\u8BD1\uFF0C\u4FDD\u7559\u539F\u8B66\u793A\u8BED\u6C14\u4E0E\u53C2\u6570\u7ED3\u6784",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Delete_Confirm3",
+        "Value": "\u8BFA\uFF0C\u5220\u300C{name}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Confirmation message for deletion operation in classical Chinese",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Delete_Deleted",
+        "Value": "\u300C{name}\u300D\u5DF2\u9664",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6587\u8A00\u6587\u8868\u8FBE\u5220\u9664\u5B8C\u6210\u4E4B\u72B6\u6001",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Export",
+        "Value": "\u51FA\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5BFC\u51FA\u9879\u76EE\u4E4B\u64CD\u4F5C",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Open",
+        "Value": "\u542F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u9879\u76EE\u4E0A\u4E0B\u6587\u83DC\u5355\u4E2D\u4E4B\u5F00\u542F\u9009\u9879",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_OpenInFileManager",
+        "Value": "[Translation Error]: The SSL connection could not be established, see inner exception.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: The SSL connection could not be established, see inner exception.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_OpenReadonly",
+        "Value": "\u4EE5\u552F\u8BFB\u4E4B\u5F0F\u542F\u4E4B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Open in read-only mode",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Rename",
+        "Value": "\u91CD\u547D\u540D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Welcome",
+        "Value": "DateTime.Now.Hour switch\r{\r\u003E= 5 and \u003C 12 =\u003E \u0022\u6668\u5B89\uFF0C\u0022,\r\u003E= 12 and \u003C 18 =\u003E \u0022\u5348\u5B89\uFF0C\u0022,\r\u003E= 18 and \u003C 22 =\u003E \u0022\u66AE\u5B89\uFF0C\u0022,\r_ =\u003E \u0022\u591C\u5B89\uFF0C\u0022,\r} \u002B WelcomeMessage",
+        "Mode": "RawExpression",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "C# expression that greets based on time of day: morning (5-11), afternoon (12-17), evening (18-21), night (22-4)",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "iDevicesAPI_MemoryNotEnough",
+        "Value": "\u5C14\u8BBE\u5907\u5185\u5B58\u4E0D\u8DB3\uFF0C\u7A0B\u5E8F\u6216\u9047\u5F02\u5E38\u3002\u5B9C\u901F\u5B58\u8BF8\u6570\u636E\uFF0C\u4EE5\u9632\u95EA\u9000\u81F4\u6570\u636E\u9057\u5931\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5185\u5B58\u4E0D\u8DB3\u8B66\u544A\u4E4B\u6587\u8A00\u8868\u8FF0",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "iDevicesAPI_TooHot",
+        "Value": "\u60A8\u7684\u8BBE\u5907\u8FC7\u70ED\u3002\u8BF7\u5C3D\u5FEB\u4FDD\u5B58\u6240\u6709\u6570\u636E\uFF0C\u5F85\u8BBE\u5907\u51B7\u5374\u540E\u518D\u7EE7\u7EED\u4F7F\u7528\uFF0C\u4EE5\u514D\u635F\u574F\u786C\u4EF6\u6216\u4E22\u5931\u6570\u636E\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8BBE\u5907\u8FC7\u70ED\u8B66\u544A\u4FE1\u606F\uFF0C\u63D0\u9192\u7528\u6237\u4FDD\u5B58\u6570\u636E\u5E76\u7B49\u5F85\u8BBE\u5907\u51B7\u5374",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "LandingPage_BackToContent",
+        "Value": "\u70B9\u6B64\u5F52\u4E3B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u610F\u4E3A\u70B9\u51FB\u6B64\u5904\u8FD4\u56DE\u4E3B\u754C\u9762",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "LandingPage_Loading",
+        "Value": "\u8F7D\u5165\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u7CFB\u7EDF\u6B63\u5728\u52A0\u8F7D\u7684\u72B6\u6001\u63D0\u793A",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "LandingPage_TakingToDraft",
+        "Value": "\u8BF7\u7A0D\u5019\uFF0C\u65B9\u542F\u8349\u7A3F\u300C{name}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u7248\u672C\uFF0C\u0027\u65B9\u0027\u8868\u793A\u8FDB\u884C\u6001\uFF0C\u0027\u542F\u0027\u66FF\u4EE3\u0027\u6253\u5F00\u0027\u66F4\u5408\u6587\u8A00\u4E60\u60EF",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_About",
+        "Value": "\u5173\u4E8E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_Asset",
+        "Value": "\u6750\u8D44",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_Edit",
+        "Value": "[Translation Error]: The SSL connection could not be established, see inner exception.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: The SSL connection could not be established, see inner exception.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_General",
+        "Value": "\u901A\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8BBE\u7F6E\u4E4B\u603B\u7C7B\uFF0C\u8BF8\u4E8B\u7686\u53EF\u4E8E\u6B64\u8C03\u8BBE",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_Misc",
+        "Value": "\u4E0A\u7B49",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Settings tab label for advanced options",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_Render",
+        "Value": "\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "PropertyPanel",
+        "Value": "\u6027\u7256",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Properties panel interface",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "PropertyPanel_General",
+        "Value": "\u901A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u8BD1\u6CD5\uFF0C\u53D6\u0027\u901A\u7528\u0027\u4E4B\u4E49\uFF0C\u7528\u4E8E\u5C5E\u6027\u9762\u677F\u5206\u7C7B\u6807\u7B7E",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "PropertyPanel_General_DisplayName",
+        "Value": "\u663E\u540D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C5E\u6027\u9762\u677F\u901A\u7528\u5B57\u6BB5\u6807\u7B7E\uFF0C\u8868\u793A\u663E\u793A\u7528\u540D\u79F0",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "PropertyPanel_General_SpeedRatio",
+        "Value": "\u500D\u7387",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_CancelRender",
+        "Value": "\u6B62\u6E32",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u53D6\u6D88\u6E32\u67D3\u4E4B\u64CD\u4F5C",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_CancelRender_Warn",
+        "Value": "\u6C5D\u6B32\u6B62\u6E32\u67D3\u4E4E\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u7248\u672C\u4E4B\u53D6\u6D88\u6E32\u67D3\u8B66\u544A\u8BED",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_CustomOption",
+        "Value": "\u81EA\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_Done",
+        "Value": "\u6E32\u67D3\u6BD5\uFF01",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ExportTitle",
+        "Value": "\u51FA\u9879\u300C{name}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [],
+        "Comment": "Export project in classical Chinese",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LoggingLabel",
+        "Value": "\u51FA\u5FD7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u65E5\u5FD7\u8F93\u51FA\u6807\u7B7E\u4E4B\u6587\u8A00\u8BD1\u6CD5",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_MaxParallelThreadsCount",
+        "Value": "\u540C\u53D1\u4E4B\u6570\uFF1A{num}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "num"
+          }
+        ],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u540C\u65F6\u8FDB\u884C\u5904\u7406\u7684\u4EFB\u52A1\u6570\u91CF",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_NoDraft",
+        "Value": "\u987B\u5148\u542F\u7A3F\uFF0C\u65B9\u5F97\u65BD\u6E32\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u64CD\u4F5C\u63D0\u793A\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u91C7\u7528\u6761\u4EF6\u53E5\u5F0F\u8868\u8FBE\u524D\u7F6E\u8981\u6C42",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PreviewLabel",
+        "Value": "\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_RenderMoreOptions",
+        "Value": "\u6108\u591A\u62E9\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SelectEncoding",
+        "Value": "\u62E9\u7801",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u9009\u62E9\u7F16\u7801\u65B9\u5F0F\u4E4B\u610F",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SelectFrameRate",
+        "Value": "\u62E9\u5E27\u9891",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u754C\u9762\u9009\u9879\uFF0C\u4F9B\u7528\u6237\u9009\u62E9\u753B\u9762\u5237\u65B0\u901F\u7387",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SelectResolution",
+        "Value": "\u62E9\u4E00\u5206\u8FA8\u4E4B\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u9009\u62E9\u663E\u793A\u7CBE\u5EA6\u4E4B\u7EA7\u522B",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_StartRender",
+        "Value": "\u59CB\u6E32",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6E32\u67D3\u64CD\u4F5C\u5F00\u59CB\u4E4B\u63D0\u793A",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_FinalEncoding",
+        "Value": "\u7F16\u5A92",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7F16\u7801\u5A92\u4F53\u4E4B\u6587\u8A00\u8BD1\u6CD5",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_Init",
+        "Value": "\u521D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u521D\u59CB\u8BBE\u7F6E\u4E4B\u610F",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_None",
+        "Value": "\u5B50\u7A0B\u8FDB\u5883",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8868\u793A\u5B50\u7A0B\u5E8F\u6267\u884C\u8FDB\u5EA6",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_PrepareDraft",
+        "Value": "\u51C6\u5907\u8349\u6848",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u8BED\u5883\u4E0B\u6307\u4E3A\u9879\u76EE\u6216\u6587\u4E66\u8FDB\u884C\u521D\u6B65\u7B79\u5907\u5DE5\u4F5C",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_Render",
+        "Value": "\u7ED8\u67D3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7ED8\u56FE\u6E32\u67D3\u4E4B\u610F",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_WriteVideo",
+        "Value": "\u5F55\u5F71",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_TotalProg",
+        "Value": "\u603B\u7A0B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Overall progress indicator",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelcomeMessage",
+        "Value": "\u6B22\u8FCE\u8385\u4E34projectFrameCut\u8BD5\u7528\u7248\uFF01",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

@@ -143,7 +143,8 @@ Current directory: {Environment.CurrentDirectory}
 
     public static class Program
     {
-        static async Task Main(string[] args)
+        [STAThread] //avoid failed to initialize COM library error, cause a lot of issue like IME not work at all...
+        static void Main(string[] args)
         {
             try
             {
@@ -156,7 +157,7 @@ Current directory: {Environment.CurrentDirectory}
                     new App();
                 });
 
-                await SettingsManager.FlushAndStopAsync();
+                SettingsManager.FlushAndStopAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
@@ -164,7 +165,7 @@ Current directory: {Environment.CurrentDirectory}
                 static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
 
                 _ = MessageBox(IntPtr.Zero,
-                    $"Oh no! projectFrameCut cannot start because a unrecoverable early-boot {ex.GetType().Name} exception happends.\r\nFor more information, please see the crash report popped up later.\r\n\r\n({ex})",
+                    $"Oh no! projectFrameCut have to stop now because a unrecoverable {ex.GetType().Name} exception happends.\r\nFor more information, please see the crash report popped up later.\r\n\r\n({ex})",
                     "Fatal error",
                     0);
                 App.Crash(ex);

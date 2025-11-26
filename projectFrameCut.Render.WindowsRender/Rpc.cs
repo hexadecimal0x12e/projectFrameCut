@@ -49,6 +49,12 @@ namespace projectFrameCut.Render.WindowsRender
                 return;
             }
 
+            if (switches.ContainsKey("UseCheckerboardBackgroundForNoContent"))
+            {
+                Picture Checkerboard = new Picture(Path.Combine(AppContext.BaseDirectory, "FallbackResources", "NoContent.png"));
+                Timeline.FallBackImageGetter = (w, h) => Checkerboard.Resize(w, h, false);
+            }
+
             PngEncoder encoder = new()
             {
                 BitDepth = PngBitDepth.Bit8,
@@ -57,28 +63,19 @@ namespace projectFrameCut.Render.WindowsRender
 
             var cts = new CancellationTokenSource();
 
-            //Console.CancelKeyPress += (_, e) =>
-            //{
-            //    e.Cancel = true;
-            //    cts.Cancel();
-            //    RpcCts.Cancel();
-            //    RpcReturnCode = 42;
-
-            //};
-
             IClip[] clips = Array.Empty<IClip>();
 
             Log("Warming up ILGPU...");
 
-            {
-                var krnl = accelerator.LoadAutoGroupedStreamKernel<Index1D, ArrayView<ushort>, ArrayView<ushort>, ArrayView<ushort>>((i, a, b, c) => c[i] = (ushort)(a[i] + b[i]));
-                var inA = accelerator.Allocate1D<ushort>(Enumerable.Range(0, 10).Select(Convert.ToUInt16).ToArray());
-                var inB = accelerator.Allocate1D<ushort>(Enumerable.Range(0, 10).Select(Convert.ToUInt16).ToArray());
-                var outC = accelerator.Allocate1D<ushort>(10);
-                krnl(10, inA.View, inB.View, outC.View);
-                accelerator.Synchronize();
-                Log("ILGPU is ready.");
-            }
+
+            var krnl = accelerator.LoadAutoGroupedStreamKernel<Index1D, ArrayView<ushort>, ArrayView<ushort>, ArrayView<ushort>>((i, a, b, c) => c[i] = (ushort)(a[i] + b[i]));
+            var inA = accelerator.Allocate1D<ushort>(Enumerable.Range(0, 10).Select(Convert.ToUInt16).ToArray());
+            var inB = accelerator.Allocate1D<ushort>(Enumerable.Range(0, 10).Select(Convert.ToUInt16).ToArray());
+            var outC = accelerator.Allocate1D<ushort>(10);
+            krnl(10, inA.View, inB.View, outC.View);
+            accelerator.Synchronize();
+            Log("ILGPU is ready.");
+
 
             //Log($"[RPC] Booting nanohost...");
             //BootBackendNanoHost(int.TryParse(backendPort, out var p) ? p : -1, tempFolder, accessToken);
@@ -203,7 +200,7 @@ namespace projectFrameCut.Render.WindowsRender
                                     var pic = Timeline.MixtureLayers(layers, frameIndex, width, height);
                                     pic.SaveAsPng8bpc(destPath, encoder);
                                     Thread.Sleep(500);
-                                    Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "frameHash", frameHash } , { "path", destPath } });
+                                    Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "frameHash", frameHash }, { "path", destPath } });
                                     Log($"[RPC] RenderOne completed");
                                 }
                                 catch (Exception ex)
@@ -234,29 +231,7 @@ namespace projectFrameCut.Render.WindowsRender
 
                                 foreach (var clip in clipsJson)
                                 {
-
-                                    var type = (ClipMode)clip.GetProperty("ClipType").GetInt32();
-                                    Log($"Found clip {type}, name: {clip.GetProperty("Name").GetString()}, id: {clip.GetProperty("Id").GetString()}");
-                                    switch (type)
-                                    {
-                                        case ClipMode.VideoClip:
-                                            {
-                                                clipsList.Add(clip.Deserialize<VideoClip>() ?? throw new NullReferenceException());
-                                                break;
-                                            }
-                                        case ClipMode.PhotoClip:
-                                            {
-                                                clipsList.Add(clip.Deserialize<PhotoClip>() ?? throw new NullReferenceException());
-                                                break;
-                                            }
-                                        case ClipMode.SolidColorClip:
-                                            {
-                                                clipsList.Add(clip.Deserialize<SolidColorClip>() ?? throw new NullReferenceException());
-                                                break;
-                                            }
-                                        default:
-                                            throw new NotSupportedException($"Clip type {type} is not suported.");
-                                    }
+                                    clipsList.Add(IClip.FromJSON(clip));
                                 }
 
                                 clips = clipsList.ToArray();
@@ -284,7 +259,7 @@ namespace projectFrameCut.Render.WindowsRender
                                     var frameHash = Timeline.GetFrameHash(clips, frameIndex);
                                     var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height, true);
                                     Log($"Clips in frame #{frameIndex}:\r\n{JsonSerializer.Serialize(layers)}\r\n---");
-                                    
+
                                     Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "json", JsonSerializer.Serialize(layers, new JsonSerializerOptions
                                     {
                                         WriteIndented = true,

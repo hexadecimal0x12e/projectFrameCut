@@ -12,7 +12,6 @@ namespace projectFrameCut.VideoMakeEngine
     {
         public static List<string> ParametersNeeded = new();
 
-
         public static Dictionary<string, string> ParametersType = new();
 
         public Dictionary<string, object> Parameters => new();

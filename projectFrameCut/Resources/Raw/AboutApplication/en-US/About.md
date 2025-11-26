@@ -4,7 +4,7 @@ Copyright (c) hexadecimal0x12e 2025.
 
 projectFrameCut is an open-source project released under the GNU GPL v2 (or later). You can find the source code on GitHub: https://github.com/hexadecimal0x12e/projectFrameCut
 
-projectFrameCut is still under development ¡ª do not use it in any production environment. We provide no warranty for any disruption to your workflow caused by projectFrameCut.
+projectFrameCut is still under development â€” do not use it in any production environment. We provide no warranty for any disruption to your workflow caused by projectFrameCut.
 
 Developing software is long and hard. If you find a bug or have a good idea, please open an issue: https://github.com/hexadecimal0x12e/projectFrameCut/issues/new
 

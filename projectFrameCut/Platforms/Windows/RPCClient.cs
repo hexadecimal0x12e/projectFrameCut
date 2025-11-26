@@ -31,7 +31,7 @@ public sealed class RpcClient : IAsyncDisposable
             {
                 FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Render.WindowsRender.exe"),
                 WorkingDirectory = Path.Combine(AppContext.BaseDirectory),
-                Arguments = $""" rpc_backend  "-pipe={pipeId}" "-output_options={options}" "-tempFolder={tmpDir}" "-accessToken={backendAccessToken}" "-port={backendPort}" """,
+                Arguments = $""" rpc_backend  "-pipe={pipeId}" "-output_options={options}" "-tempFolder={tmpDir}" "-accessToken={backendAccessToken}" "-port={backendPort}" "-UseCheckerboardBackgroundForNoContent=true" """,
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardError = true,

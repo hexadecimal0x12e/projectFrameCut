@@ -76,6 +76,7 @@ namespace projectFrameCut.Render
                     {
                         GC.Collect();
                     }
+
                     for (int i = 0; i < toStart; i++)
                     {
                         if (!PreparedFrames.TryDequeue(out var targetFrame))
@@ -88,6 +89,11 @@ namespace projectFrameCut.Render
                             try
                             {
                                 RenderAFrame(targetFrame);
+                            }
+                            catch(Exception ex)
+                            {
+                                Console.Error.WriteLine($"Error rendering frame {targetFrame}: {ex}");
+                                throw;
                             }
                             finally
                             {
@@ -114,6 +120,7 @@ namespace projectFrameCut.Render
                 }
 
             }
+            Console.WriteLine($"All frames are prepared and waiting for render done...");
 
             foreach (var t in Threads)
             {
@@ -135,7 +142,7 @@ namespace projectFrameCut.Render
                         continue;
                     }
 
-                    var frame = item.GetFrameRelativeToStartPointOfSource(idx,_width,_height,true);
+                    var frame = item.GetFrameRelativeToStartPointOfSource(idx, _width, _height, true);
                     if (frame != null)
                     {
                         var cache = FrameCache.GetOrAdd(item.Id, (_) => new());
@@ -146,7 +153,6 @@ namespace projectFrameCut.Render
 
                     if (item.StartFrame * item.SecondPerFrameRatio <= idx && item.Duration * item.SecondPerFrameRatio + item.StartFrame * item.SecondPerFrameRatio >= idx)
                     {
-                        // add or update the mapping of which clips are needed for this frame
                         ClipNeedForFrame.AddOrUpdate(
                             frameIndex,
                             (_) => [item],
@@ -161,6 +167,18 @@ namespace projectFrameCut.Render
 
 
                 }
+
+                if (!ClipNeedForFrame.ContainsKey(idx) || ClipNeedForFrame[idx] is null || ClipNeedForFrame[idx].Length == 0)
+                {
+                    // no clip for this frame, still need to mark it as prepared
+                    if (PreparedFlag.TryAdd(idx, 0))
+                    {
+                        PreparedFrames.Enqueue(idx);
+                        Interlocked.Increment(ref TotalEnqueued);
+                        Interlocked.Increment(ref Finished);
+                        builder.Append(idx, Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0));
+                    }
+                }
                 sw.Stop();
                 EachElapsedForPreparing.Add(sw.Elapsed);
                 Console.WriteLine($"Frame {idx} is ready to render, elapsed {sw.Elapsed}");
@@ -173,7 +191,7 @@ namespace projectFrameCut.Render
 
         private void RenderAFrame(uint targetFrame)
         {
-            if(targetFrame > Duration)
+            if (targetFrame > Duration)
             {
                 Console.WriteLine($"WARN: Target frame {targetFrame} exceeds project duration. Ignore.");
                 return;
@@ -214,7 +232,7 @@ namespace projectFrameCut.Render
             }
 
         noFrame:
-            builder.Append(targetFrame, result.Resize(_width,_height, false) ?? Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0));
+            builder.Append(targetFrame, result.Resize(_width, _height, false) ?? Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0));
             sw.Stop();
             Console.WriteLine($"frame {targetFrame} render done, elapsed {sw.Elapsed}");
             EachElapsed.Add(sw.Elapsed);

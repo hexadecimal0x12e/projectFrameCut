@@ -13,6 +13,8 @@ namespace projectFrameCut.Setting.SettingManager
 {
     public static class SettingsManager
     {
+        static string[] protectedSettingsList = ["UserID"];
+
         public static ConcurrentDictionary<string, string> Settings
         {
             get;
@@ -40,6 +42,7 @@ namespace projectFrameCut.Setting.SettingManager
         [DebuggerNonUserCode()]
         public static void WriteSetting(string key, string value)
         {
+            if (protectedSettingsList.Any((k) => k == key)) throw new UnauthorizedAccessException("Trying to write a protected setting.");
             Settings.AddOrUpdate(key, value, (k, v) => value);
 
             saveSignal.Set();
@@ -47,6 +50,9 @@ namespace projectFrameCut.Setting.SettingManager
 
         [DebuggerNonUserCode()]
         public static bool IsSettingExists(string key) => Settings.ContainsKey(key);
+
+        [DebuggerNonUserCode()]
+        public static bool IsBoolSettingTrue(string key) => Settings.ContainsKey(key) && (bool.TryParse(GetSetting(key, "False"), out var result) ? result : false);
 
         public static void ToggleSaveSignal() => saveSignal.Set();
 

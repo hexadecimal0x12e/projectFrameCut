@@ -13,7 +13,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Path = System.IO.Path;
-
+using projectFrameCut.Setting.SettingManager;
 
 
 #if WINDOWS
@@ -546,15 +546,33 @@ public partial class DraftPage : ContentPage
         if (sender is not Border border) return;
         if (border.BindingContext is not ClipElementUI clip) return;
         LogDiagnostic($"Clip {clip.Id} double clicked, state:{clip.MovingStatus}");
+        if (!SettingsManager.IsSettingExists("PreferredPopupMode"))
+        {
+#if WINDOWS
+            SettingsManager.WriteSetting("PreferredPopupMode", "right");
+#else
+            SettingsManager.WriteSetting("PreferredPopupMode", "bottom");
+#endif
+        }
         try
         {
-            if (WindowSize.Width > WindowSize.Height)
+            switch (SettingsManager.GetSetting("PreferredPopupMode"))
             {
-                await ShowClipPopup(border, clip);
-            }
-            else
-            {
-                await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, BuildPropertyPanel(clip));
+                case "right":
+                    {
+                        await ShowAFullscreenPopupInRight(WindowSize.Height * 0.75, BuildPropertyPanel(clip));
+                        break;
+                    }
+                case "bottom":
+                    {
+                        await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, BuildPropertyPanel(clip));
+                        break;
+                    }
+                case "clip":
+                    {
+                        await ShowClipPopup(border, clip);
+                        break;
+                    }
             }
         }
         catch (Exception ex)
@@ -589,7 +607,7 @@ public partial class DraftPage : ContentPage
         CustomContent2 = new VerticalStackLayout();
 
     }
-    #endregion
+#endregion
 
     #region move clip
     private void ClipPaned(object? sender, PanUpdatedEventArgs e)
@@ -1041,6 +1059,15 @@ public partial class DraftPage : ContentPage
     {
         if (_selected is null) return;
         var clip = _selected;
+
+        if (e.Id == "__REFRESH_PANEL__")
+        {
+            CustomContent2 = (VerticalStackLayout)BuildPropertyPanel(clip);
+            Clips[clip.Id] = clip;
+            ReRenderUI();
+            return;
+        }
+
         SetStatusText($"{clip.displayName}'s property '{e.Id}' changed from {e.OriginValue} to {e.Value}");
         switch (e.Id)
         {
@@ -1177,7 +1204,7 @@ public partial class DraftPage : ContentPage
             }
             else
             {
-#if WINDOWS //·ÀÖ¹ÊÓÆµ´ò²»¿ªÖ÷³ÌÐòÕ¨µô
+#if WINDOWS //ï¿½ï¿½Ö¹ï¿½ï¿½Æµï¿½ò²»¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¨ï¿½ï¿½
                 var cts = new CancellationTokenSource();
                 cts.CancelAfter(5000);
                 var info = await _rpc.SendAsync("GetVideoFileInfo", JsonSerializer.SerializeToElement(item.Path), cts.Token);
@@ -1387,7 +1414,7 @@ public partial class DraftPage : ContentPage
         {
             var result = await FilePicker.PickAsync(new PickOptions
             {
-                PickerTitle = "Ñ¡ÔñËØ²ÄÎÄ¼þ",
+                PickerTitle = "Ñ¡ï¿½ï¿½ï¿½Ø²ï¿½ï¿½Ä¼ï¿½",
                 FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
                 {
                     { DevicePlatform.WinUI,[ ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v",".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"] },
@@ -2768,7 +2795,7 @@ public partial class DraftPage : ContentPage
     {
 
 #if WINDOWS
-        backendProc.EnableRaisingEvents = false; //±ÜÃâµ¯¿ò
+        backendProc.EnableRaisingEvents = false; //ï¿½ï¿½ï¿½âµ¯ï¿½ï¿½
 
 #endif
         await Save(true);
@@ -2879,7 +2906,6 @@ public partial class DraftPage : ContentPage
 
         var size = GetScreenSizeInDp();
         Log($"Window size on appearing: {size.Width:F0} x {size.Height:F0} (DIP)");
-        // ¶ÌµÈ´ý£¬È·±£²¼¾ÖÍê³É
         await Task.Delay(50);
 
         var w = this.Window?.Width ?? 0;
@@ -2986,6 +3012,51 @@ Clip {clip.displayName}({clip.Id}):
 
     }
 
+    private async void AddTextButton_Clicked(object sender, EventArgs e)
+    {
+        var text = await DisplayPromptAsync("Add Text", "Enter the text to add:");
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            var entry = new TextClip.TextClipEntry(
+                text,
+                100, 100,
+                "HarmonyOS Sans SC",
+                72f,
+                65535, 65535, 65535,
+                1.0f
+            );
+
+            var entries = new List<TextClip.TextClipEntry> { entry };
+
+            int trackIndex = Tracks.Any() ? Tracks.Last().Key : 0;
+            if (!Tracks.ContainsKey(trackIndex))
+            {
+                AddATrack(trackIndex);
+            }
+
+            uint durationFrames = (uint)(5.0 / SecondsPerFrame);
+
+            var element = CreateAndAddClip(
+                startX: 0,
+                width: FrameToPixel(durationFrames),
+                trackIndex: trackIndex,
+                id: null,
+                labelText: text,
+                background: new SolidColorBrush(Colors.MediumPurple),
+                resolveOverlap: true,
+                relativeStart: 0,
+                maxFrames: durationFrames
+            );
+
+            element.ClipType = ClipMode.TextClip;
+            element.isInfiniteLength = true;
+            element.maxFrameCount = 0;
+            element.ExtraData["TextEntries"] = entries;
+
+            SetStatusText($"Added text clip: {text}");
+        }
+    }
+
     protected override void OnNavigatedFrom(NavigatedFromEventArgs args)
     {
         base.OnNavigatedFrom(args);
@@ -3004,7 +3075,7 @@ Clip {clip.displayName}({clip.Id}):
 
     public async void OnRefreshButtonClicked(object sender, EventArgs e)
     {
-        var path = @"D:\code\projectFrameCut\projectFrameCut\Resources\Raw\FallbackResources\NoContent.png"; //Ëæ±ã
+        var path = @"D:\code\projectFrameCut\projectFrameCut\Resources\Raw\FallbackResources\NoContent.png"; //ï¿½ï¿½ï¿½
         await MainThread.InvokeOnMainThreadAsync(() =>
         {
             PreviewBox.Source = ImageSource.FromFile(path);
@@ -3050,8 +3121,8 @@ Clip {clip.displayName}({clip.Id}):
 
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
-                LogDiagnostic("PreviewOverlayImage Width=" + source.Width + " Height=" + source.Height);
-                LogDiagnostic("PreviewOverlayImage Measure=" + source.Measure(10000, 10000));
+                LogDiagnostic("PreviewOverlayImage Width=" + PreviewOverlayImage.Width + " Height=" + PreviewOverlayImage.Height);
+                LogDiagnostic("PreviewOverlayImage Measure=" + PreviewOverlayImage.Measure(10000, 10000));
             });
 
             var fileUri = new Uri("file:///" + path.Replace('\\', '/'));

@@ -1,19 +1,19 @@
-�P� codename 'projectFrameCut'
+關於 codename 'projectFrameCut'
 
-������� (c) hexadecimal0x12e 2025��
+版權所有 (c) hexadecimal0x12e 2025。
 
-projectFrameCut ��һ���_Դ���������� GNU GPL v2������°汾���ڙࡣ������ڴ��ҵ�ԭʼ�a��https://github.com/hexadecimal0x12e/projectFrameCut
+projectFrameCut 是一個開源專案，採用 GNU GPL v2（或更新版本）授權。你可以在此找到原始碼：https://github.com/hexadecimal0x12e/projectFrameCut
 
-projectFrameCut �����_�l�� �� Ո�����κ����a�h����ʹ�á��҂������� projectFrameCut ���µ��κι��������Д�Г��κα��C��
+projectFrameCut 仍在開發中 — 請勿在任何生產環境中使用。我們不對因 projectFrameCut 導致的任何工作流程中斷承擔任何保證。
 
-�҂�֪�����_�lܛ�w�����L���D�y�������l�F�e�`���к����⣬Ո��� issue��https://github.com/hexadecimal0x12e/projectFrameCut/issues/new
+我們知道，開發軟體既漫長又艱難。如果你發現錯誤或有好主意，請提出 issue：https://github.com/hexadecimal0x12e/projectFrameCut/issues/new
 
-projectFrameCut ��Ŀ���ǳɞ�һ�������������ȫ���ɵ�ӰƬ��݋ܛ�w���҂�������Ŀ��Ŭ����
+projectFrameCut 的目標是成為一款強大、易上手且完全自由的影片剪輯軟體。我們正朝此目標努力。
 
-��������ʽ���c���x
+第三方程式庫與致謝
 
-������ʹ�� FFmpeg �c SixLabors.ImageSharp�������P��ʽ�죩���������Ӱ���ȡ�c̎�����Kʹ�� FFmpeg_droidFix.AutoGen ���� FFmpeg��
+本專案使用 FFmpeg 與 SixLabors.ImageSharp（及相關程式庫）做為基本的影格抽取與處理，並使用 FFmpeg_droidFix.AutoGen 呼叫 FFmpeg。
 
-ᘌ� Windows ƽ̨���҂�Ҳʹ�� ILGPU ��Ӳ�w���١�
+針對 Windows 平台，我們也使用 ILGPU 做硬體加速。
 
-�� Android ƽ̨�ϣ��҂�ʹ�� Fishnet �������؈�
+在 Android 平台上，我們使用 Fishnet 做崩潰回報。
