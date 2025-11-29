@@ -198,7 +198,7 @@ namespace projectFrameCut.Render.WindowsRender
                                     var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height, true);
                                     Log($"Clips in frame #{frameIndex}:\r\n{JsonSerializer.Serialize(layers)}\r\n---");
                                     var pic = Timeline.MixtureLayers(layers, frameIndex, width, height);
-                                    pic.SaveAsPng8bpc(destPath, encoder);
+                                    pic.SaveAsPng8bpp(destPath, encoder);
                                     Thread.Sleep(500);
                                     Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "frameHash", frameHash }, { "path", destPath } });
                                     Log($"[RPC] RenderOne completed");
@@ -341,7 +341,7 @@ namespace projectFrameCut.Render.WindowsRender
                                             frame = frame.Resize(w, h);
                                         }
                                     }
-                                    frame.SaveAsPng16bpc(tmpPath, encoder);
+                                    frame.SaveAsPng16bpp(tmpPath, encoder);
                                     Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "path", tmpPath } });
                                 }
                                 catch (Exception ex)

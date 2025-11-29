@@ -31,7 +31,7 @@ public partial class GeneralSettingPage : ContentPage
         Title = Localized.MainSettingsPage_Tab_General;
         overrideOpts = new Dictionary<string, string>
         {
-            {"default",  SettingLocalizedResources.General_Language_OverrideCulture_DontOverride},
+            {"default", SettingLocalizedResources.General_Language_OverrideCulture_DontOverride},
             {"zh-CN", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
                     (ISimpleLocalizerBase.GetMapping()["zh-CN"]._LocateDisplayName) },
             {"ja-JP", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
@@ -46,7 +46,9 @@ public partial class GeneralSettingPage : ContentPage
         };
         rootPPB
             .AddPicker("locate", SettingLocalizedResources.General_Language, locates, currentLocate != "default" ? Localized._LocateDisplayName : $"{Localized._Default} / Default", null)
+#if WINDOWS
             .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts[GetSetting("OverrideCulture", "default")], null)
+#endif
             .AddSeparator()
             .AddText(SettingLocalizedResources.General_UserData)
 #if WINDOWS

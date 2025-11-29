@@ -87,6 +87,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
+                <RowDefinition Height="2"/>
             </Grid.RowDefinitions>
 
             <Button Grid.Row="0" Margin="0,8,0,8" IsVisible="True"  x:Name="CancelRender" Text="{l:Localized Key=RenderPage_CancelRender}" Clicked="CancelRender_Clicked" />
@@ -99,6 +100,7 @@
             <Label Grid.Row="5" Text="{l:Localized Key=RenderPage_LoggingLabel}"  Margin="0,8,0,0"/>
 
             <Editor Grid.Row="6" x:Name="LoggingBox" Margin="0,16,0,0" IsReadOnly="True"></Editor>
+            <VerticalStackLayout Grid.Row="7" x:Name="ComputeView" />
         </Grid>
     </Grid>
 </ContentPage>

@@ -148,11 +148,15 @@ namespace projectFrameCut.Setting.SettingManager
             }
         }
 
+        private static bool SettingSaveSlotIndicator = true;
+
         private static async Task SaveSettingAsync(CancellationToken token = default)
         {
             if (Settings == null) return;
-            var path = Path.Combine(MauiProgram.BasicDataPath, "settings.json");
+            var path = Path.Combine(MauiProgram.BasicDataPath, $"settings_{(SettingSaveSlotIndicator ? "a" : "b")}.json");
             var json = JsonSerializer.Serialize(Settings, serializerOptions);
+            await File.WriteAllTextAsync(path, json, token).ConfigureAwait(false);
+            path = Path.Combine(MauiProgram.BasicDataPath, $"settings.json");
             await File.WriteAllTextAsync(path, json, token).ConfigureAwait(false);
         }
 

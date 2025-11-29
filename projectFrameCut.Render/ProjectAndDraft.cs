@@ -4,6 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -208,7 +209,7 @@ namespace projectFrameCut.Shared
         /// <param name="targetFrame">the frame in the whole clip you'd like to get</param>
         /// <returns>the target clip, or null if the frame you want is 1 frame longer than the range (probably because of little overlap caused by rounding)</returns>
         /// <exception cref="IndexOutOfRangeException">Frame is not exist in this clip.</exception>
-        public Picture? GetFrame(uint targetFrame)
+        public IPicture? GetFrame(uint targetFrame)
         {
             var relativeIndex = GetRelativeFrameIndex(targetFrame);
             if (relativeIndex is null)
@@ -228,7 +229,7 @@ namespace projectFrameCut.Shared
         /// <returns>the target clip,or be the last frame if the frame you want is 1 frame longer than the range (probably because of little overlap caused by rounding)</returns>
         /// <remarks>you may override this method if you source can generate the frame directly with a specific size.</remarks>
         /// <exception cref="IndexOutOfRangeException">Frame is not exist in this clip.</exception>
-        public virtual Picture GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool forceResize = false)
+        public virtual IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool forceResize = false)
             => GetFrameRelativeToStartPointOfSource(GetRelativeFrameIndex(targetFrame) ?? Duration, targetWidth, targetHeight, forceResize);
 
         /// <summary>
@@ -239,7 +240,7 @@ namespace projectFrameCut.Shared
         /// </remarks>
         /// <param name="frameIndex">frame index related to the source clip</param>
         /// <returns>the result frame</returns>
-        public Picture GetFrameRelativeToStartPointOfSource(uint frameIndex);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex);
 
         /// <summary>
         /// Get the frame at the specified index relative to the start of the clip with the specific size.
@@ -249,7 +250,7 @@ namespace projectFrameCut.Shared
         /// </remarks>
         /// <param name="frameIndex">frame index related to the source clip</param>
         /// <returns>the result frame</returns>
-        public virtual Picture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
+        public virtual IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
             => GetFrameRelativeToStartPointOfSource(frameIndex).Resize(targetWidth, targetHeight, forceResize);
 
         /// <summary>
@@ -293,6 +294,18 @@ namespace projectFrameCut.Shared
             }
         }
 
+        
+
+    }
+
+    public class ClipEquabilityComparer : IEqualityComparer<IClip>
+    {
+        public bool Equals(IClip? x, IClip? y) => x?.Id == y?.Id;
+
+        public int GetHashCode([DisallowNull] IClip obj)
+        {
+            return obj.Id.GetHashCode();
+        }
     }
 
     public enum ClipMode
@@ -307,12 +320,12 @@ namespace projectFrameCut.Shared
     public class OneFrame
     {
         public uint FrameNumber { get; init; }
-        public Picture Clip { get; init; }
+        public IPicture Clip { get; init; }
         public uint LayerIndex { get; init; } = 0;
         public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
         public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
         public IClip ParentClip { get; init; }
-        public OneFrame(uint frameNumber, IClip parent, Picture pic)
+        public OneFrame(uint frameNumber, IClip parent, IPicture pic)
         {
             FrameNumber = frameNumber;
             ParentClip = parent;

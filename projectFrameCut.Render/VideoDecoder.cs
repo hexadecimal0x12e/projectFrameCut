@@ -213,7 +213,7 @@ namespace projectFrameCut.Render
         }
 
 
-        public Picture GetFrame(uint targetFrame, bool hasAlpha = false)
+        public IPicture GetFrame(uint targetFrame, bool hasAlpha = false)
         {
             if (targetFrame < _currentFrameNumber)
             {
@@ -560,7 +560,7 @@ namespace projectFrameCut.Render
         }
 
         [DebuggerNonUserCode()]
-        public Picture GetFrame(uint targetFrame, bool hasAlpha)
+        public IPicture GetFrame(uint targetFrame, bool hasAlpha)
         {
 
             if (targetFrame < _currentFrameNumber)
@@ -641,14 +641,14 @@ namespace projectFrameCut.Render
         }
 
         [DebuggerNonUserCode()]
-        private static Picture PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false)
+        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false)
         {
             var size = width * height;
-            var result = new Picture(width, height)
+            var result = new Picture8bpp(width, height)
             {
-                r = new ushort[size],
-                g = new ushort[size],
-                b = new ushort[size],
+                r = new byte[size],
+                g = new byte[size],
+                b = new byte[size],
             };
             int idx, baseIndex, offset, x, y;
             byte* srcRow;
@@ -660,9 +660,9 @@ namespace projectFrameCut.Render
                 {
                     idx = baseIndex + x;
                     offset = x * 3;
-                    result.r[idx] = (ushort)(srcRow[offset + 2] * 257);
-                    result.g[idx] = (ushort)(srcRow[offset + 1] * 257);
-                    result.b[idx] = (ushort)(srcRow[offset + 0] * 257);
+                    result.r[idx] = srcRow[offset + 2];
+                    result.g[idx] = srcRow[offset + 1];
+                    result.b[idx] = srcRow[offset + 0];
                 }
             }
             return result.SetAlpha(hasAlpha);

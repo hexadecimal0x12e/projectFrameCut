@@ -47,6 +47,8 @@ namespace projectFrameCut
 
         public static MauiApp CreateMauiApp()
         {
+            System.Threading.Thread.CurrentThread.Name = "App Main thread";
+
             string loggingDir = "";
             try
             {
@@ -119,7 +121,29 @@ namespace projectFrameCut
                 if (File.Exists(Path.Combine(BasicDataPath, "settings.json")))
                 {
                     var json = File.ReadAllText(Path.Combine(BasicDataPath, "settings.json"));
-                    SettingsManager.Settings = new(JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? []);
+                    try
+                    {
+                        SettingsManager.Settings = new(JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? []);
+                    }
+                    catch (Exception ex2)
+                    {
+                        try
+                        {
+                            json = File.ReadAllText(Path.Combine(BasicDataPath, "settings_a.json"));
+                            SettingsManager.Settings = new(JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? []);
+                        }
+                        catch (Exception ex3)
+                        {
+                            try
+                            {
+                                json = File.ReadAllText(Path.Combine(BasicDataPath, "settings_b.json"));
+                                SettingsManager.Settings = new(JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? []);
+                            }catch(Exception ex4)
+                            {
+                                throw new AggregateException($"Failed to load settings from all slots.\r\n\r\n{ex2.GetType().Name} ({ex2.Message})", [ex2, ex3, ex4]);
+                            }
+                        }
+                    }
                     Log($"Settings inited. Count: {SettingsManager.Settings.Count}");
                     if (SettingsManager.IsSettingExists("reset_Settings") && bool.TryParse(SettingsManager.GetSetting("reset_Settings", "true"), out var resetAll) ? resetAll : false)
                     {
@@ -137,7 +161,11 @@ namespace projectFrameCut
                     Log("Settings inited with empty.");
                 }
 
-                if (!SettingsManager.IsSettingExists("UserID")) SettingsManager.Settings.TryAdd("UserID", Guid.NewGuid().ToString());
+                if (!SettingsManager.IsSettingExists("UserID") || string.IsNullOrWhiteSpace(SettingsManager.GetSetting("UserID")))
+                {
+                    SettingsManager.Settings.AddOrUpdate("UserID", Guid.NewGuid().ToString(), (_, v) => string.IsNullOrWhiteSpace(v) ? Guid.NewGuid().ToString() : v);
+                    SettingsManager.ToggleSaveSignal();
+                }
             }
             catch (Exception ex)
             {
@@ -216,9 +244,7 @@ namespace projectFrameCut
                     });
                 });
 
-                
-#endif
-#if ANDROID
+#elif ANDROID
                 builder.ConfigureMauiHandlers(handlers =>
                 {
                     handlers.AddHandler<NativeGLSurfaceView, NativeGLSurfaceViewHandler>();
@@ -250,9 +276,6 @@ namespace projectFrameCut
                                     };
                 }
                 catch { } //this is not very important so just let it go
-
-
-
 #endif
                 try
                 {
@@ -281,9 +304,13 @@ namespace projectFrameCut
                 try
                 {
                     var locate = SettingsManager.GetSetting("locate", "default");
+#if !ANDROID
                     CultureInfo culture = CultureInfo.CurrentCulture;
-                    Log($"Your current culture: {culture.Name}, locate defined in settings:{locate} ");
-                    if (locate == "default") locate = CultureInfo.CurrentCulture.Name;
+#else
+                    CultureInfo culture = projectFrameCut.Platforms.Android.DeviceLocaleHelper.GetDeviceCultureInfo();
+#endif
+                    Log($"OS default current culture: {culture.Name}, locate defined in settings:{locate} ");
+                    if (locate == "default") locate = culture.Name;
                     try
                     {
                         var cul = CultureInfo.GetCultures(CultureTypes.NeutralCultures);
@@ -473,15 +500,15 @@ namespace projectFrameCut
                 case 932: //Japanese
                     builder.ConfigureFonts(fonts =>
                     {
-                        fonts.AddFont("NotoSansJP-VariableFont_wght.ttf", "Font_Regular");
-                        fonts.AddFont("NotoSansJP-VariableFont_wght.ttf", "Font_Semibold");
+                        fonts.AddFont("NotoSansJP-Regular.ttf", "Font_Regular");
+                        fonts.AddFont("NotoSansJP-Bold.ttf", "Font_Semibold");
                     });
                     break;
                 case 949: //Korean
                     builder.ConfigureFonts(fonts =>
                     {
-                        fonts.AddFont("NotoSansKR-VariableFont_wght.ttf", "Font_Regular");
-                        fonts.AddFont("NotoSansKR-VariableFont_wght.ttf", "Font_Semibold");
+                        fonts.AddFont("NotoSansKR-Regular.ttf", "Font_Regular");
+                        fonts.AddFont("NotoSansKR-Bold.ttf", "Font_Semibold");
                     });
                     break;
                 case 1256: //Arabic

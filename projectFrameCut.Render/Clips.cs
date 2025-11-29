@@ -39,7 +39,7 @@ namespace projectFrameCut.Render
 
         }
 
-        public Picture GetFrameRelativeToStartPointOfSource(uint targetFrame) => (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame) => (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame);
 
         void IClip.ReInit()
         {
@@ -85,7 +85,7 @@ namespace projectFrameCut.Render
         }
 
 
-        public Picture GetFrameRelativeToStartPointOfSource(uint targetFrame) => source ?? throw new NullReferenceException("Source is null. Please init it.");
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame) => source ?? throw new NullReferenceException("Source is null. Please init it.");
 
         void IClip.ReInit()
         {
@@ -128,9 +128,9 @@ namespace projectFrameCut.Render
         public int targetWidth { get; init; } = 1920;
         public int targetHeight { get; init; } = 1080;
 
-        public Picture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight) => Picture.GenerateSolidColor(tWidth, tHeight, R, G, B, A);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight) => Picture.GenerateSolidColor(tWidth, tHeight, R, G, B, A);
 
-        public Picture GetFrameRelativeToStartPointOfSource(uint frameIndex) => Picture.GenerateSolidColor(targetWidth, targetHeight, R, G, B, A);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex) => Picture.GenerateSolidColor(targetWidth, targetHeight, R, G, B, A);
 
         public SolidColorClip()
         {
@@ -171,7 +171,7 @@ namespace projectFrameCut.Render
 
         public List<TextClipEntry> TextEntries { get; init; } = new List<TextClipEntry>();
 
-        public Picture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
         {
             Image<Rgba64> canvas = new(targetWidth, targetHeight);
 
@@ -208,7 +208,7 @@ namespace projectFrameCut.Render
             return new Picture(canvas);
         }
 
-        public Picture GetFrameRelativeToStartPointOfSource(uint frameIndex)
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
         {
             throw new NotSupportedException();
         }

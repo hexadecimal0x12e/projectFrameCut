@@ -26,7 +26,7 @@ namespace LocalizedResources
                 var key = Localized.DynamicLookup(Key);
                 return key;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 return $"@{Key}"; 
             }

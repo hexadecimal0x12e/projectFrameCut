@@ -194,7 +194,7 @@ namespace projectFrameCut.Render.RenderCLI
             Accelerator[] accelerators = picked.Select(d => d.CreateAccelerator(context)).ToArray();
 
             Log("Initiliazing FFmpeg...");
-            ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
+            ffmpeg.RootPath = switches.GetOrAdd("FFmpegLibraryPath", Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal"));
             FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
             FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize();
             if (Program.advancedFlags.Contains("ffmpeg_loglevel_debug"))
@@ -359,12 +359,14 @@ namespace projectFrameCut.Render.RenderCLI
 
             builder?.Build()?.Start();
 
+            renderer.PrepareRender(CancellationToken.None);
+
             Stopwatch sw1 = new();
             SetSubProg("Render");
             Log("Start render...");
 
             sw1.Restart();
-            await renderer.GoRender();
+            await renderer.GoRender(CancellationToken.None);
 
             Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
 

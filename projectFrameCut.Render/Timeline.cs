@@ -74,11 +74,15 @@ namespace projectFrameCut.Render
                 foreach (var srcFrame in frames)
                 {
                     var frame = srcFrame.Clip.Resize(targetWidth, targetHeight, true);
-                    Picture effected = frame;
+                    IPicture effected = frame;
                     foreach (var effect in srcFrame?.Effects ?? [])
                     {
+                        Picture pic16;
+                        if (effected is Picture p) pic16 = p;
+                        else pic16 = (Picture)effected.ToBitPerPixel(16);
+
                         effected = effect.Render(
-                            effected,
+                            pic16,
                             ComputerCache.GetOrAdd(
                                 effect.TypeName,
                                 AcceleratedComputerBridge.RequireAComputer?.Invoke(effect.TypeName)
@@ -86,9 +90,13 @@ namespace projectFrameCut.Render
                                     throw new NotSupportedException($"Mixture mode {srcFrame.MixtureMode} is not supported in accelerated computer bridge.")));
                     }
 
+                    Picture picTop;
+                    if (effected is Picture p2) picTop = p2;
+                    else picTop = (Picture)effected.ToBitPerPixel(16);
+
                     result = MixtureCache.GetOrAdd(
                             srcFrame!.MixtureMode, GetMixer(srcFrame.MixtureMode))
-                                .Mix(effected, result,
+                                .Mix(picTop, result,
                                     ComputerCache.GetOrAdd(srcFrame.MixtureMode.ToString(),
                                         AcceleratedComputerBridge.RequireAComputer?.Invoke(srcFrame.MixtureMode.ToString())
                                             is IComputer c ? c :

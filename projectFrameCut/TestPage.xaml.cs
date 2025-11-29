@@ -495,21 +495,21 @@ public partial class TestPage : ContentPage
             };
 
             var path = $"/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/out-{DateTime.Now:yyyy-MM-dd-hh-mm-ss}.png";
-            outPic.SaveAsPng16bpc(path);
+            outPic.SaveAsPng16bpp(path);
 
             ResultImage.Source = ImageSource.FromFile(path);
 
 
             //MemoryStream ms = new();
 
-            //outPic.SaveAsPng8bpc(ms);
+            //outPic.SaveAsPng8bpp(ms);
 
             //using (var fs = new FileStream(, FileMode.Create, FileAccess.ReadWrite))
             //{
             //    ms.CopyTo(fs);
             //}
 
-            ////outPic.SaveAsPng16bpc("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/1.png", new PngEncoder());
+            ////outPic.SaveAsPng16bpp("/storage/emulated/0/Android/data/com.hexadecimal0x12e.projectframecut/files/1.png", new PngEncoder());
 
             //ResultImage.Source = ImageSource.FromStream(() => ms);
 

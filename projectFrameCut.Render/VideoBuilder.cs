@@ -28,6 +28,14 @@ namespace projectFrameCut.Render
 
         ConcurrentDictionary<uint,Picture> Cache = new();
 
+        /// <summary>
+        /// Indicates whether the frame has been pended to write. 
+        /// True means the frame has been written to the video file. 
+        /// False means the frame is still in the cache waiting to be written.
+        /// If the key is not present, it means the frame has not been added yet.
+        /// </summary>
+        public ConcurrentDictionary<uint,bool> FramePendedToWrite { get; private set; } = new();
+
         public VideoBuilder(string path,  int width, int height, int framerate,string encoder, AVPixelFormat fmt, bool disposeAfterWrite)
         {
             outputPath = path;
@@ -45,9 +53,22 @@ namespace projectFrameCut.Render
                 frame.Dispose();    
                 return;
             }
+            if(!FramePendedToWrite.TryAdd(index, false))
+            {
+                if (StrictMode)
+                {
+                    throw new InvalidOperationException($"Frame #{index} has already been added.");
+                }
+                else
+                {
+                    Log($"[VideoBuilder] WARN: Frame #{index} has already been added, ignored.");
+                    frame.Dispose();
+                    return;
+                }
+            }
             if (!BlockWrite)
             {
-                Cache.AddOrUpdate(index, frame, (_, _) => throw new InvalidOperationException($"Frame #{index} has already added."));
+                Cache.AddOrUpdate(index, frame, (_, _) => throw new InvalidOperationException($"Frame #{index} has already been added."));
                 if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview)
                 {
                     AsyncSave(index, frame);
@@ -68,7 +89,7 @@ namespace projectFrameCut.Render
             {
                 try
                 {
-                    frame.SaveAsPng8bpc(PreviewPath ?? "preview.png");
+                    frame.SaveAsPng8bpp(PreviewPath ?? "preview.png");
                 }
                 catch (Exception ex)
                 {
@@ -108,6 +129,7 @@ namespace projectFrameCut.Render
                     {
                         builder.Append(Cache.TryRemove(index, out var f) ? f : throw new KeyNotFoundException());
                         Log($"[VideoBuilder] Frame #{index} added.");
+                        FramePendedToWrite[index] = true;
                         index++;
                         if (DoGCAfterEachWrite)
                         {

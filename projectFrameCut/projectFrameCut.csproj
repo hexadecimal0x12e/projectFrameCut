@@ -129,7 +129,7 @@
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<ProjectReference Include="..\projectFrameCut.Render.WindowsRender\projectFrameCut.Render.WindowsRender.csproj" />
-		<MauiAsset Include="..\..\playground\FFmpeg\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+		<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Update="AppShell_Windows.xaml.cs">
 			<DependentUpon>AppShell_Windows.xaml</DependentUpon>
 		</Compile>
@@ -139,7 +139,7 @@
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<ProjectReference Include="..\projectFrameCut.Render.AndroidOpenGL\projectFrameCut.Render.AndroidOpenGL.csproj" />
 		<Reference Include="Platforms\Android\fishnet\FishnetBinding.dll" />
-		<AndroidNativeLibrary Include="Platforms\Android\ffmpeg\**\*.so" />
+		<AndroidNativeLibrary Include="..\..\playground\FFmpeg\android\**\*.so" />
 		<Compile Update="AppShell_Android.xaml.cs">
 			<DependentUpon>AppShell_Android.xaml</DependentUpon>
 		</Compile>
@@ -225,10 +225,6 @@
 		<Using Include="projectFrameCut.Setting.SettingManager">
 			<Static>False</Static>
 		</Using>
-	</ItemGroup>
-
-	<ItemGroup>
-		<Folder Include="Platforms\Android\ffmpeg\" />
 	</ItemGroup>
 
 	<ItemGroup>

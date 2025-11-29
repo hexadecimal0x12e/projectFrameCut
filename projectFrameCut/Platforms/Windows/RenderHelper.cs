@@ -48,7 +48,7 @@ namespace projectFrameCut.Platforms.Windows
                 if (!string.IsNullOrWhiteSpace(e.Data))
                 {
 
-                    Log(e.Data,"Render");
+                    Log(e.Data, "Render");
                     OnLog?.Invoke(e.Data);
 
                 }
@@ -61,9 +61,9 @@ namespace projectFrameCut.Platforms.Windows
                     if (e.Data.StartsWith("@@"))
                     {
                         var parts = e.Data.Trim('@').Split(',', 2, StringSplitOptions.TrimEntries);
-                        if(int.TryParse(parts[0], out var working) && int.TryParse(parts[1], out var total))
+                        if (int.TryParse(parts[0], out var working) && int.TryParse(parts[1], out var total))
                         {
-                            if(total > 0)
+                            if (total > 0)
                                 OnProgressChanged?.Invoke((working / (float)total));
                         }
                     }
@@ -74,7 +74,7 @@ namespace projectFrameCut.Platforms.Windows
                     }
                     else
                     {
-                        Log(e.Data,"Render_err");
+                        Log(e.Data, "Render_err");
                         OnLog?.Invoke(e.Data);
 
                     }
@@ -116,7 +116,7 @@ namespace projectFrameCut.Platforms.Windows
         public double Speed { get; set; }
     }
 
-    public class ffmpegHelper
+    public partial class ffmpegHelper
     {
         Process _proc;
 
@@ -129,88 +129,88 @@ namespace projectFrameCut.Platforms.Windows
 
         public event Action<FFmpegStatistics>? OnStatisticsUpdate;
 
-        private static readonly Regex StatsRegex = new Regex(
-            @"frame=\s*(?<frame>\d+)\s+" +
-            @"fps=\s*(?<fps>[\d.]+)\s+" +
-            @"q=\s*(?<q>[\d.-]+)\s+" +
-            @"(?:L?size=\s*(?<size>\S+)\s+)?" +
-            @"time=\s*(?<time>-?[\d:.]+)\s+" +
-            @"bitrate=\s*(?<bitrate>\S+)\s+" +
-            @"(?:dup=\s*(?<dup>\d+)\s+)?" +
-            @"(?:drop=\s*(?<drop>\d+)\s+)?" +
-            @"speed=\s*(?<speed>[\d.]+)x?",
-            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        private static readonly Regex StatsRegex = StatsRegexGetter();
 
         public async Task<int> Run(string args)
         {
-            _proc = new();
-            _proc.StartInfo = new ProcessStartInfo
+            try
             {
-                FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg.exe"),
-                WorkingDirectory = Path.Combine(AppContext.BaseDirectory),
-                Arguments = args,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-
-            };
-
-            _proc.OutputDataReceived += (s, e) =>
-            {
-                if (!string.IsNullOrWhiteSpace(e.Data))
+                _proc = new();
+                _proc.StartInfo = new ProcessStartInfo
                 {
+                    FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg.exe"),
+                    WorkingDirectory = Path.Combine(AppContext.BaseDirectory),
+                    Arguments = args,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
 
-                    Log(e.Data, "FFmpeg");
-                    
-                    OnLog?.Invoke(e.Data);
+                };
 
-                }
-            };
-
-            _proc.ErrorDataReceived += (s, e) =>
-            {
-                if (!string.IsNullOrWhiteSpace(e.Data))
+                _proc.OutputDataReceived += (s, e) =>
                 {
-                    Log(e.Data, "FFmpeg");
-                    OnLog?.Invoke(e.Data);
-
-                    // 尝试解析统计信息
-                    var stats = ParseStatistics(e.Data);
-                    if (stats != null)
+                    if (!string.IsNullOrWhiteSpace(e.Data))
                     {
-                        OnStatisticsUpdate?.Invoke(stats);
 
-                        if (totalFrames > 0)
+                        Log(e.Data, "FFmpeg");
+
+                        OnLog?.Invoke(e.Data);
+
+                    }
+                };
+
+                _proc.ErrorDataReceived += (s, e) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(e.Data))
+                    {
+                        Log(e.Data, "FFmpeg");
+                        OnLog?.Invoke(e.Data);
+
+                        // 尝试解析统计信息
+                        var stats = ParseStatistics(e.Data);
+                        if (stats != null)
                         {
-                            var progress = stats.Frame / totalFrames;
-                            OnProgressChanged?.Invoke(progress);
-                        }
-                        else if (totalDuration > TimeSpan.Zero)
-                        {
-                            var progress = stats.Time.TotalSeconds / totalDuration.TotalSeconds;
-                            OnProgressChanged?.Invoke(Math.Clamp(progress, 0, 1));
+                            OnStatisticsUpdate?.Invoke(stats);
+
+                            if (totalFrames > 0)
+                            {
+                                var progress = stats.Frame / totalFrames;
+                                OnProgressChanged?.Invoke(progress);
+                            }
+                            else if (totalDuration > TimeSpan.Zero)
+                            {
+                                var progress = stats.Time.TotalSeconds / totalDuration.TotalSeconds;
+                                OnProgressChanged?.Invoke(Math.Clamp(progress, 0, 1));
+                            }
                         }
                     }
-                }
-            };
+                };
 
-            _proc.EnableRaisingEvents = true;
-            _proc.Exited += (s, e) =>
+                _proc.EnableRaisingEvents = true;
+                _proc.Exited += (s, e) =>
+                {
+                    Log($"Render process exited with code {_proc.ExitCode}", "Render");
+                };
+
+                _proc.Start();
+
+                _proc.BeginOutputReadLine();
+                _proc.BeginErrorReadLine();
+
+                Log("Render process started.", "Render");
+
+                await _proc.WaitForExitAsync();
+
+                return _proc.ExitCode;
+            }
+            catch (Exception ex)
             {
-                Log($"Render process exited with code {_proc.ExitCode}", "Render");
-            };
+                Log(ex, "run ffmpeg", this);
+            }
 
-            _proc.Start();
+            return -1;
 
-            _proc.BeginOutputReadLine();
-            _proc.BeginErrorReadLine();
-
-            Log("Render process started.", "Render");
-
-            await _proc.WaitForExitAsync();
-
-            return _proc.ExitCode;
 
 
         }
@@ -256,7 +256,7 @@ namespace projectFrameCut.Platforms.Windows
         private bool TryParseFFmpegTime(string timeStr, out TimeSpan time)
         {
             time = TimeSpan.Zero;
-            
+
             var parts = timeStr.TrimStart('-').Split(':');
             if (parts.Length != 3)
                 return false;
@@ -276,5 +276,8 @@ namespace projectFrameCut.Platforms.Windows
         {
             _proc?.Kill();
         }
+
+        [GeneratedRegex(@"frame=\s*(?<frame>\d+)\s+fps=\s*(?<fps>[\d.]+)\s+q=\s*(?<q>[\d.-]+)\s+(?:L?size=\s*(?<size>\S+)\s+)?time=\s*(?<time>-?[\d:.]+)\s+bitrate=\s*(?<bitrate>\S+)\s+(?:dup=\s*(?<dup>\d+)\s+)?(?:drop=\s*(?<drop>\d+)\s+)?speed=\s*(?<speed>[\d.]+)x?", RegexOptions.IgnoreCase | RegexOptions.Compiled, "zh-CN")]
+        private static partial Regex StatsRegexGetter();
     }
 }

@@ -8,6 +8,7 @@ using Microsoft.Maui;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Handlers;
+using projectFrameCut.Shared;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -34,11 +35,11 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
         public GLComputeView(Context context, string glSource, params float[][] inputs) : base(context)
         {
             if (inputs == null || inputs.Length == 0 || inputs.Length > 6)
-                throw new ArgumentException("必须传入 1 到 6 个输入数组");
+                throw new ArgumentOutOfRangeException("Must input 1-6 array(s).", nameof(inputs));
             if (inputs.Any(arr => arr.Length != inputs[0].Length))
-                throw new ArgumentException("所有输入数组长度必须相同");
+                throw new InvalidDataException("All input arrays must have same length");
             if (string.IsNullOrWhiteSpace(glSource))
-                throw new ArgumentException("glSource 不能为空");
+                throw new NullReferenceException("glSource can't be null or whitespace.");
 
             shaderSrc = glSource;
             hostInputs = inputs;
@@ -121,9 +122,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             }
         }
 
-        /// <summary>
-        /// 供 UI 调用的异步方法
-        /// </summary>
+
         public Task<float[]> RunComputeAsync()
         {
             if (!initialized)
@@ -138,8 +137,8 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
         {
             try
             {
-                Log.Info(TAG, $"GL_VERSION: {GLES31.GlGetString(GLES31.GlVersion)}");
-                Log.Info(TAG, $"GL_SHADING_LANGUAGE_VERSION: {GLES31.GlGetString(GLES31.GlShadingLanguageVersion)}");
+                Logger.LogDiagnostic($"[{TAG}] GL_VERSION: {GLES31.GlGetString(GLES31.GlVersion)}");
+                Logger.LogDiagnostic($"[{TAG}] [{TAG}] GL_SHADING_LANGUAGE_VERSION: {GLES31.GlGetString(GLES31.GlShadingLanguageVersion)}");
 
                 if (length <= 0)
                 {
@@ -155,7 +154,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     throw new Exception("Failed to create shader");
                 }
 
-                Log.Info(TAG, $"Compiling shader:\n{shaderSrc}");
+                Logger.LogDiagnostic($"[{TAG}] Compiling shader:\n{shaderSrc}");
 
                 GLES31.GlShaderSource(shader, shaderSrc);
                 GLES31.GlCompileShader(shader);
@@ -164,19 +163,19 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                 GLES31.GlGetShaderiv(shader, GLES31.GlCompileStatus, status, 0);
 
                 string shaderLog = GLES31.GlGetShaderInfoLog(shader);
-                Log.Info(TAG, $"Shader compilation log: {shaderLog}");
+                Logger.LogDiagnostic($"[{TAG}] Shader compilation log: {shaderLog}");
 
                 if (status[0] == 0)
                 {
                     GLES31.GlDeleteShader(shader);
-                    throw new Exception($"Shader compile error: {shaderLog}\nSource:\n{shaderSrc}");
+                    throw new Exception($"[{TAG}] Shader compile error: {shaderLog}\nSource:\n{shaderSrc}");
                 }
 
                 program = GLES31.GlCreateProgram();
                 if (program == 0)
                 {
                     GLES31.GlDeleteShader(shader);
-                    throw new Exception("Failed to create program");
+                    throw new Exception($"[{TAG}] Failed to create program");
                 }
 
                 GLES31.GlAttachShader(program, shader);
@@ -189,10 +188,9 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     GLES31.GlDeleteShader(shader);
                     GLES31.GlDeleteProgram(program);
                     program = 0;
-                    throw new Exception($"Program link error: {programLog}");
+                    throw new Exception($"[{TAG}] Program link error: {programLog}");
                 }
 
-                // 4. 清理shader对象
                 GLES31.GlDeleteShader(shader);
 
                 for (int i = 0; i < hostInputs.Length; i++)
@@ -208,7 +206,8 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             }
             catch (Exception ex)
             {
-                Log.Error(TAG, $"Error initializing compute shader: {ex}");
+                //Log.Error(TAG, $"Error initializing compute shader: {ex}");
+                Logger.Log(ex, $"[{TAG}] initializing compute shader", this);
                 initialized = false;
                 throw;
             }
@@ -252,7 +251,8 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             }
             catch (Exception ex)
             {
-                Log.Warn(TAG, $"DeleteGlResources warning: {ex.Message}");
+                //Log.Warn(TAG, $"DeleteGlResources warning: {ex.Message}");
+                Logger.Log(ex, $"[{TAG}] initializing compute shader", this);
             }
         }
 
@@ -398,10 +398,10 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
         {
             if (handler.PlatformView != null )
             {
-                if(string.IsNullOrWhiteSpace(view.ShaderSource))
-                    throw new ArgumentException("ShaderSource 不能为空");
-                if(view.Inputs == null || view.Inputs.Length == 0 || view.Inputs.Length > 6)
-                    throw new ArgumentException("必须传入 1 到 6 个输入数组");
+                if (string.IsNullOrWhiteSpace(view.ShaderSource))
+                    throw new NullReferenceException("glSource can't be null or whitespace.");
+                if (view.Inputs == null || view.Inputs.Length == 0 || view.Inputs.Length > 6)
+                    throw new ArgumentOutOfRangeException("Must input 1-6 array(s).", nameof(view.Inputs));
 
                 handler.PlatformView.UpdateInputs(view.Inputs, view.ShaderSource, view.JobID, view.WorkGroupSize);
             }

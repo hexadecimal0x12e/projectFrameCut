@@ -20,7 +20,9 @@ namespace projectFrameCut.Render
         public bool LogState = false;
         public int GCOption = 0;
 
-        ConcurrentDictionary<string, ConcurrentDictionary<uint, Picture>> FrameCache = new();
+        public event Action<double>? OnProgressChanged;
+
+        ConcurrentDictionary<string, ConcurrentDictionary<uint, IPicture>> FrameCache = new();
         ConcurrentDictionary<uint, IClip[]> ClipNeedForFrame = new();
         ConcurrentDictionary<string, IComputer> ComputerCache = new();
         ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
@@ -30,7 +32,7 @@ namespace projectFrameCut.Render
 
         int ThreadWorking = 0, Finished = 0;
 
-        ConcurrentQueue<uint> PreparedFrames = new();
+        ConcurrentQueue<uint> PreparedFrames = new(), BlankFrames = new();
         ConcurrentDictionary<uint, byte> PreparedFlag = new();
 
         int TotalEnqueued = 0;
@@ -38,9 +40,13 @@ namespace projectFrameCut.Render
         private int _width;
         private int _height;
 
-        public async Task GoRender()
+        private IPicture BlankFrame = null!;
+
+        public async Task GoRender(CancellationToken token)
         {
-            Thread preparer = new(PrepareRender);
+            BlankFrame = Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+
+            Thread preparer = new(() => PrepareSource(token));
             preparer.Name = "Preparer thread";
             preparer.IsBackground = true;
             preparer.Start();
@@ -52,6 +58,11 @@ namespace projectFrameCut.Render
 
             while (true)
             {
+                if (token.IsCancellationRequested)
+                {
+                    Log("Render cancelled by user.", "info");
+                    break;
+                }
                 if (PreparerFinished && Volatile.Read(ref Finished) >= Duration)
                     break;
 
@@ -83,22 +94,23 @@ namespace projectFrameCut.Render
                             break;
 
                         Interlocked.Increment(ref ThreadWorking);
-
                         var thread = new Thread(() =>
                         {
                             try
                             {
-                                RenderAFrame(targetFrame);
+                                FlushBlankFramesBefore(targetFrame, token);
+                                RenderAFrame(targetFrame, token);
                             }
-                            catch(Exception ex)
+                            catch (Exception ex)
                             {
-                                Console.Error.WriteLine($"Error rendering frame {targetFrame}: {ex}");
+                                Log($"Error rendering frame {targetFrame}: {ex}", "error");
                                 throw;
                             }
                             finally
                             {
                                 Interlocked.Decrement(ref ThreadWorking);
                                 Interlocked.Increment(ref Finished);
+                                OnProgressChanged?.Invoke((double)Volatile.Read(ref Finished) / Duration);
                             }
                         });
 
@@ -110,7 +122,7 @@ namespace projectFrameCut.Render
                 }
                 else
                 {
-                    Thread.Sleep(10);
+                    await Task.Delay(10);
                 }
 
                 if (LogState)
@@ -120,68 +132,102 @@ namespace projectFrameCut.Render
                 }
 
             }
-            Console.WriteLine($"All frames are prepared and waiting for render done...");
+            if (token.IsCancellationRequested)
+            {
+                Log("Render cancelled by user.");
+                ReleaseResources();
+                return;
+            }
+            Log($"[Preparer] All frames are prepared and waiting for render done...");
 
             foreach (var t in Threads)
             {
-                try { if (t.IsAlive) t.Join(); } catch { }
+                try
+                {
+                    if (t.IsAlive)
+                    {
+                        await Task.Delay(5000, token);
+                    }
+                }
+                catch { }
             }
+            ReleaseResources();
+
         }
 
-        private void PrepareRender()
+        public void PrepareRender(CancellationToken token)
         {
-            Stopwatch sw = new();
+            bool found = false;
             for (uint idx = 0; idx < Duration; idx++)
             {
-                sw.Restart();
+                found = false;
+                if (token.IsCancellationRequested) return;
                 foreach (var item in Clips)
                 {
+                    if (token.IsCancellationRequested) return;
 
-                    if (item.Duration != 0 && idx > item.Duration)
-                    {
-                        continue;
-                    }
-
-                    var frame = item.GetFrameRelativeToStartPointOfSource(idx, _width, _height, true);
-                    if (frame != null)
-                    {
-                        var cache = FrameCache.GetOrAdd(item.Id, (_) => new());
-                        cache.TryAdd(idx + item.StartFrame, frame);
-                    }
-
-                    uint frameIndex = idx + item.StartFrame;
 
                     if (item.StartFrame * item.SecondPerFrameRatio <= idx && item.Duration * item.SecondPerFrameRatio + item.StartFrame * item.SecondPerFrameRatio >= idx)
                     {
+                        found = true;
                         ClipNeedForFrame.AddOrUpdate(
-                            frameIndex,
+                            idx,
                             (_) => [item],
                             (_, old) => old.Append(item).OrderBy(x => x.LayerIndex).ToArray());
-
-                        if (PreparedFlag.TryAdd(frameIndex, 0))
-                        {
-                            PreparedFrames.Enqueue(frameIndex);
-                            Interlocked.Increment(ref TotalEnqueued);
-                        }
                     }
-
-
                 }
 
-                if (!ClipNeedForFrame.ContainsKey(idx) || ClipNeedForFrame[idx] is null || ClipNeedForFrame[idx].Length == 0)
+                if (!found)
                 {
-                    // no clip for this frame, still need to mark it as prepared
-                    if (PreparedFlag.TryAdd(idx, 0))
+                    //Log($"[Preparer] Frame {idx} is empty.");
+                    BlankFrames.Enqueue(idx);
+                }
+                else
+                {
+                    //Log($"[Preparer] Frame {idx} have {ClipNeedForFrame[idx].Length} clips.");
+                }
+
+                if (idx % 50 == 0)
+                {
+                    Log($"[Preparer] source preparing finished {(float)idx / (float)Duration:p3} ({idx}/{Duration})");
+                }
+
+            }
+            Log($"[Preparer] source preparing done.");
+
+        }
+
+        static ClipEquabilityComparer clipEquabilityComparer = new();
+
+        private void PrepareSource(CancellationToken token)
+        {
+            Stopwatch sw = new();
+            foreach (var idx in ClipNeedForFrame.Keys)
+            {
+                if (token.IsCancellationRequested) return;
+                sw.Restart();
+
+                foreach (var item in Clips)
+                {
+                    if (token.IsCancellationRequested) return;
+
+                    if (ClipNeedForFrame[idx].Contains(item, clipEquabilityComparer))
                     {
-                        PreparedFrames.Enqueue(idx);
-                        Interlocked.Increment(ref TotalEnqueued);
-                        Interlocked.Increment(ref Finished);
-                        builder.Append(idx, Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0));
+                        var frame = item.GetFrame(idx, _width, _height, true);
+                        if (frame != null)
+                        {
+                            FrameCache.GetOrAdd(item.Id, (_) => new()).TryAdd(idx, frame);
+                        }
                     }
+                }
+                if (PreparedFlag.TryAdd(idx, 0))
+                {
+                    PreparedFrames.Enqueue(idx);
+                    Interlocked.Increment(ref TotalEnqueued);
                 }
                 sw.Stop();
                 EachElapsedForPreparing.Add(sw.Elapsed);
-                Console.WriteLine($"Frame {idx} is ready to render, elapsed {sw.Elapsed}");
+                Log($"[Preparer] Frame {idx} is ready to render, elapsed {sw.Elapsed}");
 
             }
 
@@ -189,39 +235,81 @@ namespace projectFrameCut.Render
             PreparerFinished = true;
         }
 
-        private void RenderAFrame(uint targetFrame)
+        private void RenderAFrame(uint targetFrame, CancellationToken token)
         {
             if (targetFrame > Duration)
             {
-                Console.WriteLine($"WARN: Target frame {targetFrame} exceeds project duration. Ignore.");
+                Log($"[Render] WARN: Target frame {targetFrame} exceeds project duration. Ignore.");
                 return;
             }
             Stopwatch sw = Stopwatch.StartNew();
             Picture result = null!;
 
-            if (!ClipNeedForFrame.Remove(targetFrame, out var ClipsNeed) || ClipsNeed.Length == 0) goto noFrame;
+            if (!PreparedFlag.TryRemove(targetFrame, out _))
+            {
+                Log($"[Render] WARN: Target frame {targetFrame} not ready yet. Waiting...");
+                while (!PreparedFrames.Contains(targetFrame)) Thread.Sleep(500);
+                Log($"Target frame {targetFrame} is ready yet. Continue.");
+                PreparedFlag.TryRemove(targetFrame, out _);
+            }
 
-            PreparedFlag.TryRemove(targetFrame, out _);
+            if (!ClipNeedForFrame.Remove(targetFrame, out var ClipsNeed) || ClipsNeed.Length == 0)
+            {
+                sw.Stop();
+                Log($"[Render] Frame {targetFrame} is empty.");
+                builder.Append(targetFrame, (Picture)BlankFrame);
+                EachElapsed.Add(sw.Elapsed);
+                return;
+            }
+
 
             foreach (var clip in ClipsNeed)
             {
-                if (!FrameCache[clip.Id].Remove(targetFrame, out var frame)) throw new IndexOutOfRangeException("The specific frame is not in cache.");
+                if (token.IsCancellationRequested) return;
+
+                IPicture frame;
+                if (!FrameCache.TryGetValue(clip.Id, out var perClipCache) || !perClipCache.TryRemove(targetFrame, out frame))
+                {
+                    Log($"[Render] WARN: Prepared frame {targetFrame} not found in cache for clip {clip.Id}. Regenerating.");
+                    try
+                    {
+                        frame = clip.GetFrame(targetFrame, _width, _height, true) ?? Picture.GenerateSolidColor(_width, _height, 0, 0, 0, 0);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, $"regenerate frame {targetFrame} for clip {clip.Id}", this);
+                        throw;
+                    }
+                }
+
                 if (clip.Effects != null)
                 {
                     foreach (var item in clip.EffectsInstances ?? IClip.GetEffectsInstances(clip.Effects))
                     {
-                        frame = item.Render(frame,
+                        Picture picFrame;
+                        if (frame is Picture p) picFrame = p;
+                        else picFrame = (Picture)frame.ToBitPerPixel(16);
+
+                        frame = item.Render(picFrame,
                                         ComputerCache.GetOrAdd(item.TypeName, AcceleratedComputerBridge.RequireAComputer?.Invoke(item.TypeName)
                                         is IComputer c1 ? c1 : throw new NotSupportedException($"Effect mode {item.TypeName} is not supported in accelerated computer bridge.")))
                                     .Resize(_width, _height, true);
                     }
                 }
 
-                if (result is null) result = frame;
+                if (result is null)
+                {
+                    if (frame is Picture p) result = p;
+                    else result = (Picture)frame.ToBitPerPixel(16);
+                }
                 else
                 {
+                    Picture picFrame;
+                    if (frame is Picture p) picFrame = p;
+                    else picFrame = (Picture)frame.ToBitPerPixel(16);
+
                     result = MixtureCache.GetOrAdd(clip.MixtureMode, GetMixer(clip.MixtureMode))
-                                         .Mix(result, frame,
+                                         .Mix(result, picFrame,
                                              ComputerCache.GetOrAdd(
                                                 clip.MixtureMode.ToString(),
                                                 AcceleratedComputerBridge.RequireAComputer
@@ -230,12 +318,28 @@ namespace projectFrameCut.Render
                                          .Resize(_width, _height, true);
                 }
             }
-
-        noFrame:
-            builder.Append(targetFrame, result.Resize(_width, _height, false) ?? Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0));
+            builder.Append(targetFrame, result?.Resize(_width, _height, false) ?? Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0));
             sw.Stop();
-            Console.WriteLine($"frame {targetFrame} render done, elapsed {sw.Elapsed}");
+            Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}");
             EachElapsed.Add(sw.Elapsed);
+            return;
+
+
+
+        }
+
+        private void ReleaseResources()
+        {
+            try
+            {
+                Log("Release resources...");
+                FrameCache.Clear();
+                ClipNeedForFrame.Clear();
+                ComputerCache.Clear();
+                MixtureCache.Clear();
+            }
+            catch { }
+
         }
 
         private static IMixture GetMixer(MixtureMode mixtureMode)
@@ -248,6 +352,42 @@ namespace projectFrameCut.Render
                     throw new NotSupportedException($"Mixture mode {mixtureMode} is not supported.");
             }
         }
+
+        private void FlushBlankFramesBefore(uint frameIndex, CancellationToken token)
+        {
+            try
+            {
+                while (!token.IsCancellationRequested && BlankFrames.TryPeek(out var head) && head < frameIndex)
+                {
+                    if (!BlankFrames.TryDequeue(out var blankIdx))
+                        break;
+
+                    if (blankIdx >= frameIndex)
+                    {
+                        BlankFrames.Enqueue(blankIdx);
+                        break;
+                    }
+
+                    try
+                    {
+                        builder.Append(blankIdx, (Picture)BlankFrame);
+                        EachElapsed.Add(TimeSpan.Zero);
+                        Interlocked.Increment(ref Finished);
+                        OnProgressChanged?.Invoke((double)Volatile.Read(ref Finished) / Duration);
+                        Log($"[Render] Wrote blank frame {blankIdx} before starting frame {frameIndex}.");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, $"Write blank frame {blankIdx}", this);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Write blank frames", this);
+            }
+        }
+
 
     }
 }
