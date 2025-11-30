@@ -19,6 +19,8 @@ namespace projectFrameCut.Render
         public int MaxThreads = (int)(Environment.ProcessorCount * 1.75);
         public bool LogState = false;
         public int GCOption = 0;
+        public bool LogStatToLogger = false;
+
 
         public event Action<double>? OnProgressChanged;
 
@@ -41,10 +43,46 @@ namespace projectFrameCut.Render
         private int _height;
 
         private IPicture BlankFrame = null!;
+        public bool running { get; private set; } = false;
 
         public async Task GoRender(CancellationToken token)
         {
             BlankFrame = Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+
+            running = true;
+            if (LogStatToLogger)
+            {
+                new Thread(() =>
+                {
+                    float d = Duration;
+                    TimeSpan each = TimeSpan.Zero, eachPrepare = TimeSpan.Zero;
+                    while (running)
+                    {
+                        try
+                        {
+                            if (EachElapsed.Count > 0)
+                                each = new TimeSpan((long)EachElapsed.Average(x => x.Ticks));
+                            if (EachElapsedForPreparing.Count > 0)
+                                eachPrepare = new TimeSpan((long)EachElapsedForPreparing.Average(x => x.Ticks));
+
+                            if (token.IsCancellationRequested) return;
+                            Log($"[STAT] " +
+                                $"memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB, " +
+                                $"total prepared: {TotalEnqueued / d:p2}, " +
+                                $"total rendered: {Volatile.Read(ref Finished) / d:p2}, " +
+                                $"total wrote frames: {builder.FramePendedToWrite.Count(k => k.Value) / d:p3}, " +
+                                $"total pended to write frames: {builder.FramePendedToWrite.Count(k => !k.Value)}/{builder.FramePendedToWrite.Count}, " +
+                                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}. ");
+                            Thread.Sleep(10000);
+                        }
+                        catch { }
+                    }
+                })
+                {
+                    Name = "Stat logger thread",
+                    IsBackground = false
+                }.Start();
+            }
 
             Thread preparer = new(() => PrepareSource(token));
             preparer.Name = "Preparer thread";
@@ -179,12 +217,7 @@ namespace projectFrameCut.Render
 
                 if (!found)
                 {
-                    //Log($"[Preparer] Frame {idx} is empty.");
                     BlankFrames.Enqueue(idx);
-                }
-                else
-                {
-                    //Log($"[Preparer] Frame {idx} have {ClipNeedForFrame[idx].Length} clips.");
                 }
 
                 if (idx % 50 == 0)
@@ -198,6 +231,7 @@ namespace projectFrameCut.Render
         }
 
         static ClipEquabilityComparer clipEquabilityComparer = new();
+
 
         private void PrepareSource(CancellationToken token)
         {
@@ -332,6 +366,7 @@ namespace projectFrameCut.Render
         {
             try
             {
+                running = false;
                 Log("Release resources...");
                 FrameCache.Clear();
                 ClipNeedForFrame.Clear();

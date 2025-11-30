@@ -50,9 +50,9 @@ public partial class GeneralSettingPage : ContentPage
             .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts[GetSetting("OverrideCulture", "default")], null)
 #endif
             .AddSeparator()
-            .AddText(SettingLocalizedResources.General_UserData)
+            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.General_UserData, SettingLocalizedResources.General_UserData_Subtitle, 20, 12))
 #if WINDOWS
-            .AddButton("userDataSelectButton", SettingLocalizedResources.General_UserData_Path)
+            .AddButton("userDataSelectButton", SettingLocalizedResources.General_UserData_SelectPath)
             .AddButton("openUserDataButton", SettingLocalizedResources.General_UserData_Open(MauiProgram.DataPath))
 #endif
             .AddButton("manageUsedDataButton", SettingLocalizedResources.General_UserData_ManagePageOpen, null)

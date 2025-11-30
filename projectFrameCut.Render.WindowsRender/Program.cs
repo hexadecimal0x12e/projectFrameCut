@@ -309,10 +309,12 @@ namespace projectFrameCut.Render.RenderCLI
                 clips[i].ReInit();
             }
 
-            VideoBuilder builder = new VideoBuilder(switches["output"], width, height, fps, outputEncoder, outputFormat, true)
+            VideoBuilder builder = new VideoBuilder(switches["output"], width, height, fps, outputEncoder, outputFormat)
             {
                 EnablePreview = bool.TryParse(switches.GetOrAdd("preview", "false"), out var preview) ? preview : false,
                 PreviewPath = switches.GetOrAdd("previewPath", "nope"),
+                DoGCAfterEachWrite = true,
+                DisposeFrameAfterEachWrite = true,
             };
 
             builder.Duration = duration;

@@ -42,6 +42,8 @@ namespace projectFrameCut.Shared
     {
         public bool IsMixture { get; set; } = false;    
         public string TypeName { get; set; } = string.Empty;
+        public bool Enabled { get; set; } = true;
+        public int Index { get; set; } = 1;
         public Dictionary<string, object>? Parameters { get; set; }
     }
 

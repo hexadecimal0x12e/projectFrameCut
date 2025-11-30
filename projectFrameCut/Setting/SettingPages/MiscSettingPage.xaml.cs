@@ -71,7 +71,7 @@ public partial class MiscSettingPage : ContentPage
                         break;
                     }
                 case "makeDiagReport":
-                    //todo
+                    await Navigation.PushAsync(new DiagnosticPage());
                     goto done;
                 case "openSettingsButton":
                     var jsonPath = Path.Combine(MauiProgram.BasicDataPath, "settings.json");

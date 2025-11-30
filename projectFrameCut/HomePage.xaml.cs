@@ -26,6 +26,20 @@ public partial class HomePage : ContentPage
         vm = new ProjectsListViewModel();
         vm.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
         BindingContext = vm;
+        Loaded += async (s, e) =>
+        {
+            if (SimpleLocalizer.IsFallbackMatched)
+            {
+                List<string> localeDispName = new();
+                foreach (var item in ISimpleLocalizerBase.GetMapping().Select(k => k.Value._LocateDisplayName))
+                {
+                    localeDispName.Add(item.Split('/').Last().Trim(' '));
+                }
+                localeDispName[^1] = $"and {localeDispName.Last()}";
+                await DisplayAlertAsync("Info", $"it seems like projectFrameCut doesn't support your system language yet.\r\nwe support {localeDispName.Aggregate((a, b) => $"{a}, {b}")} yet.\r\nIf you'd like to contribute the localization, do it and make a pull request.", "OK");
+                SimpleLocalizer.IsFallbackMatched = false;
+            }
+        };
 #if !ANDROID
         ProjectsCollection.SelectionChanged += CollectionView_SelectionChanged;
 #endif
@@ -285,12 +299,24 @@ public partial class HomePage : ContentPage
         }
     }
 
-    protected override void OnAppearing()
+    protected override async void OnAppearing()
     {
         base.OnAppearing();
 #if WINDOWS || ANDROID
         AppShell.instance.ShowNavView();
 #endif
+
+        if (SimpleLocalizer.IsFallbackMatched)
+        {
+            List<string> localeDispName = new();
+            foreach (var item in ISimpleLocalizerBase.GetMapping().Select(k => k.Value._LocateDisplayName))
+            {
+                localeDispName.Add(item.Split('/').Last().Trim(' '));
+            }
+            localeDispName[^1] = $"and {localeDispName.Last()}";
+            await DisplayAlertAsync("Info", $"it seems like projectFrameCut doesn't support your system language yet.\r\nwe support {localeDispName.Aggregate((a,b) => $"{a}, {b}")} yet.\r\nIf you'd like to contribute the localization, do it and make a pull request.", "OK");
+            SimpleLocalizer.IsFallbackMatched = false;
+        }
     }
 
     private async void MenuOpen_Clicked(object sender, EventArgs e)

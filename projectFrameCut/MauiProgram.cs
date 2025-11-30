@@ -309,8 +309,19 @@ namespace projectFrameCut
 #else
                     CultureInfo culture = projectFrameCut.Platforms.Android.DeviceLocaleHelper.GetDeviceCultureInfo();
 #endif
+                    
                     Log($"OS default current culture: {culture.Name}, locate defined in settings:{locate} ");
-                    if (locate == "default") locate = culture.Name;
+                    if (locate == "default")
+                    {
+                        if (culture.Name.StartsWith("en"))
+                        {
+                            locate = "en-US";
+                        }
+                        else
+                        {
+                            locate = culture.Name;
+                        }
+                    }
                     try
                     {
                         var cul = CultureInfo.GetCultures(CultureTypes.NeutralCultures);
@@ -473,9 +484,9 @@ namespace projectFrameCut
                 return false;
             }
 
+
         }
 #endif
-
         public static void ConfigFontFromCulture(MauiAppBuilder builder, CultureInfo culture)
         {
             int codePage = culture.TextInfo.ANSICodePage;

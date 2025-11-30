@@ -74,9 +74,6 @@ public partial class RenderPage : ContentPage
     private async Task FlushLogQueue()
     {
         if (_logQueue.IsEmpty) return;
-#if !WINDOWS
-        Log($"[Stat] Program used memory: {Environment.WorkingSet / 1024f / 1024f} MB");
-#endif
         await _logSemaphore.WaitAsync();
         try
         {
@@ -155,11 +152,11 @@ public partial class RenderPage : ContentPage
 #if WINDOWS
             var outputPath = await PickSavePath(_project.projectName);
             await DoComputeOnWindows(vm, render, ffmpeg, outputPath);
-#elif ANDROID
+#else
             var outputDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
             Directory.CreateDirectory(outputDir);
             var outputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mp4");
-            await DoComputeOnAndroid(vm, outputPath);
+            await DoComputeOnMobile(vm, outputPath);
 #endif
             _logUpdateTimer?.Stop();
             await FlushLogQueue();
@@ -294,12 +291,9 @@ public partial class RenderPage : ContentPage
 
         Log($"FFmpeg process exited with code {ffRet}.");
     }
-#endif
-
-#if ANDROID
-    async Task DoComputeOnAndroid(RenderPageViewModel vm, string outputPath)
+#else
+    async Task DoComputeOnMobile(RenderPageViewModel vm, string outputPath)
     {
-        Thread.CurrentThread.Name = "Main thread";
         void _WriteToLogBox(string s, string l)
         {
             _logQueue.Enqueue(s);
@@ -316,7 +310,7 @@ public partial class RenderPage : ContentPage
         {
             parallelThreadCount = Environment.ProcessorCount / 2;
         }
-
+#if ANDROID
         NativeGLSurfaceView view = new NativeGLSurfaceView
         {
             WorkGroupSize = 512,
@@ -324,11 +318,19 @@ public partial class RenderPage : ContentPage
         };
 
         ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
+#elif iDevices
 
+#endif
         var draftSrc = JsonSerializer.Deserialize<DraftStructureJSON>
                                                  (File.ReadAllText(Path.Combine(_workingPath, "timeline.json"))) ?? throw new NullReferenceException();
 
         Log($"Draft loaded: duration {draftSrc.Duration}, saved on {draftSrc.SavedAt}, {draftSrc.Clips.Length} clips.");
+
+        if(draftSrc.Duration <= 1)
+        {
+            await DisplayAlertAsync(Localized._Info, "Draft invalid", Localized._OK);
+            return;
+        }
 
         var duration = draftSrc.Duration;
 
@@ -337,7 +339,6 @@ public partial class RenderPage : ContentPage
         List<JsonElement> clipsJson = draftSrc.Clips.Select(c => (JsonElement)c).ToList();
 
         var clipsList = new List<IClip>();
-
 
         foreach (var clip in clipsJson)
         {
@@ -355,19 +356,21 @@ public partial class RenderPage : ContentPage
         SetSubProg("PrepareDraft");
 
         Log("Initializing all clips...");
-        for (int i = 0; i < clips.Length; i++)
+        foreach (IClip clip in clips)
         {
-            clips[i].ReInit();
+            clip.ReInit();
         }
 
         int width = 1280;// int.Parse(vm.Width);
         int height = 720;// int.Parse(vm.Height);
         int fps = int.Parse(vm.Framerate);
 
-        VideoBuilder builder = new VideoBuilder(outputPath, width, height, fps, "libx264", AVPixelFormat.AV_PIX_FMT_YUV420P, true)
+        VideoBuilder builder = new VideoBuilder(outputPath, width, height, fps, "libx264", AVPixelFormat.AV_PIX_FMT_YUV420P)
         {
             EnablePreview = false,
-            DoGCAfterEachWrite = false
+            DoGCAfterEachWrite = true,
+            DisposeFrameAfterEachWrite = true,
+            Duration = duration
         };
 
         Renderer renderer = new Renderer
@@ -377,6 +380,7 @@ public partial class RenderPage : ContentPage
             Duration = duration,
             MaxThreads = parallelThreadCount,
             LogState = false,
+            LogStatToLogger = true,
             GCOption = 0,
         };
 

@@ -260,9 +260,10 @@ namespace projectFrameCut.Render
             }
 
         not_found:
-            if (Math.Abs(targetFrame - TotalFrames) < 5)//a little bit overlength due to rounding
+            if (Math.Abs(targetFrame - TotalFrames) < 5)
             {
-                return GetFrame((uint)TotalFrames, hasAlpha);
+                Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - TotalFrames} instead.");
+                return GetFrame(targetFrame - 1, hasAlpha);
             }
             double fps = _fps > 0 ? _fps : 1.0;
             double seconds = targetFrame / fps;
@@ -621,6 +622,11 @@ namespace projectFrameCut.Render
             }
 
         not_found:
+            if(Math.Abs(targetFrame - TotalFrames) < 5)
+            {
+                Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - TotalFrames} instead.");
+                return GetFrame(targetFrame - 1, hasAlpha);
+            }
             double fps = _fps > 0 ? _fps : 1.0;
             double seconds = targetFrame / fps;
             throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_path}'.");

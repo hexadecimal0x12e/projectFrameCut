@@ -68,6 +68,46 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Diag_InfoSection_App",
+        "Value": "\u5E94\u7528\u7A0B\u5E8F\u4FE1\u606F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_Hardware",
+        "Value": "\u786C\u4EF6\u4FE1\u606F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_OperatingSystem",
+        "Value": "\u64CD\u4F5C\u7CFB\u7EDF\u4FE1\u606F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_MakingReport",
+        "Value": "\u6B63\u5728\u751F\u6210\u62A5\u544A...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_MakingReport_Sub",
+        "Value": "\u8BF7\u4E0D\u8981\u79BB\u5F00\u6B64\u754C\u9762\uFF0C\u6216\u8005\u9000\u51FA\u5E94\u7528\u7A0B\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Edit_EditorPreference",
         "Value": "\u9879\u76EE\u7F16\u8F91\u5668 - \u4E2A\u6027\u5316",
         "Mode": "ConstString",
@@ -259,6 +299,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "General_UserData_SelectPath",
+        "Value": "\u9009\u62E9\u7528\u6237\u6570\u636E\u6587\u4EF6\u5939...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "General_UserData_Subtitle",
         "Value": "\u914D\u7F6E\u4F60\u7684\u6570\u636E\u548C\u8D44\u6E90\u6587\u4EF6",
         "Mode": "ConstString",
@@ -292,7 +340,7 @@
       },
       {
         "Id": "Misc_MakeDiagReport",
-        "Value": "\u751F\u6210\u8BCA\u65AD\u62A5\u544A",
+        "Value": "\u524D\u5F80\u8BCA\u65AD\u9875\u9762...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -401,6 +449,22 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_GenerateReport",
+        "Value": "\u5BFC\u51FA\u8BCA\u65AD\u62A5\u544A...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_OpenBaseData",
+        "Value": "\u6253\u5F00\u5E94\u7528\u7A0B\u5E8F\u6570\u636E\u76EE\u5F55...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
       }
     ],
     "en-US": [
@@ -469,12 +533,166 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Diag_InfoSection_App",
+        "Value": "Unset localization item:Diag_InfoSection_App()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_Hardware",
+        "Value": "Unset localization item:Diag_InfoSection_Hardware()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_OperatingSystem",
+        "Value": "Unset localization item:Diag_InfoSection_OperatingSystem()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_MakingReport",
+        "Value": "Unset localization item:Diag_MakingReport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_MakingReport_Sub",
+        "Value": "Unset localization item:Diag_MakingReport_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EditorPreference",
+        "Value": "Project Editor - Personalization",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Preferences for customizing the project editor interface",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EditorPreference_Subtitle",
+        "Value": "Adjust the editor interface according to your preferences",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode",
+        "Value": "Default Popup Mode",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Refers to the standard behavior for displaying popup windows in the interface",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Bottom",
+        "Value": "Bottom Panel",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "UI option for popup appearing from bottom of screen",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Clip",
+        "Value": "Overlay",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Refers to a UI layer that appears on top of existing content, commonly used in popup or modal contexts",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_FixedView",
+        "Value": "Fixed Window",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Refers to a non-resizable or fixed-position dialog/window mode in UI context",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Right",
+        "Value": "Right Sidebar",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Window",
+        "Value": "Independent window",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Refers to opening content in a separate/standalone window interface",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "General_Language",
         "Value": "Language/Language",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "Translated the Chinese part while preserving the \u0027/Language\u0027 suffix as instructed",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture",
+        "Value": "Override CurrentCulture to resolve the issue of inability to input Chinese/Japanese/Korean",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Technical note about solving IME input issues for CJK languages",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture_DontOverride",
+        "Value": "Do not override",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of \u0027\u4E0D\u8981\u8986\u76D6\u0027 for language setting option",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture_OverrideTo",
+        "Value": "Override to {name}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Indicates changing the current setting to a specified value",
         "HasValidationErrors": false
       },
       {
@@ -492,6 +710,25 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open",
+        "Value": "Open user data directory ({path})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
         "Comment": "",
         "HasValidationErrors": false
       },
@@ -551,6 +788,24 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "General_UserData_SelectPath",
+        "Value": "Unset localization item:General_UserData_SelectPath()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Subtitle",
+        "Value": "Configure your data and resource files",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Misc_DebugMode",
         "Value": "Developer Mode",
         "Mode": "ConstString",
@@ -560,8 +815,44 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Misc_DiagOptions",
+        "Value": "Diagnostics, Development and Debugging",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions_Subtitle",
+        "Value": "If you don\u0027t know what the options below mean, please do not modify them.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Misc_MakeDiagReport",
         "Value": "Generate Diagnostic Report",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_OpenSettingsJson",
+        "Value": "Opening settings JSON file...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_Reset",
+        "Value": "Reset Configuration and Resources",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -575,6 +866,51 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "Button/label text for restoring all configurations to default values",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserDisplayName",
+        "Value": "User Display Name",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserID",
+        "Value": "User Identifier",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Translation of \u0027\u7528\u6237\u6807\u8BC6\u7B26\u0027 - formal term for user ID in system contexts",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserInfo",
+        "Value": "Your Information",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserInfo_Subtitle",
+        "Value": "Identifies you for collaboration and asset management",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsNotSupported",
+        "Value": "Sorry, your platform does not support hardware acceleration configuration.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Informs the user that their system cannot enable hardware acceleration options",
         "HasValidationErrors": false
       },
       {
@@ -605,15 +941,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_SelectAccel",
-        "Value": "Select GPU for hardware acceleration during rendering/editing",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_LoadingAccels",
         "Value": "Loading available accelerators...",
         "Mode": "ConstString",
@@ -623,26 +950,8 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_AccelOptsNotSupported",
-        "Value": "Sorry, your platform does not support hardware acceleration configuration.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Informs the user that their system cannot enable hardware acceleration options",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode",
-        "Value": "Default Popup Mode",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Refers to the standard behavior for displaying popup windows in the interface",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Right",
-        "Value": "Right Sidebar",
+        "Id": "Render_SelectAccel",
+        "Value": "Select GPU for hardware acceleration during rendering/editing",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -650,194 +959,12 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Edit_PreferredPopupMode_Bottom",
-        "Value": "Bottom Panel",
+        "Id": "Diag_GenerateReport",
+        "Value": "Unset localization item:Diag_GenerateReport()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "UI option for popup appearing from bottom of screen",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Clip",
-        "Value": "Overlay",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Refers to a UI layer that appears on top of existing content, commonly used in popup or modal contexts",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Window",
-        "Value": "Independent window",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Refers to opening content in a separate/standalone window interface",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_FixedView",
-        "Value": "Fixed Window",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Refers to a non-resizable or fixed-position dialog/window mode in UI context",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_EditorPreference",
-        "Value": "Project Editor - Personalization",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Preferences for customizing the project editor interface",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserID",
-        "Value": "User Identifier",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Translation of \u0027\u7528\u6237\u6807\u8BC6\u7B26\u0027 - formal term for user ID in system contexts",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserDisplayName",
-        "Value": "User Display Name",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserInfo",
-        "Value": "Your Information",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserInfo_Subtitle",
-        "Value": "Identifies you for collaboration and asset management",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_OpenSettingsJson",
-        "Value": "Opening settings JSON file...",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions",
-        "Value": "Diagnostics, Development and Debugging",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions_Subtitle",
-        "Value": "If you don\u0027t know what the options below mean, please do not modify them.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_Reset",
-        "Value": "Reset Configuration and Resources",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_UserData_Subtitle",
-        "Value": "Configure your data and resource files",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_EditorPreference_Subtitle",
-        "Value": "Adjust the editor interface according to your preferences",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_UserData_Open",
-        "Value": "Open user data directory ({path})",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "path"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "path",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture",
-        "Value": "Override CurrentCulture to resolve the issue of inability to input Chinese/Japanese/Korean",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Technical note about solving IME input issues for CJK languages",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture_OverrideTo",
-        "Value": "Override to {name}",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "name",
-            "Value": ""
-          }
-        ],
-        "Comment": "Indicates changing the current setting to a specified value",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture_DontOverride",
-        "Value": "Do not override",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Translation of \u0027\u4E0D\u8981\u8986\u76D6\u0027 for language setting option",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -907,12 +1034,166 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Diag_InfoSection_App",
+        "Value": "Unset localization item:Diag_InfoSection_App()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_Hardware",
+        "Value": "Unset localization item:Diag_InfoSection_Hardware()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_OperatingSystem",
+        "Value": "Unset localization item:Diag_InfoSection_OperatingSystem()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_MakingReport",
+        "Value": "Unset localization item:Diag_MakingReport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_MakingReport_Sub",
+        "Value": "Unset localization item:Diag_MakingReport_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EditorPreference",
+        "Value": "\u9805\u76EE\u7DE8\u8F2F\u5668 \uFF0D \u500B\u4EBA\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EditorPreference_Subtitle",
+        "Value": "\u6309\u7167\u4F60\u7684\u559C\u597D\u8ABF\u6574\u7DE8\u8F2F\u5668\u4ECB\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode",
+        "Value": "\u9ED8\u8A8D\u5F48\u51FA\u6846\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Bottom",
+        "Value": "\u5E95\u90E8\u5074\u62C9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7528\u65BC\u63CF\u8FF0\u5F48\u51FA\u8996\u7A97\u5F9E\u5E95\u90E8\u5074\u908A\u5C55\u958B\u7684\u986F\u793A\u6A21\u5F0F",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Clip",
+        "Value": "\u758A\u52A0\u5C64",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_FixedView",
+        "Value": "\u56FA\u5B9A\u8996\u7A97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Right",
+        "Value": "\u53F3\u5074\u5074\u62C9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Window",
+        "Value": "\u7368\u7ACB\u8996\u7A97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "General_Language",
         "Value": "\u8A9E\u8A00/Language",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u4FDD\u6301\u539F\u6587\u7684\u540E\u7F00\u683C\u5F0F\uFF0C\u4EC5\u8F6C\u6362\u7B80\u4F53\u4E2D\u6587\u90E8\u5206\u4E3A\u7E41\u4F53\u4E2D\u6587",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture",
+        "Value": "\u8986\u5BEBCurrentCulture\u4EE5\u89E3\u6C7A\u7121\u6CD5\u8F38\u5165\u4E2D\u6587/\u65E5\u6587/\u97D3\u6587\u7684\u554F\u984C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture_DontOverride",
+        "Value": "\u4E0D\u8981\u8986\u84CB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7528\u65BC\u8A9E\u8A00\u8A2D\u5B9A\u9078\u9805\uFF0C\u8868\u793A\u4E0D\u5F37\u5236\u8986\u84CB\u7CFB\u7D71\u8A9E\u8A00\u8A2D\u5B9A",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture_OverrideTo",
+        "Value": "\u8986\u5BEB\u70BA {name}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u5C07\u7CFB\u7D71\u8A9E\u8A00\u8A2D\u5B9A\u8986\u84CB\u70BA\u6307\u5B9A\u8A9E\u8A00",
         "HasValidationErrors": false
       },
       {
@@ -930,6 +1211,25 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open",
+        "Value": "\u958B\u555F\u7528\u6236\u8CC7\u6599\u76EE\u9304 ({path})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
         "Comment": "",
         "HasValidationErrors": false
       },
@@ -989,8 +1289,44 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "General_UserData_SelectPath",
+        "Value": "Unset localization item:General_UserData_SelectPath()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Subtitle",
+        "Value": "\u914D\u7F6E\u4F60\u7684\u6578\u64DA\u548C\u8CC7\u6E90\u6587\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Misc_DebugMode",
         "Value": "\u958B\u767C\u8005\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions",
+        "Value": "\u8A3A\u65B7\u3001\u958B\u767C\u548C\u9664\u932F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions_Subtitle",
+        "Value": "\u5982\u679C\u60A8\u4E0D\u6E05\u695A\u4EE5\u4E0B\u9078\u9805\u7684\u610F\u7FA9\uFF0C\u8ACB\u4E0D\u8981\u8B8A\u66F4\u5B83\u5011",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1007,8 +1343,70 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Misc_OpenSettingsJson",
+        "Value": "\u958B\u555F\u8A2D\u5B9AJSON\u6A94\u6848...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_Reset",
+        "Value": "\u91CD\u7F6E\u914D\u7F6E\u548C\u8CC7\u6E90",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Misc_ResetSettings",
         "Value": "\u91CD\u8A2D\u6240\u6709\u7684\u8A2D\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserDisplayName",
+        "Value": "\u4F7F\u7528\u8005\u986F\u793A\u540D\u7A31",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserID",
+        "Value": "\u7528\u6236\u8B58\u5225\u78BC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserInfo",
+        "Value": "\u60A8\u7684\u8CC7\u8A0A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserInfo_Subtitle",
+        "Value": "\u7528\u65BC\u5354\u4F5C\u548C\u7D20\u6750\u7BA1\u7406\u6642\uFF0C\u8B58\u5225\u60A8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsNotSupported",
+        "Value": "\u5C0D\u4E0D\u8D77\uFF0C\u4F60\u7684\u5E73\u53F0\u4E0D\u652F\u63F4\u914D\u7F6E\u786C\u9AD4\u52A0\u901F\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1043,15 +1441,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_SelectAccel",
-        "Value": "\u9078\u53D6\u7528\u65BC\u6E32\u67D3/\u7DE8\u8F2F\u6642\u786C\u9AD4\u52A0\u901F\u7684GPU",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_LoadingAccels",
         "Value": "\u6B63\u5728\u53D6\u5F97\u53EF\u7528\u7684\u52A0\u901F\u5668\u4E2D...",
         "Mode": "ConstString",
@@ -1061,8 +1450,8 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_AccelOptsNotSupported",
-        "Value": "\u5C0D\u4E0D\u8D77\uFF0C\u4F60\u7684\u5E73\u53F0\u4E0D\u652F\u63F4\u914D\u7F6E\u786C\u9AD4\u52A0\u901F\u3002",
+        "Id": "Render_SelectAccel",
+        "Value": "\u9078\u53D6\u7528\u65BC\u6E32\u67D3/\u7DE8\u8F2F\u6642\u786C\u9AD4\u52A0\u901F\u7684GPU",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1070,211 +1459,12 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Edit_PreferredPopupMode",
-        "Value": "\u9ED8\u8A8D\u5F48\u51FA\u6846\u6A21\u5F0F",
+        "Id": "Diag_GenerateReport",
+        "Value": "Unset localization item:Diag_GenerateReport()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Right",
-        "Value": "\u53F3\u5074\u5074\u62C9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Bottom",
-        "Value": "\u5E95\u90E8\u5074\u62C9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u7528\u65BC\u63CF\u8FF0\u5F48\u51FA\u8996\u7A97\u5F9E\u5E95\u90E8\u5074\u908A\u5C55\u958B\u7684\u986F\u793A\u6A21\u5F0F",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Clip",
-        "Value": "\u758A\u52A0\u5C64",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Window",
-        "Value": "\u7368\u7ACB\u8996\u7A97",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_FixedView",
-        "Value": "\u56FA\u5B9A\u8996\u7A97",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_EditorPreference",
-        "Value": "\u9805\u76EE\u7DE8\u8F2F\u5668 \uFF0D \u500B\u4EBA\u5316",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserID",
-        "Value": "\u7528\u6236\u8B58\u5225\u78BC",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserDisplayName",
-        "Value": "\u4F7F\u7528\u8005\u986F\u793A\u540D\u7A31",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserInfo",
-        "Value": "\u60A8\u7684\u8CC7\u8A0A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserInfo_Subtitle",
-        "Value": "\u7528\u65BC\u5354\u4F5C\u548C\u7D20\u6750\u7BA1\u7406\u6642\uFF0C\u8B58\u5225\u60A8",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_OpenSettingsJson",
-        "Value": "\u958B\u555F\u8A2D\u5B9AJSON\u6A94\u6848...",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions",
-        "Value": "\u8A3A\u65B7\u3001\u958B\u767C\u548C\u9664\u932F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions_Subtitle",
-        "Value": "\u5982\u679C\u60A8\u4E0D\u6E05\u695A\u4EE5\u4E0B\u9078\u9805\u7684\u610F\u7FA9\uFF0C\u8ACB\u4E0D\u8981\u8B8A\u66F4\u5B83\u5011",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_Reset",
-        "Value": "\u91CD\u7F6E\u914D\u7F6E\u548C\u8CC7\u6E90",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_UserData_Subtitle",
-        "Value": "\u914D\u7F6E\u4F60\u7684\u6578\u64DA\u548C\u8CC7\u6E90\u6587\u4EF6",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_EditorPreference_Subtitle",
-        "Value": "\u6309\u7167\u4F60\u7684\u559C\u597D\u8ABF\u6574\u7DE8\u8F2F\u5668\u4ECB\u9762",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_UserData_Open",
-        "Value": "\u958B\u555F\u7528\u6236\u8CC7\u6599\u76EE\u9304 ({path})",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "path"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "path",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture",
-        "Value": "\u8986\u5BEBCurrentCulture\u4EE5\u89E3\u6C7A\u7121\u6CD5\u8F38\u5165\u4E2D\u6587/\u65E5\u6587/\u97D3\u6587\u7684\u554F\u984C",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture_OverrideTo",
-        "Value": "\u8986\u5BEB\u70BA {name}",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "name",
-            "Value": ""
-          }
-        ],
-        "Comment": "\u5C07\u7CFB\u7D71\u8A9E\u8A00\u8A2D\u5B9A\u8986\u84CB\u70BA\u6307\u5B9A\u8A9E\u8A00",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture_DontOverride",
-        "Value": "\u4E0D\u8981\u8986\u84CB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u7528\u65BC\u8A9E\u8A00\u8A2D\u5B9A\u9078\u9805\uFF0C\u8868\u793A\u4E0D\u5F37\u5236\u8986\u84CB\u7CFB\u7D71\u8A9E\u8A00\u8A2D\u5B9A",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -1344,12 +1534,166 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Diag_InfoSection_App",
+        "Value": "Unset localization item:Diag_InfoSection_App()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_Hardware",
+        "Value": "Unset localization item:Diag_InfoSection_Hardware()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_OperatingSystem",
+        "Value": "Unset localization item:Diag_InfoSection_OperatingSystem()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_MakingReport",
+        "Value": "Unset localization item:Diag_MakingReport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_MakingReport_Sub",
+        "Value": "Unset localization item:Diag_MakingReport_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EditorPreference",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u30A8\u30C7\u30A3\u30BF\u30FC - \u500B\u4EBA\u8A2D\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Project editor personalization/preferences",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EditorPreference_Subtitle",
+        "Value": "\u304A\u597D\u307F\u306B\u5408\u308F\u305B\u3066\u30A8\u30C7\u30A3\u30BF\u30FC\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u3092\u8ABF\u6574",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode",
+        "Value": "\u30C7\u30D5\u30A9\u30EB\u30C8\u306E\u30DD\u30C3\u30D7\u30A2\u30C3\u30D7\u30E2\u30FC\u30C9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: An error occurred while sending the request.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Bottom",
+        "Value": "\u30DC\u30C8\u30E0\u30B5\u30A4\u30C9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5E95\u90E8\u4FA7\u62C9\u83DC\u5355\u7684\u663E\u793A\u4F4D\u7F6E\u9009\u9879",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Clip",
+        "Value": "\u30AA\u30FC\u30D0\u30FC\u30EC\u30A4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "UI\u8981\u7D20\u304C\u91CD\u306D\u3066\u8868\u793A\u3055\u308C\u308B\u30E2\u30FC\u30C9\u3092\u6307\u3059",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_FixedView",
+        "Value": "\u56FA\u5B9A\u30A6\u30A3\u30F3\u30C9\u30A6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Right",
+        "Value": "\u53F3\u5074\u30B5\u30A4\u30C9\u30D0\u30FC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "UI element position indicator for right-side panel/popup",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Window",
+        "Value": "\u72EC\u7ACB\u30A6\u30A3\u30F3\u30C9\u30A6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Standalone window mode for popup display",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "General_Language",
         "Value": "\u8A00\u8A9E/Language",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "Translation of \u0027Language\u0027 with preserved \u0027/Language\u0027 suffix as requested",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture",
+        "Value": "CurrentCulture\u3092\u4E0A\u66F8\u304D\u3057\u3066\u4E2D\u56FD\u8A9E/\u65E5\u672C\u8A9E/\u97D3\u56FD\u8A9E\u306E\u5165\u529B\u554F\u984C\u3092\u89E3\u6C7A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Language override setting to resolve CJK input issues",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture_DontOverride",
+        "Value": "\u4E0A\u66F8\u304D\u3057\u306A\u3044",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Do not override the language setting",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture_OverrideTo",
+        "Value": "{name} \u306B\u8A2D\u5B9A",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Override culture/language setting to specified value",
         "HasValidationErrors": false
       },
       {
@@ -1367,6 +1711,25 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u3092\u958B\u304F ({path})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
         "Comment": "",
         "HasValidationErrors": false
       },
@@ -1426,12 +1789,48 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "General_UserData_SelectPath",
+        "Value": "Unset localization item:General_UserData_SelectPath()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Subtitle",
+        "Value": "\u30C7\u30FC\u30BF\u3068\u30EA\u30BD\u30FC\u30B9\u30D5\u30A1\u30A4\u30EB\u306E\u8A2D\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Configure your data and resource files",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Misc_DebugMode",
         "Value": "\u958B\u767A\u8005\u30E2\u30FC\u30C9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions",
+        "Value": "\u8A3A\u65AD\u30FB\u958B\u767A\u30FB\u30C7\u30D0\u30C3\u30B0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions_Subtitle",
+        "Value": "\u4EE5\u4E0B\u306E\u30AA\u30D7\u30B7\u30E7\u30F3\u306E\u610F\u5473\u304C\u5206\u304B\u3089\u306A\u3044\u5834\u5408\u306F\u3001\u5909\u66F4\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Technical settings warning message",
         "HasValidationErrors": false
       },
       {
@@ -1444,12 +1843,75 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Misc_OpenSettingsJson",
+        "Value": "\u8A2D\u5B9AJSON\u30D5\u30A1\u30A4\u30EB\u3092\u958B\u304F...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Open the settings JSON file",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_Reset",
+        "Value": "\u8A2D\u5B9A\u3068\u30EA\u30BD\u30FC\u30B9\u3092\u30EA\u30BB\u30C3\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Configuration and resources reset",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Misc_ResetSettings",
         "Value": "\u3059\u3079\u3066\u306E\u8A2D\u5B9A\u3092\u30EA\u30BB\u30C3\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "Reset all settings to their default values",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserDisplayName",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u8868\u793A\u540D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserID",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u8B58\u5225\u5B50",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserInfo",
+        "Value": "\u3042\u306A\u305F\u306E\u60C5\u5831",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u30E6\u30FC\u30B6\u30FC\u306E\u500B\u4EBA\u60C5\u5831\u3092\u6307\u3059\u4E00\u822C\u7684\u306A\u8868\u793A",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserInfo_Subtitle",
+        "Value": "\u5171\u540C\u4F5C\u696D\u3084\u7D20\u6750\u7BA1\u7406\u306E\u969B\u306B\u3001\u3042\u306A\u305F\u3092\u8B58\u5225\u3057\u307E\u3059",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "[Translation Error]: An error occurred while sending the request.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsNotSupported",
+        "Value": "\u7533\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093\u304C\u3001\u304A\u4F7F\u3044\u306E\u30D7\u30E9\u30C3\u30C8\u30D5\u30A9\u30FC\u30E0\u306F\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u306E\u8A2D\u5B9A\u3092\u30B5\u30DD\u30FC\u30C8\u3057\u3066\u3044\u307E\u305B\u3093\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -1480,15 +1942,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_SelectAccel",
-        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0/\u7DE8\u96C6\u6642\u306E\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u306B\u4F7F\u7528\u3059\u308BGPU\u3092\u9078\u629E",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_LoadingAccels",
         "Value": "\u5229\u7528\u53EF\u80FD\u306A\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30BF\u30FC\u3092\u53D6\u5F97\u4E2D...",
         "Mode": "ConstString",
@@ -1498,8 +1951,8 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_AccelOptsNotSupported",
-        "Value": "\u7533\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093\u304C\u3001\u304A\u4F7F\u3044\u306E\u30D7\u30E9\u30C3\u30C8\u30D5\u30A9\u30FC\u30E0\u306F\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u306E\u8A2D\u5B9A\u3092\u30B5\u30DD\u30FC\u30C8\u3057\u3066\u3044\u307E\u305B\u3093\u3002",
+        "Id": "Render_SelectAccel",
+        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0/\u7DE8\u96C6\u6642\u306E\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u306B\u4F7F\u7528\u3059\u308BGPU\u3092\u9078\u629E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1507,212 +1960,12 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Edit_PreferredPopupMode",
-        "Value": "\u30C7\u30D5\u30A9\u30EB\u30C8\u306E\u30DD\u30C3\u30D7\u30A2\u30C3\u30D7\u30E2\u30FC\u30C9",
+        "Id": "Diag_GenerateReport",
+        "Value": "Unset localization item:Diag_GenerateReport()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: An error occurred while sending the request.",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Right",
-        "Value": "\u53F3\u5074\u30B5\u30A4\u30C9\u30D0\u30FC",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "UI element position indicator for right-side panel/popup",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Bottom",
-        "Value": "\u30DC\u30C8\u30E0\u30B5\u30A4\u30C9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u5E95\u90E8\u4FA7\u62C9\u83DC\u5355\u7684\u663E\u793A\u4F4D\u7F6E\u9009\u9879",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Clip",
-        "Value": "\u30AA\u30FC\u30D0\u30FC\u30EC\u30A4",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "UI\u8981\u7D20\u304C\u91CD\u306D\u3066\u8868\u793A\u3055\u308C\u308B\u30E2\u30FC\u30C9\u3092\u6307\u3059",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Window",
-        "Value": "\u72EC\u7ACB\u30A6\u30A3\u30F3\u30C9\u30A6",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Standalone window mode for popup display",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_FixedView",
-        "Value": "\u56FA\u5B9A\u30A6\u30A3\u30F3\u30C9\u30A6",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_EditorPreference",
-        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u30A8\u30C7\u30A3\u30BF\u30FC - \u500B\u4EBA\u8A2D\u5B9A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Project editor personalization/preferences",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserID",
-        "Value": "\u30E6\u30FC\u30B6\u30FC\u8B58\u5225\u5B50",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserDisplayName",
-        "Value": "\u30E6\u30FC\u30B6\u30FC\u8868\u793A\u540D",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserInfo",
-        "Value": "\u3042\u306A\u305F\u306E\u60C5\u5831",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u30E6\u30FC\u30B6\u30FC\u306E\u500B\u4EBA\u60C5\u5831\u3092\u6307\u3059\u4E00\u822C\u7684\u306A\u8868\u793A",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserInfo_Subtitle",
-        "Value": "\u5171\u540C\u4F5C\u696D\u3084\u7D20\u6750\u7BA1\u7406\u306E\u969B\u306B\u3001\u3042\u306A\u305F\u3092\u8B58\u5225\u3057\u307E\u3059",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "[Translation Error]: An error occurred while sending the request.",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_OpenSettingsJson",
-        "Value": "\u8A2D\u5B9AJSON\u30D5\u30A1\u30A4\u30EB\u3092\u958B\u304F...",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Open the settings JSON file",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions",
-        "Value": "\u8A3A\u65AD\u30FB\u958B\u767A\u30FB\u30C7\u30D0\u30C3\u30B0",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions_Subtitle",
-        "Value": "\u4EE5\u4E0B\u306E\u30AA\u30D7\u30B7\u30E7\u30F3\u306E\u610F\u5473\u304C\u5206\u304B\u3089\u306A\u3044\u5834\u5408\u306F\u3001\u5909\u66F4\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Technical settings warning message",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_Reset",
-        "Value": "\u8A2D\u5B9A\u3068\u30EA\u30BD\u30FC\u30B9\u3092\u30EA\u30BB\u30C3\u30C8",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Configuration and resources reset",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_UserData_Subtitle",
-        "Value": "\u30C7\u30FC\u30BF\u3068\u30EA\u30BD\u30FC\u30B9\u30D5\u30A1\u30A4\u30EB\u306E\u8A2D\u5B9A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Configure your data and resource files",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_EditorPreference_Subtitle",
-        "Value": "\u304A\u597D\u307F\u306B\u5408\u308F\u305B\u3066\u30A8\u30C7\u30A3\u30BF\u30FC\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u3092\u8ABF\u6574",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_UserData_Open",
-        "Value": "\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u3092\u958B\u304F ({path})",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "path"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "path",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture",
-        "Value": "CurrentCulture\u3092\u4E0A\u66F8\u304D\u3057\u3066\u4E2D\u56FD\u8A9E/\u65E5\u672C\u8A9E/\u97D3\u56FD\u8A9E\u306E\u5165\u529B\u554F\u984C\u3092\u89E3\u6C7A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Language override setting to resolve CJK input issues",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture_OverrideTo",
-        "Value": "{name} \u306B\u8A2D\u5B9A",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "name",
-            "Value": ""
-          }
-        ],
-        "Comment": "Override culture/language setting to specified value",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture_DontOverride",
-        "Value": "\u4E0A\u66F8\u304D\u3057\u306A\u3044",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Do not override the language setting",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -1782,12 +2035,166 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Diag_InfoSection_App",
+        "Value": "Unset localization item:Diag_InfoSection_App()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_Hardware",
+        "Value": "Unset localization item:Diag_InfoSection_Hardware()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_OperatingSystem",
+        "Value": "Unset localization item:Diag_InfoSection_OperatingSystem()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_MakingReport",
+        "Value": "Unset localization item:Diag_MakingReport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_MakingReport_Sub",
+        "Value": "Unset localization item:Diag_MakingReport_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EditorPreference",
+        "Value": "\uD504\uB85C\uC81D\uD2B8 \uD3B8\uC9D1\uAE30 - \uB9DE\uCDA4 \uC124\uC815",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\uD504\uB85C\uC81D\uD2B8 \uD3B8\uC9D1\uAE30\uC758 \uAC1C\uC778\uD654 \uC124\uC815\uC744 \uB098\uD0C0\uB0C4",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EditorPreference_Subtitle",
+        "Value": "\uC5D0\uB514\uD130 \uC778\uD130\uD398\uC774\uC2A4\uB97C \uB2F9\uC2E0\uC758 \uC120\uD638\uC5D0 \uB9DE\uAC8C \uC870\uC815\uD558\uC138\uC694",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode",
+        "Value": "\uAE30\uBCF8 \uD31D\uC5C5 \uBAA8\uB4DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Default popup mode setting",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Bottom",
+        "Value": "\uD558\uB2E8 \uCE21\uBA74 \uD31D\uC5C5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Popup display position preference - bottom side",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Clip",
+        "Value": "\uC624\uBC84\uB808\uC774",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_FixedView",
+        "Value": "\uACE0\uC815 \uBDF0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Right",
+        "Value": "\uC624\uB978\uCABD \uC2AC\uB77C\uC774\uB4DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Window",
+        "Value": "\uB3C5\uB9BD \uCC3D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "General_Language",
         "Value": "\uC5B8\uC5B4/Language",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "Translation of \u0027Language\u0027 while preserving the \u0027/Language\u0027 suffix as requested",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture",
+        "Value": "\uC911\uAD6D\uC5B4/\uC77C\uBCF8\uC5B4/\uD55C\uAD6D\uC5B4 \uC785\uB825 \uBB38\uC81C \uD574\uACB0\uC744 \uC704\uD574 CurrentCulture \uC7AC\uC815\uC758",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Override CurrentCulture to resolve Chinese/Japanese/Korean input issues",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture_DontOverride",
+        "Value": "\uB36E\uC5B4\uC4F0\uC9C0 \uC54A\uC74C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\uC5B8\uC5B4 \uC124\uC815\uC744 \uC7AC\uC815\uC758\uD558\uC9C0 \uC54A\uB294 \uC635\uC158",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture_OverrideTo",
+        "Value": "{name}(\uC73C)\uB85C \uB36E\uC5B4\uC4F0\uAE30",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Override to specific culture/language",
         "HasValidationErrors": false
       },
       {
@@ -1806,6 +2213,25 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uAD00\uB9AC \uD398\uC774\uC9C0\uB97C \uB098\uD0C0\uB0B4\uB294 \uC81C\uBAA9",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open",
+        "Value": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uB514\uB809\uD1A0\uB9AC \uC5F4\uAE30 ({path})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "Opens the user data directory",
         "HasValidationErrors": false
       },
       {
@@ -1864,12 +2290,48 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "General_UserData_SelectPath",
+        "Value": "Unset localization item:General_UserData_SelectPath()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Subtitle",
+        "Value": "\uB370\uC774\uD130 \uBC0F \uB9AC\uC18C\uC2A4 \uD30C\uC77C \uAD6C\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130\uC640 \uB9AC\uC18C\uC2A4 \uD30C\uC77C\uC744 \uC124\uC815\uD558\uB294 \uB0B4\uC6A9",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Misc_DebugMode",
         "Value": "\uAC1C\uBC1C\uC790 \uBAA8\uB4DC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "Indicates the software is running in developer/debug mode",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions",
+        "Value": "\uC9C4\uB2E8, \uAC1C\uBC1C \uBC0F \uB514\uBC84\uAE45",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions_Subtitle",
+        "Value": "\uC544\uB798 \uC635\uC158\uC758 \uC758\uBBF8\uB97C \uBAA8\uB974\uC2E0\uB2E4\uBA74 \uBCC0\uACBD\uD558\uC9C0 \uB9C8\uC2ED\uC2DC\uC624.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "User guidance for diagnostic options",
         "HasValidationErrors": false
       },
       {
@@ -1882,12 +2344,75 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Misc_OpenSettingsJson",
+        "Value": "\uC124\uC815 JSON \uD30C\uC77C \uC5F4\uAE30...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_Reset",
+        "Value": "\uAD6C\uC131 \uBC0F \uB9AC\uC18C\uC2A4 \uC7AC\uC124\uC815",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Reset configurations and resources",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Misc_ResetSettings",
         "Value": "\uBAA8\uB4E0 \uC124\uC815 \uCD08\uAE30\uD654",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "Reset all settings to default values",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserDisplayName",
+        "Value": "\uC0AC\uC6A9\uC790 \uD45C\uC2DC \uC774\uB984",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserID",
+        "Value": "\uC0AC\uC6A9\uC790 \uC2DD\uBCC4\uC790",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserInfo",
+        "Value": "\uD68C\uC6D0 \uC815\uBCF4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Displays the user\u0027s information section",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserInfo_Subtitle",
+        "Value": "\uD611\uC5C5 \uBC0F \uC790\uB8CC \uAD00\uB9AC \uC2DC \uADC0\uD558\uB97C \uC2DD\uBCC4\uD558\uB294 \uB370 \uC0AC\uC6A9\uB429\uB2C8\uB2E4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "User identification for collaboration and material management purposes",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsNotSupported",
+        "Value": "\uC8C4\uC1A1\uD569\uB2C8\uB2E4. \uC0AC\uC6A9 \uC911\uC778 \uD50C\uB7AB\uD3FC\uC5D0\uC11C \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D \uAD6C\uC131\uC744 \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Hardware acceleration configuration not supported on current platform",
         "HasValidationErrors": false
       },
       {
@@ -1918,15 +2443,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_SelectAccel",
-        "Value": "\uB80C\uB354\uB9C1/\uD3B8\uC9D1 \uC2DC \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D\uC5D0 \uC0AC\uC6A9\uD560 GPU \uC120\uD0DD",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_LoadingAccels",
         "Value": "\uC0AC\uC6A9 \uAC00\uB2A5\uD55C \uAC00\uC18D\uAE30 \uAC00\uC838\uC624\uB294 \uC911...",
         "Mode": "ConstString",
@@ -1936,26 +2452,8 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_AccelOptsNotSupported",
-        "Value": "\uC8C4\uC1A1\uD569\uB2C8\uB2E4. \uC0AC\uC6A9 \uC911\uC778 \uD50C\uB7AB\uD3FC\uC5D0\uC11C \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D \uAD6C\uC131\uC744 \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Hardware acceleration configuration not supported on current platform",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode",
-        "Value": "\uAE30\uBCF8 \uD31D\uC5C5 \uBAA8\uB4DC",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Default popup mode setting",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Right",
-        "Value": "\uC624\uB978\uCABD \uC2AC\uB77C\uC774\uB4DC",
+        "Id": "Render_SelectAccel",
+        "Value": "\uB80C\uB354\uB9C1/\uD3B8\uC9D1 \uC2DC \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D\uC5D0 \uC0AC\uC6A9\uD560 GPU \uC120\uD0DD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1963,194 +2461,12 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Edit_PreferredPopupMode_Bottom",
-        "Value": "\uD558\uB2E8 \uCE21\uBA74 \uD31D\uC5C5",
+        "Id": "Diag_GenerateReport",
+        "Value": "Unset localization item:Diag_GenerateReport()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Popup display position preference - bottom side",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Clip",
-        "Value": "\uC624\uBC84\uB808\uC774",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Window",
-        "Value": "\uB3C5\uB9BD \uCC3D",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_FixedView",
-        "Value": "\uACE0\uC815 \uBDF0",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_EditorPreference",
-        "Value": "\uD504\uB85C\uC81D\uD2B8 \uD3B8\uC9D1\uAE30 - \uB9DE\uCDA4 \uC124\uC815",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\uD504\uB85C\uC81D\uD2B8 \uD3B8\uC9D1\uAE30\uC758 \uAC1C\uC778\uD654 \uC124\uC815\uC744 \uB098\uD0C0\uB0C4",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserID",
-        "Value": "\uC0AC\uC6A9\uC790 \uC2DD\uBCC4\uC790",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserDisplayName",
-        "Value": "\uC0AC\uC6A9\uC790 \uD45C\uC2DC \uC774\uB984",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserInfo",
-        "Value": "\uD68C\uC6D0 \uC815\uBCF4",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Displays the user\u0027s information section",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserInfo_Subtitle",
-        "Value": "\uD611\uC5C5 \uBC0F \uC790\uB8CC \uAD00\uB9AC \uC2DC \uADC0\uD558\uB97C \uC2DD\uBCC4\uD558\uB294 \uB370 \uC0AC\uC6A9\uB429\uB2C8\uB2E4",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "User identification for collaboration and material management purposes",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_OpenSettingsJson",
-        "Value": "\uC124\uC815 JSON \uD30C\uC77C \uC5F4\uAE30...",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions",
-        "Value": "\uC9C4\uB2E8, \uAC1C\uBC1C \uBC0F \uB514\uBC84\uAE45",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions_Subtitle",
-        "Value": "\uC544\uB798 \uC635\uC158\uC758 \uC758\uBBF8\uB97C \uBAA8\uB974\uC2E0\uB2E4\uBA74 \uBCC0\uACBD\uD558\uC9C0 \uB9C8\uC2ED\uC2DC\uC624.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "User guidance for diagnostic options",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_Reset",
-        "Value": "\uAD6C\uC131 \uBC0F \uB9AC\uC18C\uC2A4 \uC7AC\uC124\uC815",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Reset configurations and resources",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_UserData_Subtitle",
-        "Value": "\uB370\uC774\uD130 \uBC0F \uB9AC\uC18C\uC2A4 \uD30C\uC77C \uAD6C\uC131",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130\uC640 \uB9AC\uC18C\uC2A4 \uD30C\uC77C\uC744 \uC124\uC815\uD558\uB294 \uB0B4\uC6A9",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_EditorPreference_Subtitle",
-        "Value": "\uC5D0\uB514\uD130 \uC778\uD130\uD398\uC774\uC2A4\uB97C \uB2F9\uC2E0\uC758 \uC120\uD638\uC5D0 \uB9DE\uAC8C \uC870\uC815\uD558\uC138\uC694",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_UserData_Open",
-        "Value": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uB514\uB809\uD1A0\uB9AC \uC5F4\uAE30 ({path})",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "path"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "path",
-            "Value": ""
-          }
-        ],
-        "Comment": "Opens the user data directory",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture",
-        "Value": "\uC911\uAD6D\uC5B4/\uC77C\uBCF8\uC5B4/\uD55C\uAD6D\uC5B4 \uC785\uB825 \uBB38\uC81C \uD574\uACB0\uC744 \uC704\uD574 CurrentCulture \uC7AC\uC815\uC758",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Override CurrentCulture to resolve Chinese/Japanese/Korean input issues",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture_OverrideTo",
-        "Value": "{name}(\uC73C)\uB85C \uB36E\uC5B4\uC4F0\uAE30",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "name",
-            "Value": ""
-          }
-        ],
-        "Comment": "Override to specific culture/language",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture_DontOverride",
-        "Value": "\uB36E\uC5B4\uC4F0\uC9C0 \uC54A\uC74C",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\uC5B8\uC5B4 \uC124\uC815\uC744 \uC7AC\uC815\uC758\uD558\uC9C0 \uC54A\uB294 \uC635\uC158",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -2220,12 +2536,166 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Diag_InfoSection_App",
+        "Value": "Unset localization item:Diag_InfoSection_App()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_Hardware",
+        "Value": "Unset localization item:Diag_InfoSection_Hardware()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_OperatingSystem",
+        "Value": "Unset localization item:Diag_InfoSection_OperatingSystem()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_MakingReport",
+        "Value": "Unset localization item:Diag_MakingReport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_MakingReport_Sub",
+        "Value": "Unset localization item:Diag_MakingReport_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EditorPreference",
+        "Value": "\u00C9diteur de projet - Personnalisation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Pr\u00E9f\u00E9rences de personnalisation de l\u0027\u00E9diteur de projet",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EditorPreference_Subtitle",
+        "Value": "Personnalisez l\u0027interface de l\u0027\u00E9diteur selon vos pr\u00E9f\u00E9rences",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode",
+        "Value": "Mode pop-up par d\u00E9faut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Bottom",
+        "Value": "Panneau coulissant du bas",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Clip",
+        "Value": "Superposition",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_FixedView",
+        "Value": "Fen\u00EAtre fixe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Right",
+        "Value": "Menu lat\u00E9ral droit",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Interface control describing a slide-out panel from the right side",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreferredPopupMode_Window",
+        "Value": "Fen\u00EAtre ind\u00E9pendante",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "General_Language",
         "Value": "Langue/Language",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "Keep the /Language suffix as specified in the comment",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture",
+        "Value": "Remplacer CurrentCulture pour r\u00E9soudre le probl\u00E8me de saisie du chinois/japonais/cor\u00E9en",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Technical setting description for overriding culture to fix CJK input issues",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture_DontOverride",
+        "Value": "Ne pas remplacer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_OverrideCulture_OverrideTo",
+        "Value": "Remplacer par {name}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Translation of \u0027\u8986\u76D6\u5230\u0027 in configuration context - indicates overriding settings to the specified name",
         "HasValidationErrors": false
       },
       {
@@ -2244,6 +2714,25 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "Traduction directe de \u0027\u7BA1\u7406\u7528\u6237\u6570\u636E\u0027 en fran\u00E7ais, correspondant \u00E0 l\u0027action d\u0027administration des donn\u00E9es d\u0027utilisateur dans une interface logicielle.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open",
+        "Value": "Ouvrir le r\u00E9pertoire des donn\u00E9es utilisateur ({path})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -2302,12 +2791,48 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "General_UserData_SelectPath",
+        "Value": "Unset localization item:General_UserData_SelectPath()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Subtitle",
+        "Value": "Configurer vos donn\u00E9es et fichiers de ressources",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Misc_DebugMode",
         "Value": "Mode d\u00E9veloppeur",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "Translation of \u0027\u5F00\u53D1\u8005\u6A21\u5F0F\u0027 to French, maintaining the formal software UI context",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions",
+        "Value": "Diagnostic, d\u00E9veloppement et d\u00E9bogage",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions_Subtitle",
+        "Value": "Si vous ne savez pas ce que signifient les options ci-dessous, ne les modifiez pas.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Technical warning about not modifying unknown options",
         "HasValidationErrors": false
       },
       {
@@ -2320,12 +2845,75 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Misc_OpenSettingsJson",
+        "Value": "Ouverture du fichier JSON de param\u00E8tres...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_Reset",
+        "Value": "R\u00E9initialiser la configuration et les ressources",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Option pour remettre \u00E0 z\u00E9ro les param\u00E8tres et ressources du syst\u00E8me",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Misc_ResetSettings",
         "Value": "R\u00E9initialiser tous les param\u00E8tres",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserDisplayName",
+        "Value": "Nom d\u0027affichage de l\u0027utilisateur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserID",
+        "Value": "Identifiant d\u0027utilisateur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserInfo",
+        "Value": "Vos informations",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_UserInfo_Subtitle",
+        "Value": "Pour vous identifier lors de la collaboration et de la gestion des ressources",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "French translation for user identification in collaborative and resource management contexts",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AccelOptsNotSupported",
+        "Value": "D\u00E9sol\u00E9, votre plateforme ne prend pas en charge la configuration de l\u0027acc\u00E9l\u00E9ration mat\u00E9rielle.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Error message indicating that hardware acceleration configuration is not supported on the user\u0027s platform",
         "HasValidationErrors": false
       },
       {
@@ -2356,15 +2944,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_SelectAccel",
-        "Value": "S\u00E9lectionnez le GPU pour l\u0027acc\u00E9l\u00E9ration mat\u00E9rielle lors du rendu/\u00E9dition",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_LoadingAccels",
         "Value": "R\u00E9cup\u00E9ration des acc\u00E9l\u00E9rateurs disponibles...",
         "Mode": "ConstString",
@@ -2374,17 +2953,8 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_AccelOptsNotSupported",
-        "Value": "D\u00E9sol\u00E9, votre plateforme ne prend pas en charge la configuration de l\u0027acc\u00E9l\u00E9ration mat\u00E9rielle.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Error message indicating that hardware acceleration configuration is not supported on the user\u0027s platform",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode",
-        "Value": "Mode pop-up par d\u00E9faut",
+        "Id": "Render_SelectAccel",
+        "Value": "S\u00E9lectionnez le GPU pour l\u0027acc\u00E9l\u00E9ration mat\u00E9rielle lors du rendu/\u00E9dition",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2392,203 +2962,12 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Edit_PreferredPopupMode_Right",
-        "Value": "Menu lat\u00E9ral droit",
+        "Id": "Diag_GenerateReport",
+        "Value": "Unset localization item:Diag_GenerateReport()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Interface control describing a slide-out panel from the right side",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Bottom",
-        "Value": "Panneau coulissant du bas",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Clip",
-        "Value": "Superposition",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_Window",
-        "Value": "Fen\u00EAtre ind\u00E9pendante",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_PreferredPopupMode_FixedView",
-        "Value": "Fen\u00EAtre fixe",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_EditorPreference",
-        "Value": "\u00C9diteur de projet - Personnalisation",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Pr\u00E9f\u00E9rences de personnalisation de l\u0027\u00E9diteur de projet",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserID",
-        "Value": "Identifiant d\u0027utilisateur",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserDisplayName",
-        "Value": "Nom d\u0027affichage de l\u0027utilisateur",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserInfo",
-        "Value": "Vos informations",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_UserInfo_Subtitle",
-        "Value": "Pour vous identifier lors de la collaboration et de la gestion des ressources",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "French translation for user identification in collaborative and resource management contexts",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_OpenSettingsJson",
-        "Value": "Ouverture du fichier JSON de param\u00E8tres...",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions",
-        "Value": "Diagnostic, d\u00E9veloppement et d\u00E9bogage",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions_Subtitle",
-        "Value": "Si vous ne savez pas ce que signifient les options ci-dessous, ne les modifiez pas.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Technical warning about not modifying unknown options",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_Reset",
-        "Value": "R\u00E9initialiser la configuration et les ressources",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Option pour remettre \u00E0 z\u00E9ro les param\u00E8tres et ressources du syst\u00E8me",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_UserData_Subtitle",
-        "Value": "Configurer vos donn\u00E9es et fichiers de ressources",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_EditorPreference_Subtitle",
-        "Value": "Personnalisez l\u0027interface de l\u0027\u00E9diteur selon vos pr\u00E9f\u00E9rences",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_UserData_Open",
-        "Value": "Ouvrir le r\u00E9pertoire des donn\u00E9es utilisateur ({path})",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "path"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "path",
-            "Value": ""
-          }
-        ],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture",
-        "Value": "Remplacer CurrentCulture pour r\u00E9soudre le probl\u00E8me de saisie du chinois/japonais/cor\u00E9en",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Technical setting description for overriding culture to fix CJK input issues",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture_OverrideTo",
-        "Value": "Remplacer par {name}",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "name",
-            "Value": ""
-          }
-        ],
-        "Comment": "Translation of \u0027\u8986\u76D6\u5230\u0027 in configuration context - indicates overriding settings to the specified name",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_OverrideCulture_DontOverride",
-        "Value": "Ne pas remplacer",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -2655,6 +3034,51 @@
           }
         ],
         "Comment": "\u6587\u8A00\u6587\u7248\u672C\u7684\u98CE\u9669\u786E\u8BA4\u63D0\u793A\uFF0C\u0027\u77E3\u0027\u4E3A\u53E5\u672B\u8BED\u6C14\u8BCD\uFF0C\u0027\u4E4E\u0027\u8868\u7591\u95EE",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_App",
+        "Value": "Unset localization item:Diag_InfoSection_App()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_Hardware",
+        "Value": "Unset localization item:Diag_InfoSection_Hardware()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_InfoSection_OperatingSystem",
+        "Value": "Unset localization item:Diag_InfoSection_OperatingSystem()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_MakingReport",
+        "Value": "Unset localization item:Diag_MakingReport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_MakingReport_Sub",
+        "Value": "Unset localization item:Diag_MakingReport_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
@@ -2868,6 +3292,15 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "General_UserData_SelectPath",
+        "Value": "Unset localization item:General_UserData_SelectPath()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "General_UserData_Subtitle",
         "Value": "\u8BBE\u5C14\u6570\u636E\u4E0E\u8D44\u6750\u6587\u724D",
         "Mode": "ConstString",
@@ -3027,6 +3460,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "Select GPU for hardware acceleration during rendering/editing",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_GenerateReport",
+        "Value": "Unset localization item:Diag_GenerateReport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]
