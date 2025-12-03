@@ -60,6 +60,7 @@
                 <Button x:Name="AssetPanelButton" Text="Assets" Clicked="AssetPanelButton_Clicked"/>
                 <Button Clicked="OnRefreshButtonClicked" Text="Refresh"/>
                 <Button x:Name="AddTextButton" Text="Add a text" Clicked="AddTextButton_Clicked"/>
+                <Picker x:Name="ResolutionPicker" WidthRequest="250" SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
                 <Button 
 x:Name="AddClip"
 Text="Add clip"
@@ -118,6 +119,8 @@ Clicked="AddClip_Clicked" />
 
             <HorizontalStackLayout HorizontalOptions="End" Grid.Column="3">
                 <Label x:Name="AlternativeStatusLabel" Text="" />
+                <VerticalStackLayout x:Name="ComputeView" />
+
             </HorizontalStackLayout>
 
         </Grid>

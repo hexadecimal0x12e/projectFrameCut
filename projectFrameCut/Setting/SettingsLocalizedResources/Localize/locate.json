@@ -68,6 +68,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Diag_GenerateReport",
+        "Value": "\u5BFC\u51FA\u8BCA\u65AD\u62A5\u544A...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Diag_InfoSection_App",
         "Value": "\u5E94\u7528\u7A0B\u5E8F\u4FE1\u606F",
         "Mode": "ConstString",
@@ -102,6 +110,14 @@
       {
         "Id": "Diag_MakingReport_Sub",
         "Value": "\u8BF7\u4E0D\u8981\u79BB\u5F00\u6B64\u754C\u9762\uFF0C\u6216\u8005\u9000\u51FA\u5E94\u7528\u7A0B\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_OpenBaseData",
+        "Value": "\u6253\u5F00\u5E94\u7528\u7A0B\u5E8F\u6570\u636E\u76EE\u5F55...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -449,22 +465,6 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
-      },
-      {
-        "Id": "Diag_GenerateReport",
-        "Value": "\u5BFC\u51FA\u8BCA\u65AD\u62A5\u544A...",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Diag_OpenBaseData",
-        "Value": "\u6253\u5F00\u5E94\u7528\u7A0B\u5E8F\u6570\u636E\u76EE\u5F55...",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
       }
     ],
     "en-US": [
@@ -534,47 +534,47 @@
       },
       {
         "Id": "Diag_InfoSection_App",
-        "Value": "Unset localization item:Diag_InfoSection_App()",
+        "Value": "Application Information",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_InfoSection_Hardware",
-        "Value": "Unset localization item:Diag_InfoSection_Hardware()",
+        "Value": "Hardware Information",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_InfoSection_OperatingSystem",
-        "Value": "Unset localization item:Diag_InfoSection_OperatingSystem()",
+        "Value": "Operating System Information",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_MakingReport",
-        "Value": "Unset localization item:Diag_MakingReport()",
+        "Value": "Generating report...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_MakingReport_Sub",
-        "Value": "Unset localization item:Diag_MakingReport_Sub()",
+        "Value": "Please do not leave this interface or exit the application.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -789,11 +789,11 @@
       },
       {
         "Id": "General_UserData_SelectPath",
-        "Value": "Unset localization item:General_UserData_SelectPath()",
+        "Value": "Select user data folder...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -834,7 +834,7 @@
       },
       {
         "Id": "Misc_MakeDiagReport",
-        "Value": "Generate Diagnostic Report",
+        "Value": "Navigating to diagnosis page...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -960,11 +960,20 @@
       },
       {
         "Id": "Diag_GenerateReport",
-        "Value": "Unset localization item:Diag_GenerateReport()",
+        "Value": "Exporting diagnostic report...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_OpenBaseData",
+        "Value": "Opening application data directory...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -1035,47 +1044,47 @@
       },
       {
         "Id": "Diag_InfoSection_App",
-        "Value": "Unset localization item:Diag_InfoSection_App()",
+        "Value": "\u61C9\u7528\u7A0B\u5F0F\u8CC7\u8A0A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_InfoSection_Hardware",
-        "Value": "Unset localization item:Diag_InfoSection_Hardware()",
+        "Value": "\u786C\u9AD4\u8CC7\u8A0A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_InfoSection_OperatingSystem",
-        "Value": "Unset localization item:Diag_InfoSection_OperatingSystem()",
+        "Value": "\u4F5C\u696D\u7CFB\u7D71\u8CC7\u8A0A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_MakingReport",
-        "Value": "Unset localization item:Diag_MakingReport()",
+        "Value": "\u6B63\u5728\u751F\u6210\u5831\u544A...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_MakingReport_Sub",
-        "Value": "Unset localization item:Diag_MakingReport_Sub()",
+        "Value": "\u8ACB\u4E0D\u8981\u96E2\u958B\u6B64\u4ECB\u9762\uFF0C\u6216\u8005\u9000\u51FA\u61C9\u7528\u7A0B\u5F0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -1290,11 +1299,11 @@
       },
       {
         "Id": "General_UserData_SelectPath",
-        "Value": "Unset localization item:General_UserData_SelectPath()",
+        "Value": "\u9078\u64C7\u4F7F\u7528\u8005\u8CC7\u6599\u8CC7\u6599\u593E...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -1335,7 +1344,7 @@
       },
       {
         "Id": "Misc_MakeDiagReport",
-        "Value": "\u751F\u6210\u8A3A\u65B7\u5831\u544A",
+        "Value": "\u524D\u5F80\u8A3A\u65B7\u9801\u9762...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1460,11 +1469,20 @@
       },
       {
         "Id": "Diag_GenerateReport",
-        "Value": "Unset localization item:Diag_GenerateReport()",
+        "Value": "\u532F\u51FA\u8A3A\u65B7\u5831\u544A...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_OpenBaseData",
+        "Value": "\u958B\u555F\u61C9\u7528\u7A0B\u5F0F\u8CC7\u6599\u76EE\u9304...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -1535,47 +1553,47 @@
       },
       {
         "Id": "Diag_InfoSection_App",
-        "Value": "Unset localization item:Diag_InfoSection_App()",
+        "Value": "\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u60C5\u5831",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_InfoSection_Hardware",
-        "Value": "Unset localization item:Diag_InfoSection_Hardware()",
+        "Value": "\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u60C5\u5831",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_InfoSection_OperatingSystem",
-        "Value": "Unset localization item:Diag_InfoSection_OperatingSystem()",
+        "Value": "\u30AA\u30DA\u30EC\u30FC\u30C6\u30A3\u30F3\u30B0\u30B7\u30B9\u30C6\u30E0\u60C5\u5831",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_MakingReport",
-        "Value": "Unset localization item:Diag_MakingReport()",
+        "Value": "\u30EC\u30DD\u30FC\u30C8\u3092\u4F5C\u6210\u4E2D...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_MakingReport_Sub",
-        "Value": "Unset localization item:Diag_MakingReport_Sub()",
+        "Value": "\u3053\u306E\u753B\u9762\u304B\u3089\u96E2\u308C\u305F\u308A\u3001\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u3092\u7D42\u4E86\u3057\u305F\u308A\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -1790,11 +1808,11 @@
       },
       {
         "Id": "General_UserData_SelectPath",
-        "Value": "Unset localization item:General_UserData_SelectPath()",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u30D5\u30A9\u30EB\u30C0\u3092\u9078\u629E...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -1835,7 +1853,7 @@
       },
       {
         "Id": "Misc_MakeDiagReport",
-        "Value": "\u8A3A\u65AD\u30EC\u30DD\u30FC\u30C8\u3092\u751F\u6210",
+        "Value": "\u8A3A\u65AD\u30DA\u30FC\u30B8\u3078\u79FB\u52D5\u4E2D...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1961,11 +1979,20 @@
       },
       {
         "Id": "Diag_GenerateReport",
-        "Value": "Unset localization item:Diag_GenerateReport()",
+        "Value": "\u8A3A\u65AD\u30EC\u30DD\u30FC\u30C8\u3092\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8\u4E2D...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_OpenBaseData",
+        "Value": "\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u3092\u958B\u3044\u3066\u3044\u307E\u3059...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -2036,47 +2063,47 @@
       },
       {
         "Id": "Diag_InfoSection_App",
-        "Value": "Unset localization item:Diag_InfoSection_App()",
+        "Value": "\uC560\uD50C\uB9AC\uCF00\uC774\uC158 \uC815\uBCF4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_InfoSection_Hardware",
-        "Value": "Unset localization item:Diag_InfoSection_Hardware()",
+        "Value": "\uD558\uB4DC\uC6E8\uC5B4 \uC815\uBCF4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_InfoSection_OperatingSystem",
-        "Value": "Unset localization item:Diag_InfoSection_OperatingSystem()",
+        "Value": "\uC6B4\uC601 \uCCB4\uC81C \uC815\uBCF4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_MakingReport",
-        "Value": "Unset localization item:Diag_MakingReport()",
+        "Value": "\uBCF4\uACE0\uC11C \uC0DD\uC131 \uC911...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_MakingReport_Sub",
-        "Value": "Unset localization item:Diag_MakingReport_Sub()",
+        "Value": "\uC774 \uD654\uBA74\uC744 \uB5A0\uB098\uAC70\uB098 \uC560\uD50C\uB9AC\uCF00\uC774\uC158\uC744 \uC885\uB8CC\uD558\uC9C0 \uB9C8\uC2ED\uC2DC\uC624.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -2291,11 +2318,11 @@
       },
       {
         "Id": "General_UserData_SelectPath",
-        "Value": "Unset localization item:General_UserData_SelectPath()",
+        "Value": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uD3F4\uB354 \uC120\uD0DD...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -2336,7 +2363,7 @@
       },
       {
         "Id": "Misc_MakeDiagReport",
-        "Value": "\uC9C4\uB2E8 \uBCF4\uACE0\uC11C \uC0DD\uC131",
+        "Value": "\uC9C4\uB2E8 \uD398\uC774\uC9C0\uB85C \uC774\uB3D9 \uC911...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2462,11 +2489,20 @@
       },
       {
         "Id": "Diag_GenerateReport",
-        "Value": "Unset localization item:Diag_GenerateReport()",
+        "Value": "\uC9C4\uB2E8 \uBCF4\uACE0\uC11C \uB0B4\uBCF4\uB0B4\uB294 \uC911...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_OpenBaseData",
+        "Value": "\uC751\uC6A9 \uD504\uB85C\uADF8\uB7A8 \uB370\uC774\uD130 \uB514\uB809\uD130\uB9AC \uC5F4\uAE30...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -2537,47 +2573,47 @@
       },
       {
         "Id": "Diag_InfoSection_App",
-        "Value": "Unset localization item:Diag_InfoSection_App()",
+        "Value": "Informations sur l\u0027application",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_InfoSection_Hardware",
-        "Value": "Unset localization item:Diag_InfoSection_Hardware()",
+        "Value": "Informations mat\u00E9rielles",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_InfoSection_OperatingSystem",
-        "Value": "Unset localization item:Diag_InfoSection_OperatingSystem()",
+        "Value": "Informations sur le syst\u00E8me d\u0027exploitation",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_MakingReport",
-        "Value": "Unset localization item:Diag_MakingReport()",
+        "Value": "G\u00E9n\u00E9ration du rapport en cours...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_MakingReport_Sub",
-        "Value": "Unset localization item:Diag_MakingReport_Sub()",
+        "Value": "Veuillez ne pas quitter cette interface ou fermer l\u0027application.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -2792,11 +2828,11 @@
       },
       {
         "Id": "General_UserData_SelectPath",
-        "Value": "Unset localization item:General_UserData_SelectPath()",
+        "Value": "S\u00E9lectionner le dossier des donn\u00E9es utilisateur...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -2837,7 +2873,7 @@
       },
       {
         "Id": "Misc_MakeDiagReport",
-        "Value": "G\u00E9n\u00E9rer un rapport de diagnostic",
+        "Value": "Acc\u00E8s \u00E0 la page de diagnostic...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2963,11 +2999,20 @@
       },
       {
         "Id": "Diag_GenerateReport",
-        "Value": "Unset localization item:Diag_GenerateReport()",
+        "Value": "G\u00E9n\u00E9ration du rapport de diagnostic...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_OpenBaseData",
+        "Value": "Ouverture du r\u00E9pertoire des donn\u00E9es de l\u0027application...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -3038,47 +3083,47 @@
       },
       {
         "Id": "Diag_InfoSection_App",
-        "Value": "Unset localization item:Diag_InfoSection_App()",
+        "Value": "\u5E94\u7528\u7A0B\u5E8F\u4FE1\u606F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_InfoSection_Hardware",
-        "Value": "Unset localization item:Diag_InfoSection_Hardware()",
+        "Value": "\u786C\u5668\u4E4B\u8BAF",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_InfoSection_OperatingSystem",
-        "Value": "Unset localization item:Diag_InfoSection_OperatingSystem()",
+        "Value": "\u64CD\u4F5C\u7CFB\u7EDF\u4FE1\u606F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_MakingReport",
-        "Value": "Unset localization item:Diag_MakingReport()",
+        "Value": "\u6B63\u5728\u751F\u6210\u62A5\u544A...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Diag_MakingReport_Sub",
-        "Value": "Unset localization item:Diag_MakingReport_Sub()",
+        "Value": "\u8BF7\u52FF\u79BB\u6B64\u754C\u9762\uFF0C\u6216\u9000\u5E94\u7528\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -3293,11 +3338,11 @@
       },
       {
         "Id": "General_UserData_SelectPath",
-        "Value": "Unset localization item:General_UserData_SelectPath()",
+        "Value": "\u62E9\u7528\u6237\u6570\u636E\u76EE\u5F55...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -3338,7 +3383,7 @@
       },
       {
         "Id": "Misc_MakeDiagReport",
-        "Value": "\u5236\u8BCA\u62A5",
+        "Value": "\u524D\u5F80\u8BCA\u65AD\u9875\u9762...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3464,11 +3509,20 @@
       },
       {
         "Id": "Diag_GenerateReport",
-        "Value": "Unset localization item:Diag_GenerateReport()",
+        "Value": "\u5BFC\u51FA\u8BCA\u65AD\u62A5\u544A...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Diag_OpenBaseData",
+        "Value": "\u5F00\u5E94\u7528\u6570\u636E\u4E4B\u76EE\u5F55...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]

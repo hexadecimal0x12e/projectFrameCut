@@ -10,6 +10,10 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using projectFrameCut.Setting.SettingManager;
+#if WINDOWS
+using projectFrameCut.Platforms.Windows;
+
+#endif
 
 namespace projectFrameCut;
 
@@ -38,6 +42,46 @@ public partial class HomePage : ContentPage
                 localeDispName[^1] = $"and {localeDispName.Last()}";
                 await DisplayAlertAsync("Info", $"it seems like projectFrameCut doesn't support your system language yet.\r\nwe support {localeDispName.Aggregate((a, b) => $"{a}, {b}")} yet.\r\nIf you'd like to contribute the localization, do it and make a pull request.", "OK");
                 SimpleLocalizer.IsFallbackMatched = false;
+            }
+
+            if (Environment.GetCommandLineArgs().Length > 0)
+            {
+                var args = Environment.GetCommandLineArgs().Skip(1).ToArray();
+                if (args.Length > 1)
+                {
+                    switch (args[0])
+                    {
+                        case "go_draft_dbgBackend":
+                            {
+                                var draft = args[1];
+                                if (Directory.Exists(draft))
+                                {
+#if WINDOWS
+                                    RpcClient c = new();
+                                    if(Process.GetProcessesByName("projectFrameCut.Render.WindowsRender").Any())
+                                    {
+                                        await c.StartAsync("pjfc_rpc_V1_debug123", default);
+                                        await GoDraft(draft, false, false, c, true);
+                                    }
+                                    
+#endif
+                                }
+
+                                break;
+                            }
+
+                        case " goDraft":
+                            {
+                                var draft = args[1];
+                                if (Directory.Exists(draft))
+                                {
+                                    await GoDraft(draft, false, false);
+                                }
+
+                                break;
+                            }
+                    }
+                }
             }
         };
 #if !ANDROID
@@ -191,9 +235,11 @@ public partial class HomePage : ContentPage
         }
     }
 
-    private async Task GoDraft(ProjectsViewModel projectsViewModel, bool isReadonly = false, bool throwOnException = false)
+    private async Task GoDraft(ProjectsViewModel pvm, bool isReadonly = false, bool throwOnException = false)
+        => await GoDraft(pvm._projectPath, throwOnException, throwOnException);
+
+    private async Task GoDraft(string draftSourcePath, bool isReadonly = false, bool throwOnException = false, object? dbgBackend = null, bool? skipAskForRecover = null)
     {
-        var draftSourcePath = projectsViewModel._projectPath;
         if (Directory.Exists(draftSourcePath))
         {
             try
@@ -225,9 +271,9 @@ public partial class HomePage : ContentPage
                 {
                     try
                     {
-                        bool skipAsk = SettingsManager.IsBoolSettingTrue("AutoRecoverDraft");
+                        var skipAsk = skipAskForRecover ?? SettingsManager.IsBoolSettingTrue("AutoRecoverDraft");
                         Log(ex, "read draft", this);
-                        var conf = !skipAsk ? await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken, Localized._Confirm, Localized._Cancel) : true;
+                        var conf = skipAsk || await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken, Localized._Confirm, Localized._Cancel);
                         if (!conf) return;
 
                         Dictionary<string, DraftStructureJSON?> tmls = new();
@@ -250,7 +296,7 @@ public partial class HomePage : ContentPage
                             }
                         }
 
-                        var newest = tmls.OrderByDescending((t) => t.Value.SavedAt).FirstOrDefault(new KeyValuePair<string, DraftStructureJSON?>("", null));
+                        var newest = tmls.OrderByDescending((t) => t.Value?.SavedAt).FirstOrDefault(new KeyValuePair<string, DraftStructureJSON?>("", null));
                         if (newest.Value is null)
                         {
                             await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Fail, Localized._OK);
@@ -259,7 +305,7 @@ public partial class HomePage : ContentPage
                         else
                         {
 
-                            var result = !skipAsk ? await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Confirm(newest.Value.SavedAt), Localized._Confirm, Localized._Cancel) : true;
+                            var result = skipAsk || await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Confirm(newest.Value.SavedAt), Localized._Confirm, Localized._Cancel);
 
                             if (result)
                             {
@@ -276,7 +322,7 @@ public partial class HomePage : ContentPage
                     catch (Exception exInner)
                     {
                         Log(exInner, "read draft from save slot confirm", this);
-                        await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Fail, Localized._OK);
+                        await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Fail + $"\r\n({exInner.Message})", Localized._OK);
                         return;
                     }
                 }
@@ -284,7 +330,7 @@ public partial class HomePage : ContentPage
                 (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline);
                 var assetDict = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (a) => a));
 
-                page = new DraftPage(project ?? new(), dict, assetDict, trackCount, draftSourcePath, project?.projectName ?? "?", isReadonly);
+                page = new DraftPage(project ?? new(), dict, assetDict, trackCount, draftSourcePath, project?.projectName ?? "?", isReadonly, dbgBackend);
 
 #if WINDOWS || ANDROID
                 AppShell.instance.HideNavView();
@@ -314,7 +360,7 @@ public partial class HomePage : ContentPage
                 localeDispName.Add(item.Split('/').Last().Trim(' '));
             }
             localeDispName[^1] = $"and {localeDispName.Last()}";
-            await DisplayAlertAsync("Info", $"it seems like projectFrameCut doesn't support your system language yet.\r\nwe support {localeDispName.Aggregate((a,b) => $"{a}, {b}")} yet.\r\nIf you'd like to contribute the localization, do it and make a pull request.", "OK");
+            await DisplayAlertAsync("Info", $"it seems like projectFrameCut doesn't support your system language yet.\r\nwe support {localeDispName.Aggregate((a, b) => $"{a}, {b}")} yet.\r\nIf you'd like to contribute the localization, do it and make a pull request.", "OK");
             SimpleLocalizer.IsFallbackMatched = false;
         }
     }
@@ -541,7 +587,7 @@ public partial class HomePage : ContentPage
                 await GoDraft(vmItem);
                 break;
             case 1: //OpenReadonly 
-                await GoDraft(vmItem, isReadonly:true);
+                await GoDraft(vmItem, isReadonly: true);
                 break;
             case 2: //Export
                 await ExportProject(vmItem);

@@ -1,5 +1,6 @@
 ﻿using projectFrameCut.Render;
 using projectFrameCut.Shared;
+using SixLabors.ImageSharp.Drawing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +12,8 @@ namespace projectFrameCut.VideoMakeEngine
 {
     public class RemoveColorEffect : IEffect
     {
-        public bool Enabled { get; init; } = true;
-        public int Index { get; init; }
+        public bool Enabled { get; set; } = true;
+        public int Index { get; set; }
 
         public ushort R { get; init; }
         public ushort G { get; init; }
@@ -31,6 +32,7 @@ namespace projectFrameCut.VideoMakeEngine
 
         List<string> IEffect.ParametersNeeded => ParametersNeeded;
         Dictionary<string, string> IEffect.ParametersType => ParametersType;
+        bool IEffect.NeedAComputer => true;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -51,7 +53,6 @@ namespace projectFrameCut.VideoMakeEngine
         };
 
         public string TypeName => "RemoveColor";
-        public static string s_TypeName => "RemoveColor";  
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
         {
@@ -78,86 +79,124 @@ namespace projectFrameCut.VideoMakeEngine
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public Picture Render(Picture source, IComputer computer)
+        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
+            ArgumentNullException.ThrowIfNull(computer, nameof(computer));
+
+            float[] r, g, b, a;
+            if (source is IPicture<ushort> p16)
+            {
+                r = p16.r.Select(Convert.ToSingle).ToArray();
+                g = p16.g.Select(Convert.ToSingle).ToArray();
+                b = p16.b.Select(Convert.ToSingle).ToArray();
+                a = p16.a ?? Enumerable.Repeat(1f, p16.Pixels).ToArray();
+            }
+            else if (source is IPicture<byte> p8)
+            {
+                r = p8.r.Select(Convert.ToSingle).ToArray();
+                g = p8.g.Select(Convert.ToSingle).ToArray();
+                b = p8.b.Select(Convert.ToSingle).ToArray();
+                a = p8.a ?? Enumerable.Repeat(1f, p8.Pixels).ToArray();
+            }
+            else
+            {
+                throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
+            }
+
             var alpha = computer.Compute([
-                source.r.Select(Convert.ToSingle).ToArray(),
-                source.g.Select(Convert.ToSingle).ToArray(),
-                source.b.Select(Convert.ToSingle).ToArray(),
-                source.a ?? Enumerable.Repeat(1f, source.Pixels).ToArray(),
+                r,
+                g,
+                b,
+                a,
                 [(float)R],
                 [(float)G],
                 [(float)B],
                 [(float)Tolerance]
                 ])[0];
 
-            var result = new Picture(source)
+            if (source is IPicture<ushort> p16_out)
             {
-                r = source.r,
-                g = source.g,
-                b = source.b,
-                a = alpha,
-                hasAlphaChannel = true
-            };
-
-            for (int i = 0; i < result.Pixels; i++)
-            {
-                if (result.a[i] == 0)
+                var result = new Picture(p16_out)
                 {
-                    result.r[i] = 0;
-                    result.g[i] = 0;
-                    result.b[i] = 0;
-                    result.a[i] = 0f;
+                    r = p16_out.r,
+                    g = p16_out.g,
+                    b = p16_out.b,
+                    a = alpha,
+                    hasAlphaChannel = true
+                };
+                for (int i = 0; i < result.Pixels; i++)
+                {
+                    if (result.a[i] == 0)
+                    {
+                        result.r[i] = 0;
+                        result.g[i] = 0;
+                        result.b[i] = 0;
+                        result.a[i] = 0f;
+                    }
                 }
-            }
+                result.ProcessStack += $"Replace color #{R:x2}{G:x2}{B:x2} tol:{Tolerance}\r\n";
 
-            return result;
+                return result.Resize(targetWidth, targetHeight, false);
+            }
+            else if (source is Picture8bpp p8_out)
+            {
+                var result = new Picture8bpp(p8_out)
+                {
+                    r = p8_out.r,
+                    g = p8_out.g,
+                    b = p8_out.b,
+                    a = alpha,
+                    hasAlphaChannel = true
+                };
+                for (int i = 0; i < result.Pixels; i++)
+                {
+                    if (result.a[i] == 0)
+                    {
+                        result.r[i] = 0;
+                        result.g[i] = 0;
+                        result.b[i] = 0;
+                        result.a[i] = 0f;
+                    }
+                }
+                result.ProcessStack += $"Replace color #{R:x2}{G:x2}{B:x2} tol:{Tolerance}\r\n";
+
+                return result.Resize(targetWidth, targetHeight, false);
+            }
+            throw new NotSupportedException();
         }
     }
 
-    public class CropAndPanEffect : IEffect
+    public class PlaceEffect : IEffect
     {
-        public bool Enabled { get; init; } = true;
-        public int Index { get; init; }
+        public bool Enabled { get; set; } = true;
+        public int Index { get; set; }
 
-        public int startX { get; init; }
-        public int startY { get; init; }
-        public float AlphaDelta { get; init; } = 0f;
-        public int TargetWidth { get; init; } = -1;
-        public int TargetHeight { get; init; } = -1;
+        public int StartX { get; init; }
+        public int StartY { get; init; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
-            {"startX",0 },
-            {"startY",0 },
-            {"AlphaDelta",0f },
-            {"TargetWidth",0 },
-            {"TargetHeight",0 }
+            {"StartX", StartX},
+            {"StartY", StartY},
         };
 
         List<string> IEffect.ParametersNeeded => ParametersNeeded;
         Dictionary<string, string> IEffect.ParametersType => ParametersType;
+        bool IEffect.NeedAComputer => false;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
-            "startX",
-            "startY",
-            "AlphaDelta",
-            "TargetWidth",
-            "TargetHeight",
+            "StartX",
+            "StartY"
         };
 
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
         {
-            {"startX","ushort" },
-            {"startY","ushort" },
-            {"AlphaDelta","float" },
-            {"TargetWidth","ushort" },
-            {"TargetHeight","ushort" }
+            {"StartX","int" },
+            {"StartY","int" },
         };
 
-        public string TypeName => "CropAndPan";
-        public static string s_TypeName => "CropAndPan";
+        public string TypeName => "Place";
 
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
         {
@@ -172,75 +211,290 @@ namespace projectFrameCut.VideoMakeEngine
             }
 
 
-            return new CropAndPanEffect
+            return new PlaceEffect
             {
-                startX = Convert.ToInt32(parameters["startX"]),
-                startY = Convert.ToInt32(parameters["startY"]),
-                AlphaDelta = Convert.ToSingle(parameters["AlphaDelta"]),
-                TargetWidth = Convert.ToInt32(parameters["TargetWidth"]),
-                TargetHeight = Convert.ToInt32(parameters["TargetHeight"]),
+                StartX = Convert.ToInt32(parameters["StartX"]),
+                StartY = Convert.ToInt32(parameters["StartY"]),
             };
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public Picture Render(Picture source, IComputer computer)
+        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            int targetW = TargetWidth > 0 ? TargetWidth : source.Width - startX;
-            int targetH = TargetHeight > 0 ? TargetHeight : source.Height - startY;
-
-            if (targetW <= 0) targetW = 1;
-            if (targetH <= 0) targetH = 1;
-
-            var result = new Picture(targetW, targetH);
-            result.hasAlphaChannel = true;
-            result.a = new float[result.Pixels];
-
-            var sR = source.r;
-            var sG = source.g;
-            var sB = source.b;
-            var sA = source.a;
-            bool sourceHasAlpha = source.hasAlphaChannel && sA != null;
-
-            var tR = result.r;
-            var tG = result.g;
-            var tB = result.b;
-            var tA = result.a;
-
-            int sWidth = source.Width;
-            int sHeight = source.Height;
-
-            Parallel.For(0, targetH, y =>
+            if (source is IPicture<ushort> p16)
             {
-                int sy = startY + y;
-                if (sy >= 0 && sy < sHeight)
+                Picture result = new Picture(targetWidth, targetHeight)
                 {
-                    for (int x = 0; x < targetW; x++)
+                    r = new ushort[targetWidth * targetHeight],
+                    g = new ushort[targetWidth * targetHeight],
+                    b = new ushort[targetWidth * targetHeight],
+                    a = new float[targetWidth * targetHeight],
+                    hasAlphaChannel = true
+                };
+                int targetIndex = 0, sourceIndex = 0;
+                for (int y = 0; y < source.Height; y++)
+                {
+                    for (int x = 0; x < source.Width; x++)
                     {
-                        int sx = startX + x;
-                        if (sx >= 0 && sx < sWidth)
+                        if (source.TryFromXYToArrayIndex(x, y, out sourceIndex))
                         {
-                            int sIndex = sy * sWidth + sx;
-                            int tIndex = y * targetW + x;
+                            if (result.TryFromXYToArrayIndex(x + StartX, y + StartY, out targetIndex))
+                            {
+                                result.r[targetIndex] = p16.r[sourceIndex];
+                                result.g[targetIndex] = p16.g[sourceIndex];
+                                result.b[targetIndex] = p16.b[sourceIndex];
+                                result.a[targetIndex] = p16.a != null ? p16.a[sourceIndex] : 1f;
+                            }
+                            else //use blank to replace content not in range
+                            {
+                                targetIndex = y * targetWidth + x;
+                                result.r[targetIndex] = 0;
+                                result.g[targetIndex] = 0;
+                                result.b[targetIndex] = 0;
+                                result.a[targetIndex] = 0f;
+                            }
+                        }
 
-                            tR[tIndex] = sR[sIndex];
-                            tG[tIndex] = sG[sIndex];
-                            tB[tIndex] = sB[sIndex];
+                    }
 
-                            float alpha = sourceHasAlpha ? sA[sIndex] : 1.0f;
-                            alpha += AlphaDelta;
+                }
+                result.ProcessStack += $"Place to ({StartX},{StartY}) with canvas size {targetWidth}*{targetHeight}\r\n";
+                return result;
+            }
+            else if (source is IPicture<byte> p8)
+            {
+                Picture8bpp result = new Picture8bpp(targetWidth, targetHeight)
+                {
+                    r = new byte[targetWidth * targetHeight],
+                    g = new byte[targetWidth * targetHeight],
+                    b = new byte[targetWidth * targetHeight],
+                    a = new float[targetWidth * targetHeight],
+                    hasAlphaChannel = true
+                };
+                int targetIndex = 0, sourceIndex = 0;
+                for (int y = 0; y < source.Height; y++)
+                {
+                    for (int x = 0; x < source.Width; x++)
+                    {
+                        if (source.TryFromXYToArrayIndex(x, y, out sourceIndex))
+                        {
+                            if (result.TryFromXYToArrayIndex(x + StartX, y + StartY, out targetIndex))
+                            {
+                                result.r[targetIndex] = p8.r[sourceIndex];
+                                result.g[targetIndex] = p8.g[sourceIndex];
+                                result.b[targetIndex] = p8.b[sourceIndex];
+                                result.a[targetIndex] = p8.a != null ? p8.a[sourceIndex] : 1f;
+                            }
+                            else //use blank to replace content not in range
+                            {
+                                targetIndex = y * targetWidth + x;
+                                result.r[targetIndex] = 0;
+                                result.g[targetIndex] = 0;
+                                result.b[targetIndex] = 0;
+                                result.a[targetIndex] = 0f;
+                            }
+                        }
 
-                            if (alpha < 0f) alpha = 0f;
-                            else if (alpha > 1f) alpha = 1f;
+                    }
 
-                            tA[tIndex] = alpha;
+                }
+                result.ProcessStack += $"Place to ({StartX},{StartY}) with canvas size {targetWidth}*{targetHeight}\r\n";
+                return result;
+            }
+            throw new NotSupportedException();
+        }
+
+    }
+
+    public class CropEffect : IEffect
+    {
+        public bool Enabled { get; set; } = true;
+        public int Index { get; set; }
+
+        public int StartX { get; init; }
+        public int StartY { get; init; }
+        public int Height { get; init; }
+        public int Width { get; init; }
+
+        public Dictionary<string, object> Parameters => new Dictionary<string, object>
+        {
+            {"StartX", StartX },
+            {"StartY", StartY },
+            {"Height", Height },
+            {"Width", Width },
+        };
+
+        List<string> IEffect.ParametersNeeded => ParametersNeeded;
+        Dictionary<string, string> IEffect.ParametersType => ParametersType;
+        bool IEffect.NeedAComputer => false;
+
+        public static List<string> ParametersNeeded { get; } = new List<string>
+        {
+            "StartX",
+            "StartY",
+            "Height",
+            "Width",
+        };
+
+        public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        {
+            {"StartX", "int" },
+            {"StartY", "int" },
+            {"Height", "int" },
+            {"Width", "int" },
+        };
+
+        public string TypeName => "Crop";
+
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
+        {
+            ArgumentNullException.ThrowIfNull(parameters);
+            if (!ParametersNeeded.All(parameters.ContainsKey))
+            {
+                throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
+            }
+            if (parameters.Count != ParametersNeeded.Count)
+            {
+                throw new ArgumentException("Too many parameters provided.");
+            }
+
+
+            return new CropEffect
+            {
+                StartX = Convert.ToInt32(parameters["StartX"]),
+                StartY = Convert.ToInt32(parameters["StartY"]),
+                Height = Convert.ToInt32(parameters["Height"]),
+                Width = Convert.ToInt32(parameters["Width"]),
+            };
+        }
+
+        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
+
+        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        {
+            if (source is IPicture<ushort> p16)
+            {
+                Picture result = new Picture(Width, Height)
+                {
+                    r = new ushort[Width * Height],
+                    g = new ushort[Width * Height],
+                    b = new ushort[Width * Height],
+                    a = new float[Width * Height],
+                    hasAlphaChannel = true
+                };
+                int targetIndex = 0, sourceIndex = 0;
+                for (int y = 0; y < Height; y++)
+                {
+                    for (int x = 0; x < Width; x++)
+                    {
+                        if (source.TryFromXYToArrayIndex(x + StartX, y + StartY, out sourceIndex))
+                        {
+                            if (result.TryFromXYToArrayIndex(x, y, out targetIndex))
+                            {
+                                result.r[targetIndex] = p16.r[sourceIndex];
+                                result.g[targetIndex] = p16.g[sourceIndex];
+                                result.b[targetIndex] = p16.b[sourceIndex];
+                                result.a[targetIndex] = p16.a != null ? p16.a[sourceIndex] : 1f;
+                            }
                         }
                     }
                 }
-            });
+                result.ProcessStack += $"Crop from ({StartX},{StartY}) with size {Width}*{Height}, with canvas size {targetWidth}*{targetHeight}\r\n";
 
-            return result;
+                return result;
+            }
+            else if (source is IPicture<byte> p8)
+            {
+                Picture8bpp result = new Picture8bpp(Width, Height)
+                {
+                    r = new byte[Width * Height],
+                    g = new byte[Width * Height],
+                    b = new byte[Width * Height],
+                    a = new float[Width * Height],
+                    hasAlphaChannel = true
+                };
+                int targetIndex = 0, sourceIndex = 0;
+                for (int y = 0; y < Height; y++)
+                {
+                    for (int x = 0; x < Width; x++)
+                    {
+                        if (source.TryFromXYToArrayIndex(x + StartX, y + StartY, out sourceIndex))
+                        {
+                            if (result.TryFromXYToArrayIndex(x, y, out targetIndex))
+                            {
+                                result.r[targetIndex] = p8.r[sourceIndex];
+                                result.g[targetIndex] = p8.g[sourceIndex];
+                                result.b[targetIndex] = p8.b[sourceIndex];
+                                result.a[targetIndex] = p8.a != null ? p8.a[sourceIndex] : 1f;
+                            }
+                        }
+                    }
+                }
+                result.ProcessStack += $"Crop from ({StartX},{StartY}) with size {Width}*{Height} with canvas size {targetWidth}*{targetHeight}\r\n";
+
+                return result;
+            }
+            throw new NotSupportedException();
+        }
+
+
+    }
+
+
+    /*
+    public class EffectBase : IEffect
+    {
+        public bool Enabled { get; set; } = true;
+        public int Index { get; init; }
+
+        public Dictionary<string, object> Parameters => new Dictionary<string, object>
+        {
+            {"", },
+        };
+
+        List<string> IEffect.ParametersNeeded => ParametersNeeded;
+        Dictionary<string, string> IEffect.ParametersType => ParametersType;
+
+        public static List<string> ParametersNeeded { get; } = new List<string>
+        {
+            "",
+        };
+
+        public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        {
+            {"","" },
+        };
+
+        public string TypeName => "";
+        public static string s_TypeName => "";
+
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
+        {
+            ArgumentNullException.ThrowIfNull(parameters);
+            if (!ParametersNeeded.All(parameters.ContainsKey))
+            {
+                throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
+            }
+            if (parameters.Count != ParametersNeeded.Count)
+            {
+                throw new ArgumentException("Too many parameters provided.");
+            }
+
+
+            return new EffectBase
+            {
+                
+            };
+        }
+
+        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
+
+        public Picture Render(Picture source, IComputer computer, int targetWidth, int targetHeight)
+        {
+            
         }
     }
+    */
 
 }

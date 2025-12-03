@@ -1302,7 +1302,7 @@
       },
       {
         "Id": "_Info",
-        "Value": "Information",
+        "Value": "Info",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2604,11 +2604,11 @@
       },
       {
         "Id": "MainSettingsPage_Tab_DiagnosticPage",
-        "Value": "Unset localization item:MainSettingsPage_Tab_DiagnosticPage()",
+        "Value": "Diagnostic",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -3954,11 +3954,11 @@
       },
       {
         "Id": "MainSettingsPage_Tab_DiagnosticPage",
-        "Value": "Unset localization item:MainSettingsPage_Tab_DiagnosticPage()",
+        "Value": "\u8A3A\u65B7",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -5322,11 +5322,11 @@
       },
       {
         "Id": "MainSettingsPage_Tab_DiagnosticPage",
-        "Value": "Unset localization item:MainSettingsPage_Tab_DiagnosticPage()",
+        "Value": "\u8A3A\u65AD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -5433,7 +5433,7 @@
       },
       {
         "Id": "AppBrand",
-        "Value": "projectFrameCut(\u4EEE)",
+        "Value": "codename \u0027projectFrameCut\u0027",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6690,11 +6690,11 @@
       },
       {
         "Id": "MainSettingsPage_Tab_DiagnosticPage",
-        "Value": "Unset localization item:MainSettingsPage_Tab_DiagnosticPage()",
+        "Value": "\uC9C4\uB2E8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -8040,11 +8040,11 @@
       },
       {
         "Id": "MainSettingsPage_Tab_DiagnosticPage",
-        "Value": "Unset localization item:MainSettingsPage_Tab_DiagnosticPage()",
+        "Value": "Diagnostic",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -9408,11 +9408,11 @@
       },
       {
         "Id": "MainSettingsPage_Tab_DiagnosticPage",
-        "Value": "Unset localization item:MainSettingsPage_Tab_DiagnosticPage()",
+        "Value": "\u8BCA\u65AD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]

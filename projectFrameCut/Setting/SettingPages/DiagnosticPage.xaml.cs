@@ -12,12 +12,12 @@ using static projectFrameCut.Setting.SettingManager.SettingsManager;
 
 namespace projectFrameCut.Setting.SettingPages;
 
-public partial class DiagnosticPage : ContentPage
+public partial class DiagnosticSettingPage : ContentPage
 {
     public PropertyPanel.PropertyPanelBuilder rootPPB;
     string OSInfo = "?", ApplicationInfo = "?", DeviceInfo = "?";
     bool infoGetted = false;
-    public DiagnosticPage()
+    public DiagnosticSettingPage()
     {
         Title = Localized.MainSettingsPage_Tab_DiagnosticPage;
         BuildPPB();

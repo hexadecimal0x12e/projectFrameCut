@@ -2,27 +2,62 @@
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
+using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using System.Numerics;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
+using static System.Net.Mime.MediaTypeNames;
+using Image = SixLabors.ImageSharp.Image;
 
 namespace projectFrameCut.Shared
 {
     /// <summary>
-    /// This class is for implicit conversion. It equals to <see cref="IPicture{T}"/>.
+    /// This class is for placing Picture information and as a base of the actual picture (<see cref="IPicture{T}"/>).
     /// </summary>
     public interface IPicture : IDisposable
     {
+        public int bitPerPixel { get; }
+
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public int Pixels { get; init; }
+
+        public uint? frameIndex { get; init; } //诊断用
+        public string? filePath { get; init; } //诊断用
+
+        public string? ProcessStack { get; set; }
+
+        public bool hasAlphaChannel { get; set; }
+
         IPicture Resize(int targetWidth, int targetHeight, bool preserveAspect = true);
         IPicture ToBitPerPixel(int bitPerPixel);
-        void SaveAsPng8bpp(string path, IImageEncoder? imageEncoder = null);
-        void SaveAsPng16bpp(string path, IImageEncoder? imageEncoder = null);
-    }
 
+        //void SaveAsPng8bpp(string path, IImageEncoder? imageEncoder = null);
+        //void SaveAsPng16bpp(string path, IImageEncoder? imageEncoder = null);
+
+        object? GetSpecificChannel(ChannelId channelId);
+
+        string GetDiagnosticsInfo();
+
+        public enum ChannelId
+        {
+            Red = 0,
+            Green = 1,
+            Blue = 2,
+            Alpha = 3
+        }
+
+    }
+    /// <summary>
+    /// Represents a picture with pixel data of type T and a float alpha channel.
+    /// </summary>
+    /// <typeparam name="T">The pixel type.</typeparam>
     public interface IPicture<T> : IPicture, IDisposable
     {
         [JsonIgnore()]
@@ -35,28 +70,77 @@ namespace projectFrameCut.Shared
         [NotNull()]
         public float[]? a { get; set; }
 
-        public int Width { get; set; }
-        public int Height { get; set; }
-        public int Pixels { get; init; }
-
-        public uint? frameIndex { get; init; } //诊断用
-        public string? filePath { get; init; } //诊断用
-
-        public bool hasAlphaChannel { get; set; } 
-
-        public int bitPerPixel { get; }
-
         public IPicture<T> SetAlpha(bool haveAlpha);
         public new IPicture<T> Resize(int targetWidth, int targetHeight, bool preserveAspect = true);
 
     }
 
 
+    /// <summary>
+    /// Represents a picture without an alpha channel.
+    /// </summary>
+    public interface INoAlphaPicture<T> : IPicture, IDisposable
+    {
+        [JsonIgnore()]
+        public T[] r { get; set; }
+        [JsonIgnore()]
+        public T[] g { get; set; }
+        [JsonIgnore()]
+        public T[] b { get; set; }
+
+        public new bool hasAlphaChannel { get => false; set { } }
+
+        public new IPicture<T> Resize(int targetWidth, int targetHeight, bool preserveAspect = true);
+    }
+    /// <summary>
+    /// Represents a picture with an uniform, float-based alpha channel.
+    /// </summary>
+    public interface IUniformAlphaPicture<T> : IPicture, IDisposable
+    {
+        [JsonIgnore()]
+        public T[] r { get; set; }
+        [JsonIgnore()]
+        public T[] g { get; set; }
+        [JsonIgnore()]
+        public T[] b { get; set; }
+        [JsonIgnore()]
+        public float uniformAlpha { get; set; }
+
+        public new IPicture<T> Resize(int targetWidth, int targetHeight, bool preserveAspect = true);
+
+    }
+
+    /// <summary>
+    /// This class is for compatibility with older codes. It's basically equals to <see cref="Picture16bpp"/>.
+    /// </summary>
+    [DebuggerDisplay("ProcessStack: {ProcessStack}")]
+    public class Picture : Picture16bpp
+    {
+        public Picture(IPicture<ushort> picture) : base(picture)
+        {
+        }
+
+        public Picture(string imagePath) : base(imagePath)
+        {
+        }
+
+        public Picture(Image source) : base(source)
+        {
+        }
+
+        public Picture(int width, int height) : base(width, height)
+        {
+        }
+    }
+
+
+
 
     /// <summary>
     /// The projectFrameCut's 16-bit Picture structure. It's the base of everything you see in the final video.
     /// </summary>
-    public class Picture : IPicture<ushort>, IDisposable
+    [DebuggerDisplay("ProcessStack: {ProcessStack}")]
+    public class Picture16bpp : IPicture<ushort>
     {
         [JsonIgnore()]
         public ushort[] r { get; set; } = Array.Empty<ushort>();
@@ -73,10 +157,11 @@ namespace projectFrameCut.Shared
 
         public uint? frameIndex { get; init; } //诊断用
         public string? filePath { get; init; } //诊断用
+        public string? ProcessStack { get; set; }
 
         public bool hasAlphaChannel { get; set; } = false;
 
-        public int bitPerPixel => sizeof(ushort);
+        public int bitPerPixel => 16;
 
 
         /// <summary>
@@ -85,7 +170,7 @@ namespace projectFrameCut.Shared
         /// <remarks>The new Picture instance shares the same pixel data reference as the source Picture.
         /// Changes to the pixel data in one instance will affect the other.</remarks>
         /// <param name="picture">The Picture instance to copy the width, height, and pixel data from. Cannot be null.</param>
-        public Picture(IPicture<ushort> picture)
+        public Picture16bpp(IPicture<ushort> picture)
         {
             Width = picture.Width;
             Height = picture.Height;
@@ -106,6 +191,8 @@ namespace projectFrameCut.Shared
                 a = null;
                 hasAlphaChannel = false;
             }
+
+            ProcessStack = $"Created from another, {Width}*{Height},\r\n'{picture.ProcessStack}'\r\n";
         }
 
         /// <summary>
@@ -113,7 +200,7 @@ namespace projectFrameCut.Shared
         /// </summary>
         /// <param name="width">The width of the picture, in pixels. Must be a non-negative integer.</param>
         /// <param name="height">The height of the picture, in pixels. Must be a non-negative integer.</param>
-        public Picture(int width, int height)
+        public Picture16bpp(int width, int height)
         {
             Width = width;
             Height = height;
@@ -124,6 +211,8 @@ namespace projectFrameCut.Shared
             g = new ushort[Pixels];
             b = new ushort[Pixels];
             a = null;
+            ProcessStack = $"Created from scratch, {Width}*{Height}\r\n";
+
         }
 
 
@@ -138,7 +227,7 @@ namespace projectFrameCut.Shared
         /// consist only of white-space characters.</param>
         /// <exception cref="ArgumentException">Thrown if imagePath is null, empty, or consists only of white-space characters.</exception>
         [DebuggerNonUserCode()]
-        public Picture(string imagePath)
+        public Picture16bpp(string imagePath)
         {
             if (string.IsNullOrWhiteSpace(imagePath)) throw new ArgumentException("imagePath is null or empty", nameof(imagePath));
             using (Image<Rgba64> img = Image.Load<Rgba64>(imagePath))
@@ -170,10 +259,12 @@ namespace projectFrameCut.Shared
 
             Pixels = checked(Width * Height);
             filePath = imagePath;
+            ProcessStack = $"Created from file '{imagePath}', {Width}*{Height}\r\n";
+
         }
 
         [DebuggerNonUserCode()]
-        public Picture(SixLabors.ImageSharp.Image source)
+        public Picture16bpp(SixLabors.ImageSharp.Image source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             Width = source.Width;
@@ -235,9 +326,11 @@ namespace projectFrameCut.Shared
                     }
                 }
             }
+            ProcessStack = $"Created from SixLabors.ImageSharp.Image, {Width}*{Height}\r\n";
+
         }
 
-        public Picture SetAlpha(bool haveAlpha)
+        public Picture16bpp SetAlpha(bool haveAlpha)
         {
             lock (this)
             {
@@ -269,7 +362,7 @@ namespace projectFrameCut.Shared
                 }
             }
         }
-        
+
 
         public void EnsureNoAlpha()
         {
@@ -277,139 +370,6 @@ namespace projectFrameCut.Shared
             {
                 a = null;
                 hasAlphaChannel = false;
-            }
-        }
-
-        
-
-        [DebuggerNonUserCode()]
-        public void SaveAsPng16bpp(string path, IImageEncoder? imageEncoder = null)
-        {
-            lock (this)
-            {
-                //if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("path is null or empty", nameof(path));
-                //if (width <= 0 || height <= 0) throw new ArgumentException("width and height must be positive");
-                //if (checked(width * height) != r.Length) throw new ArgumentException("width * height must equal pixels");
-
-                imageEncoder = imageEncoder ?? new PngEncoder()
-                {
-                    BitDepth = PngBitDepth.Bit16
-                };
-
-                int idx = 0, lineStart = 0;
-
-                if (hasAlphaChannel && (a != null && a.Length >= Pixels))
-                {
-                    using (var img = new Image<Rgba64>(Width, Height))
-                    {
-                        for (int y = 0; y < Height; y++)
-                        {
-                            for (int x = 0; x < Width; x++)
-                            {
-                                idx = y * Width + x;
-                                ushort rr = (r != null && r.Length > idx) ? r[idx] : (ushort)0;
-                                ushort gg = (g != null && g.Length > idx) ? g[idx] : (ushort)0;
-                                ushort bb = (b != null && b.Length > idx) ? b[idx] : (ushort)0;
-                                float aval = (hasAlphaChannel && a != null && a.Length > idx) ? a[idx] : 1f;
-                                if (float.IsNaN(aval) || float.IsInfinity(aval)) aval = 1f;
-                                int ai = (int)Math.Round(aval * 65535f);
-                                if (ai < 0) ai = 0;
-                                if (ai > 65535) ai = 65535;
-                                ushort aa = (ushort)ai;
-
-                                img[x, y] = new Rgba64(rr, gg, bb, aa);
-                            }
-                        }
-                        img.Save(path, imageEncoder);
-                        return;
-                    }
-                }
-                else
-                {
-                    using (var img = new Image<Rgb48>(Width, Height))
-                    {
-                        for (int y = 0; y < Height; y++)
-                        {
-                            lineStart = y * Width;
-                            for (int x = 0; x < Width; x++)
-                            {
-                                idx = lineStart + x;
-                                img[x, y] = new Rgb48(r[idx], g[idx], b[idx]);
-
-                            }
-                        }
-
-                        img.Save(path, imageEncoder);
-                        return;
-                    }
-                }
-            }
-        }
-
-        [DebuggerNonUserCode()]
-        public void SaveAsPng8bpp(string path, IImageEncoder? imageEncoder = null)
-        {
-            lock (this)
-            {
-                //if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("path is null or empty", nameof(path));
-                //if (width <= 0 || height <= 0) throw new ArgumentException("width and height must be positive");
-                //if (checked(width * height) != r.Length) throw new ArgumentException("width * height must equal pixels");
-
-                imageEncoder = imageEncoder ?? new PngEncoder()
-                {
-                    BitDepth = PngBitDepth.Bit8
-                };
-
-                int idx = 0, lineStart = 0;
-
-                if (hasAlphaChannel && (a != null && a.Length >= Pixels))
-                {
-                    using (var img = new Image<Rgba32>(Width, Height))
-                    {
-                        for (int y = 0; y < Height; y++)
-                        {
-                            for (int x = 0; x < Width; x++)
-                            {
-                                idx = y * Width + x;
-                                byte rr = (byte)((r != null && r.Length > idx) ? r[idx] / 257 : 0);
-                                byte gg = (byte)((g != null && g.Length > idx) ? g[idx] / 257 : 0);
-                                byte bb = (byte)((b != null && b.Length > idx) ? b[idx] / 257 : 0);
-                                float aval = (hasAlphaChannel && a != null && a.Length > idx) ? a[idx] : 1f;
-                                if (float.IsNaN(aval) || float.IsInfinity(aval)) aval = 1f;
-                                int ai = (int)Math.Round(aval * 255f);
-                                if (ai < 0) ai = 0;
-                                if (ai > 255) ai = 255;
-                                byte aa = (byte)ai;
-
-                                img[x, y] = new Rgba32(rr, gg, bb, aa);
-                            }
-                        }
-                        img.Save(path, imageEncoder);
-                        return;
-                    }
-                }
-                else
-                {
-                    using (var img = new Image<Rgb24>(Width, Height))
-                    {
-                        for (int y = 0; y < Height; y++)
-                        {
-                            lineStart = y * Width;
-                            for (int x = 0; x < Width; x++)
-                            {
-                                idx = lineStart + x;
-                                byte rr = (byte)(r[idx] / 257);
-                                byte gg = (byte)(g[idx] / 257);
-                                byte bb = (byte)(b[idx] / 257);
-                                img[x, y] = new Rgb24(rr, gg, bb);
-
-                            }
-                        }
-
-                        img.Save(path, imageEncoder);
-                        return;
-                    }
-                }
             }
         }
 
@@ -423,7 +383,7 @@ namespace projectFrameCut.Shared
         /// <param name="preserveAspect">Whether to preserve aspect ratio.</param>
         /// <returns>A new Picture instance with the resized image data.</returns>
         [DebuggerNonUserCode()]
-        public Picture Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
+        public Picture16bpp Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
         {
             lock (this)
             {
@@ -528,20 +488,22 @@ namespace projectFrameCut.Shared
                         }
                     }
                 }
+                result.ProcessStack = $"{ProcessStack}\r\nResize to {targetWidth}*{targetHeight}\r\n";
 
                 return result;
             }
         }
 
-     
-
-        public static Picture GenerateSolidColor(int width,int height,ushort r, ushort g, ushort b, float? a)
+        public static Picture GenerateSolidColor(int width, int height, ushort r, ushort g, ushort b, float? a)
         {
-            var pic = new Picture(width, height);
+            var pic = new Picture(width, height)
+            {
+                ProcessStack = $"SolidColor, {width}*{height}, rgba:{r},{g},{b},{(a is not null ? $"{a}" : "ff")}\r\n"
+            };
             pic.r = Enumerable.Repeat(r, pic.Pixels).ToArray();
             pic.g = Enumerable.Repeat(g, pic.Pixels).ToArray();
             pic.b = Enumerable.Repeat(b, pic.Pixels).ToArray();
-            if(a != null)
+            if (a != null)
             {
                 pic.a = Enumerable.Repeat(a.Value, pic.Pixels).ToArray();
                 pic.hasAlphaChannel = true;
@@ -634,12 +596,27 @@ namespace projectFrameCut.Shared
         {
             return Resize(targetWidth, targetHeight, preserveAspect);
         }
+
+        public object? GetSpecificChannel(IPicture.ChannelId channelId)
+        {
+            return channelId switch
+            {
+                IPicture.ChannelId.Red => r,
+                IPicture.ChannelId.Green => g,
+                IPicture.ChannelId.Blue => b,
+                IPicture.ChannelId.Alpha => a!,
+                _ => throw new ArgumentOutOfRangeException(nameof(channelId), "Invalid channel ID."),
+            };
+        }
+
+        public string GetDiagnosticsInfo() => $"16BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{ProcessStack}";
     }
 
     /// <summary>
     /// The projectFrameCut's 8-bit Picture structure.
     /// </summary>
-    public class Picture8bpp : IPicture<byte>, IDisposable
+    [DebuggerDisplay("ProcessStack: {ProcessStack}")]
+    public class Picture8bpp : IPicture<byte>
     {
         [JsonIgnore()]
         public byte[] r { get; set; } = Array.Empty<byte>();
@@ -656,10 +633,11 @@ namespace projectFrameCut.Shared
 
         public uint? frameIndex { get; init; } //诊断用
         public string? filePath { get; init; } //诊断用
+        public string? ProcessStack { get; set; }
 
         public bool hasAlphaChannel { get; set; } = false;
 
-        public int bitPerPixel => sizeof(byte);
+        public int bitPerPixel => 8;
 
 
         /// <summary>
@@ -687,6 +665,8 @@ namespace projectFrameCut.Shared
                 a = null;
                 hasAlphaChannel = false;
             }
+            ProcessStack = $"Created from another, {Width}*{Height},\r\n'{picture.ProcessStack}'\r\n";
+
         }
 
         /// <summary>
@@ -705,6 +685,8 @@ namespace projectFrameCut.Shared
             g = new byte[Pixels];
             b = new byte[Pixels];
             a = null;
+            ProcessStack = $"Created from scratch, {Width}*{Height}\r\n";
+
         }
 
 
@@ -745,6 +727,8 @@ namespace projectFrameCut.Shared
 
             Pixels = checked(Width * Height);
             filePath = imagePath;
+            ProcessStack = $"Created from file '{imagePath}', {Width}*{Height}\r\n";
+
         }
 
         public Picture8bpp(SixLabors.ImageSharp.Image source)
@@ -809,6 +793,8 @@ namespace projectFrameCut.Shared
                     }
                 }
             }
+            ProcessStack = $"Created from SixLabors.ImageSharp.Image, {Width}*{Height}\r\n";
+
         }
 
         public Picture8bpp SetAlpha(bool haveAlpha)
@@ -843,7 +829,7 @@ namespace projectFrameCut.Shared
                 }
             }
         }
-        
+
 
         public void EnsureNoAlpha()
         {
@@ -851,129 +837,6 @@ namespace projectFrameCut.Shared
             {
                 a = null;
                 hasAlphaChannel = false;
-            }
-        }
-
-        
-
-        [DebuggerNonUserCode()]
-        public void SaveAsPng16bpp(string path, IImageEncoder? imageEncoder = null)
-        {
-            lock (this)
-            {
-                imageEncoder = imageEncoder ?? new PngEncoder()
-                {
-                    BitDepth = PngBitDepth.Bit16
-                };
-
-                int idx = 0;
-
-                if (hasAlphaChannel && (a != null && a.Length >= Pixels))
-                {
-                    using (var img = new Image<Rgba64>(Width, Height))
-                    {
-                        for (int y = 0; y < Height; y++)
-                        {
-                            for (int x = 0; x < Width; x++)
-                            {
-                                idx = y * Width + x;
-                                ushort rr = (ushort)((r != null && r.Length > idx) ? r[idx] * 257 : 0);
-                                ushort gg = (ushort)((g != null && g.Length > idx) ? g[idx] * 257 : 0);
-                                ushort bb = (ushort)((b != null && b.Length > idx) ? b[idx] * 257 : 0);
-                                float aval = (hasAlphaChannel && a != null && a.Length > idx) ? a[idx] : 1f;
-                                if (float.IsNaN(aval) || float.IsInfinity(aval)) aval = 1f;
-                                int ai = (int)Math.Round(aval * 65535f);
-                                if (ai < 0) ai = 0;
-                                if (ai > 65535) ai = 65535;
-                                ushort aa = (ushort)ai;
-
-                                img[x, y] = new Rgba64(rr, gg, bb, aa);
-                            }
-                        }
-                        img.Save(path, imageEncoder);
-                        return;
-                    }
-                }
-                else
-                {
-                    using (var img = new Image<Rgb48>(Width, Height))
-                    {
-                        for (int y = 0; y < Height; y++)
-                        {
-                            for (int x = 0; x < Width; x++)
-                            {
-                                idx = y * Width + x;
-                                ushort rr = (ushort)(r[idx] * 257);
-                                ushort gg = (ushort)(g[idx] * 257);
-                                ushort bb = (ushort)(b[idx] * 257);
-                                img[x, y] = new Rgb48(rr, gg, bb);
-
-                            }
-                        }
-
-                        img.Save(path, imageEncoder);
-                        return;
-                    }
-                }
-            }
-        }
-
-        [DebuggerNonUserCode()]
-        public void SaveAsPng8bpp(string path, IImageEncoder? imageEncoder = null)
-        {
-            lock (this)
-            {
-                imageEncoder = imageEncoder ?? new PngEncoder()
-                {
-                    BitDepth = PngBitDepth.Bit8
-                };
-
-                int idx = 0;
-
-                if (hasAlphaChannel && (a != null && a.Length >= Pixels))
-                {
-                    using (var img = new Image<Rgba32>(Width, Height))
-                    {
-                        for (int y = 0; y < Height; y++)
-                        {
-                            for (int x = 0; x < Width; x++)
-                            {
-                                idx = y * Width + x;
-                                byte rr = (r != null && r.Length > idx) ? r[idx] : (byte)0;
-                                byte gg = (g != null && g.Length > idx) ? g[idx] : (byte)0;
-                                byte bb = (b != null && b.Length > idx) ? b[idx] : (byte)0;
-                                float aval = (hasAlphaChannel && a != null && a.Length > idx) ? a[idx] : 1f;
-                                if (float.IsNaN(aval) || float.IsInfinity(aval)) aval = 1f;
-                                int ai = (int)Math.Round(aval * 255f);
-                                if (ai < 0) ai = 0;
-                                if (ai > 255) ai = 255;
-                                byte aa = (byte)ai;
-
-                                img[x, y] = new Rgba32(rr, gg, bb, aa);
-                            }
-                        }
-                        img.Save(path, imageEncoder);
-                        return;
-                    }
-                }
-                else
-                {
-                    using (var img = new Image<Rgb24>(Width, Height))
-                    {
-                        for (int y = 0; y < Height; y++)
-                        {
-                            for (int x = 0; x < Width; x++)
-                            {
-                                idx = y * Width + x;
-                                img[x, y] = new Rgb24(r[idx], g[idx], b[idx]);
-
-                            }
-                        }
-
-                        img.Save(path, imageEncoder);
-                        return;
-                    }
-                }
             }
         }
 
@@ -1092,20 +955,21 @@ namespace projectFrameCut.Shared
                         }
                     }
                 }
-
+                result.ProcessStack = $"{ProcessStack}\r\nResize to {targetWidth}*{targetHeight}\r\n";
                 return result;
             }
         }
 
-     
-
-        public static Picture8bpp GenerateSolidColor(int width,int height,byte r, byte g, byte b, float? a)
+        public static Picture8bpp GenerateSolidColor(int width, int height, byte r, byte g, byte b, float? a)
         {
-            var pic = new Picture8bpp(width, height);
+            var pic = new Picture8bpp(width, height)
+            {
+                ProcessStack = $"SolidColor, {width}*{height}, rgba:{r},{g},{b},{(a is not null ? $"{a}" : "ff")}\r\n"
+            };
             pic.r = Enumerable.Repeat(r, pic.Pixels).ToArray();
             pic.g = Enumerable.Repeat(g, pic.Pixels).ToArray();
             pic.b = Enumerable.Repeat(b, pic.Pixels).ToArray();
-            if(a != null)
+            if (a != null)
             {
                 pic.a = Enumerable.Repeat(a.Value, pic.Pixels).ToArray();
                 pic.hasAlphaChannel = true;
@@ -1197,6 +1061,286 @@ namespace projectFrameCut.Shared
         IPicture IPicture.Resize(int targetWidth, int targetHeight, bool preserveAspect)
         {
             return Resize(targetWidth, targetHeight, preserveAspect);
+        }
+
+        public object? GetSpecificChannel(IPicture.ChannelId channelId)
+        {
+            return channelId switch
+            {
+                IPicture.ChannelId.Red => r,
+                IPicture.ChannelId.Green => g,
+                IPicture.ChannelId.Blue => b,
+                IPicture.ChannelId.Alpha => a!,
+                _ => throw new ArgumentOutOfRangeException(nameof(channelId), "Invalid channel ID."),
+            };
+        }
+
+        public string GetDiagnosticsInfo() => $"8BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{ProcessStack}";
+
+
+    }
+
+    public static class PictureExtensions
+    {
+        public static void LogPicInfo(this IPicture<ushort> src)
+        {
+            Logger.LogDiagnostic($"16BitPerPixel image, Size: {src.Width}*{src.Height}, avg R:{src.r.Average(Convert.ToDecimal)} G:{src.g.Average(Convert.ToDecimal)} B:{src.b.Average(Convert.ToDecimal)} A:{src.a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{src.ProcessStack}");
+
+        }
+        public static void LogPicInfo(this IPicture<byte> src)
+        {
+            Logger.LogDiagnostic($"8BitPerPixel image,Size: {src.Width}*{src.Height}, avg R:{src.r.Average(Convert.ToDecimal)} G:{src.g.Average(Convert.ToDecimal)} B:{src.b.Average(Convert.ToDecimal)} A:{src.a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{src.ProcessStack}");
+        }
+
+        [DebuggerStepThrough()]
+        public static void SaveAsPng16bpp(this IPicture image, string path, IImageEncoder? imageEncoder = null) //compatibility
+            => SaveAsPng(image, path, 16, null, imageEncoder);
+
+        //[DebuggerStepThrough()]
+        public static void SaveAsPng8bpp(this IPicture image, string path, IImageEncoder? imageEncoder = null)
+            => SaveAsPng(image, path, 8, null, imageEncoder);
+
+
+        //[DebuggerStepThrough()]
+        public static void SaveAsPng(this IPicture image, string path, int resultPPB = 16, bool? saveAlpha = null, IImageEncoder? imageEncoder = null)
+        {
+            if (Debugger.IsAttached || MyLoggerExtensions.LoggingDiagnosticInfo)
+            {
+                if (image is Picture16bpp p1) p1.LogPicInfo();
+                else if(image is Picture8bpp p2) p2.LogPicInfo();
+                else Logger.LogDiagnostic("Unknown picture type, cannot get info.");
+            }
+            ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(path));
+            imageEncoder = imageEncoder ?? DefaultEncoder;
+            image.SaveToSixLaborsImage(resultPPB, saveAlpha).Save(path, imageEncoder);
+        }
+
+        //[DebuggerStepThrough()]
+        public static Image SaveToSixLaborsImage(this IPicture image, int resultPPB = 16, bool? saveAlpha = null)
+        {
+            lock (image)
+            {
+                IEnumerable<float> aa = image.hasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+                bool alpha = saveAlpha ?? image.hasAlphaChannel && aa is not null;
+
+                Image result;
+                if (image.bitPerPixel == 16)
+                {
+                    var rr = image.GetSpecificChannel(IPicture.ChannelId.Red) as ushort[];
+                    var gg = image.GetSpecificChannel(IPicture.ChannelId.Green) as ushort[];
+                    var bb = image.GetSpecificChannel(IPicture.ChannelId.Blue) as ushort[];
+                    ArgumentNullException.ThrowIfNull(rr, nameof(IPicture<ushort>.r));
+                    ArgumentNullException.ThrowIfNull(gg, nameof(IPicture<ushort>.g));
+                    ArgumentNullException.ThrowIfNull(bb, nameof(IPicture<ushort>.b));
+                    if (alpha)
+                    {
+                        if (aa is null) aa = Enumerable.Repeat(1f, image.Pixels);
+                        result = _SaveToInternal16bppWithAlpha(image, rr, gg, bb, aa);
+                    }
+                    else
+                    {
+                        result = _SaveToInternal16bppWithNoAlpha(image, rr, gg, bb);
+                    }
+                }
+                else if (image.bitPerPixel == 8)
+                {
+                    var rr = image.GetSpecificChannel(IPicture.ChannelId.Red) as byte[];
+                    var gg = image.GetSpecificChannel(IPicture.ChannelId.Green) as byte[];
+                    var bb = image.GetSpecificChannel(IPicture.ChannelId.Blue) as byte[];
+                    ArgumentNullException.ThrowIfNull(rr, nameof(IPicture<byte>.r));
+                    ArgumentNullException.ThrowIfNull(gg, nameof(IPicture<byte>.g));
+                    ArgumentNullException.ThrowIfNull(bb, nameof(IPicture<byte>.b));
+                    if (alpha)
+                    {
+                        if (aa is null) aa = Enumerable.Repeat(1f, image.Pixels);
+                        result = _SaveToInternal8bppWithAlpha(image, rr, gg, bb, aa);
+                    }
+                    else
+                    {
+                        result = _SaveToInternal8bppWithNoAlpha(image, rr, gg, bb);
+                    }
+                }
+                else
+                {
+                    throw new NotSupportedException("Only 8bpp and 16bpp images are supported.");
+                }
+                return result;
+            }
+        }
+
+        private static IImageEncoder DefaultEncoder = new PngEncoder()
+        {
+            BitDepth = PngBitDepth.Bit16
+        };
+
+        private static T readNextFromEnumerator<T>(IEnumerator<T> en)
+        {
+            if (en.MoveNext())
+            {
+                return en.Current;
+            }
+            else
+            {
+                throw new InvalidOperationException("The source enumerable is empty.");
+            }
+        }
+        [DebuggerStepThrough()]
+        private static Image _SaveToInternal16bppWithAlpha(IPicture image, IEnumerable<ushort> rr, IEnumerable<ushort> gg, IEnumerable<ushort> bb, IEnumerable<float> aa)
+        {
+            var result = new Image<Rgba64>(image.Width, image.Height);
+            var r = rr.GetEnumerator();
+            var g = gg.GetEnumerator();
+            var b = bb.GetEnumerator();
+            var a = aa.GetEnumerator();
+            int x = 0, y = 0;
+            for (int i = 0; i < image.Pixels; i++)
+            {
+                result[x, y] = new Rgba64
+                {
+                    R = readNextFromEnumerator(r),
+                    G = readNextFromEnumerator(g),
+                    B = readNextFromEnumerator(b),
+                    A = (ushort)(Math.Clamp(readNextFromEnumerator(a), 0f, 1f) * 65535f)
+                };
+                if (x == image.Width - 1)
+                {
+                    x = 0;
+                    y++;
+                }
+                else
+                {
+                    x++;
+                }
+            }
+            return result;
+        }
+        [DebuggerStepThrough()]
+        private static Image _SaveToInternal16bppWithNoAlpha(IPicture image, IEnumerable<ushort> rr, IEnumerable<ushort> gg, IEnumerable<ushort> bb)
+        {
+            var result = new Image<Rgb48>(image.Width, image.Height);
+            var r = rr.GetEnumerator();
+            var g = gg.GetEnumerator();
+            var b = bb.GetEnumerator();
+            int x = 0, y = 0;
+            for (int i = 0; i < image.Pixels; i++)
+            {
+                result[x, y] = new Rgb48
+                {
+                    R = readNextFromEnumerator(r),
+                    G = readNextFromEnumerator(g),
+                    B = readNextFromEnumerator(b),
+                };
+                if (x == image.Width - 1)
+                {
+                    x = 0;
+                    y++;
+                }
+                else
+                {
+                    x++;
+                }
+            }
+            return result;
+        }
+        [DebuggerStepThrough()]
+        private static Image _SaveToInternal8bppWithAlpha(IPicture image, IEnumerable<byte> rr, IEnumerable<byte> gg, IEnumerable<byte> bb, IEnumerable<float> aa)
+        {
+            var result = new Image<Rgba32>(image.Width, image.Height);
+            var r = rr.GetEnumerator();
+            var g = gg.GetEnumerator();
+            var b = bb.GetEnumerator();
+            var a = aa.GetEnumerator();
+            int x = 0, y = 0;
+            for (int i = 0; i < image.Pixels; i++)
+            {
+                result[x, y] = new Rgba32
+                {
+                    R = readNextFromEnumerator(r),
+                    G = readNextFromEnumerator(g),
+                    B = readNextFromEnumerator(b),
+                    A = (byte)(Math.Clamp(readNextFromEnumerator(a), 0f, 1f) * 255f)
+                };
+                if (x == image.Width - 1)
+                {
+                    x = 0;
+                    y++;
+                }
+                else
+                {
+                    x++;
+                }
+            }
+            return result;
+        }
+        [DebuggerStepThrough()]
+        private static Image _SaveToInternal8bppWithNoAlpha(IPicture image, IEnumerable<byte> rr, IEnumerable<byte> gg, IEnumerable<byte> bb)
+        {
+            var result = new Image<Rgb24>(image.Width, image.Height);
+            var r = rr.GetEnumerator();
+            var g = gg.GetEnumerator();
+            var b = bb.GetEnumerator();
+            int x = 0, y = 0;
+            for (int i = 0; i < image.Pixels; i++)
+            {
+                result[x, y] = new Rgb24
+                {
+                    R = readNextFromEnumerator(r),
+                    G = readNextFromEnumerator(g),
+                    B = readNextFromEnumerator(b),
+                };
+                if (x == image.Width - 1)
+                {
+                    x = 0;
+                    y++;
+                }
+                else
+                {
+                    x++;
+                }
+            }
+            return result;
+        }
+
+
+        public static bool TryFromXYToArrayIndex(this IPicture reference, int x, int y, out int index)
+            => TryFromXYToArrayIndex(x, y, reference.Width, reference.Height, out index);
+
+        public static bool TryFromXYToArrayIndex(int x, int y, int width, int height, out int index)
+        {
+            if (x < 0 || x >= width || y < 0 || y >= height)
+            {
+                index = -1;
+                return false;
+            }
+            index = y * width + x;
+            return true;
+        }
+
+        public static Pixel<T> GetPixel<T>(this IPicture<T> source, int x, int y)
+        {
+            if (!TryFromXYToArrayIndex(x, y, source.Width, source.Height, out int idx))
+            {
+                if (x < 0 || x >= source.Width)
+                    throw new ArgumentOutOfRangeException(nameof(x), "x is out of bounds.");
+                if (y < 0 || y >= source.Height)
+                    throw new ArgumentOutOfRangeException(nameof(y), "y is out of bounds.");
+                throw new ArgumentOutOfRangeException("x or y", "x or y is out of bounds.");
+            }
+            return new Pixel<T>
+            {
+                r = source.r[idx],
+                g = source.g[idx],
+                b = source.b[idx],
+                a = (source.a != null) ? source.a[idx] : 1f
+            };
+        }
+
+        public struct Pixel<T>
+        {
+            public T r;
+            public T g;
+            public T b;
+            public float a;
         }
     }
 }
