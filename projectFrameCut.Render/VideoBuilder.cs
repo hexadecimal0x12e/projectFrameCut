@@ -6,27 +6,54 @@ using System.Runtime.InteropServices;
 
 namespace projectFrameCut.Render
 {
-    public class VideoBuilder : IDisposable    
+    public class VideoBuilder : IDisposable
     {
         string outputPath;
         VideoWriter builder;
         uint index;
         bool running = true, stopped = false;
+        ConcurrentDictionary<uint, IPicture> Cache = new();
+
+        /// <summary>
+        /// When it's true, adding a frame with an existing index will throw an exception, 
+        /// or when <see cref="BlockWrite"/> is enabled, writing a frame with an existing index will throw an exception.
+        /// </summary>
         public bool StrictMode { get; set; } = true;
+        /// <summary>
+        /// Call GC to collect unreferenced objects after each frame is written.
+        /// </summary>
         public bool DoGCAfterEachWrite { get; set; } = true;
+        /// <summary>
+        /// Dispose the source <see cref="IPicture"/> when it's written to video.
+        /// </summary>
+        public bool DisposeFrameAfterEachWrite { get; set; } = true;
 
-        public int minFrameCountToGeneratePreview { get; set; } = 10;
-
+        /// <summary>
+        /// Don't write frames to cache, write directly to file when appended. 
+        /// </summary>
         public bool BlockWrite { get; set; } = false;
+        /// <summary>
+        /// Generate preview to the specified path when enabled.
+        /// </summary>
         public bool EnablePreview { get; set; } = false;
+        /// <summary>
+        /// Path of the preview image.
+        /// </summary>
         public string? PreviewPath { get; set; } = null;
+        /// <summary>
+        /// the minimum number of frames between generating preview images.
+        /// </summary>
+        public int minFrameCountToGeneratePreview { get; set; } = 10;
         private uint countSinceLastPreview = 0;
 
+        /// <summary>
+        /// The duration (in frames) of the video to be built.
+        /// </summary>
+        public uint Duration { get; set; }
         public int Width => builder._width;
         public int Height => builder._height;
-        public uint Duration { get; set; }
 
-        ConcurrentDictionary<uint,Picture> Cache = new();
+
 
         /// <summary>
         /// Indicates whether the frame has been pended to write. 
@@ -34,26 +61,26 @@ namespace projectFrameCut.Render
         /// False means the frame is still in the cache waiting to be written.
         /// If the key is not present, it means the frame has not been added yet.
         /// </summary>
-        public ConcurrentDictionary<uint,bool> FramePendedToWrite { get; private set; } = new();
+        public ConcurrentDictionary<uint, bool> FramePendedToWrite { get; private set; } = new();
 
-        public VideoBuilder(string path,  int width, int height, int framerate,string encoder, AVPixelFormat fmt, bool disposeAfterWrite)
+        public VideoBuilder(string path, int width, int height, int framerate, string encoder, AVPixelFormat fmt)
         {
             outputPath = path;
             index = 0;
-            builder = new(path,width,height,framerate,encoder,fmt,disposeAfterWrite);
+            builder = new(path, width, height, framerate, encoder, fmt);
         }
-        
+
         public bool Disposed { get; private set; }
 
-        public void Append(uint index, Picture frame)
+        public void Append(uint index, IPicture frame)
         {
-            if(index > Duration)
+            if (index > Duration)
             {
-                Console.WriteLine($"[VideoBuilder] WARN: Frame #{index} is out of duration {Duration}, ignored.");
-                frame.Dispose();    
+                Log($"[VideoBuilder] WARN: Frame #{index} is out of duration {Duration}, ignored.", "warn");
+                if (DisposeFrameAfterEachWrite) frame.Dispose();
                 return;
             }
-            if(!FramePendedToWrite.TryAdd(index, false))
+            if (!FramePendedToWrite.TryAdd(index, false))
             {
                 if (StrictMode)
                 {
@@ -61,8 +88,8 @@ namespace projectFrameCut.Render
                 }
                 else
                 {
-                    Log($"[VideoBuilder] WARN: Frame #{index} has already been added, ignored.");
-                    frame.Dispose();
+                    Log($"[VideoBuilder] WARN: Frame #{index} has already been added, ignored.", "warn");
+                    if (DisposeFrameAfterEachWrite) frame.Dispose();
                     return;
                 }
             }
@@ -77,13 +104,26 @@ namespace projectFrameCut.Render
             }
             else
             {
+                if (!FramePendedToWrite.TryAdd(index, true))
+                {
+                    if (StrictMode)
+                    {
+                        throw new InvalidOperationException($"Frame #{index} has already been added.");
+                    }
+                    else
+                    {
+                        Log($"[VideoBuilder] WARN: Frame #{index} has already been added, ignored.", "warn");
+                        if (DisposeFrameAfterEachWrite) frame.Dispose();
+                        return;
+                    }
+                }
                 builder.Append(frame);
                 Log($"[VideoBuilder] Frame #{index} added.");
             }
-            
+
         }
 
-        private void AsyncSave(uint index, Picture frame)
+        private void AsyncSave(uint index, IPicture frame)
         {
             new Thread(() =>
             {
@@ -93,7 +133,7 @@ namespace projectFrameCut.Render
                 }
                 catch (Exception ex)
                 {
-                    Log($"[VideoBuilder] WARN: Failed to save preview image: {ex.Message}");
+                    Log($"[VideoBuilder] WARN: Failed to save preview image: {ex.Message}", "warn");
                 }
             })
             {
@@ -119,34 +159,44 @@ namespace projectFrameCut.Render
 
                 do
                 {
-                    if (Cache.Count == 0) 
+                    if (Cache.Count == 0)
                     {
-                        Thread.Sleep(100); 
+                        Thread.Sleep(100);
                         continue;
                     }
 
                     if (Cache.ContainsKey(index))
                     {
                         builder.Append(Cache.TryRemove(index, out var f) ? f : throw new KeyNotFoundException());
-                        Log($"[VideoBuilder] Frame #{index} added.");
                         FramePendedToWrite[index] = true;
                         index++;
+                        
+                        if (DisposeFrameAfterEachWrite) f.Dispose();
                         if (DoGCAfterEachWrite)
                         {
-                            GC.Collect(2, GCCollectionMode.Forced, true, true);
-                            GC.WaitForFullGCComplete();
+                            if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
+                            {
+                                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                                GC.WaitForFullGCComplete();
+                            }
+                            else //mono don't support full blocking GC
+                            {
+                                GC.Collect();
+                            }
+                            
                         }
+                        Log($"[VideoBuilder] Frame #{index} wrote.");
                     }
                     else
                     {
-                        Thread.Sleep(200); 
+                        Thread.Sleep(200);
                     }
-                } 
+                }
                 while (running);
                 Thread.Sleep(50);
                 stopped = true;
             })
-            { 
+            {
                 Name = $"VideoWriter for {outputPath}",
                 Priority = ThreadPriority.Highest
             };
@@ -154,15 +204,15 @@ namespace projectFrameCut.Render
 
         }
 
-        public void Finish(Func<uint,Picture> regenerator, uint totalFrames = 0)
+        public void Finish(Func<uint, IPicture> regenerator, uint totalFrames = 0)
         {
             running = false;
-            while(!Volatile.Read(ref stopped))
+            while (!Volatile.Read(ref stopped))
                 Thread.Sleep(500);
-            
+
             var missingFrames = new List<uint>();
             uint currentIndex = index;
-            
+
             while (Cache.Count > 0 || missingFrames.Count > 0)
             {
                 Console.Error.WriteLine($"@@{currentIndex},{totalFrames}");
@@ -174,10 +224,10 @@ namespace projectFrameCut.Render
                     currentIndex++;
                     continue;
                 }
-                
+
                 if (missingFrames.Count == 0 && !Cache.ContainsKey(currentIndex))
                 {
-                    uint maxCheck = currentIndex + 100; 
+                    uint maxCheck = currentIndex + 100;
                     for (uint i = currentIndex; i < maxCheck; i++)
                     {
                         if (!Cache.ContainsKey(i) && (Cache.Count == 0 || i <= Cache.Keys.Max()) && i <= totalFrames)
@@ -189,10 +239,10 @@ namespace projectFrameCut.Render
                             break;
                         }
                     }
-                    
+
                     if (missingFrames.Count > 0)
                     {
-                        Log($"[VideoBuilder] WARN: Frames #{missingFrames[0]}-#{missingFrames[missingFrames.Count-1]} not found, rebuilding {missingFrames.Count} frames...");
+                        Log($"[VideoBuilder] WARN: Frames #{missingFrames[0]}-#{missingFrames[missingFrames.Count - 1]} not found, rebuilding {missingFrames.Count} frames...");
                         foreach (var frameIdx in missingFrames)
                         {
                             builder.Append(regenerator(frameIdx));
@@ -201,19 +251,19 @@ namespace projectFrameCut.Render
                     }
                     else if (Cache.Count == 0)
                     {
-                        break; 
+                        break;
                     }
                 }
                 else if (missingFrames.Count > 0)
                 {
                     uint frameToProcess = missingFrames[0];
                     missingFrames.RemoveAt(0);
-                    
+
                     if (Cache.ContainsKey(frameToProcess))
                     {
                         builder.Append(Cache.TryRemove(frameToProcess, out var f) ? f : throw new KeyNotFoundException());
                         Log($"[VideoBuilder] Rebuilt frame #{frameToProcess} added.");
-                        
+
                         if (frameToProcess == currentIndex)
                             currentIndex++;
                     }
@@ -254,7 +304,6 @@ namespace projectFrameCut.Render
 
         public bool IsOpened => _fmtCtx != null;
 
-        public bool DisposeThePictureAfterWrite { get; set; } = false;
         public uint Index { get; set; } = 0;
 
         public VideoWriter(
@@ -275,7 +324,6 @@ namespace projectFrameCut.Render
             _codecName = codecName;
             _dstPixFmt = dstPixelFormat;
             _path = outputPath;
-            DisposeThePictureAfterWrite = disposeAfterWrite;
             //FFmpegHelper.RegisterFFmpeg();
             Init();
         }
@@ -298,11 +346,11 @@ namespace projectFrameCut.Render
                 {
                     throw new FileLoadException($"projectFrameCut can't write the video file '{_path}' because of no enough privileges. Try restart the projectFrameCut with administrator privileges, or modify the privileges of output dir. (FFmpeg error:{FFmpegHelper.GetErrorString(ret) ?? "unknown"}, code:{ret})", ex);
                 }
-                catch(DirectoryNotFoundException)
+                catch (DirectoryNotFoundException)
                 {
                     throw new DirectoryNotFoundException($"The directory '{Path.GetDirectoryName(_path)}' isn't exist. (FFmpeg error:{FFmpegHelper.GetErrorString(ret) ?? "unknown"}, code:{ret})");
                 }
-                catch(PathTooLongException ex)
+                catch (PathTooLongException ex)
                 {
                     throw new FileLoadException($"projectFrameCut can't write the video file '{_path}' because of path is too long. Try modify the temp directory in the settings. (FFmpeg error:{FFmpegHelper.GetErrorString(ret) ?? "unknown"}, code:{ret})", ex);
                 }
@@ -310,7 +358,7 @@ namespace projectFrameCut.Render
                 {
                     throw new InvalidOperationException($"We failed to write the file because of '{ex.Message}'. (FFmpeg error:{FFmpegHelper.GetErrorString(ret) ?? "unknown"}, code:{ret})", ex);
                 }
-                writable:
+            writable:
                 FFmpegHelper.Throw(ret, "Prepare the file to write video (avformat_alloc_output_context2)");
             }
             _fmtCtx = oc;
@@ -390,7 +438,7 @@ namespace projectFrameCut.Render
 
         }
 
-        public void Append(Picture picture)
+        public void Append(IPicture picture)
         {
             if (picture == null) throw new ArgumentNullException(nameof(picture));
             if (picture.Width != _width || picture.Height != _height)
@@ -405,74 +453,154 @@ namespace projectFrameCut.Render
             byte* srcData0 = _frameSrc->data[0];
             int srcLinesize = _frameSrc->linesize[0];
 
-            fixed (ushort* pr = picture.r)
-            fixed (ushort* pg = picture.g)
-            fixed (ushort* pb = picture.b)
-            fixed (float* pa = picture.a)
+            if (picture is IPicture<ushort> pic16)
             {
-                if (colorDepth == 16)
+                fixed (ushort* pr = pic16.r)
+                fixed (ushort* pg = pic16.g)
+                fixed (ushort* pb = pic16.b)
+                fixed (float* pa = pic16.a)
                 {
-                    for (int y = 0; y < _height; y++)
+                    if (colorDepth == 16)
                     {
-                        ushort* row16 = (ushort*)(srcData0 + y * srcLinesize);
-                        int baseIndex = y * _width;
-                        for (int x = 0; x < _width; x++)
+                        for (int y = 0; y < _height; y++)
                         {
-                            int k = baseIndex + x;
-                            ushort r16 = (pr != null && k < picture.r.Length) ? pr[k] : (ushort)0;
-                            ushort g16 = (pg != null && k < picture.g.Length) ? pg[k] : (ushort)0;
-                            ushort b16 = (pb != null && k < picture.b.Length) ? pb[k] : (ushort)0;
-
-                            ushort a16 = 65535;
-                            if (picture.hasAlphaChannel && picture.a != null && pa != null && k < picture.a.Length)
+                            ushort* row16 = (ushort*)(srcData0 + y * srcLinesize);
+                            int baseIndex = y * _width;
+                            for (int x = 0; x < _width; x++)
                             {
-                                float af = pa[k];
-                                if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
-                                if (af < 0f) af = 0f;
-                                if (af > 1f) af = 1f;
-                                a16 = (ushort)(af * 65535f + 0.5f);
-                            }
+                                int k = baseIndex + x;
+                                ushort r16 = (pr != null && k < pic16.r.Length) ? pr[k] : (ushort)0;
+                                ushort g16 = (pg != null && k < pic16.g.Length) ? pg[k] : (ushort)0;
+                                ushort b16 = (pb != null && k < pic16.b.Length) ? pb[k] : (ushort)0;
 
-                            int off = x * 4; 
-                            row16[off + 0] = r16;
-                            row16[off + 1] = g16;
-                            row16[off + 2] = b16;
-                            row16[off + 3] = a16;
+                                ushort a16 = 65535;
+                                if (pic16.hasAlphaChannel && pic16.a != null && pa != null && k < pic16.a.Length)
+                                {
+                                    float af = pa[k];
+                                    if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
+                                    if (af < 0f) af = 0f;
+                                    if (af > 1f) af = 1f;
+                                    a16 = (ushort)(af * 65535f + 0.5f);
+                                }
+
+                                int off = x * 4;
+                                row16[off + 0] = r16;
+                                row16[off + 1] = g16;
+                                row16[off + 2] = b16;
+                                row16[off + 3] = a16;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        for (int y = 0; y < _height; y++)
+                        {
+                            byte* row = srcData0 + y * srcLinesize;
+                            int baseIndex = y * _width;
+                            for (int x = 0; x < _width; x++)
+                            {
+                                int k = baseIndex + x;
+                                ushort r16 = pr != null && k < pic16.r.Length ? pr[k] : (ushort)0;
+                                ushort g16 = pg != null && k < pic16.g.Length ? pg[k] : (ushort)0;
+                                ushort b16 = pb != null && k < pic16.b.Length ? pb[k] : (ushort)0;
+                                byte r8 = (byte)(r16 >> 8);
+                                byte g8 = (byte)(g16 >> 8);
+                                byte b8 = (byte)(b16 >> 8);
+                                byte a8 = 255;
+                                if (pic16.hasAlphaChannel && pic16.a != null && pa != null && k < pic16.a.Length)
+                                {
+                                    float af = pa[k];
+                                    if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
+                                    if (af < 0f) af = 0f;
+                                    if (af > 1f) af = 1f;
+                                    a8 = (byte)(af * 255f + 0.5f);
+                                }
+                                int off = x * 4;
+                                row[off + 0] = r8;
+                                row[off + 1] = g8;
+                                row[off + 2] = b8;
+                                row[off + 3] = a8;
+                            }
                         }
                     }
                 }
-                else
+            }
+            else if (picture is IPicture<byte> pic8)
+            {
+                fixed (byte* pr = pic8.r)
+                fixed (byte* pg = pic8.g)
+                fixed (byte* pb = pic8.b)
+                fixed (float* pa = pic8.a)
                 {
-                    for (int y = 0; y < _height; y++)
+                    if (colorDepth == 16)
                     {
-                        byte* row = srcData0 + y * srcLinesize;
-                        int baseIndex = y * _width;
-                        for (int x = 0; x < _width; x++)
+                        for (int y = 0; y < _height; y++)
                         {
-                            int k = baseIndex + x;
-                            ushort r16 = pr != null && k < picture.r.Length ? pr[k] : (ushort)0;
-                            ushort g16 = pg != null && k < picture.g.Length ? pg[k] : (ushort)0;
-                            ushort b16 = pb != null && k < picture.b.Length ? pb[k] : (ushort)0;
-                            byte r8 = (byte)(r16 >> 8);
-                            byte g8 = (byte)(g16 >> 8);
-                            byte b8 = (byte)(b16 >> 8);
-                            byte a8 = 255;
-                            if (picture.hasAlphaChannel && picture.a != null && pa != null && k < picture.a.Length)
+                            ushort* row16 = (ushort*)(srcData0 + y * srcLinesize);
+                            int baseIndex = y * _width;
+                            for (int x = 0; x < _width; x++)
                             {
-                                float af = pa[k];
-                                if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
-                                if (af < 0f) af = 0f;
-                                if (af > 1f) af = 1f;
-                                a8 = (byte)(af * 255f + 0.5f);
+                                int k = baseIndex + x;
+                                byte r8 = (pr != null && k < pic8.r.Length) ? pr[k] : (byte)0;
+                                byte g8 = (pg != null && k < pic8.g.Length) ? pg[k] : (byte)0;
+                                byte b8 = (pb != null && k < pic8.b.Length) ? pb[k] : (byte)0;
+
+                                ushort r16 = (ushort)(r8 * 257);
+                                ushort g16 = (ushort)(g8 * 257);
+                                ushort b16 = (ushort)(b8 * 257);
+
+                                ushort a16 = 65535;
+                                if (pic8.hasAlphaChannel && pic8.a != null && pa != null && k < pic8.a.Length)
+                                {
+                                    float af = pa[k];
+                                    if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
+                                    if (af < 0f) af = 0f;
+                                    if (af > 1f) af = 1f;
+                                    a16 = (ushort)(af * 65535f + 0.5f);
+                                }
+
+                                int off = x * 4;
+                                row16[off + 0] = r16;
+                                row16[off + 1] = g16;
+                                row16[off + 2] = b16;
+                                row16[off + 3] = a16;
                             }
-                            int off = x * 4;
-                            row[off + 0] = r8;
-                            row[off + 1] = g8;
-                            row[off + 2] = b8;
-                            row[off + 3] = a8;
+                        }
+                    }
+                    else
+                    {
+                        for (int y = 0; y < _height; y++)
+                        {
+                            byte* row = srcData0 + y * srcLinesize;
+                            int baseIndex = y * _width;
+                            for (int x = 0; x < _width; x++)
+                            {
+                                int k = baseIndex + x;
+                                byte r8 = pr != null && k < pic8.r.Length ? pr[k] : (byte)0;
+                                byte g8 = pg != null && k < pic8.g.Length ? pg[k] : (byte)0;
+                                byte b8 = pb != null && k < pic8.b.Length ? pb[k] : (byte)0;
+                                byte a8 = 255;
+                                if (pic8.hasAlphaChannel && pic8.a != null && pa != null && k < pic8.a.Length)
+                                {
+                                    float af = pa[k];
+                                    if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
+                                    if (af < 0f) af = 0f;
+                                    if (af > 1f) af = 1f;
+                                    a8 = (byte)(af * 255f + 0.5f);
+                                }
+                                int off = x * 4;
+                                row[off + 0] = r8;
+                                row[off + 1] = g8;
+                                row[off + 2] = b8;
+                                row[off + 3] = a8;
+                            }
                         }
                     }
                 }
+            }
+            else
+            {
+                throw new NotSupportedException($"Unsupported picture type: {picture.GetType().Name}");
             }
 
             ffmpeg.sws_scale(
@@ -488,7 +616,6 @@ namespace projectFrameCut.Render
 
             EncodeFrame(_frameDst);
 
-            if(DisposeThePictureAfterWrite) picture.Dispose();
             Index++;
         }
 
@@ -620,5 +747,5 @@ namespace projectFrameCut.Render
         }
     }
 
-   
+
 }

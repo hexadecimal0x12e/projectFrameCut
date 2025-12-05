@@ -205,7 +205,10 @@ namespace projectFrameCut.Render
                 canvas.Mutate(i => i.DrawText(entry.text, font, color, new PointF(entry.x, entry.y)));
             }
 
-            return new Picture(canvas);
+            return new Picture(canvas)
+            {
+                ProcessStack = $"Created from text '{TextEntries.Aggregate("",(a,b) => $"{a},{b.text}")}'"
+            };
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)

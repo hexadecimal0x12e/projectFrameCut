@@ -8,25 +8,29 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace projectFrameCut.Render
 {
     public class Renderer
     {
-        public IClip[] Clips;
+        public IClip[]? Clips;
         public uint Duration;
-        public VideoBuilder builder;
+        public VideoBuilder? builder;
         public int MaxThreads = (int)(Environment.ProcessorCount * 1.75);
         public bool LogState = false;
         public int GCOption = 0;
+        public bool LogStatToLogger = false;
+        public bool Use16Bit { get; set; } = true;
 
         public event Action<double>? OnProgressChanged;
+        public ConcurrentBag<TimeSpan> EachElapsed = new(), EachElapsedForPreparing = new();
+        public bool running { get; private set; } = false;
 
         ConcurrentDictionary<string, ConcurrentDictionary<uint, IPicture>> FrameCache = new();
         ConcurrentDictionary<uint, IClip[]> ClipNeedForFrame = new();
         ConcurrentDictionary<string, IComputer> ComputerCache = new();
         ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
-        public ConcurrentBag<TimeSpan> EachElapsed = new(), EachElapsedForPreparing = new();
 
         List<Thread> Threads = new List<Thread>();
 
@@ -42,9 +46,52 @@ namespace projectFrameCut.Render
 
         private IPicture BlankFrame = null!;
 
+        private PlaceEffect BlankPlace = new()
+        {
+            StartX = 0,
+            StartY = 0
+        };
+
         public async Task GoRender(CancellationToken token)
         {
-            BlankFrame = Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+            ArgumentNullException.ThrowIfNull(builder, nameof(builder));
+            ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
+            BlankFrame = Use16Bit ? Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+
+            running = true;
+            if (LogStatToLogger)
+            {
+                new Thread(() =>
+                {
+                    float d = Duration;
+                    TimeSpan each = TimeSpan.Zero, eachPrepare = TimeSpan.Zero;
+                    while (running)
+                    {
+                        try
+                        {
+                            if (EachElapsed.Count > 0)
+                                each = new TimeSpan((long)EachElapsed.Average(x => x.Ticks));
+                            if (EachElapsedForPreparing.Count > 0)
+                                eachPrepare = new TimeSpan((long)EachElapsedForPreparing.Average(x => x.Ticks));
+
+                            if (token.IsCancellationRequested) return;
+                            Log($"[STAT] " +
+                                $"memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB, " +
+                                $"total prepared: {TotalEnqueued / d:p2}, " +
+                                $"total rendered: {Volatile.Read(ref Finished) / d:p2}, " +
+                                $"total wrote frames: {builder.FramePendedToWrite.Count(k => k.Value) / d:p3}, " +
+                                $"total pended to write frames: {builder.FramePendedToWrite.Count(k => !k.Value)}/{builder.FramePendedToWrite.Count}, " +
+                                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}. ");
+                            Thread.Sleep(10000);
+                        }
+                        catch { }
+                    }
+                })
+                {
+                    Name = "Stat logger thread",
+                    IsBackground = false
+                }.Start();
+            }
 
             Thread preparer = new(() => PrepareSource(token));
             preparer.Name = "Preparer thread";
@@ -179,12 +226,7 @@ namespace projectFrameCut.Render
 
                 if (!found)
                 {
-                    //Log($"[Preparer] Frame {idx} is empty.");
                     BlankFrames.Enqueue(idx);
-                }
-                else
-                {
-                    //Log($"[Preparer] Frame {idx} have {ClipNeedForFrame[idx].Length} clips.");
                 }
 
                 if (idx % 50 == 0)
@@ -198,6 +240,7 @@ namespace projectFrameCut.Render
         }
 
         static ClipEquabilityComparer clipEquabilityComparer = new();
+
 
         private void PrepareSource(CancellationToken token)
         {
@@ -216,6 +259,14 @@ namespace projectFrameCut.Render
                         var frame = item.GetFrame(idx, _width, _height, true);
                         if (frame != null)
                         {
+                            if (Use16Bit && frame.bitPerPixel != 2)
+                            {
+                                frame = frame.ToBitPerPixel(16);
+                            }
+                            else if (!Use16Bit && frame.bitPerPixel != 1)
+                            {
+                                frame = frame.ToBitPerPixel(8);
+                            }
                             FrameCache.GetOrAdd(item.Id, (_) => new()).TryAdd(idx, frame);
                         }
                     }
@@ -243,7 +294,7 @@ namespace projectFrameCut.Render
                 return;
             }
             Stopwatch sw = Stopwatch.StartNew();
-            Picture result = null!;
+            IPicture result = null!;
 
             if (!PreparedFlag.TryRemove(targetFrame, out _))
             {
@@ -257,7 +308,7 @@ namespace projectFrameCut.Render
             {
                 sw.Stop();
                 Log($"[Render] Frame {targetFrame} is empty.");
-                builder.Append(targetFrame, (Picture)BlankFrame);
+                builder.Append(targetFrame, BlankFrame);
                 EachElapsed.Add(sw.Elapsed);
                 return;
             }
@@ -273,7 +324,26 @@ namespace projectFrameCut.Render
                     Log($"[Render] WARN: Prepared frame {targetFrame} not found in cache for clip {clip.Id}. Regenerating.");
                     try
                     {
-                        frame = clip.GetFrame(targetFrame, _width, _height, true) ?? Picture.GenerateSolidColor(_width, _height, 0, 0, 0, 0);
+                        var rawFrame = clip.GetFrame(targetFrame, _width, _height, true);
+                        if (rawFrame != null)
+                        {
+                            if (Use16Bit && rawFrame.bitPerPixel != 2)
+                            {
+                                frame = rawFrame.ToBitPerPixel(16);
+                            }
+                            else if (!Use16Bit && rawFrame.bitPerPixel != 1)
+                            {
+                                frame = rawFrame.ToBitPerPixel(8);
+                            }
+                            else
+                            {
+                                frame = rawFrame;
+                            }
+                        }
+                        else
+                        {
+                            frame = Use16Bit ? Picture.GenerateSolidColor(_width, _height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(_width, _height, 0, 0, 0, 0);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -286,30 +356,21 @@ namespace projectFrameCut.Render
                 {
                     foreach (var item in clip.EffectsInstances ?? IClip.GetEffectsInstances(clip.Effects))
                     {
-                        Picture picFrame;
-                        if (frame is Picture p) picFrame = p;
-                        else picFrame = (Picture)frame.ToBitPerPixel(16);
-
-                        frame = item.Render(picFrame,
-                                        ComputerCache.GetOrAdd(item.TypeName, AcceleratedComputerBridge.RequireAComputer?.Invoke(item.TypeName)
-                                        is IComputer c1 ? c1 : throw new NotSupportedException($"Effect mode {item.TypeName} is not supported in accelerated computer bridge.")))
+                        frame = item.Render(frame,
+                                            item.NeedAComputer ? ComputerCache.GetOrAdd(item.TypeName, AcceleratedComputerBridge.RequireAComputer?.Invoke(item.TypeName) is IComputer c1 ? c1 : throw new NotSupportedException($"Effect mode {item.TypeName} is not supported in accelerated computer bridge.")) : null,
+                                            _width, _height)
                                     .Resize(_width, _height, true);
                     }
                 }
 
                 if (result is null)
                 {
-                    if (frame is Picture p) result = p;
-                    else result = (Picture)frame.ToBitPerPixel(16);
+                    result = frame;
                 }
                 else
                 {
-                    Picture picFrame;
-                    if (frame is Picture p) picFrame = p;
-                    else picFrame = (Picture)frame.ToBitPerPixel(16);
-
                     result = MixtureCache.GetOrAdd(clip.MixtureMode, GetMixer(clip.MixtureMode))
-                                         .Mix(result, picFrame,
+                                         .Mix(result, frame,
                                              ComputerCache.GetOrAdd(
                                                 clip.MixtureMode.ToString(),
                                                 AcceleratedComputerBridge.RequireAComputer
@@ -318,7 +379,21 @@ namespace projectFrameCut.Render
                                          .Resize(_width, _height, true);
                 }
             }
-            builder.Append(targetFrame, result?.Resize(_width, _height, false) ?? Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0));
+            if (result?.Width == _width && result?.Height == _height) goto ok;
+            if (result is null)
+            {
+                result = Use16Bit ? Picture.GenerateSolidColor(_width, _height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(_width, _height, 0, 0, 0, 0);
+            }
+            else if (result.Width < _width && result.Height < _height)
+            {
+                result = BlankPlace.Render(result, null, _width, _height);
+            }
+            else if (result.Width > _width && result.Height > _height)
+            {
+                result = result.Resize(_height, _height, false);
+            }
+        ok:
+            builder.Append(targetFrame, result);
             sw.Stop();
             Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}");
             EachElapsed.Add(sw.Elapsed);
@@ -332,6 +407,7 @@ namespace projectFrameCut.Render
         {
             try
             {
+                running = false;
                 Log("Release resources...");
                 FrameCache.Clear();
                 ClipNeedForFrame.Clear();

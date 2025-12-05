@@ -18,7 +18,7 @@ namespace projectFrameCut.Render
     {
         public static ConcurrentDictionary<string, IComputer> ComputerCache = new();
         public static ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
-        public static Func<int, int, Picture> FallBackImageGetter = (w, h) => Picture.GenerateSolidColor(w, h, 0, 0, 0, null);
+        public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture.GenerateSolidColor(w, h, 0, 0, 0, null);
 
 
         public static IEnumerable<OneFrame> GetFramesInOneFrame(IClip[] video, uint targetFrame, int targetWidth, int targetHeight, bool forceResize = false)
@@ -50,7 +50,7 @@ namespace projectFrameCut.Render
                     {
                         throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
-                    result.Add(new OneFrame(targetFrame, clip, null));
+                    result.Add(new OneFrame(targetFrame, clip, null!));
                 }
             }
 
@@ -66,45 +66,56 @@ namespace projectFrameCut.Render
         }
 
 
-        public static Picture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight)
+        public static IPicture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight)
         {
             try
             {
-                Picture? result = FallBackImageGetter(targetWidth, targetHeight);
+                IPicture? result =null;
                 foreach (var srcFrame in frames)
                 {
                     var frame = srcFrame.Clip.Resize(targetWidth, targetHeight, true);
                     IPicture effected = frame;
                     foreach (var effect in srcFrame?.Effects ?? [])
                     {
-                        Picture pic16;
-                        if (effected is Picture p) pic16 = p;
-                        else pic16 = (Picture)effected.ToBitPerPixel(16);
-
                         effected = effect.Render(
-                            pic16,
-                            ComputerCache.GetOrAdd(
-                                effect.TypeName,
-                                AcceleratedComputerBridge.RequireAComputer?.Invoke(effect.TypeName)
-                                    is IComputer c1 ? c1 :
-                                    throw new NotSupportedException($"Mixture mode {srcFrame.MixtureMode} is not supported in accelerated computer bridge.")));
+                                   effected,
+                                   effect.NeedAComputer ? ComputerCache.GetOrAdd(effect.TypeName,
+                                   AcceleratedComputerBridge.RequireAComputer?.Invoke(effect.TypeName) is IComputer c1 ? c1 : throw new NotSupportedException($"Mixture mode {srcFrame?.MixtureMode} is not supported in accelerated computer bridge.")) : null,
+                                   targetWidth, targetHeight);
                     }
 
-                    Picture picTop;
-                    if (effected is Picture p2) picTop = p2;
-                    else picTop = (Picture)effected.ToBitPerPixel(16);
+                    result = result is null ? effected :
+                                    MixtureCache.GetOrAdd(srcFrame!.MixtureMode, GetMixer(srcFrame.MixtureMode))
+                                    .Mix(result, effected,
+                                        ComputerCache.GetOrAdd(srcFrame.MixtureMode.ToString(),
+                                            AcceleratedComputerBridge.RequireAComputer?.Invoke(srcFrame.MixtureMode.ToString())
+                                                is IComputer c ? c :
+                                                throw new NotSupportedException($"Mixture mode {srcFrame.MixtureMode} is not supported in accelerated computer bridge.")))
+                                    .Resize(targetWidth, targetHeight, true);
 
-                    result = MixtureCache.GetOrAdd(
-                            srcFrame!.MixtureMode, GetMixer(srcFrame.MixtureMode))
-                                .Mix(picTop, result,
-                                    ComputerCache.GetOrAdd(srcFrame.MixtureMode.ToString(),
-                                        AcceleratedComputerBridge.RequireAComputer?.Invoke(srcFrame.MixtureMode.ToString())
-                                            is IComputer c ? c :
-                                            throw new NotSupportedException($"Mixture mode {srcFrame.MixtureMode} is not supported in accelerated computer bridge.")))
-                                .Resize(targetWidth, targetHeight, true);
                 }
-
-                return result ?? FallBackImageGetter(targetWidth, targetHeight);
+                if (result?.Width == targetWidth && result?.Height == targetHeight)
+                {
+                    goto ok;
+                }
+                else if (result is null)
+                {
+                    return Picture.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0);
+                }
+                else
+                {
+                    result = Placer.Render(result, null, targetWidth, targetHeight);
+                }
+            ok:
+                result = MixtureCache.GetOrAdd(
+                           MixtureMode.Overlay, GetMixer(MixtureMode.Overlay))
+                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result,
+                                   ComputerCache.GetOrAdd(MixtureMode.Overlay.ToString(),
+                                       AcceleratedComputerBridge.RequireAComputer?.Invoke(MixtureMode.Overlay.ToString())
+                                           is IComputer c3 ? c3 :
+                                           throw new NotSupportedException($"Mixture mode {MixtureMode.Overlay} is not supported in accelerated computer bridge.")))
+                               .Resize(targetWidth, targetHeight, true);
+                return result;
             }
             catch (Exception ex)
             {
@@ -113,6 +124,12 @@ namespace projectFrameCut.Render
             }
 
         }
+
+        private static PlaceEffect Placer = new()
+        {
+            StartX = 0,
+            StartY = 0
+        };
 
         private static IMixture GetMixer(MixtureMode mixtureMode)
         {

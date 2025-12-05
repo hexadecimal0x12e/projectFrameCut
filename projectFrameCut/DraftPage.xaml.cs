@@ -14,6 +14,9 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Path = System.IO.Path;
 using projectFrameCut.Setting.SettingManager;
+using projectFrameCut.LivePreview;
+
+
 
 
 #if WINDOWS
@@ -29,6 +32,12 @@ using Foundation;
 using UIKit;
 using projectFrameCut.iDevicesAPI;
 using MobileCoreServices;
+#endif
+
+#if ANDROID
+using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
+using projectFrameCut.Render.AndroidOpenGL;
+
 #endif
 
 namespace projectFrameCut;
@@ -61,7 +70,6 @@ public partial class DraftPage : ContentPage
 
     readonly JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
     #endregion
-
 
     #region members
     public ProjectJSONStructure ProjectInfo { get; set; } = new();
@@ -101,6 +109,7 @@ public partial class DraftPage : ContentPage
 #endif
 
     ClipInfoBuilder infoBuilder;
+    LivePreviewer previewer = new();
 
     #endregion
 
@@ -113,6 +122,7 @@ public partial class DraftPage : ContentPage
     public bool IsReadonly { get; set; } = false;
     #endregion
 
+    #region init
     public DraftPage()
     {
         InitializeComponent();
@@ -130,13 +140,20 @@ public partial class DraftPage : ContentPage
 
     }
 
-    public DraftPage(ProjectJSONStructure info, ConcurrentDictionary<string, ClipElementUI> clips, ConcurrentDictionary<string, AssetItem> assets, int initialTrackCount, string workingDir, string title = "Untitled draft", bool isReadonly = false)
+    public DraftPage(ProjectJSONStructure info, ConcurrentDictionary<string, ClipElementUI> clips, ConcurrentDictionary<string, AssetItem> assets, int initialTrackCount, string workingDir, string title = "Untitled draft", bool isReadonly = false, object? dbgBackend = null)
     {
         InitializeComponent();
 #if ANDROID || iDevices
         OverlayLayer.IsVisible = false;
         OverlayLayer.InputTransparent = false;
 #endif
+#if WINDOWS
+        if (dbgBackend is RpcClient client)
+        {
+            _rpc = client;
+        }
+#endif
+
         infoBuilder = new ClipInfoBuilder(this);
         workingPath = workingDir;
         TrackCalculator.HeightPerTrack = ClipHeight;
@@ -173,6 +190,7 @@ public partial class DraftPage : ContentPage
         ProjectInfo.NormallyExited = false;
 #if WINDOWS
         PreviewBox.IsVisible = false;
+        if (_rpc is not null) goto continueLoad;
         var pipeId = RpcClient.BootRPCServer(out backendProc, out backendAccessToken, out backendPort,
             tmpDir: Path.Combine(workingPath, "thumbs"),
             stderrCallback: new Action<string>((s) =>
@@ -224,6 +242,7 @@ public partial class DraftPage : ContentPage
         }
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
+    continueLoad:
 #endif
 
         rulerTapGesture.Tapped += PlayheadTapped;
@@ -242,7 +261,19 @@ public partial class DraftPage : ContentPage
             }
         }
 
+        EffectHelper.EnumerateEffectsAndNames(); //avoid stuck when building ppb
 
+#if ANDROID
+        NativeGLSurfaceView view = new NativeGLSurfaceView
+        {
+            WorkGroupSize = 512,
+            //each computer will do the things left
+        };
+
+        ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
+#elif iDevices
+
+#endif
 
         Loaded += (s, e) =>
         {
@@ -265,7 +296,14 @@ public partial class DraftPage : ContentPage
             fileDropGesture.Drop += File_Drop;
             OverlayLayer.GestureRecognizers.Add(fileDropGesture);
 
-
+            ResolutionPicker.ItemsSource = new List<string> {
+                "1280x720",
+                "1920x1080",
+                "2560x1440",
+                "3840x2160",
+                "7680x4320",
+                "Custom..."
+                };
 
             DraftChanged(s, new());
 #if !WINDOWS
@@ -283,7 +321,7 @@ public partial class DraftPage : ContentPage
         if (!Directory.Exists(workingPath)) Title = Localized.DraftPage_IsInMode_Special(Title);
 
     }
-
+    #endregion
 
     #region add stuff
 
@@ -1453,10 +1491,17 @@ public partial class DraftPage : ContentPage
         var src = ImageSource.FromFile(path);
 
         await ForceLoadPNGToAImage(PreviewOverlayImage, path);
-
+#else
+        string path = "";
+        await Task.Run(() =>
+        {
+            path = previewer.RenderFrame(duration, 1280, 720);
+        });
+        await ForceLoadPNGToAImage(PreviewOverlayImage, path);
+        await ForceLoadPNGToAImage(PreviewBox, path);
+#endif
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
-#endif
     }
 
     private async void DraftChanged(object? sender, ClipUpdateEventArgs e)
@@ -1479,19 +1524,22 @@ public partial class DraftPage : ContentPage
         await Save();
         PlayheadLine.HeightRequest = Tracks.Count * ClipHeight + RulerLayout.Height;
         var d = DraftImportAndExportHelper.ExportFromDraftPage(this);
-#if WINDOWS
         SetStateBusy();
         SetStatusText(Localized.DraftPage_ApplyingChanges);
         var cts = new CancellationTokenSource();
 
         try
         {
+#if WINDOWS
 #if !DEBUG
             cts.CancelAfter(10000);
 #endif
-
             await RpcClient.UpdateDraft(d, _rpc, cts.Token);
+#else
+            previewer.UpdateDraft(d);
+#endif
             SetStatusText(Localized.DraftPage_ChangesApplied);
+
         }
         catch (Exception ex)
         {
@@ -1507,7 +1555,7 @@ public partial class DraftPage : ContentPage
 
 
 
-#endif
+
 
     }
     #endregion
@@ -3078,6 +3126,40 @@ Clip {clip.displayName}({clip.Id}):
             element.ExtraData["TextEntries"] = entries;
 
             SetStatusText($"Added text clip: {text}");
+        }
+    }
+
+    private async void ResolutionPicker_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        var picker = sender as Picker;
+        if (picker != null)
+        {
+            if (picker.SelectedItem is string picked)
+            {
+                var parts = picked.Split('x');
+                if (parts.Length == 2 &&
+                   int.TryParse(parts[0].Trim(), out int w1) &&
+                   int.TryParse(parts[1].Trim(), out int h1))
+                {
+                    SetStatusText($"Set output resolution to {w1} x {h1}");
+
+#if WINDOWS
+                    await _rpc.SendAsync("ConfigurePreview", JsonSerializer.SerializeToElement(new { width = w1, height = h1 }), default);
+#endif
+                    return;
+                }
+            }
+        }
+
+        var widthInput = await DisplayPromptAsync("Output Resolution", "Enter output width in pixels:", initialValue: "1920");
+        var heightInput = await DisplayPromptAsync("Output Resolution", "Enter output height in pixels:", initialValue: "1080");
+        if (int.TryParse(widthInput, out int w) && int.TryParse(heightInput, out int h))
+        {
+            SetStatusText($"Set output resolution to {w} x {h}");
+#if WINDOWS
+            await _rpc.SendAsync("ConfigurePreview", JsonSerializer.SerializeToElement(new { width = w, height = h }), default);
+#endif
+
         }
     }
 

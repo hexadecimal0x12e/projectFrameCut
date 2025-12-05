@@ -1,6 +1,8 @@
 ﻿using ILGPU;
 using ILGPU.Runtime;
+using ILGPU.Runtime.OpenCL;
 using projectFrameCut.Shared;
+using projectFrameCut.VideoMakeEngine;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
 using System;
@@ -23,7 +25,7 @@ namespace projectFrameCut.Render.WindowsRender
 
         public static bool diagMode { get; private set; }
 
-        public static void go_rpcAsync(ConcurrentDictionary<string, string> switches, Accelerator accelerator, int width, int height)
+        public static void RunRPC(ConcurrentDictionary<string, string> switches, Accelerator accelerator, int width, int height)
         {
 
             var pipeName = switches.GetValueOrDefault("pipe");
@@ -31,6 +33,10 @@ namespace projectFrameCut.Render.WindowsRender
             var tempFolder = switches.GetValueOrDefault("tempFolder");
             //var accessToken = switches.GetValueOrDefault("accessToken");
             //var backendPort = switches.GetValueOrDefault("port");
+
+#if DEBUG
+            OverlayMixture.TempSavePath = tempFolder;
+#endif
 
             if (pipeName is null)
             {
@@ -51,7 +57,7 @@ namespace projectFrameCut.Render.WindowsRender
 
             if (switches.ContainsKey("UseCheckerboardBackgroundForNoContent"))
             {
-                Picture Checkerboard = new Picture(Path.Combine(AppContext.BaseDirectory, "FallbackResources", "NoContent.png"));
+                IPicture Checkerboard = new Picture(Path.Combine(AppContext.BaseDirectory, "FallbackResources", "NoContent.png"));
                 Timeline.FallBackImageGetter = (w, h) => Checkerboard.Resize(w, h, false);
             }
 
@@ -186,7 +192,7 @@ namespace projectFrameCut.Render.WindowsRender
                                     Log($"[RPC] FrameHash:{frameHash}");
                                     if (Path.Exists(destPath))
                                     {
-                                        Log($"[RPC] Frame already exist; skip");
+                                        LogDiagnostic($"[RPC] Frame already exist; skip");
                                         Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "path", destPath } });
                                         Log($"[RPC] RenderOne completed");
                                         break;
@@ -196,7 +202,7 @@ namespace projectFrameCut.Render.WindowsRender
                                         Log($"[RPC] Generating frame #{frameIndex} ({frameHash})...");
                                     }
                                     var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height, true);
-                                    Log($"Clips in frame #{frameIndex}:\r\n{JsonSerializer.Serialize(layers)}\r\n---");
+                                    LogDiagnostic($"Clips in frame #{frameIndex}:\r\n{GetFrameInfo(layers)}\r\n---");
                                     var pic = Timeline.MixtureLayers(layers, frameIndex, width, height);
                                     pic.SaveAsPng8bpp(destPath, encoder);
                                     Thread.Sleep(500);
@@ -350,6 +356,20 @@ namespace projectFrameCut.Render.WindowsRender
                                 }
                                 break;
                             }
+                        case "ConfigurePreview":
+                            {
+                                if (msg.Payload is null)
+                                {
+                                    Log("[RPC] ConfigurePreview missing payload.");
+                                    break;
+                                }
+                                var prevWidth = msg.Payload.Value.GetProperty("width").GetInt32();
+                                var prevHeight = msg.Payload.Value.GetProperty("height").GetInt32();
+                                width = prevWidth;
+                                height = prevHeight;
+                                Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
+                                break;
+                            }
 
 
                         case "ShutDown":
@@ -418,6 +438,31 @@ Current directory: {Environment.CurrentDirectory}
             RpcCts.Cancel();
             return;
 
+        }
+
+        private static string GetFrameInfo(IEnumerable<OneFrame> layers)
+        {
+            string result =
+                $"""
+                Frame {layers.First().FrameNumber}:
+                - Total {layers.Count()} clips.
+
+                """;
+            foreach (var frame in layers.OrderBy(x => x.LayerIndex))
+            {
+                var clip = frame.ParentClip;
+                result +=
+                    $"""
+                    Clip {clip.Name}/{clip.Id}:
+                    - start in {clip.StartFrame}, duration {clip.Duration}
+                    - in layer {frame.LayerIndex}
+                    - clip's picture info:
+                    {frame.Clip.GetDiagnosticsInfo()}
+
+                    ---
+                    """;
+            }
+            return result;
         }
 
         private static Process nanoHostProc;

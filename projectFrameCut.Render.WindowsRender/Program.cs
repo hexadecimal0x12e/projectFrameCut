@@ -261,12 +261,14 @@ namespace projectFrameCut.Render.RenderCLI
             outputFormat = (FFmpeg.AutoGen.AVPixelFormat)Convert.ToInt64(pxfmtInfo.GetValue(null)!);
             outputEncoder = outputOptions[4];
 
-            Console.WriteLine($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}");
+            var use16Bit = bool.TryParse(switches.GetOrAdd("Use16bpp", "true"), out var b1) ? b1 : true;
+
+            Console.WriteLine($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, bitPerPixel:{(use16Bit ? "16" :"8")}");
 
 
             if (runningMode == "rpc_backend")
             {
-                Rpc.go_rpcAsync(switches, accelerators[0], width, height);
+                Rpc.RunRPC(switches, accelerators[0], width, height);
                 Console.WriteLine($"RPC server exited with code {Rpc.RpcReturnCode}. Exiting...");
                 return Rpc.RpcReturnCode;
             }
@@ -309,13 +311,17 @@ namespace projectFrameCut.Render.RenderCLI
                 clips[i].ReInit();
             }
 
-            VideoBuilder builder = new VideoBuilder(switches["output"], width, height, fps, outputEncoder, outputFormat, true)
+            Log("Setting up renderer and check frames to render...");
+            VideoBuilder builder = new VideoBuilder(switches["output"], width, height, fps, outputEncoder, outputFormat)
             {
                 EnablePreview = bool.TryParse(switches.GetOrAdd("preview", "false"), out var preview) ? preview : false,
                 PreviewPath = switches.GetOrAdd("previewPath", "nope"),
+                DoGCAfterEachWrite = true,
+                DisposeFrameAfterEachWrite = true,
+                Duration = duration,
+                
             };
 
-            builder.Duration = duration;
             int maxParallelThreads = int.TryParse(switches.GetOrAdd("maxParallelThreads", "8"), out var result) ? result : 8;
 
             if (bool.TryParse(switches.GetOrAdd("oneByOneRender", "false"), out var oneByOneRender) && oneByOneRender)
@@ -328,13 +334,16 @@ namespace projectFrameCut.Render.RenderCLI
                 builder.BlockWrite = false;
             }
 
-            Renderer renderer = new Renderer();
-            renderer.builder = builder;
-            renderer.Clips = clips;
-            renderer.Duration = duration;
-            renderer.MaxThreads = maxParallelThreads;
-            renderer.Duration = duration;
-            renderer.LogState = inprojectFrameCut;
+            Renderer renderer = new Renderer
+            {
+                builder = builder,
+                Clips = clips,
+                Duration = duration,
+                MaxThreads = maxParallelThreads,
+                LogState = inprojectFrameCut,
+                LogStatToLogger = true,
+                Use16Bit = use16Bit,
+            };
 
             switch (switches.GetOrAdd("GCOptions", "doLOHCompression"))
             {
@@ -358,7 +367,6 @@ namespace projectFrameCut.Render.RenderCLI
             }
 
             builder?.Build()?.Start();
-
             renderer.PrepareRender(CancellationToken.None);
 
             Stopwatch sw1 = new();

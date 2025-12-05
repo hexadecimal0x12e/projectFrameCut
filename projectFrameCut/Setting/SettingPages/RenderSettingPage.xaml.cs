@@ -47,7 +47,10 @@ public partial class RenderSettingPage : ContentPage
 #if WINDOWS
         if (AcceleratorInfos.Length == 0)
         {
-            Task t = new(GetAccelInfo);
+            Task t = new(() =>
+            {
+                AcceleratorInfos = GetAccelInfo();
+            });
             t.Start();
             t.ContinueWith((_) => Dispatcher.Dispatch(BuildPPB));
         }
@@ -89,7 +92,7 @@ public partial class RenderSettingPage : ContentPage
         Content = new ScrollView { Content = rootPPB.Build() };
     }
 #if WINDOWS
-    private void GetAccelInfo()
+    public static AcceleratorInfo[] GetAccelInfo()
     {
         try
         {
@@ -111,12 +114,13 @@ public partial class RenderSettingPage : ContentPage
             p.WaitForExit();
             accelInfoJson = p.StandardError.ReadToEnd();
 
-            AcceleratorInfos = JsonSerializer.Deserialize<AcceleratorInfo[]>(accelInfoJson);
+            return JsonSerializer.Deserialize<AcceleratorInfo[]>(accelInfoJson);
         }
         catch (Exception ex)
         {
-            Log(ex, "get accel info", this);
+            Log(ex, "get accel info");
         }
+        return Array.Empty<AcceleratorInfo>();
 
     }
 #endif

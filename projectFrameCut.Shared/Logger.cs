@@ -1,11 +1,12 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 
 
 namespace projectFrameCut.Shared
@@ -145,6 +146,7 @@ Exception data:
         public static void LogDiagnostic(string msg)
         {
 #if DEBUG
+            Console.WriteLine($"[Diag] {msg}");
             Debug.WriteLine($"log:[Diag] {msg}");
 #endif
 

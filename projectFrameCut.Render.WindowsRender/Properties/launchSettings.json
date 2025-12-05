@@ -2,7 +2,7 @@
   "profiles": {
     "projectFrameCut.Render.RenderCLI": {
       "commandName": "Project",
-      "commandLineArgs": "render \"-draft=D:\\code\\playground\\projectFrameCut\\My Drafts\\test.pjfc\\timeline.json\" -duration=1920 \"-output=D:\\code\\playground\\projectFrameCut\\My Drafts\\test.pjfc\\export\\output-68c94b92-f3fc-41ed-80ab-d11a22fdedc9.mkv\" -output_options=3840,2160,30,AV_PIX_FMT_GBRP16LE,ffv1 -maxParallelThreads=16 -FFmpegLibraryPath=D:\\code\\playground\\FFmpeg\\FFmpeg\\8.x_internal"
+      "commandLineArgs": "render \"-draft=D:\\code\\playground\\projectFrameCut\\My Drafts\\test.pjfc\\timeline.json\" -duration=1920 \"-output=D:\\code\\playground\\projectFrameCut\\My Drafts\\test.pjfc\\export\\output-68c94b92-f3fc-41ed-80ab-d11a22fdedc9.mkv\" -output_options=3840,2160,30,AV_PIX_FMT_YUV420P,libaom-av1 -maxParallelThreads=16 -FFmpegLibraryPath=D:\\code\\playground\\FFmpeg\\windows\\FFmpeg\\8.x_internal -Use16bpp=false"
     }
   }
 }

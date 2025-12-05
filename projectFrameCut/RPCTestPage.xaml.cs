@@ -61,10 +61,44 @@ public partial class RPCTestPage : ContentPage
         await DisplayAlert("渲染完成", path, "ok");
         RPCResultImage.Source = ImageSource.FromFile(path);
     }
+
+    string vidPath = "";
+
+    private async void OpenVideo_Clicked(object sender, EventArgs e)
+    {
+        var result = await FilePicker.PickAsync(new PickOptions { PickerTitle = "选择草稿 JSON 文件" });
+        if (result == null) return;
+        vidPath = result.FullPath;
+    }
+
+    private async void ExtractFrame_Clicked(object sender, EventArgs e)
+    {
+        var thumbNail = await _rpc.SendAsync("ReadAFrame", JsonSerializer.SerializeToElement(new Dictionary<string, object>
+                        {
+                            { "path", vidPath },
+                            { "frameToRead", int.Parse(FrameToRender.Text) },
+                            { "size", "640x480" }
+                        }), default);
+
+        if (thumbNail.Value.TryGetProperty("path", out var tPath))
+        {
+            var p = tPath.GetString();
+            if (!string.IsNullOrWhiteSpace(p))
+            {
+                RPCResultImage.Source = ImageSource.FromFile(p);
+
+            }
+        }
+    }
 #else
     private async void GoRender_Clicked(object sender, EventArgs e) => await DisplayAlert("提示", "仅在 Windows 平台可用", "OK");
     private async void BootRPC_Clicked(object sender, EventArgs e)=> await DisplayAlert("提示", "仅在 Windows 平台可用", "OK");
     private async void LoadDraft_Clicked(object sender, EventArgs e) => await DisplayAlert("提示", "仅在 Windows 平台可用", "OK");
+
+    private async void OpenVideo_Clicked(object sender, EventArgs e) => await DisplayAlert("提示", "仅在 Windows 平台可用", "OK");
+
+
+    private async void ExtractFrame_Clicked(object sender, EventArgs e) => await DisplayAlert("提示", "仅在 Windows 平台可用", "OK");
 
 #endif
 }

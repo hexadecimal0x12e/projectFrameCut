@@ -260,9 +260,10 @@ namespace projectFrameCut.Render
             }
 
         not_found:
-            if (Math.Abs(targetFrame - TotalFrames) < 5)//a little bit overlength due to rounding
+            if (Math.Abs(targetFrame - TotalFrames) < 5)
             {
-                return GetFrame((uint)TotalFrames, hasAlpha);
+                Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - TotalFrames} instead.");
+                return GetFrame(targetFrame - 1, hasAlpha);
             }
             double fps = _fps > 0 ? _fps : 1.0;
             double seconds = targetFrame / fps;
@@ -280,12 +281,12 @@ namespace projectFrameCut.Render
                              _rgb->linesize
                              );
 
-            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha);
+            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha,_path,targetFrame);
         }
 
 
         [DebuggerNonUserCode()]
-        private static Picture PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false)
+        private static IPicture PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
         {
             var size = width * height;
             var result = new Picture(width, height)
@@ -311,7 +312,8 @@ namespace projectFrameCut.Render
 
                 }
             }
-            return result.SetAlpha(hasAlpha);
+            result.ProcessStack = $"From video '{filePath}', frame #{frameIdx}";
+            return result;
         }
 
         public void Dispose()
@@ -621,6 +623,11 @@ namespace projectFrameCut.Render
             }
 
         not_found:
+            if(Math.Abs(targetFrame - TotalFrames) < 5)
+            {
+                Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
+                return GetFrame(targetFrame - 1, hasAlpha);
+            }
             double fps = _fps > 0 ? _fps : 1.0;
             double seconds = targetFrame / fps;
             throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_path}'.");
@@ -635,13 +642,13 @@ namespace projectFrameCut.Render
                                 _height,
                                 _rgb->data,
                                 _rgb->linesize);
-            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha);
+            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha,_path,targetFrame);
 
 
         }
 
-        [DebuggerNonUserCode()]
-        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false)
+        //[DebuggerNonUserCode()]
+        private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
         {
             var size = width * height;
             var result = new Picture8bpp(width, height)
@@ -650,6 +657,7 @@ namespace projectFrameCut.Render
                 g = new byte[size],
                 b = new byte[size],
             };
+            result.ProcessStack = $"From video '{filePath}', frame #{frameIdx}";
             int idx, baseIndex, offset, x, y;
             byte* srcRow;
             for (y = 0; y < height; y++)
@@ -665,7 +673,8 @@ namespace projectFrameCut.Render
                     result.b[idx] = srcRow[offset + 0];
                 }
             }
-            return result.SetAlpha(hasAlpha);
+
+            return result;
         }
 
         public void Dispose()
