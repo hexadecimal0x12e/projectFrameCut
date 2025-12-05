@@ -274,6 +274,15 @@ public partial class HomePage : ContentPage
 
 #if WINDOWS || ANDROID
                 AppShell.instance.HideNavView();
+#elif iDevices
+                if (OperatingSystem.IsMacCatalyst())
+                {
+                    AppShell_MacCatalyst.instance.HideNavView();
+                }
+                else
+                {
+                    AppShell.instance.HideNavView();
+                }
 #endif
                 await Navigation.PushAsync(page);
             }
@@ -290,6 +299,15 @@ public partial class HomePage : ContentPage
         base.OnAppearing();
 #if WINDOWS || ANDROID
         AppShell.instance.ShowNavView();
+#elif iDevices
+        if (OperatingSystem.IsMacCatalyst())
+        {
+            AppShell_MacCatalyst.instance.ShowNavView();
+        }
+        else
+        {
+            AppShell.instance.ShowNavView();
+        }
 #endif
     }
 
@@ -416,7 +434,7 @@ public partial class HomePage : ContentPage
     {
         if (sender is Microsoft.Maui.Controls.Border border && border.BindingContext is ProjectsViewModel vmItem)
         {
-#if WINDOWS
+#if WINDOWS || MACCATALYST
             // Windows: Right-click to show context menu
             var tap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Secondary };
             tap.Tapped += async (_, _) =>
@@ -477,7 +495,7 @@ public partial class HomePage : ContentPage
         }
 
         string[] verbs = [
-            Localized.HomePage_ProjectContextMenu_Open,
+                    Localized.HomePage_ProjectContextMenu_Open,
                     Localized.HomePage_ProjectContextMenu_OpenReadonly,
                     Localized.HomePage_ProjectContextMenu_Export,
                     Localized.HomePage_ProjectContextMenu_OpenInFileManager,
@@ -486,12 +504,13 @@ public partial class HomePage : ContentPage
                     Localized.HomePage_ProjectContextMenu_Delete
                     ];
 
+
         if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
         {
             verbs = verbs.Append("Debug: throw the exceptions while opening").ToArray();
         }
 
-        var action = await DisplayActionSheetAsync(vmItem.Name, Localized._Cancel, null, verbs);
+        var action = await DisplayActionSheetAsync(vmItem.Name, Localized._Cancel, Localized.HomePage_ProjectContextMenu_Delete, verbs);
 
         if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
         {
@@ -515,7 +534,7 @@ public partial class HomePage : ContentPage
                 await GoDraft(vmItem);
                 break;
             case 1: //OpenReadonly 
-                await GoDraft(vmItem, isReadonly:true);
+                await GoDraft(vmItem, isReadonly: true);
                 break;
             case 2: //Export
                 await ExportProject(vmItem);

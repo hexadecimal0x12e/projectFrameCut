@@ -28,18 +28,22 @@ namespace projectFrameCut
 
         protected override Microsoft.Maui.Controls.Window CreateWindow(IActivationState? activationState)
         {
+            // Use sidebar shell on Mac Catalyst, original tabbed shell on iOS
+            if (OperatingSystem.IsMacCatalyst())
+            {
+                var window = new Microsoft.Maui.Controls.Window(new MacCatalystAppShell());
+#if MACCATALYST
+                window.HandlerChanged += (s, e) =>
+                {
+                    projectFrameCut.Platforms.MacCatalyst.MacSideBarHelper.MakeWindow(window);
+                };
+#endif
+                return window;
+            }
+            
             var mauiWindow = new Microsoft.Maui.Controls.Window(new AppShell());
 
 #if WINDOWS
-            mauiWindow.HandlerChanged += (s, e) =>
-            {
-                MakeWindow(mauiWindow);
-            };
-
-#endif
-
-            return mauiWindow;
-        }
 
 #if WINDOWS
         private void MakeWindow(Microsoft.Maui.Controls.Window mauiWindow, bool force = false)

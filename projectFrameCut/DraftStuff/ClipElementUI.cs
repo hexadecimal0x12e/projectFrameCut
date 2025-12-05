@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 
 #if iDevices
-using projectFrameCut.Platforms.iOS;
+// using projectFrameCut.Platforms.iOS;
 #endif
 
 namespace projectFrameCut.DraftStuff
@@ -160,11 +160,6 @@ namespace projectFrameCut.DraftStuff
             Grid.SetColumn(element.LeftHandle, 0);
             Grid.SetColumn(element.RightHandle, 2);
             Grid.SetColumn(cont, 1);
-
-#if iDevices
-            element.LeftHandle.AddGlassEffect("SystemUltraThinMaterial", 20, 0.5);
-            element.RightHandle.AddGlassEffect("SystemUltraThinMaterial", 20, 0.5);
-#endif
 
             element.Clip.Content = new Grid
             {

@@ -126,6 +126,7 @@ Clicked="AddClip_Clicked" />
                         Grid.RowSpan="3"
                         ZIndex="1000"
                         InputTransparent="True"
+                        CascadeInputTransparent="False"
                        BackgroundColor="Transparent"
                         IsVisible="True"
                         HorizontalOptions="Fill"

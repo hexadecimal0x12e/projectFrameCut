@@ -181,7 +181,7 @@ namespace projectFrameCut.DraftStuff
 #if WINDOWS
             ApplyAcrylic(panel);
 #elif iDevices
-            panel.AddGlassEffect("SystemChromeMaterial", 8.0, 0.8);
+            // panel.AddGlassEffect("SystemChromeMaterial", 8.0, 0.8);
 #endif
             return panel;
 

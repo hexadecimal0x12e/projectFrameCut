@@ -31,7 +31,7 @@
 		<WindowsPackageType>None</WindowsPackageType>
 
 			<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">17.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">14.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -53,6 +53,10 @@
 	</ItemGroup>
 
 
+	<PropertyGroup Condition="'$(TargetFramework)'=='net10.0-maccatalyst'">
+		<DefineConstants>$(DefineConstants);iDevices</DefineConstants>
+	</PropertyGroup>
+
 	<PropertyGroup Condition="'$(TargetFramework)'=='net10.0-ios'">
 		<CodesignKey>Apple Development: Created via API (UTKTS349ZC)</CodesignKey>
 		<CodesignProvision>VS: WildCard Development</CodesignProvision>
@@ -70,7 +74,9 @@
 
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.10" />
+				<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
+
 	</ItemGroup>
 
 

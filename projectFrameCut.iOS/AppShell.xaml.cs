@@ -1,5 +1,5 @@
 ﻿using System;
-#if IOS
+#if iDevices 
 using UIKit;
 using System.Runtime.InteropServices;
 #endif
@@ -29,6 +29,16 @@ namespace projectFrameCut
             AssetsTab.Icon = ImageSource.FromFile("icon_asset.svg");
             DebugTab.Icon = ImageSource.FromFile("icon_debug.svg");
 #endif
+        }
+
+        public void HideNavView()
+        {
+            MainTabBar.IsVisible = false;
+        }
+
+        public void ShowNavView()
+        {
+            MainTabBar.IsVisible = true;
         }
 
 #if iDevices

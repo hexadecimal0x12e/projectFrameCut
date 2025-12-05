@@ -133,7 +133,7 @@ public partial class DraftPage : ContentPage
     public DraftPage(ProjectJSONStructure info, ConcurrentDictionary<string, ClipElementUI> clips, ConcurrentDictionary<string, AssetItem> assets, int initialTrackCount, string workingDir, string title = "Untitled draft", bool isReadonly = false)
     {
         InitializeComponent();
-#if ANDROID
+#if ANDROID || iDevices
         OverlayLayer.IsVisible = false;
         OverlayLayer.InputTransparent = false;
 #endif
@@ -546,40 +546,7 @@ public partial class DraftPage : ContentPage
         if (sender is not Border border) return;
         if (border.BindingContext is not ClipElementUI clip) return;
         LogDiagnostic($"Clip {clip.Id} double clicked, state:{clip.MovingStatus}");
-        if (!SettingsManager.IsSettingExists("PreferredPopupMode"))
-        {
-#if WINDOWS
-            SettingsManager.WriteSetting("PreferredPopupMode", "right");
-#else
-            SettingsManager.WriteSetting("PreferredPopupMode", "bottom");
-#endif
-        }
-        try
-        {
-            switch (SettingsManager.GetSetting("PreferredPopupMode"))
-            {
-                case "right":
-                    {
-                        await ShowAFullscreenPopupInRight(WindowSize.Height * 0.75, BuildPropertyPanel(clip));
-                        break;
-                    }
-                case "bottom":
-                    {
-                        await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, BuildPropertyPanel(clip));
-                        break;
-                    }
-                case "clip":
-                    {
-                        await ShowClipPopup(border, clip);
-                        break;
-                    }
-            }
-        }
-        catch (Exception ex)
-        {
-            Log(ex, "ShowClipPopup", clip);
-            throw;
-        }
+        await ShowAPopup(clip: clip, border: border);
     }
 
     private void SelectTapGesture_Tapped(object? sender, TappedEventArgs e)
@@ -607,7 +574,7 @@ public partial class DraftPage : ContentPage
         CustomContent2 = new VerticalStackLayout();
 
     }
-#endregion
+    #endregion
 
     #region move clip
     private void ClipPaned(object? sender, PanUpdatedEventArgs e)
@@ -1276,14 +1243,8 @@ public partial class DraftPage : ContentPage
     {
         try
         {
-            if (WindowSize.Width > WindowSize.Height)
-            {
-                await ShowAFullscreenPopupInRight(500, BuildAssetPanel());
-            }
-            else
-            {
-                await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, BuildAssetPanel());
-            }
+            await ShowAPopup(BuildAssetPanel());
+
         }
         catch (Exception ex)
         {
@@ -1296,6 +1257,17 @@ public partial class DraftPage : ContentPage
     private ScrollView BuildAssetPanel()
     {
         var layout = new VerticalStackLayout { Spacing = 10 };
+        var closeButton = new Button
+        {
+            Background = Colors.Green,
+            Text = "Close"
+        };
+
+        closeButton.Clicked += async (s, e) =>
+        {
+            await Navigation.PopModalAsync();
+        };
+        layout.Children.Add(closeButton);
         foreach (var kvp in Assets)
         {
             var asset = kvp.Value;
@@ -1341,6 +1313,8 @@ public partial class DraftPage : ContentPage
             //#endif
             //            };
             //            assetClip.Clip.GestureRecognizers.Add(dragGesture);
+
+
 
             var addButton = new Button
             {
@@ -1412,39 +1386,43 @@ public partial class DraftPage : ContentPage
 
         addBtn.Clicked += async (s, e) =>
         {
-            var result = await FilePicker.PickAsync(new PickOptions
+            await MainThread.InvokeOnMainThreadAsync(async () =>
             {
-                PickerTitle = "ѡ���ز��ļ�",
-                FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+                SetStateBusy(Localized.DraftPage_WaitForUser);
+
+                var result = await FilePicker.PickAsync(new PickOptions
+                {
+                    PickerTitle = "1",
+                    FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
                 {
                     { DevicePlatform.WinUI,[ ".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v",".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"] },
                     { DevicePlatform.Android, [ "image/*", "video/*"] },
 #if iDevices
-                    {DevicePlatform.iOS , [UTType.Image, UTType.MPEG4, UTType.Video, UTType.AVIMovie, UTType.AppleProtectedMPEG4Video, "mp4", "m4v", "mpg", "mpeg", "mp2", "mov", "avi", "mkv", "flv", "gifv", "qt"]},
-                    {DevicePlatform.MacCatalyst , [UTType.Image, UTType.MPEG4, UTType.Video, UTType.AVIMovie, UTType.AppleProtectedMPEG4Video, "mp4", "m4v", "mpg", "mpeg", "mp2", "mov", "avi", "mkv", "flv", "gifv", "qt"]}
+                    {DevicePlatform.iOS , ["public.image", "public.movie", "public.video", "public.mpeg-4", "com.apple.protected-mpeg-4-video", "com.apple.quicktime-movie", "public.avi", "org.matroska.mkv"]},
+                    {DevicePlatform.MacCatalyst , ["public.image", "public.movie", "public.video", "public.mpeg-4", "com.apple.protected-mpeg-4-video", "com.apple.quicktime-movie", "public.avi", "org.matroska.mkv"]}
 #endif
                 })
-            });
-            string resultPath = "";
-            if (result is not null)
-            {
-                if (!OperatingSystem.IsWindows()) //todo: setting
+                });
+                string resultPath = "";
+                if (result is not null)
                 {
-                    resultPath = Path.Combine(workingPath, "assets", $"imported-{result.FileName}");
-                    if (!string.IsNullOrWhiteSpace(workingPath))
+                    if (!OperatingSystem.IsWindows()) //todo: setting
                     {
-                        File.Move(result.FullPath, resultPath, true);
+                        resultPath = Path.Combine(workingPath, "assets", $"imported-{result.FileName}");
+                        if (!string.IsNullOrWhiteSpace(workingPath))
+                        {
+                            File.Move(result.FullPath, resultPath, true);
+                        }
                     }
+                    else
+                    {
+                        resultPath = result.FullPath;
+                    }
+
+                    AddAsset(resultPath);
+
                 }
-                else
-                {
-                    resultPath = result.FullPath;
-                }
-
-                AddAsset(resultPath);
-
-            }
-
+            });
         };
 
         layout.Add(addBtn);
@@ -1972,7 +1950,7 @@ public partial class DraftPage : ContentPage
         {
 
         }
-        
+
 #endif
         catch (Exception ex)
         {
@@ -2044,6 +2022,58 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region popup
+
+    private async Task ShowAPopup(View? content = null, Border? border = null, ClipElementUI? clip = null, string mode = "")
+    {
+        content ??= (border != null && clip != null) ? BuildPropertyPanel(clip) : new Label { Text = "No content." };
+
+#if iDevices
+        await Navigation.PushModalAsync(new ContentPage()
+        {
+            Content = content,
+
+        });
+        return;
+#endif
+
+        if (!SettingsManager.IsSettingExists("PreferredPopupMode"))
+        {
+#if WINDOWS
+            SettingsManager.WriteSetting("PreferredPopupMode", "right");
+#else
+            SettingsManager.WriteSetting("PreferredPopupMode", "bottom");
+#endif
+        }
+        try
+        {
+            switch (!string.IsNullOrWhiteSpace(mode) ? mode : SettingsManager.GetSetting("PreferredPopupMode"))
+            {
+                case "right":
+                    {
+                        await ShowAFullscreenPopupInRight(WindowSize.Height * 0.75, content);
+                        break;
+                    }
+                case "bottom":
+                    {
+                        await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, content);
+                        break;
+                    }
+                case "clip":
+                    {
+                        if (border is not null && clip is not null)
+                            await ShowClipPopup(border, clip);
+                        else
+                            await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, content);
+                        break;
+                    }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "ShowClipPopup", clip);
+            throw;
+        }
+    }
 
     private async Task ShowClipPopup(Border clipBorder, ClipElementUI clip)
     {
@@ -2250,10 +2280,8 @@ public partial class DraftPage : ContentPage
         //if (!isPopupShowing) return;
         OverlayLayer.InputTransparent = true;
         await Task.WhenAll(HideClipPopup(), HideFullscreenPopup());
-#if ANDROID
+#if ANDROID || iDevices
         OverlayLayer.IsVisible = false;
-#endif
-#if iDevices
         OverlayLayer.InputTransparent = true;
 #endif
     }
@@ -2294,10 +2322,8 @@ public partial class DraftPage : ContentPage
     private async Task ShowAFullscreenPopupInBottom(double height, View content)
     {
         popupShowingDirection = "bottom";
-#if ANDROID
+#if ANDROID || iDevices
         OverlayLayer.IsVisible = true;
-#endif
-#if iDevices
         OverlayLayer.InputTransparent = false;
 #endif
         var size = WindowSize;
@@ -2343,10 +2369,8 @@ public partial class DraftPage : ContentPage
     private async Task ShowAFullscreenPopupInRight(double width, View content)
     {
         popupShowingDirection = "right";
-#if ANDROID
+#if ANDROID || iDevices
         OverlayLayer.IsVisible = true;
-#endif
-#if iDevices
         OverlayLayer.InputTransparent = false;
 #endif
         var size = WindowSize;
@@ -3075,7 +3099,7 @@ Clip {clip.displayName}({clip.Id}):
 
     public async void OnRefreshButtonClicked(object sender, EventArgs e)
     {
-        var path = @"D:\code\projectFrameCut\projectFrameCut\Resources\Raw\FallbackResources\NoContent.png"; //���
+        var path = @"D:\code\projectFrameCut\projectFrameCut\Resources\Raw\FallbackResources\NoContent.png"; //���?
         await MainThread.InvokeOnMainThreadAsync(() =>
         {
             PreviewBox.Source = ImageSource.FromFile(path);

@@ -674,7 +674,7 @@ public partial class TestPage : ContentPage
 
     private async void TestCrashButton_Clicked(object sender, EventArgs e)
     {
-        var type = await DisplayActionSheet("Choose a favour you'd like", "Cancel", null, "Native(null pointer)", "Managed(NullReferenceException)", "Environment.FailFast");
+        var type = await DisplayActionSheetAsync("Choose a favour you'd like", "Cancel", "Environment.FailFast", "Native(null pointer)", "Managed(NullReferenceException)");
         switch (type)
         {
             case "Native(null pointer)":

@@ -155,7 +155,7 @@ public partial class RenderPage : ContentPage
 #if WINDOWS
             var outputPath = await PickSavePath(_project.projectName);
             await DoComputeOnWindows(vm, render, ffmpeg, outputPath);
-#elif ANDROID
+#else
             var outputDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
             Directory.CreateDirectory(outputDir);
             var outputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mp4");
@@ -294,9 +294,7 @@ public partial class RenderPage : ContentPage
 
         Log($"FFmpeg process exited with code {ffRet}.");
     }
-#endif
-
-#if ANDROID
+#else
     async Task DoComputeOnAndroid(RenderPageViewModel vm, string outputPath)
     {
         Thread.CurrentThread.Name = "Main thread";
@@ -316,7 +314,7 @@ public partial class RenderPage : ContentPage
         {
             parallelThreadCount = Environment.ProcessorCount / 2;
         }
-
+#if ANDROID
         NativeGLSurfaceView view = new NativeGLSurfaceView
         {
             WorkGroupSize = 512,
@@ -324,7 +322,7 @@ public partial class RenderPage : ContentPage
         };
 
         ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
-
+#endif
         var draftSrc = JsonSerializer.Deserialize<DraftStructureJSON>
                                                  (File.ReadAllText(Path.Combine(_workingPath, "timeline.json"))) ?? throw new NullReferenceException();
 
