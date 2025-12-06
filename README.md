@@ -1,6 +1,6 @@
 # codename 'projectFrameCut'
 
-<image src="projectFrameCut\\\\\\\\Resources\\\\\\\\AppIcon\\\\\\\\projectframecut.svg" width="300" height="300" />
+<image src="projectFrameCut\Resources\AppIcon\projectframecut.svg" width="300" height="300" />
 
 一个强大，易上手且完全自由的视频剪辑软件
 
@@ -27,9 +27,9 @@
 
 - [x] Windows - 硬件加速渲染
 
-- [ ] Android - 硬件加速渲染
+- [x] Android - 硬件加速渲染
 
-- [ ] MacOS/iOS - 硬件加速渲染
+- [x] (部分，实验性) MacOS/iOS - 硬件加速渲染
 
 - [ ] 音频处理
 
@@ -42,7 +42,9 @@
 - [ ] ...
 
 ### 支持的平台
-要使用projectFrameCut，你的设备需要至少有8GB的运行内存和至少10GB的可用存储空间；要渲染视频，你的设备必须拥有大于16GB的内存或者50GB的可用存储空间来存储渲染途中的数据。
+要使用projectFrameCut，你的设备需要至少有8GB的运行内存和至少5GB的可用存储空间；要渲染视频，你的设备必须拥有大于8GB(带独显)/12GB(不带独显)的内存，4GB显存(独显)和10GB的可用存储空间来存储渲染途中的数据。
+
+推荐使用至少有24GB(桌面)/12GB(移动)内存的设备，同时带独立和集成显卡，并且有50GB的可用空间。
 
 projectFrameCut性能的差异不会随着CPU或者GPU的变化而差异很大，但是你的CPU或者GPU越好，渲染就越快。
 
@@ -64,7 +66,7 @@ projectFrameCut性能的差异不会随着CPU或者GPU的变化而差异很大�
    按照下列结构放置文件
 
 ```
-c:\path\to\your\folder
+c:\path\to\your\folder\Windows
 └─FFmpeg
     └─8.x\_internal
             avcodec-62.dll
@@ -78,16 +80,43 @@ c:\path\to\your\folder
             swresample-6.dll
             swscale-9.dll
 ```
-建议使用[Gyan.dev他们家的](https://www.gyan.dev/ffmpeg/builds/)FFmpeg库，请下载文件名带`shared`的版本
-2. 修改projectFrameCut.csproj里的这一行：
 
-```xml
-<MauiAsset Include="你的路径\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+建议使用[Gyan.dev他们家的](https://www.gyan.dev/ffmpeg/builds/)FFmpeg库，请下载文件名带`shared`的版本。
+
+2. 你还需要编译一个适用于Android的**8.x** FFmpeg动态库(他们太大了，Git存储库里塞不下)，放在项目文件夹以外的地方。
+   按照下列结构放置文件
+```
+c:\path\to\your\folder\Android
+└─FFmpeg
+    └─<CPU架构(比如arm64-v8a)>
+            libavcodec.so
+            libavfilter.so
+            libavformat.so
+            libavutil.so
+            libc++_shared.so
+            libswresample.so
+            libswscale.so
 ```
 
-把Include里的内容替换成你的路径，**确保在文件夹路径的末尾添加一个反斜杠和两个星号。**
+你需要准备所有的目标架构的.so动态库文件，请记得使用16KB对齐以避免应用程序不能在Android 16或者更新的版本上运行的问题。
 
-3.重新配置iOS预配（如果你需要）:
+3. 修改`projectFrameCut.csproj`里的这几行：
+
+```xml
+<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		...
+    <MauiAsset Include="[你的路径(c:\path\to\your\folder)]\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+</ItemGroup>
+...
+<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+        ...
+    <AndroidNativeLibrary Include="[你的路径(c:\path\to\your\folder)]\**\*.so" />
+</ItemGroup>
+```
+
+把Include里的内容替换成你的路径，**请只修改方括号扩起来的部分，以避免莫名其妙的缺动态库的问题。**
+
+4. 重新配置iOS预配（如果你需要）:
 
 修改`projectFrameCut.iDevices.csproj`
 
@@ -101,9 +130,9 @@ c:\path\to\your\folder
 
 ```
 
-4.在项目根目录里运行`dotnet workload restore`安装所有的SDK组件。
+5. 在项目根目录里运行`dotnet workload restore`安装所有的SDK组件。
 
-5.编译，运行。
+6. 编译，运行。
 
 因为一些原因，如果你需要生成iOS/MacCatalyst目标，请使用`projectFrameCut.iDevices.csproj`，而不是`projectFrameCut.csproj`
 
