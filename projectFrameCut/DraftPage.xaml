@@ -73,7 +73,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <VerticalStackLayout Grid.Column="0">
+                <VerticalStackLayout x:Name="MainUpperContent" Grid.Column="0">
                     <Image x:Name="PreviewBox" 
                             Background="Black"
                             HeightRequest="240"

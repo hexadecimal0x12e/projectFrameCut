@@ -282,7 +282,7 @@ public partial class DraftPage : ContentPage
             
         }) ;
 #elif iDevices
-
+        projectFrameCut.iOS.Render.MetalComputerHelper.RegisterComputerBridge();
 #elif WINDOWS
         if (UseLivePreviewInsteadOfBackend)
         {
@@ -1412,7 +1412,7 @@ public partial class DraftPage : ContentPage
 
         closeButton.Clicked += async (s, e) =>
         {
-            await Navigation.PopModalAsync();
+            await HidePopup();
         };
         layout.Children.Add(closeButton);
         foreach (var kvp in Assets)
@@ -2274,17 +2274,27 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region popup
-
+    private IView? OrigionalUIContent = null;
     private async Task ShowAPopup(View? content = null, Border? border = null, ClipElementUI? clip = null, string mode = "")
     {
         content ??= (border != null && clip != null) ? BuildPropertyPanel(clip) : new Label { Text = "No content." };
-
 #if iDevices
-        await Navigation.PushModalAsync(new ContentPage()
+        if (OrigionalUIContent is null && MainUpperContent.Children.Count > 0)
         {
-            Content = content,
-
+            OrigionalUIContent = MainUpperContent.Children.First();
+        }
+        MainUpperContent.Children.Clear();
+        MainUpperContent.Children.Add(new VerticalStackLayout
+        {
+            Children =
+            {
+                content
+            },
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center
         });
+        OverlayLayer.InputTransparent = true;
+        OverlayLayer.IsVisible = false;
         return;
 #endif
 
@@ -2529,6 +2539,15 @@ public partial class DraftPage : ContentPage
 
     private async Task HidePopup()
     {
+#if iDevices
+        if (OrigionalUIContent is not null)
+        {
+            MainUpperContent.Children.Clear();
+            MainUpperContent.Children.Add(OrigionalUIContent);
+            OrigionalUIContent = null;
+        }
+        return;
+#endif
         //if (!isPopupShowing) return;
         OverlayLayer.InputTransparent = true;
         await Task.WhenAll(HideClipPopup(), HideFullscreenPopup());
