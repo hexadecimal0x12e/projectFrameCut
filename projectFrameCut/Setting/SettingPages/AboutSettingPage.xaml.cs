@@ -26,7 +26,7 @@ public partial class AboutSettingPage : ContentPage
         {
             var filePath = $"AboutApplication/{Localized._LocaleId_}/About.md";
             using var stream = await FileSystem.OpenAppPackageFileAsync(filePath);
-            using var reader = new StreamReader(stream, Encoding.UTF8);
+            using var reader = new StreamReader(stream);
             var text = await reader.ReadToEndAsync();
             Dispatcher.Dispatch(() =>
             {

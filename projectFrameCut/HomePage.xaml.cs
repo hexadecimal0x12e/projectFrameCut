@@ -50,7 +50,7 @@ public partial class HomePage : ContentPage
                                 var draft = args[1];
                                 if (Directory.Exists(draft))
                                 {
-#if WINDOWS
+#if WINDOWS && DEBUG
                                     RpcClient c = new();
                                     if(Process.GetProcessesByName("projectFrameCut.Render.WindowsRender").Any())
                                     {
@@ -234,6 +234,7 @@ public partial class HomePage : ContentPage
 
     private async Task GoDraft(string draftSourcePath, string title, bool isReadonly = false, bool throwOnException = false, object? dbgBackend = null, bool? skipAskForRecover = null)
     {
+        LogDiagnostic($"Loading draft {draftSourcePath}, {title}, \r\n{Environment.StackTrace}");
         if (!Directory.Exists(draftSourcePath))
         {
             await DisplayAlertAsync(Localized._Warn, "Draft not found.", Localized._OK);
@@ -401,15 +402,16 @@ public partial class HomePage : ContentPage
                 });
             }
         });
+        Content = origContent;
 
         if (page != null)
         {
-            Content = origContent;
 #if WINDOWS
             AppShell.instance.HideNavView();
 #endif
             await base.Navigation.PushAsync(page);
         }
+
     }
 
     protected override async void OnAppearing()
@@ -448,6 +450,12 @@ public partial class HomePage : ContentPage
 
         await DisplayAlertAsync("Info", $"it seems like projectFrameCut doesn't support your system language yet.\r\nwe support {localeDispName.Aggregate((a, b) => $"{a}, {b}")} yet.\r\nIf you'd like to contribute the localization, do it and make a pull request.", "OK");
         SimpleLocalizer.IsFallbackMatched = false;
+
+        if (!SettingsManager.IsBoolSettingTrue("AIGeneratedTranslatePromptReaded") && Localized._LocaleId_ != "zh-CN")
+        {
+            await DisplayAlertAsync(Localized._Info,Localized.HomePage_AIGeneratdTranslationPrompt, Localized._OK);
+            SettingsManager.WriteSetting("AIGeneratedTranslatePromptReaded", "true");
+        }
     }
 
     private async void MenuOpen_Clicked(object? sender, EventArgs e)

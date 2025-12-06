@@ -14,13 +14,13 @@
         </MenuBarItem>
 
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Edit}" >
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" Command="{Binding SpiltCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
                     Key="S" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" Command="{Binding DeleteCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
                     Key="R" />

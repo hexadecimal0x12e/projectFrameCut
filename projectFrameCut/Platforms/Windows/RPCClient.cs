@@ -128,6 +128,7 @@ public sealed class RpcClient : IAsyncDisposable
 
     public static async Task<string> RenderOneFrame(uint frameId, RpcClient rpcClient, CancellationToken ct = default)
     {
+        if (rpcClient is null) return "";
         var result = await rpcClient.SendAsync("RenderOne", JsonSerializer.SerializeToElement(frameId), ct);
         if (result is null)
         {

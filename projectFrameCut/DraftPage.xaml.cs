@@ -110,6 +110,8 @@ public partial class DraftPage : ContentPage
     public ICommand SettingsCommand { get; private set; }
     public ICommand UndoCommand { get; private set; }
     public ICommand RedoCommand { get; private set; }
+    public ICommand SpiltCommand { get; private set; }
+    public ICommand DeleteCommand { get; private set; }
 
     DateTime lastSyncTime = DateTime.MinValue;
 
@@ -148,6 +150,8 @@ public partial class DraftPage : ContentPage
         SettingsCommand = new Command(() => SettingsClick(this, EventArgs.Empty));
         UndoCommand = new Command(() => UndoChanges());
         RedoCommand = new Command(() => RedoChanges());
+        SpiltCommand = new Command(() => Split_Clicked(this, EventArgs.Empty));
+        DeleteCommand = new Command(() => DeleteAClip());
 
         InitializeComponent();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
@@ -172,6 +176,7 @@ public partial class DraftPage : ContentPage
         SettingsCommand = new Command(() => SettingsClick(this, EventArgs.Empty));
         UndoCommand = new Command(() => UndoChanges());
         RedoCommand = new Command(() => RedoChanges());
+
 
         InitializeComponent();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
@@ -279,8 +284,8 @@ public partial class DraftPage : ContentPage
             v.WidthRequest = 50;
             v.HeightRequest = 50;
             ComputeView.Children.Add(v);
-            
-        }) ;
+
+        });
 #elif iDevices
         projectFrameCut.iOS.Render.MetalComputerHelper.RegisterComputerBridge();
 #elif WINDOWS
@@ -1028,6 +1033,20 @@ public partial class DraftPage : ContentPage
             origTrack = 0
         };
         Clips.AddOrUpdate("shadow_" + cid, shadowElement, (string _, ClipElementUI _) => shadowElement);
+    }
+
+    private void DeleteAClip(ClipElementUI? clip = null)
+    {
+        clip ??= _selected;
+        if (clip is null) return;
+        if (clip.origTrack is null) return;
+        if (Tracks.TryGetValue(clip.origTrack ?? 0, out var trackLayout))
+        {
+            trackLayout.Children.Remove(clip.Clip);
+        }
+        Clips.TryRemove(clip.Id, out _);
+        LogDiagnostic($"clip {clip.Id} deleted.");
+        SetStatusText(Localized.DraftPage_Removed);
     }
 
     #endregion

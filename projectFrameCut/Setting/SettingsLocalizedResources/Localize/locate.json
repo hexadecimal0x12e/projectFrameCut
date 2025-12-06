@@ -140,6 +140,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Edit_MaxiumSaveSlot",
+        "Value": "\u6700\u5927\u4FDD\u5B58\u6B65\u6570 (\u7528\u4E8E\u64A4\u9500\u548C\u8FD8\u539F)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Edit_PreferredPopupMode",
         "Value": "\u9ED8\u8BA4\u5F39\u51FA\u6846\u6A21\u5F0F",
         "Mode": "ConstString",
@@ -461,14 +469,6 @@
       {
         "Id": "Render_SelectAccel",
         "Value": "\u9009\u62E9\u7528\u4E8E\u6E32\u67D3/\u7F16\u8F91\u65F6\u786C\u4EF6\u52A0\u901F\u7684GPU",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_MaxiumSaveSlot",
-        "Value": "\u6700\u5927\u4FDD\u5B58\u6B65\u6570 (\u7528\u4E8E\u64A4\u9500\u548C\u8FD8\u539F)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -986,11 +986,11 @@
       },
       {
         "Id": "Edit_MaxiumSaveSlot",
-        "Value": "Unset localization item:Edit_MaxiumSaveSlot()",
+        "Value": "Maximum Save Steps (for Undo and Redo)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -1504,11 +1504,11 @@
       },
       {
         "Id": "Edit_MaxiumSaveSlot",
-        "Value": "Unset localization item:Edit_MaxiumSaveSlot()",
+        "Value": "\u6700\u5927\u4FDD\u5B58\u6B65\u6578 (\u7528\u65BC\u64A4\u92B7\u548C\u9084\u539F)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -2023,11 +2023,11 @@
       },
       {
         "Id": "Edit_MaxiumSaveSlot",
-        "Value": "Unset localization item:Edit_MaxiumSaveSlot()",
+        "Value": "\u6700\u5927\u4FDD\u5B58\u30B9\u30C6\u30C3\u30D7\u6570\uFF08\u5143\u306B\u623B\u3059\u30FB\u3084\u308A\u76F4\u3057\u7528\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -2542,11 +2542,11 @@
       },
       {
         "Id": "Edit_MaxiumSaveSlot",
-        "Value": "Unset localization item:Edit_MaxiumSaveSlot()",
+        "Value": "\uCD5C\uB300 \uC800\uC7A5 \uB2E8\uACC4 \uC218 (\uC2E4\uD589 \uCDE8\uC18C \uBC0F \uC7AC\uC2E4\uD589\uC6A9)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -3061,11 +3061,11 @@
       },
       {
         "Id": "Edit_MaxiumSaveSlot",
-        "Value": "Unset localization item:Edit_MaxiumSaveSlot()",
+        "Value": "Nombre maximum d\u0027\u00E9tapes de sauvegarde (pour annuler et restaurer)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -3580,11 +3580,11 @@
       },
       {
         "Id": "Edit_MaxiumSaveSlot",
-        "Value": "Unset localization item:Edit_MaxiumSaveSlot()",
+        "Value": "\u81F3\u5927\u5B58\u6B65\uFF08\u4EE5\u8D44\u64A4\u590D\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]
