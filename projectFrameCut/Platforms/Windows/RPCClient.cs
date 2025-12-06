@@ -21,7 +21,7 @@ public sealed class RpcClient : IAsyncDisposable
 
     public static string BootRPCServer(out Process rpcProc, out string backendAccessToken, out int backendPort, string tmpDir = "", string options = "1280,720,42,AV_PIX_FMT_NONE,nope", bool VerboseBackendLog = false, Action<string>? stdoutCallback = null, Action<string>? stderrCallback = null)
     {
-        var pipeId = "pjfc_rpc_V1_" + Guid.NewGuid().ToString();
+        var pipeId = "pjfc_rpc_" + Guid.NewGuid().ToString();
         backendAccessToken = Guid.NewGuid().ToString().Replace("-", "");
         backendPort = GenerateBackendPort();
         Directory.CreateDirectory(tmpDir);
@@ -112,7 +112,6 @@ public sealed class RpcClient : IAsyncDisposable
 
     public static async Task<string> UpdateDraft(DraftStructureJSON draft, RpcClient rpcClient, CancellationToken ct = default)
     {
-        var draftJson = JsonSerializer.SerializeToElement(draft, RpcProtocol.JsonOptions);
         var element = JsonSerializer.SerializeToElement(draft);
         var result = await rpcClient.SendAsync("UpdateClips", element, ct);
         if (result.HasValue && result.Value.TryGetProperty("status", out var status))
@@ -174,11 +173,12 @@ public sealed class RpcClient : IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
-            Debug.WriteLine("连接 RPC 后端超时。");
+            Log("Connect to RPC timeout.","error");
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("连接 RPC 后端失败。", ex);
+            Log(ex, "Connect to RPC", this);
+
         }
 
         try
@@ -192,7 +192,7 @@ public sealed class RpcClient : IAsyncDisposable
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException("初始化 RPC 通信失败。", ex);
+            Log(ex, "Connect to RPC", this);
         }
 
 

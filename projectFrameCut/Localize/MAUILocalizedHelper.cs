@@ -23,7 +23,7 @@ namespace LocalizedResources
 
             try
             {
-                var key = Localized.DynamicLookup(Key);
+                var key = Localized.DynamicLookup(Key,$"Unknown localized string {Key}");
                 return key;
             }
             catch (Exception ex)

@@ -88,9 +88,9 @@
 
 		<Compile Include="..\projectFrameCut\Localize\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\ViewModels\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
-		<Compile Include="..\projectFrameCut\DraftStuff\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut\DraftStuff\**\*.cs" Exclude="..\projectFrameCut\DraftStuff\InteractableEditor\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Converters\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
-		<Compile Include="..\projectFrameCut\Setting\Setting*\**\*.cs" Exclude="..\projectFrameCut\Setting\SettingPages\**\*.cs"   Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut\Setting\Setting*\**\*.cs" Exclude="..\projectFrameCut\Setting\SettingPages\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		
 		<Compile Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'" Include="..\projectFrameCut\Platforms\iOS\**\*.cs" Exclude="..\projectFrameCut\Platforms\iOS\AppDelegate.cs;..\projectFrameCut\Platforms\iOS\Program.cs" Link="Platforms\iOS\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'" Include="..\projectFrameCut\Platforms\MacCatalyst\**\*.cs" Exclude="..\projectFrameCut\Platforms\MacCatalyst\AppDelegate.cs;..\projectFrameCut\Platforms\MacCatalyst\Program.cs" Link="Platforms\MacCatalyst\%(RecursiveDir)%(Filename)%(Extension)" />

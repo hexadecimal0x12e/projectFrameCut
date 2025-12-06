@@ -250,6 +250,9 @@ namespace projectFrameCut
                     handlers.AddHandler<NativeGLSurfaceView, NativeGLSurfaceViewHandler>();
                 });
 
+                // Initialize Android compute helpers
+                projectFrameCut.Render.AndroidOpenGL.ComputerHelper.Init();
+
                 try
                 {
                     MyLoggerExtensions.OnLog += (msg, level) =>

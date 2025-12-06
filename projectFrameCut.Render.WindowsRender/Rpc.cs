@@ -205,7 +205,7 @@ namespace projectFrameCut.Render.WindowsRender
                                     LogDiagnostic($"Clips in frame #{frameIndex}:\r\n{GetFrameInfo(layers)}\r\n---");
                                     var pic = Timeline.MixtureLayers(layers, frameIndex, width, height);
                                     pic.SaveAsPng8bpp(destPath, encoder);
-                                    Thread.Sleep(500);
+                                    //Thread.Sleep(500);
                                     Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "frameHash", frameHash }, { "path", destPath } });
                                     Log($"[RPC] RenderOne completed");
                                 }

@@ -137,6 +137,12 @@ namespace projectFrameCut.Render
             {
                 case MixtureMode.Overlay:
                     return new OverlayMixture();
+                case MixtureMode.Add:
+                    return new AddMixture();
+                case MixtureMode.Minus:
+                    return new MinusMixture();
+                case MixtureMode.Multiply:
+                    return new MultiplyMixture();
                 default:
                     throw new NotSupportedException($"Mixture mode {mixtureMode} is not supported.");
             }

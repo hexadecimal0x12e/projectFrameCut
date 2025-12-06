@@ -3,12 +3,61 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.DraftPage"
              xmlns:l="clr-namespace:LocalizedResources"
-             Title="DraftPage V2">
-    <ContentPage.ToolbarItems>
-        <ToolbarItem x:Name="JobRunningIndicator" Text="{l:Localized Key=DraftPage_NoJobRunning}" Order="Primary" Priority="0" Clicked="OnExportedClick" />
-        <ToolbarItem Text="{l:Localized Key=DraftPage_GoRender}" Order="Primary" Priority="0" Clicked="OnExportedClick" />
-        <ToolbarItem Text="{l:Localized Key=_Options}"  Order="Secondary" Clicked="SettingsClick"/>
-    </ContentPage.ToolbarItems>
+             xmlns:ie="clr-namespace:projectFrameCut.DraftStuff.InteractableEditor"
+             Title="">
+    <ContentPage.MenuBarItems>
+        <MenuBarItem x:Name="ProjectNameMenuBarItem" Text="{Binding ProjectName}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_GoRender}"  Command="{Binding GoRenderCommand}" />
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Share}"/>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Cooperate}"/>
+        </MenuBarItem>
+
+        <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Edit}" >
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
+                    Key="S" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
+                    Key="R" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Undo}" Command="{Binding UndoCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
+                                Key="Z" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Redo}" Command="{Binding RedoCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
+                                Key="Y" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
+            
+            
+            <MenuFlyoutItem Text="{l:Localized Key=_Settings}" Command="{Binding SettingsCommand}"/>
+        </MenuBarItem>
+
+        <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs}">
+            <MenuFlyoutItem x:Name="JobRunningIndicator" Text="{l:Localized Key=DraftPage_NoJobRunning}" IsEnabled="False" />
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs_ManageJobs}" >
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
+                Key="T" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+        </MenuBarItem>
+        
+
+    </ContentPage.MenuBarItems>
+    
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -35,7 +84,7 @@
                     <VerticalStackLayout x:Name="CustomContent1" />
                 </Border>
                 <Border  ZIndex="0" Grid.Column="2" StrokeThickness="5" HorizontalOptions="Fill">
-                    <VerticalStackLayout x:Name="CustomContent2"/>
+
                 </Border>
 
                 <!--
@@ -52,6 +101,7 @@
             </Grid>
 
             <StackLayout Orientation="Horizontal" Padding="4,0">
+                <VerticalStackLayout x:Name="ComputeView" WidthRequest="50" />
                 <Button x:Name="MoveLeftButton" Text="&lt;-"  Clicked="MoveLeftButton_Clicked"/>
                 <Button x:Name="MoveRightButton" Text="-&gt;"  Clicked="MoveRightButton_Clicked"/>
                 <Button x:Name="ZoomOutButton" Text="+" Clicked="ZoomOutButton_Clicked" />
@@ -119,7 +169,6 @@ Clicked="AddClip_Clicked" />
 
             <HorizontalStackLayout HorizontalOptions="End" Grid.Column="3">
                 <Label x:Name="AlternativeStatusLabel" Text="" />
-                <VerticalStackLayout x:Name="ComputeView" />
 
             </HorizontalStackLayout>
 
@@ -129,12 +178,12 @@ Clicked="AddClip_Clicked" />
                         Grid.RowSpan="3"
                         ZIndex="1000"
                         InputTransparent="True"
-                        CascadeInputTransparent="False"
+                        CascadeInputTransparent="True"
                        BackgroundColor="Transparent"
                         IsVisible="True"
                         HorizontalOptions="Fill"
                         VerticalOptions="Fill">
-            <BoxView x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red"/>
+            <BoxView x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True"/>
             <Image x:Name="PreviewOverlayImage"
            BackgroundColor="#112233"
            Aspect="AspectFit"
@@ -143,6 +192,11 @@ Clicked="AddClip_Clicked" />
            HeightRequest="240"
            AbsoluteLayout.LayoutBounds="0,0,800,240"
            AbsoluteLayout.LayoutFlags="None" />
+
+            <ie:InteractableEditor x:Name="ClipEditor"
+                                   AbsoluteLayout.LayoutBounds="0,0,800,240"
+                                   AbsoluteLayout.LayoutFlags="None"
+                                   IsVisible="False"/>
 
             <Label Text="Overlay"
                    TextColor="White"

@@ -145,7 +145,7 @@ namespace projectFrameCut.Render.RenderCLI
             {
                 var acceleratorId = int.TryParse(switches.GetOrAdd("acceleratorDeviceId", "-1"), out var result1) ? result1 : -1;
                 var accelType = switches.GetOrAdd("acceleratorType", "auto");
-                var acc = PickOneAccel(accelType, acceleratorId, devices);
+                var acc = ILGPUComputerHelper.PickOneAccel(accelType, acceleratorId, devices);
                 if (acc is null)
                 {
                     return 2;
@@ -168,7 +168,7 @@ namespace projectFrameCut.Render.RenderCLI
                     .ToList();
                 picked = accelsIds.Select(id =>
                 {
-                    var acc = PickOneAccel("auto", id, devices);
+                    var acc = ILGPUComputerHelper.PickOneAccel("auto", id, devices);
                     if (acc is null)
                     {
                         Log($"ERROR: Cannot pick accelerator device with id {id}.");
@@ -205,7 +205,7 @@ namespace projectFrameCut.Render.RenderCLI
                 ffmpeg.av_log_set_level(ffmpeg.AV_LOG_QUIET);
             else
                 ffmpeg.av_log_set_level(ffmpeg.AV_LOG_WARNING);
-            Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
+            Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}");
 
             bool fSync = false;
             foreach (var accelerator in accelerators)
@@ -231,7 +231,7 @@ namespace projectFrameCut.Render.RenderCLI
 
 
 
-            RegisterComputerGetter(accelerators, fSync);
+            ILGPUComputerHelper.RegisterComputerGetter(accelerators, fSync);
 
             var outputOptions = switches["output_options"].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
@@ -402,49 +402,9 @@ namespace projectFrameCut.Render.RenderCLI
             return 0;
         }
 
-        private static Device? PickOneAccel(string accelType, int acceleratorId, List<Device> devices)
-        {
-            Device? pick = null;
-            if (acceleratorId >= 0)
-                pick = devices[acceleratorId];
-            else if (accelType == "cuda")
-                pick = devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.Cuda);
-            else if (accelType == "opencl")
-                pick = devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.OpenCL
-                            && (d.Name.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase) || d.Name.Contains("AMD", StringComparison.OrdinalIgnoreCase))) //优先用独显
-                        ?? devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.OpenCL);
-            else if (accelType == "cpu")
-                pick = devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.CPU);
-            else if (accelType == "auto")
-                pick =
-                    devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.Cuda)
-                    ?? devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.OpenCL && (d.Name.Contains("NVIDIA", StringComparison.OrdinalIgnoreCase) || d.Name.Contains("AMD", StringComparison.OrdinalIgnoreCase)))
-                    ?? devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.OpenCL)
-                    ?? devices.FirstOrDefault(d => d.AcceleratorType == AcceleratorType.CPU);
-            else
-            {
-                Log($"ERROR: acceleratorType {accelType} is not supported.");
-            }
-            return pick;
-        }
+        
 
-        private static void RegisterComputerGetter(Accelerator[] accels, bool sync)
-        {
-            AcceleratedComputerBridge.RequireAComputer = new((name) =>
-            {
-                switch (name)
-                {
-                    case "Overlay":
-                        return new OverlayComputer(accels, sync);
-                    case "RemoveColor":
-                        return new RemoveColorComputer(accels, sync);
-                    default:
-                        Log($"Computer {name} not found.", "Error");
-                        return null;
-
-                }
-            });
-        }
+        
 
         public static bool inprojectFrameCut = false;
 

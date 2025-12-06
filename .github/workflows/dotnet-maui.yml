@@ -27,15 +27,15 @@ jobs:
     - name: Build Android
       run: dotnet build projectFrameCut/projectFrameCut.csproj -c Release -f net10.0-android --no-restore
 
-    - name: Build Windows
-      run: dotnet build projectFrameCut/projectFrameCut.csproj -c Release -f net10.0-windows10.0.19041.0 --no-restore
-
     - name: Upload Android Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: android-build
         path: projectFrameCut/bin/Release/net10.0-android/
 
+    - name: Build Windows
+      run: dotnet build projectFrameCut/projectFrameCut.csproj -c Release -f net10.0-windows10.0.19041.0 --no-restore
+    
     - name: Upload Windows Artifacts
       uses: actions/upload-artifact@v4
       with:

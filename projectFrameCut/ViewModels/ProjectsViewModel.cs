@@ -5,14 +5,17 @@ using System.Runtime.CompilerServices;
 
 namespace projectFrameCut.ViewModels
 {
+#if WINDOWS
+    [WinRT.GeneratedBindableCustomProperty()]
+#endif
     public partial class ProjectsViewModel : INotifyPropertyChanged
     {
         public string _name = "unknown";
-        public DateTime _lastChanged;
+        public DateTime? _lastChanged;
         public string _thumbPath = string.Empty;
         public string _projectPath = string.Empty;
 
-        public ProjectsViewModel(string name, DateTime lastChanged, string thumbPath)
+        public ProjectsViewModel(string name, DateTime? lastChanged, string thumbPath)
         {
             _name = name ?? throw new ArgumentNullException(nameof(name));
             _lastChanged = lastChanged;
@@ -37,13 +40,14 @@ namespace projectFrameCut.ViewModels
 #else
                 Localized.HomePage_CreateAProject_Hint_Tap
 #endif
-                : DateTime.Now.Ticks - _lastChanged.Ticks >= 0 ?
-                TimeSpan.FromTicks(DateTime.Now.Ticks - _lastChanged.Ticks) switch
+                : _lastChanged is null ? Localized.HomePage_GoDraft_DraftBroken_InvaildInfoTitle :
+                DateTime.Now.Ticks - _lastChanged.Value.Ticks >= 0 ?
+                TimeSpan.FromTicks(DateTime.Now.Ticks - _lastChanged.Value.Ticks) switch
                 {
                     var t when t.TotalHours < 2 => Localized.HomePage_LastChangedOnMinutes(t.Minutes),
                     var t when t.TotalHours < 48 => Localized.HomePage_LastChangedOnHours((int)t.TotalHours),
                     var t when t.TotalDays < 14 => Localized.HomePage_LastChangedOnDays((int)t.TotalDays),
-                    _ => Localized.HomePage_LastChangedOnExactTimeSpan(_lastChanged)
+                    _ => Localized.HomePage_LastChangedOnExactTimeSpan(_lastChanged.Value)
                 }
                 : Localized.HomePage_LastChangedOnFuture;
         }

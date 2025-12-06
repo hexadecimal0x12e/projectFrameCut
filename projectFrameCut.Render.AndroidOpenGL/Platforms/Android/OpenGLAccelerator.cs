@@ -12,55 +12,9 @@ using Xamarin.Google.Crypto.Tink.Annotations;
 
 namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 {
-    public class OverlayComputer : IComputer
+    internal static class ShaderLibrary
     {
-
-
-
-        public float[][] Compute(float[][] args)
-        {
-            // args: [A, B, aAlpha, bAlpha]
-            var A = args[0];
-            var B = args[1];
-            var aAlpha = args[2];
-            var bAlpha = args[3];
-
-            // Ensure inputs are not null
-            if (aAlpha == null) aAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
-            if (bAlpha == null) bAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
-
-            // We need to run on MainThread because we are touching UI elements (NativeGLSurfaceView)
-            return MainThread.InvokeOnMainThreadAsync(async () =>
-            {
-                
-                NativeGLSurfaceView accelerator = new NativeGLSurfaceView
-                {
-                    ShaderSource = ShaderAlphaSrc,
-                    Inputs = new float[][] { aAlpha, bAlpha },
-                };
-                ComputerHelper.AddGLViewHandler?.Invoke(accelerator);
-                var handler = accelerator.Handler as NativeGLSurfaceViewHandler;
-                if (handler?.PlatformView is not GLComputeView glView)
-                    throw new InvalidOperationException("Accelerator is not ready or not attached.");
-
-                await glView.WaitUntilReadyAsync();
-                // Force update inputs on platform view
-                //NativeGLSurfaceViewHandler.MapInputs(handler, accelerator);
-
-                var alphaResult = await glView.RunComputeAsync();
-
-                // 2. Compute Color
-                accelerator.ShaderSource = ShaderColorSrc;
-                accelerator.Inputs = new float[][] { aAlpha, A, bAlpha, B };
-                NativeGLSurfaceViewHandler.MapInputs(handler, accelerator);
-
-                var colorResult = await glView.RunComputeAsync();
-
-                return new float[][] { colorResult, alphaResult };
-            }).Result;
-        }
-
-        private const string ShaderAlphaSrc =
+        public const string Alpha =
             """
             #version 310 es            
             layout(local_size_x = 256) in;
@@ -89,7 +43,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             }
             """;
 
-        private const string ShaderColorSrc =
+        public const string ShaderColorSrc =
             """
             #version 310 es            
             layout(local_size_x = 256) in;
@@ -132,6 +86,65 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                 }
             }
             """;
+
+    }
+
+    public class OverlayComputer : IComputer
+    {
+        public float[][] Compute(float[][] args)
+        {
+            // args: [A, B, aAlpha, bAlpha]
+            var A = args[0];
+            var B = args[1];
+            var aAlpha = args[2];
+            var bAlpha = args[3];
+
+            // Ensure inputs are not null
+            if (aAlpha == null) aAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
+            if (bAlpha == null) bAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
+
+            // We need to run on MainThread because we are touching UI elements (NativeGLSurfaceView)
+            var result = MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                
+                NativeGLSurfaceView accelerator = new NativeGLSurfaceView
+                {
+                    ShaderSource = ShaderLibrary.Alpha,
+                    Inputs = new float[][] { aAlpha, bAlpha },
+                    WidthRequest = 50,
+                    HeightRequest = 50,
+                    JobID = "OverlayComputer"
+                };
+                ComputerHelper.AddGLViewHandler?.Invoke(accelerator);
+                var handler = accelerator.Handler as NativeGLSurfaceViewHandler;
+                if (handler?.PlatformView is not GLComputeView glView)
+                    throw new InvalidOperationException("Accelerator is not ready or not attached.");
+
+                await glView.WaitUntilReadyAsync();
+                // Force update inputs on platform view
+                //NativeGLSurfceViewHandler.MapInputs(handler, accelerator);
+
+                var alphaResult = await glView.RunComputeAsync();
+
+                // 2. Compute Color
+                accelerator.ShaderSource = ShaderLibrary.ShaderColorSrc;
+                accelerator.Inputs = new float[][] { aAlpha, A, bAlpha, B };
+                NativeGLSurfaceViewHandler.MapInputs(handler, accelerator);
+
+                var colorResult = await glView.RunComputeAsync();
+
+                return new float[][] { colorResult, alphaResult };
+            }).Result;
+
+            if (result is null)
+                throw new InvalidOperationException($"OverlayComputer Compute failed: accelerator returned null result.");
+
+            return result;
+        }
+
+        
+
+        
     }
 
     public class RemoveColorComputer : IComputer
@@ -186,12 +199,15 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                 }
                 """;
 
-            return MainThread.InvokeOnMainThreadAsync(async () =>
+            float[] result = MainThread.InvokeOnMainThreadAsync(async () =>
             {
                 NativeGLSurfaceView accelerator = new NativeGLSurfaceView
                 {
                     ShaderSource = shader,
-                    Inputs = new float[][] { aR, aG, aB, sourceA }
+                    Inputs = new float[][] { aR, aG, aB, sourceA },
+                    WidthRequest = 50,
+                    HeightRequest = 50,
+                    JobID = "RemoveColorComputer"
                 };
                 ComputerHelper.AddGLViewHandler?.Invoke(accelerator);
                 var handler = accelerator.Handler as NativeGLSurfaceViewHandler;
@@ -199,11 +215,14 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     throw new InvalidOperationException("Accelerator is not ready or not attached.");
 
                 await glView.WaitUntilReadyAsync();
-                //NativeGLSurfaceViewHandler.MapInputs(handler, accelerator);
-
-                var result = await glView.RunComputeAsync();
-                return new float[][] { result };
+                return await glView.RunComputeAsync();
             }).Result;
+
+            if (result is null)
+                throw new InvalidOperationException($"RemoveColorComputer Compute failed: accelerator returned null result.");
+
+            return [result];
         }
     }
+
 }

@@ -66,6 +66,10 @@ namespace projectFrameCut.Shared
                 var ex1 = new InvalidDataException($"An error occurred while trying to log the {ex.GetType().Name}'s detailed information.", new AggregateException(ex, e));
                 Log(ex1, message, sender);
             }
+            //finally
+            //{
+            //    if(Debugger.IsAttached) Debugger.Break();
+            //}
 
 
         }

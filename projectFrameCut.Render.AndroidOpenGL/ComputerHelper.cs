@@ -18,7 +18,7 @@ namespace projectFrameCut.Render.AndroidOpenGL
                 }
 
                 switch (name)
-                {
+                {                      
                     case "Overlay":
                         return new OverlayComputer();
                     case "RemoveColor":

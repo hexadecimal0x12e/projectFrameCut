@@ -65,6 +65,9 @@ namespace projectFrameCut.Shared
         public string? ThumbnailPath { get; set; }
         public string? AssetId { get; set; }
 
+        public int Width { get; set; }
+        public int Height { get; set; }
+
         [JsonIgnore]
         public object? Background { get; set; }
 
@@ -265,36 +268,21 @@ namespace projectFrameCut.Shared
         /// </summary>
         public void ReInit();
 
-        public static IClip FromJSON(JsonElement clip)
+        static IClip FromJSON(JsonElement clip)
         {
-            var type = (ClipMode)clip.GetProperty("ClipType").GetInt32();
+            ClipMode type = (ClipMode)clip.GetProperty("ClipType").GetInt32();
             Console.WriteLine($"Found clip {type}, name: {clip.GetProperty("Name").GetString()}, id: {clip.GetProperty("Id").GetString()}");
-            switch (type)
+            return type switch
             {
-                case ClipMode.VideoClip:
-                    {
-                        return clip.Deserialize<VideoClip>() ?? throw new NullReferenceException();
-                    }
-                case ClipMode.PhotoClip:
-                    {
-                        return clip.Deserialize<PhotoClip>() ?? throw new NullReferenceException();
-
-                    }
-                case ClipMode.SolidColorClip:
-                    {
-                        return clip.Deserialize<SolidColorClip>() ?? throw new NullReferenceException();
-                    }
-                case ClipMode.TextClip:
-                    {
-                        return clip.Deserialize<TextClip>() ?? throw new NullReferenceException();
-                    }
-                default:
-                    throw new NotSupportedException($"Unknown or unsupported clip type {type}.");
-                    
-            }
+                ClipMode.VideoClip => clip.Deserialize<VideoClip>() ?? throw new NullReferenceException(),
+                ClipMode.PhotoClip => clip.Deserialize<PhotoClip>() ?? throw new NullReferenceException(),
+                ClipMode.SolidColorClip => clip.Deserialize<SolidColorClip>() ?? throw new NullReferenceException(),
+                ClipMode.TextClip => clip.Deserialize<TextClip>() ?? throw new NullReferenceException(),
+                _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
+            };
         }
 
-        
+
 
     }
 

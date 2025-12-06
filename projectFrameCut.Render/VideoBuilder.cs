@@ -170,7 +170,7 @@ namespace projectFrameCut.Render
                         builder.Append(Cache.TryRemove(index, out var f) ? f : throw new KeyNotFoundException());
                         FramePendedToWrite[index] = true;
                         index++;
-                        
+
                         if (DisposeFrameAfterEachWrite) f.Dispose();
                         if (DoGCAfterEachWrite)
                         {
@@ -183,7 +183,7 @@ namespace projectFrameCut.Render
                             {
                                 GC.Collect();
                             }
-                            
+
                         }
                         Log($"[VideoBuilder] Frame #{index} wrote.");
                     }
@@ -438,9 +438,9 @@ namespace projectFrameCut.Render
 
         }
 
-        public void Append(IPicture picture)
+        public void Append(IPicture<ushort> picture)
         {
-            if (picture == null) throw new ArgumentNullException(nameof(picture));
+            ArgumentNullException.ThrowIfNull(picture);
             if (picture.Width != _width || picture.Height != _height)
                 throw new ArgumentException("The result size is different from original size. Please check the source.");
             if (_isDisposed) throw new ObjectDisposedException(nameof(VideoBuilder));
@@ -453,155 +453,76 @@ namespace projectFrameCut.Render
             byte* srcData0 = _frameSrc->data[0];
             int srcLinesize = _frameSrc->linesize[0];
 
-            if (picture is IPicture<ushort> pic16)
+            fixed (ushort* pr = picture.r)
+            fixed (ushort* pg = picture.g)
+            fixed (ushort* pb = picture.b)
+            fixed (float* pa = picture.a)
             {
-                fixed (ushort* pr = pic16.r)
-                fixed (ushort* pg = pic16.g)
-                fixed (ushort* pb = pic16.b)
-                fixed (float* pa = pic16.a)
+                if (colorDepth == 16)
                 {
-                    if (colorDepth == 16)
+                    for (int y = 0; y < _height; y++)
                     {
-                        for (int y = 0; y < _height; y++)
+                        ushort* row16 = (ushort*)(srcData0 + y * srcLinesize);
+                        int baseIndex = y * _width;
+                        for (int x = 0; x < _width; x++)
                         {
-                            ushort* row16 = (ushort*)(srcData0 + y * srcLinesize);
-                            int baseIndex = y * _width;
-                            for (int x = 0; x < _width; x++)
+                            int k = baseIndex + x;
+                            ushort r16 = (pr != null && k < picture.r.Length) ? pr[k] : (ushort)0;
+                            ushort g16 = (pg != null && k < picture.g.Length) ? pg[k] : (ushort)0;
+                            ushort b16 = (pb != null && k < picture.b.Length) ? pb[k] : (ushort)0;
+
+                            ushort a16 = 65535;
+                            if (picture.hasAlphaChannel && picture.a != null && pa != null && k < picture.a.Length)
                             {
-                                int k = baseIndex + x;
-                                ushort r16 = (pr != null && k < pic16.r.Length) ? pr[k] : (ushort)0;
-                                ushort g16 = (pg != null && k < pic16.g.Length) ? pg[k] : (ushort)0;
-                                ushort b16 = (pb != null && k < pic16.b.Length) ? pb[k] : (ushort)0;
-
-                                ushort a16 = 65535;
-                                if (pic16.hasAlphaChannel && pic16.a != null && pa != null && k < pic16.a.Length)
-                                {
-                                    float af = pa[k];
-                                    if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
-                                    if (af < 0f) af = 0f;
-                                    if (af > 1f) af = 1f;
-                                    a16 = (ushort)(af * 65535f + 0.5f);
-                                }
-
-                                int off = x * 4;
-                                row16[off + 0] = r16;
-                                row16[off + 1] = g16;
-                                row16[off + 2] = b16;
-                                row16[off + 3] = a16;
+                                float af = pa[k];
+                                if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
+                                if (af < 0f) af = 0f;
+                                if (af > 1f) af = 1f;
+                                a16 = (ushort)(af * 65535f + 0.5f);
                             }
+
+                            int off = x * 4;
+                            row16[off + 0] = r16;
+                            row16[off + 1] = g16;
+                            row16[off + 2] = b16;
+                            row16[off + 3] = a16;
                         }
                     }
-                    else
+                }
+                else
+                {
+                    for (int y = 0; y < _height; y++)
                     {
-                        for (int y = 0; y < _height; y++)
+                        byte* row = srcData0 + y * srcLinesize;
+                        int baseIndex = y * _width;
+                        for (int x = 0; x < _width; x++)
                         {
-                            byte* row = srcData0 + y * srcLinesize;
-                            int baseIndex = y * _width;
-                            for (int x = 0; x < _width; x++)
+                            int k = baseIndex + x;
+                            ushort r16 = pr != null && k < picture.r.Length ? pr[k] : (ushort)0;
+                            ushort g16 = pg != null && k < picture.g.Length ? pg[k] : (ushort)0;
+                            ushort b16 = pb != null && k < picture.b.Length ? pb[k] : (ushort)0;
+                            byte r8 = (byte)(r16 >> 8);
+                            byte g8 = (byte)(g16 >> 8);
+                            byte b8 = (byte)(b16 >> 8);
+                            byte a8 = 255;
+                            if (picture.hasAlphaChannel && picture.a != null && pa != null && k < picture.a.Length)
                             {
-                                int k = baseIndex + x;
-                                ushort r16 = pr != null && k < pic16.r.Length ? pr[k] : (ushort)0;
-                                ushort g16 = pg != null && k < pic16.g.Length ? pg[k] : (ushort)0;
-                                ushort b16 = pb != null && k < pic16.b.Length ? pb[k] : (ushort)0;
-                                byte r8 = (byte)(r16 >> 8);
-                                byte g8 = (byte)(g16 >> 8);
-                                byte b8 = (byte)(b16 >> 8);
-                                byte a8 = 255;
-                                if (pic16.hasAlphaChannel && pic16.a != null && pa != null && k < pic16.a.Length)
-                                {
-                                    float af = pa[k];
-                                    if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
-                                    if (af < 0f) af = 0f;
-                                    if (af > 1f) af = 1f;
-                                    a8 = (byte)(af * 255f + 0.5f);
-                                }
-                                int off = x * 4;
-                                row[off + 0] = r8;
-                                row[off + 1] = g8;
-                                row[off + 2] = b8;
-                                row[off + 3] = a8;
+                                float af = pa[k];
+                                if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
+                                if (af < 0f) af = 0f;
+                                if (af > 1f) af = 1f;
+                                a8 = (byte)(af * 255f + 0.5f);
                             }
+                            int off = x * 4;
+                            row[off + 0] = r8;
+                            row[off + 1] = g8;
+                            row[off + 2] = b8;
+                            row[off + 3] = a8;
                         }
                     }
                 }
             }
-            else if (picture is IPicture<byte> pic8)
-            {
-                fixed (byte* pr = pic8.r)
-                fixed (byte* pg = pic8.g)
-                fixed (byte* pb = pic8.b)
-                fixed (float* pa = pic8.a)
-                {
-                    if (colorDepth == 16)
-                    {
-                        for (int y = 0; y < _height; y++)
-                        {
-                            ushort* row16 = (ushort*)(srcData0 + y * srcLinesize);
-                            int baseIndex = y * _width;
-                            for (int x = 0; x < _width; x++)
-                            {
-                                int k = baseIndex + x;
-                                byte r8 = (pr != null && k < pic8.r.Length) ? pr[k] : (byte)0;
-                                byte g8 = (pg != null && k < pic8.g.Length) ? pg[k] : (byte)0;
-                                byte b8 = (pb != null && k < pic8.b.Length) ? pb[k] : (byte)0;
 
-                                ushort r16 = (ushort)(r8 * 257);
-                                ushort g16 = (ushort)(g8 * 257);
-                                ushort b16 = (ushort)(b8 * 257);
-
-                                ushort a16 = 65535;
-                                if (pic8.hasAlphaChannel && pic8.a != null && pa != null && k < pic8.a.Length)
-                                {
-                                    float af = pa[k];
-                                    if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
-                                    if (af < 0f) af = 0f;
-                                    if (af > 1f) af = 1f;
-                                    a16 = (ushort)(af * 65535f + 0.5f);
-                                }
-
-                                int off = x * 4;
-                                row16[off + 0] = r16;
-                                row16[off + 1] = g16;
-                                row16[off + 2] = b16;
-                                row16[off + 3] = a16;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        for (int y = 0; y < _height; y++)
-                        {
-                            byte* row = srcData0 + y * srcLinesize;
-                            int baseIndex = y * _width;
-                            for (int x = 0; x < _width; x++)
-                            {
-                                int k = baseIndex + x;
-                                byte r8 = pr != null && k < pic8.r.Length ? pr[k] : (byte)0;
-                                byte g8 = pg != null && k < pic8.g.Length ? pg[k] : (byte)0;
-                                byte b8 = pb != null && k < pic8.b.Length ? pb[k] : (byte)0;
-                                byte a8 = 255;
-                                if (pic8.hasAlphaChannel && pic8.a != null && pa != null && k < pic8.a.Length)
-                                {
-                                    float af = pa[k];
-                                    if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
-                                    if (af < 0f) af = 0f;
-                                    if (af > 1f) af = 1f;
-                                    a8 = (byte)(af * 255f + 0.5f);
-                                }
-                                int off = x * 4;
-                                row[off + 0] = r8;
-                                row[off + 1] = g8;
-                                row[off + 2] = b8;
-                                row[off + 3] = a8;
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                throw new NotSupportedException($"Unsupported picture type: {picture.GetType().Name}");
-            }
 
             ffmpeg.sws_scale(
                 _sws,
@@ -617,6 +538,119 @@ namespace projectFrameCut.Render
             EncodeFrame(_frameDst);
 
             Index++;
+        }
+
+
+        public void Append(IPicture<byte> picture)
+        {
+            if (picture == null) throw new ArgumentNullException(nameof(picture));
+            if (picture.Width != _width || picture.Height != _height)
+                throw new ArgumentException("The result size is different from original size. Please check the source.");
+            if (_isDisposed) throw new ObjectDisposedException(nameof(VideoBuilder));
+
+            EnsureHeader();
+
+            FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frameSrc), "make frame writable");
+            FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frameDst), "make frame writable");
+
+            byte* srcData0 = _frameSrc->data[0];
+            int srcLinesize = _frameSrc->linesize[0];
+
+            fixed (byte* pr = picture.r)
+            fixed (byte* pg = picture.g)
+            fixed (byte* pb = picture.b)
+            fixed (float* pa = picture.a)
+            {
+                if (colorDepth == 16)
+                {
+                    for (int y = 0; y < _height; y++)
+                    {
+                        ushort* row16 = (ushort*)(srcData0 + y * srcLinesize);
+                        int baseIndex = y * _width;
+                        for (int x = 0; x < _width; x++)
+                        {
+                            int k = baseIndex + x;
+                            byte r8 = (pr != null && k < picture.r.Length) ? pr[k] : (byte)0;
+                            byte g8 = (pg != null && k < picture.g.Length) ? pg[k] : (byte)0;
+                            byte b8 = (pb != null && k < picture.b.Length) ? pb[k] : (byte)0;
+
+                            ushort r16 = (ushort)(r8 * 257);
+                            ushort g16 = (ushort)(g8 * 257);
+                            ushort b16 = (ushort)(b8 * 257);
+
+                            ushort a16 = 65535;
+                            if (picture.hasAlphaChannel && picture.a != null && pa != null && k < picture.a.Length)
+                            {
+                                float af = pa[k];
+                                if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
+                                if (af < 0f) af = 0f;
+                                if (af > 1f) af = 1f;
+                                a16 = (ushort)(af * 65535f + 0.5f);
+                            }
+
+                            int off = x * 4;
+                            row16[off + 0] = r16;
+                            row16[off + 1] = g16;
+                            row16[off + 2] = b16;
+                            row16[off + 3] = a16;
+                        }
+                    }
+                }
+                else
+                {
+                    for (int y = 0; y < _height; y++)
+                    {
+                        byte* row = srcData0 + y * srcLinesize;
+                        int baseIndex = y * _width;
+                        for (int x = 0; x < _width; x++)
+                        {
+                            int k = baseIndex + x;
+                            byte r8 = pr != null && k < picture.r.Length ? pr[k] : (byte)0;
+                            byte g8 = pg != null && k < picture.g.Length ? pg[k] : (byte)0;
+                            byte b8 = pb != null && k < picture.b.Length ? pb[k] : (byte)0;
+                            byte a8 = 255;
+                            if (picture.hasAlphaChannel && picture.a != null && pa != null && k < picture.a.Length)
+                            {
+                                float af = pa[k];
+                                if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
+                                if (af < 0f) af = 0f;
+                                if (af > 1f) af = 1f;
+                                a8 = (byte)(af * 255f + 0.5f);
+                            }
+                            int off = x * 4;
+                            row[off + 0] = r8;
+                            row[off + 1] = g8;
+                            row[off + 2] = b8;
+                            row[off + 3] = a8;
+                        }
+                    }
+                }
+            }
+
+            ffmpeg.sws_scale(
+            _sws,
+            _frameSrc->data,
+            _frameSrc->linesize,
+            0,
+            _height,
+            _frameDst->data,
+            _frameDst->linesize);
+
+            _frameDst->pts = _frameIndex++;
+
+            EncodeFrame(_frameDst);
+
+            Index++;
+        }
+
+        public void Append(Picture16bpp pic) => Append((IPicture<ushort>)pic);
+        public void Append(Picture8bpp pic) => Append((IPicture<byte>)pic);
+        public void Append(IPicture source)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            if (source.bitPerPixel == 16) Append((IPicture<ushort>)source);
+            else if (source.bitPerPixel == 8) Append((IPicture<byte>)source);
+            else throw new NotSupportedException($"Unsupported pixel mode.");
         }
 
         private void EnsureHeader()

@@ -202,11 +202,11 @@ namespace projectFrameCut.DraftStuff
                     if (ppb.Properties.TryGetValue("NewEffectType", out var typeObj) && typeObj is string typeName)
                     {
                         IEffect? newEffect = null;
-                        if(EffectHelper.EnumerateEffectsAndNames().TryGetValue(typeName, out var effectType))
+                        if(EffectHelper.EffectsEnum.TryGetValue(typeName, out var creator))
                         {
                             try
                             {
-                                newEffect = (IEffect)Activator.CreateInstance(effectType);
+                                newEffect = creator?.Invoke();
                             }
                             catch(Exception ex)
                             {
@@ -214,17 +214,6 @@ namespace projectFrameCut.DraftStuff
                             }
                         }
 
-                        if(newEffect is null)
-                        {
-                            Log($"Failed to create effect of type {typeName} via reflection, trying manual creation.","warning");
-                            switch (typeName)
-                            {
-                                case "RemoveColorEffect":
-                                    newEffect = new RemoveColorEffect();
-                                    break;
-                            }
-
-                        }
 
                         if (newEffect != null)
                         {

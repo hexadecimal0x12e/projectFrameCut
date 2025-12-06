@@ -1,8 +1,10 @@
 ﻿using Microsoft.Maui.Controls.Shapes;
+using projectFrameCut.Render;
 using projectFrameCut.Shared;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 #if iDevices
@@ -210,5 +212,20 @@ namespace projectFrameCut.DraftStuff
         Free,
         Move,
         Resize
+    }
+
+
+    [JsonSerializable(typeof(Dictionary<string, projectFrameCut.Shared.IEffect>))]
+    [JsonSerializable(typeof(Dictionary<string, object>))]
+    [JsonSerializable(typeof(ClipMovingStatus))]
+    [JsonSerializable(typeof(ClipMode))]
+    [JsonSourceGenerationOptions(WriteIndented = true, PropertyNameCaseInsensitive = true)]
+    public partial class ClipElementUIAotJsonSerializerContext : JsonSerializerContext
+    {
+    }
+
+    public partial class GlobalJSONSerializerContexts
+    {
+        public static JsonSerializerOptions GlobalClipJSONContext = new JsonSerializerOptions { TypeInfoResolver = ClipElementUIAotJsonSerializerContext.Default };
     }
 }

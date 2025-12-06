@@ -114,8 +114,11 @@ namespace projectFrameCut.VideoMakeEngine
                 [(float)Tolerance]
                 ])[0];
 
+            
+
             if (source is IPicture<ushort> p16_out)
             {
+                p16_out.SetAlpha(true);
                 var result = new Picture(p16_out)
                 {
                     r = p16_out.r,
@@ -140,6 +143,7 @@ namespace projectFrameCut.VideoMakeEngine
             }
             else if (source is Picture8bpp p8_out)
             {
+                p8_out.SetAlpha(true);
                 var result = new Picture8bpp(p8_out)
                 {
                     r = p8_out.r,
@@ -441,6 +445,70 @@ namespace projectFrameCut.VideoMakeEngine
 
     }
 
+    public class ResizeEffect : IEffect
+    {
+        public bool Enabled { get; set; } = true;
+        public int Index { get; set; }
+
+        public int Height { get; init; }
+        public int Width { get; init; }
+        public bool PreserveAspectRatio { get; init; } = true;
+
+        public Dictionary<string, object> Parameters => new Dictionary<string, object>
+        {
+            {"Height", Height },
+            {"Width", Width },
+            {"PreserveAspectRatio" , PreserveAspectRatio  },
+        };
+
+        List<string> IEffect.ParametersNeeded => ParametersNeeded;
+        Dictionary<string, string> IEffect.ParametersType => ParametersType;
+        bool IEffect.NeedAComputer => false;
+
+        public static List<string> ParametersNeeded { get; } = new List<string>
+        {
+            "Height",
+            "Width",
+            "PreserveAspectRatio"
+        };
+
+        public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        {
+            {"Height", "int" },
+            {"Width", "int" },
+            {"PreserveAspectRatio", "bool" },
+        };
+
+        public string TypeName => "Resize";
+
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
+        {
+            ArgumentNullException.ThrowIfNull(parameters);
+            if (!ParametersNeeded.All(parameters.ContainsKey))
+            {
+                throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
+            }
+            if (parameters.Count != ParametersNeeded.Count)
+            {
+                throw new ArgumentException("Too many parameters provided.");
+            }
+
+
+            return new ResizeEffect
+            {
+                Height = Convert.ToInt32(parameters["Height"]),
+                Width = Convert.ToInt32(parameters["Width"]),
+                PreserveAspectRatio = Convert.ToBoolean(parameters["PreserveAspectRatio"]),
+            };
+        }
+
+        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
+
+        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+            => source.Resize(Width, Height, PreserveAspectRatio);
+
+
+    }
 
     /*
     public class EffectBase : IEffect

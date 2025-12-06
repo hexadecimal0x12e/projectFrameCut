@@ -36,11 +36,12 @@ namespace projectFrameCut.LivePreview
 
         public void UpdateDraft(DraftStructureJSON json)
         {
-            List<JsonElement> clipsJson = json.Clips.Select(c => (JsonElement)c).ToList();
+            var elements = JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips; //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
+            if (elements is null) throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClip.");
 
             var clipsList = new List<IClip>();
 
-            foreach (var clip in clipsJson)
+            foreach (var clip in elements.Select(c => (JsonElement)c))
             {
                 clipsList.Add(IClip.FromJSON(clip));
             }

@@ -10,7 +10,7 @@ public partial class EditSettingPage : ContentPage
 
     public readonly Dictionary<string, string> ModeStringMapping = new Dictionary<string, string>
     {
-        {  SettingLocalizedResources.Edit_PreferredPopupMode_Right, "right" },
+        { SettingLocalizedResources.Edit_PreferredPopupMode_Right, "right" },
         { SettingLocalizedResources.Edit_PreferredPopupMode_Bottom, "bottom" },
         { SettingLocalizedResources.Edit_PreferredPopupMode_Clip, "clip" },
         { SettingLocalizedResources.Edit_PreferredPopupMode_Window, "window" },
@@ -28,13 +28,13 @@ public partial class EditSettingPage : ContentPage
 
         rootPPB = new();
         rootPPB.AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_EditorPreference, SettingLocalizedResources.Edit_EditorPreference_Subtitle, 20, 12))
-            .AddPicker("PreferredPopupMode",
+            .AddPicker("Edit_PreferredPopupMode",
                 SettingLocalizedResources.Edit_PreferredPopupMode, ModeStringMapping.Keys.ToArray(),
-                ModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("PreferredPopupMode", "right"),
+                ModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreferredPopupMode", "right"),
                                                  new KeyValuePair<string, string>("right", "right")).Key
-
-
-                      );
+            )
+            .AddEntry("Edit_MaximumSaveSlot", SettingLocalizedResources.Edit_MaxiumSaveSlot, GetSetting("Edit_MaximumSaveSlot", "10"), "10")
+            ;
 
         rootPPB.ListenToChanges(SettingInvoker);
 
@@ -49,8 +49,8 @@ public partial class EditSettingPage : ContentPage
             switch (args.Id)
             {
 
-                case "PreferredPopupMode":
-                    {
+                case "Edit_PreferredPopupMode":
+                    {   
                         var mode = ModeStringMapping.FirstOrDefault(k => k.Key == args.Value,
                                                  new KeyValuePair<string, string>("right", "right")).Value;
                         WriteSetting("PreferredPopupMode", mode);

@@ -67,6 +67,9 @@ namespace projectFrameCut.Shared
                 case "Crop":
                     effect = CropEffect.FromParametersDictionary(ConvertElementDictToObjectDict(item.Parameters!, CropEffect.ParametersType));
                     break;
+                case "Resize":
+                    effect = ResizeEffect.FromParametersDictionary(ConvertElementDictToObjectDict(item.Parameters!, ResizeEffect.ParametersType));
+                    break;
                 default:
                     throw new NotImplementedException($"Effect type '{item.TypeName}' is not implemented.");
             }
@@ -108,57 +111,15 @@ namespace projectFrameCut.Shared
             return result;
         }
 
-        private static Dictionary<string,Type> _effectTypeCache = null!;
-
-        [RequiresUnreferencedCode("Effect enumeration may not preserve all information.")]
-        public static IDictionary<string, Type> EnumerateEffectsAndNames()
+        public static Dictionary<string, Func<IEffect>> EffectsEnum = new Dictionary<string, Func<IEffect>>
         {
-            if(_effectTypeCache is not null) return _effectTypeCache;
-            var results = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
-            var effectInterface = typeof(IEffect);
+            {"RemoveColor", new(() => new RemoveColorEffect()) },
+            {"Crop", new(() => new CropEffect()) },
+            {"Place", new(() => new PlaceEffect()) },
+            {"Resize", new(() => new ResizeEffect())  },
+        };
 
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            foreach (var asm in assemblies)
-            {
-                Type[] types;
-                try
-                {
-                    types = asm.GetTypes();
-                }
-                catch (ReflectionTypeLoadException ex)
-                {
-                    types = ex.Types.Where(t => t != null).ToArray()!;
-                }
-                catch
-                {
-                    continue; 
-                }
-
-                foreach (var t in types)
-                {
-                    if (t is null) continue;
-                    if (t.IsAbstract) continue;
-                    if (!effectInterface.IsAssignableFrom(t)) continue;
-
-                    try
-                    {
-                        if (Activator.CreateInstance(t) is IEffect inst)
-                        {
-                            results.Add(inst.TypeName,t);
-                        }
-                    }
-                    catch
-                    {
-                        continue;
-                    }
-                }
-            }
-            _effectTypeCache = results;
-            return results;
-        }
-
-
-        public static IEnumerable<string> GetEffectTypes() => _effectTypeCache is not null ? _effectTypeCache.Keys : EnumerateEffectsAndNames().Keys;
+        public static IEnumerable<string> GetEffectTypes() => EffectsEnum.Keys;
 
     }
 }

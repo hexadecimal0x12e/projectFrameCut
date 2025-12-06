@@ -10,6 +10,7 @@ using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Handlers;
 using projectFrameCut.Shared;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using MauiGraphics = Microsoft.Maui.Graphics;
@@ -91,7 +92,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             base.SurfaceDestroyed(holder);
         }
 
-        public void OnDrawFrame(IGL10 gl)
+        public void OnDrawFrame(IGL10? gl)
         {
             if (!initialized || _tcs == null) return;
 
@@ -307,6 +308,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 
         private float[] RunComputeAndReadback()
         {
+            Logger.LogDiagnostic("Start computing...");
             GLES31.GlUseProgram(program);
             int numGroups = (length + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE;
             if (numGroups <= 0)
@@ -394,6 +396,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 
     public class NativeGLSurfaceViewHandler : ViewHandler<NativeGLSurfaceView, GLComputeView>
     {
+        [DebuggerStepThrough()]
         public static void MapInputs(NativeGLSurfaceViewHandler handler, NativeGLSurfaceView view)
         {
             if (handler.PlatformView != null )

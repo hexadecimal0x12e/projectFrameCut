@@ -64,7 +64,7 @@
                        Text="{Binding Encoding, Mode=TwoWay}" />
                 </HorizontalStackLayout>
 
-                <Label x:Name="MaxParallelThreadsCountLabel"  Margin="0,8,0,0" Text="{l:Localized Key=RenderPage_MaxParallelThreadsCount}" />
+                <Label x:Name="MaxParallelThreadsCountLabel"  Margin="0,8,0,0" Text="RenderPage_MaxParallelThreadsCount" />
                 <Slider x:Name="MaxParallelThreadsCount" Minimum="8" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
                 <Button Margin="0,8,0,8"  x:Name="StartRender" Text="{l:Localized Key=RenderPage_StartRender}" Clicked="StartRender_Clicked" />
             </VerticalStackLayout>

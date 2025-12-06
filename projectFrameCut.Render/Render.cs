@@ -424,6 +424,12 @@ namespace projectFrameCut.Render
             {
                 case MixtureMode.Overlay:
                     return new OverlayMixture();
+                case MixtureMode.Add:
+                    return new AddMixture();
+                case MixtureMode.Minus:
+                    return new MinusMixture();
+                case MixtureMode.Multiply:
+                    return new MultiplyMixture();
                 default:
                     throw new NotSupportedException($"Mixture mode {mixtureMode} is not supported.");
             }
@@ -444,23 +450,17 @@ namespace projectFrameCut.Render
                         break;
                     }
 
-                    try
-                    {
-                        builder.Append(blankIdx, (Picture)BlankFrame);
-                        EachElapsed.Add(TimeSpan.Zero);
-                        Interlocked.Increment(ref Finished);
-                        OnProgressChanged?.Invoke((double)Volatile.Read(ref Finished) / Duration);
-                        Log($"[Render] Wrote blank frame {blankIdx} before starting frame {frameIndex}.");
-                    }
-                    catch (Exception ex)
-                    {
-                        Log(ex, $"Write blank frame {blankIdx}", this);
-                    }
+                    builder.Append(blankIdx, BlankFrame);
+                    EachElapsed.Add(TimeSpan.Zero);
+                    Interlocked.Increment(ref Finished);
+                    OnProgressChanged?.Invoke((double)Volatile.Read(ref Finished) / Duration);
+                    Log($"[Render] Wrote blank frame {blankIdx} before starting frame {frameIndex}.");
                 }
             }
             catch (Exception ex)
             {
                 Log(ex, $"Write blank frames", this);
+                throw;
             }
         }
 

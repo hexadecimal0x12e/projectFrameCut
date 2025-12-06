@@ -1,5 +1,7 @@
+using LocalizedResources;
 using Microsoft.Maui.Graphics;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
 using System.Collections.Concurrent;
@@ -9,7 +11,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using projectFrameCut.Setting.SettingManager;
+
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
 
@@ -19,30 +21,22 @@ namespace projectFrameCut;
 
 public partial class HomePage : ContentPage
 {
-    private readonly ProjectsListViewModel vm;
+    private readonly ProjectsListViewModel _viewModel;
 
-    private string lastItem;
+    private const string CreateButtonName = "!!CreateButton!!";
+
+    private string _lastSelectedItemName = string.Empty;
 
     public HomePage()
     {
         InitializeComponent();
         WelcomeLabel.Text = Localized.HomePage_Welcome();
-        vm = new ProjectsListViewModel();
-        vm.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
-        BindingContext = vm;
+        _viewModel = new ProjectsListViewModel();
+        _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+        BindingContext = _viewModel;
         Loaded += async (s, e) =>
         {
-            if (SimpleLocalizer.IsFallbackMatched)
-            {
-                List<string> localeDispName = new();
-                foreach (var item in ISimpleLocalizerBase.GetMapping().Select(k => k.Value._LocateDisplayName))
-                {
-                    localeDispName.Add(item.Split('/').Last().Trim(' '));
-                }
-                localeDispName[^1] = $"and {localeDispName.Last()}";
-                await DisplayAlertAsync("Info", $"it seems like projectFrameCut doesn't support your system language yet.\r\nwe support {localeDispName.Aggregate((a, b) => $"{a}, {b}")} yet.\r\nIf you'd like to contribute the localization, do it and make a pull request.", "OK");
-                SimpleLocalizer.IsFallbackMatched = false;
-            }
+            await ShowUnsupportedLanguageAlertAsync();
 
             if (Environment.GetCommandLineArgs().Length > 0)
             {
@@ -61,7 +55,7 @@ public partial class HomePage : ContentPage
                                     if(Process.GetProcessesByName("projectFrameCut.Render.WindowsRender").Any())
                                     {
                                         await c.StartAsync("pjfc_rpc_V1_debug123", default);
-                                        await GoDraft(draft, false, false, c, true);
+                                        await GoDraft(draft, "Project", false, false, c, true);
                                     }
                                     
 #endif
@@ -70,12 +64,12 @@ public partial class HomePage : ContentPage
                                 break;
                             }
 
-                        case " goDraft":
+                        case "goDraft":
                             {
                                 var draft = args[1];
                                 if (Directory.Exists(draft))
                                 {
-                                    await GoDraft(draft, false, false);
+                                    await GoDraft(draft, "Project", false, false);
                                 }
 
                                 break;
@@ -90,7 +84,7 @@ public partial class HomePage : ContentPage
 
     }
 
-    private async void CollectionView_SelectionChanged(object sender, Microsoft.Maui.Controls.SelectionChangedEventArgs e)
+    private async void CollectionView_SelectionChanged(object? sender, Microsoft.Maui.Controls.SelectionChangedEventArgs e)
     {
         try
         {
@@ -102,34 +96,34 @@ public partial class HomePage : ContentPage
             else
             {
 #if WINDOWS
-                if (lastItem == selected.Name)
+                if (_lastSelectedItemName == selected.Name)
                 {
                     ProjectsCollection.SelectedItem = null;
-                    if (selected._name == "!!CreateButton!!")
+                    if (selected._name == CreateButtonName)
                     {
                         await CreateDraft();
                     }
                     else
                     {
-                        await GoDraft(vm.Projects.First(s => s.Name == lastItem));
+                        await GoDraft(_viewModel.Projects.First(s => s.Name == _lastSelectedItemName));
                     }
-                    lastItem = "";
+                    _lastSelectedItemName = string.Empty;
 
                 }
                 else
                 {
-                    lastItem = selected.Name;
+                    _lastSelectedItemName = selected.Name;
                     ProjectsCollection.SelectedItem = null;
                 }
 
 #else
-                if (selected._name == "!!CreateButton!!")
+                if (selected._name == CreateButtonName)
                 {
                     await CreateDraft();
                 }
                 else
                 {
-                    await GoDraft(vm.Projects.First(s => s.Name == selected._name));
+                    await GoDraft(_viewModel.Projects.First(s => s.Name == selected._name));
                 }
 
                 ProjectsCollection.SelectedItem = null;
@@ -179,7 +173,7 @@ public partial class HomePage : ContentPage
             Path.Combine(draftSourcePath, "project.json"),
             JsonSerializer.Serialize(ProjectInfo));
 
-        vm.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+        _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
 
 
     }
@@ -211,7 +205,7 @@ public partial class HomePage : ContentPage
             Path.Combine(draftSourcePath, "project.json"),
             JsonSerializer.Serialize(ProjectInfo));
 
-        vm.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+        _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
 
 
     }
@@ -236,121 +230,185 @@ public partial class HomePage : ContentPage
     }
 
     private async Task GoDraft(ProjectsViewModel pvm, bool isReadonly = false, bool throwOnException = false)
-        => await GoDraft(pvm._projectPath, throwOnException, throwOnException);
+        => await GoDraft(pvm._projectPath, pvm.Name, isReadonly, throwOnException);
 
-    private async Task GoDraft(string draftSourcePath, bool isReadonly = false, bool throwOnException = false, object? dbgBackend = null, bool? skipAskForRecover = null)
+    private async Task GoDraft(string draftSourcePath, string title, bool isReadonly = false, bool throwOnException = false, object? dbgBackend = null, bool? skipAskForRecover = null)
     {
-        if (Directory.Exists(draftSourcePath))
+        if (!Directory.Exists(draftSourcePath))
+        {
+            await DisplayAlertAsync(Localized._Warn, "Draft not found.", Localized._OK);
+            return;
+        }
+        DraftPage? page = null;
+        var origContent = Content;
+        Content = new VerticalStackLayout
+        {
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center,
+            Children =
+            {
+                new ActivityIndicator
+                {
+                    IsRunning = true
+                },
+                new Label
+                {
+                    Text = SimpleLocalizerBaseGeneratedHelper.Localized.LandingPage_TakingToDraft(title),
+                    HorizontalTextAlignment = Microsoft.Maui.TextAlignment.Center,
+                    Margin = new Microsoft.Maui.Thickness(0.0, 10.0, 0.0, 0.0)
+                }
+            }
+        };
+        ProjectJSONStructure project = new();
+        try
+        {
+            project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(draftSourcePath, "project.json")));
+
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "get project info", this);
+            await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n({ex.Message})", Localized._OK);
+            Content = origContent;
+            return;
+        }
+
+        await Task.Run(async () =>
         {
             try
             {
-                DraftPage page;
-
                 if (!Directory.Exists(draftSourcePath))
-                    throw new DirectoryNotFoundException($"Working path not found: {draftSourcePath}");
-
-                var filesShouldExist = new[] { "project.json", "timeline.json", "assets.json" };
-
+                {
+                    throw new DirectoryNotFoundException("Working path not found: " + draftSourcePath);
+                }
+                string[] filesShouldExist = ["project.json", "timeline.json", "assets.json"];
                 if (filesShouldExist.Any((f) => !File.Exists(Path.Combine(draftSourcePath, f))))
                 {
-                    throw new FileNotFoundException("One or more required files are missing.", draftSourcePath);
+                    await Dispatcher.DispatchAsync(async () =>
+                    {
+                        await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n(These files are missing:{string.Join(", ", filesShouldExist.Where(f => !File.Exists(Path.Combine(draftSourcePath, f))))})", Localized._OK);
+                    });
+                    return;
                 }
-
-                var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(draftSourcePath, "project.json")));
-
-                List<AssetItem> assets = new();
-                DraftStructureJSON timeline = new();
-
+                List<AssetItem> assets;
+                DraftStructureJSON timeline;
                 try
                 {
-                    if (!(project?.NormallyExited ?? true)) throw new Exception("draft not saved correctly.");
                     assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(draftSourcePath, "assets.json"))) ?? new();
                     timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(draftSourcePath, "timeline.json"))) ?? new();
+                    goto ok;
                 }
                 catch (Exception ex)
                 {
-                    try
-                    {
-                        var skipAsk = skipAskForRecover ?? SettingsManager.IsBoolSettingTrue("AutoRecoverDraft");
-                        Log(ex, "read draft", this);
-                        var conf = skipAsk || await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken, Localized._Confirm, Localized._Cancel);
-                        if (!conf) return;
+                    Log(ex, "read draft", this);
+                    goto recover;
+                }
 
-                        Dictionary<string, DraftStructureJSON?> tmls = new();
-                        foreach (var item in Directory.GetDirectories(Path.Combine(draftSourcePath, "saveSlots")))
+            recover:
+                try
+                {
+                    bool skipAsk = skipAskForRecover ?? SettingsManager.IsBoolSettingTrue("AutoRecoverDraft");
+                    bool conf = false;
+                    await Dispatcher.DispatchAsync(async delegate
+                    {
+                        conf = skipAsk || await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken, Localized._Confirm, Localized._Cancel);
+                    });
+                    if (!conf) return;
+                    Dictionary<string, DraftStructureJSON?> tmls = new Dictionary<string, DraftStructureJSON?>();
+                    string[] directories = Directory.GetDirectories(Path.Combine(draftSourcePath, "saveSlots"));
+                    foreach (string item in directories)
+                    {
+                        if (File.Exists(Path.Combine(item, "timeline.json")))
                         {
-                            if (File.Exists(Path.Combine(item, "timeline.json")))
+                            try
                             {
-                                try
+                                DraftStructureJSON? tml = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(item, "timeline.json")));
+                                if (tml != null)
                                 {
-                                    var tml = JsonSerializer.Deserialize<DraftStructureJSON?>(File.ReadAllText(Path.Combine(item, "timeline.json")));
-                                    if (tml is not null)
-                                    {
-                                        tmls.Add(item, tml);
-                                    }
-                                }
-                                catch (Exception exInner)
-                                {
-                                    Log(exInner, "read draft from save slot", this);
+                                    tmls.Add(item, tml);
                                 }
                             }
+                            catch (Exception ex2)
+                            {
+                                Exception exInner = ex2;
+                                Logger.Log(exInner, "read draft from save slot", this);
+                            }
                         }
-
-                        var newest = tmls.OrderByDescending((t) => t.Value?.SavedAt).FirstOrDefault(new KeyValuePair<string, DraftStructureJSON?>("", null));
+                    }
+                    KeyValuePair<string, DraftStructureJSON?> newest = tmls.OrderByDescending(t => t.Value?.SavedAt).FirstOrDefault(new KeyValuePair<string, DraftStructureJSON?>("", null));
+                    bool result = false;
+                    await Dispatcher.DispatchAsync(async () =>
+                    {
                         if (newest.Value is null)
                         {
                             await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Fail, Localized._OK);
-                            return;
                         }
                         else
                         {
-
-                            var result = skipAsk || await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Confirm(newest.Value.SavedAt), Localized._Confirm, Localized._Cancel);
-
-                            if (result)
-                            {
-                                assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(newest.Key, "assets.json"))) ?? new();
-                                timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(newest.Key, "timeline.json"))) ?? new();
-                                if (skipAsk) goto open;
-                                await DisplayAlertAsync(Localized._Info, Localized.HomePage_GoDraft_DraftBroken_Success, Localized._OK);
-                            }
-                            else return;
-
-
+                            result = skipAsk || await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Confirm(newest.Value.SavedAt), Localized._Confirm, Localized._Cancel);
                         }
-                    }
-                    catch (Exception exInner)
+                    });
+                    if (!result)
                     {
-                        Log(exInner, "read draft from save slot confirm", this);
-                        await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Fail + $"\r\n({exInner.Message})", Localized._OK);
                         return;
                     }
+                    assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(newest.Key, "assets.json"))) ?? new List<AssetItem>();
+                    timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(newest.Key, "timeline.json"))) ?? new DraftStructureJSON();
+                    if (!skipAsk)
+                    {
+                        await Dispatcher.DispatchAsync(async () =>
+                        {
+                            await DisplayAlertAsync(Localized._Info, Localized.HomePage_GoDraft_DraftBroken_Success, Localized._OK);
+                        });
+                    }
                 }
-            open:
+                catch (Exception ex3)
+                {
+                    Log(ex3, "read draft from save slot confirm", this);
+                    await Dispatcher.DispatchAsync(async () =>
+                    {
+                        await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Fail + "\r\n(" + ex3.Message + ")", Localized._OK);
+                    });
+                    return;
+                }
+            ok:
                 (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline);
-                var assetDict = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (a) => a));
-
-                page = new DraftPage(project ?? new(), dict, assetDict, trackCount, draftSourcePath, project?.projectName ?? "?", isReadonly, dbgBackend);
-
-#if WINDOWS || ANDROID
-                AppShell.instance.HideNavView();
-#elif iDevices
-                if (OperatingSystem.IsMacCatalyst())
+                ConcurrentDictionary<string, AssetItem> assetDict = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((AssetItem a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (AssetItem a) => a));
+                if (!SettingsManager.IsSettingExists("Edit_PreferredPopupMode"))
                 {
-                    AppShell_MacCatalyst.instance.HideNavView();
-                }
-                else
-                {
-                    AppShell.instance.HideNavView();
-                }
+#if WINDOWS || MACCATALYST
+                    SettingsManager.WriteSetting("Edit_PreferredPopupMode", "right");
+#else
+                    SettingsManager.WriteSetting("Edit_PreferredPopupMode", "bottom");
 #endif
-                await Navigation.PushAsync(page);
+                }
+                page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.projectName ?? "?", isReadonly, dbgBackend);
+                page.ProjectName = project?.projectName ?? "?";
+                page.UseLivePreviewInsteadOfBackend = SettingsManager.IsBoolSettingTrue("UseLivePreviewInsteadOfBackend");
+                page.IsReadonly = isReadonly;
+                page.PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "right");
+                page.MaximumSaveSlot = int.TryParse(SettingsManager.GetSetting("Edit_MaximumSaveSlot"), out var slotCount) ? slotCount : 10;
             }
-            catch (Exception ex)
+            catch (Exception ex4)
             {
-                if (throwOnException) throw;
-                await DisplayAlert(Localized._Warn, Localized._ExceptionTemplate(ex), "ok");
+                if (throwOnException)
+                {
+                    throw;
+                }
+                await Dispatcher.DispatchAsync(async () =>
+                {
+                    await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex4), "OK");
+                });
             }
+        });
+
+        if (page != null)
+        {
+            Content = origContent;
+#if WINDOWS
+            AppShell.instance.HideNavView();
+#endif
+            await base.Navigation.PushAsync(page);
         }
     }
 
@@ -370,20 +428,29 @@ public partial class HomePage : ContentPage
         }
 #endif
 
-        if (SimpleLocalizer.IsFallbackMatched)
-        {
-            List<string> localeDispName = new();
-            foreach (var item in ISimpleLocalizerBase.GetMapping().Select(k => k.Value._LocateDisplayName))
-            {
-                localeDispName.Add(item.Split('/').Last().Trim(' '));
-            }
-            localeDispName[^1] = $"and {localeDispName.Last()}";
-            await DisplayAlertAsync("Info", $"it seems like projectFrameCut doesn't support your system language yet.\r\nwe support {localeDispName.Aggregate((a, b) => $"{a}, {b}")} yet.\r\nIf you'd like to contribute the localization, do it and make a pull request.", "OK");
-            SimpleLocalizer.IsFallbackMatched = false;
-        }
+        await ShowUnsupportedLanguageAlertAsync();
     }
 
-    private async void MenuOpen_Clicked(object sender, EventArgs e)
+    private async Task ShowUnsupportedLanguageAlertAsync()
+    {
+        if (!SimpleLocalizer.IsFallbackMatched)
+            return;
+
+        List<string> localeDispName = new();
+        foreach (var item in ISimpleLocalizerBase.GetMapping().Select(k => k.Value._LocateDisplayName))
+        {
+            localeDispName.Add(item.Split('/').Last().Trim(' '));
+        }
+        if (localeDispName.Count > 1)
+        {
+            localeDispName[localeDispName.Count - 1] = $"and {localeDispName.Last()}";
+        }
+
+        await DisplayAlertAsync("Info", $"it seems like projectFrameCut doesn't support your system language yet.\r\nwe support {localeDispName.Aggregate((a, b) => $"{a}, {b}")} yet.\r\nIf you'd like to contribute the localization, do it and make a pull request.", "OK");
+        SimpleLocalizer.IsFallbackMatched = false;
+    }
+
+    private async void MenuOpen_Clicked(object? sender, EventArgs e)
     {
         ProjectsViewModel? pvm = null;
         if (sender is Microsoft.Maui.Controls.VisualElement ve && ve.BindingContext is ProjectsViewModel pv3) pvm = pv3;
@@ -444,7 +511,7 @@ public partial class HomePage : ContentPage
             {
                 Directory.Delete(pvm._projectPath, true);
             }
-            vm.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+            _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
             await DisplayAlertAsync(Localized._Info, Localized.HomePage_ProjectContextMenu_Delete_Deleted(pvm.Name), Localized._OK);
 
         }
@@ -499,10 +566,10 @@ public partial class HomePage : ContentPage
                 JsonSerializer.Serialize(info));
         }
 
-        vm.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+        _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
     }
 
-    private async void ItemBorder_Loaded(object sender, EventArgs e)
+    private async void ItemBorder_Loaded(object? sender, EventArgs e)
     {
         if (sender is Microsoft.Maui.Controls.Border border && border.BindingContext is ProjectsViewModel vmItem)
         {
@@ -531,15 +598,15 @@ public partial class HomePage : ContentPage
             pointerGesture.PointerReleased += async (s, e) =>
             {
                 var duration = (DateTime.Now - pointerDownTime).TotalMilliseconds;
-                // If held for more than 500ms, show context menu
                 if (duration >= 500)
                 {
+                    Vibration.Vibrate(120);
                     await ShowContextMenu(vmItem);
                 }
                 else if (duration > 0)
                 {
                     // Short tap to open
-                    if (vmItem._name == "!!CreateButton!!")
+                    if (vmItem._name == CreateButtonName)
                     {
                         await CreateDraft();
                     }
@@ -561,28 +628,29 @@ public partial class HomePage : ContentPage
 
     private async Task ShowContextMenu(ProjectsViewModel vmItem)
     {
-        if (vmItem._name == "!!CreateButton!!")
+        if (vmItem._name == CreateButtonName)
         {
             return;
         }
 
-        string[] verbs = [
-                    Localized.HomePage_ProjectContextMenu_Open,
-                    Localized.HomePage_ProjectContextMenu_OpenReadonly,
-                    Localized.HomePage_ProjectContextMenu_Export,
-                    Localized.HomePage_ProjectContextMenu_OpenInFileManager,
-                    Localized.HomePage_ProjectContextMenu_Clone,
-                    Localized.HomePage_ProjectContextMenu_Rename,
-                    Localized.HomePage_ProjectContextMenu_Delete
-                    ];
+        var verbs = new List<string>
+        {
+            Localized.HomePage_ProjectContextMenu_Open,
+            Localized.HomePage_ProjectContextMenu_OpenReadonly,
+            Localized.HomePage_ProjectContextMenu_Export,
+            Localized.HomePage_ProjectContextMenu_OpenInFileManager,
+            Localized.HomePage_ProjectContextMenu_Clone,
+            Localized.HomePage_ProjectContextMenu_Rename,
+            Localized.HomePage_ProjectContextMenu_Delete
+        };
 
 
         if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
         {
-            verbs = verbs.Append("Debug: throw the exceptions while opening").ToArray();
+            verbs.Add("Debug: throw the exceptions while opening");
         }
 
-        var action = await DisplayActionSheetAsync(vmItem.Name, Localized._Cancel, Localized.HomePage_ProjectContextMenu_Delete, verbs);
+        var action = await DisplayActionSheetAsync(vmItem.Name, Localized._Cancel, null, verbs.ToArray());
 
         if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
         {
@@ -600,7 +668,7 @@ public partial class HomePage : ContentPage
             }
         }
 
-        switch (Array.IndexOf(verbs, action))
+        switch (verbs.IndexOf(action))
         {
             case 0: //Open
                 await GoDraft(vmItem);
@@ -660,12 +728,12 @@ public class ProjectsListViewModel
             });
             foreach (var item in Directory.GetDirectories(sourcePath, "*"))
             {
+                ProjectJSONStructure? proj = null;
                 var projFile = Path.Combine(item, "project.json");
-                if (!File.Exists(projFile)) continue;
-
+                if (!File.Exists(projFile)) goto fail;
                 try
                 {
-                    var proj = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(projFile));
+                    proj = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(projFile));
                     if (proj is not null)
                     {
                         var thumb = Path.Combine(item, "thumbs", "_project.png");
@@ -674,11 +742,24 @@ public class ProjectsListViewModel
                             _projectPath = item
                         });
                     }
+                    else goto fail;
+                    continue;
                 }
                 catch (Exception exInner)
                 {
                     Log(exInner, "load draft", this);
+                    goto fail;
                 }
+
+            fail:
+                Projects.Insert(Projects.Count - 1, new ProjectsViewModel(proj?.projectName ?? "Unknown project", null, "")
+                {
+                    _projectPath = item
+                });
+                continue;
+                
+
+                
             }
         }
         catch (Exception ex)

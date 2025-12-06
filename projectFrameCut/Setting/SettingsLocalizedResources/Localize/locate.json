@@ -465,6 +465,14 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MaxiumSaveSlot",
+        "Value": "\u6700\u5927\u4FDD\u5B58\u6B65\u6570 (\u7528\u4E8E\u64A4\u9500\u548C\u8FD8\u539F)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
       }
     ],
     "en-US": [
@@ -975,6 +983,15 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MaxiumSaveSlot",
+        "Value": "Unset localization item:Edit_MaxiumSaveSlot()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -1483,6 +1500,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MaxiumSaveSlot",
+        "Value": "Unset localization item:Edit_MaxiumSaveSlot()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -1994,6 +2020,15 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MaxiumSaveSlot",
+        "Value": "Unset localization item:Edit_MaxiumSaveSlot()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -2503,6 +2538,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MaxiumSaveSlot",
+        "Value": "Unset localization item:Edit_MaxiumSaveSlot()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -3014,6 +3058,15 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MaxiumSaveSlot",
+        "Value": "Unset localization item:Edit_MaxiumSaveSlot()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -3523,6 +3576,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MaxiumSaveSlot",
+        "Value": "Unset localization item:Edit_MaxiumSaveSlot()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]
