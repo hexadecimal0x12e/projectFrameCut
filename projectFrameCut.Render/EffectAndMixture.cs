@@ -1,4 +1,5 @@
 ﻿using projectFrameCut.Render;
+using projectFrameCut.Render.Plugins;
 using projectFrameCut.VideoMakeEngine;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,7 @@ namespace projectFrameCut.Shared
     public interface IEffect
     {
         public string TypeName { get; }
+        public string Name { get; set; }
         public Dictionary<string, object> Parameters { get; }
         public bool Enabled { get; set; }
         public int Index { get; set; }      
@@ -45,6 +47,7 @@ namespace projectFrameCut.Shared
     public class EffectAndMixtureJSONStructure
     {
         public bool IsMixture { get; set; } = false;    
+        public string Name { get; set; } = string.Empty;    
         public string TypeName { get; set; } = string.Empty;
         public bool Enabled { get; set; } = true;
         public int Index { get; set; } = 1;
@@ -73,6 +76,9 @@ namespace projectFrameCut.Shared
                 default:
                     throw new NotImplementedException($"Effect type '{item.TypeName}' is not implemented.");
             }
+            effect.Name = item.Name;
+            effect.Index = item.Index;
+            effect.Enabled = item.Enabled;
             return effect;
         }
 
@@ -111,13 +117,8 @@ namespace projectFrameCut.Shared
             return result;
         }
 
-        public static Dictionary<string, Func<IEffect>> EffectsEnum = new Dictionary<string, Func<IEffect>>
-        {
-            {"RemoveColor", new(() => new RemoveColorEffect()) },
-            {"Crop", new(() => new CropEffect()) },
-            {"Place", new(() => new PlaceEffect()) },
-            {"Resize", new(() => new ResizeEffect())  },
-        };
+
+        public static Dictionary<string, Func<IEffect>> EffectsEnum => PluginManager.loadedPlugins.Values.SelectMany(p => p.EffectProvider).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
         public static IEnumerable<string> GetEffectTypes() => EffectsEnum.Keys;
 

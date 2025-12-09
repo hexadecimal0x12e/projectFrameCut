@@ -169,74 +169,41 @@ public partial class InteractableEditor : ContentView
 
         double x = 0, y = 0, w = _baseRect.Width, h = _baseRect.Height;
 
-        var effects = _currentClip.Effects?.Values ?? Enumerable.Empty<IEffect>();
+        if (_currentClip.Effects == null) _currentClip.Effects = new Dictionary<string, IEffect>();
 
-        var place = effects.OfType<PlaceEffect>().FirstOrDefault();
-        if (place != null)
+        if (!_currentClip.Effects.TryGetValue("__Internal_Place__", out var p) || !(p is PlaceEffect))
+        {
+            _currentClip.Effects["__Internal_Place__"] = new PlaceEffect { StartX = (int)x, StartY = (int)y, Enabled = true };
+        }
+
+        if (_currentClip.Effects.TryGetValue("__Internal_Place__", out p) && p is PlaceEffect place)
         {
             x = place.StartX;
             y = place.StartY;
         }
 
-        var resize = effects.OfType<ResizeEffect>().FirstOrDefault();
-        if (resize != null)
+        bool resetCrop = false;
+        if (!_currentClip.Effects.TryGetValue("__Internal_Crop__", out var c) || !(c is CropEffect))
         {
-            // ResizeEffect scales the *entire* source.
-            // If source is Video (1920x1080), Resize(960x540) means 0.5x scale.
-            // If source is Text (1920x1080 transparent), Resize(960x540) means 0.5x scale.
-            // So the visual rect of the text should also be scaled by (ResizeW / SourceW).
-            
-            double scaleX = resize.Width / _videoWidth;
-            double scaleY = resize.Height / _videoHeight;
-            
-            w = _baseRect.Width * scaleX;
-            h = _baseRect.Height * scaleY;
-            
-            // Position is also affected if we consider the base rect is relative to the source top-left.
-            // _baseRect.X is the text position in the source.
-            // After resize, it moves to _baseRect.X * scaleX.
-            // Then PlaceEffect adds offset.
-            
-            // Wait, 'x' and 'y' above are from PlaceEffect.
-            // The final visual position is:
-            // (BaseX * ScaleX) + PlaceX
-            
-            // But 'x' variable currently holds PlaceX.
-            // So let's calculate the visual X/Y relative to the canvas (before mapping to screen).
-            
-            // Let's redefine x,y to be the top-left of the visual box in Canvas coordinates.
-            x = (_baseRect.X * scaleX) + place?.StartX ?? 0;
-            y = (_baseRect.Y * scaleY) + place?.StartY ?? 0;
+            resetCrop = true;
         }
-        else
+        else if (c is CropEffect existingCrop)
         {
-            // No resize, scale is 1.
-            x = _baseRect.X + (place?.StartX ?? 0);
-            y = _baseRect.Y + (place?.StartY ?? 0);
-            
-            var crop = effects.OfType<CropEffect>().FirstOrDefault();
-            if (crop != null)
+            if (!existingCrop.Enabled || (existingCrop.Width == 0 && existingCrop.Height == 0))
             {
-                // Crop is tricky. It changes the source size.
-                // For now, let's assume Crop just changes the visible area but if we are tracking "the text",
-                // and the text is cropped out, we might still show the box?
-                // Or maybe Crop changes the coordinate system?
-                // Usually Crop happens before Resize/Place? Or after?
-                // In Effects.cs, the order depends on the list.
-                // But here we are just visualizing.
-                // Let's assume standard order or just ignore Crop for text box sizing for now if it's complex.
-                // If Crop is used, w/h might be the crop size.
-                w = crop.Width;
-                h = crop.Height;
-                // If it's text, this might be wrong if we want to show text bounds.
-                // But if user cropped the text layer, maybe they want to see the crop rect?
-                // Let's stick to _baseRect for Text if no resize.
-                if (_isTextClip)
-                {
-                     w = _baseRect.Width;
-                     h = _baseRect.Height;
-                }
+                resetCrop = true;
             }
+        }
+
+        if (resetCrop)
+        {
+            _currentClip.Effects["__Internal_Crop__"] = new CropEffect { StartX = 0, StartY = 0, Width = (int)w, Height = (int)h, Enabled = true };
+        }
+
+        if (_currentClip.Effects.TryGetValue("__Internal_Crop__", out c) && c is CropEffect crop)
+        {
+            w = crop.Width;
+            h = crop.Height;
         }
 
         Rect renderRect = GetRenderRect();
@@ -269,45 +236,10 @@ public partial class InteractableEditor : ContentView
                 Rect renderRect = GetRenderRect();
                 double scale = renderRect.Width / _videoWidth;
 
-                // Calculate new visual position in Canvas coordinates
                 double newVisualX = _startX + e.TotalX / scale;
                 double newVisualY = _startY + e.TotalY / scale;
 
-                // We need to map this back to Effects.
-                // VisualX = (BaseX * ScaleX) + PlaceX
-                // PlaceX = VisualX - (BaseX * ScaleX)
-                
-                // Determine current ScaleX/Y from ResizeEffect (or 1.0)
-                double currentScaleX = 1.0;
-                double currentScaleY = 1.0;
-                var resize = _currentClip.Effects?.Values.OfType<ResizeEffect>().FirstOrDefault();
-                if (resize != null)
-                {
-                    currentScaleX = (double)resize.Width / _videoWidth;
-                    currentScaleY = (double)resize.Height / _videoHeight;
-                }
-
-                double newPlaceX = newVisualX - (_baseRect.X * currentScaleX);
-                double newPlaceY = newVisualY - (_baseRect.Y * currentScaleY);
-
-                // UpdateClipEffects expects the "Rect" parameters (x,y,w,h).
-                // But wait, UpdateClipEffects uses x,y for Place.StartX/Y directly.
-                // So we should pass newPlaceX, newPlaceY.
-                // And for w,h, we pass the *Resize* target width/height?
-                // UpdateClipEffects implementation:
-                // place = new PlaceEffect { StartX = (int)x, StartY = (int)y };
-                // resize = new ResizeEffect { Width = (int)w, Height = (int)h ... };
-                
-                // So we should pass:
-                // x = newPlaceX
-                // y = newPlaceY
-                // w = resize?.Width ?? _videoWidth (unchanged)
-                // h = resize?.Height ?? _videoHeight (unchanged)
-                
-                double currentResizeW = resize?.Width ?? _videoWidth;
-                double currentResizeH = resize?.Height ?? _videoHeight;
-
-                UpdateClipEffects(newPlaceX, newPlaceY, currentResizeW, currentResizeH);
+                UpdateClipEffects(newVisualX, newVisualY, _startW, _startH);
                 UpdateVisuals();
                 break;
             case GestureStatus.Completed:
@@ -334,53 +266,37 @@ public partial class InteractableEditor : ContentView
                 double dx = e.TotalX / scale;
                 double dy = e.TotalY / scale;
 
-                // _startX, _startY, _startW, _startH are the VISUAL bounds in Canvas coords.
-                double newVisualX = _startX, newVisualY = _startY, newVisualW = _startW, newVisualH = _startH;
+                double newX = _startX, newY = _startY, newW = _startW, newH = _startH;
 
                 if (handle == HandleTL)
                 {
-                    newVisualX += dx;
-                    newVisualY += dy;
-                    newVisualW -= dx;
-                    newVisualH -= dy;
+                    newX += dx;
+                    newY += dy;
+                    newW -= dx;
+                    newH -= dy;
                 }
                 else if (handle == HandleTR)
                 {
-                    newVisualY += dy;
-                    newVisualW += dx;
-                    newVisualH -= dy;
+                    newY += dy;
+                    newW += dx;
+                    newH -= dy;
                 }
                 else if (handle == HandleBL)
                 {
-                    newVisualX += dx;
-                    newVisualW -= dx;
-                    newVisualH += dy;
+                    newX += dx;
+                    newW -= dx;
+                    newH += dy;
                 }
                 else if (handle == HandleBR)
                 {
-                    newVisualW += dx;
-                    newVisualH += dy;
+                    newW += dx;
+                    newH += dy;
                 }
 
-                if (newVisualW < 10) newVisualW = 10;
-                if (newVisualH < 10) newVisualH = 10;
+                if (newW < 10) newW = 10;
+                if (newH < 10) newH = 10;
 
-                // Now map back to Effects.
-                // VisualW = BaseW * ScaleX
-                // ScaleX = VisualW / BaseW
-                // ResizeW = ScaleX * VideoWidth
-                
-                double newScaleX = newVisualW / _baseRect.Width;
-                double newScaleY = newVisualH / _baseRect.Height;
-                
-                double newResizeW = newScaleX * _videoWidth;
-                double newResizeH = newScaleY * _videoHeight;
-                
-                // PlaceX = VisualX - (BaseX * ScaleX)
-                double newPlaceX = newVisualX - (_baseRect.X * newScaleX);
-                double newPlaceY = newVisualY - (_baseRect.Y * newScaleY);
-
-                UpdateClipEffects(newPlaceX, newPlaceY, newResizeW, newResizeH);
+                UpdateClipEffects(newX, newY, newW, newH);
                 UpdateVisuals();
                 break;
             case GestureStatus.Completed:
@@ -391,27 +307,21 @@ public partial class InteractableEditor : ContentView
 
     private void GetCurrentRect(out double x, out double y, out double w, out double h)
     {
-        // Return the current VISUAL bounds in Canvas coordinates.
-        // This matches the logic in UpdateVisuals.
+        x = 0; y = 0; w = _baseRect.Width; h = _baseRect.Height;
         
-        var effects = _currentClip?.Effects?.Values ?? Enumerable.Empty<IEffect>();
-        var place = effects.OfType<PlaceEffect>().FirstOrDefault();
-        var resize = effects.OfType<ResizeEffect>().FirstOrDefault();
-        
-        double scaleX = 1.0, scaleY = 1.0;
-        if (resize != null)
+        if (_currentClip?.Effects != null)
         {
-            scaleX = (double)resize.Width / _videoWidth;
-            scaleY = (double)resize.Height / _videoHeight;
+             if (_currentClip.Effects.TryGetValue("__Internal_Place__", out var p) && p is PlaceEffect place)
+             {
+                 x = place.StartX;
+                 y = place.StartY;
+             }
+             if (_currentClip.Effects.TryGetValue("__Internal_Crop__", out var c) && c is CropEffect crop)
+             {
+                 w = crop.Width;
+                 h = crop.Height;
+             }
         }
-        
-        double placeX = place?.StartX ?? 0;
-        double placeY = place?.StartY ?? 0;
-        
-        x = (_baseRect.X * scaleX) + placeX;
-        y = (_baseRect.Y * scaleY) + placeY;
-        w = _baseRect.Width * scaleX;
-        h = _baseRect.Height * scaleY;
     }
 
     private void UpdateClipEffects(double x, double y, double w, double h)
@@ -420,27 +330,26 @@ public partial class InteractableEditor : ContentView
         if (_currentClip.Effects == null) _currentClip.Effects = new Dictionary<string, IEffect>();
 
         // Update Place
-        var place = _currentClip.Effects.Values.OfType<PlaceEffect>().FirstOrDefault();
-        if (place == null)
+        if (_currentClip.Effects.TryGetValue("__Internal_Place__", out var p) && p is PlaceEffect place)
         {
-            place = new PlaceEffect { StartX = (int)x, StartY = (int)y };
-            _currentClip.Effects["Place"] = place;
+            _currentClip.Effects["__Internal_Place__"] = new PlaceEffect { StartX = (int)x, StartY = (int)y, Enabled = place.Enabled, Index = place.Index };
         }
         else
         {
-            _currentClip.Effects["Place"] = new PlaceEffect { StartX = (int)x, StartY = (int)y, Enabled = place.Enabled, Index = place.Index };
+            _currentClip.Effects["__Internal_Place__"] = new PlaceEffect { StartX = (int)x, StartY = (int)y };
         }
 
-        // Update Resize
-        var resize = _currentClip.Effects.Values.OfType<ResizeEffect>().FirstOrDefault();
-        if (resize == null)
+        // Update Crop
+        int cropX = 0, cropY = 0;
+        if (_currentClip.Effects.TryGetValue("__Internal_Crop__", out var c) && c is CropEffect crop)
         {
-            resize = new ResizeEffect { Width = (int)w, Height = (int)h, PreserveAspectRatio = false };
-            _currentClip.Effects["Resize"] = resize;
+            cropX = crop.StartX;
+            cropY = crop.StartY;
+            _currentClip.Effects["__Internal_Crop__"] = new CropEffect { StartX = cropX, StartY = cropY, Width = (int)w, Height = (int)h, Enabled = crop.Enabled, Index = crop.Index };
         }
         else
         {
-            _currentClip.Effects["Resize"] = new ResizeEffect { Width = (int)w, Height = (int)h, PreserveAspectRatio = false, Enabled = resize.Enabled, Index = resize.Index };
+            _currentClip.Effects["__Internal_Crop__"] = new CropEffect { StartX = 0, StartY = 0, Width = (int)w, Height = (int)h };
         }
     }
 }

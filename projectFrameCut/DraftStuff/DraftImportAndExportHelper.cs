@@ -164,7 +164,7 @@ namespace projectFrameCut.DraftStuff
                 element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
                 element.ApplySpeedRatio();
                 element.Effects = dto.Effects?.ToDictionary(
-                    e => e.TypeName,
+                    e => string.IsNullOrWhiteSpace(e.Name) ? $"Effect-{Guid.NewGuid()}" : e.Name,
                     EffectHelper.CreateFromJSONStructure
                 );
 

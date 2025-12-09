@@ -12,6 +12,8 @@ using System.Globalization;
 using System.Diagnostics;
 using CommunityToolkit.Maui;
 using projectFrameCut.iOS.Render;
+using projectFrameCut.Render.Plugins;
+
 
 
 #if IOS
@@ -319,6 +321,15 @@ namespace projectFrameCut
                     MetalComputerHelper.RegisterComputerBridge();
                 }
                 catch { }
+
+                try
+                {
+                    PluginManager.Init();
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Load plugins", CreateMauiApp);
+                }
 
                 Log("Everything ready!");
                 var app = builder.Build();

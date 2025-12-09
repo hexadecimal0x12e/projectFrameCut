@@ -11,27 +11,28 @@
           x:Name="WelcomeLabel"
          VerticalOptions="Center" 
          HorizontalOptions="Center" />
-
-        <CollectionView 
+        <ScrollView>
+            <CollectionView 
                         x:Name="ProjectsCollection"
                         ItemsSource="{Binding Projects}"
                         SelectionMode="Single"
                         Margin="12">
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="vm:ProjectsViewModel">
-                    <Border Padding="8" Margin="4" Loaded="ItemBorder_Loaded">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ProjectsViewModel">
+                        <Border Padding="8" Margin="4" Loaded="ItemBorder_Loaded">
 
-                        <Grid ColumnDefinitions="64, *" RowDefinitions="Auto">
-                            <Image Grid.Column="0" Source="{Binding ThumbImage}" WidthRequest="64" HeightRequest="64" Aspect="AspectFill"/>
-                            <VerticalStackLayout Grid.Column="1" Spacing="2" Padding="8,0,0,0">
-                                <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="20" LineBreakMode="TailTruncation"/>
-                                <Label Text="{Binding LastChangedDisplay}" FontSize="Small" TextColor="Gray"/>
-                            </VerticalStackLayout>
+                            <Grid ColumnDefinitions="64, *" RowDefinitions="Auto">
+                                <Image Grid.Column="0" Source="{Binding ThumbImage}" WidthRequest="64" HeightRequest="64" Aspect="AspectFill"/>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" Padding="8,0,0,0">
+                                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="20" LineBreakMode="TailTruncation"/>
+                                    <Label Text="{Binding LastChangedDisplay}" FontSize="Small" TextColor="Gray"/>
+                                </VerticalStackLayout>
 
-                        </Grid>
-                    </Border>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </ScrollView>
     </VerticalStackLayout>
 </ContentPage>

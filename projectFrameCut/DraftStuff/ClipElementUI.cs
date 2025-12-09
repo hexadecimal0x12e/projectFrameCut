@@ -1,6 +1,7 @@
 ﻿using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.Render;
 using projectFrameCut.Shared;
+using projectFrameCut.VideoMakeEngine;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -183,6 +184,12 @@ namespace projectFrameCut.DraftStuff
             element.LeftHandle.BindingContext = element;
             element.RightHandle.BindingContext = element;
 
+            element.Effects = new Dictionary<string, IEffect>
+            {
+                {"__Internal_Place__", new PlaceEffect{ Index = int.MinValue, Enabled = false  } },
+                {"__Internal_Crop__", new CropEffect{ Index = int.MinValue + 1, Enabled = false  } }
+            };
+
 
             return element;
         }
@@ -215,17 +222,4 @@ namespace projectFrameCut.DraftStuff
     }
 
 
-    [JsonSerializable(typeof(Dictionary<string, projectFrameCut.Shared.IEffect>))]
-    [JsonSerializable(typeof(Dictionary<string, object>))]
-    [JsonSerializable(typeof(ClipMovingStatus))]
-    [JsonSerializable(typeof(ClipMode))]
-    [JsonSourceGenerationOptions(WriteIndented = true, PropertyNameCaseInsensitive = true)]
-    public partial class ClipElementUIAotJsonSerializerContext : JsonSerializerContext
-    {
-    }
-
-    public partial class GlobalJSONSerializerContexts
-    {
-        public static JsonSerializerOptions GlobalClipJSONContext = new JsonSerializerOptions { TypeInfoResolver = ClipElementUIAotJsonSerializerContext.Default };
-    }
 }

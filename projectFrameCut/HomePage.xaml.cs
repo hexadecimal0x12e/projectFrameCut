@@ -32,11 +32,9 @@ public partial class HomePage : ContentPage
         InitializeComponent();
         WelcomeLabel.Text = Localized.HomePage_Welcome();
         _viewModel = new ProjectsListViewModel();
-        _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
         BindingContext = _viewModel;
         Loaded += async (s, e) =>
         {
-            await ShowUnsupportedLanguageAlertAsync();
 
             if (Environment.GetCommandLineArgs().Length > 0)
             {
@@ -368,7 +366,7 @@ public partial class HomePage : ContentPage
                     Log(ex3, "read draft from save slot confirm", this);
                     await Dispatcher.DispatchAsync(async () =>
                     {
-                        await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_DraftBroken_Fail + "\r\n(" + ex3.Message + ")", Localized._OK);
+                        await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_Fail}\r\n({ex3.Message})", Localized._OK);
                     });
                     return;
                 }
@@ -429,8 +427,14 @@ public partial class HomePage : ContentPage
             AppShell.instance.ShowNavView();
         }
 #endif
-
         await ShowUnsupportedLanguageAlertAsync();
+
+        await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+        if (_viewModel.LoadFailed)
+        {
+            await DisplayAlertAsync(Localized._Info,Localized.HomePage_DraftLoadFailed(), Localized._OK);
+            
+        }
     }
 
     private async Task ShowUnsupportedLanguageAlertAsync()
@@ -574,7 +578,7 @@ public partial class HomePage : ContentPage
                 JsonSerializer.Serialize(info));
         }
 
-        _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+        await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
     }
 
     private async void ItemBorder_Loaded(object? sender, EventArgs e)
@@ -715,6 +719,7 @@ public class ProjectsListViewModel
 {
     public ObservableCollection<ProjectsViewModel> Projects { get; } = new();
 
+    public bool LoadFailed = false;
 
     public ProjectsListViewModel()
     {
@@ -722,8 +727,10 @@ public class ProjectsListViewModel
 
     }
 
-    public void LoadDrafts(string sourcePath)
+    public async Task LoadDrafts(string sourcePath)
     {
+        List<ProjectsViewModel> projects = new();
+        List<ProjectsViewModel> failedProjects = new();
         try
         {
             if (!Directory.Exists(sourcePath))
@@ -745,7 +752,7 @@ public class ProjectsListViewModel
                     if (proj is not null)
                     {
                         var thumb = Path.Combine(item, "thumbs", "_project.png");
-                        Projects.Insert(Projects.Count - 1, new ProjectsViewModel(proj.projectName, proj.LastChanged ?? DateTime.MinValue, thumb)
+                        projects.Add(new ProjectsViewModel(proj.projectName, proj.LastChanged ?? DateTime.MinValue, thumb)
                         {
                             _projectPath = item
                         });
@@ -755,12 +762,12 @@ public class ProjectsListViewModel
                 }
                 catch (Exception exInner)
                 {
-                    Log(exInner, "load draft", this);
+                    if (MyLoggerExtensions.LoggingDiagnosticInfo) Log(exInner, "load draft", this);
                     goto fail;
                 }
 
-            fail:
-                Projects.Insert(Projects.Count - 1, new ProjectsViewModel(proj?.projectName ?? "Unknown project", null, "")
+                fail:
+                failedProjects.Add(new ProjectsViewModel(proj?.projectName ?? "Unknown project", null, "")
                 {
                     _projectPath = item
                 });
@@ -772,8 +779,27 @@ public class ProjectsListViewModel
         }
         catch (Exception ex)
         {
-            Log(ex, "load draft", this);
-
+            if(MyLoggerExtensions.LoggingDiagnosticInfo) Log(ex, "load draft", this);
+        }
+        finally
+        {
+            try
+            {
+                foreach (var item in projects.OrderByDescending(x => x._lastChanged))
+                {
+                    Projects.Insert(Projects.Count - 1, item);
+                }
+                // Insert failed (invalid) projects after valid ones, so they appear closer to the bottom
+                foreach (var f in failedProjects)
+                {
+                    Projects.Insert(Projects.Count - 1, f);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "render draft list", this);
+                LoadFailed = true;
+            }
         }
     }
 

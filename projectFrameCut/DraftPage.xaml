@@ -9,6 +9,13 @@
         <MenuBarItem x:Name="ProjectNameMenuBarItem" Text="{Binding ProjectName}">
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_GoRender}"  Command="{Binding GoRenderCommand}" />
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Save}" Command="{Binding SaveCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
+                                Key="S" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Share}"/>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Cooperate}"/>
         </MenuBarItem>
@@ -40,24 +47,29 @@
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            
-            
+
+
             <MenuFlyoutItem Text="{l:Localized Key=_Settings}" Command="{Binding SettingsCommand}"/>
         </MenuBarItem>
 
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs}">
             <MenuFlyoutItem x:Name="JobRunningIndicator" Text="{l:Localized Key=DraftPage_NoJobRunning}" IsEnabled="False" />
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs_ManageJobs}" >
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs_ManageJobs}" Command="{Binding ManageJobsCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
                 Key="T" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
         </MenuBarItem>
-        
 
     </ContentPage.MenuBarItems>
-    
+    <ContentPage.ToolbarItems>
+        <ToolbarItem x:Name="ManageTasksButton" Text="{l:Localized Key=DraftPage_MenuBar_Jobs_ManageJobs}" Order="Primary" Priority="0" Command="{Binding ManageJobsCommand}"/>
+        <ToolbarItem x:Name="GoRenderButton" Text="{l:Localized Key=DraftPage_GoRender}" Order="Primary" Priority="0" Command="{Binding GoRenderCommand}"/>
+        <ToolbarItem x:Name="SaveButton" Text="{l:Localized Key=DraftPage_MenuBar_Project_Save}" Order="Secondary" Priority="0" Command="{Binding SaveCommand}"/>
+        <ToolbarItem x:Name="SettingsButton" Text="{l:Localized Key=_Settings}" Order="Secondary" Priority="1" Command="{Binding SettingsCommand}"/>
+    </ContentPage.ToolbarItems>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -69,7 +81,6 @@
         <VerticalStackLayout Grid.Row="0" x:Name="UpperContent">
             <Grid Padding="4" HeightRequest="250" >
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="800"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
@@ -82,9 +93,6 @@
                 </VerticalStackLayout>
                 <Border ZIndex="0" Grid.Column="1" StrokeThickness="5" HorizontalOptions="Fill">
                     <VerticalStackLayout x:Name="CustomContent1" />
-                </Border>
-                <Border  ZIndex="0" Grid.Column="2" StrokeThickness="5" HorizontalOptions="Fill">
-
                 </Border>
 
                 <!--
@@ -100,35 +108,44 @@
                 </Border> -->
             </Grid>
 
-            <StackLayout Orientation="Horizontal" Padding="4,0">
-                <VerticalStackLayout x:Name="ComputeView" WidthRequest="50" />
-                <Button x:Name="MoveLeftButton" Text="&lt;-"  Clicked="MoveLeftButton_Clicked"/>
-                <Button x:Name="MoveRightButton" Text="-&gt;"  Clicked="MoveRightButton_Clicked"/>
-                <Button x:Name="ZoomOutButton" Text="+" Clicked="ZoomOutButton_Clicked" />
-                <Button x:Name="ZoomInButton" Text="-" Clicked="ZoomInButton_Clicked"/>
-                <Button x:Name="SpiltButton" Text="Spilt" Clicked="Split_Clicked"/>
-                <Button x:Name="AssetPanelButton" Text="Assets" Clicked="AssetPanelButton_Clicked"/>
-                <Button Clicked="OnRefreshButtonClicked" Text="Refresh"/>
-                <Button x:Name="AddTextButton" Text="Add a text" Clicked="AddTextButton_Clicked"/>
-                <Picker x:Name="ResolutionPicker" WidthRequest="250" SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
-                <Button 
-x:Name="AddClip"
-Text="Add clip"
-Clicked="AddClip_Clicked" />
-            </StackLayout>
-            <Button x:Name="FullscreenFlyoutTestButton" Text="Pop a flyout" Clicked="FullscreenFlyoutTestButton_Clicked"/>
-            <HorizontalStackLayout x:Name="RulerLayout" HeightRequest="12" WidthRequest="-1" BackgroundColor="Grey">
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <HorizontalStackLayout Grid.Column="0">
+                    <Button x:Name="AddClip" Text="Add clip" Clicked="AddClip_Clicked" />
+                    <Button x:Name="AssetPanelButton" Text="Assets"  Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
+                    <Button x:Name="SpiltButton" Text="Spilt" Margin="8,0,0,0" Clicked="Split_Clicked"/>
+                    <Label x:Name="CurrentPlayheadLabel" Text="00:00/99:99" Margin="8,0,0,0" VerticalOptions="Center"></Label>
+                </HorizontalStackLayout>
+
+                <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End">
+                    <VerticalStackLayout x:Name="ComputeView" WidthRequest="50" />
+
+                    <Picker x:Name="ResolutionPicker" WidthRequest="150"  SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
+
+                   <!-- <Button x:Name="AddTextButton" Text="Add a text" Clicked="AddTextButton_Clicked"/> -->
+                    
+                    <Button x:Name="ZoomOutButton" Text="+" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />
+                    <Button x:Name="ZoomInButton" Text="-" Margin="8,0,0,0" Clicked="ZoomInButton_Clicked"/>
+                </HorizontalStackLayout>
+            </Grid>
+
+            <!--  <Button x:Name="FullscreenFlyoutTestButton" Text="Pop a flyout" Clicked="FullscreenFlyoutTestButton_Clicked"/> -->
+            <HorizontalStackLayout x:Name="RulerLayout" HeightRequest="12" WidthRequest="-1" BackgroundColor="LightGray">
 
             </HorizontalStackLayout>
         </VerticalStackLayout>
 
-        <Grid Grid.Row="1">
+        <Grid x:Name="LowerContent" Grid.Row="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="25"/>
             </Grid.RowDefinitions>
 
-            <ScrollView Grid.Row="0" x:Name="NativeView" Orientation="Vertical">
+            <ScrollView Grid.Row="0" x:Name="TracksAndClipsLayout" Orientation="Vertical">
                 <Grid x:Name="MainTrackContentGrid">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="1*"/>
@@ -143,11 +160,13 @@ Clicked="AddClip_Clicked" />
                     HeightRequest="80" />
                     </VerticalStackLayout>
 
-                    <VerticalStackLayout x:Name="TrackContentLayout" Grid.Column="1" Padding="2" />
+                    <ScrollView x:Name="TimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled">
+                        <VerticalStackLayout x:Name="TrackContentLayout" Padding="2" />
+                    </ScrollView>
                 </Grid>
 
             </ScrollView>
-
+            <BoxView x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>
         </Grid>
 
         <Grid Grid.Row="2" x:Name="StatusBarGrid" BackgroundColor="#001122" Margin="0,2,0,0">
@@ -174,7 +193,7 @@ Clicked="AddClip_Clicked" />
 
         </Grid>
 
-       <AbsoluteLayout x:Name="OverlayLayer"
+        <AbsoluteLayout x:Name="OverlayLayer"
                         Grid.RowSpan="3"
                         ZIndex="1000"
                         InputTransparent="True"
@@ -183,7 +202,6 @@ Clicked="AddClip_Clicked" />
                         IsVisible="True"
                         HorizontalOptions="Fill"
                         VerticalOptions="Fill">
-            <BoxView x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True"/>
             <Image x:Name="PreviewOverlayImage"
            BackgroundColor="#112233"
            Aspect="AspectFit"

@@ -138,7 +138,7 @@ namespace projectFrameCut.Platforms.Windows
                 _proc = new();
                 _proc.StartInfo = new ProcessStartInfo
                 {
-                    FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg.exe"),
+                    FileName = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal", "ffmpeg.exe"),
                     WorkingDirectory = Path.Combine(AppContext.BaseDirectory),
                     Arguments = args,
                     UseShellExecute = false,

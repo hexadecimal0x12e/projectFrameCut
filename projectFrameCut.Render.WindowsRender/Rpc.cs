@@ -34,6 +34,32 @@ namespace projectFrameCut.Render.WindowsRender
             //var accessToken = switches.GetValueOrDefault("accessToken");
             //var backendPort = switches.GetValueOrDefault("port");
 
+            if (switches.ContainsKey("ParentPID"))
+            {
+                var parentPidStr = switches["ParentPID"];
+                if (int.TryParse(parentPidStr, out var parentPid))
+                {
+                    Task.Run(() =>
+                    {
+                        while (true)
+                        {
+                            try
+                            {
+                                var parentProc = Process.GetProcessById(parentPid);
+                                parentProc.WaitForExit();
+                                Log($"Parent process {parentPid} exited, shutting down RPC server.");
+                                RpcCts.Cancel();
+                                Environment.Exit(0);
+                            }
+                            catch
+                            {
+                                // ignored
+                            }
+                        }
+                    });
+                }
+            }
+
 #if DEBUG
             OverlayMixture.TempSavePath = tempFolder;
 #endif

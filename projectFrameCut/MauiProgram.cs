@@ -27,6 +27,7 @@ using System.Globalization;
 using Microsoft.Maui.Controls.PlatformConfiguration;
 using System.Runtime.Versioning;
 using CommunityToolkit.Maui;
+using projectFrameCut.Render.Plugins;
 
 namespace projectFrameCut
 {
@@ -213,6 +214,8 @@ namespace projectFrameCut
             {
                 var builder = MauiApp.CreateBuilder();
                 builder.UseMauiApp<App>().UseMauiCommunityToolkit();
+                // 注册屏幕朗读检测服务（跨平台实现）
+                builder.Services.AddSingleton<IScreenReaderService, ScreenReaderService>();
 #if DEBUG
                 builder.Logging.SetMinimumLevel(LogLevel.Trace);
 #else
@@ -412,6 +415,16 @@ namespace projectFrameCut
                         fonts.AddFont("HarmonyOS_Sans_Bold.ttf", "Font_Semibold");
                     });
                 }
+
+                try
+                {
+                    PluginManager.Init();
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Load plugins", CreateMauiApp);
+                }
+
 
                 Log("Everything ready!");
                 var app = builder.Build();

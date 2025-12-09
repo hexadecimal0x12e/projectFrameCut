@@ -12,11 +12,15 @@ using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-
+using projectFrameCut.Setting.SettingManager;
 
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL;
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
+#endif
+
+#if WINDOWS
+using ILGPU;
 #endif
 
 namespace projectFrameCut;
@@ -147,23 +151,33 @@ public partial class RenderPage : ContentPage
         {
             running = true;
             DeviceDisplay.Current.KeepScreenOn = true;
-
+            string outputPath;
             Log("Output options:\r\n" + vm.BuildSummary());
-#if WINDOWS
-            var outputPath = await PickSavePath(_project.projectName);
-            await DoComputeOnWindows(vm, render, ffmpeg, outputPath);
-#else
             var outputDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
-            Directory.CreateDirectory(outputDir);
-            var outputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mp4");
-            await DoComputeOnMobile(vm, outputPath);
+#if WINDOWS
+            outputPath = await PickSavePath(_project.projectName);
+#else
+            outputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mp4");
 #endif
+            if (!OperatingSystem.IsWindows() || SettingsManager.IsBoolSettingTrue("UseLivePreviewInsteadOfBackend"))
+            {
+                Directory.CreateDirectory(outputDir);
+                await DoComputeOnMobile(vm, outputPath);
+            }
+            else
+            {
+#if WINDOWS
+                await DoComputeOnWindows(vm, render, ffmpeg, outputPath);
+#endif
+            }
+
+
             _logUpdateTimer?.Stop();
             await FlushLogQueue();
             await TotalProgress.ProgressTo(1, 50, Easing.Linear);
 
 
-            await DisplayAlert(Localized._Info, Localized.RenderPage_Done, Localized._OK);
+            await DisplayAlertAsync(Localized._Info, Localized.RenderPage_Done, Localized._OK);
             running = false;
             CancelRender.IsEnabled = false;
             DeviceDisplay.Current.KeepScreenOn = false;
@@ -175,17 +189,39 @@ public partial class RenderPage : ContentPage
 #if WINDOWS
     async Task DoComputeOnWindows(RenderPageViewModel vm, Platforms.Windows.RenderHelper render, Platforms.Windows.ffmpegHelper ffmpeg, string outputPath)
     {
-        var outTempFile = Path.Combine(_workingPath, "export", $"output-{Guid.NewGuid()}.mkv");
+        var fmt = vm.BitDepth switch
+        {
+            "8bit" => "AV_PIX_FMT_YUV420P",
+            "10bit" => "AV_PIX_FMT_YUV420P10LE",
+            "12bit" => "AV_PIX_FMT_YUV444P12LE",
+            _ => "AV_PIX_FMT_GBRP16LE"
+        };
+        var enc = vm.BitDepth switch
+        {
+            "8bit" => "libx264",
+            "10bit" => "libx265",
+            "12bit" => "libx265",
+            _ => "ffv1"
+        };
+        var ext = enc switch
+        {
+            "libx264" => "mp4",
+            "libx265" => ".mov",
+            "ffv1" => ".mkv",
+            _ => ""
+        };
+        var outTempFile = Path.Combine(_workingPath, "export", $"output-{Guid.NewGuid()}.{ext}");
         var outPreview = Path.Combine(_workingPath, "export", $"preview-{Guid.NewGuid()}.png");
         Directory.CreateDirectory(Path.GetDirectoryName(outTempFile) ?? throw new NullReferenceException());
         var args = $"render " +
             $"\"-draft={Path.Combine(_workingPath, "timeline.json")}\" " +
             $"-duration={_duration} " +
             $"\"-output={outTempFile}\" " +
-            $"-output_options={vm.Width},{vm.Height},{vm.Framerate},AV_PIX_FMT_GBRP16LE,ffv1  " +
+            $"-output_options={vm.Width},{vm.Height},{vm.Framerate},{fmt},{enc}  " +
             $"-maxParallelThreads={(int)MaxParallelThreadsCount.Value} " +
             $"-preview=true " +
-            $"\"-previewPath={outPreview}\" ";
+            $"\"-previewPath={outPreview}\" " +
+            $"\"-Use16bpp={vm.BitDepth == "16"}\" ";
 
         Log($"Args to render:{args}");
 
@@ -291,9 +327,30 @@ public partial class RenderPage : ContentPage
 
         Log($"FFmpeg process exited with code {ffRet}.");
     }
-#else
+#endif
+
     async Task DoComputeOnMobile(RenderPageViewModel vm, string outputPath)
     {
+        void SetSubProg(string s)
+        {
+            lastProg = totalProg;
+            string label;
+            try
+            {
+                label = Localized.DynamicLookup($"RenderPage_SubProg_{s}");
+            }
+            catch (Exception)
+            {
+                label = $"RenderPage_SubProg_{s}";
+            }
+            Dispatcher.Dispatch(() =>
+            {
+                SubProgLabel.Text = label;
+                TotalProgress.ProgressTo(totalProg / 3d, 5, Easing.Linear);
+
+            });
+        }
+
         void _WriteToLogBox(string s, string l)
         {
             _logQueue.Enqueue(s);
@@ -320,13 +377,18 @@ public partial class RenderPage : ContentPage
         ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
 #elif iDevices
 
+#elif WINDOWS
+        Context context = Context.CreateDefault();
+        var devices = context.Devices.ToList();
+        var accel = projectFrameCut.Render.WindowsRender.ILGPUComputerHelper.PickOneAccel("auto", -1, devices);
+        projectFrameCut.Render.WindowsRender.ILGPUComputerHelper.RegisterComputerGetter([accel.CreateAccelerator(context)], false);
 #endif
         var draftSrc = JsonSerializer.Deserialize<DraftStructureJSON>
                                                  (File.ReadAllText(Path.Combine(_workingPath, "timeline.json"))) ?? throw new NullReferenceException();
 
         Log($"Draft loaded: duration {draftSrc.Duration}, saved on {draftSrc.SavedAt}, {draftSrc.Clips.Length} clips.");
 
-        if(draftSrc.Duration <= 1)
+        if (draftSrc.Duration <= 1)
         {
             await DisplayAlertAsync(Localized._Info, "Draft invalid", Localized._OK);
             return;
@@ -405,10 +467,10 @@ public partial class RenderPage : ContentPage
         sw1.Restart();
         await renderer.GoRender(_cts.Token);
         if (_cts.IsCancellationRequested) return;
-        
+
         Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
-        
-        GC.Collect(); 
+
+        GC.Collect();
         SetSubProg("WriteVideo");
         Log("Finish writing video...");
         builder?.Finish((i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), duration);
@@ -429,26 +491,8 @@ public partial class RenderPage : ContentPage
 
 
 
-    private void SetSubProg(string s)
-    {
-        lastProg = totalProg;
-        string label;
-        try
-        {
-            label = Localized.DynamicLookup($"RenderPage_SubProg_{s}");
-        }
-        catch (Exception)
-        {
-            label = $"RenderPage_SubProg_{s}";
-        }
-        Dispatcher.Dispatch(() =>
-        {
-            SubProgLabel.Text = label;
-            TotalProgress.ProgressTo(totalProg / 3d, 5, Easing.Linear);
 
-        });
-    }
-#endif
+
 
 
 
@@ -538,6 +582,10 @@ public class RenderPageViewModel : INotifyPropertyChanged
         Localized.RenderPage_CustomOption
     ];
 
+    public string[] ExportOptions_BitDepth { get; } = [
+        "8bit", "10bit", "12bit"
+    ];
+
     string _resoultion = "3840x2160";
     public string Resoultion
     {
@@ -624,6 +672,36 @@ public class RenderPageViewModel : INotifyPropertyChanged
         }
     }
 
+    string _bitDepth = "8bit";
+    public string BitDepth
+    {
+        get
+        {
+            if (_bitDepth == Localized.RenderPage_CustomOption) return "";
+            else return _bitDepth;
+        }
+        set
+        {
+            if (SetProperty(ref _bitDepth, value))
+            {
+                OnPropertyChanged(nameof(IsCustomBitDepthVisible));
+            }
+        }
+    }
+
+    public string BitDepthDisplay
+    {
+        get
+        {
+            if (ExportOptions_BitDepth.Any((x) => x == BitDepth)) return BitDepth;
+            else return Localized.RenderPage_CustomOption;
+        }
+        set
+        {
+            BitDepth = value;
+        }
+    }
+
     string _width = "3840";
     public string Width
     {
@@ -649,9 +727,10 @@ public class RenderPageViewModel : INotifyPropertyChanged
     public bool IsCustomResolutionVisible => _resoultion == Localized.RenderPage_CustomOption;
     public bool IsCustomFramerateVisible => !ExportOptions_Framerate.Where((x) => x != Localized.RenderPage_CustomOption).Any((x) => x == _framerate);
     public bool IsCustomEncodingVisible => !ExportOptions_Encoding.Where((x) => x != Localized.RenderPage_CustomOption).Any((x) => x == _encoding);
+    public bool IsCustomBitDepthVisible => !ExportOptions_BitDepth.Where((x) => x != Localized.RenderPage_CustomOption).Any((x) => x == _bitDepth);
 
     public string BuildSummary() =>
-        $"{_width}x{_height} @ {_framerate} fps\nEncoding: {_encoding}";
+        $"{_width}x{_height} @ {_framerate} fps\nEncoding: {_encoding}\nBitDepth: {_bitDepth}";
 
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged([CallerMemberName] string? name = null)

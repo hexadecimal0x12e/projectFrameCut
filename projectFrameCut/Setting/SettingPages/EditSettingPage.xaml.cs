@@ -53,7 +53,7 @@ public partial class EditSettingPage : ContentPage
                     {   
                         var mode = ModeStringMapping.FirstOrDefault(k => k.Key == args.Value,
                                                  new KeyValuePair<string, string>("right", "right")).Value;
-                        WriteSetting("PreferredPopupMode", mode);
+                        WriteSetting("Edit_PreferredPopupMode", mode);
                         goto done;
                     }
             }

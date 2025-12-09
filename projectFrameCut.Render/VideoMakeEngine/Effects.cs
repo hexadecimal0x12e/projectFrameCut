@@ -14,6 +14,7 @@ namespace projectFrameCut.VideoMakeEngine
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
+        public string Name { get; set; }
 
         public ushort R { get; init; }
         public ushort G { get; init; }
@@ -174,6 +175,8 @@ namespace projectFrameCut.VideoMakeEngine
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
+        public string Name { get; set; }
+
 
         public int StartX { get; init; }
         public int StartY { get; init; }
@@ -315,6 +318,8 @@ namespace projectFrameCut.VideoMakeEngine
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
+        public string Name { get; set; }
+
 
         public int StartX { get; init; }
         public int StartY { get; init; }
@@ -449,6 +454,8 @@ namespace projectFrameCut.VideoMakeEngine
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
+        public string Name { get; set; }
+
 
         public int Height { get; init; }
         public int Width { get; init; }

@@ -5,6 +5,7 @@ using ILGPU.Runtime;
 using ILGPU.Runtime.CPU;
 using ILGPU.Runtime.Cuda;
 using ILGPU.Runtime.OpenCL;
+using projectFrameCut.Render.Plugins;
 using projectFrameCut.Render.WindowsRender;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp.Formats;
@@ -61,6 +62,7 @@ namespace projectFrameCut.Render.RenderCLI
                             -draft=<draft file path>
                             -output=<output file/folder>
                             -output_options=<width>,<height>,<fps>,<pixel format>,<encoder>
+                            [-Use16bpp=<true|false>]
                             [-maxParallelThreads=<number> or -oneByOneRender=<true|false>]
                             [-multiAccelerator=<true|false>]
                             [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids>]
@@ -73,6 +75,7 @@ namespace projectFrameCut.Render.RenderCLI
                        or: projectFrameCut.Render rpc_backend
                             -pipe=<name of pipe>
                             -tempFolder="<path to temp folder>" 
+                            [-parentPID=<integer>]
                             [-acceleratorType=<auto|cuda|opencl|cpu>]
                             [-acceleratorDeviceId=<device id>]
                             [-forceSync=<true|false|default>]
@@ -271,6 +274,16 @@ namespace projectFrameCut.Render.RenderCLI
                 Rpc.RunRPC(switches, accelerators[0], width, height);
                 Console.WriteLine($"RPC server exited with code {Rpc.RpcReturnCode}. Exiting...");
                 return Rpc.RpcReturnCode;
+            }
+
+            Console.WriteLine("Initializing plugins...");
+            try
+            {
+                PluginManager.Init();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize plugins: {ex.Message}");
             }
 
 
