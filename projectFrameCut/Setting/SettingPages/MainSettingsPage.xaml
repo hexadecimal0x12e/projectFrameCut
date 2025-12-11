@@ -10,11 +10,12 @@
             <Label FontSize="32" Text="{l:Localized Key=_Settings}"/>
 
             <VerticalStackLayout Spacing="8">
-                <Button x:Name="GeneralSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_General}" Clicked="OnGeneralSettingClicked" />
-                <Button x:Name="EditSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Edit}" Clicked="OnEditSettingClicked" />
-                <Button x:Name="RenderSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Render}" Clicked="OnRenderSettingClicked" />
-                <Button x:Name="MiscSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Misc}" Clicked="OnMiscSettingClicked" />
-                <Button x:Name="AboutSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_About}" Clicked="OnAboutSettingClicked" />
+                <Button x:Name="GeneralSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_General}" FontSize="24" Clicked="OnGeneralSettingClicked" />
+                <Button x:Name="EditSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Edit}" FontSize="24" Clicked="OnEditSettingClicked" />
+                <Button x:Name="RenderSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Render}" FontSize="24" Clicked="OnRenderSettingClicked" />
+                <Button x:Name="PluginSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Plugin}" FontSize="24" Clicked="OnPluginSettingClicked" />
+                <Button x:Name="MiscSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Misc}" FontSize="24" Clicked="OnMiscSettingClicked" />
+                <Button x:Name="AboutSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_About}" FontSize="24" Clicked="OnAboutSettingClicked" />
             </VerticalStackLayout>
         </VerticalStackLayout>
     </ScrollView>

@@ -103,7 +103,7 @@
 
 
 	<ItemGroup>
-		<AndroidResource Remove="Platforms\Android\Resources\values\styles.xml" />
+	  <None Remove="Platforms\Android\Resources\values\styles.xml" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -7,6 +7,8 @@ using System.Text.Json.Serialization;
 using projectFrameCut.VideoMakeEngine;
 using projectFrameCut.Shared;
 using Microsoft.Maui.Platform;
+using projectFrameCut.Render.VideoMakeEngine;
+
 
 #if WINDOWS
 using Microsoft.UI.Xaml;
@@ -78,7 +80,7 @@ namespace projectFrameCut.DraftStuff
 
             if (clip.Effects != null)
             {
-                foreach (var effectKvp in clip.Effects)
+                foreach (var effectKvp in clip.Effects.OrderBy(c => c.Value.Index))
                 {
                     var effectKey = effectKvp.Key;
                     var effect = effectKvp.Value;

@@ -28,9 +28,10 @@ namespace projectFrameCut.Render
         public IEffect[]? EffectsInstances { get; init; }
 
         [System.Text.Json.Serialization.JsonIgnore]
-        public IDecoderContext? Decoder { get; set; } = null;
+        public IVideoSource? Decoder { get; set; } = null;
 
         public ClipMode ClipType => ClipMode.VideoClip;
+        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
 
 
         public VideoClip()
@@ -72,6 +73,7 @@ namespace projectFrameCut.Render
         public Picture? source { get; set; } = null;
 
         public ClipMode ClipType => ClipMode.PhotoClip;
+        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
 
 
         public Dictionary<string, object>? MixtureArgs { get; init; }
@@ -114,6 +116,7 @@ namespace projectFrameCut.Render
         public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.SolidColorClip;
+        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
@@ -163,6 +166,7 @@ namespace projectFrameCut.Render
         public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.TextClip;
+        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }

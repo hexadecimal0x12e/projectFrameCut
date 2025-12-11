@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Diagnostics.CodeAnalysis;
 using projectFrameCut.VideoMakeEngine;
+using projectFrameCut.Render.Plugins;
 
 namespace projectFrameCut.DraftStuff
 {
@@ -44,6 +45,8 @@ namespace projectFrameCut.DraftStuff
                         {
                             Id = elem.Id,
                             Name = name,
+                            FromPlugin = elem.FromPlugin,
+                            TypeName = elem.TypeName,
                             ClipType = elem.ClipType,
                             LayerIndex = (uint)trackKey,
                             StartFrame = startFrame,
@@ -58,8 +61,13 @@ namespace projectFrameCut.DraftStuff
                             Effects = elem.Effects?.Select((kv) => 
                             new EffectAndMixtureJSONStructure
                             {
-                                TypeName = kv.Key,
-                                Parameters = kv.Value.Parameters
+                                Name = kv.Key,
+                                FromPlugin = kv.Value.FromPlugin,
+                                TypeName = kv.Value.TypeName,
+                                Parameters = kv.Value.Parameters,
+                                Index = kv.Value.Index,
+                                Enabled = kv.Value.Enabled,
+                                IsMixture = false
                             }).ToArray()
                         };
 
@@ -163,9 +171,11 @@ namespace projectFrameCut.DraftStuff
                 element.sourceSecondPerFrame = dto.FrameTime;
                 element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
                 element.ApplySpeedRatio();
+                element.TypeName = dto.TypeName;
+                element.FromPlugin = dto.FromPlugin;
                 element.Effects = dto.Effects?.ToDictionary(
                     e => string.IsNullOrWhiteSpace(e.Name) ? $"Effect-{Guid.NewGuid()}" : e.Name,
-                    EffectHelper.CreateFromJSONStructure
+                    PluginManager.CreateEffect
                 );
 
                 if(element.Effects is null ) 

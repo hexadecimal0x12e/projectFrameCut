@@ -10,7 +10,7 @@ using static projectFrameCut.Render.Video;
 namespace projectFrameCut.Render
 {
 
-    public sealed unsafe class DecoderContext16Bit : IDecoderContext
+    public sealed unsafe class DecoderContext16Bit : IVideoSource
     {
         private readonly object locker = new();
 
@@ -43,15 +43,18 @@ namespace projectFrameCut.Render
 
         public uint Index { get; set; } = 0;
 
+        public string[] PreferredExtension => ["mkv"];
+
         public DecoderContext16Bit(string path)
         {
-            _path = path ?? throw new ArgumentNullException(nameof(path));
+            _path = path;
             Initialize();
         }
 
 
         public void Initialize()
         {
+            if (_path is null) return; //VideoSourceCreator needs a instance to get PreferredExtension
             if (Initialized) throw new InvalidOperationException("DecoderContext has already been initialized.");
 
             try
@@ -336,7 +339,7 @@ namespace projectFrameCut.Render
         }
     }
 
-    public sealed unsafe class DecoderContext8Bit : IDecoderContext
+    public sealed unsafe class DecoderContext8Bit : IVideoSource
     {
         private readonly object locker = new();
 
@@ -371,15 +374,18 @@ namespace projectFrameCut.Render
         public int Height => _height;
 
         public uint Index { get; set; } = 0;
+        public string[] PreferredExtension => ["mp4","mov"];
+
 
         public DecoderContext8Bit(string path)
         {
-            _path = path ?? throw new ArgumentNullException(nameof(path));
+            _path = path;
             Initialize();
         }
 
         public void Initialize()
         {
+            if (_path is null) return; //VideoSourceCreator needs a instance to get PreferredExtension
             if (Initialized) throw new InvalidOperationException("DecoderContext has already been initialized.");
             try
             {

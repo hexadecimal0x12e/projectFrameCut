@@ -18,4 +18,10 @@
     <!-- let the system decide light/dark status bar icons where appropriate -->
     <item name="android:windowLightStatusBar">true</item>
   </style>
+	<style name="AppTheme" parent="Theme.MaterialComponents.Light.Bridge">
+		<!-- Customize your theme here. -->
+		<item name="colorPrimary">@color/colorPrimary</item>
+		<item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+		<item name="colorAccent">@color/colorAccent</item>
+	</style>
 </resources>

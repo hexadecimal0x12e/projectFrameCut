@@ -31,6 +31,10 @@ namespace projectFrameCut
         {
             await NavigateAsync(new MiscSettingPage());
         }
+        private async void OnPluginSettingClicked(object sender, EventArgs e)
+        {
+            await NavigateAsync(new PluginSettingPage());
+        }
         private async void OnAboutSettingClicked(object sender, EventArgs e)
         {
             await NavigateAsync(new AboutSettingPage());

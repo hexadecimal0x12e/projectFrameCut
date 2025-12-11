@@ -1,8 +1,10 @@
-﻿using projectFrameCut.Shared;
+﻿using projectFrameCut.Render.Plugins;
+using projectFrameCut.Shared;
 using projectFrameCut.VideoMakeEngine;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Security.Cryptography;
@@ -16,7 +18,7 @@ namespace projectFrameCut.Render
 {
     public class Timeline
     {
-        public static ConcurrentDictionary<string, IComputer> ComputerCache = new();
+        //public static ConcurrentDictionary<string, IComputer> ComputerCache = new();
         public static ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
         public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture.GenerateSolidColor(w, h, 0, 0, 0, null);
 
@@ -79,21 +81,19 @@ namespace projectFrameCut.Render
                     {
                         effected = effect.Render(
                                    effected,
-                                   effect.NeedAComputer ? ComputerCache.GetOrAdd(effect.TypeName,
-                                   AcceleratedComputerBridge.RequireAComputer?.Invoke(effect.TypeName) is IComputer c1 ? c1 : throw new NotSupportedException($"Mixture mode {srcFrame?.MixtureMode} is not supported in accelerated computer bridge.")) : null,
+                                   effect.NeedComputer is not null ? PluginManager.CreateComputer(effect.NeedComputer) : null,
                                    targetWidth, targetHeight);
                     }
+                    var mix = GetMixer(srcFrame.MixtureMode);
 
                     result = result is null ? effected :
-                                    MixtureCache.GetOrAdd(srcFrame!.MixtureMode, GetMixer(srcFrame.MixtureMode))
+                                    MixtureCache.GetOrAdd(srcFrame!.MixtureMode, mix)
                                     .Mix(result, effected,
-                                        ComputerCache.GetOrAdd(srcFrame.MixtureMode.ToString(),
-                                            AcceleratedComputerBridge.RequireAComputer?.Invoke(srcFrame.MixtureMode.ToString())
-                                                is IComputer c ? c :
-                                                throw new NotSupportedException($"Mixture mode {srcFrame.MixtureMode} is not supported in accelerated computer bridge.")))
+                                       mix.ComputerId is not null ? PluginManager.CreateComputer(mix.ComputerId) : null)
                                     .Resize(targetWidth, targetHeight, true);
 
                 }
+                LogDiagnostic($"Result's diag info:{result?.GetDiagnosticsInfo() ?? "unknown"}");
                 if (result?.Width == targetWidth && result?.Height == targetHeight)
                 {
                     goto ok;
@@ -109,17 +109,14 @@ namespace projectFrameCut.Render
             ok:
                 result = MixtureCache.GetOrAdd(
                            MixtureMode.Overlay, GetMixer(MixtureMode.Overlay))
-                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result,
-                                   ComputerCache.GetOrAdd(MixtureMode.Overlay.ToString(),
-                                       AcceleratedComputerBridge.RequireAComputer?.Invoke(MixtureMode.Overlay.ToString())
-                                           is IComputer c3 ? c3 :
-                                           throw new NotSupportedException($"Mixture mode {MixtureMode.Overlay} is not supported in accelerated computer bridge.")))
+                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer("OverlayComputer"))
                                .Resize(targetWidth, targetHeight, true);
                 return result;
             }
             catch (Exception ex)
             {
-                Log(ex);
+                Log(ex,$"Render frame {frameIndex}","Timeline");
+                throw;
                 return new Picture(Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png")).Resize(targetHeight, targetHeight, true);
             }
 
@@ -137,12 +134,7 @@ namespace projectFrameCut.Render
             {
                 case MixtureMode.Overlay:
                     return new OverlayMixture();
-                case MixtureMode.Add:
-                    return new AddMixture();
-                case MixtureMode.Minus:
-                    return new MinusMixture();
-                case MixtureMode.Multiply:
-                    return new MultiplyMixture();
+                
                 default:
                     throw new NotSupportedException($"Mixture mode {mixtureMode} is not supported.");
             }

@@ -2,6 +2,7 @@
   "profiles": {
     "Windows Machine": {
       "commandName": "Project",
+      "commandLineArgs": "go_draft_dbgBackend \"D:\\code\\playground\\projectFrameCut\\My Drafts\\test 1.pjfc\"",
       "nativeDebugging": false
     }
   }

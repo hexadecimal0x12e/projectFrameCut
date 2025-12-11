@@ -1,4 +1,6 @@
 ﻿using projectFrameCut.Render;
+using projectFrameCut.Render.Plugins;
+using projectFrameCut.Render.RenderAPIBase;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp.Formats.Png;
 using System;
@@ -43,7 +45,7 @@ namespace projectFrameCut.LivePreview
 
             foreach (var clip in elements.Select(c => (JsonElement)c))
             {
-                clipsList.Add(IClip.FromJSON(clip));
+                clipsList.Add(PluginManager.CreateClip(clip));
             }
 
             Clips = clipsList.ToArray();

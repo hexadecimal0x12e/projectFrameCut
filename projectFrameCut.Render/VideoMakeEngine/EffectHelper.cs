@@ -1,59 +1,13 @@
-﻿using projectFrameCut.Render;
-using projectFrameCut.Render.Plugins;
+﻿using projectFrameCut.Render.Plugins;
+using projectFrameCut.Shared;
 using projectFrameCut.VideoMakeEngine;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
-namespace projectFrameCut.Shared
+namespace projectFrameCut.Render.VideoMakeEngine
 {
-    public interface IEffect
-    {
-        public string TypeName { get; }
-        public string Name { get; set; }
-        public Dictionary<string, object> Parameters { get; }
-        public bool Enabled { get; set; }
-        public int Index { get; set; }      
-        [JsonIgnore]
-        public List<string> ParametersNeeded { get; }
-        [JsonIgnore]
-        public Dictionary<string, string> ParametersType { get; }
-        [JsonIgnore]
-        public bool NeedAComputer { get; }
-
-        public IEffect WithParameters(Dictionary<string, object> parameters);
-
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight);
-    }
-
-    public interface IMixture
-    {
-        public Dictionary<string, object> Parameters { get; }
-
-        public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer computer);
-    }
-
-    public interface IComputer
-    {
-        public float[][] Compute(float[][] args);
-    }
-
-    public class EffectAndMixtureJSONStructure
-    {
-        public bool IsMixture { get; set; } = false;    
-        public string Name { get; set; } = string.Empty;    
-        public string TypeName { get; set; } = string.Empty;
-        public bool Enabled { get; set; } = true;
-        public int Index { get; set; } = 1;
-        public Dictionary<string, object>? Parameters { get; set; }
-    }
-
     public static class EffectHelper
     {
         public static IEffect CreateFromJSONStructure(EffectAndMixtureJSONStructure item)
@@ -118,7 +72,7 @@ namespace projectFrameCut.Shared
         }
 
 
-        public static Dictionary<string, Func<IEffect>> EffectsEnum => PluginManager.loadedPlugins.Values.SelectMany(p => p.EffectProvider).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        public static Dictionary<string, Func<IEffect>> EffectsEnum => PluginManager.LoadedPlugins.Values.SelectMany(p => p.EffectProvider).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
         public static IEnumerable<string> GetEffectTypes() => EffectsEnum.Keys;
 

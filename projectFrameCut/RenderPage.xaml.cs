@@ -13,6 +13,10 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using projectFrameCut.Setting.SettingManager;
+using projectFrameCut.Render.RenderAPIBase;
+using projectFrameCut.Render.Plugins;
+
+
 
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL;
@@ -380,8 +384,7 @@ public partial class RenderPage : ContentPage
 #elif WINDOWS
         Context context = Context.CreateDefault();
         var devices = context.Devices.ToList();
-        var accel = projectFrameCut.Render.WindowsRender.ILGPUComputerHelper.PickOneAccel("auto", -1, devices);
-        projectFrameCut.Render.WindowsRender.ILGPUComputerHelper.RegisterComputerGetter([accel.CreateAccelerator(context)], false);
+        projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Select(d => d.CreateAccelerator(context)).ToArray();
 #endif
         var draftSrc = JsonSerializer.Deserialize<DraftStructureJSON>
                                                  (File.ReadAllText(Path.Combine(_workingPath, "timeline.json"))) ?? throw new NullReferenceException();
@@ -404,7 +407,7 @@ public partial class RenderPage : ContentPage
 
         foreach (var clip in clipsJson)
         {
-            clipsList.Add(IClip.FromJSON(clip));
+            clipsList.Add(PluginManager.CreateClip(clip));
         }
 
         var clips = clipsList.ToArray();

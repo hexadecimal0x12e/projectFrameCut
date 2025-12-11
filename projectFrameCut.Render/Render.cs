@@ -1,14 +1,15 @@
-﻿using projectFrameCut.Shared;
+﻿using projectFrameCut.Render.Plugins;
+using projectFrameCut.Shared;
 using projectFrameCut.VideoMakeEngine;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Threading;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace projectFrameCut.Render
 {
@@ -29,7 +30,6 @@ namespace projectFrameCut.Render
 
         ConcurrentDictionary<string, ConcurrentDictionary<uint, IPicture>> FrameCache = new();
         ConcurrentDictionary<uint, IClip[]> ClipNeedForFrame = new();
-        ConcurrentDictionary<string, IComputer> ComputerCache = new();
         ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
 
         List<Thread> Threads = new List<Thread>();
@@ -357,7 +357,7 @@ namespace projectFrameCut.Render
                     foreach (var item in clip.EffectsInstances ?? IClip.GetEffectsInstances(clip.Effects))
                     {
                         frame = item.Render(frame,
-                                            item.NeedAComputer ? ComputerCache.GetOrAdd(item.TypeName, AcceleratedComputerBridge.RequireAComputer?.Invoke(item.TypeName) is IComputer c1 ? c1 : throw new NotSupportedException($"Effect mode {item.TypeName} is not supported in accelerated computer bridge.")) : null,
+                                            item.NeedComputer is not null ? PluginManager.CreateComputer(item.NeedComputer) : null,
                                             _width, _height)
                                     .Resize(_width, _height, true);
                     }
@@ -369,13 +369,10 @@ namespace projectFrameCut.Render
                 }
                 else
                 {
-                    result = MixtureCache.GetOrAdd(clip.MixtureMode, GetMixer(clip.MixtureMode))
+                    var mix = GetMixer(clip.MixtureMode);
+                    result = MixtureCache.GetOrAdd(clip.MixtureMode, mix)
                                          .Mix(result, frame,
-                                             ComputerCache.GetOrAdd(
-                                                clip.MixtureMode.ToString(),
-                                                AcceleratedComputerBridge.RequireAComputer
-                                                    ?.Invoke(clip.MixtureMode.ToString()) is IComputer c2 ? c2 :
-                                                    throw new NotSupportedException($"Mixture mode {clip.MixtureMode} is not supported in accelerated computer bridge.")))
+                                              mix.ComputerId is not null ? PluginManager.CreateComputer(mix.ComputerId) : null)
                                          .Resize(_width, _height, true);
                 }
             }
@@ -411,7 +408,6 @@ namespace projectFrameCut.Render
                 Log("Release resources...");
                 FrameCache.Clear();
                 ClipNeedForFrame.Clear();
-                ComputerCache.Clear();
                 MixtureCache.Clear();
             }
             catch { }
@@ -424,12 +420,6 @@ namespace projectFrameCut.Render
             {
                 case MixtureMode.Overlay:
                     return new OverlayMixture();
-                case MixtureMode.Add:
-                    return new AddMixture();
-                case MixtureMode.Minus:
-                    return new MinusMixture();
-                case MixtureMode.Multiply:
-                    return new MultiplyMixture();
                 default:
                     throw new NotSupportedException($"Mixture mode {mixtureMode} is not supported.");
             }

@@ -6,6 +6,7 @@ using ILGPU.Runtime.CPU;
 using ILGPU.Runtime.Cuda;
 using ILGPU.Runtime.OpenCL;
 using projectFrameCut.Render.Plugins;
+using projectFrameCut.Render.RenderAPIBase;
 using projectFrameCut.Render.WindowsRender;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp.Formats;
@@ -66,7 +67,6 @@ namespace projectFrameCut.Render.RenderCLI
                             [-maxParallelThreads=<number> or -oneByOneRender=<true|false>]
                             [-multiAccelerator=<true|false>]
                             [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids>]
-                            [-forceSync=<true|false|default>]
                             [-GCOptions=doLOHCompression|doNormalCollection|letCLRDoCollection]
                             [-preview=true|false]
                             [-previewPath=<path of preview output>]
@@ -210,31 +210,29 @@ namespace projectFrameCut.Render.RenderCLI
                 ffmpeg.av_log_set_level(ffmpeg.AV_LOG_WARNING);
             Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}");
 
-            bool fSync = false;
-            foreach (var accelerator in accelerators)
-            {
-                if (bool.TryParse(switches.GetOrAdd("forceSync", "default"), out fSync))
-                {
-                    Console.WriteLine($"Force synchronize is set to {fSync}");
-                }
-                else //默认值
-                {
-                    if (accelerator.AcceleratorType == AcceleratorType.OpenCL)
-                    {
-                        fSync = true;
-                        Console.WriteLine($"Force synchronize is default set to true because of OpenCL accelerator is selected.");//不这么做Render会炸
-                    }
-                    else
-                    {
-                        fSync = false;
-                        Console.WriteLine($"Force synchronize is default set to false");
-                    }
-                }
-            }
+            //bool fSync = false;
+            //foreach (var accelerator in accelerators)
+            //{
+            //    if (bool.TryParse(switches.GetOrAdd("forceSync", "default"), out fSync))
+            //    {
+            //        Console.WriteLine($"Force synchronize is set to {fSync}");
+            //    }
+            //    else //默认值
+            //    {
+            //        if (accelerator.AcceleratorType == AcceleratorType.OpenCL)
+            //        {
+            //            fSync = true;
+            //            Console.WriteLine($"Force synchronize is default set to true because of OpenCL accelerator is selected.");//不这么做Render会炸
+            //        }
+            //        else
+            //        {
+            //            fSync = false;
+            //            Console.WriteLine($"Force synchronize is default set to false");
+            //        }
+            //    }
+            //}
 
-
-
-            ILGPUComputerHelper.RegisterComputerGetter(accelerators, fSync);
+            ILGPUPlugin.accelerators = accelerators;
 
             var outputOptions = switches["output_options"].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
@@ -268,6 +266,16 @@ namespace projectFrameCut.Render.RenderCLI
 
             Console.WriteLine($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, bitPerPixel:{(use16Bit ? "16" :"8")}");
 
+            Console.WriteLine("Initializing plugins...");
+            try
+            {
+                PluginManager.Init([new InternalPluginBase(), new ILGPUPlugin()]);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize plugins: {ex.Message}");
+                return 16;
+            }
 
             if (runningMode == "rpc_backend")
             {
@@ -275,17 +283,6 @@ namespace projectFrameCut.Render.RenderCLI
                 Console.WriteLine($"RPC server exited with code {Rpc.RpcReturnCode}. Exiting...");
                 return Rpc.RpcReturnCode;
             }
-
-            Console.WriteLine("Initializing plugins...");
-            try
-            {
-                PluginManager.Init();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to initialize plugins: {ex.Message}");
-            }
-
 
             var draftSrc = JsonSerializer.Deserialize<DraftStructureJSON
                 >(File.ReadAllText(switches["draft"])) ?? throw new NullReferenceException();
@@ -305,7 +302,7 @@ namespace projectFrameCut.Render.RenderCLI
 
             foreach (var clip in clipsJson)
             {
-                clipsList.Add(IClip.FromJSON(clip));
+                clipsList.Add(PluginManager.CreateClip(clip));
             }
 
             var clips = clipsList.ToArray();

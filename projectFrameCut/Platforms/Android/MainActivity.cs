@@ -9,7 +9,7 @@ using System;
 namespace projectFrameCut.Platforms.Android
 {
     [Activity(
-        Theme = "@style/Maui.SplashTheme",
+        Theme = "@style/AppTheme",
         MainLauncher = true,
         LaunchMode = LaunchMode.SingleTop,
         ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density,

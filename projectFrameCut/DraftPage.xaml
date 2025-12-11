@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.DraftPage"
              xmlns:l="clr-namespace:LocalizedResources"
-             xmlns:ie="clr-namespace:projectFrameCut.DraftStuff.InteractableEditor"
+             xmlns:ie="clr-namespace:InteractableEditor"
              Title="">
     <ContentPage.MenuBarItems>
         <MenuBarItem x:Name="ProjectNameMenuBarItem" Text="{Binding ProjectName}">

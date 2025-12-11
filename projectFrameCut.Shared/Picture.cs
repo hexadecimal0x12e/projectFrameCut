@@ -382,7 +382,7 @@ namespace projectFrameCut.Shared
         /// <param name="targetHeight">The target height.</param>
         /// <param name="preserveAspect">Whether to preserve aspect ratio.</param>
         /// <returns>A new Picture instance with the resized image data.</returns>
-        [DebuggerNonUserCode()]
+        //[DebuggerNonUserCode()]
         public Picture16bpp Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
         {
             lock (this)
@@ -414,6 +414,7 @@ namespace projectFrameCut.Shared
 
                 double xRatio = (double)Width / destW;
                 double yRatio = (double)Height / destH;
+                int srcArraySize = this.r.Length;
 
                 for (int y = 0; y < destH; y++)
                 {
@@ -425,6 +426,7 @@ namespace projectFrameCut.Shared
                     {
                         y0 = 0; y1 = 0; wy = 0;
                     }
+                    else if (y0 >= Height) { y0 = Height - 1; y1 = Height - 1; wy = 0; }
                     if (y1 >= Height) { y1 = Height - 1; }
 
                     for (int x = 0; x < destW; x++)
@@ -437,12 +439,13 @@ namespace projectFrameCut.Shared
                         {
                             x0 = 0; x1 = 0; wx = 0;
                         }
+                        else if (x0 >= Width) { x0 = Width - 1; x1 = Width - 1; wx = 0; }
                         if (x1 >= Width) { x1 = Width - 1; }
 
-                        int k00 = y0 * Width + x0;
-                        int k10 = y0 * Width + x1;
-                        int k01 = y1 * Width + x0;
-                        int k11 = y1 * Width + x1;
+                        int k00 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x0));
+                        int k10 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x1));
+                        int k01 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x0));
+                        int k11 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x1));
 
                         double r00 = this.r[k00];
                         double r10 = this.r[k10];
@@ -881,6 +884,7 @@ namespace projectFrameCut.Shared
 
                 double xRatio = (double)Width / destW;
                 double yRatio = (double)Height / destH;
+                int srcArraySize = this.r.Length;
 
                 for (int y = 0; y < destH; y++)
                 {
@@ -892,6 +896,7 @@ namespace projectFrameCut.Shared
                     {
                         y0 = 0; y1 = 0; wy = 0;
                     }
+                    else if (y0 >= Height) { y0 = Height - 1; y1 = Height - 1; wy = 0; }
                     if (y1 >= Height) { y1 = Height - 1; }
 
                     for (int x = 0; x < destW; x++)
@@ -904,12 +909,13 @@ namespace projectFrameCut.Shared
                         {
                             x0 = 0; x1 = 0; wx = 0;
                         }
+                        else if (x0 >= Width) { x0 = Width - 1; x1 = Width - 1; wx = 0; }
                         if (x1 >= Width) { x1 = Width - 1; }
 
-                        int k00 = y0 * Width + x0;
-                        int k10 = y0 * Width + x1;
-                        int k01 = y1 * Width + x0;
-                        int k11 = y1 * Width + x1;
+                        int k00 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x0));
+                        int k10 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x1));
+                        int k01 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x0));
+                        int k11 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x1));
 
                         double r00 = this.r[k00];
                         double r10 = this.r[k10];
@@ -1181,6 +1187,7 @@ namespace projectFrameCut.Shared
             }
             else
             {
+                if (Debugger.IsAttached) Debugger.Break();
                 throw new InvalidOperationException("The source enumerable is empty.");
             }
         }

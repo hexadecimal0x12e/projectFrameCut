@@ -14,12 +14,13 @@ namespace projectFrameCut.Render.WindowsRender
 {
     public class OverlayComputer : IComputer
     {
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
 
         [SetsRequiredMembers]
-        public OverlayComputer(Accelerator[] accel, bool sync)
+        public OverlayComputer(Accelerator[] accel, bool? sync)
         {
             this.accelerators = accel;
-            Sync = sync;
+            Sync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
         }
 
         public required Accelerator[] accelerators { get; init; }
@@ -113,13 +114,14 @@ namespace projectFrameCut.Render.WindowsRender
 
     public class RemoveColorComputer : IComputer
     {
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
 
 
         [SetsRequiredMembers]
-        public RemoveColorComputer(Accelerator[] accel, bool sync)
+        public RemoveColorComputer(Accelerator[] accel, bool? sync)
         {
             this.accelerators = accel;
-            ForceSync = sync;
+            ForceSync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
         }
 
         public required Accelerator[] accelerators { get; init; }
@@ -311,23 +313,23 @@ namespace projectFrameCut.Render.WindowsRender
 
     public static class ILGPUComputerHelper
     {
-        public static void RegisterComputerGetter(Accelerator[] accels, bool sync)
-        {
-            AcceleratedComputerBridge.RequireAComputer = new((name) =>
-            {
-                switch (name)
-                {
-                    case "Overlay":
-                        return new OverlayComputer(accels, sync);
-                    case "RemoveColor":
-                        return new RemoveColorComputer(accels, sync);
-                    default:
-                        Log($"Computer {name} not found.", "Error");
-                        return null;
+        //public static void RegisterComputerGetter(Accelerator[] accels)
+        //{
+        //    AcceleratedComputerBridge.RequireAComputer = new((name) =>
+        //    {
+        //        switch (name)
+        //        {
+        //            case "Overlay":
+        //                return new OverlayComputer(accels, null);
+        //            case "RemoveColor":
+        //                return new RemoveColorComputer(accels, null);
+        //            default:
+        //                Log($"Computer {name} not found.", "Error");
+        //                return null;
 
-                }
-            });
-        }
+        //        }
+        //    });
+        //}
 
         public static Device? PickOneAccel(string accelType, int acceleratorId, List<Device> devices)
         {

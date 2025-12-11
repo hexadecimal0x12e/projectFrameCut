@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "projectFrameCut.Render.Wind
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "projectFrameCut.iDevices", "projectFrameCut.iOS\projectFrameCut.iDevices.csproj", "{1EBC857C-44E5-57D5-2855-73BE348B5593}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "projectFrameCut.Render.RenderAPIBase", "projectFrameCut.Render.RenderAPIBase\projectFrameCut.Render.RenderAPIBase.csproj", "{48ED2329-42AD-49DF-AE6B-A06A401D9290}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -101,6 +103,18 @@ Global
 		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Release|ARM64.Build.0 = Release|Any CPU
 		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Release|x64.ActiveCfg = Release|Any CPU
 		{1EBC857C-44E5-57D5-2855-73BE348B5593}.Release|x64.Build.0 = Release|Any CPU
+		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Debug|x64.Build.0 = Debug|Any CPU
+		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Release|Any CPU.Build.0 = Release|Any CPU
+		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Release|ARM64.Build.0 = Release|Any CPU
+		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Release|x64.ActiveCfg = Release|Any CPU
+		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

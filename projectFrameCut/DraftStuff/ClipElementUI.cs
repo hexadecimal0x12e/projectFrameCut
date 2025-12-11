@@ -47,6 +47,8 @@ namespace projectFrameCut.DraftStuff
         public float SecondPerFrameRatio { get; set; } = 1f;
 
         public ClipMode ClipType { get; set; } = ClipMode.Special;
+        public string FromPlugin { get; set; } = string.Empty;
+        public string TypeName { get; set; } = string.Empty;
         public string? sourcePath { get; set; } = null;
 
         public Dictionary<string, projectFrameCut.Shared.IEffect>? Effects { get; set; } = new();
@@ -184,11 +186,11 @@ namespace projectFrameCut.DraftStuff
             element.LeftHandle.BindingContext = element;
             element.RightHandle.BindingContext = element;
 
-            element.Effects = new Dictionary<string, IEffect>
-            {
-                {"__Internal_Place__", new PlaceEffect{ Index = int.MinValue, Enabled = false  } },
-                {"__Internal_Crop__", new CropEffect{ Index = int.MinValue + 1, Enabled = false  } }
-            };
+            //element.Effects = new Dictionary<string, IEffect>
+            //{
+            //    {"__Internal_Place__", new PlaceEffect{ Index = int.MinValue, Enabled = false  } },
+            //    {"__Internal_Crop__", new CropEffect{ Index = int.MinValue + 1, Enabled = false  } }
+            //};
 
 
             return element;

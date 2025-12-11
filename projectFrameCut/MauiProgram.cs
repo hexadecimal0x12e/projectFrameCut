@@ -12,6 +12,7 @@ using Java.Lang;
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
+using projectFrameCut.Render.WindowsRender;
 
 #endif
 using System;
@@ -28,6 +29,8 @@ using Microsoft.Maui.Controls.PlatformConfiguration;
 using System.Runtime.Versioning;
 using CommunityToolkit.Maui;
 using projectFrameCut.Render.Plugins;
+using projectFrameCut.Render;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 
 namespace projectFrameCut
 {
@@ -418,7 +421,20 @@ namespace projectFrameCut
 
                 try
                 {
-                    PluginManager.Init();
+                    List<IPluginBase> plugins = [new InternalPluginBase()];
+#if ANDROID
+                    plugins.Add(new OpenGLPlugin());
+#elif WINDOWS
+                    plugins.Add(new ILGPUPlugin());
+#elif iDevices
+
+#endif
+                    if (!Environment.IsPrivilegedProcess)
+                    {
+                        //todo:load plugins from external assemblies
+                    }
+
+                    PluginManager.Init(plugins);
                 }
                 catch (Exception ex)
                 {

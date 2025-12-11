@@ -516,6 +516,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_MenuBar_Project_Save",
+        "Value": "\u4FDD\u5B58\u5E76\u540C\u6B65",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_MenuBar_Project_Share",
         "Value": "\u5171\u4EAB\u9879\u76EE",
         "Mode": "ConstString",
@@ -1181,6 +1189,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "MainSettingsPage_Tab_Plugin",
+        "Value": "\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "MainSettingsPage_Tab_Render",
         "Value": "\u6E32\u67D3",
         "Mode": "ConstString",
@@ -1311,6 +1327,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "RenderPage_SelectBitdepth",
+        "Value": "\u9009\u62E9\u4F4D\u6DF1\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "RenderPage_SelectEncoding",
         "Value": "\u9009\u62E9\u7F16\u7801",
         "Mode": "ConstString",
@@ -1408,17 +1432,9 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "DraftPage_MenuBar_Project_Save",
-        "Value": "\u4FDD\u5B58\u5E76\u540C\u6B65",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "RenderPage_SelectBitdepth",
-        "Value": "\u9009\u62E9\u4F4D\u6DF1\u5EA6",
-        "Mode": "ConstString",
+        "Id": "HomePage_AdminWarn",
+        "Value": "\u8B66\u544A\uFF1A\u4F60\u6B63\u5728\u4EE5\u7BA1\u7406\u5458\u8EAB\u4EFD\u8FD0\u884C {Localized.AppBrand} \u3002\r\u5BF9\u4E8E\u7EDD\u5927\u591A\u6570\u573A\u666F\u4E0B\uFF0C\u4F60\u90FD\u4E0D\u9700\u8981\u7528\u7BA1\u7406\u5458\u8EAB\u4EFD\u8FD0\u884C{Localized.AppBrand}\u3002\u8FD9\u4F1A\u5BFC\u81F4\u6F5C\u5728\u7684\u5B89\u5168\u98CE\u9669\uFF08\u5C24\u5176\u662F\u6765\u81EA\u63D2\u4EF6\u7684\u98CE\u9669\uFF09\u3002\r\u5982\u679C\u4F60\u5B89\u88C5\u7684\u4E00\u4E2A\u6216\u8005\u591A\u4E2A\u63D2\u4EF6\u6307\u4F7F\u4F60\u600E\u4E48\u505A\uFF0C\u8BF7\u7ACB\u9A6C\u5173\u95ED\u5E94\u7528\u7A0B\u5E8F\u5E76\u4E14\u4F7F\u7528\u6740\u6BD2\u8F6F\u4EF6\u5BF9\u4F60\u7684\u8BBE\u5907\u505A\u4E00\u6B21\u626B\u63CF\u3002\r\u51FA\u4E8E\u5B89\u5168\u8003\u8651\uFF0C\u6240\u6709\u7684\u975E\u5185\u7F6E\u63D2\u4EF6\u5728\u6B64\u6B21\u7684\u542F\u52A8\u4E2D\u90FD\u6CA1\u6709\u88AB\u52A0\u8F7D\u3002\u9000\u51FA\u5E94\u7528\u7A0B\u5E8F\uFF0C\u7136\u540E\u4F7F\u7528\u6B63\u5E38\u7528\u6237\u8EAB\u4EFD\u542F\u52A8{Localized.AppBrand}\u6765\u91CD\u65B0\u542F\u7528\u63D2\u4EF6\u529F\u80FD\u3002\r\u66F4\u591A\u7684\u8BE6\u60C5\u8BF7\u53C2\u9605\u6587\u6863\u3002",
+        "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
@@ -2953,6 +2969,15 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_Plugin",
+        "Value": "Unset localization item:MainSettingsPage_Tab_Plugin()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -4479,6 +4504,15 @@
       {
         "Id": "RenderPage_SelectBitdepth",
         "Value": "Unset localization item:RenderPage_SelectBitdepth()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_Plugin",
+        "Value": "Unset localization item:MainSettingsPage_Tab_Plugin()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6033,6 +6067,15 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_Plugin",
+        "Value": "Unset localization item:MainSettingsPage_Tab_Plugin()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -7582,6 +7625,15 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_Plugin",
+        "Value": "Unset localization item:MainSettingsPage_Tab_Plugin()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -9108,6 +9160,15 @@
       {
         "Id": "RenderPage_SelectBitdepth",
         "Value": "Unset localization item:RenderPage_SelectBitdepth()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_Plugin",
+        "Value": "Unset localization item:MainSettingsPage_Tab_Plugin()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10657,6 +10718,15 @@
       {
         "Id": "RenderPage_SelectBitdepth",
         "Value": "Unset localization item:RenderPage_SelectBitdepth()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_Plugin",
+        "Value": "Unset localization item:MainSettingsPage_Tab_Plugin()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

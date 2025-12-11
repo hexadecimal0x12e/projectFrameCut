@@ -5,13 +5,14 @@
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:vm="clr-namespace:projectFrameCut.ViewModels"
              Title="{l:Localized Key=AppShell_ProjectsTab}">
-    <VerticalStackLayout>
-        <Label 
+    <ScrollView>
+
+        <VerticalStackLayout>
+            <Label 
          Text="{l:Localized Key=WelcomeMessage}"
           x:Name="WelcomeLabel"
          VerticalOptions="Center" 
          HorizontalOptions="Center" />
-        <ScrollView>
             <CollectionView 
                         x:Name="ProjectsCollection"
                         ItemsSource="{Binding Projects}"
@@ -33,6 +34,6 @@
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
-        </ScrollView>
-    </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

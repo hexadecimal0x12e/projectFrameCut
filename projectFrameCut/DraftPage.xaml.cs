@@ -47,6 +47,7 @@ using MobileCoreServices;
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
 using projectFrameCut.Render.AndroidOpenGL;
+using static Android.Icu.Text.CaseMap;
 
 #endif
 
@@ -231,6 +232,7 @@ public partial class DraftPage : ContentPage
 
         trackCount = initialTrackCount;
         ProjectName = isReadonly ? Localized.DraftPage_IsInMode_Readonly(title) : title;
+        ProjectInfo.projectName = title;
         ProjectNameMenuBarItem.Text = ProjectInfo.projectName ?? "Unknown project";
         IsReadonly = isReadonly;
 
@@ -269,6 +271,7 @@ public partial class DraftPage : ContentPage
         if (Inited) return;
         Inited = true;
         ProjectInfo.NormallyExited = false;
+        ProjectNameMenuBarItem.Text = ProjectInfo.projectName ?? "Unknown project";
 #if WINDOWS
         PreviewBox.IsVisible = false;
         if (!(_rpc is not null || UseLivePreviewInsteadOfBackend)) await BootRPC();
@@ -307,8 +310,8 @@ public partial class DraftPage : ContentPage
         {
             Context context = Context.CreateDefault();
             var devices = context.Devices.ToList();
-            var accel = projectFrameCut.Render.WindowsRender.ILGPUComputerHelper.PickOneAccel("auto", -1, devices);
-            projectFrameCut.Render.WindowsRender.ILGPUComputerHelper.RegisterComputerGetter([accel.CreateAccelerator(context)], false);
+            projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Select(d => d.CreateAccelerator(context)).ToArray();
+
         }
 
 #endif
@@ -452,6 +455,7 @@ public partial class DraftPage : ContentPage
         if (sourceElement is not null)
         {
             element.ClipType = sourceElement.ClipType;
+            element.FromPlugin = sourceElement.FromPlugin;
             element.SecondPerFrameRatio = sourceElement.SecondPerFrameRatio;
             element.sourcePath = sourceElement.sourcePath;
             element.maxFrameCount = sourceElement.maxFrameCount;
@@ -745,6 +749,7 @@ public partial class DraftPage : ContentPage
             );
 
             element.ClipType = ClipMode.TextClip;
+            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
             element.isInfiniteLength = true;
             element.maxFrameCount = 0;
             element.ExtraData["TextEntries"] = entries;
@@ -808,6 +813,7 @@ public partial class DraftPage : ContentPage
         );
 
         element.ClipType = ClipMode.SolidColorClip;
+        element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
         element.isInfiniteLength = true;
         element.maxFrameCount = 0;
         element.ExtraData["R"] = R;
@@ -843,6 +849,8 @@ public partial class DraftPage : ContentPage
         clip.Clip.Background = Colors.YellowGreen;
         SetStatusText(Localized.DraftPage_Selected(clip.displayName));
         //CustomContent2 = (VerticalStackLayout)BuildPropertyPanel(clip);
+        //OverlayLayer.InputTransparent = false;
+        //OverlayLayer.CascadeInputTransparent = false;
         ClipEditor.SetClip(clip, Assets.TryGetValue(clip.Id, out var asset) ? asset : null);
         SetTimelineScrollEnabled(false);
     }
@@ -855,6 +863,8 @@ public partial class DraftPage : ContentPage
         SetStatusText(Localized.DraftPage_EverythingFine);
         //CustomContent2 = new VerticalStackLayout();
         ClipEditor.SetClip(null, null);
+        //OverlayLayer.InputTransparent = true;
+        //OverlayLayer.CascadeInputTransparent = true;
         SetTimelineScrollEnabled(true);
     }
 
@@ -1426,9 +1436,9 @@ public partial class DraftPage : ContentPage
         SetStateBusy(Localized.DraftPage_PrepareAsset);
         try
         {
-            var srcHash = await HashServices.ComputeFileSHA512Async(path, null);
+            var srcHash = "";// await HashServices.ComputeFileSHA512Async(path, null);
             Log($"New asset {path}'s hash: {srcHash}");
-            if (Assets.Values.Any((v) => v.SourceHash == srcHash))
+            if (false && Assets.Values.Any((v) => v.SourceHash == srcHash)) //todo: use tasks to do this
             {
                 string opt = Localized.DraftPage_DuplicatedAsset_Skip;
 #if WINDOWS
@@ -1695,6 +1705,7 @@ public partial class DraftPage : ContentPage
 
                 elem.sourcePath = asset.Path;
                 elem.ClipType = asset.Type;
+                elem.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
                 elem.sourceSecondPerFrame = asset.SecondPerFrame;
                 elem.SecondPerFrameRatio = 1f;
                 elem.ExtraData = new();
@@ -2444,6 +2455,7 @@ public partial class DraftPage : ContentPage
 
         elem.sourcePath = _draggingAsset.Path;
         elem.ClipType = _draggingAsset.Type;
+        elem.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
         elem.sourceSecondPerFrame = _draggingAsset.SecondPerFrame;
         elem.SecondPerFrameRatio = 1f;
         elem.ExtraData = new();

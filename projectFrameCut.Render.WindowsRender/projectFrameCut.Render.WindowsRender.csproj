@@ -34,4 +34,10 @@
 		</Using>
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Compile Update="ILGPUPlugin.cs">
+	    <ExcludeFromCurrentConfiguration>false</ExcludeFromCurrentConfiguration>
+	  </Compile>
+	</ItemGroup>
+
 </Project>

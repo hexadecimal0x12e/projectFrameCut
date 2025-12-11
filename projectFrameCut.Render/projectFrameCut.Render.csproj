@@ -43,10 +43,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\projectFrameCut.Render.RenderAPIBase\projectFrameCut.Render.RenderAPIBase.csproj" />
     <ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
 	</ItemGroup>
 
   <ItemGroup>
+    <Using Include="projectFrameCut.Render.RenderAPIBase" />
     <Using Include="projectFrameCut.Shared.Logger">
       <Static>True</Static>
     </Using>

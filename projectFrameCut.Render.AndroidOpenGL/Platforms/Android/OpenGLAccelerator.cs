@@ -91,6 +91,8 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 
     public class OverlayComputer : IComputer
     {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+
         public float[][] Compute(float[][] args)
         {
             // args: [A, B, aAlpha, bAlpha]
@@ -149,6 +151,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 
     public class RemoveColorComputer : IComputer
     {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
 
         public float[][] Compute(float[][] args)
         {

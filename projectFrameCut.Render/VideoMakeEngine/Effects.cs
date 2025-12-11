@@ -3,6 +3,7 @@ using projectFrameCut.Shared;
 using SixLabors.ImageSharp.Drawing;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -15,6 +16,7 @@ namespace projectFrameCut.VideoMakeEngine
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
+
 
         public ushort R { get; init; }
         public ushort G { get; init; }
@@ -33,7 +35,9 @@ namespace projectFrameCut.VideoMakeEngine
 
         List<string> IEffect.ParametersNeeded => ParametersNeeded;
         Dictionary<string, string> IEffect.ParametersType => ParametersType;
-        bool IEffect.NeedAComputer => true;
+        public string? FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string NeedComputer => "RemoveColorComputer";
+
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -189,7 +193,8 @@ namespace projectFrameCut.VideoMakeEngine
 
         List<string> IEffect.ParametersNeeded => ParametersNeeded;
         Dictionary<string, string> IEffect.ParametersType => ParametersType;
-        bool IEffect.NeedAComputer => false;
+        public string? NeedComputer => null;
+        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -244,6 +249,7 @@ namespace projectFrameCut.VideoMakeEngine
                 {
                     for (int x = 0; x < source.Width; x++)
                     {
+                        if (x + StartX >= result.Width || y + StartY >= result.Height) continue; 
                         if (source.TryFromXYToArrayIndex(x, y, out sourceIndex))
                         {
                             if (result.TryFromXYToArrayIndex(x + StartX, y + StartY, out targetIndex))
@@ -256,6 +262,7 @@ namespace projectFrameCut.VideoMakeEngine
                             else //use blank to replace content not in range
                             {
                                 targetIndex = y * targetWidth + x;
+                                if (targetIndex >= result.Pixels) continue;
                                 result.r[targetIndex] = 0;
                                 result.g[targetIndex] = 0;
                                 result.b[targetIndex] = 0;
@@ -284,6 +291,7 @@ namespace projectFrameCut.VideoMakeEngine
                 {
                     for (int x = 0; x < source.Width; x++)
                     {
+                        if (x + StartX >= result.Width || y + StartY >= result.Height) continue;
                         if (source.TryFromXYToArrayIndex(x, y, out sourceIndex))
                         {
                             if (result.TryFromXYToArrayIndex(x + StartX, y + StartY, out targetIndex))
@@ -296,6 +304,7 @@ namespace projectFrameCut.VideoMakeEngine
                             else //use blank to replace content not in range
                             {
                                 targetIndex = y * targetWidth + x;
+                                if (targetIndex >= result.Pixels) continue;
                                 result.r[targetIndex] = 0;
                                 result.g[targetIndex] = 0;
                                 result.b[targetIndex] = 0;
@@ -336,7 +345,8 @@ namespace projectFrameCut.VideoMakeEngine
 
         List<string> IEffect.ParametersNeeded => ParametersNeeded;
         Dictionary<string, string> IEffect.ParametersType => ParametersType;
-        bool IEffect.NeedAComputer => false;
+        public string? NeedComputer => null;
+        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -380,6 +390,7 @@ namespace projectFrameCut.VideoMakeEngine
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
+        [DebuggerStepThrough()]
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
             if (source is IPicture<ushort> p16)
@@ -470,7 +481,8 @@ namespace projectFrameCut.VideoMakeEngine
 
         List<string> IEffect.ParametersNeeded => ParametersNeeded;
         Dictionary<string, string> IEffect.ParametersType => ParametersType;
-        bool IEffect.NeedAComputer => false;
+        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string? NeedComputer => null;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {

@@ -27,6 +27,9 @@ public partial class HomePage : ContentPage
 
     private string _lastSelectedItemName = string.Empty;
 
+    private static bool HasAlreadyLaunchedFromFile = false;
+   
+
     public HomePage()
     {
         InitializeComponent();
@@ -35,7 +38,8 @@ public partial class HomePage : ContentPage
         BindingContext = _viewModel;
         Loaded += async (s, e) =>
         {
-
+            if (HasAlreadyLaunchedFromFile) return;
+            HasAlreadyLaunchedFromFile = true;
             if (Environment.GetCommandLineArgs().Length > 0)
             {
                 var args = Environment.GetCommandLineArgs().Skip(1).ToArray();
@@ -52,7 +56,7 @@ public partial class HomePage : ContentPage
                                     RpcClient c = new();
                                     if(Process.GetProcessesByName("projectFrameCut.Render.WindowsRender").Any())
                                     {
-                                        await c.StartAsync("pjfc_rpc_V1_debug123", default);
+                                        await c.StartAsync("pjfc_rpc_debug123", default);
                                         await GoDraft(draft, "Project", false, false, c, true);
                                     }
                                     
@@ -427,7 +431,7 @@ public partial class HomePage : ContentPage
             AppShell.instance.ShowNavView();
         }
 #endif
-        await ShowUnsupportedLanguageAlertAsync();
+        await ShowManyAlertsAsync();
 
         await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
         if (_viewModel.LoadFailed)
@@ -437,7 +441,7 @@ public partial class HomePage : ContentPage
         }
     }
 
-    private async Task ShowUnsupportedLanguageAlertAsync()
+    private async Task ShowManyAlertsAsync()
     {
         if (!SimpleLocalizer.IsFallbackMatched)
             return;
@@ -459,6 +463,11 @@ public partial class HomePage : ContentPage
         {
             await DisplayAlertAsync(Localized._Info,Localized.HomePage_AIGeneratdTranslationPrompt, Localized._OK);
             SettingsManager.WriteSetting("AIGeneratedTranslatePromptReaded", "true");
+        }
+
+        if (Environment.IsPrivilegedProcess)
+        {
+            await DisplayAlertAsync(Localized._Warn, Localized.HomePage_AdminWarn(), Localized._OK);
         }
     }
 
@@ -710,6 +719,10 @@ public partial class HomePage : ContentPage
                 await DeleteProject(vmItem);
                 break;
             default: //unknown/cancel
+                if (!string.IsNullOrWhiteSpace(action))
+                {
+                    Log($"Action {action} doesn't matched on any case.", "warn");
+                }
                 break;
         }
     }

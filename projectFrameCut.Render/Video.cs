@@ -30,11 +30,11 @@ namespace projectFrameCut.Render
                 });
         }
 
-        private static readonly ConcurrentDictionary<string, IDecoderContext> decoders = new();
+        private static readonly ConcurrentDictionary<string, IVideoSource> decoders = new();
 
         public IPicture ExtractFrame(uint targetFrame) => decoders.TryGetValue(filePath, out var value) ? value.GetFrame(targetFrame) : throw new NullReferenceException($"Video file '{filePath}''s decoder context is not exist.");
 
-        public IDecoderContext Decoder => decoders.TryGetValue(filePath, out var value) ? value : throw new NullReferenceException($"Video file '{filePath}''s decoder context is not exist.");
+        public IVideoSource Decoder => decoders.TryGetValue(filePath, out var value) ? value : throw new NullReferenceException($"Video file '{filePath}''s decoder context is not exist.");
 
 
         public static void ReleaseDecoder(string videoPath)
@@ -53,18 +53,6 @@ namespace projectFrameCut.Render
         }
 
 
-    }
-
-    public interface IDecoderContext : IDisposable
-    {
-        abstract void Initialize();
-        abstract IPicture GetFrame(uint targetFrame, bool hasAlpha = false);
-        public uint Index { get; set; }
-        public bool Disposed { get; }
-        public long TotalFrames { get; }   // -1 = 未知
-        public double Fps { get; }
-        public int Width { get; }
-        public int Height { get; }
     }
 
     public static unsafe class FFmpegHelper

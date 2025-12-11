@@ -1,6 +1,8 @@
 ﻿using ILGPU;
 using ILGPU.Runtime;
 using ILGPU.Runtime.OpenCL;
+using projectFrameCut.Render.Plugins;
+using projectFrameCut.Render.RenderAPIBase;
 using projectFrameCut.Shared;
 using projectFrameCut.VideoMakeEngine;
 using SixLabors.ImageSharp.Formats.Jpeg;
@@ -173,290 +175,266 @@ namespace projectFrameCut.Render.WindowsRender
             var disconnect = false;
             while (!cts.IsCancellationRequested && server.IsConnected && !disconnect)
             {
+#if !DEBUG
                 try
                 {
-                    if (diagMode) Log("[RPC] Waiting for message...");
-                    var line = reader.ReadLine();
-                    if (line is null) break;
+#endif
+                if (diagMode) Log("[RPC] Waiting for message...");
+                var line = reader.ReadLine();
+                if (line is null) break;
 
-                    if (diagMode) Log($"[RPC] Received: {line} \r\n--- \r\n");
+                if (diagMode) Log($"[RPC] Received: {line} \r\n--- \r\n");
 
-                    RpcProtocol.RpcMessage? msg = null;
-                    try
-                    {
-                        msg = JsonSerializer.Deserialize<RpcProtocol.RpcMessage>(line, RpcProtocol.JsonOptions);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log($"[RPC] Bad JSON: {ex.Message}");
-                        continue;
-                    }
+                RpcProtocol.RpcMessage? msg = null;
+                try
+                {
+                    msg = JsonSerializer.Deserialize<RpcProtocol.RpcMessage>(line, RpcProtocol.JsonOptions);
+                }
+                catch (Exception ex)
+                {
+                    Log($"[RPC] Bad JSON: {ex.Message}");
+                    continue;
+                }
 
-                    if (msg is null || string.IsNullOrWhiteSpace(msg.Type))
-                        continue;
+                if (msg is null || string.IsNullOrWhiteSpace(msg.Type))
+                    continue;
 
-                    switch (msg.Type)
-                    {
-                        case "ping":
-                            {
-                                Send(msg, new Dictionary<string, object?> { { "value", DateTime.Now } });
-                                break;
-                            }
-                        case "RenderOne":
-                            {
+                switch (msg.Type)
+                {
+                    case "ping":
+                        {
+                            Send(msg, new Dictionary<string, object?> { { "value", DateTime.Now } });
+                            break;
+                        }
+                    case "RenderOne":
+                        {
+#if !DEBUG
+
                                 try
                                 {
-                                    if (msg.Payload is null)
-                                    {
-                                        Console.Error.WriteLine("[RPC] RenderOne missing payload.");
-                                        break;
-                                    }
-                                    var frameIndex = msg.Payload.Value.GetUInt32();
-                                    Log($"[RPC] RenderOne request: frame #{frameIndex}");
-                                    var frameHash = Timeline.GetFrameHash(clips, frameIndex);
-                                    var destPath = Path.Combine(tempFolder, $"projectFrameCut_Render_{frameHash}.png");
-                                    Log($"[RPC] FrameHash:{frameHash}");
-                                    if (Path.Exists(destPath))
-                                    {
-                                        LogDiagnostic($"[RPC] Frame already exist; skip");
-                                        Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "path", destPath } });
-                                        Log($"[RPC] RenderOne completed");
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        Log($"[RPC] Generating frame #{frameIndex} ({frameHash})...");
-                                    }
-                                    var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height, true);
-                                    LogDiagnostic($"Clips in frame #{frameIndex}:\r\n{GetFrameInfo(layers)}\r\n---");
-                                    var pic = Timeline.MixtureLayers(layers, frameIndex, width, height);
-                                    pic.SaveAsPng8bpp(destPath, encoder);
-                                    //Thread.Sleep(500);
-                                    Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "frameHash", frameHash }, { "path", destPath } });
-                                    Log($"[RPC] RenderOne completed");
-                                }
+#endif
+                            if (msg.Payload is null)
+                            {
+                                Console.Error.WriteLine("[RPC] RenderOne missing payload.");
+                                break;
+                            }
+                            var frameIndex = msg.Payload.Value.GetUInt32();
+                            Log($"[RPC] RenderOne request: frame #{frameIndex}");
+                            var frameHash = Timeline.GetFrameHash(clips, frameIndex);
+                            var destPath = Path.Combine(tempFolder, $"projectFrameCut_Render_{frameHash}.png");
+                            Log($"[RPC] FrameHash:{frameHash}");
+                            if (Path.Exists(destPath) && !Debugger.IsAttached)
+                            {
+                                LogDiagnostic($"[RPC] Frame already exist; skip");
+                                Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "path", destPath } });
+                                Log($"[RPC] RenderOne completed");
+                                break;
+                            }
+                            else
+                            {
+                                Log($"[RPC] Generating frame #{frameIndex} ({frameHash})...");
+                            }
+                            var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height, true);
+                            LogDiagnostic($"Clips in frame #{frameIndex}:\r\n{GetFrameInfo(layers)}\r\n---");
+                            var pic = Timeline.MixtureLayers(layers, frameIndex, width, height);
+                            pic.SaveAsPng8bpp(destPath, encoder);
+                            //Thread.Sleep(500);
+                            Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "frameHash", frameHash }, { "path", destPath } });
+                            Log($"[RPC] RenderOne completed");
+#if !DEBUG
+
+                        }
                                 catch (Exception ex)
                                 {
+                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "path", Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png") }, { "error", $"ERROR: a {ex.GetType()} exception happends:{ex.Message}" } });
+
+                                    throw;
+
                                     Log(ex);
                                     Console.Error.WriteLine($"ERROR: a {ex.GetType()} exception happends:{ex.Message}");
 
-                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "path", Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png") }, { "error", $"ERROR: a {ex.GetType()} exception happends:{ex.Message}" } });
-
                                 }
+#endif
+                            break;
+                        }
 
+                    case "UpdateClips":
+                        {
+                            if (msg.Payload is null)
+                            {
+                                Log("[RPC] UpdateClips missing payload.");
                                 break;
                             }
+                            Log("[RPC] Updating clips...");
+                            var draftSrc = msg.Payload.Value.Deserialize<DraftStructureJSON>(RpcProtocol.JsonOptions) ?? throw new Exception("An error happends.");
 
-                        case "UpdateClips":
+                            List<JsonElement> clipsJson = draftSrc.Clips.Select(c => (JsonElement)c).ToList();
+
+                            var clipsList = new List<IClip>();
+
+                            foreach (var clip in clipsJson)
+                            {
+                                clipsList.Add(PluginManager.CreateClip(clip));
+                            }
+
+                            clips = clipsList.ToArray();
+
+                            foreach (var clip in clips)
+                            {
+                                clip.ReInit();
+                            }
+
+                            Log($"[RPC] Updated clips, total {clips.Length} clips.");
+                            Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
+                            break;
+                        }
+                    case "GetAFrameData":
+                        {
+                            try
                             {
                                 if (msg.Payload is null)
                                 {
-                                    Log("[RPC] UpdateClips missing payload.");
+                                    Console.Error.WriteLine("[RPC] RenderOne missing payload.");
                                     break;
                                 }
-                                Log("[RPC] Updating clips...");
-                                var draftSrc = msg.Payload.Value.Deserialize<DraftStructureJSON>(RpcProtocol.JsonOptions) ?? throw new Exception("An error happends.");
+                                var frameIndex = msg.Payload.Value.GetUInt32();
+                                Log($"[RPC] RenderOne request: frame #{frameIndex}");
+                                var frameHash = Timeline.GetFrameHash(clips, frameIndex);
+                                var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height, true);
+                                Log($"Clips in frame #{frameIndex}:\r\n{JsonSerializer.Serialize(layers)}\r\n---");
 
-                                List<JsonElement> clipsJson = draftSrc.Clips.Select(c => (JsonElement)c).ToList();
-
-                                var clipsList = new List<IClip>();
-
-                                foreach (var clip in clipsJson)
-                                {
-                                    clipsList.Add(IClip.FromJSON(clip));
-                                }
-
-                                clips = clipsList.ToArray();
-
-                                foreach (var clip in clips)
-                                {
-                                    clip.ReInit();
-                                }
-
-                                Log($"[RPC] Updated clips, total {clips.Length} clips.");
-                                Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
-                                break;
-                            }
-                        case "GetAFrameData":
-                            {
-                                try
-                                {
-                                    if (msg.Payload is null)
-                                    {
-                                        Console.Error.WriteLine("[RPC] RenderOne missing payload.");
-                                        break;
-                                    }
-                                    var frameIndex = msg.Payload.Value.GetUInt32();
-                                    Log($"[RPC] RenderOne request: frame #{frameIndex}");
-                                    var frameHash = Timeline.GetFrameHash(clips, frameIndex);
-                                    var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height, true);
-                                    Log($"Clips in frame #{frameIndex}:\r\n{JsonSerializer.Serialize(layers)}\r\n---");
-
-                                    Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "json", JsonSerializer.Serialize(layers, new JsonSerializerOptions
+                                Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "json", JsonSerializer.Serialize(layers, new JsonSerializerOptions
                                     {
                                         WriteIndented = true,
                                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                                         NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
 
                                     } ) } });
-                                    Log($"[RPC] RenderOne completed");
-                                }
-                                catch (Exception ex)
-                                {
-                                    Log(ex);
-                                    Console.Error.WriteLine($"ERROR: a {ex.GetType()} exception happends:{ex.Message}");
-
-                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "path", Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png") }, { "error", $"ERROR: a {ex.GetType()} exception happends:{ex.Message}" } });
-
-                                }
-
-                                break;
+                                Log($"[RPC] RenderOne completed");
                             }
-
-                        case "GetVideoFileInfo":
+                            catch (Exception ex)
                             {
-                                if (msg.Payload is null)
-                                {
-                                    Log("[RPC] GetVideoFileInfo missing payload.");
-                                    break;
-                                }
-                                var path = msg.Payload.Value.GetString();
-                                if (string.IsNullOrWhiteSpace(path) || !Path.Exists(path))
-                                {
-                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", "File not found." } });
-                                    break;
-                                }
-                                try
-                                {
-                                    var vid = new Video(path);
-                                    Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "frameCount", vid.Decoder.TotalFrames }, { "fps", vid.Decoder.Fps }, { "width", vid.Decoder.Width }, { "height", vid.Decoder.Height } });
-                                }
-                                catch (Exception ex)
-                                {
-                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", ex.Message } });
-                                }
-                                break;
-                            }
-                        case "ReadAFrame":
-                            {
-                                if (msg.Payload is null)
-                                {
-                                    Log("[RPC] GetVideoFileInfo missing payload.");
-                                    break;
-                                }
-                                var path = msg.Payload.Value.GetProperty("path").GetString();
-                                var FrameToRead = msg.Payload.Value.GetProperty("frameToRead").GetUInt32();
-                                if (string.IsNullOrWhiteSpace(path) || !Path.Exists(path))
-                                {
-                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", "File not found." } });
-                                    break;
-                                }
+                                Log(ex);
+                                Console.Error.WriteLine($"ERROR: a {ex.GetType()} exception happends:{ex.Message}");
 
-                                try
-                                {
-                                    var vid = new Video(path);
-                                    if (FrameToRead > vid.Decoder.TotalFrames)
-                                    {
-                                        Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", "Invaild length." } });
-                                        break;
-                                    }
-                                    var frame = vid.Decoder.GetFrame(FrameToRead, true);
-                                    var tmpPath = Path.Combine(tempFolder, $"extractedFrame-{Path.GetFileNameWithoutExtension(path)}-{FrameToRead}.png");
-                                    if (msg.Payload.Value.TryGetProperty("size", out var destSize))
-                                    {
-                                        string? sizeStr = "";
-                                        if ((sizeStr = destSize.GetString()) is not null)
-                                        {
-                                            int w = int.Parse(sizeStr.Split('x')[0]);
-                                            int h = int.Parse(sizeStr.Split('x')[1]);
+                                Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "path", Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png") }, { "error", $"ERROR: a {ex.GetType()} exception happends:{ex.Message}" } });
 
-                                            frame = frame.Resize(w, h);
-                                        }
-                                    }
-                                    frame.SaveAsPng16bpp(tmpPath, encoder);
-                                    Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "path", tmpPath } });
-                                }
-                                catch (Exception ex)
-                                {
-                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", ex.Message } });
-                                }
-                                break;
-                            }
-                        case "ConfigurePreview":
-                            {
-                                if (msg.Payload is null)
-                                {
-                                    Log("[RPC] ConfigurePreview missing payload.");
-                                    break;
-                                }
-                                var prevWidth = msg.Payload.Value.GetProperty("width").GetInt32();
-                                var prevHeight = msg.Payload.Value.GetProperty("height").GetInt32();
-                                width = prevWidth;
-                                height = prevHeight;
-                                Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
-                                break;
                             }
 
-
-                        case "ShutDown":
-                            {
-                                Log("[RPC] Shutting down...");
-                                disconnect = true;
-                                Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
-                                server.DisposeAsync();
-                                nanoHostProc?.Kill();
-                                RpcCts.Cancel();
-                                return;
-                            }
-
-                        default:
-                            Log($"[RPC] Unknown message type: {msg.Type}");
                             break;
-                    }
+                        }
+
+                    case "GetVideoFileInfo":
+                        {
+                            if (msg.Payload is null)
+                            {
+                                Log("[RPC] GetVideoFileInfo missing payload.");
+                                break;
+                            }
+                            var path = msg.Payload.Value.GetString();
+                            if (string.IsNullOrWhiteSpace(path) || !Path.Exists(path))
+                            {
+                                Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", "File not found." } });
+                                break;
+                            }
+                            try
+                            {
+                                var vid = new Video(path);
+                                Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "frameCount", vid.Decoder.TotalFrames }, { "fps", vid.Decoder.Fps }, { "width", vid.Decoder.Width }, { "height", vid.Decoder.Height } });
+                            }
+                            catch (Exception ex)
+                            {
+                                Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", ex.Message } });
+                            }
+                            break;
+                        }
+                    case "ReadAFrame":
+                        {
+                            if (msg.Payload is null)
+                            {
+                                Log("[RPC] GetVideoFileInfo missing payload.");
+                                break;
+                            }
+                            var path = msg.Payload.Value.GetProperty("path").GetString();
+                            var FrameToRead = msg.Payload.Value.GetProperty("frameToRead").GetUInt32();
+                            if (string.IsNullOrWhiteSpace(path) || !Path.Exists(path))
+                            {
+                                Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", "File not found." } });
+                                break;
+                            }
+
+                            try
+                            {
+                                var vid = new Video(path);
+                                if (FrameToRead > vid.Decoder.TotalFrames)
+                                {
+                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", "Invaild length." } });
+                                    break;
+                                }
+                                var frame = vid.Decoder.GetFrame(FrameToRead, true);
+                                var tmpPath = Path.Combine(tempFolder, $"extractedFrame-{Path.GetFileNameWithoutExtension(path)}-{FrameToRead}.png");
+                                if (msg.Payload.Value.TryGetProperty("size", out var destSize))
+                                {
+                                    string? sizeStr = "";
+                                    if ((sizeStr = destSize.GetString()) is not null)
+                                    {
+                                        int w = int.Parse(sizeStr.Split('x')[0]);
+                                        int h = int.Parse(sizeStr.Split('x')[1]);
+
+                                        frame = frame.Resize(w, h);
+                                    }
+                                }
+                                frame.SaveAsPng16bpp(tmpPath, encoder);
+                                Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "path", tmpPath } });
+                            }
+                            catch (Exception ex)
+                            {
+                                Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", ex.Message } });
+                            }
+                            break;
+                        }
+                    case "ConfigurePreview":
+                        {
+                            if (msg.Payload is null)
+                            {
+                                Log("[RPC] ConfigurePreview missing payload.");
+                                break;
+                            }
+                            var prevWidth = msg.Payload.Value.GetProperty("width").GetInt32();
+                            var prevHeight = msg.Payload.Value.GetProperty("height").GetInt32();
+                            width = prevWidth;
+                            height = prevHeight;
+                            Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
+                            break;
+                        }
+
+
+                    case "ShutDown":
+                        {
+                            Log("[RPC] Shutting down...");
+                            disconnect = true;
+                            Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
+                            server.DisposeAsync();
+                            nanoHostProc?.Kill();
+                            RpcCts.Cancel();
+                            return;
+                        }
+
+                    default:
+                        Log($"[RPC] Unknown message type: {msg.Type}");
+                        break;
+                }
+#if !DEBUG
+
                 }
                 catch (Exception ex)
                 {
                     Console.Error.WriteLine($"ERROR: a {ex.GetType()} exception happends:{ex.Message}");
-                    string innerExceptionInfo = "None";
-                    if (ex.InnerException != null)
-                    {
-                        innerExceptionInfo =
-$"""
-Type: {ex.InnerException.GetType().Name}                        
-Message: {ex.InnerException.Message}
-StackTrace:
-{ex.InnerException.StackTrace}
-
-""";
-                        Log(
-$"""
-Error in RPC server:
-
-Exception type: {ex.GetType().Name}
-Message: {ex.Message}
-
-StackTrace:
-{ex.StackTrace}
-
-From:{(ex.TargetSite is not null ? ex.TargetSite.ToString() : "unknown")}
-InnerException:
-{innerExceptionInfo}
-
-Exception data:
-{string.Join("\r\n", ex.Data.Cast<System.Collections.DictionaryEntry>().Select(k => $"{k.Key} : {k.Value}"))}
-
-Environment:
-OS version: {Environment.OSVersion}
-CLR Version:{Environment.Version}
-Command line: {Environment.CommandLine}
-Current directory: {Environment.CurrentDirectory}
-"""
-);
-                    }
+                    Log(ex, $"Processing RPC Message", "RPC Client");
                 }
+                continue;
 
-
-
+#endif
 
             }
 
@@ -468,6 +446,7 @@ Current directory: {Environment.CurrentDirectory}
 
         private static string GetFrameInfo(IEnumerable<OneFrame> layers)
         {
+            if (!layers.Any()) return "Null frame";
             string result =
                 $"""
                 Frame {layers.First().FrameNumber}:
