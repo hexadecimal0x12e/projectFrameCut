@@ -148,6 +148,22 @@ Current directory: {Environment.CurrentDirectory}
         {
             try
             {
+                try
+                {
+                    if (args.Any(c => c.StartsWith("--overrideCulture")))
+                    {
+                        var overrideCulture = args.First(c => c.StartsWith("--overrideCulture")).Split('=')[1];
+                        var culture = new System.Globalization.CultureInfo(overrideCulture);
+                        System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;
+                        System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;
+                        System.Threading.Thread.CurrentThread.CurrentCulture = culture;
+                        System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+                    }
+                }
+                catch
+                {
+
+                }
                 WinRT.ComWrappersSupport.InitializeComWrappers();
                 Microsoft.UI.Xaml.Application.Start((p) =>
                 {
@@ -165,7 +181,7 @@ Current directory: {Environment.CurrentDirectory}
                 static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
 
                 _ = MessageBox(IntPtr.Zero,
-                    $"Oh no! projectFrameCut have to stop now because a unrecoverable {ex.GetType().Name} exception happends.\r\nFor more information, please see the crash report popped up later.\r\n\r\n({ex})",
+                    $"Oh no! projectFrameCut have to stop now because a unrecoverable {ex.GetType().Name} exception happens.\r\nFor more information, please see the crash report popped up later.\r\n\r\n({ex})",
                     "Fatal error",
                     0);
                 App.Crash(ex);

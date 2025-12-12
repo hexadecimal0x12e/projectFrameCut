@@ -31,6 +31,8 @@ using CommunityToolkit.Maui;
 using projectFrameCut.Render.Plugins;
 using projectFrameCut.Render;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Services;
+using Thread = System.Threading.Thread;
 
 namespace projectFrameCut
 {
@@ -142,7 +144,8 @@ namespace projectFrameCut
                             {
                                 json = File.ReadAllText(Path.Combine(BasicDataPath, "settings_b.json"));
                                 SettingsManager.Settings = new(JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? []);
-                            }catch(Exception ex4)
+                            }
+                            catch (Exception ex4)
                             {
                                 throw new AggregateException($"Failed to load settings from all slots.\r\n\r\n{ex2.GetType().Name} ({ex2.Message})", [ex2, ex3, ex4]);
                             }
@@ -318,7 +321,7 @@ namespace projectFrameCut
 #else
                     CultureInfo culture = projectFrameCut.Platforms.Android.DeviceLocaleHelper.GetDeviceCultureInfo();
 #endif
-                    
+
                     Log($"OS default current culture: {culture.Name}, locate defined in settings:{locate} ");
                     if (locate == "default")
                     {
@@ -365,18 +368,18 @@ namespace projectFrameCut
                                     {
                                         culture = CultureInfo.CreateSpecificCulture(locate);
                                     }
-                                    break;  
+                                    break;
                                 }
 
                         }
-                        
+
                     }
                     catch (Exception ex)
                     {
                         Log(ex, "init culture");
                     }
 
-                    Localized = SimpleLocalizer.Init(locate);    
+                    Localized = SimpleLocalizer.Init(locate);
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
 
                     try
@@ -392,19 +395,20 @@ namespace projectFrameCut
                         });
                     }
 
-                    if (!SettingsManager.IsSettingExists("OverrideCulture") || SettingsManager.GetSetting("OverrideCulture", "default") == "default") //resolve IME not work when locate isn't them
-                    {
-                        System.Threading.Thread.CurrentThread.CurrentCulture = culture;
-                        System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
-                    }
-                    else
+                    if (SettingsManager.IsSettingExists("OverrideCulture") && SettingsManager.GetSetting("OverrideCulture", "default") != "default") //resolve IME not work when locate isn't them
                     {
                         culture = CultureInfo.CreateSpecificCulture(SettingsManager.GetSetting("OverrideCulture"));
-                        System.Threading.Thread.CurrentThread.CurrentCulture = culture;
-                        System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
                     }
+                    if(locate != "default")
+                    {
+                        Thread.CurrentThread.CurrentCulture = culture;
+                        Thread.CurrentThread.CurrentUICulture = culture;
+                        CultureInfo.DefaultThreadCurrentCulture = culture;
+                        CultureInfo.DefaultThreadCurrentUICulture = culture;
+                    }
+                    
 
-                    Log($"Culture:{System.Threading.Thread.CurrentThread.CurrentCulture}, locate:{Localized._LocaleId_}, {Localized.WelcomeMessage}");
+                    Log($"Culture:{Thread.CurrentThread.CurrentCulture}, locate:{Localized._LocaleId_}, {Localized.WelcomeMessage}");
                 }
                 catch (Exception ex)
                 {
@@ -429,9 +433,13 @@ namespace projectFrameCut
 #elif iDevices
 
 #endif
-                    if (!Environment.IsPrivilegedProcess)
+                    if (Environment.GetCommandLineArgs().Contains("--forceLoadPlugins") || (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins")))
                     {
-                        //todo:load plugins from external assemblies
+                        plugins.AddRange(PluginService.LoadUserPlugins().GetAwaiter().GetResult());
+                    }
+                    else
+                    {
+                        Log("Running as administrator, skip load user plugins for security reason.","warn");
                     }
 
                     PluginManager.Init(plugins);

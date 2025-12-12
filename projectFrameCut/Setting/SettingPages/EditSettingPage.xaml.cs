@@ -34,6 +34,9 @@ public partial class EditSettingPage : ContentPage
                                                  new KeyValuePair<string, string>("right", "right")).Key
             )
             .AddEntry("Edit_MaximumSaveSlot", SettingLocalizedResources.Edit_MaxiumSaveSlot, GetSetting("Edit_MaximumSaveSlot", "10"), "10")
+#if WINDOWS
+            .AddSwitch("Edit_AlwaysShowToolbarButtons", SettingLocalizedResources.Edit_AlwaysShowToolbarButtons, bool.TryParse(GetSetting("Edit_AlwaysShowToolbarButtons","false"), out var result) ? result : false, null)
+#endif
             ;
 
         rootPPB.ListenToChanges(SettingInvoker);

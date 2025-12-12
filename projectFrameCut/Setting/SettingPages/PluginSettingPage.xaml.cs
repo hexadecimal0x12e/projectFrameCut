@@ -1,6 +1,7 @@
 using projectFrameCut.PropertyPanel;
 using projectFrameCut.Render.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Services;
 using System.Globalization;
 using System.Reflection;
 using System.Text;
@@ -57,7 +58,7 @@ public partial class PluginSettingPage : ContentPage
                 {
                     FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
                     {
-                        { DevicePlatform.WinUI, new[] { ".dll" } },
+                        { DevicePlatform.WinUI, new[] { ".dll", ".pjfcPlugin" } },
                         { DevicePlatform.Android, new[] { "application/octet-stream", "application/x-msdownload", "application/x-dosexec" } },
 #if iDevices
                         {DevicePlatform.iOS, new[] {""} },
@@ -69,28 +70,37 @@ public partial class PluginSettingPage : ContentPage
                 if (result != null)
                 {
                     string dllPath = result.FullPath;
-                    var asb = Assembly.LoadFrom(dllPath);
-                    var module = asb.GetModule(asb.GetName().Name + ".dll");
-                    var types = module.GetTypes();
-                    var ldr = types.First(a => a.Name == "PluginLoader");
-                    if(ldr is null)
+                    if (dllPath.EndsWith(".dll"))
                     {
-                        await DisplayAlertAsync(Localized._Warn, "unable to find loader", Localized._OK);
-                        return;
-                    }
-                    var ldrMethod = ldr.GetMethod("Load");
-                    var pluginObj = ldrMethod?.Invoke(null, [Localized._LocaleId_]);
-                    if(pluginObj is IPluginBase pluginInstance)
-                    {
-                        var conf = await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_AddWarn(pluginInstance.Name), Localized._OK, Localized._Cancel);
-                        if (conf)
+                        var asb = Assembly.LoadFrom(dllPath);
+                        var module = asb.GetModule(asb.GetName().Name + ".dll");
+                        var types = module.GetTypes();
+                        var ldr = types.First(a => a.Name == "PluginLoader");
+                        if (ldr is null)
                         {
-                            //todo: save plugin private key
-                            //await SecureStorage.Default.SetAsync("oauth_token", "secret-oauth-token-value");
-                            PluginManager.LoadFrom(pluginInstance);
-                            BuildPPB();
+                            await DisplayAlertAsync(Localized._Warn, "unable to find loader", Localized._OK);
+                            return;
+                        }
+                        var ldrMethod = ldr.GetMethod("Load");
+                        var pluginObj = ldrMethod?.Invoke(null, [Localized._LocaleId_]);
+                        if (pluginObj is IPluginBase pluginInstance)
+                        {
+                            var conf = await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_AddWarn(pluginInstance.Name), Localized._OK, Localized._Cancel);
+                            if (conf)
+                            {
+                                //todo: save plugin private key
+                                //await SecureStorage.Default.SetAsync("oauth_token", "secret-oauth-token-value");
+                                PluginManager.LoadFrom(pluginInstance);
+                                BuildPPB();
+                            }
                         }
                     }
+                    else
+                    {
+                        await PluginService.AddAPlugin(dllPath, this);
+                    }
+
+                        
                 }
                 return;
             }

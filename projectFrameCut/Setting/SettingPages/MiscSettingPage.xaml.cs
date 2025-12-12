@@ -33,10 +33,22 @@ public partial class MiscSettingPage : ContentPage
 #endif
             .AddSeparator()
             .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Misc_Reset, 20, default))
+            .AddButton("reset_ClearPluginSign", SettingLocalizedResources.Misc_ForgetPluginSign,
+            (b) =>
+            {
+                b.BackgroundColor = Color.FromRgba("FF9999FF");
+                b.TextColor = Colors.Black;
+            })
+            .AddButton("reset_SaveStors", SettingLocalizedResources.Misc_ClearSafeStor,
+            (b) =>
+            {
+                b.BackgroundColor = Color.FromRgba("FF9999FF");
+                b.TextColor = Colors.Black;
+            })
             .AddButton("reset_Settings", SettingLocalizedResources.Misc_ResetSettings,
             (b) =>
             {
-                b.BackgroundColor = Color.FromRgba("CC0000FF");
+                b.BackgroundColor = Color.FromRgba("FF9999FF");
                 b.TextColor = Colors.Black;
             })
             .ListenToChanges(SettingInvoker);
@@ -50,25 +62,80 @@ public partial class MiscSettingPage : ContentPage
         {
             switch (args.Id)
             {
-                case var t when t.StartsWith("reset_"):
+                case "reset_ClearPluginSign":
                     {
-                        var tag = t switch
-                        {
-                            "reset_Settings" => SettingLocalizedResources.Misc_ResetSettings,
-                            _ => "Unknown"
-                        };
-                        var conf = await MainSettingsPage.instance.DisplayAlertAsync(Localized._Warn,
-                                    SettingLocalizedResources.CommonStr_Sure(tag),
-                                    Localized._Confirm,
-                                    Localized._Cancel);
-                        if (conf)
-                        {
-                            needReboot = true;
-                        }
-                        else
-                        {
-                            goto done;
-                        }
+                        await DisplayPromptAsync(Localized._Info,
+                            SettingLocalizedResources.Misc_ForgetPluginSign_Hint,
+                            Localized._Confirm,
+                            Localized._Cancel,
+                            "projectFrameCut.ExamplePlugin",
+                            -1,
+                            Keyboard.Default,
+                            "").ContinueWith(async (t) =>
+                            {
+                                if (string.IsNullOrWhiteSpace(t.Result))
+                                    return;
+                                try
+                                {
+                                    SecureStorage.Remove($"plugin_pem_{t.Result}");
+                                    await MainSettingsPage.instance.DisplayAlertAsync(Localized._Info,
+                                        SettingLocalizedResources.Misc_ForgetPluginSign_Success(t.Result),
+                                        Localized._OK);
+                                    needReboot = true;
+                                }
+                                catch (Exception ex)
+                                {
+                                    await MainSettingsPage.instance.DisplayAlertAsync(Localized._Error,
+                                        Localized._ExceptionTemplate(ex),
+                                        Localized._OK);
+                                }
+                            });
+                        break;
+                    }
+
+                case "reset_SaveStors":
+                    {
+                        await DisplayPromptAsync(Localized._Info,
+                            SettingLocalizedResources.Misc_ClearSafeStor_Warn,
+                            Localized._Confirm,
+                            Localized._Cancel,
+                            "yes",
+                            -1,
+                            Keyboard.Default,
+                            "").ContinueWith(async (t) =>
+                            {
+                                if (string.IsNullOrWhiteSpace(t.Result))
+                                    return;
+                                if (t.Result.Trim() == "yes")
+                                {
+                                    SecureStorage.RemoveAll();
+                                    needReboot = true;
+                                    
+                                }
+                            });
+                        break;
+                    }
+                case "reset_Settings":
+                    {
+                        await DisplayPromptAsync(Localized._Info,
+                            SettingLocalizedResources.Misc_ResetSettings_Warn,
+                            Localized._Confirm,
+                            Localized._Cancel,
+                            "yes",
+                            -1,
+                            Keyboard.Default,
+                            "").ContinueWith(async (t) =>
+                            {
+                                if (string.IsNullOrWhiteSpace(t.Result))
+                                    return;
+                                if (t.Result.Trim() == "yes")
+                                {
+                                    SecureStorage.RemoveAll();
+                                    WriteSetting("reset_Settings",  "true");
+
+                                    needReboot = true;
+                                }
+                            });
                         break;
                     }
                 case "makeDiagReport":

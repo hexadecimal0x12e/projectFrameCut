@@ -96,5 +96,33 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         }
     }
 
-    
+
+    public class PluginMetadata
+    {
+
+        /// <summary>
+        /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
+        /// </summary>
+        public string PluginID { get; set; }
+        /// <summary>
+        /// The supported API version of the plugin.
+        /// </summary>
+        public int PluginAPIVersion { get; set; }
+        /// <summary>
+        /// The plugin's name.
+        /// </summary>
+        public string Name { get; set; }
+        public string Author { get; set; }
+        public string Description { get; set; }
+        public Version Version { get; set; }
+        public string AuthorUrl { get; set; }
+        /// <summary>
+        /// The publish page of the plugin. Used for update checking.
+        /// </summary>
+        public string? PublishingUrl { get; set; }
+
+        public string PluginKey { get; set; }
+        public string PluginHash { get; set; }
+    }
+
 }

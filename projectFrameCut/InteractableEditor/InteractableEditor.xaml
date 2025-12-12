@@ -3,43 +3,32 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="InteractableEditor.InteractableEditor"
              BackgroundColor="Transparent"
-             InputTransparent="True">
-    <AbsoluteLayout x:Name="EditorCanvas" BackgroundColor="Transparent" InputTransparent="True">
-        <!-- The clip visual representation -->
+             InputTransparent="False">
+    <AbsoluteLayout x:Name="EditorCanvas" BackgroundColor="Transparent" InputTransparent="False">
         <Border x:Name="ClipVisual"
                 Stroke="Yellow"
                 StrokeThickness="2"
                 BackgroundColor="#33FFFF00"
                 InputTransparent="False"
                 AbsoluteLayout.LayoutFlags="None">
-            <Border.GestureRecognizers>
-                <PanGestureRecognizer PanUpdated="OnClipPanUpdated" />
-            </Border.GestureRecognizers>
+
         </Border>
 
         <!-- Resize Handles -->
         <BoxView x:Name="HandleTL" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" AbsoluteLayout.LayoutFlags="None">
-            <BoxView.GestureRecognizers>
-                <PanGestureRecognizer PanUpdated="OnResizePanUpdated" />
-            </BoxView.GestureRecognizers>
+
         </BoxView>
 
         <BoxView x:Name="HandleTR" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" AbsoluteLayout.LayoutFlags="None">
-            <BoxView.GestureRecognizers>
-                <PanGestureRecognizer PanUpdated="OnResizePanUpdated" />
-            </BoxView.GestureRecognizers>
+
         </BoxView>
 
         <BoxView x:Name="HandleBL" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" AbsoluteLayout.LayoutFlags="None">
-            <BoxView.GestureRecognizers>
-                <PanGestureRecognizer PanUpdated="OnResizePanUpdated" />
-            </BoxView.GestureRecognizers>
+
         </BoxView>
 
         <BoxView x:Name="HandleBR" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" AbsoluteLayout.LayoutFlags="None">
-             <BoxView.GestureRecognizers>
-                <PanGestureRecognizer PanUpdated="OnResizePanUpdated" />
-            </BoxView.GestureRecognizers>
+
         </BoxView>
         
         <Label x:Name="MeasurementLabel" IsVisible="True" Opacity="0" InputTransparent="True" LineBreakMode="NoWrap" HorizontalOptions="Start" VerticalOptions="Start"/>

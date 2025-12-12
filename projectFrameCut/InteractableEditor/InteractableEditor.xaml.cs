@@ -20,7 +20,6 @@ namespace InteractableEditor
         private double _videoWidth = 1920;
         private double _videoHeight = 1080;
 
-        // State for dragging
         private double _startX, _startY, _startW, _startH;
         private Rect _baseRect;
         private bool _isTextClip = false;
@@ -57,9 +56,11 @@ namespace InteractableEditor
             if (clip == null)
             {
                 this.IsVisible = false;
+                this.InputTransparent = true;
                 return;
             }
             this.IsVisible = true;
+            this.InputTransparent = false;
 
             _isTextClip = clip.ClipType == ClipMode.TextClip;
             if (_isTextClip && clip.ExtraData.TryGetValue("TextEntries", out var entriesObj))
@@ -146,7 +147,6 @@ namespace InteractableEditor
 
             if (ratioVideo > ratioCanvas)
             {
-                // Fit Width
                 drawW = _canvasWidth;
                 drawH = drawW / ratioVideo;
                 offX = 0;
@@ -154,7 +154,6 @@ namespace InteractableEditor
             }
             else
             {
-                // Fit Height
                 drawH = _canvasHeight;
                 drawW = drawH * ratioVideo;
                 offY = 0;
@@ -183,7 +182,6 @@ namespace InteractableEditor
                 y = place.StartY;
             }
 
-            // For TextClip, don't use Crop (it would crop the text), only use Place for positioning
             if (!_isTextClip)
             {
                 bool resetCrop = false;
@@ -226,6 +224,25 @@ namespace InteractableEditor
             AbsoluteLayout.SetLayoutBounds(HandleTR, new Rect(displayX + displayW - hw / 2, displayY - hw / 2, hw, hw));
             AbsoluteLayout.SetLayoutBounds(HandleBL, new Rect(displayX - hw / 2, displayY + displayH - hw / 2, hw, hw));
             AbsoluteLayout.SetLayoutBounds(HandleBR, new Rect(displayX + displayW - hw / 2, displayY + displayH - hw / 2, hw, hw));
+
+            PanGestureRecognizer tlGesture = new(), trGesture = new(), blGesture = new(), brGesture = new(), clipGesture = new();
+            HandleTL.GestureRecognizers.Clear();
+            HandleTR.GestureRecognizers.Clear();
+            HandleBL.GestureRecognizers.Clear();
+            HandleBR.GestureRecognizers.Clear();
+            tlGesture.PanUpdated += OnResizePanUpdated;
+            trGesture.PanUpdated += OnResizePanUpdated;
+            blGesture.PanUpdated += OnResizePanUpdated;
+            brGesture.PanUpdated += OnResizePanUpdated;
+
+            HandleTL.GestureRecognizers.Add(tlGesture);
+            HandleTR.GestureRecognizers.Add(trGesture);
+            HandleBL.GestureRecognizers.Add(blGesture);
+            HandleBR.GestureRecognizers.Add(brGesture);
+
+            ClipVisual.GestureRecognizers.Clear();
+            clipGesture.PanUpdated += OnClipPanUpdated;
+            ClipVisual.GestureRecognizers.Add(clipGesture);
         }
 
         private void OnClipPanUpdated(object sender, PanUpdatedEventArgs e)
@@ -259,8 +276,7 @@ namespace InteractableEditor
             var handle = sender as BoxView;
             if (handle == null) return;
 
-            // TextClip doesn't support resize, only move
-            if (_isTextClip) return;
+            if (_isTextClip) return;  //can't resize a TextClip, it'll cause a serious problem with mixturing
 
             switch (e.StatusType)
             {
@@ -278,31 +294,28 @@ namespace InteractableEditor
 
                     if (handle == HandleTL)
                     {
-                        newX += dx;
-                        newY += dy;
-                        newW -= dx;
-                        newH -= dy;
+                        newW = Math.Max(10, _startW - dx);
+                        newH = Math.Max(10, _startH - dy);
+                        newX = _startX + (_startW - newW);
+                        newY = _startY + (_startH - newH);
                     }
                     else if (handle == HandleTR)
                     {
-                        newY += dy;
-                        newW += dx;
-                        newH -= dy;
+                        newW = Math.Max(10, _startW + dx);
+                        newH = Math.Max(10, _startH - dy);
+                        newY = _startY + (_startH - newH);
                     }
                     else if (handle == HandleBL)
                     {
-                        newX += dx;
-                        newW -= dx;
-                        newH += dy;
+                        newW = Math.Max(10, _startW - dx);
+                        newH = Math.Max(10, _startH + dy);
+                        newX = _startX + (_startW - newW);
                     }
                     else if (handle == HandleBR)
                     {
-                        newW += dx;
-                        newH += dy;
+                        newW = Math.Max(10, _startW + dx);
+                        newH = Math.Max(10, _startH + dy);
                     }
-
-                    if (newW < 10) newW = 10;
-                    if (newH < 10) newH = 10;
 
                     UpdateClipEffects(newX, newY, newW, newH);
                     UpdateVisuals();
@@ -337,7 +350,7 @@ namespace InteractableEditor
             if (_currentClip == null) return;
             if (_currentClip.Effects == null) _currentClip.Effects = new Dictionary<string, IEffect>();
 
-            // Update Place
+            // Place
             if (_currentClip.Effects.TryGetValue("__Internal_Place__", out var p) && p is PlaceEffect place)
             {
                 _currentClip.Effects["__Internal_Place__"] = new PlaceEffect { StartX = (int)x, StartY = (int)y, Enabled = place.Enabled, Index = place.Index };
@@ -347,10 +360,9 @@ namespace InteractableEditor
                 _currentClip.Effects["__Internal_Place__"] = new PlaceEffect { StartX = (int)x, StartY = (int)y };
             }
 
-            // For TextClip, don't update Crop (position is controlled only by Place)
             if (!_isTextClip)
             {
-                // Update Crop
+                // Crop
                 int cropX = 0, cropY = 0;
                 if (_currentClip.Effects.TryGetValue("__Internal_Crop__", out var c) && c is CropEffect crop)
                 {

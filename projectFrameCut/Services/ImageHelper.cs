@@ -110,5 +110,13 @@ namespace projectFrameCut.DraftStuff
             return;
 #endif
         }
+
+        public static ImageSource LoadFromAsset(string assetName)
+        {
+#if WINDOWS
+            return ImageSource.FromFile(Path.Combine(AppContext.BaseDirectory, assetName + ".scale-100.png"));
+#endif
+            return ImageSource.FromFile(assetName);
+        }
     }
 }

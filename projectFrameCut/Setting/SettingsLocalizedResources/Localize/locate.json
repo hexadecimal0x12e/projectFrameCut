@@ -205,6 +205,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "General_Language_ChangeInSettings_iOS17OrOlder",
+        "Value": "\u8981\u4FEE\u6539App\u7684\u8BED\u8A00\uFF0C\u8BF7\u524D\u5F80\u4F60\u7684\u8BBE\u5907\u4E0A\u7684 \u8BBE\u7F6E -{Localized.AppBrand}-\u8BED\u8A00\u4E2D\u4FEE\u6539\u9996\u9009\u8BED\u8A00",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Language_ChangeInSettings_iOS18OrLater",
+        "Value": "\u8981\u4FEE\u6539App\u7684\u8BED\u8A00\uFF0C\u8BF7\u524D\u5F80\u4F60\u7684\u8BBE\u5907\u4E0A\u7684 \u8BBE\u7F6E-App-{Localized.AppBrand}-\u8BED\u8A00\u4E2D\u4FEE\u6539\u9996\u9009\u8BED\u8A00",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "General_Language_OverrideCulture",
         "Value": "\u8986\u76D6\u9ED8\u8BA4\u6587\u5316\u914D\u7F6E\uFF0C\u4EE5\u89E3\u51B3\u4E0D\u80FD\u8F93\u5165\u4E2D\u6587/\u65E5\u6587/\u97E9\u6587\u7684\u95EE\u9898",
         "Mode": "ConstString",
@@ -340,6 +356,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Misc_ClearSafeStor",
+        "Value": "\u6E05\u9664\u5B89\u5168\u5B58\u50A8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ClearSafeStor_Warn",
+        "Value": "\u8BF7\u6CE8\u610F\uFF0C\u4E00\u65E6\u4F60\u6E05\u9664\u4E86\u5B89\u5168\u5B58\u50A8\uFF0C\u4F60\u5C06\u4F1A\u4E0D\u80FD\u767B\u5F55\u5230\u914D\u7F6E\u4E86\u767D\u540D\u5355\u6A21\u5F0F\u7684\u7D20\u6750\u670D\u52A1\u5668\uFF1B\u5E76\u4E14\u6240\u6709\u7684\u63D2\u4EF6\u90FD\u9700\u8981\u91CD\u65B0\u5B89\u88C5\u3002\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F\u8F93\u5165\u0022yes\u0022\u6765\u786E\u8BA4\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Misc_DebugMode",
         "Value": "\u5F00\u53D1\u8005\u6A21\u5F0F",
         "Mode": "ConstString",
@@ -358,6 +390,48 @@
       {
         "Id": "Misc_DiagOptions_Subtitle",
         "Value": "\u5982\u679C\u4F60\u4E0D\u77E5\u9053\u4E0B\u9762\u7684\u9009\u9879\u610F\u5473\u7740\u4EC0\u4E48\uFF0C\u8BF7\u4E0D\u8981\u4FEE\u6539\u4ED6\u4EEC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign",
+        "Value": "\u5FD8\u8BB0\u4E00\u4E2A\u63D2\u4EF6\u7684\u7B7E\u540D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign_Hint",
+        "Value": "\u8F93\u5165\u76EE\u6807\u63D2\u4EF6\u7684ID\uFF0C\u5982\u679C\u4F60\u4E0D\u77E5\u9053\uFF0C\u4F60\u53EF\u80FD\u9700\u8981\u6E05\u9664\u5B89\u5168\u5B58\u50A8\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign_Success",
+        "Value": "\u6210\u529F\u7684\u5FD8\u8BB0\u4E86\u63D2\u4EF6 {id} \u7684\u7B7E\u540D\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_LogDiagnostics",
+        "Value": "\u5728\u65E5\u5FD7\u91CC\u8BB0\u5F55\u66F4\u591A\u7684\u4FE1\u606F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -390,6 +464,14 @@
       {
         "Id": "Misc_ResetSettings",
         "Value": "\u91CD\u7F6E\u6240\u6709\u7684\u8BBE\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ResetSettings_Warn",
+        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\u3002\u6240\u6709\u7684\u8BBE\u7F6E\u548C\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u5C06\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\u4F60\u786E\u8BA4\u5417\uFF1F\u8F93\u5165\u0022yes\u0022\u6765\u786E\u8BA4\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -436,6 +518,24 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Plugin_AddWarn",
+        "Value": "\u4F60\u786E\u8BA4\u8981\u6DFB\u52A0\u63D2\u4EF6\u300C{name}\u300D\u5417\uFF1F\r\u8BF7\u6CE8\u610F\uFF1A\r\u63D2\u4EF6\u53EF\u4EE5\u505A\u4EFB\u4F55 {Localized.AppBrand} \u80FD\u591F\u505A\u5230\u7684\u4E8B\u60C5\uFF0C\u5305\u62EC\u4F46\u4E0D\u9650\u4E8E\u8BFB\u5199\u8349\u7A3F\u548C\u9879\u76EE\u7B49\uFF0C\u5B83\u4E5F\u53EF\u4EE5\u5728\u4F60\u7684\u8BBE\u5907\u4E0A\u8FD0\u884C\u4EFB\u610F\u4EE3\u7801\u3001\u4ECE\u670D\u52A1\u5668\u4E0A\u4E0B\u8F7D\u6570\u636E\u7B49\u7B49\u3002\r\u8BF7\u53EA\u4ECE\u4FE1\u4EFB\u7684\u6765\u6E90\u53D6\u5F97\u63D2\u4EF6\uFF0C\u4EE5\u907F\u514D\u4EFB\u4F55\u6F5C\u5728\u7684\u5371\u5BB3\u3002\r\u4E00\u65E6\u4F60\u70B9\u51FB\u786E\u5B9A\uFF0C\u5373\u4EE3\u8868\u4F60\u5B8C\u5168\u77E5\u60C5\u5E76\u4E14\u613F\u610F\u627F\u62C5\u63D2\u4EF6\u53EF\u80FD\u5E26\u6765\u7684\u98CE\u9669\u3002\r",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Plugin_DetailInfo",
         "Value": "{Id}, \u4F5C\u8005: {author}, \u7248\u672C {version}",
         "Mode": "InterpolationString",
@@ -468,6 +568,14 @@
       {
         "Id": "Plugin_Enable",
         "Value": "\u542F\u7528\u6B64\u6269\u5C55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_InvaildSignToPreviousOne",
+        "Value": "\u4F60\u4E4B\u524D\u5B89\u88C5\u7684\u63D2\u4EF6\uFF0C\u548C\u4F60\u73B0\u5728\u4F60\u5B89\u88C5\u7684\uFF0C\u5177\u6709\u76F8\u540C\u7684ID\u7684\u63D2\u4EF6\u7B7E\u540D\u4E0D\u4E00\u81F4\u3002\u5982\u679C\u4F60\u5728\u66F4\u65B0\u4F60\u7684\u63D2\u4EF6\uFF0C\u8BF7\u5C1D\u8BD5\u4ECE\u4F60\u7B2C\u4E00\u6B21\u4E0B\u8F7D\u7684\u5730\u65B9\u83B7\u53D6\u66F4\u65B0\u7684\u7248\u672C\uFF1B\u5426\u5219\uFF0C\u4F60\u9700\u8981\u5728\u8BBE\u7F6E\u91CC\u5FD8\u8BB0\u8FD9\u4E2A\u63D2\u4EF6\u7684\u7B7E\u540D\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -590,45 +698,11 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "General_Language_ChangeInSettings_iOS18OrLater",
-        "Value": "\u8981\u4FEE\u6539App\u7684\u8BED\u8A00\uFF0C\u8BF7\u524D\u5F80\u4F60\u7684\u8BBE\u5907\u4E0A\u7684 \u8BBE\u7F6E-App-{Localized.AppBrand}-\u8BED\u8A00\u4E2D\u4FEE\u6539\u9996\u9009\u8BED\u8A00",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "General_Language_ChangeInSettings_iOS17OrOlder",
-        "Value": "\u8981\u4FEE\u6539App\u7684\u8BED\u8A00\uFF0C\u8BF7\u524D\u5F80\u4F60\u7684\u8BBE\u5907\u4E0A\u7684 \u8BBE\u7F6E -{Localized.AppBrand}-\u8BED\u8A00\u4E2D\u4FEE\u6539\u9996\u9009\u8BED\u8A00",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_LogDiagnostics",
-        "Value": "\u5728\u65E5\u5FD7\u91CC\u8BB0\u5F55\u66F4\u591A\u7684\u4FE1\u606F",
+        "Id": "Edit_AlwaysShowToolbarButtons",
+        "Value": "\u603B\u662F\u663E\u793A\u5DE5\u5177\u680F\u6309\u94AE",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Plugin_AddWarn",
-        "Value": "\u4F60\u786E\u8BA4\u8981\u6DFB\u52A0\u63D2\u4EF6\u300C{name}\u300D\u5417\uFF1F\r\u8BF7\u6CE8\u610F\uFF1A\r\u63D2\u4EF6\u53EF\u4EE5\u505A\u4EFB\u4F55 {Localized.AppBrand} \u80FD\u591F\u505A\u5230\u7684\u4E8B\u60C5\uFF0C\u5305\u62EC\u4F46\u4E0D\u9650\u4E8E\u8BFB\u5199\u8349\u7A3F\u548C\u9879\u76EE\u7B49\uFF0C\u5B83\u4E5F\u53EF\u4EE5\u5728\u4F60\u7684\u8BBE\u5907\u4E0A\u8FD0\u884C\u4EFB\u610F\u4EE3\u7801\u3001\u4ECE\u670D\u52A1\u5668\u4E0A\u4E0B\u8F7D\u6570\u636E\u7B49\u7B49\u3002\r\u8BF7\u53EA\u4ECE\u4FE1\u4EFB\u7684\u6765\u6E90\u53D6\u5F97\u63D2\u4EF6\uFF0C\u4EE5\u907F\u514D\u4EFB\u4F55\u6F5C\u5728\u7684\u5371\u5BB3\u3002\r\u4E00\u65E6\u4F60\u70B9\u51FB\u786E\u5B9A\uFF0C\u5373\u4EE3\u8868\u4F60\u5B8C\u5168\u77E5\u60C5\u5E76\u4E14\u613F\u610F\u627F\u62C5\u63D2\u4EF6\u53EF\u80FD\u5E26\u6765\u7684\u98CE\u9669\u3002\r",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "name",
-            "Value": ""
-          }
-        ],
         "HasValidationErrors": false
       }
     ],
@@ -825,11 +899,11 @@
       },
       {
         "Id": "General_Language_OverrideCulture",
-        "Value": "Override CurrentCulture to resolve the issue of inability to input Chinese/Japanese/Korean",
+        "Value": "Override the default culture settings to fix issues with entering Chinese/Japanese/Korean text",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Technical note about solving IME input issues for CJK languages",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -1152,16 +1226,16 @@
       },
       {
         "Id": "Plugin_ManagePlugins",
-        "Value": "Unset localization item:Plugin_ManagePlugins()",
+        "Value": "Manage Plugins",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_ViewWhatProvided",
-        "Value": "Unset localization item:Plugin_ViewWhatProvided(string name)",
+        "Value": "View what \u0027{name}\u0027 provides",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1175,21 +1249,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_MoreOption",
-        "Value": "Unset localization item:Plugin_MoreOption()",
+        "Value": "More options for the plugin",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_UpdatePlugin",
-        "Value": "Unset localization item:Plugin_UpdatePlugin(string name)",
+        "Value": "Update \u0027{name}\u0027",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1203,12 +1277,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_DetailInfo",
-        "Value": "Unset localization item:Plugin_DetailInfo(string author, Version version)",
+        "Value": "{Id}, Author: {author}, Version {version}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1234,75 +1308,75 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_OpenDataDir",
-        "Value": "Unset localization item:Plugin_OpenDataDir()",
+        "Value": "Open Data Folder",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_Remove",
-        "Value": "Unset localization item:Plugin_Remove()",
+        "Value": "Uninstall Extension",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_Enable",
-        "Value": "Unset localization item:Plugin_Enable()",
+        "Value": "Enable this extension",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_AddOne",
-        "Value": "Unset localization item:Plugin_AddOne()",
+        "Value": "Add Plugin",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "General_Language_ChangeInSettings_iOS18OrLater",
-        "Value": "Unset localization item:General_Language_ChangeInSettings_iOS18OrLater()",
+        "Value": "To change the app\u0027s language, go to Settings \u2192 App \u2192 {Localized.AppBrand} \u2192 Language on your device and modify the preferred language.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "General_Language_ChangeInSettings_iOS17OrOlder",
-        "Value": "Unset localization item:General_Language_ChangeInSettings_iOS17OrOlder()",
+        "Value": "To change the app\u0027s language, please go to Settings \u003E General \u003E Language \u0026 Region \u003E {Localized.AppBrand} on your device and modify the Preferred Language Order.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Misc_LogDiagnostics",
-        "Value": "Unset localization item:Misc_LogDiagnostics()",
+        "Value": "Log more information in the log",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_AddWarn",
-        "Value": "Unset localization item:Plugin_AddWarn(string name)",
+        "Value": "Are you sure you want to add the plugin \u0022{name}\u0022?\r\nPlease note:\r\nPlugins can do anything {Localized.AppBrand} can do, including but not limited to reading/writing drafts and projects, etc. They can also run any code on your device, download data from servers, and so on.\r\nOnly obtain plugins from trusted sources to avoid any potential harm.\r\nOnce you click OK, it means you are fully aware and willing to accept the risks that the plugin may bring.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1316,6 +1390,88 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_InvaildSignToPreviousOne",
+        "Value": "Unset localization item:Plugin_InvaildSignToPreviousOne()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign",
+        "Value": "Unset localization item:Misc_ForgetPluginSign()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ClearSafeStor",
+        "Value": "Unset localization item:Misc_ClearSafeStor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ClearSafeStor_Warn",
+        "Value": "Unset localization item:Misc_ClearSafeStor_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign_Hint",
+        "Value": "Unset localization item:Misc_ForgetPluginSign_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ResetSettings_Warn",
+        "Value": "Unset localization item:Misc_ResetSettings_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign_Success",
+        "Value": "Unset localization item:Misc_ForgetPluginSign_Success(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AlwaysShowToolbarButtons",
+        "Value": "Unset localization item:Edit_AlwaysShowToolbarButtons()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -1513,7 +1669,7 @@
       },
       {
         "Id": "General_Language_OverrideCulture",
-        "Value": "\u8986\u5BEBCurrentCulture\u4EE5\u89E3\u6C7A\u7121\u6CD5\u8F38\u5165\u4E2D\u6587/\u65E5\u6587/\u97D3\u6587\u7684\u554F\u984C",
+        "Value": "\u8986\u5BEB\u9810\u8A2D\u6587\u5316\u8A2D\u5B9A\uFF0C\u4EE5\u89E3\u6C7A\u7121\u6CD5\u8F38\u5165\u4E2D\u6587/\u65E5\u6587/\u97D3\u6587\u7684\u554F\u984C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1839,16 +1995,16 @@
       },
       {
         "Id": "Plugin_ManagePlugins",
-        "Value": "Unset localization item:Plugin_ManagePlugins()",
+        "Value": "\u7BA1\u7406\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_ViewWhatProvided",
-        "Value": "Unset localization item:Plugin_ViewWhatProvided(string name)",
+        "Value": "\u67E5\u770B\u300C{name}\u300D\u63D0\u4F9B\u4E86\u4EC0\u9EBC",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1862,21 +2018,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_MoreOption",
-        "Value": "Unset localization item:Plugin_MoreOption()",
+        "Value": "\u5916\u639B\u7A0B\u5F0F\u7684\u66F4\u591A\u9078\u9805",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_UpdatePlugin",
-        "Value": "Unset localization item:Plugin_UpdatePlugin(string name)",
+        "Value": "\u66F4\u65B0\u300C{name}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1890,12 +2046,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_DetailInfo",
-        "Value": "Unset localization item:Plugin_DetailInfo(string author, Version version)",
+        "Value": "[Translation Error]: An error occurred while sending the request.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1921,75 +2077,75 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: An error occurred while sending the request.",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_OpenDataDir",
-        "Value": "Unset localization item:Plugin_OpenDataDir()",
+        "Value": "\u958B\u555F\u8CC7\u6599\u6A94\u6848\u593E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_Remove",
-        "Value": "Unset localization item:Plugin_Remove()",
+        "Value": "\u79FB\u9664\u64F4\u5145\u529F\u80FD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_Enable",
-        "Value": "Unset localization item:Plugin_Enable()",
+        "Value": "\u555F\u7528\u6B64\u64F4\u5145\u529F\u80FD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_AddOne",
-        "Value": "Unset localization item:Plugin_AddOne()",
+        "Value": "\u65B0\u589E\u5916\u639B\u7A0B\u5F0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "General_Language_ChangeInSettings_iOS18OrLater",
-        "Value": "Unset localization item:General_Language_ChangeInSettings_iOS18OrLater()",
+        "Value": "\u8981\u4FEE\u6539App\u7684\u8A9E\u8A00\uFF0C\u8ACB\u524D\u5F80\u4F60\u7684\u88DD\u7F6E\u4E0A\u7684 \u8A2D\u5B9A-App-{Localized.AppBrand}-\u8A9E\u8A00 \u4E2D\u4FEE\u6539\u9996\u9078\u8A9E\u8A00",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "General_Language_ChangeInSettings_iOS17OrOlder",
-        "Value": "Unset localization item:General_Language_ChangeInSettings_iOS17OrOlder()",
+        "Value": "\u82E5\u8981\u4FEE\u6539App\u7684\u8A9E\u8A00\uFF0C\u8ACB\u524D\u5F80\u4F60\u7684\u88DD\u7F6E\u4E0A\u7684\u300C\u8A2D\u5B9A\u300D-{Localized.AppBrand}-\u300C\u8A9E\u8A00\u300D\u4E2D\u4FEE\u6539\u504F\u597D\u8A9E\u8A00\u3002",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Misc_LogDiagnostics",
-        "Value": "Unset localization item:Misc_LogDiagnostics()",
+        "Value": "\u5728\u65E5\u8A8C\u88E1\u8A18\u9304\u66F4\u591A\u7684\u8CC7\u8A0A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_AddWarn",
-        "Value": "Unset localization item:Plugin_AddWarn(string name)",
+        "Value": "\u4F60\u78BA\u8A8D\u8981\u65B0\u589E\u5916\u639B\u300C{name}\u300D\u55CE\uFF1F\r\n\u8ACB\u6CE8\u610F\uFF1A\r\n\u5916\u639B\u53EF\u4EE5\u505A\u4EFB\u4F55 {Localized.AppBrand} \u80FD\u5920\u505A\u5230\u7684\u4E8B\u60C5\uFF0C\u5305\u62EC\u4F46\u4E0D\u9650\u65BC\u8B80\u5BEB\u8349\u7A3F\u548C\u5C08\u6848\u7B49\uFF0C\u5B83\u4E5F\u53EF\u4EE5\u5728\u60A8\u7684\u88DD\u7F6E\u4E0A\u57F7\u884C\u4EFB\u610F\u7A0B\u5F0F\u78BC\u3001\u5F9E\u4F3A\u670D\u5668\u4E0A\u4E0B\u8F09\u8CC7\u6599\u7B49\u7B49\u3002\r\n\u8ACB\u53EA\u5F9E\u4FE1\u4EFB\u7684\u4F86\u6E90\u53D6\u5F97\u5916\u639B\uFF0C\u4EE5\u907F\u514D\u4EFB\u4F55\u6F5B\u5728\u7684\u5371\u5BB3\u3002\r\n\u4E00\u65E6\u4F60\u9EDE\u64CA\u78BA\u5B9A\uFF0C\u5373\u4EE3\u8868\u4F60\u5B8C\u5168\u77E5\u60C5\u4E26\u4E14\u9858\u610F\u627F\u64D4\u5916\u639B\u53EF\u80FD\u5E36\u4F86\u7684\u98A8\u96AA\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2003,6 +2159,88 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_InvaildSignToPreviousOne",
+        "Value": "Unset localization item:Plugin_InvaildSignToPreviousOne()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign",
+        "Value": "Unset localization item:Misc_ForgetPluginSign()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ClearSafeStor",
+        "Value": "Unset localization item:Misc_ClearSafeStor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ClearSafeStor_Warn",
+        "Value": "Unset localization item:Misc_ClearSafeStor_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign_Hint",
+        "Value": "Unset localization item:Misc_ForgetPluginSign_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ResetSettings_Warn",
+        "Value": "Unset localization item:Misc_ResetSettings_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign_Success",
+        "Value": "Unset localization item:Misc_ForgetPluginSign_Success(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AlwaysShowToolbarButtons",
+        "Value": "Unset localization item:Edit_AlwaysShowToolbarButtons()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -2200,11 +2438,11 @@
       },
       {
         "Id": "General_Language_OverrideCulture",
-        "Value": "CurrentCulture\u3092\u4E0A\u66F8\u304D\u3057\u3066\u4E2D\u56FD\u8A9E/\u65E5\u672C\u8A9E/\u97D3\u56FD\u8A9E\u306E\u5165\u529B\u554F\u984C\u3092\u89E3\u6C7A",
+        "Value": "\u30C7\u30D5\u30A9\u30EB\u30C8\u306E\u30AB\u30EB\u30C1\u30E3\u8A2D\u5B9A\u3092\u4E0A\u66F8\u304D\u3057\u3066\u3001\u4E2D\u56FD\u8A9E/\u65E5\u672C\u8A9E/\u97D3\u56FD\u8A9E\u306E\u5165\u529B\u554F\u984C\u3092\u89E3\u6C7A\u3057\u307E\u3059",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Language override setting to resolve CJK input issues",
+        "Comment": "\u3053\u3053\u3067\u306E\u300C\u30C7\u30D5\u30A9\u30EB\u30C8\u306E\u30AB\u30EB\u30C1\u30E3\u8A2D\u5B9A\u300D\u306F\u3001System.Threading.Thread.CurrentThread.CurrentCulture\u3092\u6307\u3057\u307E\u3059",
         "HasValidationErrors": false
       },
       {
@@ -2527,11 +2765,11 @@
       },
       {
         "Id": "Plugin_ManagePlugins",
-        "Value": "Unset localization item:Plugin_ManagePlugins()",
+        "Value": "\u30D7\u30E9\u30B0\u30A4\u30F3\u7BA1\u7406",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -2555,16 +2793,16 @@
       },
       {
         "Id": "Plugin_MoreOption",
-        "Value": "Unset localization item:Plugin_MoreOption()",
+        "Value": "\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u305D\u306E\u4ED6\u306E\u30AA\u30D7\u30B7\u30E7\u30F3",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_UpdatePlugin",
-        "Value": "Unset localization item:Plugin_UpdatePlugin(string name)",
+        "Value": "\u300C{name}\u300D\u3092\u66F4\u65B0",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2578,12 +2816,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_DetailInfo",
-        "Value": "Unset localization item:Plugin_DetailInfo(string author, Version version)",
+        "Value": "{Id}\u3001\u4F5C\u8005: {author}\u3001\u30D0\u30FC\u30B8\u30E7\u30F3 {version}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2609,75 +2847,75 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_OpenDataDir",
-        "Value": "Unset localization item:Plugin_OpenDataDir()",
+        "Value": "\u30C7\u30FC\u30BF\u30D5\u30A9\u30EB\u30C0\u3092\u958B\u304F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_Remove",
-        "Value": "Unset localization item:Plugin_Remove()",
+        "Value": "\u62E1\u5F35\u6A5F\u80FD\u3092\u30A2\u30F3\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_Enable",
-        "Value": "Unset localization item:Plugin_Enable()",
+        "Value": "\u3053\u306E\u62E1\u5F35\u6A5F\u80FD\u3092\u6709\u52B9\u306B\u3059\u308B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_AddOne",
-        "Value": "Unset localization item:Plugin_AddOne()",
+        "Value": "\u30D7\u30E9\u30B0\u30A4\u30F3\u3092\u8FFD\u52A0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "General_Language_ChangeInSettings_iOS18OrLater",
-        "Value": "Unset localization item:General_Language_ChangeInSettings_iOS18OrLater()",
+        "Value": "\u30A2\u30D7\u30EA\u306E\u8A00\u8A9E\u3092\u5909\u66F4\u3059\u308B\u306B\u306F\u3001\u30C7\u30D0\u30A4\u30B9\u306E\u300C\u8A2D\u5B9A\u300D\u2192\u300CApp\u300D\u2192\u300C{Localized.AppBrand}\u300D\u2192\u300C\u8A00\u8A9E\u300D\u3067\u512A\u5148\u8A00\u8A9E\u3092\u5909\u66F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "iOS 18\u4EE5\u964D\u306E\u74B0\u5883\u3067\u3001\u30A2\u30D7\u30EA\u306E\u8868\u793A\u8A00\u8A9E\u3092\u5909\u66F4\u3059\u308B\u65B9\u6CD5\u3092\u6307\u793A\u3059\u308B\u30E1\u30C3\u30BB\u30FC\u30B8\u3067\u3059\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "General_Language_ChangeInSettings_iOS17OrOlder",
-        "Value": "Unset localization item:General_Language_ChangeInSettings_iOS17OrOlder()",
+        "Value": "\u30A2\u30D7\u30EA\u306E\u8A00\u8A9E\u3092\u5909\u66F4\u3059\u308B\u306B\u306F\u3001\u30C7\u30D0\u30A4\u30B9\u306E\u300C\u8A2D\u5B9A\u300D\u2192\u300C{Localized.AppBrand}\u300D\u2192\u300C\u8A00\u8A9E\u300D\u3067\u512A\u5148\u8A00\u8A9E\u3092\u5909\u66F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "iOS 17\u4EE5\u524D\u306E\u30D0\u30FC\u30B8\u30E7\u30F3\u3067\u306E\u30A2\u30D7\u30EA\u8A00\u8A9E\u5909\u66F4\u624B\u9806\u3092\u8AAC\u660E\u3059\u308B\u6587\u3002{Localized.AppBrand}\u306F\u30A2\u30D7\u30EA\u540D\u306A\u3069\u306E\u5909\u6570\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "Misc_LogDiagnostics",
-        "Value": "Unset localization item:Misc_LogDiagnostics()",
+        "Value": "[Translation Error]: \u7531\u4E8E\u8FDE\u63A5\u65B9\u5728\u4E00\u6BB5\u65F6\u95F4\u540E\u6CA1\u6709\u6B63\u786E\u7B54\u590D\u6216\u8FDE\u63A5\u7684\u4E3B\u673A\u6CA1\u6709\u53CD\u5E94\uFF0C\u8FDE\u63A5\u5C1D\u8BD5\u5931\u8D25\u3002 (api.deepseek.com:443)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: \u7531\u4E8E\u8FDE\u63A5\u65B9\u5728\u4E00\u6BB5\u65F6\u95F4\u540E\u6CA1\u6709\u6B63\u786E\u7B54\u590D\u6216\u8FDE\u63A5\u7684\u4E3B\u673A\u6CA1\u6709\u53CD\u5E94\uFF0C\u8FDE\u63A5\u5C1D\u8BD5\u5931\u8D25\u3002 (api.deepseek.com:443)",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_AddWarn",
-        "Value": "Unset localization item:Plugin_AddWarn(string name)",
+        "Value": "\u30D7\u30E9\u30B0\u30A4\u30F3\u300C{name}\u300D\u3092\u8FFD\u52A0\u3057\u307E\u3059\u304B\uFF1F\r\n\u6CE8\u610F\uFF1A\r\n\u30D7\u30E9\u30B0\u30A4\u30F3\u306F {Localized.AppBrand} \u304C\u3067\u304D\u308B\u3059\u3079\u3066\u306E\u64CD\u4F5C\u3092\u5B9F\u884C\u53EF\u80FD\u3067\u3042\u308A\u3001\u8349\u7A3F\u3084\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306E\u8AAD\u307F\u66F8\u304D\u306A\u3069\u306B\u9650\u5B9A\u3055\u308C\u307E\u305B\u3093\u3002\u307E\u305F\u3001\u4EFB\u610F\u306E\u30B3\u30FC\u30C9\u3092\u30C7\u30D0\u30A4\u30B9\u4E0A\u3067\u5B9F\u884C\u3057\u305F\u308A\u3001\u30B5\u30FC\u30D0\u30FC\u304B\u3089\u30C7\u30FC\u30BF\u3092\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9\u3057\u305F\u308A\u3059\u308B\u3053\u3068\u3082\u3067\u304D\u307E\u3059\u3002\r\n\u6F5C\u5728\u7684\u306A\u5371\u967A\u3092\u907F\u3051\u308B\u305F\u3081\u3001\u4FE1\u983C\u3067\u304D\u308B\u30BD\u30FC\u30B9\u304B\u3089\u306E\u307F\u30D7\u30E9\u30B0\u30A4\u30F3\u3092\u53D6\u5F97\u3057\u3066\u304F\u3060\u3055\u3044\u3002\r\n\u300C\u78BA\u5B9A\u300D\u3092\u30AF\u30EA\u30C3\u30AF\u3059\u308B\u3068\u3001\u30D7\u30E9\u30B0\u30A4\u30F3\u304C\u3082\u305F\u3089\u3059\u53EF\u80FD\u6027\u306E\u3042\u308B\u30EA\u30B9\u30AF\u3092\u5B8C\u5168\u306B\u7406\u89E3\u3057\u3001\u305D\u308C\u306B\u540C\u610F\u3057\u305F\u3053\u3068\u306B\u306A\u308A\u307E\u3059\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2691,6 +2929,88 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_InvaildSignToPreviousOne",
+        "Value": "Unset localization item:Plugin_InvaildSignToPreviousOne()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign",
+        "Value": "Unset localization item:Misc_ForgetPluginSign()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ClearSafeStor",
+        "Value": "Unset localization item:Misc_ClearSafeStor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ClearSafeStor_Warn",
+        "Value": "Unset localization item:Misc_ClearSafeStor_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign_Hint",
+        "Value": "Unset localization item:Misc_ForgetPluginSign_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ResetSettings_Warn",
+        "Value": "Unset localization item:Misc_ResetSettings_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign_Success",
+        "Value": "Unset localization item:Misc_ForgetPluginSign_Success(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AlwaysShowToolbarButtons",
+        "Value": "Unset localization item:Edit_AlwaysShowToolbarButtons()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -2888,11 +3208,11 @@
       },
       {
         "Id": "General_Language_OverrideCulture",
-        "Value": "\uC911\uAD6D\uC5B4/\uC77C\uBCF8\uC5B4/\uD55C\uAD6D\uC5B4 \uC785\uB825 \uBB38\uC81C \uD574\uACB0\uC744 \uC704\uD574 CurrentCulture \uC7AC\uC815\uC758",
+        "Value": "\uAE30\uBCF8 \uBB38\uD654 \uAD6C\uC131 \uB36E\uC5B4\uC4F0\uAE30, \uC911\uAD6D\uC5B4/\uC77C\uBCF8\uC5B4/\uD55C\uAD6D\uC5B4 \uC785\uB825 \uBB38\uC81C \uD574\uACB0\uC6A9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Override CurrentCulture to resolve Chinese/Japanese/Korean input issues",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -3215,16 +3535,16 @@
       },
       {
         "Id": "Plugin_ManagePlugins",
-        "Value": "Unset localization item:Plugin_ManagePlugins()",
+        "Value": "\uD50C\uB7EC\uADF8\uC778 \uAD00\uB9AC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_ViewWhatProvided",
-        "Value": "Unset localization item:Plugin_ViewWhatProvided(string name)",
+        "Value": "\u300C{name}\u300D\uAC00 \uC81C\uACF5\uD558\uB294 \uB0B4\uC6A9 \uBCF4\uAE30",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3238,21 +3558,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_MoreOption",
-        "Value": "Unset localization item:Plugin_MoreOption()",
+        "Value": "\uD50C\uB7EC\uADF8\uC778\uC758 \uCD94\uAC00 \uC635\uC158",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_UpdatePlugin",
-        "Value": "Unset localization item:Plugin_UpdatePlugin(string name)",
+        "Value": "\u300C{name}\u300D \uC5C5\uB370\uC774\uD2B8",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3266,12 +3586,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_DetailInfo",
-        "Value": "Unset localization item:Plugin_DetailInfo(string author, Version version)",
+        "Value": "{Id}, \uC81C\uC791\uC790: {author}, \uBC84\uC804 {version}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3297,43 +3617,43 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_OpenDataDir",
-        "Value": "Unset localization item:Plugin_OpenDataDir()",
+        "Value": "\uB370\uC774\uD130 \uD3F4\uB354 \uC5F4\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_Remove",
-        "Value": "Unset localization item:Plugin_Remove()",
+        "Value": "\uD655\uC7A5 \uD504\uB85C\uADF8\uB7A8 \uC81C\uAC70",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_Enable",
-        "Value": "Unset localization item:Plugin_Enable()",
+        "Value": "\uC774 \uD655\uC7A5 \uAE30\uB2A5 \uD65C\uC131\uD654",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_AddOne",
-        "Value": "Unset localization item:Plugin_AddOne()",
+        "Value": "\uD50C\uB7EC\uADF8\uC778 \uCD94\uAC00",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -3356,16 +3676,16 @@
       },
       {
         "Id": "Misc_LogDiagnostics",
-        "Value": "Unset localization item:Misc_LogDiagnostics()",
+        "Value": "[Translation Error]: An error occurred while sending the request.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: An error occurred while sending the request.",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_AddWarn",
-        "Value": "Unset localization item:Plugin_AddWarn(string name)",
+        "Value": "\uD50C\uB7EC\uADF8\uC778 \u0027{name}\u0027\uC744(\uB97C) \uCD94\uAC00\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?\r\n\uC8FC\uC758\uC0AC\uD56D:\r\n\uD50C\uB7EC\uADF8\uC778\uC740 {Localized.AppBrand}\uAC00 \uD560 \uC218 \uC788\uB294 \uBAA8\uB4E0 \uC791\uC5C5\uC744 \uC218\uD589\uD560 \uC218 \uC788\uC73C\uBA70, \uC774\uB294 \uCD08\uC548 \uBC0F \uD504\uB85C\uC81D\uD2B8 \uC77D\uAE30/\uC4F0\uAE30\uB97C \uD3EC\uD568\uD558\uB418 \uC774\uC5D0 \uAD6D\uD55C\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uB610\uD55C \uD50C\uB7EC\uADF8\uC778\uC740 \uC0AC\uC6A9\uC790\uC758 \uAE30\uAE30\uC5D0\uC11C \uC784\uC758\uC758 \uCF54\uB4DC\uB97C \uC2E4\uD589\uD558\uAC70\uB098 \uC11C\uBC84\uC5D0\uC11C \uB370\uC774\uD130\uB97C \uB2E4\uC6B4\uB85C\uB4DC\uD558\uB294 \uB4F1\uC758 \uC791\uC5C5\uC744 \uC218\uD589\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r\n\uC7A0\uC7AC\uC801\uC778 \uC704\uD5D8\uC744 \uD53C\uD558\uAE30 \uC704\uD574 \uC2E0\uB8B0\uD560 \uC218 \uC788\uB294 \uCD9C\uCC98\uC5D0\uC11C\uB9CC \uD50C\uB7EC\uADF8\uC778\uC744 \uAC00\uC838\uC624\uC2ED\uC2DC\uC624.\r\n\uD655\uC778\uC744 \uD074\uB9AD\uD558\uBA74 \uD50C\uB7EC\uADF8\uC778\uC774 \uAC00\uC838\uC62C \uC218 \uC788\uB294 \uC704\uD5D8\uC744 \uC644\uC804\uD788 \uC774\uD574\uD558\uACE0 \uC774\uC5D0 \uB300\uD55C \uCC45\uC784\uC744 \uC218\uB77D\uD568\uC744 \uC758\uBBF8\uD569\uB2C8\uB2E4.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3379,6 +3699,88 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_InvaildSignToPreviousOne",
+        "Value": "Unset localization item:Plugin_InvaildSignToPreviousOne()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign",
+        "Value": "Unset localization item:Misc_ForgetPluginSign()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ClearSafeStor",
+        "Value": "Unset localization item:Misc_ClearSafeStor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ClearSafeStor_Warn",
+        "Value": "Unset localization item:Misc_ClearSafeStor_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign_Hint",
+        "Value": "Unset localization item:Misc_ForgetPluginSign_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ResetSettings_Warn",
+        "Value": "Unset localization item:Misc_ResetSettings_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign_Success",
+        "Value": "Unset localization item:Misc_ForgetPluginSign_Success(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AlwaysShowToolbarButtons",
+        "Value": "Unset localization item:Edit_AlwaysShowToolbarButtons()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -3576,11 +3978,11 @@
       },
       {
         "Id": "General_Language_OverrideCulture",
-        "Value": "Remplacer CurrentCulture pour r\u00E9soudre le probl\u00E8me de saisie du chinois/japonais/cor\u00E9en",
+        "Value": "Remplacer la configuration culturelle par d\u00E9faut pour r\u00E9soudre les probl\u00E8mes de saisie du chinois/japonais/cor\u00E9en.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Technical setting description for overriding culture to fix CJK input issues",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -3903,16 +4305,16 @@
       },
       {
         "Id": "Plugin_ManagePlugins",
-        "Value": "Unset localization item:Plugin_ManagePlugins()",
+        "Value": "G\u00E9rer les plugins",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_ViewWhatProvided",
-        "Value": "Unset localization item:Plugin_ViewWhatProvided(string name)",
+        "Value": "Voir ce que \u00AB {name} \u00BB fournit",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3926,21 +4328,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_MoreOption",
-        "Value": "Unset localization item:Plugin_MoreOption()",
+        "Value": "Plus d\u0027options pour le plugin",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_UpdatePlugin",
-        "Value": "Unset localization item:Plugin_UpdatePlugin(string name)",
+        "Value": "Mettre \u00E0 jour \u00AB\u202F{name}\u202F\u00BB",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3954,12 +4356,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_DetailInfo",
-        "Value": "Unset localization item:Plugin_DetailInfo(string author, Version version)",
+        "Value": "{Id}, auteur : {author}, version {version}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3985,75 +4387,75 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_OpenDataDir",
-        "Value": "Unset localization item:Plugin_OpenDataDir()",
+        "Value": "Ouvrir le dossier de donn\u00E9es",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_Remove",
-        "Value": "Unset localization item:Plugin_Remove()",
+        "Value": "D\u00E9sinstaller l\u0027extension",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_Enable",
-        "Value": "Unset localization item:Plugin_Enable()",
+        "Value": "Activer cette extension",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_AddOne",
-        "Value": "Unset localization item:Plugin_AddOne()",
+        "Value": "[Translation Error]: An error occurred while sending the request.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: An error occurred while sending the request.",
         "HasValidationErrors": false
       },
       {
         "Id": "General_Language_ChangeInSettings_iOS18OrLater",
-        "Value": "Unset localization item:General_Language_ChangeInSettings_iOS18OrLater()",
+        "Value": "Pour modifier la langue de l\u0027application, acc\u00E9dez \u00E0 R\u00E9glages \u2192 App \u2192 {Localized.AppBrand} \u2192 Langue sur votre appareil et modifiez la langue pr\u00E9f\u00E9r\u00E9e.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Traduction de l\u0027instruction pour changer la langue de l\u0027app dans les param\u00E8tres iOS. \u0027R\u00E9glages\u0027 est le terme standard pour \u0027Settings\u0027 en fran\u00E7ais. La fl\u00E8che \u0027\u2192\u0027 est utilis\u00E9e pour indiquer la navigation dans les menus, ce qui est courant dans les interfaces utilisateur.",
         "HasValidationErrors": false
       },
       {
         "Id": "General_Language_ChangeInSettings_iOS17OrOlder",
-        "Value": "Unset localization item:General_Language_ChangeInSettings_iOS17OrOlder()",
+        "Value": "Pour modifier la langue de l\u0027application, veuillez acc\u00E9der \u00E0 R\u00E9glages - {Localized.AppBrand} - Langue sur votre appareil et modifier la langue pr\u00E9f\u00E9r\u00E9e.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Misc_LogDiagnostics",
-        "Value": "Unset localization item:Misc_LogDiagnostics()",
+        "Value": "[Translation Error]: An error occurred while sending the request.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: An error occurred while sending the request.",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_AddWarn",
-        "Value": "Unset localization item:Plugin_AddWarn(string name)",
+        "Value": "Voulez-vous vraiment ajouter le plugin \u00AB\u202F{name}\u202F\u00BB\u202F?\r\nVeuillez noter\u202F:\r\nUn plugin peut effectuer tout ce que {Localized.AppBrand} peut faire, y compris, mais sans s\u0027y limiter, lire et \u00E9crire des brouillons et des projets, et il peut \u00E9galement ex\u00E9cuter n\u0027importe quel code sur votre appareil, t\u00E9l\u00E9charger des donn\u00E9es depuis des serveurs, etc.\r\nVeuillez n\u0027installer des plugins qu\u0027\u00E0 partir de sources de confiance pour \u00E9viter tout risque potentiel.\r\nEn cliquant sur Confirmer, vous reconnaissez \u00EAtre pleinement inform\u00E9 et acceptez d\u0027assumer les risques que le plugin pourrait engendrer.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -4067,6 +4469,88 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_InvaildSignToPreviousOne",
+        "Value": "Unset localization item:Plugin_InvaildSignToPreviousOne()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign",
+        "Value": "Unset localization item:Misc_ForgetPluginSign()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ClearSafeStor",
+        "Value": "Unset localization item:Misc_ClearSafeStor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ClearSafeStor_Warn",
+        "Value": "Unset localization item:Misc_ClearSafeStor_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign_Hint",
+        "Value": "Unset localization item:Misc_ForgetPluginSign_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ResetSettings_Warn",
+        "Value": "Unset localization item:Misc_ResetSettings_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign_Success",
+        "Value": "Unset localization item:Misc_ForgetPluginSign_Success(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AlwaysShowToolbarButtons",
+        "Value": "Unset localization item:Edit_AlwaysShowToolbarButtons()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -4264,11 +4748,11 @@
       },
       {
         "Id": "General_Language_OverrideCulture",
-        "Value": "\u8986CurrentCulture\u4EE5\u89E3\u4E2D\u6587\u3001\u65E5\u6587\u3001\u97E9\u6587\u8F93\u5165\u4E4B\u56F0",
+        "Value": "\u8986\u65E2\u5B9A\u6587\u4FD7\uFF0C\u4EE5\u89E3\u4E0D\u80FD\u8F93\u5165\u534E\u6587/\u65E5\u6587/\u97E9\u6587\u4E4B\u5F0A\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u6301\u53E4\u96C5\u98CE\u683C\u540C\u65F6\u786E\u4FDD\u529F\u80FD\u63CF\u8FF0\u6E05\u6670\u3002\u0027\u56F0\u0027\u5B57\u51C6\u786E\u8868\u8FBE\u4E86\u8F93\u5165\u56F0\u96BE\u4E4B\u610F\uFF0C\u7B26\u5408\u6587\u8A00\u8868\u8FBE\u4E60\u60EF\u3002",
+        "Comment": "\u300C\u65E2\u5B9A\u6587\u4FD7\u300D\u6307System.Threading.Thread.CurrentThread.CurrentCulture",
         "HasValidationErrors": false
       },
       {
@@ -4591,16 +5075,16 @@
       },
       {
         "Id": "Plugin_ManagePlugins",
-        "Value": "Unset localization item:Plugin_ManagePlugins()",
+        "Value": "\u638C\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_ViewWhatProvided",
-        "Value": "Unset localization item:Plugin_ViewWhatProvided(string name)",
+        "Value": "\u89C2\u300C{name}\u300D\u6240\u4F9B\u8005\u4F55",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -4614,21 +5098,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_MoreOption",
-        "Value": "Unset localization item:Plugin_MoreOption()",
+        "Value": "\u63D2\u4EF6\u4E4B\u4F59\u9009",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_UpdatePlugin",
-        "Value": "Unset localization item:Plugin_UpdatePlugin(string name)",
+        "Value": "[Translation Error]: An error occurred while sending the request.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -4642,12 +5126,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: An error occurred while sending the request.",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_DetailInfo",
-        "Value": "Unset localization item:Plugin_DetailInfo(string author, Version version)",
+        "Value": "[Translation Error]: An error occurred while sending the request.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -4673,75 +5157,75 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: An error occurred while sending the request.",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_OpenDataDir",
-        "Value": "Unset localization item:Plugin_OpenDataDir()",
+        "Value": "\u542F\u6570\u636E\u4E4B\u51FD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_Remove",
-        "Value": "Unset localization item:Plugin_Remove()",
+        "Value": "[Translation Error]: An error occurred while sending the request.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: An error occurred while sending the request.",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_Enable",
-        "Value": "Unset localization item:Plugin_Enable()",
+        "Value": "\u542F\u6B64\u6269\u589E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_AddOne",
-        "Value": "Unset localization item:Plugin_AddOne()",
+        "Value": "\u6DFB\u52A0\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "General_Language_ChangeInSettings_iOS18OrLater",
-        "Value": "Unset localization item:General_Language_ChangeInSettings_iOS18OrLater()",
+        "Value": "\u6B32\u6539App\u8BED\u8A00\u8005\uFF0C\u8BF7\u81F3\u8BBE\u5907\u8BBE\u7F6E-App-{Localized.AppBrand}-\u8BED\u8A00\u5904\uFF0C\u66F4\u6613\u9996\u9009\u8BED\u8A00\u3002",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "General_Language_ChangeInSettings_iOS17OrOlder",
-        "Value": "Unset localization item:General_Language_ChangeInSettings_iOS17OrOlder()",
+        "Value": "\u6B32\u6613\u5E94\u7528\u4E4B\u8A00\uFF0C\u8BF7\u8D74\u8BBE\u5907\u8BBE\u7F6E -{Localized.AppBrand}-\u8BED\u8A00\u4E2D\u66F4\u9996\u9009\u4E4B\u8BED\u3002",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Misc_LogDiagnostics",
-        "Value": "Unset localization item:Misc_LogDiagnostics()",
+        "Value": "\u65E5\u5FD7\u4E2D\u591A\u5F55\u4FE1\u606F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Plugin_AddWarn",
-        "Value": "Unset localization item:Plugin_AddWarn(string name)",
+        "Value": "\u6C5D\u786E\u8BA4\u6B32\u6DFB\u63D2\u4EF6\u300C{name}\u300D\u4E4E\uFF1F\r\u8C28\u8BB0\uFF1A\r\u63D2\u4EF6\u53EF\u4E3A\u4E4B\u4E8B\uFF0C\u65E0\u5F02\u4E8E {Localized.AppBrand} \u6240\u80FD\u4E3A\u8005\uFF0C\u542B\u8BFB\u5199\u8349\u7A3F\u3001\u9879\u76EE\u7B49\uFF0C\u4EA6\u53EF\u5728\u6C5D\u8BBE\u5907\u4E0A\u8FD0\u884C\u4EFB\u610F\u4EE3\u7801\u3001\u81EA\u670D\u52A1\u5668\u4E0B\u8F7D\u6570\u636E\u7B49\u3002\r\u52A1\u5FC5\u81EA\u53EF\u4FE1\u4E4B\u6E90\u53D6\u63D2\u4EF6\uFF0C\u4EE5\u907F\u6F5C\u5728\u4E4B\u5BB3\u3002\r\u4E00\u65E6\u70B9\u51FB\u786E\u5B9A\uFF0C\u5373\u793A\u6C5D\u6089\u77E5\u4E14\u613F\u627F\u63D2\u4EF6\u6216\u81F4\u4E4B\u9669\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -4755,6 +5239,88 @@
             "Value": ""
           }
         ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_InvaildSignToPreviousOne",
+        "Value": "Unset localization item:Plugin_InvaildSignToPreviousOne()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign",
+        "Value": "Unset localization item:Misc_ForgetPluginSign()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ClearSafeStor",
+        "Value": "Unset localization item:Misc_ClearSafeStor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ClearSafeStor_Warn",
+        "Value": "Unset localization item:Misc_ClearSafeStor_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign_Hint",
+        "Value": "Unset localization item:Misc_ForgetPluginSign_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ResetSettings_Warn",
+        "Value": "Unset localization item:Misc_ResetSettings_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_ForgetPluginSign_Success",
+        "Value": "Unset localization item:Misc_ForgetPluginSign_Success(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AlwaysShowToolbarButtons",
+        "Value": "Unset localization item:Edit_AlwaysShowToolbarButtons()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }

@@ -18,6 +18,8 @@
 		<Title>projectFrameCut render/3rd plugins shared library</Title>
 		<PackageReadmeFile>readme.md</PackageReadmeFile>
 		<NeutralLanguage>zh-CN</NeutralLanguage>
+		
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>

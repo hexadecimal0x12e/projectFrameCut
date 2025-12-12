@@ -63,12 +63,6 @@
         </MenuBarItem>
 
     </ContentPage.MenuBarItems>
-    <ContentPage.ToolbarItems>
-        <ToolbarItem x:Name="ManageTasksButton" Text="{l:Localized Key=DraftPage_MenuBar_Jobs_ManageJobs}" Order="Primary" Priority="0" Command="{Binding ManageJobsCommand}"/>
-        <ToolbarItem x:Name="GoRenderButton" Text="{l:Localized Key=DraftPage_GoRender}" Order="Primary" Priority="0" Command="{Binding GoRenderCommand}"/>
-        <ToolbarItem x:Name="SaveButton" Text="{l:Localized Key=DraftPage_MenuBar_Project_Save}" Order="Secondary" Priority="0" Command="{Binding SaveCommand}"/>
-        <ToolbarItem x:Name="SettingsButton" Text="{l:Localized Key=_Settings}" Order="Secondary" Priority="1" Command="{Binding SettingsCommand}"/>
-    </ContentPage.ToolbarItems>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -84,13 +78,35 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <VerticalStackLayout x:Name="MainUpperContent" Grid.Column="0">
+                <Grid x:Name="MainUpperContent" Grid.Column="0">
                     <Image x:Name="PreviewBox" 
                             Background="Black"
                             HeightRequest="240"
                             Aspect="AspectFit" 
                             ZIndex="9999"/>
-                </VerticalStackLayout>
+                    <AbsoluteLayout x:Name="PreviewOverlayLayer"
+             ZIndex="10000"
+             InputTransparent="False"
+            BackgroundColor="#01000000"
+             IsVisible="True"
+             HorizontalOptions="Fill"
+             VerticalOptions="Fill">
+                        <Image x:Name="PreviewOverlayImage"
+BackgroundColor="#112233"
+Aspect="AspectFit"
+InputTransparent="True"
+AbsoluteLayout.LayoutBounds="0,0,1,1"
+AbsoluteLayout.LayoutFlags="All"
+HorizontalOptions="Fill" />
+
+                        <ContentView x:Name="ClipEditorHost"
+              BackgroundColor="Transparent"
+              InputTransparent="False"
+              AbsoluteLayout.LayoutBounds="0,0,1,1"
+              AbsoluteLayout.LayoutFlags="All" />
+
+                    </AbsoluteLayout>
+                </Grid>
                 <Border ZIndex="0" Grid.Column="1" StrokeThickness="5" HorizontalOptions="Fill">
                     <VerticalStackLayout x:Name="CustomContent1" />
                 </Border>
@@ -114,26 +130,24 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <HorizontalStackLayout Grid.Column="0">
+                <HorizontalStackLayout Grid.Column="0" x:Name="LeftMenuBar">
                     <Button x:Name="AddClip" Text="Add clip" Clicked="AddClip_Clicked" />
                     <Button x:Name="AssetPanelButton" Text="Assets"  Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
                     <Button x:Name="SpiltButton" Text="Spilt" Margin="8,0,0,0" Clicked="Split_Clicked"/>
                     <Label x:Name="CurrentPlayheadLabel" Text="00:00/99:99" Margin="8,0,0,0" VerticalOptions="Center"></Label>
                 </HorizontalStackLayout>
 
-                <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End">
-                    <VerticalStackLayout x:Name="ComputeView" WidthRequest="50" />
+                <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar">
 
                     <Picker x:Name="ResolutionPicker" WidthRequest="150"  SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
 
-                   <!-- <Button x:Name="AddTextButton" Text="Add a text" Clicked="AddTextButton_Clicked"/> -->
-                    
+                    <!-- <Button x:Name="AddTextButton" Text="Add a text" Clicked="AddTextButton_Clicked"/> -->
+
                     <Button x:Name="ZoomOutButton" Text="+" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />
                     <Button x:Name="ZoomInButton" Text="-" Margin="8,0,0,0" Clicked="ZoomInButton_Clicked"/>
                 </HorizontalStackLayout>
             </Grid>
 
-            <!--  <Button x:Name="FullscreenFlyoutTestButton" Text="Pop a flyout" Clicked="FullscreenFlyoutTestButton_Clicked"/> -->
             <HorizontalStackLayout x:Name="RulerLayout" HeightRequest="12" WidthRequest="-1" BackgroundColor="LightGray">
 
             </HorizontalStackLayout>
@@ -188,6 +202,7 @@
 
             <HorizontalStackLayout HorizontalOptions="End" Grid.Column="3">
                 <Label x:Name="AlternativeStatusLabel" Text="" />
+                <VerticalStackLayout x:Name="ComputeView" WidthRequest="50" />
 
             </HorizontalStackLayout>
 
@@ -195,28 +210,14 @@
 
         <AbsoluteLayout x:Name="OverlayLayer"
                         Grid.RowSpan="3"
-                        ZIndex="1000"
-                        InputTransparent="True"
-                        CascadeInputTransparent="True"
-                       BackgroundColor="Transparent"
+                        ZIndex="10000"
+                        InputTransparent="False"
+                       BackgroundColor="#01000000"
                         IsVisible="True"
                         HorizontalOptions="Fill"
                         VerticalOptions="Fill">
-            <Image x:Name="PreviewOverlayImage"
-           BackgroundColor="#112233"
-           Aspect="AspectFit"
-           InputTransparent="True"
-           WidthRequest="800"
-           HeightRequest="240"
-           AbsoluteLayout.LayoutBounds="0,0,800,240"
-           AbsoluteLayout.LayoutFlags="None" />
 
-            <ie:InteractableEditor x:Name="ClipEditor"
-                                   AbsoluteLayout.LayoutBounds="0,0,800,240"
-                                   AbsoluteLayout.LayoutFlags="None"
-                                   IsVisible="False"/>
-
-            <Label Text="Overlay"
+            <Label Text="Overlay" 
                    TextColor="White"
                    BackgroundColor="#66000000"
                    Padding="6"

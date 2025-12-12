@@ -238,7 +238,7 @@ public partial class GeneralSettingPage : ContentPage
 
         done:
             if (needReboot)
-                RebootApp();
+                await RebootApp(this);
 
             BuildPPB();
         }
@@ -249,9 +249,9 @@ public partial class GeneralSettingPage : ContentPage
         }
     }
 
-    private async void RebootApp()
+    public static async Task RebootApp(Page currentPage)
     {
-        var conf = await MainSettingsPage.instance.DisplayAlertAsync(Localized._Info,
+        var conf = await currentPage.DisplayAlertAsync(Localized._Info,
                                     SettingLocalizedResources.CommonStr_RebootRequired(),
                                     Localized._Confirm,
                                     Localized._Cancel);

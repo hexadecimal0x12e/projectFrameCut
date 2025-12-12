@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Path = System.IO.Path;
 
 #if iDevices
 // using projectFrameCut.Platforms.iOS;
@@ -194,6 +195,18 @@ namespace projectFrameCut.DraftStuff
 
 
             return element;
+        }
+
+        public static ClipMode DetermineClipMode(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return ClipMode.Special;
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            // Common video extensions
+            string[] video = [".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"];
+            string[] image = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"];
+            if (video.Contains(ext)) return ClipMode.VideoClip;
+            if (image.Contains(ext)) return ClipMode.PhotoClip;
+            return ClipMode.Special; // fallback
         }
 
     }

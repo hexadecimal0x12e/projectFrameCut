@@ -1,6 +1,8 @@
 using LocalizedResources;
 using Microsoft.Maui.Graphics;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Render.Plugins;
+using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
 using projectFrameCut.ViewModels;
@@ -391,6 +393,7 @@ public partial class HomePage : ContentPage
                 page.IsReadonly = isReadonly;
                 page.PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "right");
                 page.MaximumSaveSlot = int.TryParse(SettingsManager.GetSetting("Edit_MaximumSaveSlot"), out var slotCount) ? slotCount : 10;
+                page.AlwaysShowToolbarBtns = SettingsManager.IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons");
             }
             catch (Exception ex4)
             {
@@ -411,6 +414,18 @@ public partial class HomePage : ContentPage
 #if WINDOWS
             AppShell.instance.HideNavView();
 #endif
+            foreach (var item in PluginManager.LoadedPlugins)
+            {
+                try
+                {
+                    item.Value.OnProjectLoad();
+                }
+                catch(Exception ex)
+                {
+                    Log(ex, $"plugin {item.Value.Name} OnProjectLoad", this);
+                }
+            }
+
             await base.Navigation.PushAsync(page);
         }
 
@@ -443,21 +458,25 @@ public partial class HomePage : ContentPage
 
     private async Task ShowManyAlertsAsync()
     {
-        if (!SimpleLocalizer.IsFallbackMatched)
-            return;
-
-        List<string> localeDispName = new();
-        foreach (var item in ISimpleLocalizerBase.GetMapping().Select(k => k.Value._LocateDisplayName))
+        if (SimpleLocalizer.IsFallbackMatched)
         {
-            localeDispName.Add(item.Split('/').Last().Trim(' '));
-        }
-        if (localeDispName.Count > 1)
-        {
-            localeDispName[localeDispName.Count - 1] = $"and {localeDispName.Last()}";
+            List<string> localeDispName = new();
+            foreach (var item in ISimpleLocalizerBase.GetMapping().Select(k => k.Value._LocateDisplayName))
+            {
+                localeDispName.Add(item.Split('/').Last().Trim(' '));
+            }
+            if (localeDispName.Count > 1)
+            {
+                localeDispName[localeDispName.Count - 1] = $"and {localeDispName.Last()}";
+            }
+
+            await DisplayAlertAsync("Info", $"it seems like projectFrameCut doesn't support your system language yet.\r\nwe support {localeDispName.Aggregate((a, b) => $"{a}, {b}")} yet.\r\nIf you'd like to contribute the localization, do it and make a pull request.", "OK");
+            SimpleLocalizer.IsFallbackMatched = false;
         }
 
-        await DisplayAlertAsync("Info", $"it seems like projectFrameCut doesn't support your system language yet.\r\nwe support {localeDispName.Aggregate((a, b) => $"{a}, {b}")} yet.\r\nIf you'd like to contribute the localization, do it and make a pull request.", "OK");
-        SimpleLocalizer.IsFallbackMatched = false;
+           
+
+        
 
         if (!SettingsManager.IsBoolSettingTrue("AIGeneratedTranslatePromptReaded") && Localized._LocaleId_ != "zh-CN")
         {
@@ -465,7 +484,7 @@ public partial class HomePage : ContentPage
             SettingsManager.WriteSetting("AIGeneratedTranslatePromptReaded", "true");
         }
 
-        if (Environment.IsPrivilegedProcess)
+        if (AdminHelper.IsRunningAsAdministrator())
         {
             await DisplayAlertAsync(Localized._Warn, Localized.HomePage_AdminWarn(), Localized._OK);
         }
@@ -484,7 +503,7 @@ public partial class HomePage : ContentPage
         }
         catch (Exception ex)
         {
-            Log(ex, "open from context menu", this);
+            Log(ex, "open from menu", this);
         }
     }
 

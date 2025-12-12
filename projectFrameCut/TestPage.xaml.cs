@@ -725,10 +725,10 @@ public partial class TestPage : ContentPage
 
     private async void CreateAsymmetricCryptoBtn_Clicked(object sender, EventArgs e)
     {
-        (var pub, var pri) = AsymmetricCrypto.GenerateKeyPairHex();
-        Log($"pubKey:{pub}, priKey:{pri}");
-        await DisplayAlert("info", pub, "ok");
-        await DisplayAlert("info", pri, "ok");
+        //(var pub, var pri) = AsymmetricCrypto.GenerateKeyPairHex();
+        //Log($"pubKey:{pub}, priKey:{pri}");
+        //await DisplayAlert("info", pub, "ok");
+        //await DisplayAlert("info", pri, "ok");
 
     }
 
@@ -749,10 +749,10 @@ public partial class TestPage : ContentPage
 
         if (result != null)
         {
-            var pubHex = await DisplayPromptAsync(Title, "input prikey");
-            var pubBase = AsymmetricCrypto.HexToBase64(pubHex ?? "");
-            await AsymmetricCrypto.EncryptFileWithPrivateKeyAsync(result.FullPath, Path.Combine(Path.GetDirectoryName(result.FullPath), Path.GetFileName(result.FullPath) + "enc" + Path.GetExtension(result.FullPath)), pubBase, null, default);
-            await DisplayAlertAsync("info", "done", "ok");
+            //var pubHex = await DisplayPromptAsync(Title, "input prikey");
+            //var pubBase = AsymmetricCrypto.HexToBase64(pubHex ?? "");
+            //await AsymmetricCrypto.EncryptFileWithPrivateKeyAsync(result.FullPath, Path.Combine(Path.GetDirectoryName(result.FullPath), Path.GetFileName(result.FullPath) + "enc" + Path.GetExtension(result.FullPath)), pubBase, null, default);
+            //await DisplayAlertAsync("info", "done", "ok");
 
         }
     }
@@ -774,10 +774,10 @@ public partial class TestPage : ContentPage
 
         if (result != null)
         {
-            var pubHex = await DisplayPromptAsync(Title, "input pubkey");
-            var pubBase = AsymmetricCrypto.HexToBase64(pubHex ?? "");
-            await AsymmetricCrypto.DecryptFileWithPublicKeyAsync(result.FullPath, Path.Combine(Path.GetDirectoryName(result.FullPath),Path.GetFileName(result.FullPath) +"dec" + Path.GetExtension(result.FullPath)), pubBase, null, default);
-            await DisplayAlertAsync("info", "done", "ok");
+            //var pubHex = await DisplayPromptAsync(Title, "input pubkey");
+            //var pubBase = AsymmetricCrypto.HexToBase64(pubHex ?? "");
+            //await AsymmetricCrypto.DecryptFileWithPublicKeyAsync(result.FullPath, Path.Combine(Path.GetDirectoryName(result.FullPath),Path.GetFileName(result.FullPath) +"dec" + Path.GetExtension(result.FullPath)), pubBase, null, default);
+            //await DisplayAlertAsync("info", "done", "ok");
 
         }
     }

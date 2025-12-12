@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Maui.Handlers;
+using projectFrameCut.DraftStuff;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -61,18 +63,18 @@ namespace projectFrameCut.ViewModels
                 {
                     if (_thumbPath == "!!CreateButton!!")
                     {
-                        return ImageSource.FromFile("icon_add_png");
+                        return ImageHelper.LoadFromAsset("icon_add_png");
                     }
                     if (!File.Exists(_thumbPath) && new FileInfo(_thumbPath).Length <= 16)
                     {
-                        return ImageSource.FromFile("icon_unknown_png");
+                        return ImageHelper.LoadFromAsset("icon_unknown_png");
                     }
                     return ImageSource.FromFile(_thumbPath);
                 }
                 catch (Exception ex)
                 {
                     //Log(ex, $"Get thumb for {_thumbPath}", this); //this is okay for not logging
-                    return ImageSource.FromFile("icon_unknown_png");
+                    return ImageHelper.LoadFromAsset("icon_unknown_png");
                 }
             }
         }
