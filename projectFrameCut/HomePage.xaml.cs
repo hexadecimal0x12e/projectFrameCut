@@ -81,6 +81,14 @@ public partial class HomePage : ContentPage
                     }
                 }
             }
+
+#if WINDOWS
+            if (projectFrameCut.SplashScreen.SplashProgram.SplashShowing)
+            {
+                projectFrameCut.SplashScreen.SplashProgram.CloseSplash();
+                await projectFrameCut.WinUI.App.BringToForeground();
+            }
+#endif
         };
 #if !ANDROID
         ProjectsCollection.SelectionChanged += CollectionView_SelectionChanged;
@@ -418,7 +426,7 @@ public partial class HomePage : ContentPage
             {
                 try
                 {
-                    item.Value.OnProjectLoad();
+                    item.Value.OnProjectLoad(project);
                 }
                 catch(Exception ex)
                 {
@@ -434,6 +442,8 @@ public partial class HomePage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+
+
 #if WINDOWS || ANDROID
         AppShell.instance.ShowNavView();
 #elif iDevices

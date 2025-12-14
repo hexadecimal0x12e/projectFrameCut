@@ -203,4 +203,23 @@ namespace projectFrameCut.Render
 
         }
     }
+
+    public class OneFrame
+    {
+        public uint FrameNumber { get; init; }
+        public IPicture Clip { get; init; }
+        public uint LayerIndex { get; init; } = 0;
+        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
+        public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
+        public IClip ParentClip { get; init; }
+        public OneFrame(uint frameNumber, IClip parent, IPicture pic)
+        {
+            FrameNumber = frameNumber;
+            ParentClip = parent;
+            Clip = pic;
+            LayerIndex = parent.LayerIndex;
+            MixtureMode = parent.MixtureMode;
+            Effects = projectFrameCut.Render.VideoMakeEngine.EffectHelper.GetEffectsInstances(parent.Effects);
+        }
+    }
 }

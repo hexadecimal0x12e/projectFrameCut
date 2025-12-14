@@ -92,14 +92,15 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
     public class OverlayComputer : IComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+                public string SupportedEffectOrMixture => "Overlay";
 
-        public float[][] Compute(float[][] args)
+        public object[] Compute(object[] args)
         {
             // args: [A, B, aAlpha, bAlpha]
-            var A = args[0];
-            var B = args[1];
-            var aAlpha = args[2];
-            var bAlpha = args[3];
+            var A = args[0] as float[];
+            var B = args[1] as float[];
+            var aAlpha = args[2] as float[];
+            var bAlpha = args[3] as float[];
 
             // Ensure inputs are not null
             if (aAlpha == null) aAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
@@ -152,20 +153,21 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
     public class RemoveColorComputer : IComputer
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "RemoveColor";
 
-        public float[][] Compute(float[][] args)
+        public object[] Compute(object[] args)
         {
 
             // args: [aR, aG, aB, sourceA, [toRemoveR], [toRemoveG], [toRemoveB], [range]]
-            var aR = args[0];
-            var aG = args[1];
-            var aB = args[2];
-            var sourceA = args[3];
+            var aR = args[0] as float[];
+            var aG = args[1] as float[];
+            var aB = args[2] as float[];
+            var sourceA = args[3] as float[];
 
-            var toRemoveR = (ushort)args[4][0];
-            var toRemoveG = (ushort)args[5][0];
-            var toRemoveB = (ushort)args[6][0];
-            var range = (ushort)args[7][0];
+            var toRemoveR = (ushort)args[4];
+            var toRemoveG = (ushort)args[5];
+            var toRemoveB = (ushort)args[6];
+            var range = (ushort)args[7];
 
             int lowR = Math.Max(0, toRemoveR - range);
             int highR = Math.Min(65535, toRemoveR + range);

@@ -117,25 +117,40 @@ public partial class MiscSettingPage : ContentPage
                     }
                 case "reset_Settings":
                     {
-                        await DisplayPromptAsync(Localized._Info,
-                            SettingLocalizedResources.Misc_ResetSettings_Warn,
-                            Localized._Confirm,
-                            Localized._Cancel,
-                            "yes",
-                            -1,
-                            Keyboard.Default,
-                            "").ContinueWith(async (t) =>
-                            {
-                                if (string.IsNullOrWhiteSpace(t.Result))
-                                    return;
-                                if (t.Result.Trim() == "yes")
-                                {
-                                    SecureStorage.RemoveAll();
-                                    WriteSetting("reset_Settings",  "true");
+                       var warn1 = await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Misc_ResetSettings_Warn2, Localized._Confirm, Localized._Cancel);
+                        if (warn1)
+                        {
 
-                                    needReboot = true;
-                                }
-                            });
+
+                            await DisplayPromptAsync(Localized._Info,
+                                SettingLocalizedResources.Misc_ResetSettings_Warn,
+                                Localized._Confirm,
+                                Localized._Cancel,
+                                "yes",
+                                -1,
+                                Keyboard.Email,
+                                "").ContinueWith(async (t) =>
+                                {
+                                    if (string.IsNullOrWhiteSpace(t.Result))
+                                        return;
+                                    if (t.Result.Trim() == "yes")
+                                    {
+                                        SecureStorage.RemoveAll();
+                                        try
+                                        {
+                                            Directory.Delete(MauiProgram.BasicDataPath, true);
+                                        }
+                                        catch
+                                        {
+
+                                        }
+                                        Directory.CreateDirectory(MauiProgram.BasicDataPath);
+                                        WriteSetting("reset_Settings", "true");
+
+                                        Environment.Exit(0);
+                                    }
+                                });
+                        }
                         break;
                     }
                 case "makeDiagReport":

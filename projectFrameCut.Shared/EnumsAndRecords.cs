@@ -26,6 +26,13 @@ namespace projectFrameCut.Shared
         Special
     }
 
+    public enum TrackMode
+    {
+        NormalTrack,
+        ExtendTrack,
+        SpecialTrack
+    }
+
     public enum EffectType
     {
         Crop,

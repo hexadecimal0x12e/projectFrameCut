@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Microsoft.Maui.Controls;
 using projectFrameCut.Setting.SettingPages;
+using static projectFrameCut.Setting.SettingManager.SettingsManager;
 
 namespace projectFrameCut
 {
@@ -13,6 +14,11 @@ namespace projectFrameCut
             InitializeComponent();
 
             instance = this;
+            HintLabel.Text = SettingLocalizedResources.General_SelectAPageToGo;
+            VersionLabel.Text = $"{Localized.AppBrand} v{AppInfo.VersionString}";
+#if iDevices && !DEBUG // no reflection in momo on ios, plugin can't work at all.
+            PluginSettingButton.IsVisible = false; 
+#endif
         }
 
         private async void OnGeneralSettingClicked(object sender, EventArgs e)

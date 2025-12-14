@@ -1,4 +1,4 @@
-﻿using projectFrameCut.Render.Plugins;
+﻿using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -34,6 +34,11 @@ namespace projectFrameCut.Render.RenderAPIBase
         /// The name of this clip. Mostly used for display purpose.
         /// </summary>
         public string Name { get; init; }
+
+        /// <summary>
+        /// Represent which sound track's id is binded to this clip.
+        /// </summary>
+        public string BindedSoundTrack { get; init;  }
         
         /// <summary>
         /// Indicate which layer this clip is in. Higher index means upper layer.
@@ -78,20 +83,6 @@ namespace projectFrameCut.Render.RenderAPIBase
 
         [JsonIgnore]
         public IEffect[]? EffectsInstances { get; init; }
-
-        public static IEffect[] GetEffectsInstances(EffectAndMixtureJSONStructure[]? Effects)
-        {
-            if (Effects is null || Effects.Length == 0)
-            {
-                return Array.Empty<IEffect>();
-            }
-            List<IEffect> effects = new();
-            foreach (var item in Effects)
-            {
-                effects.Add(PluginManager.CreateEffect(item));
-            }
-            return effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray();
-        }
 
         /// <summary>
         /// Get the path of the source file for this clip. May be null for some kind of clips.
@@ -210,27 +201,6 @@ namespace projectFrameCut.Render.RenderAPIBase
         public int GetHashCode([DisallowNull] IClip obj)
         {
             return obj.Id.GetHashCode();
-        }
-    }
-
-   
-
-    public class OneFrame
-    {
-        public uint FrameNumber { get; init; }
-        public IPicture Clip { get; init; }
-        public uint LayerIndex { get; init; } = 0;
-        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
-        public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
-        public IClip ParentClip { get; init; }
-        public OneFrame(uint frameNumber, IClip parent, IPicture pic)
-        {
-            FrameNumber = frameNumber;
-            ParentClip = parent;
-            Clip = pic;
-            LayerIndex = parent.LayerIndex;
-            MixtureMode = parent.MixtureMode;
-            Effects = IClip.GetEffectsInstances(parent.Effects);
         }
     }
 }

@@ -13,9 +13,6 @@
             <Button x:Name="TestCrashButton" Text="Crash" Clicked="TestCrashButton_Clicked"/>
             <Button x:Name="WinUIDiagTestBtn" Text="Test WinUI3 diag" Clicked="WinUIDiagTestBtn_Clicked"/>
 
-            <Button x:Name="CreateAsymmetricCryptoBtn" Text="Create keys" Clicked="CreateAsymmetricCryptoBtn_Clicked"/>
-            <Button x:Name="EncryptFileBtn" Text="Encrtpt file" Clicked="EncryptFileBtn_Clicked"/>
-            <Button x:Name="DecryptFileBtn" Text="Decrypt file" Clicked="DecryptFileBtn_Clicked"/>
             <Border StrokeThickness="4">
                 <VerticalStackLayout>
                     <Label Text="Dragging test" x:Name="DraggingTestLabel"/>

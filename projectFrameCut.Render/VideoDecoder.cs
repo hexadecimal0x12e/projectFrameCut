@@ -44,6 +44,7 @@ namespace projectFrameCut.Render
         public uint Index { get; set; } = 0;
 
         public string[] PreferredExtension => ["mkv"];
+        public int? ResultBitPerPixel => 8;
 
         public DecoderContext16Bit(string path)
         {
@@ -54,8 +55,7 @@ namespace projectFrameCut.Render
 
         public void Initialize()
         {
-            if (_path is null) return; //VideoSourceCreator needs a instance to get PreferredExtension
-            if (Initialized) throw new InvalidOperationException("DecoderContext has already been initialized.");
+            if (_path is null || Initialized) return; //VideoSourceCreator needs a instance to get PreferredExtension
 
             try
             {
@@ -376,6 +376,7 @@ namespace projectFrameCut.Render
         public uint Index { get; set; } = 0;
         public string[] PreferredExtension => ["mp4","mov"];
 
+        public int? ResultBitPerPixel => 8;
 
         public DecoderContext8Bit(string path)
         {
@@ -385,8 +386,8 @@ namespace projectFrameCut.Render
 
         public void Initialize()
         {
-            if (_path is null) return; //VideoSourceCreator needs a instance to get PreferredExtension
-            if (Initialized) throw new InvalidOperationException("DecoderContext has already been initialized.");
+            if (_path is null || Initialized) return; //VideoSourceCreator needs a instance to get PreferredExtension
+
             try
             {
                 _fmt = ffmpeg.avformat_alloc_context();

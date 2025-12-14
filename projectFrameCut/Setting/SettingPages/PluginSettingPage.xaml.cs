@@ -5,6 +5,8 @@ using projectFrameCut.Services;
 using System.Globalization;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
 
 namespace projectFrameCut.Setting.SettingPages;
@@ -12,47 +14,151 @@ namespace projectFrameCut.Setting.SettingPages;
 public partial class PluginSettingPage : ContentPage
 {
     public PropertyPanel.PropertyPanelBuilder rootPPB;
-
+    string AdvanceConfigPageViewing = "";
 
     public PluginSettingPage()
     {
+        AdvanceConfigPageViewing = "";
         BuildPPB();
     }
 
-    void BuildPPB()
+    protected override void OnAppearing()
     {
+        base.OnAppearing();
+        AdvanceConfigPageViewing = "";
+    }
+
+    async void BuildPPB()
+    {
+        if (!string.IsNullOrWhiteSpace(AdvanceConfigPageViewing))
+        {
+            await BuildAdvancedConfig(AdvanceConfigPageViewing);
+        }
         Title = Localized.MainSettingsPage_Tab_Plugin;
         rootPPB = new();
         rootPPB
             .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Plugin_ManagePlugins, 20))
-            .AddButton("addButton",SettingLocalizedResources.Plugin_AddOne);
+            .AddButton("addButton", SettingLocalizedResources.Plugin_AddOne);
 
         foreach (var item in PluginManager.LoadedPlugins)
         {
             var plugin = item.Value;
             rootPPB
                 .AddSeparator()
-                .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(plugin.Name, plugin.Description, 20, 14))
+                .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(plugin.Name, plugin.Description, 20, 16))
                 .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Plugin_DetailInfo(plugin.Author, plugin.Version, plugin.PluginID), 12))
-                //.AddButton($"ViewProvided,{item.Key}", SettingLocalizedResources.Plugin_ViewWhatProvided(plugin.Name))
-                //.AddButton($"UpdatePlugin,{item.Key}", SettingLocalizedResources.Plugin_UpdatePlugin(plugin.Name))
                 .AddButton($"MoreOption,{item.Key}", SettingLocalizedResources.Plugin_MoreOption);
 
 
         }
 
+        // 显示失败加载的插件
+        if (PluginService.FailedLoadPlugin.Any())
+        {
+            rootPPB
+                .AddSeparator()
+                .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_FailLoad, SettingLocalizedResources.Plugin_FailLoad_Subtitle, 20, 12));
+
+            foreach (var failedPlugin in PluginService.FailedLoadPlugin)
+            {
+                rootPPB
+                    .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(failedPlugin.Key, $"Reason:{failedPlugin.Value}", 20, 20))
+                    .AddButton($"RemoveFailedPlugin,{failedPlugin.Key}", SettingLocalizedResources.Plugin_Remove);
+            }
+        }
+
         rootPPB
             .AddSeparator()
-            .ListenToChanges(SettingInvoker);
+            .ListenToChanges((e) => SettingInvoker(e, this));
 
         Content = new ScrollView { Content = rootPPB.Build() };
     }
 
-    private async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args)
+    private async Task BuildAdvancedConfig(string id)
+    {
+        var plugin = PluginManager.LoadedPlugins[id];
+        var page = new ContentPage { };
+        var ppb = new PropertyPanelBuilder()
+            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_DetailConfig(plugin.Name), SettingLocalizedResources.Plugin_DetailConfig_Subtitle(plugin.Name)));
+        if (!plugin.Configuration.Any())
+        {
+            ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailConfig_None(id), 16, FontAttributes.None, Colors.Gray));
+        }
+        else
+        {
+            foreach (var item in plugin.Configuration)
+            {
+                ppb.AddEntry($"PluginCfg,{item.Key}",
+                    plugin.ConfigurationDisplayString
+                    .FirstOrDefault(c => c.Key == Localized._LocaleId_, plugin.ConfigurationDisplayString.First())
+                    .Value
+                    .FirstOrDefault(c => c.Key == item.Key, new KeyValuePair<string, string>(item.Key, item.Key))
+                    .Value, item.Value, item.Value);
+            }
+        }
+        ppb.AddText(new SingleLineLabel(Localized.HomePage_ProjectContextMenu(plugin.Name), 20, FontAttributes.None))
+            .AddButton($"ViewProvided,{id}", SettingLocalizedResources.Plugin_ViewWhatProvided(plugin.Name));
+        if (!plugin.PluginID.StartsWith("projectFrameCut"))
+        {
+            ppb.AddButton($"GotoHomepage,{id}", SettingLocalizedResources.Plugin_GotoHomepage(plugin.Name))
+               .AddButton($"UpdatePlugin,{id}", SettingLocalizedResources.Plugin_UpdatePlugin(plugin.Name))
+               .AddButton($"OpenDataDir,{id}", SettingLocalizedResources.Plugin_OpenDataDir)
+               .AddButton($"RemovePlugin,{id}", SettingLocalizedResources.Plugin_Remove);
+        }
+        else
+        {
+            ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_CannotRemoveInternalPlugin, 14, default, Colors.Grey));
+        }
+        ppb.ListenToChanges((e) =>
+        {
+            if (e.Id.StartsWith("PluginCfg,"))
+            {
+                var cfgKey = e.Id.Split(',')[1];
+                plugin.Configuration[cfgKey] = e.Value?.ToString() ?? "";
+            }
+            else
+            {
+                SettingInvoker(e, page);
+            }
+        });
+        
+            
+
+        page.Content = new ScrollView { Content = ppb.Build() };
+
+        // 在页面消失时保存配置
+        page.Disappearing += async (s, e) =>
+        {
+            await SavePluginConfiguration(plugin);
+        };
+
+        await Navigation.PushAsync(page);
+
+
+    }
+
+    private async Task SavePluginConfiguration(IPluginBase plugin)
     {
         try
         {
-            if(args.Id == "addButton")
+            var pluginDir = Path.Combine(MauiProgram.BasicDataPath, "Plugins", plugin.PluginID);
+            Directory.CreateDirectory(pluginDir);
+
+            var optionFilePath = Path.Combine(pluginDir, "option.json");
+            var configJson = JsonSerializer.Serialize(plugin.Configuration);
+            await File.WriteAllTextAsync(optionFilePath, configJson);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Failed to save plugin configuration for {plugin.PluginID}");
+        }
+    }
+
+    private async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args, Page currentPage = null)
+    {
+        try
+        {
+            if (args.Id == "addButton")
             {
                 var result = await FilePicker.Default.PickAsync(new PickOptions
                 {
@@ -100,7 +206,7 @@ public partial class PluginSettingPage : ContentPage
                         await PluginService.AddAPlugin(dllPath, this);
                     }
 
-                        
+
                 }
                 return;
             }
@@ -109,6 +215,32 @@ public partial class PluginSettingPage : ContentPage
 
             var flag = flags[0];
             var id = flags[1];
+
+            // 处理移除失败的插件
+            if (flag == "RemoveFailedPlugin")
+            {
+                if (PluginService.FailedLoadPlugin.ContainsKey(id))
+                {
+                    if (!await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_SureRemove(id), Localized._Confirm, Localized._Cancel))
+                    {
+                        return;
+                    }
+
+                    PluginService.FailedLoadPlugin.Remove(id);
+                    
+                    try
+                    {
+                        PluginService.RemovePlugin(id);
+                    }
+                    catch
+                    {
+                    }
+                    
+                    BuildPPB();
+                }
+                return;
+            }
+
             if (!PluginManager.LoadedPlugins.TryGetValue(id, out var plugin))
             {
                 await DisplayAlertAsync(Localized._Warn, $"plugin {id} not found", Localized._OK);
@@ -119,42 +251,7 @@ public partial class PluginSettingPage : ContentPage
             {
                 case "ViewProvided":
                     {
-
-                        StringBuilder providedContent = new();
-
-                        providedContent.AppendLine("Clips:");
-                        foreach (var item in plugin.ClipProvider)
-                        {
-                            providedContent.AppendLine($"- {item.Key}");
-                        }
-                        providedContent.AppendLine();
-
-                        providedContent.AppendLine("Effect:");
-                        foreach (var item in plugin.EffectProvider)
-                        {
-                            providedContent.AppendLine($"- {item.Key}");
-                        }
-                        providedContent.AppendLine();
-                        providedContent.AppendLine("Mixture:");
-                        foreach (var item in plugin.MixtureProvider)
-                        {
-                            providedContent.AppendLine($"- {item.Key}");
-                        }
-                        providedContent.AppendLine();
-                        providedContent.AppendLine("Computer:");
-                        foreach (var item in plugin.ComputerProvider)
-                        {
-                            providedContent.AppendLine($"- {item.Key}");
-                        }
-                        providedContent.AppendLine();
-                        providedContent.AppendLine("VideoSource:");
-                        foreach (var item in plugin.VideoSourceProvider)
-                        {
-                            providedContent.AppendLine($"- {item.Key}");
-                        }
-
-
-                        await DisplayAlertAsync(Localized._Info, providedContent.ToString(), Localized._OK);
+                        await DisplayAlertAsync(Localized._Info, PluginManager.GetWhatProvided(plugin), Localized._OK);
 
 
                         break;
@@ -166,51 +263,34 @@ public partial class PluginSettingPage : ContentPage
                         break;
                     }
 
-                case "MoreOption":
+                case "OpenDataDir":
                     {
+                        FileSystemService.OpenFolderAsync(Path.Combine(MauiProgram.BasicDataPath, "Plugins", plugin.PluginID));
+                        break;
+                    }
+                case "GotoHomepage":
+                    {
+                        if (!string.IsNullOrWhiteSpace(plugin.AuthorUrl)) await Launcher.OpenAsync(plugin.AuthorUrl);
+                        break;
+                    }
 
-                        List<string> actions = new()
+                case "RemovePlugin":
+                    {
+                        if (await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_SureRemove(plugin.Name), Localized._Confirm, Localized._Cancel))
                         {
-                            SettingLocalizedResources.Plugin_ViewWhatProvided(plugin.Name),
-                            SettingLocalizedResources.Plugin_UpdatePlugin(plugin.Name),
-                            SettingLocalizedResources.Plugin_OpenDataDir,
-                            SettingLocalizedResources.Plugin_Remove,
-                        };
+                            PluginService.RemovePlugin(plugin.PluginID);
+                            await Setting.SettingPages.GeneralSettingPage.RebootApp(currentPage ?? this);
 
-                        var selection = await DisplayActionSheetAsync(Localized.HomePage_ProjectContextMenu(plugin.Name), Localized._Cancel, null, actions.ToArray());
-                        if(selection == SettingLocalizedResources.Plugin_ViewWhatProvided(plugin.Name))
-                        {
-                            SettingInvoker(new PropertyPanelPropertyChangedEventArgs($"ViewProvided,{id}", null, null));
-                        }
-                        else if (selection == SettingLocalizedResources.Plugin_UpdatePlugin(plugin.Name))
-                        {
-                            SettingInvoker(new PropertyPanelPropertyChangedEventArgs($"UpdatePlugin,{id}", null, null));
-                        }
-                        else if (selection == SettingLocalizedResources.Plugin_OpenDataDir)
-                        {
-                            try
-                            {
-                                //await Launcher.Default.OpenAsync(new OpenFileRequest
-                                //{
-                                //    File = new ReadOnlyFile(dataDir)
-                                //});
-                            }
-                            catch
-                            {
-                                //await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_FailedToOpenDataDir(dataDir), Localized._OK);
-                            }
-                        }
-                        else if (selection == SettingLocalizedResources.Plugin_Remove)
-                        {
-                            //var confirm = await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_ConfirmRemove(plugin.Name), Localized._Yes, Localized._No);
-                            //if (confirm)
-                            //{
-                            //    PluginManager.UnloadPlugin(plugin.PluginID);
-                            //    BuildPPB();
-                            //}
                         }
                         break;
                     }
+                case "MoreOption":
+                    {
+                        AdvanceConfigPageViewing = id;
+                        await BuildAdvancedConfig(id);
+                        break;
+                    }
+
 
             }
 

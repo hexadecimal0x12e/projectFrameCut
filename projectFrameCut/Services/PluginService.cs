@@ -129,28 +129,75 @@ namespace projectFrameCut.Services
         }
 
 
-        public static async Task<IPluginBase?> CreateFromID(string pluginID)
+        public static IPluginBase? CreateFromID(string pluginID, out string failReason)
         {
-            var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
-            if (Directory.Exists(pluginRoot))
+            failReason = "";
+            try
             {
-                var pluginPem = await SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}");
-                if (string.IsNullOrEmpty(pluginPem))
+
+
+                var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
+                if (Directory.Exists(pluginRoot))
                 {
-                    throw new FileNotFoundException("Plugin PEM not found in secure storage", pluginID);
+                    var pluginPem = SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}").GetAwaiter().GetResult();
+                    if (string.IsNullOrEmpty(pluginPem))
+                    {
+                        throw new FileNotFoundException("Plugin PEM not found in secure storage", pluginID);
+                    }
+                    var pemHash = HashServices.ComputeStringHash(pluginPem ?? string.Empty, SHA512.Create());
+                    var pluginEnc = File.ReadAllBytes(Path.Combine(pluginRoot, pluginID + ".dll.enc"));
+                    var decBytes = FileCryptoService.DecryptToFileWithPassword(pemHash, pluginEnc);
+                    var pluginSig = File.ReadAllText(Path.Combine(pluginRoot, pluginID + ".dll.sig"));
+                    if (!FileSignerService.VerifyFileSignature(pluginPem, decBytes, pluginSig))
+                    {
+                        failReason = "Plugin may be modified, and it's sign is mismatch.";
+                        return null;
+                    }
+                    var asb = Assembly.Load(decBytes);
+                    var plugin = CreateIPluginFromAsb(asb)!;
+
+                    // 读取保存的配置文件
+                    var optionFilePath = Path.Combine(pluginRoot, "option.json");
+                    if (File.Exists(optionFilePath))
+                    {
+                        try
+                        {
+                            var configJson = File.ReadAllText(optionFilePath);
+                            var savedConfig = JsonSerializer.Deserialize<Dictionary<string, string>>(configJson) ?? new();
+
+                            // 将保存的配置复制到插件对象
+                            foreach (var kvp in savedConfig)
+                            {
+                                if (plugin.Configuration.ContainsKey(kvp.Key))
+                                {
+                                    plugin.Configuration[kvp.Key] = kvp.Value;
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, $"Failed to load plugin configuration from {optionFilePath}");
+                        }
+                    }
+
+                    var success = plugin.OnLoaded(out failReason);
+
+                    if (!success)
+                    {
+                        return null;
+                    }
+
+                    return plugin;
                 }
-                var pemHash = HashServices.ComputeStringHash(pluginPem ?? string.Empty, SHA512.Create());
-                var pluginEnc = File.ReadAllBytes(Path.Combine(pluginRoot, pluginID + ".dll.enc"));
-                var decBytes = FileCryptoService.DecryptToFileWithPassword(pemHash, pluginEnc);
-                var pluginSig = File.ReadAllText(Path.Combine(pluginRoot, pluginID + ".dll.sig"));
-                if (!FileSignerService.VerifyFileSignature(pluginPem, decBytes, pluginSig))
+                else
                 {
-                    throw new CryptographicException("Plugin signature verification failed.");
+                    failReason = $"Plugin file for {pluginID} not found.";
                 }
-                var asb = Assembly.Load(decBytes);
-                return CreateIPluginFromAsb(asb)!;
+            }catch(Exception ex)
+            {
+                failReason = $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
             }
-            throw new FileNotFoundException("Plugin file not found", pluginID);
+            return null;
         }
 
         public static IPluginBase? CreateIPluginFromAsb(Assembly asb)
@@ -167,7 +214,9 @@ namespace projectFrameCut.Services
             return pluginObj as IPluginBase;
         }
 
-        public static async Task<List<IPluginBase>> LoadUserPlugins()
+        public static Dictionary<string,string> FailedLoadPlugin = new();
+
+        public static List<IPluginBase> LoadUserPlugins()
         {
             List<IPluginBase> plugins = new();
             if (!File.Exists(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) return new();
@@ -177,25 +226,43 @@ namespace projectFrameCut.Services
                 try
                 {
                     Log($"Loading userPlugin: {item.Id}");
-                    var p = await CreateFromID(item.Id);
+                    string fail = "";
+                    var p = CreateFromID(item.Id,out fail);
                     if (p is not null)
                         plugins.Add(p);
                     else
                     {
-                        Log($"Failed to load user plugin: {item.Id}");
+                        Log($"Failed to load user plugin {item.Id}: {fail}");
+                        FailedLoadPlugin.Add(item.Id, fail);
                     }
                 }
                 catch (Exception ex)
                 {
                     Log(ex, $"load user plugin: {item.Id}");
-                }
+                    var msg = $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
+                    FailedLoadPlugin.Add(item.Id, msg);
 
+                }
 
             }
 
 
 
             return plugins;
+        }
+
+        public static void RemovePlugin(string pluginID)
+        {
+            if (pluginID.StartsWith("projectFrameCut")) throw new InvalidOperationException(SettingsManager.SettingLocalizedResources?.Plugin_CannotRemoveInternalPlugin ?? "Cannot remove a internal plugin.");
+            var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
+            if (Directory.Exists(pluginRoot))
+            {
+                Directory.Delete(pluginRoot, true);
+            }
+            var items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) ?? new();
+            items.RemoveAll(c => c.Id == pluginID);
+            File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "Plugins.json"), JsonSerializer.Serialize(items));
+
         }
 
 

@@ -435,7 +435,7 @@ namespace projectFrameCut
 #endif
                     if (Environment.GetCommandLineArgs().Contains("--forceLoadPlugins") || (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins")))
                     {
-                        plugins.AddRange(PluginService.LoadUserPlugins().GetAwaiter().GetResult());
+                        plugins.AddRange(PluginService.LoadUserPlugins());
                     }
                     else
                     {

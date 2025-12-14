@@ -10,6 +10,7 @@ using System.Text;
 
 namespace projectFrameCut.Render
 {
+    [Obsolete("Use IVideoSource directly instead of wrapping it in Video.")]
     public class Video : IDisposable
     {
         private readonly string filePath;
@@ -62,9 +63,10 @@ namespace projectFrameCut.Render
             if (err >= 0) return;
             var msg = GetErrorString(err);
             throw new InvalidOperationException
-            ($"'{api}' failed during writing the video,{(msg is not null ? $" probably because '{msg}'." : " but we don't know what thing it happens.")} (FFmpeg internal error code:{err})")
+            ($"'{api}' failed during writing the video,{(msg is not null ? $" probably because '{msg}'." : " but we don't know what thing it happens.")}\r\n(FFmpeg internal error code: 0x{err:x2})")
             {
-                HResult = err
+                HResult = err,
+                Source = "FFmpeg"
             };
         }
 

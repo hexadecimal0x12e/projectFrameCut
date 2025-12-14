@@ -57,10 +57,13 @@ namespace projectFrameCut.Render
 
         /// <summary>
         /// Indicates whether the frame has been pended to write. 
-        /// True means the frame has been written to the video file. 
-        /// False means the frame is still in the cache waiting to be written.
-        /// If the key is not present, it means the frame has not been added yet.
         /// </summary>
+        /// <remarks>
+        /// For each Key-Value pair, the key is the frame index.
+        /// When value is True means the frame has been written to the video file, 
+        /// and when value is False means the frame is still in the cache waiting to be written.
+        /// If the key is not present, it means the frame has not been added yet.
+        /// </remarks>
         public ConcurrentDictionary<uint, bool> FramePendedToWrite { get; private set; } = new();
 
         public VideoBuilder(string path, int width, int height, int framerate, string encoder, AVPixelFormat fmt)

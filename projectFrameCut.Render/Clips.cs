@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Text;
 using static projectFrameCut.Render.Video;
 using SixLabors.ImageSharp.Processing;
+using projectFrameCut.Render.VideoMakeEngine;
 
 namespace projectFrameCut.Render
 {
@@ -33,10 +34,11 @@ namespace projectFrameCut.Render
         public ClipMode ClipType => ClipMode.VideoClip;
         public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
 
+        public string BindedSoundTrack { get; init; } = "";
 
         public VideoClip()
         {
-            EffectsInstances = IClip.GetEffectsInstances(Effects);
+            EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
 
         }
 
@@ -75,6 +77,8 @@ namespace projectFrameCut.Render
         public ClipMode ClipType => ClipMode.PhotoClip;
         public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
 
+        public string BindedSoundTrack { get; init; } = "";
+
 
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
@@ -82,7 +86,7 @@ namespace projectFrameCut.Render
 
         public PhotoClip()
         {
-            EffectsInstances = IClip.GetEffectsInstances(Effects);
+            EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
 
         }
 
@@ -121,6 +125,9 @@ namespace projectFrameCut.Render
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
 
+        public string BindedSoundTrack { get; init; } = "";
+
+
         string? IClip.FilePath { get => null; init => throw new InvalidOperationException("Set path is not supported by this type of clip."); }
 
         public ushort R { get; init; }
@@ -137,7 +144,7 @@ namespace projectFrameCut.Render
 
         public SolidColorClip()
         {
-            EffectsInstances = IClip.GetEffectsInstances(Effects);
+            EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
         }
 
         public void ReInit()
@@ -170,6 +177,9 @@ namespace projectFrameCut.Render
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
+
+        public string BindedSoundTrack { get; init; } = "";
+
 
         string? IClip.FilePath { get => null; init => throw new InvalidOperationException("Set path is not supported by this type of clip."); }
 
@@ -222,7 +232,7 @@ namespace projectFrameCut.Render
 
         public TextClip()
         {
-            EffectsInstances = IClip.GetEffectsInstances(Effects);
+            EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
         }
 
         public void ReInit()

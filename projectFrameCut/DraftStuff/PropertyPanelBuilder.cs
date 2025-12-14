@@ -831,9 +831,14 @@ namespace projectFrameCut.PropertyPanel
         OnUnfocusedAndUnchanged
     }
 
-    public class SingleLineLabel(string text, int fontsize = 14, FontAttributes fontAttributes = FontAttributes.None) : PropertyPanelItemLabel
+    public class SingleLineLabel(string text, int fontsize = 14, FontAttributes fontAttributes = FontAttributes.None, Color? TextColor = null) : PropertyPanelItemLabel
     {
-        public override View LabelConfigurer() => new Label { Text = text, FontSize = fontsize, FontAttributes = fontAttributes, VerticalOptions = LayoutOptions.Center };
+        public override View LabelConfigurer()
+        {
+            var l = new Label { Text = text, FontSize = fontsize, FontAttributes = fontAttributes, VerticalOptions = LayoutOptions.Center };
+            if (TextColor is not null) l.TextColor = TextColor;
+            return l;
+        }
 
         public static implicit operator SingleLineLabel(string text) => new SingleLineLabel(text);
     }

@@ -16,58 +16,57 @@ namespace projectFrameCut.Render.Plugins
         public static IReadOnlyDictionary<string, IPluginBase> LoadedPlugins => loadedPlugins;
         private static bool Inited = false;
 
-        public static void Init(IEnumerable<IPluginBase> internalPlugins)
+        public static void Init(IEnumerable<IPluginBase> plugins)
         {
             if (Inited) throw new InvalidOperationException("PluginManager has already been initialized.");
             Inited = true;
             loadedPlugins.Clear();
-            foreach (var plugin in internalPlugins)
+            foreach (var plugin in plugins)
             {
                 loadedPlugins.Add(plugin.PluginID, plugin);
                 Logger.Log($"Plugin {plugin.PluginID} loaded.");
 #if DEBUG
-                StringBuilder providedContent = new($"{plugin.Name} ({plugin.PluginID}) provide these:\r\n");
-
-                providedContent.AppendLine("Clips:");
-                foreach (var item in plugin.ClipProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-                providedContent.AppendLine();
-
-                providedContent.AppendLine("Effect:");
-                foreach (var item in plugin.EffectProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-                providedContent.AppendLine();
-                providedContent.AppendLine("Mixture:");
-                foreach (var item in plugin.MixtureProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-                providedContent.AppendLine();
-                providedContent.AppendLine("Computer:");
-                foreach (var item in plugin.ComputerProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-                providedContent.AppendLine();
-                providedContent.AppendLine("VideoSource:");
-                foreach (var item in plugin.VideoSourceProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-                Logger.Log(providedContent.ToString());
+                Logger.Log(GetWhatProvided(plugin));
 
 #endif
             }
         }
 
+        public static string GetWhatProvided(IPluginBase pluginBase)
+        {
+            StringBuilder providedContent = new($"{pluginBase.Name} ({pluginBase.PluginID}) provide these:\r\n");
+            providedContent.AppendLine("Clips:");
+            foreach (var item in pluginBase.ClipProvider)
+            {
+                providedContent.AppendLine($"- {item.Key}");
+            }
+            providedContent.AppendLine("Effect:");
+            foreach (var item in pluginBase.EffectProvider)
+            {
+                providedContent.AppendLine($"- {item.Key}");
+            }
+            providedContent.AppendLine("Mixture:");
+            foreach (var item in pluginBase.MixtureProvider)
+            {
+                providedContent.AppendLine($"- {item.Key}");
+            }
+            providedContent.AppendLine("Computer:");
+            foreach (var item in pluginBase.ComputerProvider)
+            {
+                providedContent.AppendLine($"- {item.Key}");
+            }
+            providedContent.AppendLine("VideoSource:");
+            foreach (var item in pluginBase.VideoSourceProvider)
+            {
+                providedContent.AppendLine($"- {item.Key}");
+            }
+            return providedContent.ToString();
+        }
+
         public static void LoadFrom(IPluginBase pluginInstance)
         {
 #if !DEBUG
-            throw new UnsupportedOperationException("Loading plugins at runtime is not supported in release builds.");
+            throw new InvalidOperationException("Loading plugins at runtime is not supported in release builds.");
 #endif
             ArgumentNullException.ThrowIfNull(pluginInstance, nameof(pluginInstance));
             try

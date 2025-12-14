@@ -35,39 +35,19 @@ namespace projectFrameCut.DraftStuff
         }
 
         // Helper to recreate effect with updated parameters / flags (init-only properties)
+        // This method adapts to plugin-based IEffect by using the standard WithParameters interface
         private static IEffect ReCreateEffect(IEffect effect, Dictionary<string, object>? parameters = null, bool? enabled = null, int? index = null)
         {
-            var paramDict = parameters ?? effect.Parameters;
-            return effect switch
-            {
-                RemoveColorEffect => new RemoveColorEffect
-                {
-                    Enabled = enabled ?? effect.Enabled,
-                    Index = index ?? effect.Index,
-                    R = Convert.ToUInt16(paramDict["R"]),
-                    G = Convert.ToUInt16(paramDict["G"]),
-                    B = Convert.ToUInt16(paramDict["B"]),
-                    A = Convert.ToUInt16(paramDict["A"]),
-                    Tolerance = Convert.ToUInt16(paramDict["Tolerance"]),
-                },
-                PlaceEffect => new PlaceEffect
-                {
-                    Enabled = enabled ?? effect.Enabled,
-                    Index = index ?? effect.Index,
-                    StartX = Convert.ToInt32(paramDict["StartX"]),
-                    StartY = Convert.ToInt32(paramDict["StartY"]),
-                },
-                CropEffect => new CropEffect
-                {
-                    Enabled = enabled ?? effect.Enabled,
-                    Index = index ?? effect.Index,
-                    StartX = Convert.ToInt32(paramDict["StartX"]),
-                    StartY = Convert.ToInt32(paramDict["StartY"]),
-                    Height = Convert.ToInt32(paramDict["Height"]),
-                    Width = Convert.ToInt32(paramDict["Width"]),
-                },
-                _ => effect.WithParameters(paramDict), // fallback (won't update Enabled/Index for unknown types)
-            };
+            // Create a new effect with updated parameters using the standard IEffect interface
+            var newEffect = effect.WithParameters(parameters ?? effect.Parameters);
+            
+            // Update mutable properties (Enabled and Index)
+            if (enabled.HasValue)
+                newEffect.Enabled = enabled.Value;
+            if (index.HasValue)
+                newEffect.Index = index.Value;
+            
+            return newEffect;
         }
 
         public View Build(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
@@ -261,12 +241,6 @@ namespace projectFrameCut.DraftStuff
 
 
             var panel = ppb.Build();
-
-#if WINDOWS
-            ApplyAcrylic(panel);
-#elif iDevices
-            // panel.AddGlassEffect("SystemChromeMaterial", 8.0, 0.8);
-#endif
             return panel;
 
         }

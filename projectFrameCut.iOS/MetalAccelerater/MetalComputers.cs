@@ -38,6 +38,9 @@ namespace projectFrameCut.iOS.Render
 
     public class OverlayComputer : IComputer
     {
+        public string FromPlugin => "projectFrameCut.iOS.MetalAccelerater.MetalComputers";
+        public string SupportedEffectOrMixture => "Overlay";
+
         private IMTLComputePipelineState? _alphaPipelineState;
         private IMTLComputePipelineState? _colorPipelineState;
 
@@ -58,15 +61,15 @@ namespace projectFrameCut.iOS.Render
             if (_colorPipelineState == null) throw new Exception($"Failed to create color pipeline state: {error?.LocalizedDescription}");
         }
 
-        public float[][] Compute(float[][] args)
+        public object[] Compute(object[] args)
         {
             InitializePipeline();
 
             // args: [A, B, aAlpha, bAlpha]
-            var A = args[0];
-            var B = args[1];
-            var aAlpha = args[2];
-            var bAlpha = args[3];
+            var A = (float[])args[0];
+            var B = (float[])args[1];
+            var aAlpha = (float[])args[2];
+            var bAlpha = (float[])args[3];
 
             if (aAlpha == null) aAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
             if (bAlpha == null) bAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
@@ -120,7 +123,7 @@ namespace projectFrameCut.iOS.Render
             float[] resultAlpha = new float[count];
             Marshal.Copy(cAlphaBuffer.Contents, resultAlpha, 0, count);
 
-            return new float[][] { resultColor, resultAlpha };
+            return new object[] { resultColor, resultAlpha };
         }
 
         private IMTLBuffer CreateBuffer(IMTLDevice device, float[] data)
@@ -204,6 +207,9 @@ kernel void overlay_color_compute(
 
     public class RemoveColorComputer : IComputer
     {
+        public string FromPlugin => "projectFrameCut.iOS.MetalAccelerater.MetalComputers";
+        public string SupportedEffectOrMixture => "RemoveColor";
+
         private IMTLComputePipelineState? _pipelineState;
 
         private void InitializePipeline()
@@ -219,20 +225,20 @@ kernel void overlay_color_compute(
             if (_pipelineState == null) throw new Exception($"Failed to create pipeline state: {error?.LocalizedDescription}");
         }
 
-        public float[][] Compute(float[][] args)
+        public object[] Compute(object[] args)
         {
             InitializePipeline();
 
             // args: [aR, aG, aB, sourceA, [toRemoveR], [toRemoveG], [toRemoveB], [range]]
-            var aR = args[0];
-            var aG = args[1];
-            var aB = args[2];
-            var sourceA = args[3];
+            var aR = (float[])args[0];
+            var aG = (float[])args[1];
+            var aB = (float[])args[2];
+            var sourceA = (float[])args[3];
 
-            var toRemoveR = (uint)args[4][0];
-            var toRemoveG = (uint)args[5][0];
-            var toRemoveB = (uint)args[6][0];
-            var range = (uint)args[7][0];
+            var toRemoveR = (uint)((float[])args[4])[0];
+            var toRemoveG = (uint)((float[])args[5])[0];
+            var toRemoveB = (uint)((float[])args[6])[0];
+            var range = (uint)((float[])args[7])[0];
 
             uint lowR = toRemoveR > range ? toRemoveR - range : 0;
             uint highR = toRemoveR + range;
@@ -290,7 +296,7 @@ kernel void overlay_color_compute(
             float[] result = new float[count];
             Marshal.Copy(outABuffer.Contents, result, 0, count);
 
-            return new float[][] { result };
+            return new object[] { result };
         }
 
         private IMTLBuffer CreateBuffer(IMTLDevice device, float[] data)

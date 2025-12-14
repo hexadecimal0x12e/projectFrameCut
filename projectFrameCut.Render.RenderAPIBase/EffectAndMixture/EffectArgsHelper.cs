@@ -7,6 +7,13 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
     public static class EffectArgsHelper
     {
+        /// <summary>
+        /// Convert a dictionary with JsonElement values to a dictionary with object values according to the given parameter types.
+        /// </summary>
+        /// <param name="elements"></param>
+        /// <param name="ParametersType"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
         public static Dictionary<string, object> ConvertElementDictToObjectDict(Dictionary<string, object> elements, Dictionary<string, string> ParametersType)
         {
             var result = new Dictionary<string, object>();

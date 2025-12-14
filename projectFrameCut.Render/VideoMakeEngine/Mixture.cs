@@ -11,6 +11,8 @@ namespace projectFrameCut.VideoMakeEngine
 {
     public class OverlayMixture : IMixture
     {
+        public string TypeName => "Overlay";
+
         public static List<string> ParametersNeeded = new();
 
         public static Dictionary<string, string> ParametersType = new();
@@ -85,7 +87,7 @@ namespace projectFrameCut.VideoMakeEngine
             float[] outA;
             if (basePicture.hasAlphaChannel || topPicture.hasAlphaChannel)
             {
-                outA = outR[1];
+                outA = outR[1] as float[];
             }
             else
             {
@@ -101,9 +103,9 @@ namespace projectFrameCut.VideoMakeEngine
 #endif
                     new Picture8bpp(basePicture.Width, basePicture.Height)
                     {
-                        r = outR[0].Select(v => (byte)Math.Clamp(v / 257.0f, 0, 255)).ToArray(),
-                        g = outG[0].Select(v => (byte)Math.Clamp(v / 257.0f, 0, 255)).ToArray(),
-                        b = outB[0].Select(v => (byte)Math.Clamp(v / 257.0f, 0, 255)).ToArray(),
+                        r = (outR[0] as float[]).Select(v => (byte)Math.Clamp(v / 257.0f, 0, 255)).ToArray(),
+                        g = (outG[0] as float[]).Select(v => (byte)Math.Clamp(v / 257.0f, 0, 255)).ToArray(),
+                        b = (outB[0] as float[]).Select(v => (byte)Math.Clamp(v / 257.0f, 0, 255)).ToArray(),
                         a = outA,
                         hasAlphaChannel = basePicture.hasAlphaChannel || topPicture.hasAlphaChannel,
                         ProcessStack = $"Overlayed, \r\nbase:avg R:{baseR.Average(Convert.ToDecimal)} G:{baseG.Average(Convert.ToDecimal)} B:{baseB.Average(Convert.ToDecimal)} A:{baseA?.Average(Convert.ToDecimal) ?? -1}, ProcessStack:\r\n{basePicture.ProcessStack?.Replace("\n", "\n    ")}\r\ntop:avg R:{topR.Average(Convert.ToDecimal)} G:{topG.Average(Convert.ToDecimal)} B:{topB.Average(Convert.ToDecimal)} A:{topA?.Average(Convert.ToDecimal) ?? -1}, ProcessStack:\r\n{topPicture.ProcessStack?.Replace("\n", "\n    ")}"
@@ -119,9 +121,9 @@ namespace projectFrameCut.VideoMakeEngine
 #endif
                 new Picture(basePicture.Width, basePicture.Height)
                 {
-                    r = outR[0].Select(v => (ushort)Math.Clamp(v, 0, 65535)).ToArray(),
-                    g = outG[0].Select(v => (ushort)Math.Clamp(v, 0, 65535)).ToArray(),
-                    b = outB[0].Select(v => (ushort)Math.Clamp(v, 0, 65535)).ToArray(),
+                    r = (outR[0] as float[]).Select(v => (ushort)Math.Clamp(v, 0, 65535)).ToArray(),
+                    g = (outG[0] as float[]).Select(v => (ushort)Math.Clamp(v, 0, 65535)).ToArray(),
+                    b = (outB[0] as float[]).Select(v => (ushort)Math.Clamp(v, 0, 65535)).ToArray(),
                     a = outA,
                     hasAlphaChannel = basePicture.hasAlphaChannel || topPicture.hasAlphaChannel,
                     ProcessStack = $"Overlayed, \r\nbase:avg R:{baseR.Average(Convert.ToDecimal)} G:{baseG.Average(Convert.ToDecimal)} B:{baseB.Average(Convert.ToDecimal)} A:{baseA?.Average(Convert.ToDecimal) ?? -1}, ProcessStack:\r\n{basePicture.ProcessStack?.Replace("\n", "\n    ")}\r\ntop:avg R:{topR.Average(Convert.ToDecimal)} G:{topG.Average(Convert.ToDecimal)} B:{topB.Average(Convert.ToDecimal)} A:{topA?.Average(Convert.ToDecimal) ?? -1}, ProcessStack:\r\n{topPicture.ProcessStack?.Replace("\n", "\n    ")}"

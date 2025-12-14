@@ -41,14 +41,8 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 
         Dictionary<string, Func<string, IVideoSource>> IPluginBase.VideoSourceProvider => new Dictionary<string, Func<string, IVideoSource>> { };
 
-        IClip IPluginBase.ClipCreator(JsonElement element)
-        {
-            throw new NotImplementedException();
-        }
+        public Dictionary<string, string> Configuration { get => new Dictionary<string, string>(); set { } }
 
-        IEffect IPluginBase.EffectCreator(EffectAndMixtureJSONStructure stru)
-        {
-            throw new NotImplementedException();
-        }
+        public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString => new Dictionary<string, Dictionary<string, string>> { };
     }
 }

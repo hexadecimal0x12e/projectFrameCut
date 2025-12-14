@@ -11,6 +11,20 @@ namespace projectFrameCut.Render.VideoMakeEngine
 {
     public static class EffectHelper
     {
+        public static IEffect[] GetEffectsInstances(EffectAndMixtureJSONStructure[]? Effects)
+        {
+            if (Effects is null || Effects.Length == 0)
+            {
+                return Array.Empty<IEffect>();
+            }
+            List<IEffect> effects = new();
+            foreach (var item in Effects)
+            {
+                effects.Add(PluginManager.CreateEffect(item));
+            }
+            return effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray();
+        }
+
         public static IEffect CreateFromJSONStructure(EffectAndMixtureJSONStructure item)
         {
             IEffect effect;

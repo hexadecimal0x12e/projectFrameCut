@@ -17,6 +17,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "projectFrameCut.iDevices", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "projectFrameCut.Render.RenderAPIBase", "projectFrameCut.Render.RenderAPIBase\projectFrameCut.Render.RenderAPIBase.csproj", "{48ED2329-42AD-49DF-AE6B-A06A401D9290}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "misc", "misc", "{76A6148D-3661-4CC8-B94F-BF9AA2FC6E45}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "projectFrameCut.SplashScreen", "projectFrameCut.SplashScreen\projectFrameCut.SplashScreen.csproj", "{C5D4F283-08F2-4503-9865-48F9E0D5FE39}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -115,9 +119,24 @@ Global
 		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Release|ARM64.Build.0 = Release|Any CPU
 		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Release|x64.ActiveCfg = Release|Any CPU
 		{48ED2329-42AD-49DF-AE6B-A06A401D9290}.Release|x64.Build.0 = Release|Any CPU
+		{C5D4F283-08F2-4503-9865-48F9E0D5FE39}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5D4F283-08F2-4503-9865-48F9E0D5FE39}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5D4F283-08F2-4503-9865-48F9E0D5FE39}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{C5D4F283-08F2-4503-9865-48F9E0D5FE39}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{C5D4F283-08F2-4503-9865-48F9E0D5FE39}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C5D4F283-08F2-4503-9865-48F9E0D5FE39}.Debug|x64.Build.0 = Debug|Any CPU
+		{C5D4F283-08F2-4503-9865-48F9E0D5FE39}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5D4F283-08F2-4503-9865-48F9E0D5FE39}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5D4F283-08F2-4503-9865-48F9E0D5FE39}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{C5D4F283-08F2-4503-9865-48F9E0D5FE39}.Release|ARM64.Build.0 = Release|Any CPU
+		{C5D4F283-08F2-4503-9865-48F9E0D5FE39}.Release|x64.ActiveCfg = Release|Any CPU
+		{C5D4F283-08F2-4503-9865-48F9E0D5FE39}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C5D4F283-08F2-4503-9865-48F9E0D5FE39} = {76A6148D-3661-4CC8-B94F-BF9AA2FC6E45}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {31B4A0C3-9DB9-49BB-9B5E-8B44B08B6C38}

@@ -1,4 +1,5 @@
 ﻿using projectFrameCut.Render.Plugins;
+using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Shared;
 using projectFrameCut.VideoMakeEngine;
 using System;
@@ -354,7 +355,7 @@ namespace projectFrameCut.Render
 
                 if (clip.Effects != null)
                 {
-                    foreach (var item in clip.EffectsInstances ?? IClip.GetEffectsInstances(clip.Effects))
+                    foreach (var item in clip.EffectsInstances ?? EffectHelper.GetEffectsInstances(clip.Effects))
                     {
                         frame = item.Render(frame,
                                             item.NeedComputer is not null ? PluginManager.CreateComputer(item.NeedComputer) : null,

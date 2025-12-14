@@ -16,8 +16,11 @@ namespace projectFrameCut
 {
     public partial class App : Microsoft.Maui.Controls.Application
     {
+
+        public static App instance;
         public App()
         {
+            instance = this;
             InitializeComponent();
         }
 

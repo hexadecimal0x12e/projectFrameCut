@@ -1,4 +1,5 @@
 using Microsoft.Maui.Controls;
+using projectFrameCut.DraftStuff;
 using System;
 using System.IO;
 using System.Text;
@@ -13,6 +14,7 @@ public partial class AboutSettingPage : ContentPage
         InitializeComponent();
         Loaded += AboutSettingPage_Loaded;
         AppVersionLabel.Text = $"Version {AppInfo.VersionString} ({AppInfo.BuildString})";
+        AppLogoIcon.Source = ImageHelper.LoadFromAsset("appicon");
     }
 
     private async void AboutSettingPage_Loaded(object? sender, EventArgs e)

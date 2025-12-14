@@ -1,4 +1,5 @@
 ﻿using projectFrameCut.Render;
+using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp.Drawing;
 using System;
@@ -35,7 +36,7 @@ namespace projectFrameCut.VideoMakeEngine
 
         List<string> IEffect.ParametersNeeded => ParametersNeeded;
         Dictionary<string, string> IEffect.ParametersType => ParametersType;
-        public string? FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
         public string NeedComputer => "RemoveColorComputer";
 
 
@@ -108,18 +109,18 @@ namespace projectFrameCut.VideoMakeEngine
                 throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
             }
 
-            var alpha = computer.Compute([
+            var alphaArr = computer.Compute([
                 r,
                 g,
                 b,
                 a,
-                [(float)R],
-                [(float)G],
-                [(float)B],
-                [(float)Tolerance]
-                ])[0];
+                (float)R,
+                (float)G,
+                (float)B,
+                (float)Tolerance
+                ]);
 
-            
+            if (alphaArr[0] is not float[] alpha) throw new InvalidOperationException("The output data from computer is invaild.");
 
             if (source is IPicture<ushort> p16_out)
             {
@@ -234,8 +235,13 @@ namespace projectFrameCut.VideoMakeEngine
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
+            var pixelMapping = ComputePixelMapping(
+                source.Width, source.Height, targetWidth, targetHeight, StartX, StartY);
+
             if (source is IPicture<ushort> p16)
             {
+                p16.a ??= Enumerable.Repeat(1f, p16.Pixels).ToArray();
+
                 Picture result = new Picture(targetWidth, targetHeight)
                 {
                     r = new ushort[targetWidth * targetHeight],
@@ -244,40 +250,25 @@ namespace projectFrameCut.VideoMakeEngine
                     a = new float[targetWidth * targetHeight],
                     hasAlphaChannel = true
                 };
-                int targetIndex = 0, sourceIndex = 0;
-                for (int y = 0; y < source.Height; y++)
+
+                foreach (var mapping in pixelMapping)
                 {
-                    for (int x = 0; x < source.Width; x++)
-                    {
-                        if (x + StartX >= result.Width || y + StartY >= result.Height) continue; 
-                        if (source.TryFromXYToArrayIndex(x, y, out sourceIndex))
-                        {
-                            if (result.TryFromXYToArrayIndex(x + StartX, y + StartY, out targetIndex))
-                            {
-                                result.r[targetIndex] = p16.r[sourceIndex];
-                                result.g[targetIndex] = p16.g[sourceIndex];
-                                result.b[targetIndex] = p16.b[sourceIndex];
-                                result.a[targetIndex] = p16.a != null ? p16.a[sourceIndex] : 1f;
-                            }
-                            else //use blank to replace content not in range
-                            {
-                                targetIndex = y * targetWidth + x;
-                                if (targetIndex >= result.Pixels) continue;
-                                result.r[targetIndex] = 0;
-                                result.g[targetIndex] = 0;
-                                result.b[targetIndex] = 0;
-                                result.a[targetIndex] = 0f;
-                            }
-                        }
+                    int sourceIndex = mapping.Key;
+                    int targetIndex = mapping.Value;
 
-                    }
-
+                    result.r[targetIndex] = p16.r[sourceIndex];
+                    result.g[targetIndex] = p16.g[sourceIndex];
+                    result.b[targetIndex] = p16.b[sourceIndex];
+                    result.a[targetIndex] = p16.a[sourceIndex];
                 }
+
                 result.ProcessStack += $"Place to ({StartX},{StartY}) with canvas size {targetWidth}*{targetHeight}\r\n";
                 return result;
             }
             else if (source is IPicture<byte> p8)
             {
+                p8.a ??= Enumerable.Repeat(1f, p8.Pixels).ToArray();
+
                 Picture8bpp result = new Picture8bpp(targetWidth, targetHeight)
                 {
                     r = new byte[targetWidth * targetHeight],
@@ -286,41 +277,51 @@ namespace projectFrameCut.VideoMakeEngine
                     a = new float[targetWidth * targetHeight],
                     hasAlphaChannel = true
                 };
-                int targetIndex = 0, sourceIndex = 0;
-                for (int y = 0; y < source.Height; y++)
+
+                foreach (var mapping in pixelMapping)
                 {
-                    for (int x = 0; x < source.Width; x++)
-                    {
-                        if (x + StartX >= result.Width || y + StartY >= result.Height) continue;
-                        if (source.TryFromXYToArrayIndex(x, y, out sourceIndex))
-                        {
-                            if (result.TryFromXYToArrayIndex(x + StartX, y + StartY, out targetIndex))
-                            {
-                                result.r[targetIndex] = p8.r[sourceIndex];
-                                result.g[targetIndex] = p8.g[sourceIndex];
-                                result.b[targetIndex] = p8.b[sourceIndex];
-                                result.a[targetIndex] = p8.a != null ? p8.a[sourceIndex] : 1f;
-                            }
-                            else //use blank to replace content not in range
-                            {
-                                targetIndex = y * targetWidth + x;
-                                if (targetIndex >= result.Pixels) continue;
-                                result.r[targetIndex] = 0;
-                                result.g[targetIndex] = 0;
-                                result.b[targetIndex] = 0;
-                                result.a[targetIndex] = 0f;
-                            }
-                        }
+                    int sourceIndex = mapping.Key;
+                    int targetIndex = mapping.Value;
 
-                    }
-
+                    result.r[targetIndex] = p8.r[sourceIndex];
+                    result.g[targetIndex] = p8.g[sourceIndex];
+                    result.b[targetIndex] = p8.b[sourceIndex];
+                    result.a[targetIndex] = p8.a[sourceIndex];
                 }
+
                 result.ProcessStack += $"Place to ({StartX},{StartY}) with canvas size {targetWidth}*{targetHeight}\r\n";
                 return result;
             }
             throw new NotSupportedException();
         }
 
+
+        public static Dictionary<int, int> ComputePixelMapping(int sourceWidth, int sourceHeight,
+            int targetWidth, int targetHeight, int startX, int startY)
+        {
+            var mapping = new Dictionary<int, int>();
+
+            for (int y = 0; y < sourceHeight; y++)
+            {
+                for (int x = 0; x < sourceWidth; x++)
+                {
+                    int newX = x + startX;
+                    int newY = y + startY;
+
+                    if (newX >= targetWidth || newY >= targetHeight)
+                        continue;
+
+                    if (newX >= 0 && newY >= 0)
+                    {
+                        int sourceIndex = y * sourceWidth + x;
+                        int targetIndex = newY * targetWidth + newX;
+                        mapping[sourceIndex] = targetIndex;
+                    }
+                }
+            }
+
+            return mapping;
+        }
     }
 
     public class CropEffect : IEffect
@@ -393,8 +394,15 @@ namespace projectFrameCut.VideoMakeEngine
         [DebuggerStepThrough()]
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
+
+            // 使用 ManagedCropComputer 计算像素映射
+            var pixelMapping = ComputePixelMapping(
+                source.Width, source.Height, Width, Height, StartX, StartY);
+
             if (source is IPicture<ushort> p16)
             {
+                p16.a ??= Enumerable.Repeat(1f, p16.Pixels).ToArray();
+
                 Picture result = new Picture(Width, Height)
                 {
                     r = new ushort[Width * Height],
@@ -403,25 +411,20 @@ namespace projectFrameCut.VideoMakeEngine
                     a = new float[Width * Height],
                     hasAlphaChannel = true
                 };
-                int targetIndex = 0, sourceIndex = 0;
-                for (int y = 0; y < Height; y++)
-                {
-                    for (int x = 0; x < Width; x++)
-                    {
-                        if (source.TryFromXYToArrayIndex(x + StartX, y + StartY, out sourceIndex))
-                        {
-                            if (result.TryFromXYToArrayIndex(x, y, out targetIndex))
-                            {
-                                result.r[targetIndex] = p16.r[sourceIndex];
-                                result.g[targetIndex] = p16.g[sourceIndex];
-                                result.b[targetIndex] = p16.b[sourceIndex];
-                                result.a[targetIndex] = p16.a != null ? p16.a[sourceIndex] : 1f;
-                            }
-                        }
-                    }
-                }
-                result.ProcessStack += $"Crop from ({StartX},{StartY}) with size {Width}*{Height}, with canvas size {targetWidth}*{targetHeight}\r\n";
 
+                // 按照像素映射复制像素
+                foreach (var mapping in pixelMapping)
+                {
+                    int sourceIndex = mapping.Key;
+                    int targetIndex = mapping.Value;
+
+                    result.r[targetIndex] = p16.r[sourceIndex];
+                    result.g[targetIndex] = p16.g[sourceIndex];
+                    result.b[targetIndex] = p16.b[sourceIndex];
+                    result.a[targetIndex] = p16.a[sourceIndex];
+                }
+
+                result.ProcessStack += $"Crop from ({StartX},{StartY}) with size {Width}*{Height}, with canvas size {targetWidth}*{targetHeight}\r\n";
                 return result;
             }
             else if (source is IPicture<byte> p8)
@@ -434,30 +437,50 @@ namespace projectFrameCut.VideoMakeEngine
                     a = new float[Width * Height],
                     hasAlphaChannel = true
                 };
-                int targetIndex = 0, sourceIndex = 0;
-                for (int y = 0; y < Height; y++)
-                {
-                    for (int x = 0; x < Width; x++)
-                    {
-                        if (source.TryFromXYToArrayIndex(x + StartX, y + StartY, out sourceIndex))
-                        {
-                            if (result.TryFromXYToArrayIndex(x, y, out targetIndex))
-                            {
-                                result.r[targetIndex] = p8.r[sourceIndex];
-                                result.g[targetIndex] = p8.g[sourceIndex];
-                                result.b[targetIndex] = p8.b[sourceIndex];
-                                result.a[targetIndex] = p8.a != null ? p8.a[sourceIndex] : 1f;
-                            }
-                        }
-                    }
-                }
-                result.ProcessStack += $"Crop from ({StartX},{StartY}) with size {Width}*{Height} with canvas size {targetWidth}*{targetHeight}\r\n";
 
+                p8.a ??= Enumerable.Repeat(1f, p8.Pixels).ToArray();
+
+                foreach (var mapping in pixelMapping)
+                {
+                    int sourceIndex = mapping.Key;
+                    int targetIndex = mapping.Value;
+
+                    result.r[targetIndex] = p8.r[sourceIndex];
+                    result.g[targetIndex] = p8.g[sourceIndex];
+                    result.b[targetIndex] = p8.b[sourceIndex];
+                    result.a[targetIndex] = p8.a[sourceIndex];
+                }
+
+                result.ProcessStack += $"Crop from ({StartX},{StartY}) with size {Width}*{Height} with canvas size {targetWidth}*{targetHeight}\r\n";
                 return result;
             }
             throw new NotSupportedException();
         }
 
+
+        public static Dictionary<int, int> ComputePixelMapping(int sourceWidth, int sourceHeight,
+            int cropWidth, int cropHeight, int startX, int startY)
+        {
+            var mapping = new Dictionary<int, int>();
+
+            for (int y = 0; y < cropHeight; y++)
+            {
+                for (int x = 0; x < cropWidth; x++)
+                {
+                    int sourceX = x + startX;
+                    int sourceY = y + startY;
+
+                    if (sourceX < 0 || sourceY < 0 || sourceX >= sourceWidth || sourceY >= sourceHeight)
+                        continue;
+
+                    int sourceIndex = sourceY * sourceWidth + sourceX;
+                    int targetIndex = y * cropWidth + x;
+                    mapping[sourceIndex] = targetIndex;
+                }
+            }
+
+            return mapping;
+        }
 
     }
 

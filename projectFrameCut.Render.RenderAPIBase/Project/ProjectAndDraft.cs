@@ -1,6 +1,4 @@
 ﻿using projectFrameCut.Render;
-using projectFrameCut.Render.Plugins;
-using projectFrameCut.VideoMakeEngine;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -14,25 +12,73 @@ using System.Threading.Tasks;
 
 namespace projectFrameCut.Shared
 {
+    /// <summary>
+    /// Represents the overall structure of a project in JSON format.
+    /// </summary>
     public class ProjectJSONStructure
     {
+        /// <summary>
+        /// Name of the project.
+        /// </summary>
         public string? projectName { get; set; }
+        /// <summary>
+        /// Some project-wide properties defined by user.
+        /// </summary>
         public Dictionary<string, string> UserDefinedProperties = new();
+        /// <summary>
+        /// The save slot indicator. -1 means unknown.
+        /// </summary>
         public int SaveSlotIndicator = -1;
-
+        /// <summary>
+        /// Get or set the last changed time of the project.
+        /// </summary>
         public DateTime? LastChanged { get; set; }
+        /// <summary>
+        /// Get whether the project was normally exited.
+        /// </summary>
         public bool NormallyExited { get; set; } = false;
     }
 
+    /// <summary>
+    /// Represents the structure of a draft in JSON format.
+    /// </summary>
     public class DraftStructureJSON
     {
+        /// <summary>
+        /// The relative resolution of the draft. Unused, just for backward compatibility.
+        /// </summary>
+        [Obsolete("Use RelativeWidth and RelativeHeight instead.")]
+        [JsonIgnore]
         public uint relativeResolution { get; set; } = 1000;
+        /// <summary>
+        /// The relative width of the draft.
+        /// </summary>
+        public uint RelativeWidth { get; set; } = 1920;
+        /// <summary>
+        /// The relative height of the draft.
+        /// </summary>
+        public uint RelativeHeight { get; set; } = 1080;
+        /// <summary>
+        /// The target frame rate of the draft.
+        /// </summary>
         public uint targetFrameRate { get; set; } = 60;
+        /// <summary>
+        /// All of the clips in the draft.
+        /// </summary>
         public object[] Clips { get; init; } = Array.Empty<string>();
+        /// <summary>
+        /// Get the total duration of the draft in frames.
+        /// </summary>
         public uint Duration { get; set; } = 0;
+        /// <summary>
+        /// Get when this draft was last saved.
+        /// </summary>
         public DateTime SavedAt { get; set; } = DateTime.MinValue;
     }
 
+    /// <summary>
+    /// The data structure of a clip. Mostly used in JSON serialization/deserialization.
+    /// </summary>
     public class ClipDraftDTO
     {
         public string FromPlugin { get; set; } = string.Empty;
@@ -56,6 +102,9 @@ namespace projectFrameCut.Shared
 
     }
 
+    /// <summary>
+    /// Represents an asset item in the project. 
+    /// </summary>
     public class AssetItem
     {
         public string Name { get; set; } = string.Empty;

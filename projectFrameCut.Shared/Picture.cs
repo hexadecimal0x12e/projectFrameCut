@@ -22,27 +22,62 @@ namespace projectFrameCut.Shared
     /// </summary>
     public interface IPicture : IDisposable
     {
+        /// <summary>
+        /// Get how much bits in one pixel.
+        /// </summary>
         public int bitPerPixel { get; }
-
+        /// <summary>
+        /// The width of this picture
+        /// </summary>
         public int Width { get; set; }
+        /// <summary>
+        /// The height of this picture
+        /// </summary>
         public int Height { get; set; }
+        /// <summary>
+        /// Total pixels of this picture
+        /// </summary>
         public int Pixels { get; init; }
-
+        /// <summary>
+        /// The frame index this picture comes from. Used for diagnostics only.
+        /// </summary>
         public uint? frameIndex { get; init; } //诊断用
+        /// <summary>
+        /// The file path this picture comes from. Used for diagnostics only.
+        /// </summary>
         public string? filePath { get; init; } //诊断用
-
+        /// <summary>
+        /// Records each step of the image processed.
+        /// </summary>
+        /// <remarks>
+        /// If you're developing a Plugin that implements image processing, please append your processing step information to this property.
+        /// </remarks>
         public string? ProcessStack { get; set; }
-
+        /// <summary>
+        /// Indicates whether this picture has an alpha channel.
+        /// </summary>
         public bool hasAlphaChannel { get; set; }
 
+        /// <summary>
+        /// Resize the picture. 
+        /// </summary>
         IPicture Resize(int targetWidth, int targetHeight, bool preserveAspect = true);
+        /// <summary>
+        /// Convert this picture to the specified bits per pixel.
+        /// </summary>
         IPicture ToBitPerPixel(int bitPerPixel);
 
-        //void SaveAsPng8bpp(string path, IImageEncoder? imageEncoder = null);
-        //void SaveAsPng16bpp(string path, IImageEncoder? imageEncoder = null);
-
+        /// <summary>
+        /// Get a specific channel's data.
+        /// </summary>
+        /// <param name="channelId">The channel want to get</param>
+        /// <returns>the data. Must in a array</returns>
         object? GetSpecificChannel(ChannelId channelId);
 
+        /// <summary>
+        /// Get the diagnostics information of this picture.
+        /// </summary>
+        /// <returns>The Diagnostics info</returns>
         string GetDiagnosticsInfo();
 
         public enum ChannelId
@@ -111,7 +146,7 @@ namespace projectFrameCut.Shared
     }
 
     /// <summary>
-    /// This class is for compatibility with older codes. It's basically equals to <see cref="Picture16bpp"/>.
+    /// This class is for compatibility with some pretty old codes (mostly written before the main application appears in the Git repository). It's basically equals to <see cref="Picture16bpp"/>.
     /// </summary>
     [DebuggerDisplay("ProcessStack: {ProcessStack}")]
     public class Picture : Picture16bpp
@@ -132,9 +167,6 @@ namespace projectFrameCut.Shared
         {
         }
     }
-
-
-
 
     /// <summary>
     /// The projectFrameCut's 16-bit Picture structure. It's the base of everything you see in the final video.
@@ -170,29 +202,32 @@ namespace projectFrameCut.Shared
         /// <remarks>The new Picture instance shares the same pixel data reference as the source Picture.
         /// Changes to the pixel data in one instance will affect the other.</remarks>
         /// <param name="picture">The Picture instance to copy the width, height, and pixel data from. Cannot be null.</param>
-        public Picture16bpp(IPicture<ushort> picture)
+        public Picture16bpp(IPicture<ushort> picture, bool copyData = false)
         {
             Width = picture.Width;
             Height = picture.Height;
             Pixels = picture.Pixels;
-
-            // Ensure pixel buffers reference the source buffers if present, otherwise allocate
-            r = (picture.r != null && picture.r.Length == Pixels) ? picture.r : new ushort[Pixels];
-            g = (picture.g != null && picture.g.Length == Pixels) ? picture.g : new ushort[Pixels];
-            b = (picture.b != null && picture.b.Length == Pixels) ? picture.b : new ushort[Pixels];
-
-            if (picture.a != null && picture.a.Length == Pixels)
+            if (copyData)
             {
-                a = picture.a;
-                hasAlphaChannel = true;
-            }
-            else
-            {
-                a = null;
-                hasAlphaChannel = false;
-            }
+                // Ensure pixel buffers reference the source buffers if present, otherwise allocate
+                r = (picture.r != null && picture.r.Length == Pixels) ? picture.r : new ushort[Pixels];
+                g = (picture.g != null && picture.g.Length == Pixels) ? picture.g : new ushort[Pixels];
+                b = (picture.b != null && picture.b.Length == Pixels) ? picture.b : new ushort[Pixels];
 
-            ProcessStack = $"Created from another, {Width}*{Height},\r\n'{picture.ProcessStack}'\r\n";
+                if (picture.a != null && picture.a.Length == Pixels)
+                {
+                    a = picture.a;
+                    hasAlphaChannel = true;
+                }
+                else
+                {
+                    a = null;
+                    hasAlphaChannel = false;
+                }
+            }
+            
+
+            ProcessStack = $"Created from another, {Width}*{Height}, data {(copyData ? "copied" : "uncopied")},\r\n'{picture.ProcessStack}'\r\n";
         }
 
         /// <summary>
@@ -263,6 +298,11 @@ namespace projectFrameCut.Shared
 
         }
 
+        /// <summary>
+        /// Create a new Picture from a SixLabors.ImageSharp.Image source.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <exception cref="ArgumentNullException"></exception>
         [DebuggerNonUserCode()]
         public Picture16bpp(SixLabors.ImageSharp.Image source)
         {
@@ -644,32 +684,37 @@ namespace projectFrameCut.Shared
 
 
         /// <summary>
-        /// Initializes a new instance of the Picture8bpp class by copying the properties of an existing Picture8bpp.
+        /// Initializes a new instance of the Picture class by copying the properties of an existing Picture.
         /// </summary>
-        /// <param name="picture">The Picture8bpp instance to copy the width, height, and pixel data from. Cannot be null.</param>
-        public Picture8bpp(Picture8bpp picture)
+        /// <remarks>The new Picture instance shares the same pixel data reference as the source Picture.
+        /// Changes to the pixel data in one instance will affect the other.</remarks>
+        /// <param name="picture">The Picture instance to copy the width, height, and pixel data from. Cannot be null.</param>
+        public Picture8bpp(IPicture<byte> picture, bool copyData = false)
         {
             Width = picture.Width;
             Height = picture.Height;
             Pixels = picture.Pixels;
-
-            // reuse source buffers if they match length, otherwise allocate
-            r = (picture.r != null && picture.r.Length == Pixels) ? picture.r : new byte[Pixels];
-            g = (picture.g != null && picture.g.Length == Pixels) ? picture.g : new byte[Pixels];
-            b = (picture.b != null && picture.b.Length == Pixels) ? picture.b : new byte[Pixels];
-
-            if (picture.a != null && picture.a.Length == Pixels)
+            if (copyData)
             {
-                a = picture.a;
-                hasAlphaChannel = true;
-            }
-            else
-            {
-                a = null;
-                hasAlphaChannel = false;
-            }
-            ProcessStack = $"Created from another, {Width}*{Height},\r\n'{picture.ProcessStack}'\r\n";
+                // Ensure pixel buffers reference the source buffers if present, otherwise allocate
+                r = (picture.r != null && picture.r.Length == Pixels) ? picture.r : new byte[Pixels];
+                g = (picture.g != null && picture.g.Length == Pixels) ? picture.g : new byte[Pixels];
+                b = (picture.b != null && picture.b.Length == Pixels) ? picture.b : new byte[Pixels];
 
+                if (picture.a != null && picture.a.Length == Pixels)
+                {
+                    a = picture.a;
+                    hasAlphaChannel = true;
+                }
+                else
+                {
+                    a = null;
+                    hasAlphaChannel = false;
+                }
+            }
+
+
+            ProcessStack = $"Created from another, {Width}*{Height}, data {(copyData ? "copied" : "uncopied")},\r\n'{picture.ProcessStack}'\r\n";
         }
 
         /// <summary>
