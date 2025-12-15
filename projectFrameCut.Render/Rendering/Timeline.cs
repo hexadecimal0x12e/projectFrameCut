@@ -1,6 +1,9 @@
-﻿using projectFrameCut.Render.Plugins;
+﻿using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Shared;
-using projectFrameCut.VideoMakeEngine;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -12,9 +15,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using static projectFrameCut.Render.Video;
+using static projectFrameCut.Render.Videos.Video;
 
-namespace projectFrameCut.Render
+namespace projectFrameCut.Render.Rendering
 {
     public class Timeline
     {

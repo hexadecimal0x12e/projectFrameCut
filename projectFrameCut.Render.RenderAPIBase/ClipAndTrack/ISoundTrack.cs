@@ -2,11 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace projectFrameCut.Render.RenderAPIBase.Clip
+namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 {
-    public interface ITrack
+    public interface ISoundTrack
     {
         /// <summary>
         /// Gets the ID of the plugin that provided this value.
@@ -48,7 +49,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Clip
         /// </summary>
         public uint Duration { get; init; }
         /// <summary>
-        /// The actual sound's ratio
+        /// The actual sound's speed ratio
         /// </summary>
         /// <remarks>
         /// The final time used to do any calculation is by (FrameTime * SpeedRatio)
@@ -58,18 +59,20 @@ namespace projectFrameCut.Render.RenderAPIBase.Clip
         /// Represents the volume of this track.
         /// </summary>
         /// <remarks>
-        /// 65535 as maximum volume (257x louder, that's very enough), 255 as the origin source's volume, and 0 as mute.
+        /// 1 as origin volume, and 0 as mute.
         /// </remarks>
-        public ushort Volume { get; init; }
+        public float Volume { get; init; }
     }
 
-    public class TrackEquabilityComparer : IEqualityComparer<ITrack>
+    public class AudioTrackEquabilityComparer : IEqualityComparer<ISoundTrack>
     {
-        public bool Equals(ITrack? x, ITrack? y) => x?.Id == y?.Id;
+        public bool Equals(ISoundTrack? x, ISoundTrack? y) => x?.Id == y?.Id;
 
-        public int GetHashCode([DisallowNull] ITrack obj)
+        public int GetHashCode([DisallowNull] ISoundTrack obj)
         {
             return obj.Id.GetHashCode();
         }
+
+        public static bool IsTrackBelongsToClip(ISoundTrack track, IClip clip) => clip.BindedSoundTrack == track.Id;
     }
 }

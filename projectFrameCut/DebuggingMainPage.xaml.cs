@@ -1,7 +1,7 @@
 using Microsoft.Maui.Graphics;
 using projectFrameCut.DraftStuff;
-using projectFrameCut.Render;
-using projectFrameCut.Shared;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.Rendering;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;

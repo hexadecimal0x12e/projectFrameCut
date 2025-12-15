@@ -1,4 +1,6 @@
 ﻿using projectFrameCut.Render;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -10,7 +12,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace projectFrameCut.Shared
+namespace projectFrameCut.Render.RenderAPIBase.Project
 {
     /// <summary>
     /// Represents the overall structure of a project in JSON format.
@@ -21,6 +23,14 @@ namespace projectFrameCut.Shared
         /// Name of the project.
         /// </summary>
         public string? projectName { get; set; }
+        /// <summary>
+        /// The relative width of the draft.
+        /// </summary>
+        public int RelativeWidth { get; set; } = 1920;
+        /// <summary>
+        /// The relative height of the draft.
+        /// </summary>
+        public int RelativeHeight { get; set; } = 1080;
         /// <summary>
         /// Some project-wide properties defined by user.
         /// </summary>
@@ -50,14 +60,7 @@ namespace projectFrameCut.Shared
         [Obsolete("Use RelativeWidth and RelativeHeight instead.")]
         [JsonIgnore]
         public uint relativeResolution { get; set; } = 1000;
-        /// <summary>
-        /// The relative width of the draft.
-        /// </summary>
-        public uint RelativeWidth { get; set; } = 1920;
-        /// <summary>
-        /// The relative height of the draft.
-        /// </summary>
-        public uint RelativeHeight { get; set; } = 1080;
+
         /// <summary>
         /// The target frame rate of the draft.
         /// </summary>

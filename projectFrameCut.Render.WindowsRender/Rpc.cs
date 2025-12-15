@@ -1,10 +1,13 @@
 ﻿using ILGPU;
 using ILGPU.Runtime;
 using ILGPU.Runtime.OpenCL;
-using projectFrameCut.Render.Plugins;
-using projectFrameCut.Render.RenderAPIBase;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.Rendering;
+using projectFrameCut.Render.VideoMakeEngine;
+using projectFrameCut.Render.Videos;
 using projectFrameCut.Shared;
-using projectFrameCut.VideoMakeEngine;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
 using System;

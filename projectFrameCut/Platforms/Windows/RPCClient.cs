@@ -1,4 +1,5 @@
 ﻿using Microsoft.UI.Xaml.Media;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
 using System.Diagnostics;
 using System.Globalization;
@@ -22,6 +23,7 @@ public sealed class RpcClient : IAsyncDisposable
     public static string BootRPCServer(out Process rpcProc, out string backendAccessToken, out int backendPort, string tmpDir = "", string options = "1280,720,42,AV_PIX_FMT_NONE,nope", bool VerboseBackendLog = false, Action<string>? stdoutCallback = null, Action<string>? stderrCallback = null)
     {
         var pipeId = "pjfc_rpc_" + Guid.NewGuid().ToString();
+        var pluginPipeId = "pjfc_plugin_" + Guid.NewGuid().ToString("N");
         backendAccessToken = Guid.NewGuid().ToString().Replace("-", "");
         backendPort = GenerateBackendPort();
         Directory.CreateDirectory(tmpDir);
@@ -35,6 +37,7 @@ public sealed class RpcClient : IAsyncDisposable
                 $"""
                  rpc_backend
                   "-pipe={pipeId}"
+                                    "-pluginConnectionPipe={pluginPipeId}"
                   "-output_options={options}"
                   "-tempFolder={tmpDir}"
                   "-accessToken={backendAccessToken}"
@@ -75,6 +78,18 @@ public sealed class RpcClient : IAsyncDisposable
                 stderrCallback?.Invoke(e.Data);
             }
         };
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await PluginPipeTransport.SendEnabledPluginsAsync(pluginPipeId);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "send plugins via pipe", nameof(RpcClient));
+            }
+        });
 
         rpcProc.EnableRaisingEvents = true;
         rpcProc.Start();

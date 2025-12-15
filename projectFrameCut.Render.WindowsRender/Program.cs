@@ -5,9 +5,11 @@ using ILGPU.Runtime;
 using ILGPU.Runtime.CPU;
 using ILGPU.Runtime.Cuda;
 using ILGPU.Runtime.OpenCL;
-using projectFrameCut.Render.Plugins;
-using projectFrameCut.Render.RenderAPIBase;
-using projectFrameCut.Render.WindowsRender;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.Rendering;
+using projectFrameCut.Render.Videos;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Png;
@@ -25,7 +27,7 @@ using System.Threading.Tasks;
 using Accelerator = ILGPU.Runtime.Accelerator;
 using Device = ILGPU.Runtime.Device;
 
-namespace projectFrameCut.Render.RenderCLI
+namespace projectFrameCut.Render.WindowsRender
 {
     internal class Program
     {
@@ -70,6 +72,7 @@ namespace projectFrameCut.Render.RenderCLI
                             [-GCOptions=doLOHCompression|doNormalCollection|letCLRDoCollection]
                             [-preview=true|false]
                             [-previewPath=<path of preview output>]
+                            [-pluginConnectionPipe=<name>]
                             [-advancedFlags=<flag1>[,<flag2>,...,<flagn>]
 
                        or: projectFrameCut.Render rpc_backend
@@ -78,7 +81,7 @@ namespace projectFrameCut.Render.RenderCLI
                             [-parentPID=<integer>]
                             [-acceleratorType=<auto|cuda|opencl|cpu>]
                             [-acceleratorDeviceId=<device id>]
-                            [-forceSync=<true|false|default>]
+                            [-pluginConnectionPipe=<name>]
                             [-advancedFlags=<flag1>[,<flag2>,...,<flagn>]
 
                        or: projectFrameCut.Render list_accels
@@ -210,28 +213,6 @@ namespace projectFrameCut.Render.RenderCLI
                 ffmpeg.av_log_set_level(ffmpeg.AV_LOG_WARNING);
             Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}");
 
-            //bool fSync = false;
-            //foreach (var accelerator in accelerators)
-            //{
-            //    if (bool.TryParse(switches.GetOrAdd("forceSync", "default"), out fSync))
-            //    {
-            //        Console.WriteLine($"Force synchronize is set to {fSync}");
-            //    }
-            //    else //默认值
-            //    {
-            //        if (accelerator.AcceleratorType == AcceleratorType.OpenCL)
-            //        {
-            //            fSync = true;
-            //            Console.WriteLine($"Force synchronize is default set to true because of OpenCL accelerator is selected.");//不这么做Render会炸
-            //        }
-            //        else
-            //        {
-            //            fSync = false;
-            //            Console.WriteLine($"Force synchronize is default set to false");
-            //        }
-            //    }
-            //}
-
             ILGPUPlugin.accelerators = accelerators;
 
             var outputOptions = switches["output_options"].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -269,7 +250,34 @@ namespace projectFrameCut.Render.RenderCLI
             Console.WriteLine("Initializing plugins...");
             try
             {
-                PluginManager.Init([new InternalPluginBase(), new ILGPUPlugin()]);
+                var plugins = new List<projectFrameCut.Render.RenderAPIBase.Plugins.IPluginBase>
+                {
+                    new InternalPluginBase(),
+                    new ILGPUPlugin(),
+                };
+
+                var pluginPipe = switches.GetOrAdd("pluginConnectionPipe", string.Empty);
+                if (!string.IsNullOrWhiteSpace(pluginPipe))
+                {
+                    try
+                    {
+                        plugins.AddRange(projectFrameCut.Render.WindowsRender.PluginPipeLoader.Load(pluginPipe));
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, "load plugins from pipe", nameof(Program));
+                    }
+                }
+
+                var unique = new Dictionary<string, projectFrameCut.Render.RenderAPIBase.Plugins.IPluginBase>(StringComparer.Ordinal);
+                foreach (var p in plugins)
+                {
+                    if (p is null) continue;
+                    if (!unique.TryAdd(p.PluginID, p))
+                        Log($"Skip duplicate plugin id '{p.PluginID}'.", "warn");
+                }
+
+                projectFrameCut.Render.Plugin.PluginManager.Init(unique.Values);
             }
             catch (Exception ex)
             {

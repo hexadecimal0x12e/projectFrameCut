@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Reflection.Metadata;
 using UIKit;
 
-namespace projectFrameCut.iOS
+namespace projectFrameCut.Platforms.iOS
 {
     public class Program
     {

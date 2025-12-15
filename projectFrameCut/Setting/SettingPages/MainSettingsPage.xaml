@@ -4,16 +4,15 @@
              x:Class="projectFrameCut.MainSettingsPage"
              xmlns:l="clr-namespace:LocalizedResources"
              Title="{l:Localized Key=_Settings}">
-    <!-- Simple navigation hub without TabbedPage -->
     <ScrollView >
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="50"/>
             </Grid.RowDefinitions>
-            <VerticalStackLayout Grid.Row="0" Padding="16" Spacing="12">
-                <Label FontSize="32" Text="{l:Localized Key=_Settings}"/>
-                <Label FontSize="12" TextColor="Gray" x:Name="HintLabel"/>
+            <VerticalStackLayout Grid.Row="0" Padding="16" Spacing="2">
+               <!-- <Label FontSize="32" Text="{l:Localized Key=_Settings}"/> -->
+                <Label FontSize="14" TextColor="Gray" x:Name="HintLabel" Margin="0,0,0,8"/>
                 <VerticalStackLayout Spacing="8">
                     <Button x:Name="GeneralSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_General}" FontSize="24" Clicked="OnGeneralSettingClicked" />
                     <Button x:Name="EditSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Edit}" FontSize="24" Clicked="OnEditSettingClicked" />
@@ -26,8 +25,7 @@
 
             <VerticalStackLayout Grid.Row="1">
                 <Label Text="projectFramecCut" x:Name="VersionLabel" HorizontalOptions="Center" TextColor="Gray" />
-                <Label Text="©️ hexadecimal0x12e 2025." HorizontalOptions="Center" TextColor="Gray" />
-
+                <Label Text="© hexadecimal0x12e 2025." HorizontalOptions="Center" TextColor="Gray" />
             </VerticalStackLayout>
         </Grid>
     </ScrollView>

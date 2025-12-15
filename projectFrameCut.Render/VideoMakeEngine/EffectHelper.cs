@@ -1,7 +1,5 @@
-﻿using projectFrameCut.Render.Plugins;
+﻿using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Shared;
-using projectFrameCut.VideoMakeEngine;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -48,6 +46,8 @@ namespace projectFrameCut.Render.VideoMakeEngine
             effect.Name = item.Name;
             effect.Index = item.Index;
             effect.Enabled = item.Enabled;
+            effect.RelativeHeight = item.RelativeHeight;
+            effect.RelativeWidth = item.RelativeWidth;
             return effect;
         }
 

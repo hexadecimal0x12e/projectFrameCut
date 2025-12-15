@@ -1,19 +1,26 @@
 using Microsoft.Maui.Controls.Shapes;
-using projectFrameCut.Render;
-using projectFrameCut.VideoMakeEngine;
 using projectFrameCut.Shared;
 using System.Collections.Concurrent;
 using System.Linq;
 
 using System.Text.Json;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.VideoMakeEngine;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
 namespace InteractableEditor
 {
     public partial class InteractableEditor : ContentView
     {
         private ClipElementUI? _currentClip;
+        private AssetItem? _currentAsset;
         private Action? _updateCallback;
+
+        private const string InternalPlaceKey = "__Internal_Place__";
+        private const string InternalResizeKey = "__Internal_Resize__";
+        private const string InternalCropKey = "__Internal_Crop__";
 
         private double _canvasWidth = 800;
         private double _canvasHeight = 240;
@@ -24,9 +31,25 @@ namespace InteractableEditor
         private Rect _baseRect;
         private bool _isTextClip = false;
 
+        private const double HandleSize = 15;
+        private const double MinSize = 10;
+
+        private PanGestureRecognizer? _clipPan;
+        private PanGestureRecognizer? _tlPan;
+        private PanGestureRecognizer? _trPan;
+        private PanGestureRecognizer? _blPan;
+        private PanGestureRecognizer? _brPan;
+
         public InteractableEditor()
         {
             InitializeComponent();
+            InitGestures();
+        }
+
+        protected override void OnSizeAllocated(double width, double height)
+        {
+            base.OnSizeAllocated(width, height);
+            UpdateCanvasSize(width, height);
         }
 
         public void Init(Action updateCallback, double videoWidth, double videoHeight)
@@ -53,6 +76,7 @@ namespace InteractableEditor
         public void SetClip(ClipElementUI? clip, AssetItem? asset)
         {
             _currentClip = clip;
+            _currentAsset = asset;
             if (clip == null)
             {
                 this.IsVisible = false;
@@ -95,7 +119,14 @@ namespace InteractableEditor
                     double w = size.Width > 0 ? size.Width : 100;
                     double h = size.Height > 0 ? size.Height : 50;
 
-                    _baseRect = new Rect(entry.x + 50, entry.y + 50, w + 50, h);
+                    // For text clips, position comes from TextEntries (not PlaceEffect).
+                    _baseRect = new Rect(entry.x, entry.y, w, h);
+
+                    // Normalize storage to a mutable, strongly-typed list to simplify later edits.
+                    if (entriesObj is not List<TextClip.TextClipEntry>)
+                    {
+                        clip.ExtraData["TextEntries"] = entries;
+                    }
                 }
                 else
                 {
@@ -110,6 +141,35 @@ namespace InteractableEditor
             UpdateVisuals();
         }
 
+        private void InitGestures()
+        {
+            // Important: Do NOT recreate gesture recognizers on every frame/UI update.
+            _clipPan ??= new PanGestureRecognizer();
+            _tlPan ??= new PanGestureRecognizer();
+            _trPan ??= new PanGestureRecognizer();
+            _blPan ??= new PanGestureRecognizer();
+            _brPan ??= new PanGestureRecognizer();
+
+            _clipPan.PanUpdated += OnClipPanUpdated;
+            _tlPan.PanUpdated += OnResizePanUpdated;
+            _trPan.PanUpdated += OnResizePanUpdated;
+            _blPan.PanUpdated += OnResizePanUpdated;
+            _brPan.PanUpdated += OnResizePanUpdated;
+
+            ClipVisual.GestureRecognizers.Clear();
+            ClipVisual.GestureRecognizers.Add(_clipPan);
+
+            HandleTL.GestureRecognizers.Clear();
+            HandleTR.GestureRecognizers.Clear();
+            HandleBL.GestureRecognizers.Clear();
+            HandleBR.GestureRecognizers.Clear();
+
+            HandleTL.GestureRecognizers.Add(_tlPan);
+            HandleTR.GestureRecognizers.Add(_trPan);
+            HandleBL.GestureRecognizers.Add(_blPan);
+            HandleBR.GestureRecognizers.Add(_brPan);
+        }
+
         private Rect GetRenderRect()
         {
             if (_canvasHeight == 0 || _videoHeight == 0) return new Rect(0, 0, _canvasWidth, _canvasHeight);
@@ -118,32 +178,6 @@ namespace InteractableEditor
             double ratioVideo = _videoWidth / _videoHeight;
 
             double drawW, drawH, offX, offY;
-
-            // AspectFit logic:
-            if (ratioVideo > ratioCanvas)
-            {
-                // Video is wider than canvas (relative to aspect ratio), so it fits by Width?
-                // No, wait.
-                // Example: Canvas 100x100 (1:1), Video 200x100 (2:1).
-                // Video is wider. 2 > 1.
-                // To fit 200x100 into 100x100:
-                // Scale = 100/200 = 0.5.
-                // DrawW = 100. DrawH = 50.
-                // Fits by Width.
-
-                // Example: Canvas 800x240 (3.33), Video 1920x1080 (1.77).
-                // Video is 1.77. Canvas is 3.33.
-                // RatioVideo (1.77) < RatioCanvas (3.33).
-                // Video is NARROWER than canvas.
-                // To fit 1920x1080 into 800x240:
-                // Scale based on Height: 240/1080 = 0.222.
-                // DrawH = 240. DrawW = 1920 * 0.222 = 426.6.
-                // Fits by Height.
-
-                // So:
-                // If RatioVideo > RatioCanvas: Fits by Width.
-                // If RatioVideo < RatioCanvas: Fits by Height.
-            }
 
             if (ratioVideo > ratioCanvas)
             {
@@ -167,47 +201,19 @@ namespace InteractableEditor
         {
             if (_currentClip == null) return;
 
-            double x = 0, y = 0, w = _baseRect.Width, h = _baseRect.Height;
+            if (_videoWidth <= 0 || _videoHeight <= 0 || _canvasWidth <= 0 || _canvasHeight <= 0)
+                return;
 
             if (_currentClip.Effects == null) _currentClip.Effects = new Dictionary<string, IEffect>();
 
-            if (!_currentClip.Effects.TryGetValue("__Internal_Place__", out var p) || !(p is PlaceEffect))
-            {
-                _currentClip.Effects["__Internal_Place__"] = new PlaceEffect { StartX = (int)x, StartY = (int)y, Enabled = true, Name = "__Internal_Place__", Index = int.MinValue + 1 };
-            }
+            double x, y, w, h;
+            GetCurrentRect(out x, out y, out w, out h);
 
-            if (_currentClip.Effects.TryGetValue("__Internal_Place__", out p) && p is PlaceEffect place)
-            {
-                x = place.StartX;
-                y = place.StartY;
-            }
-
-            if (!_isTextClip)
-            {
-                bool resetCrop = false;
-                if (!_currentClip.Effects.TryGetValue("__Internal_Crop__", out var c) || !(c is CropEffect))
-                {
-                    resetCrop = true;
-                }
-                else if (c is CropEffect existingCrop)
-                {
-                    if (!existingCrop.Enabled || (existingCrop.Width == 0 && existingCrop.Height == 0))
-                    {
-                        resetCrop = true;
-                    }
-                }
-
-                if (resetCrop)
-                {
-                    _currentClip.Effects["__Internal_Crop__"] = new CropEffect { StartX = 0, StartY = 0, Width = (int)w, Height = (int)h, Enabled = true, Name = "__Internal_Crop__", Index = int.MinValue };
-                }
-
-                if (_currentClip.Effects.TryGetValue("__Internal_Crop__", out var c1) && c1 is CropEffect crop)
-                {
-                    w = crop.Width;
-                    h = crop.Height;
-                }
-            }
+            // Clamp to keep UI stable.
+            w = Math.Clamp(w, MinSize, _videoWidth);
+            h = Math.Clamp(h, MinSize, _videoHeight);
+            x = Math.Clamp(x, 0, _videoWidth - w);
+            y = Math.Clamp(y, 0, _videoHeight - h);
 
             Rect renderRect = GetRenderRect();
             double scale = renderRect.Width / _videoWidth;
@@ -219,33 +225,21 @@ namespace InteractableEditor
 
             AbsoluteLayout.SetLayoutBounds(ClipVisual, new Rect(displayX, displayY, displayW, displayH));
 
-            double hw = 15;
+            double hw = HandleSize;
             AbsoluteLayout.SetLayoutBounds(HandleTL, new Rect(displayX - hw / 2, displayY - hw / 2, hw, hw));
             AbsoluteLayout.SetLayoutBounds(HandleTR, new Rect(displayX + displayW - hw / 2, displayY - hw / 2, hw, hw));
             AbsoluteLayout.SetLayoutBounds(HandleBL, new Rect(displayX - hw / 2, displayY + displayH - hw / 2, hw, hw));
             AbsoluteLayout.SetLayoutBounds(HandleBR, new Rect(displayX + displayW - hw / 2, displayY + displayH - hw / 2, hw, hw));
 
-            PanGestureRecognizer tlGesture = new(), trGesture = new(), blGesture = new(), brGesture = new(), clipGesture = new();
-            HandleTL.GestureRecognizers.Clear();
-            HandleTR.GestureRecognizers.Clear();
-            HandleBL.GestureRecognizers.Clear();
-            HandleBR.GestureRecognizers.Clear();
-            tlGesture.PanUpdated += OnResizePanUpdated;
-            trGesture.PanUpdated += OnResizePanUpdated;
-            blGesture.PanUpdated += OnResizePanUpdated;
-            brGesture.PanUpdated += OnResizePanUpdated;
-
-            HandleTL.GestureRecognizers.Add(tlGesture);
-            HandleTR.GestureRecognizers.Add(trGesture);
-            HandleBL.GestureRecognizers.Add(blGesture);
-            HandleBR.GestureRecognizers.Add(brGesture);
-
-            ClipVisual.GestureRecognizers.Clear();
-            clipGesture.PanUpdated += OnClipPanUpdated;
-            ClipVisual.GestureRecognizers.Add(clipGesture);
+            // Disable resize handles for text clips.
+            bool showHandles = !_isTextClip;
+            HandleTL.IsVisible = showHandles;
+            HandleTR.IsVisible = showHandles;
+            HandleBL.IsVisible = showHandles;
+            HandleBR.IsVisible = showHandles;
         }
 
-        private void OnClipPanUpdated(object sender, PanUpdatedEventArgs e)
+        private void OnClipPanUpdated(object? sender, PanUpdatedEventArgs e)
         {
             if (_currentClip == null) return;
 
@@ -261,7 +255,14 @@ namespace InteractableEditor
                     double newVisualX = _startX + e.TotalX / scale;
                     double newVisualY = _startY + e.TotalY / scale;
 
-                    UpdateClipEffects(newVisualX, newVisualY, _startW, _startH);
+                    if (_isTextClip)
+                    {
+                        UpdateTextEntryPosition(newVisualX, newVisualY);
+                    }
+                    else
+                    {
+                        UpdateClipEffects(newVisualX, newVisualY, _startW, _startH);
+                    }
                     UpdateVisuals();
                     break;
                 case GestureStatus.Completed:
@@ -270,7 +271,7 @@ namespace InteractableEditor
             }
         }
 
-        private void OnResizePanUpdated(object sender, PanUpdatedEventArgs e)
+        private void OnResizePanUpdated(object? sender, PanUpdatedEventArgs e)
         {
             if (_currentClip == null) return;
             var handle = sender as BoxView;
@@ -328,21 +329,98 @@ namespace InteractableEditor
 
         private void GetCurrentRect(out double x, out double y, out double w, out double h)
         {
-            x = 0; y = 0; w = _baseRect.Width; h = _baseRect.Height;
+            x = 0;
+            y = 0;
+            w = _baseRect.Width > 0 ? _baseRect.Width : _videoWidth;
+            h = _baseRect.Height > 0 ? _baseRect.Height : _videoHeight;
 
-            if (_currentClip?.Effects != null)
+            if (_currentClip == null)
+                return;
+
+            if (_isTextClip)
             {
-                if (_currentClip.Effects.TryGetValue("__Internal_Place__", out var p) && p is PlaceEffect place)
+                if (TryGetTextEntry(out var entry) && entry != null)
+                {
+                    x = entry.x;
+                    y = entry.y;
+                }
+                return;
+            }
+
+            if (_currentClip.Effects != null)
+            {
+                if (_currentClip.Effects.TryGetValue(InternalPlaceKey, out var p) && p is PlaceEffect place)
                 {
                     x = place.StartX;
                     y = place.StartY;
+                    if (place.RelativeWidth > 0 && place.RelativeHeight > 0)
+                    {
+                        x = (double)place.StartX * _videoWidth / place.RelativeWidth;
+                        y = (double)place.StartY * _videoHeight / place.RelativeHeight;
+                    }
                 }
-                if (_currentClip.Effects.TryGetValue("__Internal_Crop__", out var c) && c is CropEffect crop)
+
+                // For size, prefer internal Resize (scale) over internal Crop (clip). We still fallback to Crop for legacy data.
+                if (_currentClip.Effects.TryGetValue(InternalResizeKey, out var r) && r is ResizeEffect resize)
                 {
-                    w = crop.Width;
-                    h = crop.Height;
+                    if (resize.Width > 0) w = resize.Width;
+                    if (resize.Height > 0) h = resize.Height;
+                    if (resize.RelativeWidth > 0 && resize.RelativeHeight > 0)
+                    {
+                        w = (double)resize.Width * _videoWidth / resize.RelativeWidth;
+                        h = (double)resize.Height * _videoHeight / resize.RelativeHeight;
+                    }
                 }
+
             }
+        }
+
+        private bool TryGetTextEntry(out TextClip.TextClipEntry? entry)
+        {
+            entry = null;
+            if (_currentClip == null) return false;
+            if (!_currentClip.ExtraData.TryGetValue("TextEntries", out var entriesObj)) return false;
+
+            List<TextClip.TextClipEntry>? entries = null;
+            if (entriesObj is List<TextClip.TextClipEntry> list)
+            {
+                entries = list;
+            }
+            else if (entriesObj is JsonElement je)
+            {
+                try
+                {
+                    entries = JsonSerializer.Deserialize<List<TextClip.TextClipEntry>>(je);
+                }
+                catch
+                {
+                    return false;
+                }
+
+                if (entries != null)
+                    _currentClip.ExtraData["TextEntries"] = entries;
+            }
+
+            if (entries == null || entries.Count == 0) return false;
+            entry = entries[0];
+            return true;
+        }
+
+        private void UpdateTextEntryPosition(double desiredX, double desiredY)
+        {
+            if (_currentClip == null) return;
+            if (!_currentClip.ExtraData.TryGetValue("TextEntries", out var entriesObj)) return;
+            if (entriesObj is not List<TextClip.TextClipEntry> entries || entries.Count == 0) return;
+
+            double w = _baseRect.Width > 0 ? _baseRect.Width : MinSize;
+            double h = _baseRect.Height > 0 ? _baseRect.Height : MinSize;
+
+            int newX = (int)Math.Round(Math.Clamp(desiredX, 0, _videoWidth - w));
+            int newY = (int)Math.Round(Math.Clamp(desiredY, 0, _videoHeight - h));
+
+            var old = entries[0];
+            entries[0] = old with { x = newX, y = newY };
+            _currentClip.ExtraData["TextEntries"] = entries;
         }
 
         private void UpdateClipEffects(double x, double y, double w, double h)
@@ -350,29 +428,97 @@ namespace InteractableEditor
             if (_currentClip == null) return;
             if (_currentClip.Effects == null) _currentClip.Effects = new Dictionary<string, IEffect>();
 
+            // Clamp in video coordinate space.
+            w = Math.Clamp(w, MinSize, _videoWidth);
+            h = Math.Clamp(h, MinSize, _videoHeight);
+            x = Math.Clamp(x, 0, _videoWidth - w);
+            y = Math.Clamp(y, 0, _videoHeight - h);
+
+            int relW = (int)Math.Round(_videoWidth);
+            int relH = (int)Math.Round(_videoHeight);
+
             // Place
-            if (_currentClip.Effects.TryGetValue("__Internal_Place__", out var p) && p is PlaceEffect place)
+            if (_currentClip.Effects.TryGetValue(InternalPlaceKey, out var p) && p is PlaceEffect place)
             {
-                _currentClip.Effects["__Internal_Place__"] = new PlaceEffect { StartX = (int)x, StartY = (int)y, Enabled = place.Enabled, Index = place.Index };
+                int newX = (int)Math.Round(x);
+                int newY = (int)Math.Round(y);
+
+                // Normalize to relative coordinate space (current video resolution)
+                if (place.RelativeWidth > 0 && place.RelativeHeight > 0)
+                {
+                    newX = (int)Math.Round(x * place.RelativeWidth / _videoWidth);
+                    newY = (int)Math.Round(y * place.RelativeHeight / _videoHeight);
+                    relW = place.RelativeWidth;
+                    relH = place.RelativeHeight;
+                }
+
+                _currentClip.Effects["__Internal_Place__"] = new PlaceEffect
+                {
+                    StartX = newX,
+                    StartY = newY,
+                    Enabled = place.Enabled,
+                    Index = place.Index,
+                    Name = string.IsNullOrWhiteSpace(place.Name) ? InternalPlaceKey : place.Name,
+                    RelativeWidth = relW,
+                    RelativeHeight = relH
+                };
             }
             else
             {
-                _currentClip.Effects["__Internal_Place__"] = new PlaceEffect { StartX = (int)x, StartY = (int)y };
+                _currentClip.Effects[InternalPlaceKey] = new PlaceEffect
+                {
+                    StartX = (int)Math.Round(x),
+                    StartY = (int)Math.Round(y),
+                    Enabled = true,
+                    Index = int.MinValue + 1,
+                    Name = InternalPlaceKey,
+                    RelativeWidth = relW,
+                    RelativeHeight = relH
+                };
             }
 
             if (!_isTextClip)
             {
-                // Crop
-                int cropX = 0, cropY = 0;
-                if (_currentClip.Effects.TryGetValue("__Internal_Crop__", out var c) && c is CropEffect crop)
+                if (_currentClip.Effects.TryGetValue(InternalResizeKey, out var r) && r is ResizeEffect resize)
                 {
-                    cropX = crop.StartX;
-                    cropY = crop.StartY;
-                    _currentClip.Effects["__Internal_Crop__"] = new CropEffect { StartX = cropX, StartY = cropY, Width = (int)w, Height = (int)h, Enabled = crop.Enabled, Index = crop.Index };
+                    int newW = (int)Math.Round(w);
+                    int newH = (int)Math.Round(h);
+
+                    int resizeRelW = relW;
+                    int resizeRelH = relH;
+                    if (resize.RelativeWidth > 0 && resize.RelativeHeight > 0)
+                    {
+                        newW = (int)Math.Round(w * resize.RelativeWidth / _videoWidth);
+                        newH = (int)Math.Round(h * resize.RelativeHeight / _videoHeight);
+                        resizeRelW = resize.RelativeWidth;
+                        resizeRelH = resize.RelativeHeight;
+                    }
+
+                    _currentClip.Effects[InternalResizeKey] = new ResizeEffect
+                    {
+                        Width = newW,
+                        Height = newH,
+                        PreserveAspectRatio = false,
+                        Enabled = resize.Enabled,
+                        Index = resize.Index,
+                        Name = string.IsNullOrWhiteSpace(resize.Name) ? InternalResizeKey : resize.Name,
+                        RelativeWidth = resizeRelW,
+                        RelativeHeight = resizeRelH
+                    };
                 }
                 else
                 {
-                    _currentClip.Effects["__Internal_Crop__"] = new CropEffect { StartX = 0, StartY = 0, Width = (int)w, Height = (int)h };
+                    _currentClip.Effects[InternalResizeKey] = new ResizeEffect
+                    {
+                        Width = (int)Math.Round(w),
+                        Height = (int)Math.Round(h),
+                        PreserveAspectRatio = false,
+                        Enabled = true,
+                        Index = int.MinValue,
+                        Name = InternalResizeKey,
+                        RelativeWidth = relW,
+                        RelativeHeight = relH
+                    };
                 }
             }
         }

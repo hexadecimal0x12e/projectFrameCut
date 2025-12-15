@@ -1,7 +1,9 @@
-﻿using projectFrameCut.Render.Plugins;
+﻿using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.VideoMakeEngine;
+using projectFrameCut.Render.Videos;
 using projectFrameCut.Shared;
-using projectFrameCut.VideoMakeEngine;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -12,7 +14,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace projectFrameCut.Render
+namespace projectFrameCut.Render.Rendering
 {
     public class Renderer
     {

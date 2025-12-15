@@ -1,15 +1,18 @@
-﻿using projectFrameCut.Render.RenderAPIBase;
+﻿using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.VideoMakeEngine;
+using projectFrameCut.Render.Videos;
 using projectFrameCut.Shared;
-using projectFrameCut.VideoMakeEngine;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
 
-namespace projectFrameCut.Render;
+namespace projectFrameCut.Render.Plugin;
 
 
 public class InternalPluginBase : IPluginBase
@@ -62,29 +65,14 @@ public class InternalPluginBase : IPluginBase
         {"DecoderContext16Bit", new((p) => new DecoderContext16Bit(p)) }
     };
 
-    Dictionary<string, string> config = new Dictionary<string, string>
-    {
-        {"TestOption1","111" },
-        {"TestOption2","abc" },
-        {"TestOption3","def" },
-        {"TestOption4","aaa" },
-    };
 
-    public Dictionary<string, string> Configuration { get => config; set { config = value; } }
+    public Dictionary<string, string> Configuration { get => new(); set { } }
 
-    public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString => new Dictionary<string, Dictionary<string, string>>
-    {
-        {
-            "zh-CN",
-            new Dictionary<string, string>
-            {
-                {"TestOption1","测试选项1" },
-                {"TestOption2","测试选项2" },
-                {"TestOption3","测试选项3" },
-                {"TestOption4","测试选项4" },
-            }
-        }
-    };
+    public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString => new Dictionary<string, Dictionary<string, string>> { };
+
+    public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new Dictionary<string, Func<string, string, ISoundTrack>> { };
+
+    public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider => new Dictionary<string, Func<string, IAudioSource>> { };
 
     public IEffect EffectCreator(EffectAndMixtureJSONStructure stru) => EffectHelper.CreateFromJSONStructure(stru);
 

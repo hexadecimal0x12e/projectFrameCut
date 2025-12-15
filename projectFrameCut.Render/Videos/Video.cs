@@ -1,4 +1,5 @@
 ﻿using FFmpeg.AutoGen;
+using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp.ColorSpaces;
 using System;
@@ -8,7 +9,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace projectFrameCut.Render
+namespace projectFrameCut.Render.Videos
 {
     [Obsolete("Use IVideoSource directly instead of wrapping it in Video.")]
     public class Video : IDisposable

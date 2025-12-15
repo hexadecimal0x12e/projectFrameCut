@@ -5,19 +5,28 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using Microsoft.Maui.LifecycleEvents;
-using projectFrameCut.iOS;
 using projectFrameCut.Setting.SettingManager;
 using System.Text.Json;
 using System.Globalization;
 using System.Diagnostics;
 using CommunityToolkit.Maui;
-using projectFrameCut.iOS.Render;
-using projectFrameCut.Render.Plugins;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.MetalAccelerater;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
+
+using projectFrameCut.Services;
 
 
 
-#if IOS
+
+
+
+
+
+#if iDevices
 using UIKit;
+using projectFrameCut.Platforms;
+
 #endif
 
 
@@ -324,13 +333,17 @@ namespace projectFrameCut
 
                 try
                 {
-                    PluginManager.Init();
+                    List<IPluginBase> plugins = [new InternalPluginBase()];
+#if DEBUG
+                    plugins.AddRange(PluginService.LoadUserPlugins());
+#endif
+
+                    PluginManager.Init(plugins);
                 }
                 catch (Exception ex)
                 {
                     Log(ex, "Load plugins", CreateMauiApp);
                 }
-
                 Log("Everything ready!");
                 var app = builder.Build();
                 Log("App is ready!");
@@ -349,7 +362,9 @@ namespace projectFrameCut
         }
         public static void Crash(Exception ex)
         {
-            Program.Crash(ex);
+#if IOS
+            projectFrameCut.Platforms.iOS.Program.Crash(ex);
+#endif
         }
         public static void ConfigFontFromCulture(MauiAppBuilder builder, CultureInfo culture)
         {

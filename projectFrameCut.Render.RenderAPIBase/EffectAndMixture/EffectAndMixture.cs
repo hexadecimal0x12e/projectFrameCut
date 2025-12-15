@@ -1,4 +1,5 @@
 ﻿using projectFrameCut.Render;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -9,7 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace projectFrameCut.Shared
+namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
     public interface IEffect
     {
@@ -53,6 +54,15 @@ namespace projectFrameCut.Shared
         /// </summary>
         [JsonIgnore]
         public string? NeedComputer { get; }
+        /// <summary>
+        /// Get the relative width of the effect.
+        /// </summary>
+        public int RelativeWidth { get; set; }
+        /// <summary>
+        /// Get the relative height of the effect.
+        /// </summary>
+        public int RelativeHeight { get; set; }
+
         /// <summary>
         /// Create a new effect with the given parameters.
         /// </summary>
@@ -127,6 +137,8 @@ namespace projectFrameCut.Shared
         public string TypeName { get; set; } = string.Empty;
         public bool Enabled { get; set; } = true;
         public int Index { get; set; } = 1;
+        public int RelativeWidth { get; set; }
+        public int RelativeHeight { get; set; }
         public Dictionary<string, object>? Parameters { get; set; }
     }
 

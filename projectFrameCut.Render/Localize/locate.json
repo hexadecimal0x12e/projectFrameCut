@@ -1,0 +1,120 @@
+{
+  "DefaultLocate": "zh-CN",
+  "AdditionalUsing": "",
+  "NameSpaceOfLocalizerInstance": "",
+  "ClassNameSpaceOfLocalizerInstance": "SimpleLocalizerBaseGeneratedHelper_PropertyPanel",
+  "NameOfLocalizerInstance": "PPLocalizedResuorces",
+  "NameOfBaseInterface": "ISimpleLocalizerBase_PropertyPanel",
+  "EnableDynamicGenerate": false,
+  "EnableBaseGenerate": true,
+  "Values": {
+    "zh-CN": [
+      {
+        "Id": "_Apply",
+        "Value": "\u5E94\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Enabled",
+        "Value": "\u542F\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_EnabledSomething",
+        "Value": "\u542F\u7528 {something}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "something"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "something",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Height",
+        "Value": "\u9AD8\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Width",
+        "Value": "\u5BBD\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Add_Effect",
+        "Value": "\u6DFB\u52A0\u4E00\u4E2A\u6548\u679C...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_Index",
+        "Value": "\u6E32\u67D3\u987A\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_Remove",
+        "Value": "\u79FB\u9664\u8FD9\u4E2A\u6548\u679C...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "PropertyPanel",
+        "Value": "\u5C5E\u6027\u9762\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Add_Effect_Select",
+        "Value": "\u9009\u62E9\u4E00\u4E2A\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_StartX",
+        "Value": "\u8D77\u59CB X \u8F74\u5750\u6807",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_StartY",
+        "Value": "\u8D77\u59CB Y \u8F74\u5750\u6807",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      }
+    ]
+  }
+}

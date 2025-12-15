@@ -1,7 +1,8 @@
 ﻿using ILGPU.Runtime;
-using projectFrameCut.Render.RenderAPIBase;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
-using projectFrameCut.Shared;
+using projectFrameCut.Render.RenderAPIBase.Sources;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -48,6 +49,9 @@ namespace projectFrameCut.Render.WindowsRender
         public Dictionary<string, string> Configuration { get => new Dictionary<string, string>(); set { } }
 
         public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString => new Dictionary<string, Dictionary<string, string>> { };
+        public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new Dictionary<string, Func<string, string, ISoundTrack>> { };
+
+        public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider => new Dictionary<string, Func<string, IAudioSource>> { };
 
 
     }

@@ -1,5 +1,7 @@
-﻿using projectFrameCut.Render.RenderAPIBase;
-using projectFrameCut.Shared;
+﻿using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.RenderAPIBase.Sources;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -48,6 +50,24 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public string? PublishingUrl { get; }
 
         /// <summary>
+        /// Create an IClip instance from the given file path and JSON data.
+        /// </summary>
+        /// <remarks>
+        /// The argument for value is Id of the clip, and the second argument is the name of the clip.
+        /// </remarks>
+        public Dictionary<string, Func<string, string, IClip>> ClipProvider { get; }
+
+        /// <summary>
+        /// Create an ISoundTrack instance from the given file path and JSON data.
+        /// </summary>
+        /// <remarks>
+        /// The argument for value is Id of the sound track, and the second argument is the name of the sound track.
+        /// </remarks>
+        public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
+
+      
+
+        /// <summary>
         /// Create an IEffect instance from the given JSON structure.
         /// </summary>
         public Dictionary<string, Func<IEffect>> EffectProvider { get; }
@@ -59,13 +79,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Create an IComputer instance from the given JSON structure.
         /// </summary>
         public Dictionary<string, Func<IComputer>> ComputerProvider { get; }
-        /// <summary>
-        /// Create an IClip instance from the given file path and JSON data.
-        /// </summary>
-        /// <remarks>
-        /// The argument for value is Id of the clip, and the second argument is the name of the clip.
-        /// </remarks>
-        public Dictionary<string, Func<string,string,IClip>> ClipProvider { get; }
+    
         /// <summary>
         /// Create an IVideoSource instance from the given file path.
         /// </summary>
@@ -73,6 +87,13 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// When the argument is null or empty when creating a IVideoSource, the provider should return an instance that can be used to check for preferred extensions.
         /// </remarks>
         public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider { get; }
+        /// <summary>
+        /// Create an IAudioSource instance from the given file path.
+        /// </summary>
+        /// <remarks>
+        /// When the argument is null or empty when creating a IAudioSource, the provider should return an instance that can be used to check for preferred extensions.
+        /// </remarks>
+        public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; }
 
         /// <summary>
         /// Get or set the configuration of the plugin.
@@ -86,7 +107,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Represents the display strings for each configuration key.
         /// </summary>
         /// <remarks>
-        /// For each configuration key, the inner dictionary is the localization mapping, where the key is the locale code (e.g., "en-US", "fr-FR") and the value is the display string in that locale.
+        /// Each key represents the locate code (like 'en-US'), and it's values represents the mapping of the setting strings. 
+        /// For each locate's mapping, the key is the setting key, and the value is the display name.
         /// </remarks>
         public Dictionary<string, Dictionary<string,string>> ConfigurationDisplayString { get; }
 
@@ -158,6 +180,37 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
             }
             throw new NotSupportedException($"No suitable video source found for the given file '{filePath}'.");
         }
+        /// <summary>
+        /// Create a AudioSource instance from the file.
+        /// This method will first try to find a preferred audio source by file extension,
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException"></exception>
+        public virtual IAudioSource AudioSourceCreator(string filePath)
+        {
+            var prefered = AudioSourceProvider.Values.Where((k) => k(null!).PreferredExtension.Contains(Path.GetExtension(filePath)));
+            if (prefered.Any())
+            {
+                return prefered.First()(filePath);
+            }
+            else
+            {
+                foreach (var provider in AudioSourceProvider.Values)
+                {
+                    var instance = provider(filePath);
+                    if (instance.TryInitialize())
+                    {
+                        return instance;
+                    }
+                    else
+                    {
+                        instance.Dispose();
+                    }
+                }
+            }
+            throw new NotSupportedException($"No suitable audio source found for the given file '{filePath}'.");
+        }
 
         /// <summary>
         /// Create a VideoSource instance using the given decoder.
@@ -172,6 +225,20 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 return value(filePath);
             }
             throw new NotSupportedException($"Video source '{decoderName}' not found.");
+        }
+        /// <summary>
+        /// Create a AudioSource instance using the given decoder.
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException"></exception>
+        public virtual IAudioSource AudioSourceCreator(string filePath, string decoderName)
+        {
+            if (AudioSourceProvider.TryGetValue(decoderName, out var value))
+            {
+                return value(filePath);
+            }
+            throw new NotSupportedException($"Audio source '{decoderName}' not found.");
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
 ﻿using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.Render;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
-using projectFrameCut.VideoMakeEngine;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -9,9 +9,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Path = System.IO.Path;
 
-#if iDevices
-// using projectFrameCut.Platforms.iOS;
-#endif
 
 namespace projectFrameCut.DraftStuff
 {
@@ -52,7 +49,7 @@ namespace projectFrameCut.DraftStuff
         public string TypeName { get; set; } = string.Empty;
         public string? sourcePath { get; set; } = null;
 
-        public Dictionary<string, projectFrameCut.Shared.IEffect>? Effects { get; set; } = new();
+        public Dictionary<string, IEffect>? Effects { get; set; } = new();
         public Dictionary<string, object> ExtraData { get; set; } = new();
 
         public void ApplySpeedRatio()

@@ -1,4 +1,18 @@
 ﻿#pragma warning disable CS8974 //log a exception will cause this
+using System;
+using System.Diagnostics;
+using FFmpeg.AutoGen;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using Exception = System.Exception;
+using System.Text;
+using System.Text.Json;
+using System.Globalization;
+using CommunityToolkit.Maui;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Services;
+using Thread = System.Threading.Thread;
+using projectFrameCut.Render.Plugin;
 using Microsoft.Extensions.Logging;
 using projectFrameCut.Shared;
 
@@ -15,24 +29,7 @@ using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
 
 #endif
-using System;
-using System.Diagnostics;
-using FFmpeg.AutoGen;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using FFmpeg.AutoGen.Native;
-using Exception = System.Exception;
-using System.Text;
-using System.Text.Json;
-using System.Globalization;
-using Microsoft.Maui.Controls.PlatformConfiguration;
-using System.Runtime.Versioning;
-using CommunityToolkit.Maui;
-using projectFrameCut.Render.Plugins;
-using projectFrameCut.Render;
-using projectFrameCut.Render.RenderAPIBase.Plugins;
-using projectFrameCut.Services;
-using Thread = System.Threading.Thread;
+
 
 namespace projectFrameCut
 {
@@ -220,7 +217,6 @@ namespace projectFrameCut
             {
                 var builder = MauiApp.CreateBuilder();
                 builder.UseMauiApp<App>().UseMauiCommunityToolkit();
-                // 注册屏幕朗读检测服务（跨平台实现）
                 builder.Services.AddSingleton<IScreenReaderService, ScreenReaderService>();
 #if DEBUG
                 builder.Logging.SetMinimumLevel(LogLevel.Trace);
@@ -381,7 +377,7 @@ namespace projectFrameCut
 
                     Localized = SimpleLocalizer.Init(locate);
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
-
+                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResuorces = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
                     try
                     {
                         ConfigFontFromCulture(builder, culture);
@@ -416,6 +412,8 @@ namespace projectFrameCut
                     SimpleLocalizer.IsFallbackMatched = true;
                     Localized = ISimpleLocalizerBase.GetMapping().First().Value;
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResuorces = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+
                     builder.ConfigureFonts(fonts =>
                     {
                         fonts.AddFont("HarmonyOS_Sans_Regular.ttf", "Font_Regular");
@@ -551,8 +549,8 @@ namespace projectFrameCut
                 case 932: //Japanese
                     builder.ConfigureFonts(fonts =>
                     {
-                        fonts.AddFont("NotoSansJP-Regular.ttf", "Font_Regular");
-                        fonts.AddFont("NotoSansJP-Bold.ttf", "Font_Semibold");
+                        fonts.AddFont("HarmonyOS_Sans_SC_Regular.ttf", "Font_Regular");
+                        fonts.AddFont("HarmonyOS_Sans_SC_Bold.ttf", "Font_Semibold");
                     });
                     break;
                 case 949: //Korean

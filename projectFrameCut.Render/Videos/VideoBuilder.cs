@@ -4,7 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 
-namespace projectFrameCut.Render
+namespace projectFrameCut.Render.Videos
 {
     public class VideoBuilder : IDisposable
     {

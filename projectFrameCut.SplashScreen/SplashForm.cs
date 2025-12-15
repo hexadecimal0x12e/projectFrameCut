@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace projectFrameCut.SplashScreen
 {
     public partial class SplashForm : Form
@@ -12,6 +14,11 @@ namespace projectFrameCut.SplashScreen
         {
             VersionLabel.Text = SplashProgram.AppVersion;
             TitleLabel.Text = SplashProgram.AppTitle;
+        }
+
+        private void closeButton_Click(object sender, EventArgs e)
+        {
+            Process.GetCurrentProcess().Kill(); 
         }
     }
 }

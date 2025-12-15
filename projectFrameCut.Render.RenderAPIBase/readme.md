@@ -1,4 +1,4 @@
 ﻿# About the Render API Base
 This directory contains the base classes and interfaces for the Render API in the projectFrameCut application. The Render API Base provides a foundation for rendering functionalities, allowing developers to build upon it for specific rendering implementations.
 
-To build a plugin, you'll need to create a new class that inherits `IPluginBase`. This will ensure that your plugin adheres to the expected structure and behavior defined by the Render API.
+To build a plugin, please refer to the plugin development documentation.

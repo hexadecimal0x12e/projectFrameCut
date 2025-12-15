@@ -12,8 +12,11 @@ namespace projectFrameCut.Services
 {
     public static class AdminHelper
     {
+        private static bool? isAdmin = null;
+
         public static bool IsRunningAsAdministrator()
         {
+            if(isAdmin is not null) return isAdmin.Value;
 #if WINDOWS
             var bcdeditProc = Process.Start(new ProcessStartInfo
             {
@@ -25,41 +28,42 @@ namespace projectFrameCut.Services
                 CreateNoWindow = true
             });
             bcdeditProc?.WaitForExit();
-            return bcdeditProc?.ExitCode == 0; //bcdedit returns 0 when success
+            isAdmin = bcdeditProc?.ExitCode == 0; //bcdedit returns 0 when success
 #elif ANDROID //if you're rooted we consider you as a admin
             string[] binPaths = {
-        "/system/bin/",
-        "/system/xbin/",
-        "/sbin/",
-        "/vendor/bin/",
-        "/system/sd/xbin/",
-        "/system/bin/failsafe/"
-    };
+                "/system/bin/",
+                "/system/xbin/",
+                "/sbin/",
+                "/vendor/bin/",
+                "/system/sd/xbin/",
+                "/system/bin/failsafe/"
+            };
+
             foreach (var path in binPaths)
             {
                 if (System.IO.File.Exists(path + "su"))
                 {
-                    return true;
+                    isAdmin = true;
                 }
             }
             try
             {
                 System.Diagnostics.Process.Start("su");
-                return true;
+                isAdmin = true;
             }
             catch //unrooted
             {
 
             }
 
-            bool isTestKeys = Build.Tags != null && Build.Tags.Contains("test-keys");
+            isAdmin = Build.Tags != null && Build.Tags.Contains("test-keys");
 
 
-            return isTestKeys;
 
 #else
-            return false;
+            isAdmin = false;
 #endif
+            return isAdmin.Value;
         }
     }
 }

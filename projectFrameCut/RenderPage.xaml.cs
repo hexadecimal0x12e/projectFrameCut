@@ -1,6 +1,5 @@
 using FFmpeg.AutoGen;
 using Microsoft.Maui.ApplicationModel;
-using projectFrameCut.Render;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
@@ -13,8 +12,13 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using projectFrameCut.Setting.SettingManager;
-using projectFrameCut.Render.RenderAPIBase;
-using projectFrameCut.Render.Plugins;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.Videos;
+using projectFrameCut.Render.Rendering;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.Plugin;
+
+
 
 
 
@@ -32,7 +36,7 @@ namespace projectFrameCut;
 public partial class RenderPage : ContentPage
 {
     public string _workingPath;
-    Shared.ProjectJSONStructure _project;
+    ProjectJSONStructure _project;
     uint _duration;
 
     public bool running;
@@ -57,7 +61,7 @@ public partial class RenderPage : ContentPage
         InitializeLogTimer();
     }
 
-    public RenderPage(string path, uint projectDuration, Shared.ProjectJSONStructure projectInfo)
+    public RenderPage(string path, uint projectDuration, ProjectJSONStructure projectInfo)
     {
         InitializeComponent();
         _workingPath = path;

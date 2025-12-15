@@ -1,5 +1,4 @@
-﻿using projectFrameCut.Render.Plugins;
-using projectFrameCut.Render.RenderAPIBase.Plugins;
+﻿using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
 using System;
@@ -14,12 +13,81 @@ namespace projectFrameCut.Services
 {
     public static class PluginService
     {
+        public sealed record PluginPayload(string Id, byte[] AssemblyBytes, Dictionary<string, string> Configuration);
+
+        public static List<PluginPayload> GetEnabledPluginPayloads()
+        {
+            var result = new List<PluginPayload>();
+
+            string pluginsListPath = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
+            if (!File.Exists(pluginsListPath))
+                pluginsListPath = Path.Combine(MauiProgram.BasicDataPath, "Plugins.json");
+
+            if (!File.Exists(pluginsListPath))
+                return result;
+
+            var items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(pluginsListPath)) ?? new();
+            foreach (var item in items.Where(c => c.Enabled))
+            {
+                try
+                {
+                    var pluginID = item.Id;
+                    var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
+                    if (!Directory.Exists(pluginRoot))
+                        continue;
+
+                    var pluginPem = SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}").GetAwaiter().GetResult();
+                    if (string.IsNullOrEmpty(pluginPem))
+                        continue;
+
+                    var pluginEncPath = Path.Combine(pluginRoot, pluginID + ".dll.enc");
+                    var pluginSigPath = Path.Combine(pluginRoot, pluginID + ".dll.sig");
+                    if (!File.Exists(pluginEncPath) || !File.Exists(pluginSigPath))
+                        continue;
+
+                    var pemHash = HashServices.ComputeStringHash(pluginPem ?? string.Empty, SHA512.Create());
+                    var pluginEnc = File.ReadAllBytes(pluginEncPath);
+                    var decBytes = FileCryptoService.DecryptToFileWithPassword(pemHash, pluginEnc);
+                    var pluginSig = File.ReadAllText(pluginSigPath);
+                    if (!FileSignerService.VerifyFileSignature(pluginPem, decBytes, pluginSig))
+                    {
+                        Log($"Skip sending plugin {pluginID}: signature mismatch.", "warn");
+                        continue;
+                    }
+
+                    var config = new Dictionary<string, string>();
+                    var optionFilePath = Path.Combine(pluginRoot, "option.json");
+                    if (File.Exists(optionFilePath))
+                    {
+                        try
+                        {
+                            var configJson = File.ReadAllText(optionFilePath);
+                            config = JsonSerializer.Deserialize<Dictionary<string, string>>(configJson) ?? new();
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, $"Failed to read plugin configuration for {pluginID}");
+                        }
+                    }
+
+                    result.Add(new PluginPayload(pluginID, decBytes, config));
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"export plugin payload: {item.Id}");
+                }
+            }
+
+            return result;
+        }
+
         public static async Task AddAPlugin(string pluginPath, Page currentPage)
         {
             IPluginBase? pluginInstance = null;
             PluginMetadata metadata = null!;
             string failReason = string.Empty;
             string pluginRoot = string.Empty;
+            bool PEMExists = false;
             await Task.Run(async () =>
             {
                 Directory.CreateDirectory(Path.Combine(MauiProgram.BasicDataPath, "Plugins"));
@@ -54,7 +122,8 @@ namespace projectFrameCut.Services
                 }
 
                 var storPluginPem = await SecureStorage.Default.GetAsync($"plugin_pem_{metadata.PluginID}");
-                if(storPluginPem is not null && storPluginPem != File.ReadAllText(pemPath))
+                PEMExists = storPluginPem is not null;
+                if (PEMExists && storPluginPem != File.ReadAllText(pemPath))
                 {
                     failReason = SettingsManager.SettingLocalizedResources.Plugin_InvaildSignToPreviousOne;
                     return;
@@ -99,11 +168,13 @@ namespace projectFrameCut.Services
                 var conf = await currentPage.DisplayAlertAsync(Localized._Warn, SettingsManager.SettingLocalizedResources.Plugin_AddWarn(pluginInstance.Name), Localized._OK, Localized._Cancel);
                 if (conf)
                 {
-                    var pemPath = Path.Combine(pluginRoot, "publickey.pem");
-                    var pem = File.ReadAllText(pemPath);
-                    await SecureStorage.Default.SetAsync($"plugin_pem_{pluginInstance.PluginID}", pem);
-                    //File.Delete(pemPath);
-                    //File.Delete(Path.Combine(pluginRoot, "metadata.json"));
+                    if (!PEMExists)
+                    {
+                        var pemPath = Path.Combine(pluginRoot, "publickey.pem");
+                        var pem = File.ReadAllText(pemPath);
+                        await SecureStorage.Default.SetAsync($"plugin_pem_{pluginInstance.PluginID}", pem);
+                    }  
+                    Directory.Delete(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID), true);
                     Directory.CreateDirectory(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID));
                     File.Move(Path.Combine(pluginRoot, pluginInstance.PluginID + ".dll.enc"), Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, pluginInstance.PluginID + ".dll.enc"));
                     File.Move(Path.Combine(pluginRoot, pluginInstance.PluginID + ".dll.sig"), Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, pluginInstance.PluginID + ".dll.sig"));
@@ -263,6 +334,40 @@ namespace projectFrameCut.Services
             items.RemoveAll(c => c.Id == pluginID);
             File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "Plugins.json"), JsonSerializer.Serialize(items));
 
+        }
+
+
+        public static List<PluginItem> GetDisabledPlugins()
+        {
+            if (!File.Exists(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) return new();
+            var items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) ?? new();
+            return items.Where(c => !c.Enabled).ToList();
+        }
+
+        public static void EnablePlugin(string pluginID)
+        {
+            var path = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
+            if (!File.Exists(path)) return;
+            var items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(path)) ?? new();
+            var item = items.FirstOrDefault(c => c.Id == pluginID);
+            if (item != null)
+            {
+                item.Enabled = true;
+                File.WriteAllText(path, JsonSerializer.Serialize(items));
+            }
+        }
+
+        public static void DisablePlugin(string pluginID)
+        {
+            var path = Path.Combine(MauiProgram.BasicDataPath, "plugins.json");
+            if (!File.Exists(path)) return;
+            var items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(path)) ?? new();
+            var item = items.FirstOrDefault(c => c.Id == pluginID);
+            if (item != null)
+            {
+                item.Enabled = false;
+                File.WriteAllText(path, JsonSerializer.Serialize(items));
+            }
         }
 
 

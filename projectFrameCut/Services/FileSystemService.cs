@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using Android.Content;
 using Android.Net;
 using AndroidX.Core.Content;
+using projectFrameCut.Platforms.Android;
 #endif
 
 namespace projectFrameCut.Services
@@ -49,11 +50,8 @@ namespace projectFrameCut.Services
                 }
 
 #elif ANDROID
-                // Android 平台
-                // 获取 Activity
-                var activity = MainThread.CurrentActivity ?? throw new InvalidOperationException("MainThread.CurrentActivity is null");
-                
-                // Android 上通常使用文件管理器应用
+                var ctx = MainApplication.MainContext ?? throw new InvalidOperationException("MainApplication.MainContext is null");
+
                 var uri = Android.Net.Uri.Parse("file://" + folderPath);
                 var intent = new Intent(Intent.ActionView);
                 intent.SetDataAndType(uri, "resource/folder");
@@ -61,7 +59,7 @@ namespace projectFrameCut.Services
                 
                 try
                 {
-                    activity.StartActivity(intent);
+                    ctx.StartActivity(intent);
                     return true;
                 }
                 catch
@@ -116,14 +114,12 @@ namespace projectFrameCut.Services
                 }
 
 #elif ANDROID
-                // Android 平台
                 if (!File.Exists(filePath))
                     return false;
 
-                var activity = MainThread.CurrentActivity ?? throw new InvalidOperationException("MainThread.CurrentActivity is null");
-                
+                var ctx = MainApplication.MainContext ?? throw new InvalidOperationException("MainApplication.MainContext is null");
                 var file = new Java.IO.File(filePath);
-                var uri = FileProvider.GetUriForFile(activity, $"{activity.PackageName}.fileprovider", file);
+                var uri = AndroidX.Core.Content.FileProvider.GetUriForFile(ctx, $"{ctx.PackageName}.fileprovider", file);
                 
                 var intent = new Intent(Intent.ActionView);
                 intent.SetData(uri);
@@ -131,7 +127,7 @@ namespace projectFrameCut.Services
                 
                 try
                 {
-                    activity.StartActivity(intent);
+                    ctx.StartActivity(intent);
                     return true;
                 }
                 catch
@@ -214,7 +210,7 @@ namespace projectFrameCut.Services
         {
             try
             {
-                var activity = MainThread.CurrentActivity ?? throw new InvalidOperationException("MainThread.CurrentActivity is null");
+                var ctx = MainApplication.MainContext ?? throw new InvalidOperationException("MainApplication.MainContext is null");
                 
                 // 尝试使用常见的文件管理器
                 var fileManagerPackages = new[]
@@ -234,7 +230,7 @@ namespace projectFrameCut.Services
                     intent.SetPackage(packageName);
                     try
                     {
-                        activity.StartActivity(intent);
+                        ctx.StartActivity(intent);
                         return true;
                     }
                     catch

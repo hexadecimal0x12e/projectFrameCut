@@ -1,5 +1,7 @@
-﻿using projectFrameCut.Render.RenderAPIBase;
+﻿using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -7,7 +9,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 
-namespace projectFrameCut.Render.Plugins
+namespace projectFrameCut.Render.Plugin
 {
     public static class PluginManager
     {

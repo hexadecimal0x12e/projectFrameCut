@@ -23,7 +23,12 @@ using Application = Microsoft.Maui.Controls.Application;
 using Microsoft.Maui.Controls;
 using InteractableEditor;
 using Microsoft.Maui.Layouts;
-
+using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.Videos;
+using projectFrameCut.Render.Plugin;
 
 
 
@@ -44,12 +49,15 @@ using Foundation;
 using UIKit;
 using projectFrameCut.iDevicesAPI;
 using MobileCoreServices;
+using projectFrameCut.MetalAccelerater;
+
 
 #endif
 
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
 using projectFrameCut.Render.AndroidOpenGL;
+
 
 #endif
 
@@ -244,6 +252,8 @@ public partial class DraftPage : ContentPage
         ProjectNameMenuBarItem.Text = ProjectInfo.projectName ?? "Unknown project";
         IsReadonly = isReadonly;
 
+        PlayheadLine.TranslationX = TrackHeadLayout.Width;
+
         PostInit();
     }
 
@@ -254,7 +264,6 @@ public partial class DraftPage : ContentPage
         _isClosing = false;
 #endif
         PostInit();
-        MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog;
 
         var size = GetScreenSizeInDp();
         LogDiagnostic($"Window size on appearing: {size.Width:F0} x {size.Height:F0} (DIP)");
@@ -366,6 +375,14 @@ public partial class DraftPage : ContentPage
     {
         if (Inited) return;
         Inited = true;
+
+        ClipEditor.UpdateVideoResolution(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
+        var resString = $"{ProjectInfo.RelativeWidth}x{ProjectInfo.RelativeHeight}";
+        if (ResolutionPicker.ItemsSource is List<string> list && list.Contains(resString))
+        {
+            ResolutionPicker.SelectedItem = resString;
+        }
+
         ProjectInfo.NormallyExited = false;
         ProjectNameMenuBarItem.Text = ProjectInfo.projectName ?? "Unknown project";
 #if WINDOWS
@@ -400,7 +417,7 @@ public partial class DraftPage : ContentPage
 
         });
 #elif iDevices
-        projectFrameCut.iOS.Render.MetalComputerHelper.RegisterComputerBridge();
+        MetalComputerHelper.RegisterComputerBridge();
 #elif WINDOWS
         if (UseLivePreviewInsteadOfBackend)
         {
@@ -414,6 +431,8 @@ public partial class DraftPage : ContentPage
 
         await Dispatcher.DispatchAsync(() =>
         {
+            UpdatePlayheadPosition();
+
             Loaded += DraftPage_Loaded;
 
             OnClipChanged += DraftChanged;
@@ -509,14 +528,14 @@ public partial class DraftPage : ContentPage
                 "7680x4320",
                 "Custom..."
                 };
-        UpdatePlayheadPosition();
 
         DraftChanged(sender, new());
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
+        MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog;
 
     }
-#endregion
+    #endregion
 
     #region add stuff
     private ClipElementUI CreateAndAddClip(
@@ -1407,7 +1426,7 @@ public partial class DraftPage : ContentPage
 
         if (e.Id == "__REFRESH_PANEL__")
         {
-            Popup.Content = (VerticalStackLayout)BuildPropertyPanel(clip);
+            Popup.Content = new ScrollView { Content = BuildPropertyPanel(clip) };
             Clips[clip.Id] = clip;
             ReRenderUI();
             DraftChanged(sender, new());
@@ -1569,9 +1588,9 @@ public partial class DraftPage : ContentPage
 
                 try
                 {
-                    var vid = new Video(item.Path);
-                    item.FrameCount = vid.Decoder.TotalFrames;
-                    item.SecondPerFrame = (float)(1f / vid.Decoder.Fps);
+                    var vid = PluginManager.CreateVideoSource(item.Path);
+                    item.FrameCount = vid.TotalFrames;
+                    item.SecondPerFrame = (float)(1f / vid.Fps);
 
 
                 }

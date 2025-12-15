@@ -9,7 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace projectFrameCut.Render.RenderAPIBase
+namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 {
     public interface IClip : IDisposable
     {
@@ -202,5 +202,19 @@ namespace projectFrameCut.Render.RenderAPIBase
         {
             return obj.Id.GetHashCode();
         }
+    }
+
+    /// <summary>
+    /// Represents a group of clips.
+    /// </summary>
+    public class ClipGroup
+    {
+        public string Id { get; set; }
+
+        public string GroupDisplayName { get; set; }
+
+        public string[] ChildrenClips { get; set; }
+
+        public string[] ChildrenSoundTracks { get; set; }
     }
 }

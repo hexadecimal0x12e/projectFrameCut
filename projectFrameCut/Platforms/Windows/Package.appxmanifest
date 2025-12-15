@@ -36,6 +36,23 @@
         <uap:DefaultTile Square71x71Logo="$placeholder$.png" Wide310x150Logo="$placeholder$.png" Square310x310Logo="$placeholder$.png" />
         <uap:SplashScreen Image="$placeholder$.png" />
       </uap:VisualElements>
+      <Extensions>
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="projectframecut_draft_bundle">
+            <uap:SupportedFileTypes>
+              <uap:FileType>.pjfc</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="projectframecut_plugin">
+            <uap:SupportedFileTypes>
+              <uap:FileType>.pjfcPlugin</uap:FileType>
+            </uap:SupportedFileTypes>
+            <uap:EditFlags AlwaysUnsafe="true"/>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+      </Extensions>
     </Application>
   </Applications>
 

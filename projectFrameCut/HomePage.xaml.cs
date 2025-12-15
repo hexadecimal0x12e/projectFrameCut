@@ -1,7 +1,8 @@
 using LocalizedResources;
 using Microsoft.Maui.Graphics;
 using projectFrameCut.DraftStuff;
-using projectFrameCut.Render.Plugins;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
@@ -13,6 +14,8 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
+
+
 
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
@@ -30,7 +33,7 @@ public partial class HomePage : ContentPage
     private string _lastSelectedItemName = string.Empty;
 
     private static bool HasAlreadyLaunchedFromFile = false;
-   
+
 
     public HomePage()
     {
@@ -40,61 +43,89 @@ public partial class HomePage : ContentPage
         BindingContext = _viewModel;
         Loaded += async (s, e) =>
         {
+#if WINDOWS
+            if (projectFrameCut.SplashScreen.SplashProgram.SplashShowing)
+            {
+                projectFrameCut.SplashScreen.SplashProgram.CloseSplash();
+            }
+            await projectFrameCut.WinUI.App.BringToForeground();
+            await ShowManyAlertsAsync();
+
+#endif
+#if !ANDROID
+            ProjectsCollection.SelectionChanged += CollectionView_SelectionChanged;
+#endif
             if (HasAlreadyLaunchedFromFile) return;
             HasAlreadyLaunchedFromFile = true;
             if (Environment.GetCommandLineArgs().Length > 0)
             {
                 var args = Environment.GetCommandLineArgs().Skip(1).ToArray();
-                if (args.Length > 1)
+                if (args.Length >= 2)
                 {
                     switch (args[0])
                     {
+#if WINDOWS && DEBUG
                         case "go_draft_dbgBackend":
                             {
                                 var draft = args[1];
                                 if (Directory.Exists(draft))
                                 {
-#if WINDOWS && DEBUG
                                     RpcClient c = new();
-                                    if(Process.GetProcessesByName("projectFrameCut.Render.WindowsRender").Any())
+                                    if (Process.GetProcessesByName("projectFrameCut.Render.WindowsRender").Any())
                                     {
                                         await c.StartAsync("pjfc_rpc_debug123", default);
                                         await GoDraft(draft, "Project", false, false, c, true);
                                     }
-                                    
-#endif
-                                }
 
+                                }
                                 break;
                             }
-
+#endif
                         case "goDraft":
                             {
                                 var draft = args[1];
                                 if (Directory.Exists(draft))
                                 {
-                                    await GoDraft(draft, "Project", false, false);
+                                    await GoDraft(draft, (Path.GetDirectoryName(draft) ?? "Project").Split('.')?.FirstOrDefault("Project")!, false, false);
                                 }
-
+                                break;
+                            }
+                        case "installPlugin":
+                            {
+                                var path = args[1];
+                                if (File.Exists(path))
+                                {
+                                    try
+                                    {
+                                        await PluginService.AddAPlugin(path, this);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_Import_CannotAddPlugin}\r\n({Localized._ExceptionTemplate(ex)})", Localized._OK);
+                                    }
+                                }
+                                break;
+                            }
+                        case "importDraft":
+                            {
+                                var path = args[1];
+                                if (File.Exists(path))
+                                {
+                                    await ImportDraft(path);
+                                }
                                 break;
                             }
                     }
                 }
             }
 
-#if WINDOWS
-            if (projectFrameCut.SplashScreen.SplashProgram.SplashShowing)
-            {
-                projectFrameCut.SplashScreen.SplashProgram.CloseSplash();
-                await projectFrameCut.WinUI.App.BringToForeground();
-            }
-#endif
+
         };
-#if !ANDROID
-        ProjectsCollection.SelectionChanged += CollectionView_SelectionChanged;
-#endif
+
 
     }
+
+
 
     private async void CollectionView_SelectionChanged(object? sender, Microsoft.Maui.Controls.SelectionChangedEventArgs e)
     {
@@ -107,7 +138,7 @@ public partial class HomePage : ContentPage
             }
             else
             {
-#if WINDOWS
+#if WINDOWS || MACCATALYST
                 if (_lastSelectedItemName == selected.Name)
                 {
                     ProjectsCollection.SelectedItem = null;
@@ -185,7 +216,7 @@ public partial class HomePage : ContentPage
             Path.Combine(draftSourcePath, "project.json"),
             JsonSerializer.Serialize(ProjectInfo));
 
-        _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+        await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
 
 
     }
@@ -217,7 +248,7 @@ public partial class HomePage : ContentPage
             Path.Combine(draftSourcePath, "project.json"),
             JsonSerializer.Serialize(ProjectInfo));
 
-        _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+        await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
 
 
     }
@@ -266,7 +297,7 @@ public partial class HomePage : ContentPage
                 },
                 new Label
                 {
-                    Text = SimpleLocalizerBaseGeneratedHelper.Localized.LandingPage_TakingToDraft(title),
+                    Text = Localized.LandingPage_TakingToDraft(title),
                     HorizontalTextAlignment = Microsoft.Maui.TextAlignment.Center,
                     Margin = new Microsoft.Maui.Thickness(0.0, 10.0, 0.0, 0.0)
                 }
@@ -428,7 +459,7 @@ public partial class HomePage : ContentPage
                 {
                     item.Value.OnProjectLoad(project);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     Log(ex, $"plugin {item.Value.Name} OnProjectLoad", this);
                 }
@@ -442,7 +473,9 @@ public partial class HomePage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-
+#if WINDOWS
+        await projectFrameCut.WinUI.App.BringToForeground();
+#endif
 
 #if WINDOWS || ANDROID
         AppShell.instance.ShowNavView();
@@ -456,13 +489,12 @@ public partial class HomePage : ContentPage
             AppShell.instance.ShowNavView();
         }
 #endif
-        await ShowManyAlertsAsync();
 
         await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
         if (_viewModel.LoadFailed)
         {
-            await DisplayAlertAsync(Localized._Info,Localized.HomePage_DraftLoadFailed(), Localized._OK);
-            
+            await DisplayAlertAsync(Localized._Info, Localized.HomePage_DraftLoadFailed(), Localized._OK);
+
         }
     }
 
@@ -484,13 +516,9 @@ public partial class HomePage : ContentPage
             SimpleLocalizer.IsFallbackMatched = false;
         }
 
-           
-
-        
-
         if (!SettingsManager.IsBoolSettingTrue("AIGeneratedTranslatePromptReaded") && Localized._LocaleId_ != "zh-CN")
         {
-            await DisplayAlertAsync(Localized._Info,Localized.HomePage_AIGeneratdTranslationPrompt, Localized._OK);
+            await DisplayAlertAsync(Localized._Info, Localized.HomePage_AIGeneratdTranslationPrompt, Localized._OK);
             SettingsManager.WriteSetting("AIGeneratedTranslatePromptReaded", "true");
         }
 
@@ -561,7 +589,7 @@ public partial class HomePage : ContentPage
             {
                 Directory.Delete(pvm._projectPath, true);
             }
-            _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+            await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
             await DisplayAlertAsync(Localized._Info, Localized.HomePage_ProjectContextMenu_Delete_Deleted(pvm.Name), Localized._OK);
 
         }
@@ -593,6 +621,37 @@ public partial class HomePage : ContentPage
             File = new ShareFile(tmpPath),
             Title = fileName
         });
+    }
+
+    private async Task ImportDraft(string path)
+    {
+        var origCont = Content;
+        Content = new ActivityIndicator
+        {
+            IsRunning = true,
+            WidthRequest = 200,
+            HeightRequest = 200
+        };
+        try
+        {
+            var workingDir = Path.Combine(MauiProgram.DataPath, "My Drafts", Path.GetFileNameWithoutExtension(path));
+            if (Directory.Exists(workingDir))
+            {
+                workingDir = Path.Combine(MauiProgram.DataPath, "My Drafts", $"Imported - {Path.GetFileNameWithoutExtension(path)}{Random.Shared.Next(1000, 9999)}");
+            }
+            Directory.CreateDirectory(workingDir);
+            await Task.Run(() =>
+            {
+                ZipFile.ExtractToDirectory(path, workingDir, true);
+            });
+        }
+        catch (Exception ex)
+        {
+            await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_Import_CannotImportFraft}\r\n({Localized._ExceptionTemplate(ex)})", Localized._OK);
+        }
+        Content = origCont;
+        await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+
     }
 
     private async Task RenameProject(ProjectsViewModel vmItem)
@@ -808,20 +867,20 @@ public class ProjectsListViewModel
                     goto fail;
                 }
 
-                fail:
+            fail:
                 failedProjects.Add(new ProjectsViewModel(proj?.projectName ?? "Unknown project", null, "")
                 {
                     _projectPath = item
                 });
                 continue;
-                
 
-                
+
+
             }
         }
         catch (Exception ex)
         {
-            if(MyLoggerExtensions.LoggingDiagnosticInfo) Log(ex, "load draft", this);
+            if (MyLoggerExtensions.LoggingDiagnosticInfo) Log(ex, "load draft", this);
         }
         finally
         {

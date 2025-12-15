@@ -25,6 +25,10 @@ namespace projectFrameCut.Platforms.Windows
         {
             _proc = new();
 
+            var pipeName = ExtractPipeName(args) ?? ("pjfc_plugin_" + Guid.NewGuid().ToString("N"));
+            if (!args.Contains("pluginConnectionPipe=", StringComparison.OrdinalIgnoreCase))
+                args = args.TrimEnd() + $" -pluginConnectionPipe={pipeName}";
+
             _proc.StartInfo = new ProcessStartInfo
             {
                 FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Render.WindowsRender.exe"),
@@ -42,6 +46,18 @@ namespace projectFrameCut.Platforms.Windows
 #endif
                 }
             };
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await PluginPipeTransport.SendEnabledPluginsAsync(pipeName);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "send plugins via pipe", nameof(RenderHelper));
+                }
+            });
 
             _proc.OutputDataReceived += (s, e) =>
             {
@@ -97,6 +113,24 @@ namespace projectFrameCut.Platforms.Windows
             await _proc.WaitForExitAsync();
 
             return _proc.ExitCode;
+        }
+
+        private static string? ExtractPipeName(string args)
+        {
+            if (string.IsNullOrWhiteSpace(args))
+                return null;
+            try
+            {
+                var m = Regex.Match(args, @"(?i)(?:^|\s)[-/]pluginConnectionPipe=(?:""([^""]+)""|(\S+))");
+                if (!m.Success)
+                    return null;
+                var raw = (m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value).Trim();
+                return string.IsNullOrWhiteSpace(raw) ? null : raw;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         internal void Cancel()

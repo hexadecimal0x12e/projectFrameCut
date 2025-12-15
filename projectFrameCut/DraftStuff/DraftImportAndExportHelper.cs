@@ -6,8 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Diagnostics.CodeAnalysis;
-using projectFrameCut.VideoMakeEngine;
-using projectFrameCut.Render.Plugins;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
 namespace projectFrameCut.DraftStuff
 {
@@ -67,6 +68,8 @@ namespace projectFrameCut.DraftStuff
                                 Parameters = kv.Value.Parameters,
                                 Index = kv.Value.Index,
                                 Enabled = kv.Value.Enabled,
+                                RelativeHeight = kv.Value.RelativeHeight,
+                                RelativeWidth = kv.Value.RelativeWidth,
                                 IsMixture = false
                             }).ToArray()
                         };

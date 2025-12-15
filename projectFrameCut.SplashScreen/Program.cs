@@ -1,4 +1,6 @@
 
+using System.Diagnostics;
+
 namespace projectFrameCut.SplashScreen
 {
     public static class SplashProgram
@@ -9,7 +11,7 @@ namespace projectFrameCut.SplashScreen
         /// 
         static SplashForm splash;
         [STAThread]
-        public static void Main()
+        public static void SplashMain()
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
@@ -19,6 +21,13 @@ namespace projectFrameCut.SplashScreen
             splash.Show();
             SplashShowing = true;
             Application.Run();
+        }
+
+        [STAThread]
+        public static void Main(string[] args)
+        {
+            Process.Start("projectFrameCut.exe", string.Join(' ', args));
+            return;
         }
 
         public static bool SplashShowing { get; set; }
@@ -32,6 +41,7 @@ namespace projectFrameCut.SplashScreen
             splash.Invoke(new Action(() =>
             {
                 splash.Close();
+                Application.Exit();
             }));
             SplashShowing = false;
         }

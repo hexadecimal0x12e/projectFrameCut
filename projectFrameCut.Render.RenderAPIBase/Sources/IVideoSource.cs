@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace projectFrameCut.Render.RenderAPIBase
+namespace projectFrameCut.Render.RenderAPIBase.Sources
 {
     /// <summary>
     /// The interface for video source (decoder) implementations.

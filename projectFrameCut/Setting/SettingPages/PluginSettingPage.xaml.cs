@@ -1,5 +1,5 @@
 using projectFrameCut.PropertyPanel;
-using projectFrameCut.Render.Plugins;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Services;
 using System.Globalization;
@@ -53,16 +53,23 @@ public partial class PluginSettingPage : ContentPage
         }
 
         // 显示失败加载的插件
-        if (PluginService.FailedLoadPlugin.Any())
+        var disabledPlugins = PluginService.GetDisabledPlugins();
+        if (PluginService.FailedLoadPlugin.Any() || disabledPlugins.Any())
         {
             rootPPB
                 .AddSeparator()
                 .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_FailLoad, SettingLocalizedResources.Plugin_FailLoad_Subtitle, 20, 12));
 
+            foreach (var disabledPlugin in disabledPlugins)
+            {
+                rootPPB
+                    .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(disabledPlugin.Id, SettingLocalizedResources.Plugin_FailLoad_Disabled, 20, 16))
+                    .AddButton($"EnablePlugin,{disabledPlugin.Id}", SettingLocalizedResources.Plugin_Enable(disabledPlugin.Id));
+            }
             foreach (var failedPlugin in PluginService.FailedLoadPlugin)
             {
                 rootPPB
-                    .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(failedPlugin.Key, $"Reason:{failedPlugin.Value}", 20, 20))
+                    .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(failedPlugin.Key, SettingLocalizedResources.Plugin_FailLoad_FailedBeacuse(failedPlugin.Value), 20, 16))
                     .AddButton($"RemoveFailedPlugin,{failedPlugin.Key}", SettingLocalizedResources.Plugin_Remove);
             }
         }
@@ -103,6 +110,7 @@ public partial class PluginSettingPage : ContentPage
             ppb.AddButton($"GotoHomepage,{id}", SettingLocalizedResources.Plugin_GotoHomepage(plugin.Name))
                .AddButton($"UpdatePlugin,{id}", SettingLocalizedResources.Plugin_UpdatePlugin(plugin.Name))
                .AddButton($"OpenDataDir,{id}", SettingLocalizedResources.Plugin_OpenDataDir)
+               .AddButton($"DisablePlugin,{id}", SettingLocalizedResources.Plugin_Disable(plugin.Name))
                .AddButton($"RemovePlugin,{id}", SettingLocalizedResources.Plugin_Remove);
         }
         else
@@ -241,6 +249,16 @@ public partial class PluginSettingPage : ContentPage
                 return;
             }
 
+            if (flag == "EnablePlugin")
+            {
+                PluginService.EnablePlugin(id);
+                if (await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.CommonStr_RebootRequired(), Localized._Confirm, Localized._Cancel))
+                {
+                    await Setting.SettingPages.GeneralSettingPage.RebootApp(currentPage ?? this);
+                }
+                return;
+            }
+
             if (!PluginManager.LoadedPlugins.TryGetValue(id, out var plugin))
             {
                 await DisplayAlertAsync(Localized._Warn, $"plugin {id} not found", Localized._OK);
@@ -266,6 +284,15 @@ public partial class PluginSettingPage : ContentPage
                 case "OpenDataDir":
                     {
                         FileSystemService.OpenFolderAsync(Path.Combine(MauiProgram.BasicDataPath, "Plugins", plugin.PluginID));
+                        break;
+                    }
+                case "DisablePlugin":
+                    {
+                        PluginService.DisablePlugin(plugin.PluginID);
+                        if (await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.CommonStr_RebootRequired(), Localized._Confirm, Localized._Cancel))
+                        {
+                            await Setting.SettingPages.GeneralSettingPage.RebootApp(currentPage ?? this);
+                        }
                         break;
                     }
                 case "GotoHomepage":

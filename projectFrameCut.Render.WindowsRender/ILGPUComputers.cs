@@ -1,8 +1,7 @@
 ﻿using ILGPU;
 using ILGPU.Runtime;
 using ILGPU.Runtime.OpenCL;
-using projectFrameCut.Render.RenderCLI;
-using projectFrameCut.Shared;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;

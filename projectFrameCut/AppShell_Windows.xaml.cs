@@ -43,7 +43,8 @@
                     App.MainNavView?.SelectedItem = App.settingItem;
                     break;
                 default:
-                    App.MainNavView?.SelectedItem = App.homeItem;
+                    //keep unchange
+                    // App.MainNavView?.SelectedItem = App.homeItem;
                     break;
             }
         }

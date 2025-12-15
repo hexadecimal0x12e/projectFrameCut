@@ -1,4 +1,5 @@
 ﻿using projectFrameCut.Render;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace projectFrameCut.VideoMakeEngine
+namespace projectFrameCut.Render.VideoMakeEngine
 {
     public class OverlayMixture : IMixture
     {

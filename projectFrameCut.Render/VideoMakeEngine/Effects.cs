@@ -1,5 +1,5 @@
 ﻿using projectFrameCut.Render;
-using projectFrameCut.Render.VideoMakeEngine;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp.Drawing;
 using System;
@@ -10,13 +10,15 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace projectFrameCut.VideoMakeEngine
+namespace projectFrameCut.Render.VideoMakeEngine
 {
     public class RemoveColorEffect : IEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
+        public int RelativeWidth { get; set; }
+        public int RelativeHeight { get; set; }
 
 
         public ushort R { get; init; }
@@ -181,6 +183,8 @@ namespace projectFrameCut.VideoMakeEngine
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
+        public int RelativeWidth { get; set; }
+        public int RelativeHeight { get; set; }
 
 
         public int StartX { get; init; }
@@ -235,8 +239,17 @@ namespace projectFrameCut.VideoMakeEngine
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
+            int startX = StartX;
+            int startY = StartY;
+
+            if (RelativeWidth > 0 && RelativeHeight > 0)
+            {
+                startX = (int)((long)StartX * targetWidth / RelativeWidth);
+                startY = (int)((long)StartY * targetHeight / RelativeHeight);
+            }
+
             var pixelMapping = ComputePixelMapping(
-                source.Width, source.Height, targetWidth, targetHeight, StartX, StartY);
+                source.Width, source.Height, targetWidth, targetHeight, startX, startY);
 
             if (source is IPicture<ushort> p16)
             {
@@ -329,6 +342,8 @@ namespace projectFrameCut.VideoMakeEngine
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
+        public int RelativeWidth { get; set; }
+        public int RelativeHeight { get; set; }
 
 
         public int StartX { get; init; }
@@ -394,21 +409,33 @@ namespace projectFrameCut.VideoMakeEngine
         [DebuggerStepThrough()]
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
+            int startX = StartX;
+            int startY = StartY;
+            int width = Width;
+            int height = Height;
+
+            if (RelativeWidth > 0 && RelativeHeight > 0)
+            {
+                startX = (int)((long)StartX * targetWidth / RelativeWidth);
+                startY = (int)((long)StartY * targetHeight / RelativeHeight);
+                width = (int)((long)Width * targetWidth / RelativeWidth);
+                height = (int)((long)Height * targetHeight / RelativeHeight);
+            }
 
             // 使用 ManagedCropComputer 计算像素映射
             var pixelMapping = ComputePixelMapping(
-                source.Width, source.Height, Width, Height, StartX, StartY);
+                source.Width, source.Height, width, height, startX, startY);
 
             if (source is IPicture<ushort> p16)
             {
                 p16.a ??= Enumerable.Repeat(1f, p16.Pixels).ToArray();
 
-                Picture result = new Picture(Width, Height)
+                Picture result = new Picture(width, height)
                 {
-                    r = new ushort[Width * Height],
-                    g = new ushort[Width * Height],
-                    b = new ushort[Width * Height],
-                    a = new float[Width * Height],
+                    r = new ushort[width * height],
+                    g = new ushort[width * height],
+                    b = new ushort[width * height],
+                    a = new float[width * height],
                     hasAlphaChannel = true
                 };
 
@@ -429,12 +456,12 @@ namespace projectFrameCut.VideoMakeEngine
             }
             else if (source is IPicture<byte> p8)
             {
-                Picture8bpp result = new Picture8bpp(Width, Height)
+                Picture8bpp result = new Picture8bpp(width, height)
                 {
-                    r = new byte[Width * Height],
-                    g = new byte[Width * Height],
-                    b = new byte[Width * Height],
-                    a = new float[Width * Height],
+                    r = new byte[width * height],
+                    g = new byte[width * height],
+                    b = new byte[width * height],
+                    a = new float[width * height],
                     hasAlphaChannel = true
                 };
 
@@ -489,6 +516,8 @@ namespace projectFrameCut.VideoMakeEngine
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; }
+        public int RelativeWidth { get; set; }
+        public int RelativeHeight { get; set; }
 
 
         public int Height { get; init; }
@@ -547,7 +576,17 @@ namespace projectFrameCut.VideoMakeEngine
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
-            => source.Resize(Width, Height, PreserveAspectRatio);
+        {
+            int width = Width;
+            int height = Height;
+
+            if (RelativeWidth > 0 && RelativeHeight > 0)
+            {
+                width = (int)((long)Width * targetWidth / RelativeWidth);
+                height = (int)((long)Height * targetHeight / RelativeHeight);
+            }
+            return source.Resize(width, height, PreserveAspectRatio);
+        }
 
 
     }

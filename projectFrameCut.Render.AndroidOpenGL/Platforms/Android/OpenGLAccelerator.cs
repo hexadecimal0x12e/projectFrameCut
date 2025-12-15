@@ -1,7 +1,7 @@
 ﻿using Android.Renderscripts;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Handlers;
-using projectFrameCut.Shared;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;

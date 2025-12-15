@@ -33,6 +33,7 @@
             VersionLabel = new Label();
             label3 = new Label();
             label1 = new Label();
+            closeButton = new Button();
             SuspendLayout();
             // 
             // TitleLabel
@@ -55,12 +56,21 @@
             resources.ApplyResources(label1, "label1");
             label1.Name = "label1";
             // 
+            // closeButton
+            // 
+            closeButton.BackColor = Color.Transparent;
+            resources.ApplyResources(closeButton, "closeButton");
+            closeButton.Name = "closeButton";
+            closeButton.UseVisualStyleBackColor = true;
+            closeButton.Click += closeButton_Click;
+            // 
             // SplashForm
             // 
             resources.ApplyResources(this, "$this");
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(255, 210, 114);
             ControlBox = false;
+            Controls.Add(closeButton);
             Controls.Add(label1);
             Controls.Add(label3);
             Controls.Add(VersionLabel);
@@ -71,7 +81,6 @@
             Name = "SplashForm";
             ShowIcon = false;
             ShowInTaskbar = false;
-            TopMost = true;
             Load += Form1_Load;
             ResumeLayout(false);
             PerformLayout();
@@ -83,5 +92,6 @@
         private Label VersionLabel;
         private Label label3;
         private Label label1;
+        private Button closeButton;
     }
 }

@@ -346,6 +346,24 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_ClipPropertyUpdated",
+        "Value": "\u6210\u529F\u7684\u66F4\u65B0\u300C{name}\u300D\u7684\u5C5E\u6027",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_DuplicatedAsset",
         "Value": "\u7D20\u6750{newAsset}\u4F3C\u4E4E\u548C{existed}\u91CD\u590D\u4E86{Environment.NewLine}\u4F60\u60F3\u8981\u505A\u4EC0\u4E48\uFF1F",
         "Mode": "InterpolationString",
@@ -1456,21 +1474,19 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "DraftPage_ClipPropertyUpdated",
-        "Value": "\u6210\u529F\u7684\u66F4\u65B0\u300C{name}\u300D\u7684\u5C5E\u6027",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "name",
-            "Value": ""
-          }
-        ],
+        "Id": "HomePage_Import_CannotAddPlugin",
+        "Value": "\u65E0\u6CD5\u6DFB\u52A0\u63D2\u8FD9\u4E2A\u63D2\u4EF6\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Import_CannotImportFraft",
+        "Value": "\u65E0\u6CD5\u5BFC\u5165\u6B64\u9879\u76EE\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "HasValidationErrors": false
       }
     ],
@@ -3058,6 +3074,24 @@
         ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Import_CannotAddPlugin",
+        "Value": "Unset localization item:HomePage_Import_CannotAddPlugin()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Import_CannotImportFraft",
+        "Value": "Unset localization item:HomePage_Import_CannotImportFraft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -4642,6 +4676,24 @@
             "Value": ""
           }
         ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Import_CannotAddPlugin",
+        "Value": "Unset localization item:HomePage_Import_CannotAddPlugin()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Import_CannotImportFraft",
+        "Value": "Unset localization item:HomePage_Import_CannotImportFraft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -6248,6 +6300,24 @@
         ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Import_CannotAddPlugin",
+        "Value": "Unset localization item:HomePage_Import_CannotAddPlugin()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Import_CannotImportFraft",
+        "Value": "Unset localization item:HomePage_Import_CannotImportFraft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -7852,6 +7922,24 @@
         ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Import_CannotAddPlugin",
+        "Value": "Unset localization item:HomePage_Import_CannotAddPlugin()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Import_CannotImportFraft",
+        "Value": "Unset localization item:HomePage_Import_CannotImportFraft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -9436,6 +9524,24 @@
             "Value": ""
           }
         ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Import_CannotAddPlugin",
+        "Value": "Unset localization item:HomePage_Import_CannotAddPlugin()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Import_CannotImportFraft",
+        "Value": "Unset localization item:HomePage_Import_CannotImportFraft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -11040,6 +11146,24 @@
             "Value": ""
           }
         ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Import_CannotAddPlugin",
+        "Value": "Unset localization item:HomePage_Import_CannotAddPlugin()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Import_CannotImportFraft",
+        "Value": "Unset localization item:HomePage_Import_CannotImportFraft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }

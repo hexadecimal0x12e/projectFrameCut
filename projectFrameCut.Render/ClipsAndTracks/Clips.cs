@@ -6,11 +6,15 @@ using SixLabors.ImageSharp.Drawing.Processing;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using static projectFrameCut.Render.Video;
+using static projectFrameCut.Render.Videos.Video;
 using SixLabors.ImageSharp.Processing;
 using projectFrameCut.Render.VideoMakeEngine;
+using projectFrameCut.Render.Videos;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
-namespace projectFrameCut.Render
+namespace projectFrameCut.Render.ClipsAndTracks
 {
     public class VideoClip : IClip
     {

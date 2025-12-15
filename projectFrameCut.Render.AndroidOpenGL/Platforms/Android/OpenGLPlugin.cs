@@ -1,6 +1,7 @@
-﻿using projectFrameCut.Render.RenderAPIBase;
+﻿using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
-using projectFrameCut.Shared;
+using projectFrameCut.Render.RenderAPIBase.Sources;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -40,6 +41,10 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
         Dictionary<string, Func<string, string, IClip>> IPluginBase.ClipProvider => new Dictionary<string, Func<string, string, IClip>> { };
 
         Dictionary<string, Func<string, IVideoSource>> IPluginBase.VideoSourceProvider => new Dictionary<string, Func<string, IVideoSource>> { };
+
+        public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider => new Dictionary<string, Func<string, IAudioSource>> { };
+
+        public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new Dictionary<string, Func<string, string, ISoundTrack>> { };
 
         public Dictionary<string, string> Configuration { get => new Dictionary<string, string>(); set { } }
 
