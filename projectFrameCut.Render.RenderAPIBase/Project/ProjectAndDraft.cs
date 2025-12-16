@@ -98,6 +98,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public MixtureMode MixtureMode { get; set; } = MixtureMode.Overlay;
         public string? FilePath { get; set; }
         public long? SourceDuration { get; set; } // in frames, null for infinite length source
+        public bool IsInfiniteLength { get; set; }
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
 
         [JsonExtensionData]

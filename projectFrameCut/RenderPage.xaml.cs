@@ -41,6 +41,7 @@ public partial class RenderPage : ContentPage
 
     public bool running;
 
+
     // »’÷æª∫≥Â«¯
     private readonly StringBuilder _logBuffer = new StringBuilder();
     private readonly ConcurrentQueue<string> _logQueue = new ConcurrentQueue<string>();
@@ -57,7 +58,16 @@ public partial class RenderPage : ContentPage
     public RenderPage()
     {
         InitializeComponent();
-        BindingContext = new RenderPageViewModel();
+        var vmDefault = new RenderPageViewModel();
+        try
+        {
+            vmDefault.Resoultion = SettingsManager.GetSetting("render_DefaultResolution", vmDefault.Resoultion);
+            vmDefault.FramerateDisplay = SettingsManager.GetSetting("render_DefaultFramerate", vmDefault.FramerateDisplay);
+            vmDefault.EncodingDisplay = SettingsManager.GetSetting("render_DefaultEncoding", vmDefault.EncodingDisplay);
+            vmDefault.BitDepthDisplay = SettingsManager.GetSetting("render_DefaultBitDepth", vmDefault.BitDepthDisplay);
+        }
+        catch { }
+        BindingContext = vmDefault;
         InitializeLogTimer();
     }
 
@@ -69,13 +79,21 @@ public partial class RenderPage : ContentPage
         _project = projectInfo;
         Title = Localized.RenderPage_ExportTitle(projectInfo.projectName);
 
-        BindingContext = new RenderPageViewModel();
-
+        var vm = new RenderPageViewModel();
+        try
+        {
+            vm.Resoultion = SettingsManager.GetSetting("render_DefaultResolution", vm.Resoultion);
+            vm.FramerateDisplay = SettingsManager.GetSetting("render_DefaultFramerate", vm.FramerateDisplay);
+            vm.EncodingDisplay = SettingsManager.GetSetting("render_DefaultEncoding", vm.EncodingDisplay);
+            vm.BitDepthDisplay = SettingsManager.GetSetting("render_DefaultBitDepth", vm.BitDepthDisplay);
+        }
+        catch { }
+        BindingContext = vm;
+        MaxParallelThreadsCount.Value = Environment.ProcessorCount * 2;
         MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)MaxParallelThreadsCount.Value);
         CancelRender.IsEnabled = false;
         InitializeLogTimer();
     }
-
     private void InitializeLogTimer()
     {
         _logUpdateTimer = new System.Timers.Timer(800);
@@ -134,11 +152,12 @@ public partial class RenderPage : ContentPage
 
     private async void ContentPage_Loaded(object sender, EventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(_workingPath))
+        if (string.IsNullOrWhiteSpace(_workingPath) )
         {
             await DisplayAlert(Localized._Info, Localized.RenderPage_NoDraft, Localized._OK);
         }
     }
+    #region rendering
 
     private async void StartRender_Clicked(object sender, EventArgs e)
     {
@@ -218,10 +237,14 @@ public partial class RenderPage : ContentPage
             "ffv1" => ".mkv",
             _ => ""
         };
+
+
+
         var outTempFile = Path.Combine(_workingPath, "export", $"output-{Guid.NewGuid()}.{ext}");
         var outPreview = Path.Combine(_workingPath, "export", $"preview-{Guid.NewGuid()}.png");
         Directory.CreateDirectory(Path.GetDirectoryName(outTempFile) ?? throw new NullReferenceException());
-        var args = $"render " +
+        var args = 
+            $"render " +
             $"\"-draft={Path.Combine(_workingPath, "timeline.json")}\" " +
             $"-duration={_duration} " +
             $"\"-output={outTempFile}\" " +
@@ -230,6 +253,19 @@ public partial class RenderPage : ContentPage
             $"-preview=true " +
             $"\"-previewPath={outPreview}\" " +
             $"\"-Use16bpp={vm.BitDepth == "16"}\" ";
+        if (SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel"))
+        {
+            var accels = SettingsManager.GetSetting("accel_MultiDeviceID", "all");
+            args += $" -multiAccelerator=true  \"-acceleratorDeviceIds={accels}\" ";
+        }
+        else
+        {
+            var accelId = SettingsManager.GetSetting("accel_DeviceId", "");
+            if (int.TryParse(accelId, out var accelIdInt)) args += $" -multiAccelerator=false \"-acceleratorDeviceId={accelIdInt}\" ";
+        }
+
+        var userDefOptions = SettingsManager.GetSetting("render_UserDefinedOpts", "");
+        if (!string.IsNullOrWhiteSpace(userDefOptions)) args += $"   {userDefOptions}   ";
 
         Log($"Args to render:{args}");
 
@@ -499,8 +535,7 @@ public partial class RenderPage : ContentPage
 
 
 
-
-
+    #endregion
 
 
     private void MaxParallelThreadsCount_ValueChanged(object sender, ValueChangedEventArgs e)

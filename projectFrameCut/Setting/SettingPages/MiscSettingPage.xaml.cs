@@ -28,7 +28,7 @@ public partial class MiscSettingPage : ContentPage
             .AddButton("makeDiagReport", SettingLocalizedResources.Misc_MakeDiagReport, null)
             .AddButton("openSettingsButton", SettingLocalizedResources.Misc_OpenSettingsJson, null!)
             .AddSwitch("LogDiagnostics", SettingLocalizedResources.Misc_LogDiagnostics, bool.TryParse(GetSetting("LogDiagnostics", "false"), out var logDiagnostics) ? logDiagnostics : false, null)
-#if !iDevices || (iDevices && !DEBUG) //appstore not allow developers put developer settings in release version of apps
+#if DEBUG
             .AddSwitch("DeveloperMode", SettingLocalizedResources.Misc_DebugMode, bool.TryParse(GetSetting("DeveloperMode", "false"), out var devMode) ? devMode : false, null)
 #endif
             .AddSeparator()

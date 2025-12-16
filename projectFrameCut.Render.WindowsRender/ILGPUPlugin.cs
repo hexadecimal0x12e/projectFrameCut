@@ -31,6 +31,9 @@ namespace projectFrameCut.Render.WindowsRender
 
         string? IPluginBase.PublishingUrl => null;
 
+        public Dictionary<string, Dictionary<string, string>> LocalizationProvider => new();
+
+
         Dictionary<string, Func<IEffect>> IPluginBase.EffectProvider => new Dictionary<string, Func<IEffect>> { };
 
         Dictionary<string, Func<IMixture>> IPluginBase.MixtureProvider => new Dictionary<string, Func<IMixture>> { };

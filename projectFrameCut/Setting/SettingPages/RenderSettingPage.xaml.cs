@@ -14,7 +14,7 @@ public partial class RenderSettingPage : ContentPage
 {
     PropertyPanel.PropertyPanelBuilder rootPPB;
     AcceleratorInfo[] AcceleratorInfos = Array.Empty<AcceleratorInfo>();
-
+    bool showMoreOpts = false;
     public RenderSettingPage()
     {
         Title = Localized.MainSettingsPage_Tab_Render;
@@ -43,7 +43,7 @@ public partial class RenderSettingPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
-        
+
 #if WINDOWS
         if (AcceleratorInfos.Length == 0)
         {
@@ -67,7 +67,7 @@ public partial class RenderSettingPage : ContentPage
     {
         Content = new VerticalStackLayout();
 #if WINDOWS
-        
+
         string[] accels = ["Unknown"];
         try
         {
@@ -84,12 +84,54 @@ public partial class RenderSettingPage : ContentPage
             .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle, 20, 12))
 #if WINDOWS
             .AddPicker("accel_DeviceId", SettingLocalizedResources.Render_SelectAccel, accels, int.TryParse(GetSetting("accel_DeviceId", ""), out var result) ? accels[result] : "", null)
-            .AddSwitch("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, bool.TryParse(GetSetting("accel_enableMultiAccel", "false"), out var result1) ? result1 : false, null)
+            .AddSwitch("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, bool.TryParse(GetSetting("accel_enableMultiAccel", "false"), out var result1) ? result1 : false, null);
+
+        try
+        {
+            var multiEnabled = bool.TryParse(GetSetting("accel_enableMultiAccel", "false"), out var me) ? me : false;
+                if (multiEnabled && AcceleratorInfos?.Length > 0)
+            {
+                rootPPB.AddSeparator().AddSwitch("selectAllAccels", SettingLocalizedResources.Render_SelectAccel_SelectAll, GetSetting("accel_MultiDeviceID", "all") == "all", null);
+
+                for (int i = 0; i < AcceleratorInfos.Length; i++)
+                {
+                    var key = $"accel_multi_{i}";
+                    var def = bool.TryParse(GetSetting(key, "false"), out var v) ? v : false;
+                    rootPPB.AddSwitch(key, $"{AcceleratorInfos[i].Type}: {AcceleratorInfos[i].name}", def, null);
+                }
+            }
+        }
+        catch (Exception ex) { Log(ex); }
 #else
-            .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Render_AccelOptsNotSupported, 14))
+            .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Render_AccelOptsNotSupported, 14));
 #endif
-            .ListenToChanges(SettingInvoker);
-        Content = new ScrollView { Content = rootPPB.Build() };
+        rootPPB
+            .AddSeparator()
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_DefaultExportOpts, SettingLocalizedResources.Render_DefaultExportOpts_Subtitle), null);
+
+        var resolutions = new[] { "1280x720", "1920x1080", "2560x1440", "3840x2160", "7680x4320" };
+        var framerates = new[] { "24", "30", "45", "60", "90", "120"};
+        var encodings = new[] { "h264", "h265/hevc", "av1"};
+        var bitdepths = new[] { "8bit", "10bit", "12bit" };
+
+        rootPPB
+            .AddPicker("render_DefaultResolution", Localized.RenderPage_SelectResolution, resolutions, GetSetting("render_DefaultResolution", "3840x2160"), null)
+            .AddPicker("render_DefaultFramerate", Localized.RenderPage_SelectFrameRate, framerates, GetSetting("render_DefaultFramerate", "30"), null)
+            .AddPicker("render_DefaultEncoding", Localized.RenderPage_SelectEncoding, encodings, GetSetting("render_DefaultEncoding", "h264"), null)
+            .AddPicker("render_DefaultBitDepth", Localized.RenderPage_SelectBitdepth, bitdepths, GetSetting("render_DefaultBitDepth", "8bit"), null);
+
+        if (showMoreOpts)
+        {
+            rootPPB
+                .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AdvanceOpts, SettingLocalizedResources.Misc_DiagOptions_Subtitle, 20, 12))
+                .AddEntry("render_UserDefinedOpts", SettingLocalizedResources.Render_CustomOpts, GetSetting("render_UserDefinedOpts", ""), SettingLocalizedResources.Render_CustomOpts_Placeholder);
+        }
+        else
+        {
+            rootPPB.AddButton("showMoreOpts", SettingLocalizedResources.Render_AdvanceOpts_Show, null);
+        }
+
+        Content = new ScrollView { Content = rootPPB.ListenToChanges(SettingInvoker).Build() };
     }
 #if WINDOWS
     public static AcceleratorInfo[] GetAccelInfo()
@@ -125,7 +167,9 @@ public partial class RenderSettingPage : ContentPage
     }
 #endif
 
-    private async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args)
+
+
+    public async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args)
     {
         try
         {
@@ -135,11 +179,92 @@ public partial class RenderSettingPage : ContentPage
                     if (args.Value is string str)
                     {
                         var idxStr = str.Substring(str.IndexOf('#') + 1, str.IndexOf(':') - str.IndexOf('#') - 1);
-                        if(uint.TryParse(idxStr, out var result))
+                        if (uint.TryParse(idxStr, out var result))
                         {
-                            WriteSetting("accel_DeviceId", result.ToString()); 
+                            WriteSetting("accel_DeviceId", result.ToString());
                         }
                     }
+                    goto done;
+                case "showMoreOpts":
+                    {
+                        showMoreOpts = true;
+                        goto done;
+                    }
+                case "accel_enableMultiAccel":
+                    // When enabling multi-accel, pre-populate per-accelerator switches from accel_MultiDeviceID
+                    if (args.Value is bool en)
+                    {
+                        WriteSetting("accel_enableMultiAccel", en.ToString());
+                        if (en)
+                        {
+                            try
+                            {
+                                var saved = GetSetting("accel_MultiDeviceID", "");
+                                if (!string.IsNullOrWhiteSpace(saved) && AcceleratorInfos != null)
+                                {
+                                    if (saved == "all")
+                                    {
+                                        for (int i = 0; i < AcceleratorInfos.Length; i++) WriteSetting($"accel_multi_{i}", "true");
+                                    }
+                                    else
+                                    {
+                                        var parts = saved.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(s => int.TryParse(s, out var id) ? id : -1).Where(x => x >= 0).ToHashSet();
+                                        for (int i = 0; i < AcceleratorInfos.Length; i++) WriteSetting($"accel_multi_{i}", parts.Contains(i) ? "true" : "false");
+                                    }
+                                }
+                            }
+                            catch (Exception ex) { Log(ex); }
+                        }
+                    }
+                    goto done;
+                case var _ when args.Id != null && args.Id.StartsWith("accel_multi_"):
+                    // Individual per-accelerator switch changed: persist it and update aggregated accel_MultiDeviceID
+                    try
+                    {
+                        // write this individual switch
+                        WriteSetting(args.Id, args.Value?.ToString() ?? "false");
+
+                        if (AcceleratorInfos != null && AcceleratorInfos.Length > 0)
+                        {
+                            var selected = new List<int>();
+                            for (int i = 0; i < AcceleratorInfos.Length; i++)
+                            {
+                                if (bool.TryParse(GetSetting($"accel_multi_{i}", "false"), out var v) && v) selected.Add(i);
+                            }
+                            if (selected.Count == 0) WriteSetting("accel_MultiDeviceID", "");
+                            else if (selected.Count == AcceleratorInfos.Length) WriteSetting("accel_MultiDeviceID", "all");
+                            else WriteSetting("accel_MultiDeviceID", string.Join(',', selected));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex);
+                    }
+                    goto done;
+                case "selectAllAccels":
+                    try
+                    {
+                        if((bool)args.Value)
+                        {
+                            WriteSetting("accel_enableMultiAccel", "true");
+                            WriteSetting($"accel_multi_0", "false");
+                            if (AcceleratorInfos is not null)
+                            {
+                                for (int i = 1; i < AcceleratorInfos.Length; i++)
+                                {
+                                    WriteSetting($"accel_multi_{i}", "true");
+                                }
+                            }
+                            WriteSetting("accel_MultiDeviceID", "all");
+                        }
+                        else if (!(bool)args.Value)
+                        {
+                            WriteSetting("accel_MultiDeviceID", string.Join(",",Enumerable.Range(1, AcceleratorInfos.Length - 1).Select(c => c.ToString())));
+
+                        }
+
+                    }
+                    catch (Exception ex) { Log(ex); }
                     goto done;
 
             }
@@ -149,7 +274,7 @@ public partial class RenderSettingPage : ContentPage
                 WriteSetting(args.Id, args.Value?.ToString() ?? "");
             }
 
-            done:
+        done:
             BuildPPB();
         }
         catch (Exception ex)

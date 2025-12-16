@@ -13,6 +13,8 @@ namespace projectFrameCut.Services
 {
     public static class PluginService
     {
+        public const int PluginAPIVersion = 1;
+
         public sealed record PluginPayload(string Id, byte[] AssemblyBytes, Dictionary<string, string> Configuration);
 
         public static List<PluginPayload> GetEnabledPluginPayloads()
@@ -173,8 +175,8 @@ namespace projectFrameCut.Services
                         var pemPath = Path.Combine(pluginRoot, "publickey.pem");
                         var pem = File.ReadAllText(pemPath);
                         await SecureStorage.Default.SetAsync($"plugin_pem_{pluginInstance.PluginID}", pem);
-                    }  
-                    Directory.Delete(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID), true);
+                    }
+                    if(Directory.Exists(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID))) Directory.Delete(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID), true);
                     Directory.CreateDirectory(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID));
                     File.Move(Path.Combine(pluginRoot, pluginInstance.PluginID + ".dll.enc"), Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, pluginInstance.PluginID + ".dll.enc"));
                     File.Move(Path.Combine(pluginRoot, pluginInstance.PluginID + ".dll.sig"), Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, pluginInstance.PluginID + ".dll.sig"));
@@ -221,13 +223,18 @@ namespace projectFrameCut.Services
                     var pluginSig = File.ReadAllText(Path.Combine(pluginRoot, pluginID + ".dll.sig"));
                     if (!FileSignerService.VerifyFileSignature(pluginPem, decBytes, pluginSig))
                     {
-                        failReason = "Plugin may be modified, and it's sign is mismatch.";
+                        string? localizedFailReason = null;
+                        try
+                        {
+                            localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_InvaildSignToPreviousOne;
+                        }
+                        catch { }
+                        failReason = localizedFailReason ?? "Plugin may be modified, and it's sign is mismatch.";
                         return null;
                     }
                     var asb = Assembly.Load(decBytes);
                     var plugin = CreateIPluginFromAsb(asb)!;
 
-                    // 读取保存的配置文件
                     var optionFilePath = Path.Combine(pluginRoot, "option.json");
                     if (File.Exists(optionFilePath))
                     {
@@ -236,7 +243,6 @@ namespace projectFrameCut.Services
                             var configJson = File.ReadAllText(optionFilePath);
                             var savedConfig = JsonSerializer.Deserialize<Dictionary<string, string>>(configJson) ?? new();
 
-                            // 将保存的配置复制到插件对象
                             foreach (var kvp in savedConfig)
                             {
                                 if (plugin.Configuration.ContainsKey(kvp.Key))
@@ -264,7 +270,19 @@ namespace projectFrameCut.Services
                 {
                     failReason = $"Plugin file for {pluginID} not found.";
                 }
-            }catch(Exception ex)
+            }
+            catch (ReflectionTypeLoadException)
+            {
+                string? localizedFailReason = null;
+                try
+                {
+                    localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
+                }
+                catch { }
+                failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
+            }
+
+            catch (Exception ex)
             {
                 failReason = $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
             }
@@ -282,10 +300,19 @@ namespace projectFrameCut.Services
             }
             var ldrMethod = ldr.GetMethod("Load");
             var pluginObj = ldrMethod?.Invoke(null, [Localized._LocaleId_]);
-            return pluginObj as IPluginBase;
+            if(pluginObj is IPluginBase plugin)
+            {
+                if (plugin.PluginAPIVersion != PluginAPIVersion)
+                {
+                    Log($"Plugin {plugin.Name} has a mismatch PluginAPIVersion. Excepted {PluginAPIVersion}, got {plugin.PluginAPIVersion}.","error");
+                    return null;
+                }
+                return plugin;
+            }
+            return null;
         }
 
-        public static Dictionary<string,string> FailedLoadPlugin = new();
+        public static Dictionary<string, string> FailedLoadPlugin = new();
 
         public static List<IPluginBase> LoadUserPlugins()
         {
@@ -298,20 +325,26 @@ namespace projectFrameCut.Services
                 {
                     Log($"Loading userPlugin: {item.Id}");
                     string fail = "";
-                    var p = CreateFromID(item.Id,out fail);
+                    var p = CreateFromID(item.Id, out fail);
                     if (p is not null)
                         plugins.Add(p);
                     else
                     {
                         Log($"Failed to load user plugin {item.Id}: {fail}");
-                        FailedLoadPlugin.Add(item.Id, fail);
+                        if (!FailedLoadPlugin.TryAdd(item.Id, fail))
+                        {
+                            Log($"The plugin {item.Id} has been added many times.");
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     Log(ex, $"load user plugin: {item.Id}");
                     var msg = $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
-                    FailedLoadPlugin.Add(item.Id, msg);
+                    if(!FailedLoadPlugin.TryAdd(item.Id, msg))
+                    {
+                        Log($"The plugin {item.Id} has been added many times.");
+                    }
 
                 }
 
@@ -325,14 +358,14 @@ namespace projectFrameCut.Services
         public static void RemovePlugin(string pluginID)
         {
             if (pluginID.StartsWith("projectFrameCut")) throw new InvalidOperationException(SettingsManager.SettingLocalizedResources?.Plugin_CannotRemoveInternalPlugin ?? "Cannot remove a internal plugin.");
+            var items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) ?? new();
+            items.RemoveAll(c => c.Id == pluginID);
+            File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "Plugins.json"), JsonSerializer.Serialize(items));
             var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
             if (Directory.Exists(pluginRoot))
             {
                 Directory.Delete(pluginRoot, true);
             }
-            var items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) ?? new();
-            items.RemoveAll(c => c.Id == pluginID);
-            File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "Plugins.json"), JsonSerializer.Serialize(items));
 
         }
 

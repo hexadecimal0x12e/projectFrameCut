@@ -654,11 +654,73 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Plugin_Disable",
+        "Value": "\u7981\u7528\u300C{name}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_Enable",
+        "Value": "\u542F\u7528\u300C{name}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Plugin_FailLoad",
         "Value": "\u52A0\u8F7D\u5931\u8D25\u7684\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FailLoad_Disabled",
+        "Value": "\u4F60\u7981\u7528\u4E86\u8FD9\u4E2A\u63D2\u4EF6\u3002\u5982\u679C\u9700\u8981\uFF0C\u4F60\u53EF\u4EE5\u5728\u4E0B\u9762\u542F\u7528\u5B83\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FailLoad_FailedBeacuse",
+        "Value": "\u63D2\u4EF6\u521D\u59CB\u5316\u5931\u8D25\uFF0C\u56E0\u4E3A\uFF1A{reason}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
+            "Value": ""
+          }
+        ],
         "HasValidationErrors": false
       },
       {
@@ -830,62 +892,64 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Plugin_FailLoad_FailedBeacuse",
-        "Value": "\u63D2\u4EF6\u521D\u59CB\u5316\u5931\u8D25\uFF0C\u56E0\u4E3A\uFF1A{reason}",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "reason"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "reason",
-            "Value": ""
-          }
-        ],
+        "Id": "Plugin_VersionMismatch",
+        "Value": "\u63D2\u4EF6\u4E0D\u591F\u65B0\uFF0C\u56E0\u4E3A\u5B83\u6CA1\u6709\u5B9E\u73B0\u65B0\u7684API\u3002\u5C1D\u8BD5\u66F4\u65B0\u5B83\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "HasValidationErrors": false
       },
       {
-        "Id": "Plugin_Disable",
-        "Value": "\u7981\u7528\u300C{name}\u300D",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "name",
-            "Value": ""
-          }
-        ],
+        "Id": "Render_CustomOpts",
+        "Value": "\u81EA\u5B9A\u4E49\u6E32\u67D3\u5668\u53C2\u6570",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "HasValidationErrors": false
       },
       {
-        "Id": "Plugin_Enable",
-        "Value": "\u542F\u7528\u300C{name}\u300D",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "name",
-            "Value": ""
-          }
-        ],
+        "Id": "Render_CustomOpts_Placeholder",
+        "Value": "\u901A\u5E38\u60C5\u51B5\u4E0B\u4E0D\u9700\u8981\u8BBE\u7F6E\uFF0C\u8BE6\u60C5\u8BF7\u53C2\u9605\u6587\u6863",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "HasValidationErrors": false
       },
       {
-        "Id": "Plugin_FailLoad_Disabled",
-        "Value": "\u4F60\u7981\u7528\u4E86\u8FD9\u4E2A\u63D2\u4EF6\u3002\u5982\u679C\u9700\u8981\uFF0C\u4F60\u53EF\u4EE5\u5728\u4E0B\u9762\u542F\u7528\u5B83\u3002",
+        "Id": "Render_AdvanceOpts",
+        "Value": "\u9AD8\u7EA7\u9009\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AdvanceOpts_Show",
+        "Value": "\u663E\u793A\u66F4\u591A\u9009\u9879...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DefaultExportOpts",
+        "Value": "\u9ED8\u8BA4\u5BFC\u51FA\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DefaultExportOpts_Subtitle",
+        "Value": "\u7F16\u8F91\u9ED8\u8BA4\u7684\u5BFC\u51FA\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel_SelectAll",
+        "Value": "\u5168\u9009",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1857,6 +1921,78 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_VersionMismatch",
+        "Value": "Unset localization item:Plugin_VersionMismatch()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_CustomOpts",
+        "Value": "Unset localization item:Render_CustomOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_CustomOpts_Placeholder",
+        "Value": "Unset localization item:Render_CustomOpts_Placeholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AdvanceOpts",
+        "Value": "Unset localization item:Render_AdvanceOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AdvanceOpts_Show",
+        "Value": "Unset localization item:Render_AdvanceOpts_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DefaultExportOpts",
+        "Value": "Unset localization item:Render_DefaultExportOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DefaultExportOpts_Subtitle",
+        "Value": "Unset localization item:Render_DefaultExportOpts_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel_SelectAll",
+        "Value": "Unset localization item:Render_SelectAccel_SelectAll()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -2818,6 +2954,78 @@
       {
         "Id": "Plugin_FailLoad_Disabled",
         "Value": "Unset localization item:Plugin_FailLoad_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_VersionMismatch",
+        "Value": "Unset localization item:Plugin_VersionMismatch()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_CustomOpts",
+        "Value": "Unset localization item:Render_CustomOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_CustomOpts_Placeholder",
+        "Value": "Unset localization item:Render_CustomOpts_Placeholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AdvanceOpts",
+        "Value": "Unset localization item:Render_AdvanceOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AdvanceOpts_Show",
+        "Value": "Unset localization item:Render_AdvanceOpts_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DefaultExportOpts",
+        "Value": "Unset localization item:Render_DefaultExportOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DefaultExportOpts_Subtitle",
+        "Value": "Unset localization item:Render_DefaultExportOpts_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel_SelectAll",
+        "Value": "Unset localization item:Render_SelectAccel_SelectAll()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3790,6 +3998,78 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_VersionMismatch",
+        "Value": "Unset localization item:Plugin_VersionMismatch()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_CustomOpts",
+        "Value": "Unset localization item:Render_CustomOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_CustomOpts_Placeholder",
+        "Value": "Unset localization item:Render_CustomOpts_Placeholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AdvanceOpts",
+        "Value": "Unset localization item:Render_AdvanceOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AdvanceOpts_Show",
+        "Value": "Unset localization item:Render_AdvanceOpts_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DefaultExportOpts",
+        "Value": "Unset localization item:Render_DefaultExportOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DefaultExportOpts_Subtitle",
+        "Value": "Unset localization item:Render_DefaultExportOpts_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel_SelectAll",
+        "Value": "Unset localization item:Render_SelectAccel_SelectAll()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -4752,6 +5032,78 @@
       {
         "Id": "Plugin_FailLoad_Disabled",
         "Value": "Unset localization item:Plugin_FailLoad_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_VersionMismatch",
+        "Value": "Unset localization item:Plugin_VersionMismatch()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_CustomOpts",
+        "Value": "Unset localization item:Render_CustomOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_CustomOpts_Placeholder",
+        "Value": "Unset localization item:Render_CustomOpts_Placeholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AdvanceOpts",
+        "Value": "Unset localization item:Render_AdvanceOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AdvanceOpts_Show",
+        "Value": "Unset localization item:Render_AdvanceOpts_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DefaultExportOpts",
+        "Value": "Unset localization item:Render_DefaultExportOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DefaultExportOpts_Subtitle",
+        "Value": "Unset localization item:Render_DefaultExportOpts_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel_SelectAll",
+        "Value": "Unset localization item:Render_SelectAccel_SelectAll()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5724,6 +6076,78 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_VersionMismatch",
+        "Value": "Unset localization item:Plugin_VersionMismatch()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_CustomOpts",
+        "Value": "Unset localization item:Render_CustomOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_CustomOpts_Placeholder",
+        "Value": "Unset localization item:Render_CustomOpts_Placeholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AdvanceOpts",
+        "Value": "Unset localization item:Render_AdvanceOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AdvanceOpts_Show",
+        "Value": "Unset localization item:Render_AdvanceOpts_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DefaultExportOpts",
+        "Value": "Unset localization item:Render_DefaultExportOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DefaultExportOpts_Subtitle",
+        "Value": "Unset localization item:Render_DefaultExportOpts_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel_SelectAll",
+        "Value": "Unset localization item:Render_SelectAccel_SelectAll()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -6686,6 +7110,78 @@
       {
         "Id": "Plugin_FailLoad_Disabled",
         "Value": "Unset localization item:Plugin_FailLoad_Disabled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_VersionMismatch",
+        "Value": "Unset localization item:Plugin_VersionMismatch()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_CustomOpts",
+        "Value": "Unset localization item:Render_CustomOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_CustomOpts_Placeholder",
+        "Value": "Unset localization item:Render_CustomOpts_Placeholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AdvanceOpts",
+        "Value": "Unset localization item:Render_AdvanceOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AdvanceOpts_Show",
+        "Value": "Unset localization item:Render_AdvanceOpts_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DefaultExportOpts",
+        "Value": "Unset localization item:Render_DefaultExportOpts()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DefaultExportOpts_Subtitle",
+        "Value": "Unset localization item:Render_DefaultExportOpts_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel_SelectAll",
+        "Value": "Unset localization item:Render_SelectAccel_SelectAll()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

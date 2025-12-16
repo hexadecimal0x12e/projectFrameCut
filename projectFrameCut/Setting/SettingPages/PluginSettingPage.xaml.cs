@@ -43,9 +43,11 @@ public partial class PluginSettingPage : ContentPage
         foreach (var item in PluginManager.LoadedPlugins)
         {
             var plugin = item.Value;
+            var name = plugin.ReadLocalizationItem("_PluginBase_Name_", plugin.Name) ?? plugin.Name;
+            var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", plugin.Description) ?? plugin.Description;
             rootPPB
                 .AddSeparator()
-                .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(plugin.Name, plugin.Description, 20, 16))
+                .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(name, desc, 20, 16))
                 .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Plugin_DetailInfo(plugin.Author, plugin.Version, plugin.PluginID), 12))
                 .AddButton($"MoreOption,{item.Key}", SettingLocalizedResources.Plugin_MoreOption);
 
@@ -85,8 +87,10 @@ public partial class PluginSettingPage : ContentPage
     {
         var plugin = PluginManager.LoadedPlugins[id];
         var page = new ContentPage { };
+        var name = plugin.ReadLocalizationItem("_PluginBase_Name_", plugin.Name);
+        var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", plugin.Description);
         var ppb = new PropertyPanelBuilder()
-            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_DetailConfig(plugin.Name), SettingLocalizedResources.Plugin_DetailConfig_Subtitle(plugin.Name)));
+            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_DetailConfig(name), SettingLocalizedResources.Plugin_DetailConfig_Subtitle(name)));
         if (!plugin.Configuration.Any())
         {
             ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailConfig_None(id), 16, FontAttributes.None, Colors.Gray));
@@ -134,7 +138,6 @@ public partial class PluginSettingPage : ContentPage
 
         page.Content = new ScrollView { Content = ppb.Build() };
 
-        // 在页面消失时保存配置
         page.Disappearing += async (s, e) =>
         {
             await SavePluginConfiguration(plugin);
@@ -202,8 +205,6 @@ public partial class PluginSettingPage : ContentPage
                             var conf = await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_AddWarn(pluginInstance.Name), Localized._OK, Localized._Cancel);
                             if (conf)
                             {
-                                //todo: save plugin private key
-                                //await SecureStorage.Default.SetAsync("oauth_token", "secret-oauth-token-value");
                                 PluginManager.LoadFrom(pluginInstance);
                                 BuildPPB();
                             }
@@ -224,7 +225,6 @@ public partial class PluginSettingPage : ContentPage
             var flag = flags[0];
             var id = flags[1];
 
-            // 处理移除失败的插件
             if (flag == "RemoveFailedPlugin")
             {
                 if (PluginService.FailedLoadPlugin.ContainsKey(id))
@@ -248,7 +248,6 @@ public partial class PluginSettingPage : ContentPage
                 }
                 return;
             }
-
             if (flag == "EnablePlugin")
             {
                 PluginService.EnablePlugin(id);

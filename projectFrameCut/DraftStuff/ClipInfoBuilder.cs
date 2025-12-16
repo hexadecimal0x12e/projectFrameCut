@@ -9,6 +9,7 @@ using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using static SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 using Microsoft.Maui.Controls.Shapes;
+using projectFrameCut.Render.Plugin;
 
 
 #if WINDOWS
@@ -68,7 +69,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     var effectKey = effectKvp.Key;
                     var effect = effectKvp.Value;
-                    ppb.AddText(new TitleAndDescriptionLineLabel(effect.TypeName, effectKey));
+                    ppb.AddText(new TitleAndDescriptionLineLabel(effect.Name, PluginManager.GetLocalizationItem($"EffectType_{effect.TypeName}", effect.TypeName)));
                     ppb.AddCheckbox($"Effect|{effectKey}|Enabled", PPLocalizedResuorces._Enabled, effect.Enabled);
                     ppb.AddEntry($"Effect|{effectKey}|Index", PPLocalizedResuorces.EffectProp_Index, effect.Index.ToString(), "-1");
                     foreach (var paramName in effect.ParametersNeeded)
@@ -94,12 +95,12 @@ namespace projectFrameCut.DraftStuff
                             bool val = false;
                             if (currentVal is bool b) val = b;
                             else if (bool.TryParse(currentVal?.ToString(), out var bParsed)) val = bParsed;
-                            ppb.AddCheckbox(controlId, PPLocalizedResuorces.DynamicLookup($"_{paramName}", paramName), val);
+                            ppb.AddCheckbox(controlId, PluginManager.GetLocalizationItem($"_{paramName}", paramName), val);
                         }
                         else
                         {
                             string valStr = currentVal?.ToString() ?? "";
-                            ppb.AddEntry(controlId, PPLocalizedResuorces.DynamicLookup($"_{paramName}", paramName), valStr, "");
+                            ppb.AddEntry(controlId, PluginManager.GetLocalizationItem($"_{paramName}", paramName), valStr, "");
                         }
                     }
                     ppb.AddButton($"Effect|{effectKey}|Remove", PPLocalizedResuorces.EffectProp_Remove);

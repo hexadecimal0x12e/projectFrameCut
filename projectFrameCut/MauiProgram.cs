@@ -16,6 +16,7 @@ using projectFrameCut.Render.Plugin;
 using Microsoft.Extensions.Logging;
 using projectFrameCut.Shared;
 
+
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
 using projectFrameCut.Platforms.Android;
@@ -378,6 +379,13 @@ namespace projectFrameCut
                     Localized = SimpleLocalizer.Init(locate);
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
                     SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResuorces = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+                    PluginManager.CurrentLocale = Localized._LocaleId_;
+                    PluginManager.ExtenedLocalizationGetter = new((k) =>
+                    {
+                        var r = Localized.DynamicLookup(k, "!!!NULL!!!");
+                        return r == "!!!NULL!!!" ? null : r;
+                    });
+
                     try
                     {
                         ConfigFontFromCulture(builder, culture);
@@ -395,14 +403,14 @@ namespace projectFrameCut
                     {
                         culture = CultureInfo.CreateSpecificCulture(SettingsManager.GetSetting("OverrideCulture"));
                     }
-                    if(locate != "default")
+                    if (locate != "default")
                     {
                         Thread.CurrentThread.CurrentCulture = culture;
                         Thread.CurrentThread.CurrentUICulture = culture;
                         CultureInfo.DefaultThreadCurrentCulture = culture;
                         CultureInfo.DefaultThreadCurrentUICulture = culture;
                     }
-                    
+
 
                     Log($"Culture:{Thread.CurrentThread.CurrentCulture}, locate:{Localized._LocaleId_}, {Localized.WelcomeMessage}");
                 }
@@ -413,7 +421,8 @@ namespace projectFrameCut
                     Localized = ISimpleLocalizerBase.GetMapping().First().Value;
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().First().Value;
                     SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResuorces = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
-
+                    PluginManager.CurrentLocale = "en-US";
+                    PluginManager.ExtenedLocalizationGetter = new((k) => ISimpleLocalizerBase.GetMapping().First().Value.DynamicLookup(k));
                     builder.ConfigureFonts(fonts =>
                     {
                         fonts.AddFont("HarmonyOS_Sans_Regular.ttf", "Font_Regular");
@@ -431,13 +440,21 @@ namespace projectFrameCut
 #elif iDevices
 
 #endif
-                    if (Environment.GetCommandLineArgs().Contains("--forceLoadPlugins") || (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins")))
+                    try
                     {
-                        plugins.AddRange(PluginService.LoadUserPlugins());
+                        if (Environment.GetCommandLineArgs().Contains("--forceLoadPlugins") || (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("disableAllUserPlugin")))
+                        {
+                            plugins.AddRange(PluginService.LoadUserPlugins());
+                        }
+                        else
+                        {
+                            if(AdminHelper.IsRunningAsAdministrator()) Log("Running as administrator, skip load user plugins for security reason.", "warn");
+                            else Log("User disabled user plugin.");
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        Log("Running as administrator, skip load user plugins for security reason.","warn");
+                        Log(ex, "load user plugins", CreateMauiApp);
                     }
 
                     PluginManager.Init(plugins);
@@ -445,6 +462,19 @@ namespace projectFrameCut
                 catch (Exception ex)
                 {
                     Log(ex, "Load plugins", CreateMauiApp);
+                    try
+                    {
+                        PluginManager.Init([new InternalPluginBase()]);
+                    }
+                    catch(Exception ex1)
+                    {
+                        Log(ex1, "try load internal plugin", CreateMauiApp);
+#if ANDROID
+                        Android.Util.Log.Wtf("projectFrameCut", $"FATAL: The pluginBase cannot be loaded. projectFrameCut may not work at all.\r\n(a {ex.GetType().Name} exception happends, {ex.Message})");
+#elif WINDOWS
+                    _ = MessageBox(new nint(0),  $"FATAL: The pluginBase cannot be loaded. projectFrameCut may not work at all.\r\n(a {ex.GetType().Name} exception happends, {ex.Message})", "projectFrameCut", 0U);
+#endif
+                    }
                 }
 
 

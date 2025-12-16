@@ -41,9 +41,9 @@ namespace projectFrameCut.Render.WindowsRender
             if (args.Length > 1) Thread.Sleep(800);
             inprojectFrameCut = Environment.GetEnvironmentVariables().Contains("projectFrameCut");
 #if DEBUG
-            if (!Environment.GetEnvironmentVariables().Contains("pjfc_dbg")) goto run;
+            if (!args.Contains("--holdForDebugger")) goto run;
             SetSubProg("WaitForDbg");
-            Console.WriteLine("DEBUG BUILD - Waiting for debugger. To disable: don't define 'pjfc_dbg' environment varable.");
+            Console.WriteLine("DEBUG BUILD - Waiting for debugger. To disable: remove arg '--holdForDebugger'.");
             Stopwatch dbg_sw = Stopwatch.StartNew();
             while (true)
             {
@@ -68,7 +68,7 @@ namespace projectFrameCut.Render.WindowsRender
                             [-Use16bpp=<true|false>]
                             [-maxParallelThreads=<number> or -oneByOneRender=<true|false>]
                             [-multiAccelerator=<true|false>]
-                            [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids>]
+                            [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]
                             [-GCOptions=doLOHCompression|doNormalCollection|letCLRDoCollection]
                             [-preview=true|false]
                             [-previewPath=<path of preview output>]
@@ -168,19 +168,28 @@ namespace projectFrameCut.Render.WindowsRender
                     Log("ERROR: multiAccelerator is set to true, but no acceleratorDeviceIds provided.");
                     return 2;
                 }
-                var accelsIds = accelsIdsStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Select(s => int.TryParse(s, out var id) ? id : -1)
-                    .Where(id => id >= 0)
-                    .ToList();
-                picked = accelsIds.Select(id =>
+
+                if (accelsIdsStr == "all")
                 {
-                    var acc = ILGPUComputerHelper.PickOneAccel("auto", id, devices);
-                    if (acc is null)
+                    picked = devices.Where(a => a.AcceleratorType != AcceleratorType.CPU).ToList();
+                }
+                else
+                {
+
+                    var accelsIds = accelsIdsStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Select(s => int.TryParse(s, out var id) ? id : -1)
+                        .Where(id => id >= 0)
+                        .ToList();
+                    picked = accelsIds.Select(id =>
                     {
-                        Log($"ERROR: Cannot pick accelerator device with id {id}.");
-                    }
-                    return acc;
-                }).ToList()!;
+                        var acc = ILGPUComputerHelper.PickOneAccel("auto", id, devices);
+                        if (acc is null)
+                        {
+                            Log($"ERROR: Cannot pick accelerator device with id {id}.");
+                        }
+                        return acc;
+                    }).ToList()!;
+                }
 
             }
 

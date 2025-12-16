@@ -363,10 +363,6 @@ public partial class DraftPage : ContentPage
         {
             cmd?.Execute(null);
         }
-        else
-        {
-            await DisplayAlertAsync(Localized._Info, $"Option not found:{optionKey}", Localized._OK);
-        }
     }
 
     private bool Inited = false;
@@ -901,6 +897,7 @@ public partial class DraftPage : ContentPage
         element.ExtraData["G"] = G;
         element.ExtraData["B"] = B;
         element.ExtraData["A"] = A;
+        element.isInfiniteLength = true;
     }
 
 
@@ -1918,44 +1915,6 @@ public partial class DraftPage : ContentPage
         if (currentX < 0) currentX = 0;
         var duration = PixelToFrame(currentX);
         await RenderOneFrame(duration);
-    }
-
-    private async void ResolutionPicker_SelectedIndexChanged(object sender, EventArgs e)
-    {
-        var picker = sender as Picker;
-        if (picker != null)
-        {
-            if (picker.SelectedItem is string picked)
-            {
-                var parts = picked.Split('x');
-                if (parts.Length == 2 &&
-                   int.TryParse(parts[0].Trim(), out int w1) &&
-                   int.TryParse(parts[1].Trim(), out int h1))
-                {
-                    SetStatusText($"Set output resolution to {w1} x {h1}");
-                    ClipEditor.UpdateVideoResolution(w1, h1);
-
-#if WINDOWS
-                    if (!_isClosing && _rpc is not null)
-                        await _rpc.SendAsync("ConfigurePreview", JsonSerializer.SerializeToElement(new { width = w1, height = h1 }), default);
-#endif
-                    return;
-                }
-            }
-        }
-
-        var widthInput = await DisplayPromptAsync("Output Resolution", "Enter output width in pixels:", initialValue: "1920");
-        var heightInput = await DisplayPromptAsync("Output Resolution", "Enter output height in pixels:", initialValue: "1080");
-        if (int.TryParse(widthInput, out int w) && int.TryParse(heightInput, out int h))
-        {
-            SetStatusText($"Set output resolution to {w} x {h}");
-            ClipEditor.UpdateVideoResolution(w, h);
-#if WINDOWS
-            if (!_isClosing && _rpc is not null)
-                await _rpc.SendAsync("ConfigurePreview", JsonSerializer.SerializeToElement(new { width = w, height = h }), default);
-#endif
-
-        }
     }
     #endregion
 
@@ -3238,6 +3197,44 @@ public partial class DraftPage : ContentPage
                 Content = BuildPropertyPanel(_selected ?? new())
             }
         });
+    }
+
+    private async void ResolutionPicker_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        var picker = sender as Picker;
+        if (picker != null)
+        {
+            if (picker.SelectedItem is string picked)
+            {
+                var parts = picked.Split('x');
+                if (parts.Length == 2 &&
+                   int.TryParse(parts[0].Trim(), out int w1) &&
+                   int.TryParse(parts[1].Trim(), out int h1))
+                {
+                    SetStatusText($"Set output resolution to {w1} x {h1}");
+                    ClipEditor.UpdateVideoResolution(w1, h1);
+
+#if WINDOWS
+                    if (!_isClosing && _rpc is not null)
+                        await _rpc.SendAsync("ConfigurePreview", JsonSerializer.SerializeToElement(new { width = w1, height = h1 }), default);
+#endif
+                    return;
+                }
+            }
+        }
+
+        var widthInput = await DisplayPromptAsync("Output Resolution", "Enter output width in pixels:", initialValue: "1920");
+        var heightInput = await DisplayPromptAsync("Output Resolution", "Enter output height in pixels:", initialValue: "1080");
+        if (int.TryParse(widthInput, out int w) && int.TryParse(heightInput, out int h))
+        {
+            SetStatusText($"Set output resolution to {w} x {h}");
+            ClipEditor.UpdateVideoResolution(w, h);
+#if WINDOWS
+            if (!_isClosing && _rpc is not null)
+                await _rpc.SendAsync("ConfigurePreview", JsonSerializer.SerializeToElement(new { width = w, height = h }), default);
+#endif
+
+        }
     }
 
     private void ZoomOutButton_Clicked(object sender, EventArgs e)

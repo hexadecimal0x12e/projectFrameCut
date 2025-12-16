@@ -27,6 +27,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// The plugin's name.
         /// </summary>
+        /// <remarks>
+        /// for this field, it's localized key is '_PluginBase_Name_'.
+        /// </remarks>
         public string Name { get; }
         /// <summary>
         /// Plugin's author.
@@ -35,6 +38,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Description of the plugin.
         /// </summary>
+        /// <remarks>
+        /// for this field, it's localized key is '_PluginBase_Description_'.
+        /// </remarks>
         public string Description { get; }
         /// <summary>
         /// The version of the plugin.
@@ -49,6 +55,15 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// </summary>
         public string? PublishingUrl { get; }
 
+        /// <summary>
+        /// Represents the localization strings provided by the plugin.
+        /// </summary>
+        /// <remarks>
+        /// For each key, it represents the locate code (like 'en-US'), and it's values represents the mapping of the localization strings.
+        /// The first key of <see cref="LocalizationProvider"/> is the default localization.
+        /// </remarks>
+        public Dictionary<string, Dictionary<string, string>> LocalizationProvider { get; }
+ 
         /// <summary>
         /// Create an IClip instance from the given file path and JSON data.
         /// </summary>
@@ -111,6 +126,29 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// For each locate's mapping, the key is the setting key, and the value is the display name.
         /// </remarks>
         public Dictionary<string, Dictionary<string,string>> ConfigurationDisplayString { get; }
+
+        /// <summary>
+        /// Read a localization item from the provider.
+        /// </summary>
+        /// <remarks>
+        /// If you don't override this method, the default implementation will first try to find the localization item from the given locate.
+        /// </remarks>
+        /// <param name="key"></param>
+        /// <param name="locate"></param>
+        /// <returns>string if key exists; null if key not exist.</returns>
+        public virtual string? ReadLocalizationItem(string key, string locate)
+        {
+            if(LocalizationProvider.TryGetValue(locate, out var pair))
+            {
+                if (pair.TryGetValue(key, out var result)) return result;
+            }
+            else
+            {
+                if (!LocalizationProvider.Any()) return null;
+                if(LocalizationProvider.First().Value.TryGetValue(key, out var result)) return result;
+            }
+            return null;
+        }
 
         /// <summary>
         /// Obtains an instance of IClip from the given JSON element. You may override this method to provide custom clip creation logic.

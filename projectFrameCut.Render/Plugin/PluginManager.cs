@@ -18,6 +18,9 @@ namespace projectFrameCut.Render.Plugin
         public static IReadOnlyDictionary<string, IPluginBase> LoadedPlugins => loadedPlugins;
         private static bool Inited = false;
 
+        public static Func<string, string?>? ExtenedLocalizationGetter = null;
+        public static string CurrentLocale = "en-US";
+
         public static void Init(IEnumerable<IPluginBase> plugins)
         {
             if (Inited) throw new InvalidOperationException("PluginManager has already been initialized.");
@@ -89,6 +92,24 @@ namespace projectFrameCut.Render.Plugin
 
             Logger.Log($"Plugin {pluginInstance.PluginID} loaded.");
 
+        }
+
+        public static string GetLocalizationItem(string key, string fallback)
+        {
+            foreach (var plugin in LoadedPlugins.Values)
+            {
+                var localizedString = plugin.ReadLocalizationItem(key, CurrentLocale);
+                if (!string.IsNullOrEmpty(localizedString))
+                {
+                    return localizedString;
+                }
+            }
+            if (ExtenedLocalizationGetter != null)
+            {
+                var str = ExtenedLocalizationGetter(key);
+                return str ?? fallback;
+            }
+            return fallback;
         }
 
         public static IClip CreateClip(JsonElement source)

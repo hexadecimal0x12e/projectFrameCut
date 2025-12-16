@@ -52,6 +52,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "_StartX",
+        "Value": "\u8D77\u59CB X \u8F74\u5750\u6807",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_StartY",
+        "Value": "\u8D77\u59CB Y \u8F74\u5750\u6807",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "_Width",
         "Value": "\u5BBD\u5EA6",
         "Mode": "ConstString",
@@ -62,6 +78,14 @@
       {
         "Id": "Add_Effect",
         "Value": "\u6DFB\u52A0\u4E00\u4E2A\u6548\u679C...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Add_Effect_Select",
+        "Value": "\u9009\u62E9\u4E00\u4E2A\u6548\u679C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -92,24 +116,16 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Add_Effect_Select",
-        "Value": "\u9009\u62E9\u4E00\u4E2A\u6548\u679C",
+        "Id": "_PluginBase_Name_",
+        "Value": "projectFrameCut \u57FA\u7840\u7EC4\u4EF6\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
       },
       {
-        "Id": "_StartX",
-        "Value": "\u8D77\u59CB X \u8F74\u5750\u6807",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "_StartY",
-        "Value": "\u8D77\u59CB Y \u8F74\u5750\u6807",
+        "Id": "_PluginBase_Description_",
+        "Value": "\u4F5C\u4E3A projectFrameCut \u7684\u4E00\u90E8\u5206\uFF0C\u63D0\u4F9B projectFrameCut \u7684\u57FA\u672C\u529F\u80FD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

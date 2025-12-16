@@ -57,9 +57,10 @@ namespace projectFrameCut.DraftStuff
                             MixtureMode = MixtureMode.Overlay,
                             FilePath = elem.sourcePath,
                             SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
+                            IsInfiniteLength = elem.isInfiniteLength,
                             SecondPerFrameRatio = elem.SecondPerFrameRatio,
                             MetaData = elem.ExtraData,
-                            Effects = elem.Effects?.Select((kv) => 
+                            Effects = elem.Effects?.Select((kv) =>
                             new EffectAndMixtureJSONStructure
                             {
                                 Name = kv.Key,
@@ -167,7 +168,7 @@ namespace projectFrameCut.DraftStuff
                 element.origX = startPx;
                 element.relativeStartFrame = dto.RelativeStartFrame;
                 element.maxFrameCount = maxFrames;
-                element.isInfiniteLength = dto.SourceDuration is null;
+                element.isInfiniteLength = dto.IsInfiniteLength;
                 element.sourcePath = dto.FilePath;
                 element.ClipType = dto.ClipType;
                 element.ExtraData = dto.MetaData ?? new();

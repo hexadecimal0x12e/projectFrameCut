@@ -22,9 +22,11 @@ namespace projectFrameCut.PropertyPanel
     [System.Diagnostics.DebuggerNonUserCode()]
     public class PropertyPanelBuilder
     {
-
-        //private VerticalStackLayout layout;
-
+        /// <summary>
+        /// Set the default width of the <see cref="WidthOfContent"/>.
+        /// </summary>
+        public static double DefaultWidthOfContent = 5;
+        
         private List<View> children = new();
         public Dictionary<string, View> Components { get; private init; } = new();
 
@@ -36,7 +38,10 @@ namespace projectFrameCut.PropertyPanel
         /// <summary>
         /// Get or set the default ratio of length of the content area (the second column) by their labels (the first column).
         /// </summary>
-        public double WidthOfContent { get; set; } = 5;
+        /// <remarks>
+        /// Use null for default value, which is equals to <see cref="DefaultWidthOfContent"/>.
+        /// </remarks>
+        public double? WidthOfContent  { get; set; } = null;
 
         /// <summary>
         /// Gets or sets the default padding applied to the control's outer grid,
@@ -62,11 +67,6 @@ namespace projectFrameCut.PropertyPanel
         public PropertyPanelBuilder()
         {
             childBuilder = new PropertyPanelChildrenBuilder(this);
-            //layout = new VerticalStackLayout
-            //{
-            //    Spacing = 10,
-            //    Padding = new Thickness(10)
-            //};
         }
 
         /// <summary>
@@ -132,7 +132,7 @@ namespace projectFrameCut.PropertyPanel
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent , GridUnitType.Star) }
                 },
                 RowDefinitions = new RowDefinitionCollection
                 {
@@ -171,7 +171,7 @@ namespace projectFrameCut.PropertyPanel
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
                 },
                 RowDefinitions = new RowDefinitionCollection
                 {
@@ -209,7 +209,7 @@ namespace projectFrameCut.PropertyPanel
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
                 },
                 RowDefinitions = new RowDefinitionCollection
                 {
@@ -241,14 +241,18 @@ namespace projectFrameCut.PropertyPanel
 
             var label = title.LabelConfigurer();
             Properties[Id] = defaultOne;
+#if !iDevices
             picker.SelectedIndexChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, picker.SelectedItem as string);
+#else //avoid picker disappears before selection done
+            picker.Closed += (s, e) => pppcea.CreateAndInvoke(this, Id, picker.SelectedItem as string);
+#endif
             PickerSetter?.Invoke(picker);
             var grid = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
                 },
                 RowDefinitions = new RowDefinitionCollection
                 {
@@ -290,7 +294,7 @@ namespace projectFrameCut.PropertyPanel
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
                 },
                 RowDefinitions = new RowDefinitionCollection
                 {
@@ -346,7 +350,7 @@ namespace projectFrameCut.PropertyPanel
             //    ColumnDefinitions = new ColumnDefinitionCollection
             //    {
             //        new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-            //        new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+            //        new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
             //    },
             //    RowDefinitions = new RowDefinitionCollection
             //    {
@@ -405,7 +409,7 @@ namespace projectFrameCut.PropertyPanel
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
                 },
                 RowDefinitions = new RowDefinitionCollection
                 {
@@ -483,7 +487,7 @@ namespace projectFrameCut.PropertyPanel
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
                 },
                 RowDefinitions = new RowDefinitionCollection
                 {

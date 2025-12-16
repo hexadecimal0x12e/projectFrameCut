@@ -33,7 +33,7 @@ public sealed class RpcClient : IAsyncDisposable
             {
                 FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Render.WindowsRender.exe"),
                 WorkingDirectory = Path.Combine(AppContext.BaseDirectory),
-                Arguments = 
+                Arguments =
                 $"""
                  rpc_backend
                   "-pipe={pipeId}"
@@ -199,7 +199,7 @@ public sealed class RpcClient : IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
-            Log("Connect to RPC timeout.","error");
+            Log("Connect to RPC timeout.", "error");
         }
         catch (Exception ex)
         {
@@ -291,11 +291,10 @@ public sealed class RpcClient : IAsyncDisposable
 
     private async Task<RpcProtocol.RpcMessage?> SendReceiveAsync(RpcProtocol.RpcMessage req, CancellationToken ct)
     {
-        if (_writer is null || _reader is null) throw new InvalidOperationException("RPC 未连接。");
-
-        await _ioLock.WaitAsync(ct);
         try
         {
+            if (_writer is null || _reader is null) throw new InvalidOperationException("RPC 未连接。");
+            await _ioLock.WaitAsync(ct);
             var json = JsonSerializer.Serialize(req, RpcProtocol.JsonOptions);
             await _writer.WriteLineAsync(json);
             var line = await _reader.ReadLineAsync(ct);
@@ -309,7 +308,14 @@ public sealed class RpcClient : IAsyncDisposable
         }
         finally
         {
-            _ioLock.Release();
+            try
+            {
+                _ioLock.Release();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "SendReceive", this);
+            }
         }
     }
 

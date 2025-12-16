@@ -33,6 +33,18 @@ public class InternalPluginBase : IPluginBase
 
     public string? PublishingUrl => null;
 
+    public Dictionary<string, Dictionary<string, string>> LocalizationProvider => new Dictionary<string, Dictionary<string, string>>
+    {
+        {
+            "zh-CN", 
+            new Dictionary<string, string>
+            {
+                {"_PluginBase_Name_", "projectFrameCut 内部基础插件" },
+                {"_PluginBase_Description_", "作为 projectFrameCut 的一部分，提供 projectFrameCut 的基本功能" }
+            } 
+        }
+    };
+
     public Dictionary<string, Func<IEffect>> EffectProvider => new Dictionary<string, Func<IEffect>>
     {
         {"RemoveColor",  new(() => new RemoveColorEffect())},
@@ -89,5 +101,15 @@ public class InternalPluginBase : IPluginBase
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
         };
     }
+
+    string? IPluginBase.ReadLocalizationItem(string key, string locate)
+    {
+        var loc = ISimpleLocalizerBase_PropertyPanel.GetMapping().FirstOrDefault(x => x.Key == locate, ISimpleLocalizerBase_PropertyPanel.GetMapping().First()).Value;
+        var result = loc.DynamicLookup(key, "!!!NULL!!!");
+        return result == "!!!NULL!!!" ? null : result;
+    }
+
+
+
 }
 
