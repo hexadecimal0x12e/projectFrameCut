@@ -96,7 +96,7 @@ namespace projectFrameCut.Render.Rendering
                                     .Resize(targetWidth, targetHeight, true);
 
                 }
-                LogDiagnostic($"Result's diag info:{result?.GetDiagnosticsInfo() ?? "unknown"}");
+                //LogDiagnostic($"Result's diag info:{result?.GetDiagnosticsInfo() ?? "unknown"}");
                 if (result?.Width == targetWidth && result?.Height == targetHeight)
                 {
                     goto ok;

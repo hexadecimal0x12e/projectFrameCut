@@ -284,7 +284,7 @@ namespace projectFrameCut.Render.Videos
 
     }
 
-    internal sealed unsafe class VideoWriter : IDisposable
+    public sealed unsafe class VideoWriter : IDisposable
     {
         public readonly int _width;
         public readonly int _height;

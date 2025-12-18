@@ -9,12 +9,44 @@ namespace projectFrameCut.Setting.SettingPages;
 
 public partial class AboutSettingPage : ContentPage
 {
+#if WINDOWS
+    TapGestureRecognizer tap = new TapGestureRecognizer();
+
+#else
+    PinchGestureRecognizer pinch = new PinchGestureRecognizer();
+#endif
+    private int count = 0;
     public AboutSettingPage()
     {
         InitializeComponent();
         Loaded += AboutSettingPage_Loaded;
         AppVersionLabel.Text = $"Version {AppInfo.VersionString} ({AppInfo.BuildString})";
-        AppLogoIcon.Source = ImageHelper.LoadFromAsset("appicon");
+        AppLogoIcon.Source = ImageHelper.LoadFromAsset("projectframecut");
+#if WINDOWS
+        tap.Tapped
+#else
+        pinch.PinchUpdated
+#endif
+         += async (s, e) =>
+        {
+            count++;
+            if (count >= 20)
+            {
+                count = 0;
+                var result = await DisplayAlertAsync("???", "Let's play a game!", Localized._Cancel, Localized._OK);
+                if (result) await Launcher.OpenAsync("https://oig.mihoyo.com/ys"); //____
+                else await DisplayAlertAsync("???", "Have a nice day :)",Localized._OK);
+            }
+
+        };
+        AppLogoIcon.GestureRecognizers.Clear();
+#if WINDOWS
+        AppLogoIcon.GestureRecognizers.Add(tap);
+
+#else
+        AppLogoIcon.GestureRecognizers.Add(pinch);
+
+#endif
     }
 
     private async void AboutSettingPage_Loaded(object? sender, EventArgs e)

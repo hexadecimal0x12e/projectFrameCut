@@ -1,4 +1,6 @@
 using projectFrameCut.PropertyPanel;
+using projectFrameCut.Services;
+using projectFrameCut.Shared;
 using System.Diagnostics;
 
 namespace projectFrameCut.Setting.SettingPages;
@@ -158,16 +160,14 @@ public partial class MiscSettingPage : ContentPage
                     goto done;
                 case "openSettingsButton":
                     var jsonPath = Path.Combine(MauiProgram.BasicDataPath, "settings.json");
-#if WINDOWS
-                    Process.Start(new ProcessStartInfo { FileName = jsonPath, UseShellExecute = true });
-#elif ANDROID
-
-#elif iDevices
-
-#endif
+                    await FileSystemService.OpenFileAsync(jsonPath);
                     goto done;
                 case "DeveloperMode":
                     needReboot = true;
+                    break;
+                case "LogDiagnostics":
+                    MyLoggerExtensions.LoggingDiagnosticInfo = args.Value is bool ? (bool)args.Value : false;
+                    LogDiagnostic($"User toggled LogDiagnostics to {args.Value}");
                     break;
 
             }
@@ -179,9 +179,9 @@ public partial class MiscSettingPage : ContentPage
 
 
             if (needReboot)
-                RebootApp();
+                await MainSettingsPage.RebootApp(this);
 
-            done:
+        done:
             BuildPPB();
         }
         catch (Exception ex)
@@ -191,45 +191,4 @@ public partial class MiscSettingPage : ContentPage
         }
     }
 
-    private async void RebootApp()
-    {
-        var conf = await MainSettingsPage.instance.DisplayAlertAsync(Localized._Info,
-                                    SettingLocalizedResources.CommonStr_RebootRequired(),
-                                    Localized._Confirm,
-                                    Localized._Cancel);
-        if (conf)
-        {
-            await FlushAndStopAsync();
-#if WINDOWS
-            string path = "projectFrameCut_Protocol:";
-            if (MauiProgram.IsPackaged() == false)
-            {
-                var exePath = Process.GetCurrentProcess().MainModule?.FileName;
-                if (exePath != null)
-                {
-                    path = exePath;
-                }
-            }
-            var script =
-    $$"""
-
-Clear-Host;Write-Output "projectFrameCut is now rebooting, please wait for a while...";Start-Sleep 2;Start-Process "{{path}}";exit
-
-""";
-            var proc = new Process();
-            proc.StartInfo.FileName = "powershell.exe";
-            proc.StartInfo.UseShellExecute = false;
-            proc.StartInfo.RedirectStandardInput = true;
-            proc.StartInfo.CreateNoWindow = false;
-            proc.Start();
-            var procWriter = proc.StandardInput;
-            if (procWriter != null)
-            {
-                procWriter.AutoFlush = true;
-                procWriter.WriteLine(script);
-            }
-            Environment.Exit(0);
-#endif
-        }
-    }
 }

@@ -26,17 +26,11 @@ namespace projectFrameCut.WinUI
         public App()
         {
             this.InitializeComponent();
+            Instance = this;
             UnhandledException += App_UnhandledException;
         }
 
-        //protected override void OnLaunched(LaunchActivatedEventArgs args)
-        //{
-        //    base.OnLaunched(args);
-        //    var window = Application.Windows[0].Handler?.PlatformView as MauiWinUIWindow;
-
-
-
-        //}
+        public static App? Instance;
 
         private void App_UnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
         {

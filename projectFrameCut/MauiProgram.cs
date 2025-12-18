@@ -48,11 +48,20 @@ namespace projectFrameCut
             "My Assets"
             ];
 
+        public static string[] CmdlineArgs = Array.Empty<string>();
+
 
         public static MauiApp CreateMauiApp()
         {
             System.Threading.Thread.CurrentThread.Name = "App Main thread";
-
+            if (CmdlineArgs is null || CmdlineArgs.Length == 0)
+            {
+                try
+                {
+                    CmdlineArgs = Environment.GetCommandLineArgs();
+                }
+                catch { } //safe to ignore it
+            }
             string loggingDir = "";
             try
             {
@@ -115,7 +124,7 @@ namespace projectFrameCut
 
             Log($"projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} \r\n" +
                 $"                  on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture},\r\n" +
-                $"                  os version {Environment.OSVersion},\r\n" +
+                $"                  os version {Environment.OSVersion}/{DeviceInfo.Version},\r\n" +
                 $"                  clr version {Environment.Version},\r\n" +
                 $"                  cmdline: {Environment.CommandLine}");
             Log("Copyright (c) hexadecimal0x12e 2025, and thanks to other open-source code's authors. This project is licensed under GNU GPL V2.");
@@ -217,7 +226,17 @@ namespace projectFrameCut
             try
             {
                 var builder = MauiApp.CreateBuilder();
-                builder.UseMauiApp<App>().UseMauiCommunityToolkit();
+#pragma warning disable CA1416  //let VS shut up here
+                builder.UseMauiApp<App>()
+                       .UseMauiCommunityToolkit(options =>
+                       {
+                           options.SetShouldEnableSnackbarOnWindows(true);
+                       })
+#if ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER 
+                       .UseMauiCommunityToolkitMediaElement();
+#pragma warning restore CA1416
+
+#endif
                 builder.Services.AddSingleton<IScreenReaderService, ScreenReaderService>();
 #if DEBUG
                 builder.Logging.SetMinimumLevel(LogLevel.Trace);
@@ -448,7 +467,7 @@ namespace projectFrameCut
                         }
                         else
                         {
-                            if(AdminHelper.IsRunningAsAdministrator()) Log("Running as administrator, skip load user plugins for security reason.", "warn");
+                            if (AdminHelper.IsRunningAsAdministrator()) Log("Running as administrator, skip load user plugins for security reason.", "warn");
                             else Log("User disabled user plugin.");
                         }
                     }
@@ -466,13 +485,13 @@ namespace projectFrameCut
                     {
                         PluginManager.Init([new InternalPluginBase()]);
                     }
-                    catch(Exception ex1)
+                    catch (Exception ex1)
                     {
                         Log(ex1, "try load internal plugin", CreateMauiApp);
 #if ANDROID
                         Android.Util.Log.Wtf("projectFrameCut", $"FATAL: The pluginBase cannot be loaded. projectFrameCut may not work at all.\r\n(a {ex.GetType().Name} exception happends, {ex.Message})");
 #elif WINDOWS
-                    _ = MessageBox(new nint(0),  $"FATAL: The pluginBase cannot be loaded. projectFrameCut may not work at all.\r\n(a {ex.GetType().Name} exception happends, {ex.Message})", "projectFrameCut", 0U);
+                        _ = MessageBox(new nint(0), $"FATAL: The pluginBase cannot be loaded. projectFrameCut may not work at all.\r\n(a {ex.GetType().Name} exception happends, {ex.Message})", "projectFrameCut", 0U);
 #endif
                     }
                 }
@@ -577,11 +596,19 @@ namespace projectFrameCut
                     });
                     break;
                 case 932: //Japanese
+#if ANDROID
                     builder.ConfigureFonts(fonts =>
                     {
                         fonts.AddFont("HarmonyOS_Sans_SC_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_SC_Bold.ttf", "Font_Semibold");
                     });
+#else
+                    builder.ConfigureFonts(fonts =>
+                    {
+                        fonts.AddFont("NotoSansJP-Regular.ttf", "Font_Regular");
+                        fonts.AddFont("NotoSansJP-Bold.ttf", "Font_Semibold");
+                    });
+#endif
                     break;
                 case 949: //Korean
                     builder.ConfigureFonts(fonts =>

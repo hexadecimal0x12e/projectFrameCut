@@ -11,6 +11,7 @@ namespace projectFrameCut.Platforms.Android
     [Activity(
         Theme = "@style/AppTheme",
         MainLauncher = true,
+        ResizeableActivity = true,
         LaunchMode = LaunchMode.SingleTop,
         ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density,
         Name = "com.hexadecimal0x12e.projectFrameCut.MainActivity",

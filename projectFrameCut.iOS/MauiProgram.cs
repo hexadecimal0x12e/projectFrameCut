@@ -47,8 +47,20 @@ namespace projectFrameCut
 
         public static StreamWriter LogWriter { get; internal set; }
 
+        public static string[] CmdlineArgs = Array.Empty<string>();
+
+
         public static MauiApp CreateMauiApp()
         {
+            System.Threading.Thread.CurrentThread.Name = "App Main thread";
+            if (CmdlineArgs is null || CmdlineArgs.Length == 0)
+            {
+                try
+                {
+                    CmdlineArgs = Environment.GetCommandLineArgs();
+                }
+                catch { } //safe to ignore it
+            }
             System.Threading.Thread.CurrentThread.Name = "App Main thread";
             string loggingDir = "";
             try
@@ -195,7 +207,16 @@ namespace projectFrameCut
             try
             {
                 var builder = MauiApp.CreateBuilder();
-                builder.UseMauiApp<App>().UseMauiCommunityToolkit();
+                builder.UseMauiApp<App>()
+                       .UseMauiCommunityToolkit(options =>
+                       {
+                           options.SetShouldEnableSnackbarOnWindows(true);
+                       })
+#if IOS15_0_OR_GREATER 
+                       .UseMauiCommunityToolkitMediaElement();
+#else
+;
+#endif
 #if DEBUG
                 builder.Logging.SetMinimumLevel(LogLevel.Trace);
 #else

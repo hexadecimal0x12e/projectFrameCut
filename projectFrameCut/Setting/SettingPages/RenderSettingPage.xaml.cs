@@ -76,10 +76,7 @@ public partial class RenderSettingPage : ContentPage
         catch (Exception ex) { Log(ex); }
 
 #endif
-        rootPPB = new()
-        {
-            WidthOfContent = 3
-        };
+        rootPPB = new();
         rootPPB
             .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle, 20, 12))
 #if WINDOWS
@@ -91,9 +88,12 @@ public partial class RenderSettingPage : ContentPage
             var multiEnabled = bool.TryParse(GetSetting("accel_enableMultiAccel", "false"), out var me) ? me : false;
                 if (multiEnabled && AcceleratorInfos?.Length > 0)
             {
-                rootPPB.AddSeparator().AddSwitch("selectAllAccels", SettingLocalizedResources.Render_SelectAccel_SelectAll, GetSetting("accel_MultiDeviceID", "all") == "all", null);
+                rootPPB
+                    .AddSeparator()
+                    .AddText(SettingLocalizedResources.Render_SelectAccel_MultiAccel, fontSize: 16)
+                    .AddSwitch("selectAllAccels", SettingLocalizedResources.Render_SelectAccel_SelectAll, GetSetting("accel_MultiDeviceID", "all") == "all", null);
 
-                for (int i = 0; i < AcceleratorInfos.Length; i++)
+                for (int i = 1; i < AcceleratorInfos.Length; i++) //nobody wants to use CPU accel
                 {
                     var key = $"accel_multi_{i}";
                     var def = bool.TryParse(GetSetting(key, "false"), out var v) ? v : false;
@@ -123,12 +123,14 @@ public partial class RenderSettingPage : ContentPage
         if (showMoreOpts)
         {
             rootPPB
+                .AddSeparator()
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AdvanceOpts, SettingLocalizedResources.Misc_DiagOptions_Subtitle, 20, 12))
-                .AddEntry("render_UserDefinedOpts", SettingLocalizedResources.Render_CustomOpts, GetSetting("render_UserDefinedOpts", ""), SettingLocalizedResources.Render_CustomOpts_Placeholder);
+                .AddEntry("render_UserDefinedOpts", SettingLocalizedResources.Render_CustomOpts, GetSetting("render_UserDefinedOpts", ""), SettingLocalizedResources.Render_CustomOpts_Placeholder)
+                .AddSwitch("render_ShowBackendConsole", SettingLocalizedResources.Render_ShowBackendConsole, IsBoolSettingTrue("render_ShowBackendConsole"), null);
         }
         else
         {
-            rootPPB.AddButton("showMoreOpts", SettingLocalizedResources.Render_AdvanceOpts_Show, null);
+            rootPPB.AddSeparator().AddButton("showMoreOpts", SettingLocalizedResources.Render_AdvanceOpts_Show, null);
         }
 
         Content = new ScrollView { Content = rootPPB.ListenToChanges(SettingInvoker).Build() };
@@ -184,14 +186,14 @@ public partial class RenderSettingPage : ContentPage
                             WriteSetting("accel_DeviceId", result.ToString());
                         }
                     }
-                    goto done;
+                    return;
                 case "showMoreOpts":
                     {
                         showMoreOpts = true;
-                        goto done;
+                        BuildPPB();
+                        break;
                     }
                 case "accel_enableMultiAccel":
-                    // When enabling multi-accel, pre-populate per-accelerator switches from accel_MultiDeviceID
                     if (args.Value is bool en)
                     {
                         WriteSetting("accel_enableMultiAccel", en.ToString());
@@ -216,7 +218,8 @@ public partial class RenderSettingPage : ContentPage
                             catch (Exception ex) { Log(ex); }
                         }
                     }
-                    goto done;
+                    BuildPPB();
+                    return;
                 case var _ when args.Id != null && args.Id.StartsWith("accel_multi_"):
                     // Individual per-accelerator switch changed: persist it and update aggregated accel_MultiDeviceID
                     try
@@ -240,7 +243,8 @@ public partial class RenderSettingPage : ContentPage
                     {
                         Log(ex);
                     }
-                    goto done;
+                    BuildPPB();
+                    return;
                 case "selectAllAccels":
                     try
                     {
@@ -265,7 +269,8 @@ public partial class RenderSettingPage : ContentPage
 
                     }
                     catch (Exception ex) { Log(ex); }
-                    goto done;
+                    BuildPPB();
+                    return;
 
             }
 
@@ -273,9 +278,6 @@ public partial class RenderSettingPage : ContentPage
             {
                 WriteSetting(args.Id, args.Value?.ToString() ?? "");
             }
-
-        done:
-            BuildPPB();
         }
         catch (Exception ex)
         {

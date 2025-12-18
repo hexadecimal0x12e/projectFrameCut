@@ -1,9 +1,13 @@
+using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Storage;
 using System;
 using System.Diagnostics;
 using System.IO;
 
 #if WINDOWS
 using System.Runtime.InteropServices;
+using System.Threading;
 #elif ANDROID
 using Android.Content;
 using Android.Net;
@@ -18,6 +22,20 @@ namespace projectFrameCut.Services
     /// </summary>
     public static class FileSystemService
     {
+        public static async Task<string?> PickFolderAsync(CancellationToken ct = default)
+        {
+            var result = await FolderPicker.Default.PickAsync(ct);
+            if (result.IsSuccessful)
+            {
+                return result.Folder.Path;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+
         /// <summary>
         /// 打开文件夹
         /// </summary>

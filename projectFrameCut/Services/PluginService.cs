@@ -195,7 +195,7 @@ namespace projectFrameCut.Services
                         Version = pluginInstance.Version
                     });
                     File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "Plugins.json"), JsonSerializer.Serialize(items));
-                    await Setting.SettingPages.GeneralSettingPage.RebootApp(currentPage);
+                    await MainSettingsPage.RebootApp(currentPage);
                 }
             }
 

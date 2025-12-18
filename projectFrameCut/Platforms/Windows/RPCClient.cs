@@ -20,13 +20,15 @@ public sealed class RpcClient : IAsyncDisposable
 
     public Action<JsonElement>? ErrorCallback = null;
 
-    public static string BootRPCServer(out Process rpcProc, out string backendAccessToken, out int backendPort, string tmpDir = "", string options = "1280,720,42,AV_PIX_FMT_NONE,nope", bool VerboseBackendLog = false, Action<string>? stdoutCallback = null, Action<string>? stderrCallback = null)
+    public static string BootRPCServer(out Process rpcProc, string tmpDir = "", string options = "1280,720,42,AV_PIX_FMT_NONE,nope", bool VerboseBackendLog = false, Action<string>? stdoutCallback = null, Action<string>? stderrCallback = null)
     {
         var pipeId = "pjfc_rpc_" + Guid.NewGuid().ToString();
         var pluginPipeId = "pjfc_plugin_" + Guid.NewGuid().ToString("N");
-        backendAccessToken = Guid.NewGuid().ToString().Replace("-", "");
-        backendPort = GenerateBackendPort();
+        //backendAccessToken = Guid.NewGuid().ToString().Replace("-", "");
+        //backendPort = GenerateBackendPort();
         Directory.CreateDirectory(tmpDir);
+        var accelId = int.TryParse(SettingsManager.GetSetting("accel_DeviceId", ""), out var a) ? a : -1;
+
         rpcProc = new Process
         {
             StartInfo = new ProcessStartInfo
@@ -37,13 +39,12 @@ public sealed class RpcClient : IAsyncDisposable
                 $"""
                  rpc_backend
                   "-pipe={pipeId}"
-                                    "-pluginConnectionPipe={pluginPipeId}"
+                  "-pluginConnectionPipe={pluginPipeId}"
                   "-output_options={options}"
                   "-tempFolder={tmpDir}"
-                  "-accessToken={backendAccessToken}"
-                  "-port={backendPort}"
                   "-UseCheckerboardBackgroundForNoContent=true"
                   "-ParentPID={Process.GetCurrentProcess().Id}"
+                  "-acceleratorDeviceId={(accelId >= 0 ? accelId : "auto")}"
                 """.Replace(Environment.NewLine, " "),
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -102,39 +103,6 @@ public sealed class RpcClient : IAsyncDisposable
         return pipeId;
     }
 
-    private static int GenerateBackendPort()
-    {
-        bool IsPortAvailable(int port)
-        {
-            try
-            {
-                var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, port);
-                listener.Start();
-                listener.Stop();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-        var random = new Random();
-        int minPort = 23457;
-        int maxPort = 65000;
-        int port;
-        bool isAvailable = false;
-
-        for (int i = 0; i < 100; i++)
-        {
-            port = random.Next(minPort, maxPort + 1);
-            if (IsPortAvailable(port))
-            {
-                return port;
-            }
-        }
-        return -1;
-    }
-
     public static async Task<string> UpdateDraft(DraftStructureJSON draft, RpcClient rpcClient, CancellationToken ct = default)
     {
         var element = JsonSerializer.SerializeToElement(draft);
@@ -151,10 +119,10 @@ public sealed class RpcClient : IAsyncDisposable
         }
     }
 
-    public static async Task<string> RenderOneFrame(uint frameId, RpcClient rpcClient, CancellationToken ct = default)
+    public static async Task<string> RenderOneFrame(uint frame, int width, int height, RpcClient rpcClient, CancellationToken ct = default)
     {
         if (rpcClient is null) return "";
-        var result = await rpcClient.SendAsync("RenderOne", JsonSerializer.SerializeToElement(frameId), ct);
+        var result = await rpcClient.SendAsync("RenderOne", JsonSerializer.SerializeToElement(new { frame, width, height }), ct);
         if (result is null)
         {
             throw new InvalidOperationException("RPC doesn't return anything.");
@@ -177,7 +145,40 @@ public sealed class RpcClient : IAsyncDisposable
         }
         else
         {
-            Log("Failed to update draft.");
+            Log("Failed to render a frame.");
+
+            throw new Exception(result.Value.GetProperty("error").GetString());
+        }
+        return "";
+    }
+    public static async Task<string> RenderSomeFrames(int start, int length, int width, int height, int framerate, RpcClient rpcClient, CancellationToken ct = default)
+    {
+        if (rpcClient is null) return "";
+        
+        var result = await rpcClient.SendAsync("RenderSomeFrames", JsonSerializer.SerializeToElement(new { start, length, width, height, framerate }), ct);
+        if (result is null)
+        {
+            throw new InvalidOperationException("RPC doesn't return anything.");
+        }
+        if (result.HasValue && result.Value.TryGetProperty("status", out var status))
+        {
+            if (status.GetString() == "ok")
+            {
+
+                if (result.Value.TryGetProperty("path", out var path))
+                {
+                    return path.GetString() ?? "";
+
+                }
+            }
+            else
+            {
+                throw new Exception(result.Value.GetProperty("error").GetString());
+            }
+        }
+        else
+        {
+            Log("Failed to render some frames.");
 
             throw new Exception(result.Value.GetProperty("error").GetString());
         }
@@ -291,10 +292,12 @@ public sealed class RpcClient : IAsyncDisposable
 
     private async Task<RpcProtocol.RpcMessage?> SendReceiveAsync(RpcProtocol.RpcMessage req, CancellationToken ct)
     {
+        var lockTaken = false;
         try
         {
             if (_writer is null || _reader is null) throw new InvalidOperationException("RPC 未连接。");
             await _ioLock.WaitAsync(ct);
+            lockTaken = true;
             var json = JsonSerializer.Serialize(req, RpcProtocol.JsonOptions);
             await _writer.WriteLineAsync(json);
             var line = await _reader.ReadLineAsync(ct);
@@ -308,14 +311,8 @@ public sealed class RpcClient : IAsyncDisposable
         }
         finally
         {
-            try
-            {
+            if (lockTaken)
                 _ioLock.Release();
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "SendReceive", this);
-            }
         }
     }
 

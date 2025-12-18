@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace projectFrameCut.Setting.SettingPages;
 
@@ -15,7 +16,7 @@ public partial class GeneralSettingPage : ContentPage
 {
     public PropertyPanel.PropertyPanelBuilder rootPPB;
     private string[] locates;
-    private Dictionary<string, string> overrideOpts;
+    private Dictionary<string, string> overrideOpts, themeOpts;
     private Dictionary<string, string> locateDisplayNameMapping = new();
     public GeneralSettingPage()
     {
@@ -39,16 +40,23 @@ public partial class GeneralSettingPage : ContentPage
             {"ko-KR", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
                     (ISimpleLocalizerBase.GetMapping()["ko-KR"]._LocateDisplayName) },
         };
-        var currentLocate = GetSetting("locate", "default");
-        rootPPB = new()
+        themeOpts = new Dictionary<string, string>
         {
-            WidthOfContent = 3
+            { "default", SettingLocalizedResources.GeneralUI_DefaultTheme_OSDefault },
+            { "dark", SettingLocalizedResources.GeneralUI_DefaultTheme_Dark },
+            { "light",SettingLocalizedResources.GeneralUI_DefaultTheme_Bright }
         };
+        var currentLocate = GetSetting("locate", "default");
+        rootPPB = new();
         rootPPB
             .AddPicker("locate", SettingLocalizedResources.General_Language, locates, currentLocate != "default" ? Localized._LocateDisplayName : $"{Localized._Default} / Default", null)
 #if WINDOWS
             .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts[GetSetting("OverrideCulture", "default")], null)
 #endif
+            .AddSeparator()
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralUI_Title, SettingLocalizedResources.GeneralUI_Subtitle))
+            .AddPicker("ui_defaultTheme", SettingLocalizedResources.GeneralUI_DefaultTheme, themeOpts.Values.ToArray(), themeOpts[GetSetting("ui_defaultTheme", "default")])
+            .AddSlider("ui_defaultWidthOfContent", SettingLocalizedResources.GeneralUI_DefaultWidthOfContent, 1, 10, PropertyPanelBuilder.DefaultWidthOfContent)
             .AddSeparator()
             .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.General_UserData, SettingLocalizedResources.General_UserData_Subtitle, 20, 12))
 #if WINDOWS
@@ -159,64 +167,11 @@ public partial class GeneralSettingPage : ContentPage
                         var locate = mapping.FirstOrDefault(l => l.Value._LocateDisplayName == locateDispName).Key;
                         if (string.IsNullOrEmpty(locate)) locate = "default";
                         WriteSetting("locate", locate);
-                        CultureInfo culture = CultureInfo.CurrentCulture;
-                        Log($"Your culture: {culture.Name}, locate defined in settings:{locate} ");
-                        try
-                        {
-                            var cul = CultureInfo.GetCultures(CultureTypes.NeutralCultures);
-                            switch (locate)
-                            {
-                                case "zh-TW":
-                                    {
-                                        if (!cul.Any((c) => CultureInfo.CreateSpecificCulture(c.Name).Name == "zh-TW"))
-                                        {
-                                            Log("zh-TW culture not found, fallback to zh-HK");
-                                            culture = CultureInfo.CreateSpecificCulture("zh-HK");
-                                        }
-                                        else
-                                        {
-                                            culture = CultureInfo.CreateSpecificCulture(locate);
-                                        }
-                                        break;
-                                    }
-                                case "文言文":
-                                    {
-                                        culture = CultureInfo.CreateSpecificCulture("zh-HK");
-                                        break;
-                                    }
-                                case "default":
-                                    {
-                                        culture = CultureInfo.InstalledUICulture;
-                                        break;
-                                    }
-                                default:
-                                    {
-                                        if (!cul.Any((c) => CultureInfo.CreateSpecificCulture(c.Name).Name == locate))
-                                        {
-                                            Log($"{locate} culture not found, fallback to en-US");
-                                            culture = CultureInfo.CreateSpecificCulture("en-US");
-                                        }
-                                        else
-                                        {
-                                            culture = CultureInfo.CreateSpecificCulture(locate);
-                                        }
-                                        break;
-                                    }
-
-                            }
-
-                            System.Threading.Thread.CurrentThread.CurrentCulture = culture;
-                            System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
-                        }
-                        catch (Exception ex)
-                        {
-                            Log(ex, "init culture");
-                        }
-
                         Localized = SimpleLocalizer.Init(locate);
                         SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
                         App.Current?.Windows?.First()?.Title = Localized.AppBrand;
-                        Log($"Localization initialized to {Localized._LocaleId_}, {Localized.WelcomeMessage}");
+                        Log($"Localization is set to {Localized._LocaleId_}, {Localized.WelcomeMessage}");
+                        await Task.Delay(150);
                         needReboot = true;
                         goto done;
                     }
@@ -228,6 +183,21 @@ public partial class GeneralSettingPage : ContentPage
                         needReboot = true;
                         goto done;
                     }
+                case "ui_defaultWidthOfContent":
+                    if (args.Value is double d)
+                        PropertyPanelBuilder.DefaultWidthOfContent = d;
+                    break;
+                case "ui_defaultTheme":
+                    var key = themeOpts.FirstOrDefault(c => c.Value == args.Value as string,new KeyValuePair<string, string>("default", "default")).Key;
+                    WriteSetting("ui_defaultTheme", key);
+                    Application.Current?.UserAppTheme = key switch
+                    {
+                        "dark" => AppTheme.Dark,
+                        "light" => AppTheme.Light,
+                        _ => AppTheme.Unspecified
+                    };
+                    needReboot = true;
+                    goto done;
 
             }
 
@@ -238,7 +208,7 @@ public partial class GeneralSettingPage : ContentPage
 
         done:
             if (needReboot)
-                await RebootApp(this);
+                await MainSettingsPage.RebootApp(this);
 
             BuildPPB();
         }
@@ -246,49 +216,6 @@ public partial class GeneralSettingPage : ContentPage
         {
             // 处理异常并通知用户
             await DisplayAlert(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
-        }
-    }
-
-    public static async Task RebootApp(Page currentPage)
-    {
-        var conf = await currentPage.DisplayAlertAsync(Localized._Info,
-                                    SettingLocalizedResources.CommonStr_RebootRequired(),
-                                    Localized._Confirm,
-                                    Localized._Cancel);
-        if (conf)
-        {
-            await FlushAndStopAsync();
-#if WINDOWS
-            string path = "projectFrameCut_Protocol:";
-            if (!MauiProgram.IsPackaged())
-            {
-                var exePath = Process.GetCurrentProcess().MainModule?.FileName;
-                if (exePath != null)
-                {
-                    path = exePath;
-                }
-            }
-            var script =
-    $$"""
-
-Clear-Host;Write-Output "projectFrameCut is now rebooting, please wait for a while...";Start-Process "{{path}}";exit
-
-""";
-            var proc = new Process();
-            proc.StartInfo.FileName = "powershell.exe";
-            proc.StartInfo.UseShellExecute = false;
-            proc.StartInfo.RedirectStandardInput = true;
-            proc.StartInfo.CreateNoWindow = false;
-            proc.Start();
-            var procWriter = proc.StandardInput;
-            if (procWriter != null)
-            {
-                procWriter.AutoFlush = true;
-                procWriter.WriteLine(script);
-            }
-#endif
-            Environment.Exit(0);
-
         }
     }
 }

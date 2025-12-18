@@ -8,7 +8,7 @@
              x:DataType="vm:RenderPageViewModel"
              Title="RenderPage">
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/>
+       <!-- <ToolbarItem Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/> -->
 
     </ContentPage.ToolbarItems>
     <Grid>

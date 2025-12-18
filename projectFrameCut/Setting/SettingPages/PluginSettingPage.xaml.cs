@@ -54,7 +54,6 @@ public partial class PluginSettingPage : ContentPage
 
         }
 
-        // 显示失败加载的插件
         var disabledPlugins = PluginService.GetDisabledPlugins();
         if (PluginService.FailedLoadPlugin.Any() || disabledPlugins.Any())
         {
@@ -87,40 +86,43 @@ public partial class PluginSettingPage : ContentPage
     {
         var plugin = PluginManager.LoadedPlugins[id];
         var page = new ContentPage { };
-        var name = plugin.ReadLocalizationItem("_PluginBase_Name_", plugin.Name);
-        var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", plugin.Description);
+        var name = plugin.ReadLocalizationItem("_PluginBase_Name_", plugin.Name) ?? plugin.Name;
+        var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", plugin.Description) ?? plugin.Description;
         var ppb = new PropertyPanelBuilder()
             .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_DetailConfig(name), SettingLocalizedResources.Plugin_DetailConfig_Subtitle(name)));
         if (!plugin.Configuration.Any())
         {
-            ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailConfig_None(id), 16, FontAttributes.None, Colors.Gray));
+            ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailConfig_None(name), 16, FontAttributes.None, Colors.Gray));
         }
         else
         {
             foreach (var item in plugin.Configuration)
             {
                 ppb.AddEntry($"PluginCfg,{item.Key}",
-                    plugin.ConfigurationDisplayString
-                    .FirstOrDefault(c => c.Key == Localized._LocaleId_, plugin.ConfigurationDisplayString.First())
-                    .Value
-                    .FirstOrDefault(c => c.Key == item.Key, new KeyValuePair<string, string>(item.Key, item.Key))
-                    .Value, item.Value, item.Value);
+                    plugin.ConfigurationDisplayString.FirstOrDefault
+                        (c => c.Key == Localized._LocaleId_, plugin.ConfigurationDisplayString.First()).Value
+                        .FirstOrDefault(c => c.Key == item.Key, new KeyValuePair<string, string>(item.Key, item.Key))
+                        .Value,
+                    item.Value, item.Value);
             }
         }
         ppb.AddText(new SingleLineLabel(Localized.HomePage_ProjectContextMenu(plugin.Name), 20, FontAttributes.None))
             .AddButton($"ViewProvided,{id}", SettingLocalizedResources.Plugin_ViewWhatProvided(plugin.Name));
         if (!plugin.PluginID.StartsWith("projectFrameCut"))
         {
-            ppb.AddButton($"GotoHomepage,{id}", SettingLocalizedResources.Plugin_GotoHomepage(plugin.Name))
+            ppb
+               .AddButton($"DisablePlugin,{id}", SettingLocalizedResources.Plugin_Disable(plugin.Name))
+               .AddButton($"GotoHomepage,{id}", SettingLocalizedResources.Plugin_GotoHomepage(plugin.Name))
                .AddButton($"UpdatePlugin,{id}", SettingLocalizedResources.Plugin_UpdatePlugin(plugin.Name))
                .AddButton($"OpenDataDir,{id}", SettingLocalizedResources.Plugin_OpenDataDir)
-               .AddButton($"DisablePlugin,{id}", SettingLocalizedResources.Plugin_Disable(plugin.Name))
                .AddButton($"RemovePlugin,{id}", SettingLocalizedResources.Plugin_Remove);
         }
         else
         {
             ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_CannotRemoveInternalPlugin, 14, default, Colors.Grey));
         }
+
+
         ppb.ListenToChanges((e) =>
         {
             if (e.Id.StartsWith("PluginCfg,"))
@@ -133,8 +135,6 @@ public partial class PluginSettingPage : ContentPage
                 SettingInvoker(e, page);
             }
         });
-        
-            
 
         page.Content = new ScrollView { Content = ppb.Build() };
 
@@ -235,7 +235,7 @@ public partial class PluginSettingPage : ContentPage
                     }
 
                     PluginService.FailedLoadPlugin.Remove(id);
-                    
+
                     try
                     {
                         PluginService.RemovePlugin(id);
@@ -243,7 +243,7 @@ public partial class PluginSettingPage : ContentPage
                     catch
                     {
                     }
-                    
+
                     BuildPPB();
                 }
                 return;
@@ -253,7 +253,7 @@ public partial class PluginSettingPage : ContentPage
                 PluginService.EnablePlugin(id);
                 if (await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.CommonStr_RebootRequired(), Localized._Confirm, Localized._Cancel))
                 {
-                    await Setting.SettingPages.GeneralSettingPage.RebootApp(currentPage ?? this);
+                    await MainSettingsPage.RebootApp(currentPage ?? this);
                 }
                 return;
             }
@@ -290,7 +290,7 @@ public partial class PluginSettingPage : ContentPage
                         PluginService.DisablePlugin(plugin.PluginID);
                         if (await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.CommonStr_RebootRequired(), Localized._Confirm, Localized._Cancel))
                         {
-                            await Setting.SettingPages.GeneralSettingPage.RebootApp(currentPage ?? this);
+                            await MainSettingsPage.RebootApp(currentPage ?? this);
                         }
                         break;
                     }
@@ -305,7 +305,7 @@ public partial class PluginSettingPage : ContentPage
                         if (await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_SureRemove(plugin.Name), Localized._Confirm, Localized._Cancel))
                         {
                             PluginService.RemovePlugin(plugin.PluginID);
-                            await Setting.SettingPages.GeneralSettingPage.RebootApp(currentPage ?? this);
+                            await MainSettingsPage.RebootApp(currentPage ?? this);
 
                         }
                         break;

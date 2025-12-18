@@ -32,9 +32,17 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// </summary>
         public int RelativeHeight { get; set; } = 1080;
         /// <summary>
+        /// The target frame rate of the project.
+        /// </summary>
+        public uint targetFrameRate { get; set; } = 60;
+        /// <summary>
         /// Some project-wide properties defined by user.
         /// </summary>
         public Dictionary<string, string> UserDefinedProperties = new();
+        /// <summary>
+        /// Gets or sets the file system path to the thumbnail image associated with the item.
+        /// </summary>
+        public string? ThumbPath { get; set; } = null;
         /// <summary>
         /// The save slot indicator. -1 means unknown.
         /// </summary>

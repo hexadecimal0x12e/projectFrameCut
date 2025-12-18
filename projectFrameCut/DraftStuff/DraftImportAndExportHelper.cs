@@ -14,7 +14,7 @@ namespace projectFrameCut.DraftStuff
 {
     internal static class DraftImportAndExportHelper
     {
-        public static DraftStructureJSON ExportFromDraftPage(projectFrameCut.DraftPage page, uint targetFrameRate = 30)
+        public static DraftStructureJSON ExportFromDraftPage(projectFrameCut.DraftPage page)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
 
@@ -99,7 +99,7 @@ namespace projectFrameCut.DraftStuff
 
             return new DraftStructureJSON
             {
-                targetFrameRate = targetFrameRate,
+                targetFrameRate = page.ProjectInfo.targetFrameRate,
                 Clips = clips.Cast<object>().ToArray(),
                 Duration = (uint)max,
                 SavedAt = DateTime.Now

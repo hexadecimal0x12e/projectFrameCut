@@ -877,6 +877,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "HomePage_Import_CannotAddPlugin",
+        "Value": "\u65E0\u6CD5\u6DFB\u52A0\u63D2\u8FD9\u4E2A\u63D2\u4EF6\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_Import_CannotImportFraft",
+        "Value": "\u65E0\u6CD5\u5BFC\u5165\u6B64\u9879\u76EE\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "HomePage_LastChangedOnDays",
         "Value": "\u6700\u540E\u4FEE\u6539\u4E8E {day} \u5929\u524D",
         "Mode": "InterpolationString",
@@ -1471,22 +1487,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "HomePage_Import_CannotAddPlugin",
-        "Value": "\u65E0\u6CD5\u6DFB\u52A0\u63D2\u8FD9\u4E2A\u63D2\u4EF6\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "HomePage_Import_CannotImportFraft",
-        "Value": "\u65E0\u6CD5\u5BFC\u5165\u6B64\u9879\u76EE\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
         "HasValidationErrors": false
       }
     ],
@@ -2383,7 +2383,7 @@
       },
       {
         "Id": "HomePage_ProjectContextMenu_Delete_Confirm3",
-        "Value": "[Translation Error]: An error occurred while sending the request.",
+        "Value": "Yes, delete \u0022{name}\u0022",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2397,7 +2397,7 @@
             "Value": ""
           }
         ],
-        "Comment": "[Translation Error]: An error occurred while sending the request.",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -3022,11 +3022,11 @@
       },
       {
         "Id": "MainSettingsPage_Tab_Plugin",
-        "Value": "[Translation Error]: An error occurred while sending the request.",
+        "Value": "Plugins",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: An error occurred while sending the request.",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -3040,25 +3040,25 @@
       },
       {
         "Id": "_Error",
-        "Value": "Unset localization item:_Error()",
+        "Value": "Error",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_MenuBar_MoreOptions",
-        "Value": "Unset localization item:HomePage_MenuBar_MoreOptions()",
+        "Value": "More Options",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_ClipPropertyUpdated",
-        "Value": "Unset localization item:DraftPage_ClipPropertyUpdated(string name)",
+        "Value": "Successfully updated the property of \u0027{name}\u0027",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3072,25 +3072,25 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_Import_CannotAddPlugin",
-        "Value": "Unset localization item:HomePage_Import_CannotAddPlugin()",
+        "Value": "Cannot add this plugin.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_Import_CannotImportFraft",
-        "Value": "Unset localization item:HomePage_Import_CannotImportFraft()",
+        "Value": "Cannot import this item.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -4644,25 +4644,25 @@
       },
       {
         "Id": "_Error",
-        "Value": "Unset localization item:_Error()",
+        "Value": "\u932F\u8AA4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_MenuBar_MoreOptions",
-        "Value": "Unset localization item:HomePage_MenuBar_MoreOptions()",
+        "Value": "\u66F4\u591A\u9078\u9805",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_ClipPropertyUpdated",
-        "Value": "Unset localization item:DraftPage_ClipPropertyUpdated(string name)",
+        "Value": "\u6210\u529F\u66F4\u65B0\u300C{name}\u300D\u7684\u5C6C\u6027",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -4676,25 +4676,25 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_Import_CannotAddPlugin",
-        "Value": "Unset localization item:HomePage_Import_CannotAddPlugin()",
+        "Value": "\u7121\u6CD5\u65B0\u589E\u9019\u500B\u63D2\u4EF6\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_Import_CannotImportFraft",
-        "Value": "Unset localization item:HomePage_Import_CannotImportFraft()",
+        "Value": "\u7121\u6CD5\u5C0E\u5165\u6B64\u9805\u76EE\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -6266,25 +6266,25 @@
       },
       {
         "Id": "_Error",
-        "Value": "Unset localization item:_Error()",
+        "Value": "\u30A8\u30E9\u30FC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_MenuBar_MoreOptions",
-        "Value": "Unset localization item:HomePage_MenuBar_MoreOptions()",
+        "Value": "\u305D\u306E\u4ED6\u306E\u30AA\u30D7\u30B7\u30E7\u30F3",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_ClipPropertyUpdated",
-        "Value": "Unset localization item:DraftPage_ClipPropertyUpdated(string name)",
+        "Value": "\u300C{name}\u300D\u306E\u30D7\u30ED\u30D1\u30C6\u30A3\u3092\u66F4\u65B0\u3057\u307E\u3057\u305F",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -6298,25 +6298,25 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_Import_CannotAddPlugin",
-        "Value": "Unset localization item:HomePage_Import_CannotAddPlugin()",
+        "Value": "\u3053\u306E\u30D7\u30E9\u30B0\u30A4\u30F3\u3092\u8FFD\u52A0\u3067\u304D\u307E\u305B\u3093\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_Import_CannotImportFraft",
-        "Value": "Unset localization item:HomePage_Import_CannotImportFraft()",
+        "Value": "\u3053\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3092\u30A4\u30F3\u30DD\u30FC\u30C8\u3067\u304D\u307E\u305B\u3093\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -7888,25 +7888,25 @@
       },
       {
         "Id": "_Error",
-        "Value": "Unset localization item:_Error()",
+        "Value": "\uC624\uB958",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_MenuBar_MoreOptions",
-        "Value": "Unset localization item:HomePage_MenuBar_MoreOptions()",
+        "Value": "\uB354 \uB9CE\uC740 \uC635\uC158",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_ClipPropertyUpdated",
-        "Value": "Unset localization item:DraftPage_ClipPropertyUpdated(string name)",
+        "Value": "[Translation Error]: An error occurred while sending the request.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -7920,25 +7920,25 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: An error occurred while sending the request.",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_Import_CannotAddPlugin",
-        "Value": "Unset localization item:HomePage_Import_CannotAddPlugin()",
+        "Value": "\uC774 \uD50C\uB7EC\uADF8\uC778\uC744 \uCD94\uAC00\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_Import_CannotImportFraft",
-        "Value": "Unset localization item:HomePage_Import_CannotImportFraft()",
+        "Value": "\uC774 \uD504\uB85C\uC81D\uD2B8\uB97C \uAC00\uC838\uC62C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -9492,25 +9492,25 @@
       },
       {
         "Id": "_Error",
-        "Value": "Unset localization item:_Error()",
+        "Value": "Erreur",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_MenuBar_MoreOptions",
-        "Value": "Unset localization item:HomePage_MenuBar_MoreOptions()",
+        "Value": "Plus d\u0027options",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_ClipPropertyUpdated",
-        "Value": "Unset localization item:DraftPage_ClipPropertyUpdated(string name)",
+        "Value": "Propri\u00E9t\u00E9 de \u00AB\u202F{name}\u202F\u00BB mise \u00E0 jour avec succ\u00E8s",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -9524,25 +9524,25 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_Import_CannotAddPlugin",
-        "Value": "Unset localization item:HomePage_Import_CannotAddPlugin()",
+        "Value": "Impossible d\u0027ajouter ce plug-in.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_Import_CannotImportFraft",
-        "Value": "Unset localization item:HomePage_Import_CannotImportFraft()",
+        "Value": "[Translation Error]: An error occurred while sending the request.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: An error occurred while sending the request.",
         "HasValidationErrors": false
       }
     ],
@@ -10572,11 +10572,11 @@
       },
       {
         "Id": "HomePage_ProjectContextMenu_Clone",
-        "Value": "[Translation Error]: The SSL connection could not be established, see inner exception.",
+        "Value": "\u590D\u523B\u5DE5\u52A1",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: The SSL connection could not be established, see inner exception.",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -10703,11 +10703,11 @@
       },
       {
         "Id": "HomePage_ProjectContextMenu_OpenInFileManager",
-        "Value": "[Translation Error]: The SSL connection could not be established, see inner exception.",
+        "Value": "\u6253\u5F00\u9879\u76EE\u7684\u6570\u636E\u6587\u4EF6\u5939",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: The SSL connection could not be established, see inner exception.",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -10816,11 +10816,11 @@
       },
       {
         "Id": "MainSettingsPage_Tab_Edit",
-        "Value": "[Translation Error]: The SSL connection could not be established, see inner exception.",
+        "Value": "\u7F16\u8F91",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "[Translation Error]: The SSL connection could not be established, see inner exception.",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -11114,25 +11114,25 @@
       },
       {
         "Id": "_Error",
-        "Value": "Unset localization item:_Error()",
+        "Value": "\u9519\u8BEF",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_MenuBar_MoreOptions",
-        "Value": "Unset localization item:HomePage_MenuBar_MoreOptions()",
+        "Value": "\u8BF8\u62E9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_ClipPropertyUpdated",
-        "Value": "Unset localization item:DraftPage_ClipPropertyUpdated(string name)",
+        "Value": "\u5DF2\u66F4\u65B0\u300C{name}\u300D\u4E4B\u5C5E\u6027",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -11146,25 +11146,25 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_Import_CannotAddPlugin",
-        "Value": "Unset localization item:HomePage_Import_CannotAddPlugin()",
+        "Value": "\u6B64\u63D2\u4EF6\u4E0D\u53EF\u6DFB\u4E5F\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_Import_CannotImportFraft",
-        "Value": "Unset localization item:HomePage_Import_CannotImportFraft()",
+        "Value": "\u4E0D\u53EF\u7EB3\u6B64\u7269\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]

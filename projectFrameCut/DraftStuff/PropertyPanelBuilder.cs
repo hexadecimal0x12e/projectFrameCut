@@ -26,7 +26,7 @@ namespace projectFrameCut.PropertyPanel
         /// Set the default width of the <see cref="WidthOfContent"/>.
         /// </summary>
         public static double DefaultWidthOfContent = 5;
-        
+
         private List<View> children = new();
         public Dictionary<string, View> Components { get; private init; } = new();
 
@@ -41,7 +41,7 @@ namespace projectFrameCut.PropertyPanel
         /// <remarks>
         /// Use null for default value, which is equals to <see cref="DefaultWidthOfContent"/>.
         /// </remarks>
-        public double? WidthOfContent  { get; set; } = null;
+        public double? WidthOfContent { get; set; } = null;
 
         /// <summary>
         /// Gets or sets the default padding applied to the control's outer grid,
@@ -72,7 +72,7 @@ namespace projectFrameCut.PropertyPanel
         /// <summary>
         /// Adds a <seealso cref="Label"/> to the property panel.
         /// </summary>
-        public PropertyPanelBuilder AddText(string content, string Id = "",double fontSize = 14, FontAttributes fontAttributes = FontAttributes.None)
+        public PropertyPanelBuilder AddText(string content, string Id = "", double fontSize = 14, FontAttributes fontAttributes = FontAttributes.None)
         {
             var label = new Label
             {
@@ -80,7 +80,7 @@ namespace projectFrameCut.PropertyPanel
                 FontSize = fontSize,
                 FontAttributes = fontAttributes
             };
-            if(!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, label);
+            if (!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, label);
             children.Add(label);
             return this;
         }
@@ -182,7 +182,7 @@ namespace projectFrameCut.PropertyPanel
             grid.Children.Add(label);
             grid.Children.Add(checkbox);
             Grid.SetColumn(checkbox, 1);
-            children.Add(grid); 
+            children.Add(grid);
             Components.Add(Id, checkbox);
             return this;
         }
@@ -202,7 +202,11 @@ namespace projectFrameCut.PropertyPanel
             };
             var label = title.LabelConfigurer();
             Properties[Id] = defaultValue;
-            swtch.Toggled += (s, e) => pppcea.CreateAndInvoke(this, Id, e.Value);
+            swtch.Toggled += async (s, e) =>
+            {
+                await Task.Delay(350); //let animation go
+                pppcea.CreateAndInvoke(this, Id, e.Value);
+            };
             SwitchSetter?.Invoke(swtch);
             var grid = new Grid
             {
@@ -263,7 +267,7 @@ namespace projectFrameCut.PropertyPanel
             grid.Children.Add(label);
             grid.Children.Add(picker);
             Grid.SetColumn(picker, 1);
-            children.Add(grid); 
+            children.Add(grid);
             Components.Add(Id, picker);
             return this;
         }
@@ -273,7 +277,7 @@ namespace projectFrameCut.PropertyPanel
         /// </summary>
         /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
         /// <param name="defaultValue">The default value to assign to the property identified by <paramref name="Id"/>.</param>
-        public PropertyPanelBuilder AddSlider(string Id, PropertyPanelItemLabel title, double min, double max, double defaultValue, Action<Slider>? SliderSetter = null)
+        public PropertyPanelBuilder AddSlider(string Id, PropertyPanelItemLabel title, double min, double max, double defaultValue, Action<Slider>? SliderSetter = null, SliderUpdateEventCallMode eventCallMode = SliderUpdateEventCallMode.OnMouseUp)
         {
             var slider = new Slider
             {
@@ -286,7 +290,15 @@ namespace projectFrameCut.PropertyPanel
             var label = title.LabelConfigurer();
 
             Properties[Id] = defaultValue;
-            slider.ValueChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, e.NewValue);
+            if (eventCallMode == SliderUpdateEventCallMode.OnValueChanged)
+            {
+                slider.ValueChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, e.NewValue);
+            }
+            else
+            {
+                slider.DragCompleted += (s, e) => pppcea.CreateAndInvoke(this, Id, slider.Value);
+            }
+
             SliderSetter?.Invoke(slider);
 
             var grid = new Grid
@@ -361,7 +373,7 @@ namespace projectFrameCut.PropertyPanel
             //grid.Children.Add(label);
             //grid.Children.Add(button);
             //Grid.SetColumn(button, 1);
-            children.Add(button); 
+            children.Add(button);
             Components.Add(Id, button);
             return this;
         }
@@ -370,7 +382,7 @@ namespace projectFrameCut.PropertyPanel
         {
             var cb = new PropertyPanelChildrenBuilder(this);
             childrenMaker(cb);
-            if(!string.IsNullOrWhiteSpace(id)) Components.Add(id, cb.ToHorizentalLayout());
+            if (!string.IsNullOrWhiteSpace(id)) Components.Add(id, cb.ToHorizentalLayout());
             children.Add(cb.ToVerticalLayout());
             return this;
         }
@@ -420,8 +432,8 @@ namespace projectFrameCut.PropertyPanel
             grid.Children.Add(label);
             grid.Children.Add(child);
             Grid.SetColumn(child, 1);
-            children.Add(grid); 
-            if(!string.IsNullOrWhiteSpace(id)) Components.Add(id, child);
+            children.Add(grid);
+            if (!string.IsNullOrWhiteSpace(id)) Components.Add(id, child);
             return this;
         }
 
@@ -518,7 +530,7 @@ namespace projectFrameCut.PropertyPanel
             {
                 AddCustomChild(item);
             }
-            
+
             another.PropertyChanged += (_, e) => PropertyChanged?.Invoke(another, e);
             return this;
 
@@ -833,6 +845,12 @@ namespace projectFrameCut.PropertyPanel
     {
         OnAnyTextChange,
         OnUnfocusedAndUnchanged
+    }
+
+    public enum SliderUpdateEventCallMode
+    {
+        OnValueChanged,
+        OnMouseUp
     }
 
     public class SingleLineLabel(string text, int fontsize = 14, FontAttributes fontAttributes = FontAttributes.None, Color? TextColor = null) : PropertyPanelItemLabel

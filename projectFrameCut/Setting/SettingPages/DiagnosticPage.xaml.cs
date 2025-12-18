@@ -278,7 +278,8 @@ public partial class DiagnosticSettingPage : ContentPage
             - CPU arch: {RuntimeInformation.ProcessArchitecture}
             - AppDataPath: {MauiProgram.BasicDataPath}
             - UserDataPath: {MauiProgram.DataPath}
-            - {(OperatingSystem.IsWindows() ? $"IsPackaged: {IsPackaged}" : "")}
+            {(OperatingSystem.IsWindows() ? $"- IsPackaged: {IsPackaged}" : "")}
+            CmdLine:{string.Join(' ', MauiProgram.CmdlineArgs)}
 
             Assembly: {asb.FullName}
             - Runtime version: {asb.ImageRuntimeVersion}

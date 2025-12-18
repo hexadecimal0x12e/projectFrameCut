@@ -28,6 +28,9 @@ namespace projectFrameCut.Render.WindowsRender
 
         public static CancellationTokenSource RpcCts = new CancellationTokenSource();
 
+        private static CancellationTokenSource? _currentTaskCts;
+        private static readonly SemaphoreSlim _writerSemaphore = new SemaphoreSlim(1, 1);
+
         public static bool diagMode { get; private set; }
 
         public static void RunRPC(ConcurrentDictionary<string, string> switches, Accelerator accelerator, int width, int height)
@@ -66,7 +69,7 @@ namespace projectFrameCut.Render.WindowsRender
             }
 
 #if DEBUG
-            OverlayMixture.TempSavePath = tempFolder;
+            //OverlayMixture.TempSavePath = tempFolder;
 #endif
 
             if (pipeName is null)
@@ -156,13 +159,25 @@ namespace projectFrameCut.Render.WindowsRender
 
                 var json = JsonSerializer.Serialize(envelope, RpcProtocol.JsonOptions);
                 if (diagMode) Log($"[RPC] Sending: {json} \r\n--- \r\n");
-                var cts = new CancellationTokenSource();
+                using var cts = new CancellationTokenSource();
                 cts.CancelAfter(10000);
+                var lockTaken = false;
                 try
                 {
-                    writer.WriteLineAsync(json.AsMemory(), cts.Token).Wait();
+                    _writerSemaphore.Wait(cts.Token);
+                    lockTaken = true;
+                    try
+                    {
+                        // Use synchronous write to avoid AggregateException from Task.Wait() on cancellation.
+                        writer.WriteLine(json);
+                    }
+                    finally
+                    {
+                        if (lockTaken)
+                            _writerSemaphore.Release();
+                    }
                 }
-                catch (TaskCanceledException)
+                catch (OperationCanceledException)
                 {
                     Console.Error.WriteLine($"Error: failed to answer request #{msg.RequestId} because of timeout.");
                 }
@@ -174,7 +189,6 @@ namespace projectFrameCut.Render.WindowsRender
                 }
             }
             var size = width * height;
-
             var disconnect = false;
             while (!cts.IsCancellationRequested && server.IsConnected && !disconnect)
             {
@@ -209,55 +223,145 @@ namespace projectFrameCut.Render.WindowsRender
                             Send(msg, new Dictionary<string, object?> { { "value", DateTime.Now } });
                             break;
                         }
+                    case "CancelTask":
+                        {
+                            Log("[RPC] CancelTask requested.");
+                            _currentTaskCts?.Cancel();
+                            Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
+                            break;
+                        }
                     case "RenderOne":
                         {
-#if !DEBUG
-
-                                try
-                                {
-#endif
                             if (msg.Payload is null)
                             {
                                 Console.Error.WriteLine("[RPC] RenderOne missing payload.");
                                 break;
                             }
-                            var frameIndex = msg.Payload.Value.GetUInt32();
-                            Log($"[RPC] RenderOne request: frame #{frameIndex}");
-                            var frameHash = Timeline.GetFrameHash(clips, frameIndex);
-                            var destPath = Path.Combine(tempFolder, $"projectFrameCut_Render_{frameHash}.png");
-                            Log($"[RPC] FrameHash:{frameHash}");
-                            if (Path.Exists(destPath) && !Debugger.IsAttached)
-                            {
-                                LogDiagnostic($"[RPC] Frame already exist; skip");
-                                Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "path", destPath } });
-                                Log($"[RPC] RenderOne completed");
-                                break;
-                            }
-                            else
-                            {
-                                Log($"[RPC] Generating frame #{frameIndex} ({frameHash})...");
-                            }
-                            var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height, true);
-                            LogDiagnostic($"Clips in frame #{frameIndex}:\r\n{GetFrameInfo(layers)}\r\n---");
-                            var pic = Timeline.MixtureLayers(layers, frameIndex, width, height);
-                            pic.SaveAsPng8bpp(destPath, encoder);
-                            //Thread.Sleep(500);
-                            Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "frameHash", frameHash }, { "path", destPath } });
-                            Log($"[RPC] RenderOne completed");
-#if !DEBUG
+                            var frameIndex = msg.Payload.Value.GetProperty("frame").GetUInt32();
+                            var targetWidth = msg.Payload.Value.GetProperty("width").GetInt32();
+                            var targetHeight = msg.Payload.Value.GetProperty("height").GetInt32();
 
-                        }
+                            _currentTaskCts?.Cancel();
+                            _currentTaskCts = new CancellationTokenSource();
+                            var token = _currentTaskCts.Token;
+                            var currentClips = clips;
+
+                            _ = Task.Run(() =>
+                            {
+                                try
+                                {
+                                    Log($"[RPC] RenderOne request: frame #{frameIndex}");
+                                    var frameHash = Timeline.GetFrameHash(currentClips, frameIndex);
+                                    var destPath = Path.Combine(tempFolder, $"projectFrameCut_Render_{frameHash}.png");
+                                    Log($"[RPC] FrameHash:{frameHash}");
+                                    if (Path.Exists(destPath))
+                                    {
+                                        LogDiagnostic($"[RPC] Frame already exist; skip");
+                                        Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "path", destPath } });
+                                        LogDiagnostic($"[RPC] RenderOne completed");
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        LogDiagnostic($"[RPC] Generating frame #{frameIndex} ({frameHash})...");
+                                    }
+
+                                    if (token.IsCancellationRequested) return;
+
+                                    var layers = Timeline.GetFramesInOneFrame(currentClips, frameIndex, targetWidth, targetHeight, true);
+                                    
+                                    if (token.IsCancellationRequested) return;
+
+                                    LogDiagnostic($"Clips in frame #{frameIndex}:\r\n{GetFrameInfo(layers)}\r\n---");
+                                    var pic = Timeline.MixtureLayers(layers, frameIndex, targetWidth, targetHeight);
+                                    
+                                    if (token.IsCancellationRequested) return;
+
+                                    pic.SaveAsPng8bpp(destPath, encoder);
+                                    Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "frameHash", frameHash }, { "path", destPath } });
+                                    LogDiagnostic($"[RPC] RenderOne completed");
+                                }
                                 catch (Exception ex)
                                 {
-                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "path", Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png") }, { "error", $"ERROR: a {ex.GetType()} exception happends:{ex.Message}" } });
-
-                                    throw;
-
                                     Log(ex);
-                                    Console.Error.WriteLine($"ERROR: a {ex.GetType()} exception happends:{ex.Message}");
-
+                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "path", Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png") }, { "error", $"ERROR: a {ex.GetType()} exception happends:{ex.Message}" } });
                                 }
-#endif
+                            }, token);
+                            break;
+                        }
+                    case "RenderSomeFrames":
+                        {
+                            if (msg.Payload is null)
+                            {
+                                Console.Error.WriteLine("[RPC] RenderSomeFrames missing payload.");
+                                break;
+                            }
+                            var startIndex = msg.Payload.Value.GetProperty("start").GetInt32();
+                            var length = msg.Payload.Value.GetProperty("length").GetInt32();
+                            var targetWidth = msg.Payload.Value.GetProperty("width").GetInt32();
+                            var targetHeight = msg.Payload.Value.GetProperty("height").GetInt32();
+                            var targetFramerate = msg.Payload.Value.GetProperty("framerate").GetInt32();
+
+                            _currentTaskCts?.Cancel();
+                            _currentTaskCts = new CancellationTokenSource();
+                            var token = _currentTaskCts.Token;
+                            var currentClips = clips;
+
+                            _ = Task.Run(() =>
+                            {
+                                try
+                                {
+                                    // libx264 + yuv420p requires even width/height (4:2:0 chroma subsampling)
+                                    // Otherwise avcodec_open2 may fail with AVERROR_EXTERNAL ("Generic error in an external library").
+                                    var encodeWidth = (targetWidth % 2 == 0) ? targetWidth : targetWidth - 1;
+                                    var encodeHeight = (targetHeight % 2 == 0) ? targetHeight : targetHeight - 1;
+                                    if (encodeWidth <= 0 || encodeHeight <= 0)
+                                    {
+                                        Send(msg, new Dictionary<string, object?>
+                                        {
+                                            { "status", "error" },
+                                            { "message", $"Invalid output size {targetWidth}x{targetHeight}. For libx264/yuv420p, width/height must be positive and even." }
+                                        });
+                                        return;
+                                    }
+                                    if (encodeWidth != targetWidth || encodeHeight != targetHeight)
+                                    {
+                                        Log($"[RPC] RenderSomeFrames: adjusted output size {targetWidth}x{targetHeight} -> {encodeWidth}x{encodeHeight} for libx264/yuv420p.");
+                                    }
+
+                                    var destPath = Path.Combine(tempFolder, $"projectFrameCut_Render_{Guid.NewGuid()}.mp4");
+                                    Log($"[RPC] RenderSomeFrames request: frame #{startIndex}, length {length}");
+                                    using var builder = new VideoWriter(destPath, encodeWidth, encodeHeight, targetFramerate, "libx264", FFmpeg.AutoGen.AVPixelFormat.AV_PIX_FMT_YUV420P);
+                                    foreach (var item in Enumerable.Range(startIndex, length))
+                                    {
+                                        if (token.IsCancellationRequested)
+                                        {
+                                            Log("[RPC] RenderSomeFrames cancelled.");
+                                            Send(msg, new Dictionary<string, object?> { { "status", "cancelled" } });
+                                            return;
+                                        }
+                                        builder.Append(
+                                            Timeline.MixtureLayers(
+                                                Timeline.GetFramesInOneFrame(currentClips, (uint)item, encodeWidth, encodeHeight, true),
+                                                (uint)item, encodeWidth, encodeHeight));
+                                        LogDiagnostic($"Frame {item} in sequence rendered.");
+                                    }
+                                    builder.Finish();
+                                    Send(msg, new Dictionary<string, object?>
+                                    {
+                                        { "status", "ok" },
+                                        { "path", destPath },
+                                        { "width", encodeWidth },
+                                        { "height", encodeHeight }
+                                    });
+                                    Log($"[RPC] RenderSomeFrames completed");
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log(ex);
+                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", ex.Message } });
+                                }
+                            }, token);
                             break;
                         }
 
@@ -293,36 +397,49 @@ namespace projectFrameCut.Render.WindowsRender
                         }
                     case "GetAFrameData":
                         {
-                            try
+                            if (msg.Payload is null)
                             {
-                                if (msg.Payload is null)
+                                Console.Error.WriteLine("[RPC] GetAFrameData missing payload.");
+                                break;
+                            }
+                            var frameIndex = msg.Payload.Value.GetUInt32();
+
+                            _currentTaskCts?.Cancel();
+                            _currentTaskCts = new CancellationTokenSource();
+                            var token = _currentTaskCts.Token;
+                            var currentClips = clips;
+
+                            _ = Task.Run(() =>
+                            {
+                                try
                                 {
-                                    Console.Error.WriteLine("[RPC] RenderOne missing payload.");
-                                    break;
+                                    Log($"[RPC] GetAFrameData request: frame #{frameIndex}");
+                                    var frameHash = Timeline.GetFrameHash(currentClips, frameIndex);
+                                    
+                                    if (token.IsCancellationRequested) return;
+
+                                    var layers = Timeline.GetFramesInOneFrame(currentClips, frameIndex, width, height, true);
+                                    
+                                    if (token.IsCancellationRequested) return;
+
+                                    Log($"Clips in frame #{frameIndex}:\r\n{JsonSerializer.Serialize(layers)}\r\n---");
+
+                                    Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "json", JsonSerializer.Serialize(layers, new JsonSerializerOptions
+                                        {
+                                            WriteIndented = true,
+                                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                                            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
+
+                                        } ) } });
+                                    Log($"[RPC] GetAFrameData completed");
                                 }
-                                var frameIndex = msg.Payload.Value.GetUInt32();
-                                Log($"[RPC] RenderOne request: frame #{frameIndex}");
-                                var frameHash = Timeline.GetFrameHash(clips, frameIndex);
-                                var layers = Timeline.GetFramesInOneFrame(clips, frameIndex, width, height, true);
-                                Log($"Clips in frame #{frameIndex}:\r\n{JsonSerializer.Serialize(layers)}\r\n---");
-
-                                Send(msg, new Dictionary<string, object?> { { "status", "ok" }, { "json", JsonSerializer.Serialize(layers, new JsonSerializerOptions
-                                    {
-                                        WriteIndented = true,
-                                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                                        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
-
-                                    } ) } });
-                                Log($"[RPC] RenderOne completed");
-                            }
-                            catch (Exception ex)
-                            {
-                                Log(ex);
-                                Console.Error.WriteLine($"ERROR: a {ex.GetType()} exception happends:{ex.Message}");
-
-                                Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "path", Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png") }, { "error", $"ERROR: a {ex.GetType()} exception happends:{ex.Message}" } });
-
-                            }
+                                catch (Exception ex)
+                                {
+                                    Log(ex);
+                                    Console.Error.WriteLine($"ERROR: a {ex.GetType()} exception happends:{ex.Message}");
+                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "error", $"ERROR: a {ex.GetType()} exception happends:{ex.Message}" } });
+                                }
+                            }, token);
 
                             break;
                         }

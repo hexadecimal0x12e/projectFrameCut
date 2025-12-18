@@ -1,6 +1,7 @@
-using System.Collections.Generic;
 using Microsoft.Maui.Controls;
 using projectFrameCut.Setting.SettingPages;
+using System.Collections.Generic;
+using System.Diagnostics;
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
 
 namespace projectFrameCut
@@ -50,6 +51,54 @@ namespace projectFrameCut
         {
             // Ensure we use Navigation stack from Shell or current NavigationPage
             return Navigation.PushAsync(page);
+        }
+
+        public static async Task RebootApp(Page currentPage)
+        {
+            var conf = await currentPage.DisplayAlertAsync(Localized._Info,
+                                        SettingLocalizedResources.CommonStr_RebootRequired(),
+                                        Localized._Confirm,
+                                        Localized._Cancel);
+            if (conf)
+            {
+                await FlushAndStopAsync();
+                if (Debugger.IsAttached) //let user to reboot in debugger
+                {
+                    Debugger.Break();
+                    Environment.Exit(0);
+                }
+#if WINDOWS
+            string path = "projectFrameCut_Protocol:";
+            if (!MauiProgram.IsPackaged())
+            {
+                var exePath = Process.GetCurrentProcess().MainModule?.FileName;
+                if (exePath != null)
+                {
+                    path = exePath;
+                }
+            }
+            var script =
+$$"""
+
+Clear-Host;Write-Output "projectFrameCut is now rebooting, please wait for a while...";Start-Process "{{path}}";exit
+
+""";
+            var proc = new Process();
+            proc.StartInfo.FileName = "powershell.exe";
+            proc.StartInfo.UseShellExecute = false;
+            proc.StartInfo.RedirectStandardInput = true;
+            proc.StartInfo.CreateNoWindow = false;
+            proc.Start();
+            var procWriter = proc.StandardInput;
+            if (procWriter != null)
+            {
+                procWriter.AutoFlush = true;
+                procWriter.WriteLine(script);
+            }
+#endif
+                Environment.Exit(0);
+
+            }
         }
     }
 }

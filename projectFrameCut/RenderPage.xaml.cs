@@ -165,7 +165,7 @@ public partial class RenderPage : ContentPage
         PreviewLayout.IsVisible = true;
         ProgressBox.IsVisible = true;
         CancelRender.IsEnabled = true;
-        MoreOptions.IsEnabled = false;
+        //MoreOptions.IsEnabled = false;
         await SubProgress.ProgressTo(0, 250, Easing.Linear);
         await TotalProgress.ProgressTo(0, 250, Easing.Linear);
 
@@ -595,7 +595,7 @@ public partial class RenderPage : ContentPage
 
             RenderOptionPanel.IsVisible = true;
             CancelRender.IsEnabled = false;
-            MoreOptions.IsEnabled = true;
+            //MoreOptions.IsEnabled = true;
             PreviewLayout.IsVisible = false;
             running = false;
         }

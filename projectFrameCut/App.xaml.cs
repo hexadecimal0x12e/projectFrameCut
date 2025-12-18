@@ -18,10 +18,39 @@ namespace projectFrameCut
     {
 
         public static App instance;
+
+        // If the app was launched/opened via a .pjfc file, this will hold the incoming URI string.
+        public string? LaunchedPjfcUri { get; private set; }
+
         public App()
         {
             instance = this;
             InitializeComponent();
+            try
+            {
+                instance?.UserAppTheme = SettingsManager.GetSetting("ui_defaultTheme", "default") switch
+                {
+                    "dark" => AppTheme.Dark,
+                    "light" => AppTheme.Light,
+                    _ => AppTheme.Unspecified
+                };
+            }
+            catch { }
+
+            try
+            {
+                var uri = Microsoft.Maui.Storage.Preferences.Get("OpenedPjfcUri", (string?)null);
+                if (!string.IsNullOrWhiteSpace(uri))
+                {
+                    LaunchedPjfcUri = uri;
+                    // remove preference once read to avoid reprocessing
+                    Microsoft.Maui.Storage.Preferences.Remove("OpenedPjfcUri");
+                }
+            }
+            catch
+            {
+                // ignore if preferences fail
+            }
         }
 
 #if WINDOWS

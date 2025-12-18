@@ -41,6 +41,9 @@
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
             </Border>
+            <VerticalStackLayout HeightRequest="250" >
+                <WebView x:Name="TestWebView" HeightRequest="250"  Source="https://bing.com" />
+            </VerticalStackLayout>
 
             <Image x:Name="ResultImage" Aspect="AspectFit" HeightRequest="300" WidthRequest="300"/>
 

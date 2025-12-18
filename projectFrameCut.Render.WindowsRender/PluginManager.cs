@@ -23,7 +23,7 @@ namespace projectFrameCut.Render.WindowsRender
             using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.In, PipeOptions.Asynchronous);
             try
             {
-                client.Connect(timeout: 15000);
+                client.Connect(timeout: 30000);
             }
             catch
             {

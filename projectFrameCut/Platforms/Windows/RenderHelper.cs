@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace projectFrameCut.Platforms.Windows
 {
-    public class RenderHelper
+    public partial class RenderHelper
     {
 
         Process _proc = new();
@@ -46,6 +46,12 @@ namespace projectFrameCut.Platforms.Windows
 #endif
                 }
             };
+
+            if (SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole"))
+            {
+                _proc.StartInfo.RedirectStandardOutput = false;
+                _proc.StartInfo.CreateNoWindow = false;
+            }
 
             _ = Task.Run(async () =>
             {
@@ -104,8 +110,10 @@ namespace projectFrameCut.Platforms.Windows
             };
 
             _proc.Start();
-
-            _proc.BeginOutputReadLine();
+            if (!SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole"))
+            {
+                _proc.BeginOutputReadLine();
+            }
             _proc.BeginErrorReadLine();
 
             Log("Render process started.", "Render");
@@ -121,7 +129,7 @@ namespace projectFrameCut.Platforms.Windows
                 return null;
             try
             {
-                var m = Regex.Match(args, @"(?i)(?:^|\s)[-/]pluginConnectionPipe=(?:""([^""]+)""|(\S+))");
+                var m = PluginConnectionPipeRegex().Match(args);
                 if (!m.Success)
                     return null;
                 var raw = (m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value).Trim();
@@ -137,6 +145,9 @@ namespace projectFrameCut.Platforms.Windows
         {
             _proc.Kill();
         }
+
+        [GeneratedRegex(@"(?i)(?:^|\s)[-/]pluginConnectionPipe=(?:""([^""]+)""|(\S+))", RegexOptions.None, "zh-CN")]
+        private static partial Regex PluginConnectionPipeRegex();
     }
 
     public class FFmpegStatistics

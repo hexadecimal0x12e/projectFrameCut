@@ -85,43 +85,34 @@
                             Aspect="AspectFit" 
                             ZIndex="9999"/>
                     <AbsoluteLayout x:Name="PreviewOverlayLayer"
-             ZIndex="10000"
-             InputTransparent="False"
-            BackgroundColor="#01000000"
-             IsVisible="True"
-             HorizontalOptions="Fill"
-             VerticalOptions="Fill">
+                        ZIndex="10000"
+                        InputTransparent="False"
+                        BackgroundColor="#01000000"
+                        IsVisible="True"
+                        HorizontalOptions="Fill"
+                        VerticalOptions="Fill">
                         <Image x:Name="PreviewOverlayImage"
-BackgroundColor="#112233"
-Aspect="AspectFit"
-InputTransparent="True"
-AbsoluteLayout.LayoutBounds="0,0,1,1"
-AbsoluteLayout.LayoutFlags="All"
-HorizontalOptions="Fill" />
-
+                            BackgroundColor="#112233"
+                            Aspect="AspectFit"
+                            InputTransparent="True"
+                            AbsoluteLayout.LayoutBounds="0,0,1,1"
+                            AbsoluteLayout.LayoutFlags="All"
+                            HorizontalOptions="Fill" />
+                        <ContentView x:Name="LivePreviewerHost"
+                            BackgroundColor="Transparent"
+                            InputTransparent="True"
+                            AbsoluteLayout.LayoutBounds="0,0,1,1"
+                            AbsoluteLayout.LayoutFlags="All" />
                         <ContentView x:Name="ClipEditorHost"
-              BackgroundColor="Transparent"
-              InputTransparent="False"
-              AbsoluteLayout.LayoutBounds="0,0,1,1"
-              AbsoluteLayout.LayoutFlags="All" />
-
+                            BackgroundColor="Transparent"
+                            InputTransparent="False"
+                            AbsoluteLayout.LayoutBounds="0,0,1,1"
+                            AbsoluteLayout.LayoutFlags="All" />
                     </AbsoluteLayout>
                 </Grid>
                 <Border ZIndex="0" Grid.Column="1" StrokeThickness="5" HorizontalOptions="Fill">
-                    <VerticalStackLayout x:Name="CustomContent1" />
+                    <ScrollView x:Name="CustomContent1" />
                 </Border>
-
-                <!--
-                <Border StrokeThickness="5" Padding="4" HeightRequest="250" WidthRequest="500" Margin="10,0,0,0" HorizontalOptions="End">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="50"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Entry x:Name="FrameIndexEntry" Placeholder="Frame index to view" Grid.Row="0" TextChanged="FrameIndexEntry_TextChanged"/>
-                        <Editor x:Name="FrameContentEditor" Placeholder="Content" Grid.Row="1" IsReadOnly="True"  />
-                    </Grid>
-                </Border> -->
             </Grid>
 
             <Grid Margin="0,0,0,8">
@@ -134,16 +125,16 @@ HorizontalOptions="Fill" />
                     <Button x:Name="AddClip" Text="Add clip" Clicked="AddClip_Clicked" />
                     <Button x:Name="AssetPanelButton" Text="Assets"  Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
                     <Button x:Name="SpiltButton" Text="Spilt" Margin="8,0,0,0" Clicked="Split_Clicked"/>
+                </HorizontalStackLayout>
+                <HorizontalStackLayout Grid.Column="1" HorizontalOptions="Center">
+                    <Button x:Name="PlayPauseButton" Text="▶" Clicked="PlayPauseButton_Clicked" WidthRequest="40" />
                     <Label x:Name="CurrentPlayheadLabel" Text="00:00/99:99" Margin="8,0,0,0" VerticalOptions="Center"></Label>
                 </HorizontalStackLayout>
 
                 <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar">
-
                     <Picker x:Name="ResolutionPicker" WidthRequest="150"  SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
-
-                    <!-- <Button x:Name="AddTextButton" Text="Add a text" Clicked="AddTextButton_Clicked"/> -->
-
                     <Button x:Name="ZoomOutButton" Text="+" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />
+                    <Button x:Name="ZoomResetButton" Text="1x" Margin="8,0,0,0" Clicked="ZoomResetButton_Clicked"/>
                     <Button x:Name="ZoomInButton" Text="-" Margin="8,0,0,0" Clicked="ZoomInButton_Clicked"/>
                 </HorizontalStackLayout>
             </Grid>

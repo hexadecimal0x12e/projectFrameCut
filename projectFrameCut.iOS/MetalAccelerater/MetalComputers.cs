@@ -8,13 +8,10 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 
-<<<<<<< TODO: 项目“projectFrameCut.iDevices (net10.0-maccatalyst)”的未合并的更改, 在此之前:
-=======
+#if iDevices
 using projectFrameCut;
-using projectFrameCut.iOS;
-using projectFrameCut.iOS.Render;
 using projectFrameCut.MetalAccelerater;
->>>>>>> 晚于
+#endif
 
 namespace projectFrameCut.MetalAccelerater
 {
