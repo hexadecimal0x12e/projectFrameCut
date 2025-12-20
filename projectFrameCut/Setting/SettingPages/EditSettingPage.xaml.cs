@@ -34,6 +34,7 @@ public partial class EditSettingPage : ContentPage
                                                  new KeyValuePair<string, string>("right", "right")).Key
             )
             .AddEntry("Edit_MaximumSaveSlot", SettingLocalizedResources.Edit_MaxiumSaveSlot, GetSetting("Edit_MaximumSaveSlot", "10"), "10")
+            .AddEntry("edit_LiveVideoPreviewBufferLength", SettingLocalizedResources.Edit_LiveVideoPreviewBufferLength, GetSetting("edit_LiveVideoPreviewBufferLength", "240"), "240")
 #if WINDOWS
             .AddSwitch("Edit_AlwaysShowToolbarButtons", SettingLocalizedResources.Edit_AlwaysShowToolbarButtons, bool.TryParse(GetSetting("Edit_AlwaysShowToolbarButtons","false"), out var result) ? result : false, null)
 #endif

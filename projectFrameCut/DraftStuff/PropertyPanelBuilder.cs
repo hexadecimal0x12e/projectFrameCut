@@ -87,7 +87,7 @@ namespace projectFrameCut.PropertyPanel
 
         public PropertyPanelBuilder AddText(PropertyPanelItemLabel label, string Id = "")
         {
-            var l = label.LabelConfigurer();
+            var l = label.LabelConfigure();
             if (!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, l);
             children.Add(l);
             return this;
@@ -98,7 +98,7 @@ namespace projectFrameCut.PropertyPanel
         /// </summary>
         /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
         /// <param name="defaultValue">The default value to assign to the property identified by <paramref name="Id"/>.</param>
-        public PropertyPanelBuilder AddEntry(string Id, PropertyPanelItemLabel title, string defaultValue, string placeholder, Action<Entry>? EntrySeter = null, EntryUpdateEventCallMode mode = EntryUpdateEventCallMode.OnUnfocusedAndUnchanged)
+        public PropertyPanelBuilder AddEntry(string Id, PropertyPanelItemLabel title, string defaultValue, string placeholder, Action<Entry>? EntrySeter = null, EntryUpdateEventCallMode mode = EntryUpdateEventCallMode.OnUnfocusedAndTextChanged)
         {
             var entry = new Entry
             {
@@ -107,7 +107,7 @@ namespace projectFrameCut.PropertyPanel
                 HorizontalOptions = LayoutOptions.Fill,
                 BindingContext = this
             };
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
 
             Properties[Id] = defaultValue;
             switch (mode)
@@ -115,7 +115,7 @@ namespace projectFrameCut.PropertyPanel
                 case EntryUpdateEventCallMode.OnAnyTextChange:
                     entry.TextChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, e.NewTextValue);
                     break;
-                case EntryUpdateEventCallMode.OnUnfocusedAndUnchanged:
+                case EntryUpdateEventCallMode.OnUnfocusedAndTextChanged:
                     entry.Unfocused += (s, e) =>
                     {
                         if (entry.Text != Properties[Id] as string)
@@ -162,7 +162,7 @@ namespace projectFrameCut.PropertyPanel
                 HorizontalOptions = LayoutOptions.End,
                 BindingContext = this
             };
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
             Properties[Id] = defaultValue;
             checkbox.CheckedChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, e.Value);
             CheckboxSetter?.Invoke(checkbox);
@@ -200,7 +200,7 @@ namespace projectFrameCut.PropertyPanel
                 BindingContext = this,
 
             };
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
             Properties[Id] = defaultValue;
             swtch.Toggled += async (s, e) =>
             {
@@ -243,7 +243,7 @@ namespace projectFrameCut.PropertyPanel
             picker.ItemsSource = values;
             picker.SelectedIndex = Array.IndexOf(values, defaultOne);
 
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
             Properties[Id] = defaultOne;
 #if !iDevices
             picker.SelectedIndexChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, picker.SelectedItem as string);
@@ -287,7 +287,7 @@ namespace projectFrameCut.PropertyPanel
                 HorizontalOptions = LayoutOptions.FillAndExpand,
                 BindingContext = this
             };
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
 
             Properties[Id] = defaultValue;
             if (eventCallMode == SliderUpdateEventCallMode.OnValueChanged)
@@ -353,28 +353,36 @@ namespace projectFrameCut.PropertyPanel
                 Text = buttonText,
                 HorizontalOptions = LayoutOptions.Fill
             };
-            //var label = title.LabelConfigurer();
             Properties[Id] = null!;
             ButtonSetter?.Invoke(button);
             button.Clicked += (s, e) => pppcea.CreateAndInvoke(this, Id, null!);
-            //var grid = new Grid
-            //{
-            //    ColumnDefinitions = new ColumnDefinitionCollection
-            //    {
-            //        new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-            //        new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
-            //    },
-            //    RowDefinitions = new RowDefinitionCollection
-            //    {
-            //        new RowDefinition { Height = GridLength.Auto }
-            //    },
-            //    Padding = DefaultPadding
-            //};
-            //grid.Children.Add(label);
-            //grid.Children.Add(button);
-            //Grid.SetColumn(button, 1);
             children.Add(button);
             Components.Add(Id, button);
+            return this;
+        }
+        /// <summary>
+        /// Adds a <seealso cref="Button"/> with an associated label to the property panel, and invoke the provided event on click.
+        /// </summary>
+        /// <remarks>
+        /// WARNING: If you're using this method, <see cref="PropertyChanged"/> will NEVER be triggered.
+        /// Instead, OnClicked will be triggered when you click on the button.
+        /// </remarks>
+        /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
+        public PropertyPanelBuilder AddButton(string buttonText, EventHandler OnClicked, string Id = "", Action<Button>? ButtonSetter = null)
+        {
+            var button = new Button
+            {
+                Text = buttonText,
+                HorizontalOptions = LayoutOptions.Fill
+            };
+            if (!string.IsNullOrWhiteSpace(Id))
+            {
+                Properties[Id] = null!;
+                Components.Add(Id, button);
+            }
+            ButtonSetter?.Invoke(button);
+            button.Clicked += OnClicked;
+            children.Add(button);
             return this;
         }
 
@@ -414,7 +422,7 @@ namespace projectFrameCut.PropertyPanel
         /// </summary>
         public PropertyPanelBuilder AddCustomChild(PropertyPanelItemLabel title, View child, string id = "")
         {
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
 
             var grid = new Grid
             {
@@ -493,7 +501,7 @@ namespace projectFrameCut.PropertyPanel
         {
             var child = maker((o) => pppcea.CreateAndInvoke(this, Id, o));
             Properties[Id] = defaultValue;
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
             var grid = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitionCollection
@@ -585,6 +593,12 @@ namespace projectFrameCut.PropertyPanel
             return layout;
         }
 
+        /// <summary>
+        /// Create a <see cref="ScrollView"/> of the instance of this builder.
+        /// </summary>
+        /// <returns></returns>
+        public ScrollView BuildWithScrollView() => new ScrollView { Content = Build() };
+
         internal void _InvokeInternal(pppcea e)
         {
             PropertyChanged?.Invoke(this, e);
@@ -622,7 +636,7 @@ namespace projectFrameCut.PropertyPanel
 
         public PropertyPanelChildrenBuilder AddText(PropertyPanelItemLabel label, GridLength? width = null)
         {
-            addChild(label.LabelConfigurer(), width);
+            addChild(label.LabelConfigure(), width);
             return this;
         }
 
@@ -844,7 +858,7 @@ namespace projectFrameCut.PropertyPanel
     public enum EntryUpdateEventCallMode
     {
         OnAnyTextChange,
-        OnUnfocusedAndUnchanged
+        OnUnfocusedAndTextChanged
     }
 
     public enum SliderUpdateEventCallMode
@@ -855,7 +869,7 @@ namespace projectFrameCut.PropertyPanel
 
     public class SingleLineLabel(string text, int fontsize = 14, FontAttributes fontAttributes = FontAttributes.None, Color? TextColor = null) : PropertyPanelItemLabel
     {
-        public override View LabelConfigurer()
+        public override View LabelConfigure()
         {
             var l = new Label { Text = text, FontSize = fontsize, FontAttributes = fontAttributes, VerticalOptions = LayoutOptions.Center };
             if (TextColor is not null) l.TextColor = TextColor;
@@ -867,7 +881,7 @@ namespace projectFrameCut.PropertyPanel
 
     public class TitleAndDescriptionLineLabel(string title, string description, int titleFontSize = 20, int contentFontSize = 12) : PropertyPanelItemLabel
     {
-        public override View LabelConfigurer() => new VerticalStackLayout
+        public override View LabelConfigure() => new VerticalStackLayout
         {
             Children =
             {
@@ -883,7 +897,7 @@ namespace projectFrameCut.PropertyPanel
 
         public PropertyPanelItemLabel() { }
         public PropertyPanelItemLabel(View v) => _view = v;
-        public virtual View LabelConfigurer() => _view ?? throw new NullReferenceException("Trying to set a null label.");
+        public virtual View LabelConfigure() => _view ?? throw new NullReferenceException("Trying to set a null label.");
 
         public static implicit operator PropertyPanelItemLabel(string text) => new SingleLineLabel(text);
 

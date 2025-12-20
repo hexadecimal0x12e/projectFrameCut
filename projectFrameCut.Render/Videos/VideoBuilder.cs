@@ -53,6 +53,8 @@ namespace projectFrameCut.Render.Videos
         public int Width => builder._width;
         public int Height => builder._height;
 
+        public VideoWriter Writer { get => builder; }
+
 
 
         /// <summary>
@@ -107,20 +109,7 @@ namespace projectFrameCut.Render.Videos
             }
             else
             {
-                if (!FramePendedToWrite.TryAdd(index, true))
-                {
-                    if (StrictMode)
-                    {
-                        throw new InvalidOperationException($"Frame #{index} has already been added.");
-                    }
-                    else
-                    {
-                        Log($"[VideoBuilder] WARN: Frame #{index} has already been added, ignored.", "warn");
-                        if (DisposeFrameAfterEachWrite) frame.Dispose();
-                        return;
-                    }
-                }
-                builder.Append(frame);
+                builder.Append(frame.Resize(Width, Height, false)); //ensure size
                 Log($"[VideoBuilder] Frame #{index} added.");
             }
 
@@ -151,7 +140,8 @@ namespace projectFrameCut.Render.Videos
         {
             if (Disposed) return;
             Disposed = true;
-            builder.Dispose();
+            if(!builder.Disposed)
+                builder.Dispose();
         }
 
         public Thread Build()
@@ -282,6 +272,10 @@ namespace projectFrameCut.Render.Videos
             Dispose();
         }
 
+        public static implicit operator VideoBuilder(VideoWriter v)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public sealed unsafe class VideoWriter : IDisposable
@@ -301,11 +295,12 @@ namespace projectFrameCut.Render.Videos
         private SwsContext* _sws;
         private int _frameIndex;
         private bool _isHeaderWritten;
-        private bool _isDisposed;
+        public bool _isDisposed;
         private string _path;
         private int colorDepth = 8;
 
         public bool IsOpened => _fmtCtx != null;
+        public bool Disposed => _isDisposed;
 
         public uint Index { get; set; } = 0;
 
@@ -445,7 +440,7 @@ namespace projectFrameCut.Render.Videos
         {
             ArgumentNullException.ThrowIfNull(picture);
             if (picture.Width != _width || picture.Height != _height)
-                throw new ArgumentException("The result size is different from original size. Please check the source.");
+                throw new ArgumentException($"The result \r\n{picture.GetDiagnosticsInfo()}\r\n size ({picture.Width}*{picture.Height}) is different from original size ({_width}*{_height}). Please check the source.");
             if (_isDisposed) throw new ObjectDisposedException(nameof(VideoBuilder));
 
             EnsureHeader();
@@ -548,7 +543,7 @@ namespace projectFrameCut.Render.Videos
         {
             if (picture == null) throw new ArgumentNullException(nameof(picture));
             if (picture.Width != _width || picture.Height != _height)
-                throw new ArgumentException("The result size is different from original size. Please check the source.");
+                throw new ArgumentException($"The result \r\n{picture.GetDiagnosticsInfo()}\r\n size ({picture.Width}*{picture.Height}) is different from original size ({_width}*{_height}). Please check the source.");
             if (_isDisposed) throw new ObjectDisposedException(nameof(VideoBuilder));
 
             EnsureHeader();

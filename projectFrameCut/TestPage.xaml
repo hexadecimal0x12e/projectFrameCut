@@ -7,12 +7,15 @@
 
 
         <VerticalStackLayout>
+            <Button Text="manage setting" x:Name="SettingMgntBtn" Margin="0,0,0,25" Clicked="SettingMgntBtn_Clicked" />
+
+
             <Button x:Name="OpenGLESStartButton" Text="compute by OpenGL ES (android only)" Clicked="OpenGLESStartButton_Clicked"/>
             <Button x:Name="MetalRenderStartButton" Text="compute by Metal (ios only)" Clicked="MetalRenderStartButton_Clicked"/>
             <Button x:Name="TestFFmpegButton" Text="Test FFmpeg" Clicked="TestFFmpegButton_Clicked"/>
             <Button x:Name="TestCrashButton" Text="Crash" Clicked="TestCrashButton_Clicked"/>
             <Button x:Name="WinUIDiagTestBtn" Text="Test WinUI3 diag" Clicked="WinUIDiagTestBtn_Clicked"/>
-
+            <Button x:Name="TestResizeVideoBtn" Text="Resize a Video" Clicked="TestResizeVideoBtn_Clicked"/>
             <Border StrokeThickness="4">
                 <VerticalStackLayout>
                     <Label Text="Dragging test" x:Name="DraggingTestLabel"/>
@@ -42,7 +45,7 @@
                 </VerticalStackLayout>
             </Border>
             <VerticalStackLayout HeightRequest="250" >
-                <WebView x:Name="TestWebView" HeightRequest="250"  Source="https://bing.com" />
+                <!-- <WebView x:Name="TestWebView" HeightRequest="250"  Source="https://bing.com" /> -->
             </VerticalStackLayout>
 
             <Image x:Name="ResultImage" Aspect="AspectFit" HeightRequest="300" WidthRequest="300"/>

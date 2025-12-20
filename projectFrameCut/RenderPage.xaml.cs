@@ -17,6 +17,8 @@ using projectFrameCut.Render.Videos;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Services;
+
 
 
 
@@ -180,15 +182,17 @@ public partial class RenderPage : ContentPage
             DeviceDisplay.Current.KeepScreenOn = true;
             string outputPath;
             Log("Output options:\r\n" + vm.BuildSummary());
-            var outputDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
 #if WINDOWS
-            outputPath = await PickSavePath(_project.projectName);
+            string? outputDir = null;
 #else
-            outputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mp4");
+            string? outputDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
 #endif
-            if (!OperatingSystem.IsWindows() || SettingsManager.IsBoolSettingTrue("UseLivePreviewInsteadOfBackend"))
+            outputPath = await FileSystemService.PickSavePathAsync(_project.projectName ?? "export" + ".mp4", outputDir);
+            Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? throw new NullReferenceException());
+
+
+            if (!OperatingSystem.IsWindows())
             {
-                Directory.CreateDirectory(outputDir);
                 await DoComputeOnMobile(vm, outputPath);
             }
             else
@@ -306,11 +310,11 @@ public partial class RenderPage : ContentPage
 
             });
         };
-
+        string currentStage = "";
         render.OnSubProgChanged += (s) =>
         {
             lastProg = totalProg;
-
+            currentStage = $"RenderPage_SubProg_{s}";
             string label;
             try
             {
@@ -326,7 +330,20 @@ public partial class RenderPage : ContentPage
             });
         };
 
-        render.OnLog += _logQueue.Enqueue;
+        render.OnLog += (s) =>
+        {
+            if(currentStage == "RenderPage_SubProg_Render" )
+            {
+                if (!s.StartsWith("[Render]"))
+                {
+                    _logQueue.Enqueue(s);
+                }
+            }
+            else
+            {
+                _logQueue.Enqueue(s);
+            }
+        };
 
         var ret = await render.StartRender(args);
         Log($"Render process exited with code {ret}.");
@@ -554,31 +571,7 @@ public partial class RenderPage : ContentPage
 
     }
 
-    private static async Task<string> PickSavePath(string? defaultName = null)
-    {
-#if WINDOWS
-        var picker = new Windows.Storage.Pickers.FileSavePicker();
 
-        // 获取当前窗口句柄
-        var hwnd = ((MauiWinUIWindow)Application.Current.Windows[0].Handler.PlatformView).WindowHandle;
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
-
-        // 设置文件类型过滤器
-        picker.FileTypeChoices.Add("视频文件", new List<string> { ".mp4", ".mkv", ".avi", ".mov" });
-        //picker.FileTypeChoices.Add("所有文件", new List<string> { ".*" });
-
-        // 设置默认文件名
-        picker.SuggestedFileName = defaultName ?? $"Export_{DateTime.Now:yyyyMMdd_HHmmss}";
-
-        // 显示保存对话框
-        var file = await picker.PickSaveFileAsync();
-
-        return file?.Path ?? string.Empty;
-#else
-
-    return string.Empty;
-#endif
-    }
 
     private async void CancelRender_Clicked(object sender, EventArgs e)
     {

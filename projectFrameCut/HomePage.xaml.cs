@@ -17,12 +17,11 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 
 
-
-
-
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
 using Windows.ApplicationModel.UserActivities;
+using projectFrameCut.Render.WindowsRender;
+using ILGPU;
 
 #endif
 
@@ -79,7 +78,6 @@ public partial class HomePage : ContentPage
                                         RpcClient c = new();
                                         if (Process.GetProcessesByName("projectFrameCut.Render.WindowsRender").Any())
                                         {
-                                            await Task.Delay(1200);
                                             await PluginPipeTransport.SendEnabledPluginsAsync("pjfc_plugin_debug123");
                                             await c.StartAsync("pjfc_rpc_debug123", default);
                                             await GoDraft(draft, "Project", false, false, c, true);
@@ -495,12 +493,28 @@ public partial class HomePage : ContentPage
                 }
                 page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.projectName ?? "?", isReadonly, dbgBackend);
                 page.ProjectName = project?.projectName ?? "?";
-                page.UseLivePreviewInsteadOfBackend = SettingsManager.IsBoolSettingTrue("UseLivePreviewInsteadOfBackend");
+                page.UseLivePreviewInsteadOfBackend = SettingsManager.IsBoolSettingTrue("render_UseLivePreviewInsteadOfBackend");
                 page.IsReadonly = isReadonly;
                 page.PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "right");
                 page.MaximumSaveSlot = int.TryParse(SettingsManager.GetSetting("Edit_MaximumSaveSlot"), out var slotCount) ? slotCount : 10;
                 page.AlwaysShowToolbarBtns = SettingsManager.IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons");
                 page.ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole");
+                page.LiveVideoPreviewBufferLength = int.TryParse(SettingsManager.GetSetting("edit_LiveVideoPreviewBufferLength", "240"), out var bufferLen) ? bufferLen : 240;
+#if WINDOWS
+                if (!page.UseLivePreviewInsteadOfBackend)
+                {
+                    await page.BootRPC();
+                }
+                else
+                {
+                    Context context = Context.CreateDefault();
+                    var devices = context.Devices.ToList();
+                    var accelDevice = devices.Index().Select(t => new KeyValuePair<int, ILGPU.Runtime.Device>(t.Index,t.Item))
+                                            .FirstOrDefault((t) => t.Key == (int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var accelIdx) ? accelIdx : -1),
+                                            new KeyValuePair<int, ILGPU.Runtime.Device>(-1, devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices.First()))).Value;
+                    page.AcceleratorToUse = accelDevice.CreateAccelerator(context);
+                }
+#endif
                 await page.PostInit();
 
             }
@@ -512,7 +526,7 @@ public partial class HomePage : ContentPage
                 }
                 await Dispatcher.DispatchAsync(async () =>
                 {
-                    await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex4), "OK");
+                    await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_FailByException(ex4), "OK");
                 });
             }
         });
@@ -556,14 +570,14 @@ public partial class HomePage : ContentPage
                     }
                     catch (Exception ex)
                     {
-
+                        Log(ex, "Log the activity for recall/timeline", this);
                     }
                 });
 
             }
             catch (Exception ex)
             {
-
+                Log(ex, "Log the activity for recall/timeline", this);
             }
 
 #endif

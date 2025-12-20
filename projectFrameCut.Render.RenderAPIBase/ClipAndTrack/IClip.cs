@@ -87,7 +87,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <summary>
         /// Get the path of the source file for this clip. May be null for some kind of clips.
         /// </summary>
-        public string? FilePath { get; init; }
+        public string? FilePath { get; set; }
 
         /// <summary>
         /// Get the frame index relative to the source clip for the specified target frame in the draft.

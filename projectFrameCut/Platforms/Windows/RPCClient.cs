@@ -20,7 +20,7 @@ public sealed class RpcClient : IAsyncDisposable
 
     public Action<JsonElement>? ErrorCallback = null;
 
-    public static string BootRPCServer(out Process rpcProc, string tmpDir = "", string options = "1280,720,42,AV_PIX_FMT_NONE,nope", bool VerboseBackendLog = false, Action<string>? stdoutCallback = null, Action<string>? stderrCallback = null)
+    public static string BootRPCServer(out Process rpcProc, string tmpDir = "", string proxyDir = "", string options = "1280,720,42,AV_PIX_FMT_NONE,nope", bool VerboseBackendLog = false, Action<string>? stdoutCallback = null, Action<string>? stderrCallback = null)
     {
         var pipeId = "pjfc_rpc_" + Guid.NewGuid().ToString();
         var pluginPipeId = "pjfc_plugin_" + Guid.NewGuid().ToString("N");
@@ -45,6 +45,7 @@ public sealed class RpcClient : IAsyncDisposable
                   "-UseCheckerboardBackgroundForNoContent=true"
                   "-ParentPID={Process.GetCurrentProcess().Id}"
                   "-acceleratorDeviceId={(accelId >= 0 ? accelId : "auto")}"
+                  "-proxyRoot={proxyDir}"
                 """.Replace(Environment.NewLine, " "),
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -154,7 +155,7 @@ public sealed class RpcClient : IAsyncDisposable
     public static async Task<string> RenderSomeFrames(int start, int length, int width, int height, int framerate, RpcClient rpcClient, CancellationToken ct = default)
     {
         if (rpcClient is null) return "";
-        
+
         var result = await rpcClient.SendAsync("RenderSomeFrames", JsonSerializer.SerializeToElement(new { start, length, width, height, framerate }), ct);
         if (result is null)
         {
@@ -261,14 +262,13 @@ public sealed class RpcClient : IAsyncDisposable
             await SendAsync(req, ct);
         }
         catch { /* ignore */ }
-
+        await Task.Delay(250);
         try
         {
             if (_proc is { HasExited: false })
             {
-                // 给后端一点时间正常退出
-                if (!await WaitForExitAsync(_proc, TimeSpan.FromSeconds(2)))
-                    _proc.Kill(entireProcessTree: true);
+                //if (!await WaitForExitAsync(_proc, TimeSpan.FromSeconds(2)))
+                _proc.Kill(entireProcessTree: true);
             }
         }
         catch { /* ignore */ }
@@ -276,7 +276,7 @@ public sealed class RpcClient : IAsyncDisposable
 
     private async Task SendAsync(RpcProtocol.RpcMessage req, CancellationToken ct)
     {
-        if (_writer is null) throw new InvalidOperationException("RPC 未连接。");
+        if (_writer is null) throw new InvalidOperationException("RPC not connected.");
         var json = JsonSerializer.Serialize(req, RpcProtocol.JsonOptions);
 
         await _ioLock.WaitAsync(ct);
@@ -295,14 +295,49 @@ public sealed class RpcClient : IAsyncDisposable
         var lockTaken = false;
         try
         {
-            if (_writer is null || _reader is null) throw new InvalidOperationException("RPC 未连接。");
+            if (_writer is null || _reader is null) throw new InvalidOperationException("RPC not connected.");
+
+            // Serialize all requests on the single pipe.
             await _ioLock.WaitAsync(ct);
             lockTaken = true;
+
             var json = JsonSerializer.Serialize(req, RpcProtocol.JsonOptions);
             await _writer.WriteLineAsync(json);
-            var line = await _reader.ReadLineAsync(ct);
-            if (line is null) return null;
-            return JsonSerializer.Deserialize<RpcProtocol.RpcMessage>(line, RpcProtocol.JsonOptions);
+
+            // IMPORTANT:
+            // If a previous in-flight call was cancelled AFTER its request was written but BEFORE its response was read,
+            // the response will still be sitting in the pipe. If we read just one line and return it, we'd get a
+            // mismatched RequestId and the client would appear to "stop responding" forever.
+            //
+            // To make the protocol resilient, keep reading and discarding unrelated responses until we find ours.
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(30));
+
+            while (true)
+            {
+                var line = await _reader.ReadLineAsync(timeoutCts.Token);
+                if (line is null) return null;
+
+                RpcProtocol.RpcMessage? resp;
+                try
+                {
+                    resp = JsonSerializer.Deserialize<RpcProtocol.RpcMessage>(line, RpcProtocol.JsonOptions);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (resp?.RequestId == req.RequestId)
+                    return resp;
+
+                // Stale/other response; discard and continue.
+                Log($"[RPC] Discarding stale response id={resp?.RequestId} (expect {req.RequestId}).", "warn");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
         }
         catch (Exception ex)
         {

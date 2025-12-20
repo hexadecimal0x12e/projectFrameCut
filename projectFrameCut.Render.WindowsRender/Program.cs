@@ -72,6 +72,9 @@ namespace projectFrameCut.Render.WindowsRender
                             [-GCOptions=doLOHCompression|doNormalCollection|letCLRDoCollection]
                             [-preview=true|false]
                             [-previewPath=<path of preview output>]
+                            [-LogAnalyzeState=true|false]
+                            [-AnalyzeFilePath=<path of analyze log output>]
+                            [-FFmpegLibraryPath=<path to FFmpeg libraries>]
                             [-pluginConnectionPipe=<name>]
                             [-advancedFlags=<flag1>[,<flag2>,...,<flagn>]
 
@@ -82,6 +85,7 @@ namespace projectFrameCut.Render.WindowsRender
                             [-acceleratorType=<auto|cuda|opencl|cpu>]
                             [-acceleratorDeviceId=<device id>]
                             [-pluginConnectionPipe=<name>]
+                            [-FFmpegLibraryPath=<path to FFmpeg libraries>]
                             [-advancedFlags=<flag1>[,<flag2>,...,<flagn>]
 
                        or: projectFrameCut.Render list_accels
@@ -254,7 +258,7 @@ namespace projectFrameCut.Render.WindowsRender
 
             var use16Bit = bool.TryParse(switches.GetOrAdd("Use16bpp", "true"), out var b1) ? b1 : true;
 
-            Console.WriteLine($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, bitPerPixel:{(use16Bit ? "16" :"8")}");
+            Console.WriteLine($"Output options: {width}x{height} @ {fps} fps, pixel format: {outputFormat}, encoder: {outputEncoder}, bitPerPixel:{(use16Bit ? "16" : "8")}");
 
             Console.WriteLine("Initializing plugins...");
             try
@@ -346,7 +350,7 @@ namespace projectFrameCut.Render.WindowsRender
                 DoGCAfterEachWrite = true,
                 DisposeFrameAfterEachWrite = true,
                 Duration = duration,
-                
+
             };
 
             int maxParallelThreads = int.TryParse(switches.GetOrAdd("maxParallelThreads", "8"), out var result) ? result : 8;
@@ -372,9 +376,10 @@ namespace projectFrameCut.Render.WindowsRender
                 Use16Bit = use16Bit,
             };
 
-            switch (switches.GetOrAdd("GCOptions", "doLOHCompression"))
+            switch (switches.GetOrAdd("GCOptions", "letCLRDoCollection"))
             {
                 case "letCLRDoCollection":
+                letCLRDoCollection:
                     builder.DoGCAfterEachWrite = false;
                     renderer.GCOption = 0;
                     break;
@@ -383,14 +388,13 @@ namespace projectFrameCut.Render.WindowsRender
                     renderer.GCOption = 1;
                     break;
                 case "doLOHCompression":
-                doLOHCompression:
                     builder.DoGCAfterEachWrite = true;
                     renderer.GCOption = 2;
                     GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce; //avoid Picture eating too much memory cause hang or crash
                     break;
                 default:
-                    Console.WriteLine($"WARN: Undefined GC option {switches["GCOptions"]}, use doLOHCompression.");
-                    goto doLOHCompression;
+                    Console.WriteLine($"WARN: Undefined GC option {switches["GCOptions"]}, use letCLRDoCollection.");
+                    goto letCLRDoCollection;
             }
 
             builder?.Build()?.Start();
@@ -426,13 +430,26 @@ namespace projectFrameCut.Render.WindowsRender
 
             Log($"All done! Total elapsed {sw1}.");
 
+            if (bool.TryParse(switches.GetOrAdd("LogAnalyzeState", "false"), out var logAnalyze) && logAnalyze)
+            {
+                var analyzeFilePath = switches.GetOrAdd("AnalyzeFilePath", "analyze_log.csv");
+                using(FileStream fs = new(analyzeFilePath, FileMode.OpenOrCreate))
+                {
+                    using(StreamWriter sw = new StreamWriter(fs))
+                    {
+                        sw.WriteLine("FrameIndex,PrepareElapsedSeconds,RenderElapsedSeconds");
+                        for (int i = 0; i < duration; i++)
+                        {
+                            var prep = renderer.EachElapsedForPreparing.ElementAt(i);
+                            var rend = renderer.EachElapsed.ElementAt(i);
+                            sw.WriteLine($"{i},{prep.TotalSeconds},{rend.TotalSeconds}");
+                        }
+                    }
+                }
+                Log($"Analyze log saved to {analyzeFilePath}");
+            }
             return 0;
         }
-
-        
-
-        
-
         public static bool inprojectFrameCut = false;
 
         public static void SetSubProg(string progName)

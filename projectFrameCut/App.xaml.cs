@@ -177,7 +177,7 @@ namespace projectFrameCut
                                     await Shell.Current.Navigation.PushAsync(new MainSettingsPage());
                                     break;
                                 case "Debug":
-                                    await Shell.Current.Navigation.PushAsync(new DebuggingMainPage());
+                                    await Shell.Current.Navigation.PushAsync(new TestPage());
                                     break;
                             }
                         }

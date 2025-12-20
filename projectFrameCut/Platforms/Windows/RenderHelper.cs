@@ -41,9 +41,6 @@ namespace projectFrameCut.Platforms.Windows
                 Environment =
                 {
                     ["projectFrameCut"] = $"projectFrameCut/{Assembly.GetExecutingAssembly().GetName().Version}",
-#if DEBUG
-                    ["pjfc_dbg"] = "1",
-#endif
                 }
             };
 

@@ -2,6 +2,7 @@
   "profiles": {
     "Windows Machine": {
       "commandName": "Project",
+      "commandLineArgs": "go_draft_dbgBackend D:\\code\\playground\\projectFrameCut\\My Drafts\\abc_3d13596e-d523-4c0f-8191-b9a7bbe0fcbb ",
       "nativeDebugging": false
     }
   }

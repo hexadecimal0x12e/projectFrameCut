@@ -1,9 +1,9 @@
 {
   "DefaultLocate": "zh-CN",
   "AdditionalUsing": "",
-  "NameSpaceOfLocalizerInstance": "",
+  "NameSpaceOfLocalizerInstance": "LocalizedResources",
   "ClassNameSpaceOfLocalizerInstance": "SimpleLocalizerBaseGeneratedHelper_PropertyPanel",
-  "NameOfLocalizerInstance": "PPLocalizedResuorces",
+  "NameOfLocalizerInstance": "PPLocalizedResources",
   "NameOfBaseInterface": "ISimpleLocalizerBase_PropertyPanel",
   "EnableDynamicGenerate": false,
   "EnableBaseGenerate": true,
@@ -46,6 +46,23 @@
       {
         "Id": "_Height",
         "Value": "\u9AD8\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_PluginBase_Description_",
+        "Value": "\u4F5C\u4E3A projectFrameCut \u7684\u4E00\u90E8\u5206\uFF0C\u63D0\u4F9B projectFrameCut \u7684\u57FA\u672C\u529F\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u5E94\u7528\u7A0B\u5E8F\u7684\u540D\u5B57",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_PluginBase_Name_",
+        "Value": "projectFrameCut \u57FA\u7840\u7EC4\u4EF6\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -114,21 +131,695 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
-      },
+      }
+    ],
+    "en-US": [
       {
-        "Id": "_PluginBase_Name_",
-        "Value": "projectFrameCut \u57FA\u7840\u7EC4\u4EF6\u63D2\u4EF6",
+        "Id": "_Apply",
+        "Value": "Apply",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Enabled",
+        "Value": "Enabled",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_EnabledSomething",
+        "Value": "Enable {something}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "something"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "something",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Height",
+        "Value": "Height",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "_PluginBase_Description_",
-        "Value": "\u4F5C\u4E3A projectFrameCut \u7684\u4E00\u90E8\u5206\uFF0C\u63D0\u4F9B projectFrameCut \u7684\u57FA\u672C\u529F\u80FD",
+        "Value": "As part of projectFrameCut, provides the basic functionality of projectFrameCut",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_PluginBase_Name_",
+        "Value": "projectFrameCut Base Component Plugin",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_StartX",
+        "Value": "Start X Coordinate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_StartY",
+        "Value": "Start Y-coordinate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Width",
+        "Value": "Width",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Add_Effect",
+        "Value": "Add an effect...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Add_Effect_Select",
+        "Value": "Select an effect",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_Index",
+        "Value": "Render Order",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_Remove",
+        "Value": "Remove this effect...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "PropertyPanel",
+        "Value": "Property Panel",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      }
+    ],
+    "zh-TW": [
+      {
+        "Id": "_Apply",
+        "Value": "\u5957\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Enabled",
+        "Value": "\u555F\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_EnabledSomething",
+        "Value": "\u555F\u7528 {something}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "something"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "something",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Height",
+        "Value": "\u9AD8\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_PluginBase_Description_",
+        "Value": "\u4F5C\u70BA projectFrameCut \u7684\u4E00\u90E8\u5206\uFF0C\u63D0\u4F9B projectFrameCut \u7684\u57FA\u672C\u529F\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_PluginBase_Name_",
+        "Value": "projectFrameCut \u57FA\u790E\u5143\u4EF6\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_StartX",
+        "Value": "\u8D77\u59CB X \u8EF8\u5EA7\u6A19",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_StartY",
+        "Value": "\u8D77\u59CB Y \u8EF8\u5EA7\u6A19",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Width",
+        "Value": "\u5BEC\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Add_Effect",
+        "Value": "\u65B0\u589E\u4E00\u500B\u6548\u679C...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Add_Effect_Select",
+        "Value": "\u9078\u64C7\u4E00\u500B\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_Index",
+        "Value": "\u6E32\u67D3\u9806\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_Remove",
+        "Value": "\u79FB\u9664\u9019\u500B\u6548\u679C...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "PropertyPanel",
+        "Value": "\u5C6C\u6027\u9762\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      }
+    ],
+    "ja-JP": [
+      {
+        "Id": "_Apply",
+        "Value": "\u9069\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Enabled",
+        "Value": "\u6709\u52B9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_EnabledSomething",
+        "Value": "{something}\u3092\u6709\u52B9\u306B\u3059\u308B",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "something"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "something",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Height",
+        "Value": "\u9AD8\u3055",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_PluginBase_Description_",
+        "Value": "projectFrameCut\u306E\u4E00\u90E8\u3068\u3057\u3066\u3001projectFrameCut\u306E\u57FA\u672C\u6A5F\u80FD\u3092\u63D0\u4F9B\u3057\u307E\u3059",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_PluginBase_Name_",
+        "Value": "projectFrameCut \u30D9\u30FC\u30B9\u30B3\u30F3\u30DD\u30FC\u30CD\u30F3\u30C8\u30D7\u30E9\u30B0\u30A4\u30F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_StartX",
+        "Value": "\u958B\u59CB X \u8EF8\u5EA7\u6A19",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_StartY",
+        "Value": "\u958B\u59CB Y \u8EF8\u5EA7\u6A19",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Width",
+        "Value": "\u5E45",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Add_Effect",
+        "Value": "\u30A8\u30D5\u30A7\u30AF\u30C8\u3092\u8FFD\u52A0...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Add_Effect_Select",
+        "Value": "\u52B9\u679C\u3092\u9078\u629E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_Index",
+        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u9806\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_Remove",
+        "Value": "\u3053\u306E\u52B9\u679C\u3092\u524A\u9664\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "PropertyPanel",
+        "Value": "\u5C5E\u6027\u30D1\u30CD\u30EB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      }
+    ],
+    "ko-KR": [
+      {
+        "Id": "_Apply",
+        "Value": "\uC801\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Enabled",
+        "Value": "\uC0AC\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_EnabledSomething",
+        "Value": "{something} \uC0AC\uC6A9",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "something"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "something",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Height",
+        "Value": "\uB192\uC774",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_PluginBase_Description_",
+        "Value": "projectFrameCut\uC758 \uC77C\uBD80\uB85C, projectFrameCut\uC758 \uAE30\uBCF8 \uAE30\uB2A5\uC744 \uC81C\uACF5\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_PluginBase_Name_",
+        "Value": "projectFrameCut \uAE30\uBCF8 \uAD6C\uC131 \uC694\uC18C \uD50C\uB7EC\uADF8\uC778",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_StartX",
+        "Value": "\uC2DC\uC791 X \uC88C\uD45C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_StartY",
+        "Value": "\uC2DC\uC791 Y \uC88C\uD45C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Width",
+        "Value": "\uB108\uBE44",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Add_Effect",
+        "Value": "\uD6A8\uACFC \uCD94\uAC00...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Add_Effect_Select",
+        "Value": "\uD6A8\uACFC \uC120\uD0DD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_Index",
+        "Value": "\uB80C\uB354\uB9C1 \uC21C\uC11C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_Remove",
+        "Value": "\uC774 \uD6A8\uACFC\uB97C \uC81C\uAC70\uD569\uB2C8\uB2E4...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "PropertyPanel",
+        "Value": "\uC18D\uC131 \uD328\uB110",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      }
+    ],
+    "fr-FR": [
+      {
+        "Id": "_Apply",
+        "Value": "Appliquer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Enabled",
+        "Value": "Activ\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_EnabledSomething",
+        "Value": "Activer {something}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "something"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "something",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Height",
+        "Value": "Hauteur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_PluginBase_Description_",
+        "Value": "Fait partie de projectFrameCut, fournit les fonctionnalit\u00E9s de base de projectFrameCut.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_PluginBase_Name_",
+        "Value": "Plugin de composant de base projectFrameCut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_StartX",
+        "Value": "Coordonn\u00E9e de l\u0027axe X de d\u00E9part",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_StartY",
+        "Value": "Coordonn\u00E9e Y de d\u00E9part",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Width",
+        "Value": "Largeur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Add_Effect",
+        "Value": "Ajouter un effet...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Add_Effect_Select",
+        "Value": "S\u00E9lectionnez un effet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_Index",
+        "Value": "Ordre de rendu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_Remove",
+        "Value": "Suppression de l\u0027effet...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "PropertyPanel",
+        "Value": "Panneau de propri\u00E9t\u00E9s",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]

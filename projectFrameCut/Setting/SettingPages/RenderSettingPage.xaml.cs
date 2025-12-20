@@ -15,6 +15,7 @@ public partial class RenderSettingPage : ContentPage
     PropertyPanel.PropertyPanelBuilder rootPPB;
     AcceleratorInfo[] AcceleratorInfos = Array.Empty<AcceleratorInfo>();
     bool showMoreOpts = false;
+    Dictionary<string, string> GCOptionMapping = new();
     public RenderSettingPage()
     {
         Title = Localized.MainSettingsPage_Tab_Render;
@@ -37,6 +38,12 @@ public partial class RenderSettingPage : ContentPage
             },
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center
+        };
+        GCOptionMapping = new Dictionary<string, string>
+        {
+            {"letCLRDoCollection", SettingLocalizedResources.Render_GCOption_LetCLRDoGC },
+            {"doNormalCollection", SettingLocalizedResources.Render_GCOption_DoNormalCollection },
+            {"doLOHCompression", SettingLocalizedResources.Render_GCOption_DoLOHCompression }
         };
     }
 
@@ -76,17 +83,18 @@ public partial class RenderSettingPage : ContentPage
         catch (Exception ex) { Log(ex); }
 
 #endif
+
         rootPPB = new();
         rootPPB
             .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle, 20, 12))
 #if WINDOWS
             .AddPicker("accel_DeviceId", SettingLocalizedResources.Render_SelectAccel, accels, int.TryParse(GetSetting("accel_DeviceId", ""), out var result) ? accels[result] : "", null)
-            .AddSwitch("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, bool.TryParse(GetSetting("accel_enableMultiAccel", "false"), out var result1) ? result1 : false, null);
-
+            .AddSwitch("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, bool.TryParse(GetSetting("accel_enableMultiAccel", "false"), out var result1) ? result1 : false, null)
+            .AddPicker("render_SelectRenderHost", SettingLocalizedResources.Render_SelectRenderHost, [SettingLocalizedResources.Render_RenderHost_UseLivePreviewInsteadOfBackend, SettingLocalizedResources.Render_RenderHost_UseBackendAsRenderHost], GetSetting("render_UseLivePreviewInsteadOfBackend", "True") == "True" ? SettingLocalizedResources.Render_RenderHost_UseLivePreviewInsteadOfBackend : SettingLocalizedResources.Render_RenderHost_UseBackendAsRenderHost);
         try
         {
             var multiEnabled = bool.TryParse(GetSetting("accel_enableMultiAccel", "false"), out var me) ? me : false;
-                if (multiEnabled && AcceleratorInfos?.Length > 0)
+            if (multiEnabled && AcceleratorInfos?.Length > 0)
             {
                 rootPPB
                     .AddSeparator()
@@ -110,8 +118,8 @@ public partial class RenderSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_DefaultExportOpts, SettingLocalizedResources.Render_DefaultExportOpts_Subtitle), null);
 
         var resolutions = new[] { "1280x720", "1920x1080", "2560x1440", "3840x2160", "7680x4320" };
-        var framerates = new[] { "24", "30", "45", "60", "90", "120"};
-        var encodings = new[] { "h264", "h265/hevc", "av1"};
+        var framerates = new[] { "24", "30", "45", "60", "90", "120" };
+        var encodings = new[] { "h264", "h265/hevc", "av1" };
         var bitdepths = new[] { "8bit", "10bit", "12bit" };
 
         rootPPB
@@ -126,6 +134,7 @@ public partial class RenderSettingPage : ContentPage
                 .AddSeparator()
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AdvanceOpts, SettingLocalizedResources.Misc_DiagOptions_Subtitle, 20, 12))
                 .AddEntry("render_UserDefinedOpts", SettingLocalizedResources.Render_CustomOpts, GetSetting("render_UserDefinedOpts", ""), SettingLocalizedResources.Render_CustomOpts_Placeholder)
+                .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.TryGetValue(GetSetting("render_GCOption", "letCLRDoCollection"), out var value) ? value : SettingLocalizedResources.Render_GCOption_LetCLRDoGC)
                 .AddSwitch("render_ShowBackendConsole", SettingLocalizedResources.Render_ShowBackendConsole, IsBoolSettingTrue("render_ShowBackendConsole"), null);
         }
         else
@@ -177,6 +186,20 @@ public partial class RenderSettingPage : ContentPage
         {
             switch (args.Id)
             {
+                case "render_SelectRenderHost":
+                    {
+                        var val = args.Value as string;
+                        if (val == SettingLocalizedResources.Render_RenderHost_UseLivePreviewInsteadOfBackend)
+                        {
+                            WriteSetting("render_UseLivePreviewInsteadOfBackend", "True");
+                        }
+                        else 
+                        {
+                            WriteSetting("render_UseLivePreviewInsteadOfBackend", "False");
+                        }
+
+                        return;
+                    }
                 case "accel_DeviceId":
                     if (args.Value is string str)
                     {
@@ -248,7 +271,7 @@ public partial class RenderSettingPage : ContentPage
                 case "selectAllAccels":
                     try
                     {
-                        if((bool)args.Value)
+                        if ((bool)args.Value)
                         {
                             WriteSetting("accel_enableMultiAccel", "true");
                             WriteSetting($"accel_multi_0", "false");
@@ -263,7 +286,7 @@ public partial class RenderSettingPage : ContentPage
                         }
                         else if (!(bool)args.Value)
                         {
-                            WriteSetting("accel_MultiDeviceID", string.Join(",",Enumerable.Range(1, AcceleratorInfos.Length - 1).Select(c => c.ToString())));
+                            WriteSetting("accel_MultiDeviceID", string.Join(",", Enumerable.Range(1, AcceleratorInfos.Length - 1).Select(c => c.ToString())));
 
                         }
 
@@ -271,6 +294,12 @@ public partial class RenderSettingPage : ContentPage
                     catch (Exception ex) { Log(ex); }
                     BuildPPB();
                     return;
+                case "render_GCOption":
+                    {
+                        var key = GCOptionMapping.FirstOrDefault(k => k.Value == args.Value as string, new("letCLRDoCollection", "letCLRDoCollection"));
+                        WriteSetting("render_GCOption", key.Key);
+                        return;
+                    }
 
             }
 
