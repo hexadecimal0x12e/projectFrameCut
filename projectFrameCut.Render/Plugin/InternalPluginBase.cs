@@ -53,6 +53,16 @@ public class InternalPluginBase : IPluginBase
         {"Resize",  new(() => new ResizeEffect())}
     };
 
+    public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>>
+    {
+        {"ZoomIn", new(() => new ZoomInContinuousEffect())  },
+    };
+
+    public Dictionary<string, Func<IEffect>> VariableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>
+    {
+
+    };
+
     public Dictionary<string, Func<IMixture>> MixtureProvider => new Dictionary<string, Func<IMixture>>
     {
         {"Overlay", new(() => new OverlayMixture()) }
@@ -86,7 +96,9 @@ public class InternalPluginBase : IPluginBase
 
     public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider => new Dictionary<string, Func<string, IAudioSource>> { };
 
-    public IEffect EffectCreator(EffectAndMixtureJSONStructure stru) => EffectHelper.CreateFromJSONStructure(stru);
+    
+
+    //public IEffect EffectCreator(EffectAndMixtureJSONStructure stru) => EffectHelper.CreateFromJSONStructure(stru);
 
     IClip IPluginBase.ClipCreator(JsonElement element)
     {

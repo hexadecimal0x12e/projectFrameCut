@@ -5,6 +5,38 @@ using System.Text.Json;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
+
+    public interface IComputer
+    {
+        /// <summary>
+        /// Indicates which plugin this computer comes from.
+        /// </summary>
+        public string FromPlugin { get; }
+        /// <summary>
+        /// Represents the effect or mixture type name that this computer supports.
+        /// </summary>
+        public string SupportedEffectOrMixture { get; }
+        /// <summary>
+        /// Compute the output based on the input arguments.
+        /// </summary>
+        /// <param name="args">Input data</param>
+        /// <returns>output data</returns>
+        public object[] Compute(object[] args);
+    }
+
+    public class EffectAndMixtureJSONStructure
+    {
+        public bool IsMixture { get; set; } = false;
+        public bool IsContinuousEffect { get; set; } = false;
+        public string FromPlugin { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string TypeName { get; set; } = string.Empty;
+        public bool Enabled { get; set; } = true;
+        public int Index { get; set; } = 1;
+        public int RelativeWidth { get; set; }
+        public int RelativeHeight { get; set; }
+        public Dictionary<string, object>? Parameters { get; set; }
+    }
     public static class EffectArgsHelper
     {
         /// <summary>

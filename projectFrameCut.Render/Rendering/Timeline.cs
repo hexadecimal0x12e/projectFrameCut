@@ -15,7 +15,6 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using static projectFrameCut.Render.Videos.Video;
 
 namespace projectFrameCut.Render.Rendering
 {
@@ -31,7 +30,7 @@ namespace projectFrameCut.Render.Rendering
             List<OneFrame> result = new List<OneFrame>();
             foreach (var clip in video)
             {
-                if (clip.StartFrame * clip.SecondPerFrameRatio <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame * clip.SecondPerFrameRatio >= targetFrame)
+                if (clip.StartFrame <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame >= targetFrame)
                 {
                     if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
@@ -75,18 +74,33 @@ namespace projectFrameCut.Render.Rendering
         {
             try
             {
-                IPicture? result =null;
+                IPicture? result = null;
                 foreach (var srcFrame in frames)
                 {
+                    ArgumentNullException.ThrowIfNull(srcFrame, $"Source frame for frame {frameIndex}");
                     var frame = srcFrame.Clip.Resize(targetWidth, targetHeight, true);
                     IPicture effected = frame;
                     foreach (var effect in srcFrame?.Effects ?? [])
                     {
-                        effected = effect.Render(
-                                   effected,
-                                   effect.NeedComputer is not null ? PluginManager.CreateComputer(effect.NeedComputer) : null,
-                                   targetWidth, targetHeight);
+                        if (effect is IContinuousEffect c)
+                        {
+                            if (c.EndPoint == 0 && c.EndPoint == 0)
+                            { 
+                                c.StartPoint = (int)(srcFrame.ParentClip.StartFrame * srcFrame.ParentClip.SecondPerFrameRatio);
+                                c.EndPoint = (int)(c.StartPoint + srcFrame.ParentClip.Duration * srcFrame.ParentClip.SecondPerFrameRatio);
+                            }
+                            effected =
+                                c.Render(effected, frameIndex, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight)
+                                 .Resize(targetWidth, targetHeight, true);
+                        }
+                        else
+                        {
+                            effected =
+                                effect.Render(effected, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight)
+                                    .Resize(targetWidth, targetHeight, true);
+                        }
                     }
+
                     var mix = GetMixer(srcFrame.MixtureMode);
 
                     result = result is null ? effected :
@@ -110,10 +124,10 @@ namespace projectFrameCut.Render.Rendering
                     result = Placer.Render(result, null, targetWidth, targetHeight);
                 }
             ok:
-                result = MixtureCache.GetOrAdd(
-                           MixtureMode.Overlay, GetMixer(MixtureMode.Overlay))
-                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer("OverlayComputer"))
-                               .Resize(targetWidth, targetHeight, true);
+                //result = MixtureCache.GetOrAdd(
+                //           MixtureMode.Overlay, GetMixer(MixtureMode.Overlay))
+                //               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer("OverlayComputer"))
+                //               .Resize(targetWidth, targetHeight, true);
                 return result;
             }
             catch (Exception ex)

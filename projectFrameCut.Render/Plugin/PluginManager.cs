@@ -31,42 +31,11 @@ namespace projectFrameCut.Render.Plugin
                 loadedPlugins.Add(plugin.PluginID, plugin);
                 Logger.Log($"Plugin {plugin.PluginID} loaded.");
 #if DEBUG
-                Logger.Log(GetWhatProvided(plugin));
-
+                Logger.Log(IPluginBase.GetWhatProvided(plugin));
 #endif
             }
         }
 
-        public static string GetWhatProvided(IPluginBase pluginBase)
-        {
-            StringBuilder providedContent = new($"{pluginBase.Name} ({pluginBase.PluginID}) provide these:\r\n");
-            providedContent.AppendLine("Clips:");
-            foreach (var item in pluginBase.ClipProvider)
-            {
-                providedContent.AppendLine($"- {item.Key}");
-            }
-            providedContent.AppendLine("Effect:");
-            foreach (var item in pluginBase.EffectProvider)
-            {
-                providedContent.AppendLine($"- {item.Key}");
-            }
-            providedContent.AppendLine("Mixture:");
-            foreach (var item in pluginBase.MixtureProvider)
-            {
-                providedContent.AppendLine($"- {item.Key}");
-            }
-            providedContent.AppendLine("Computer:");
-            foreach (var item in pluginBase.ComputerProvider)
-            {
-                providedContent.AppendLine($"- {item.Key}");
-            }
-            providedContent.AppendLine("VideoSource:");
-            foreach (var item in pluginBase.VideoSourceProvider)
-            {
-                providedContent.AppendLine($"- {item.Key}");
-            }
-            return providedContent.ToString();
-        }
 
         public static void LoadFrom(IPluginBase pluginInstance)
         {
@@ -167,9 +136,10 @@ namespace projectFrameCut.Render.Plugin
 
         private static Dictionary<string, IComputer> ComputerCache = new();
 
-        public static IComputer CreateComputer(string computerType, bool forceCreate = false)
+        public static IComputer? CreateComputer(string? computerType, bool forceCreate = false)
         {
-            if(!forceCreate && ComputerCache.TryGetValue(computerType, out var cachedComputer))
+            if (computerType is null) return null;
+            if (!forceCreate && ComputerCache.TryGetValue(computerType, out var cachedComputer))
             {
                 return cachedComputer;
             }

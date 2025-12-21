@@ -268,7 +268,7 @@ public partial class PluginSettingPage : ContentPage
             {
                 case "ViewProvided":
                     {
-                        await DisplayAlertAsync(Localized._Info, PluginManager.GetWhatProvided(plugin), Localized._OK);
+                        await DisplayAlertAsync(Localized._Info, IPluginBase.GetWhatProvided(plugin), Localized._OK);
 
 
                         break;
