@@ -269,12 +269,12 @@ namespace projectFrameCut.Render.WindowsRender
                                     if (token.IsCancellationRequested) return;
 
                                     var layers = Timeline.GetFramesInOneFrame(currentClips, frameIndex, targetWidth, targetHeight, true);
-
+                                    
                                     if (token.IsCancellationRequested) return;
 
                                     LogDiagnostic($"Clips in frame #{frameIndex}:\r\n{GetFrameInfo(layers)}\r\n---");
                                     var pic = Timeline.MixtureLayers(layers, frameIndex, targetWidth, targetHeight);
-
+                                    
                                     if (token.IsCancellationRequested) return;
 
                                     pic.SaveAsPng8bpp(destPath, encoder);
@@ -307,59 +307,60 @@ namespace projectFrameCut.Render.WindowsRender
                             var token = _currentTaskCts.Token;
                             var currentClips = clips;
 
-                            _ = Task.Run(async () =>
+                            _ = Task.Run(() =>
                             {
-#if !DEBUG
-                            try
-                            {
-#endif
-                                var encodeWidth = (targetWidth % 2 == 0) ? targetWidth : targetWidth - 1;
-                                var encodeHeight = (targetHeight % 2 == 0) ? targetHeight : targetHeight - 1;
-                                if (encodeWidth <= 0 || encodeHeight <= 0)
+                                try
                                 {
-                                    Send(msg, new Dictionary<string, object?>
+                                    // libx264 + yuv420p requires even width/height (4:2:0 chroma subsampling)
+                                    // Otherwise avcodec_open2 may fail with AVERROR_EXTERNAL ("Generic error in an external library").
+                                    var encodeWidth = (targetWidth % 2 == 0) ? targetWidth : targetWidth - 1;
+                                    var encodeHeight = (targetHeight % 2 == 0) ? targetHeight : targetHeight - 1;
+                                    if (encodeWidth <= 0 || encodeHeight <= 0)
+                                    {
+                                        Send(msg, new Dictionary<string, object?>
                                         {
                                             { "status", "error" },
                                             { "message", $"Invalid output size {targetWidth}x{targetHeight}. For libx264/yuv420p, width/height must be positive and even." }
                                         });
-                                    return;
-                                }
-                                var destPath = Path.Combine(tempFolder, $"projectFrameCut_Render_{Guid.NewGuid()}.mp4");
-                                Log($"[RPC] RenderSomeFrames request: frame #{startIndex}, length {length}, adjusted output size {targetWidth}x{targetHeight}");
-                                using var builder = new VideoBuilder(destPath, encodeWidth, encodeHeight, targetFramerate, "libx264", FFmpeg.AutoGen.AVPixelFormat.AV_PIX_FMT_YUV420P)
-                                {
-                                    Duration = uint.MaxValue,
-                                    BlockWrite = true //builder doesn't write from non-0 start index when blockwrite is not true
-                                };
-                                Renderer renderer = new Renderer
-                                {
-                                    StartFrame = (uint)startIndex,
-                                    Duration = (uint)length,
-                                    builder = builder,
-                                    Clips = clips,
-                                    Use16Bit = false,
-                                    MaxThreads = 1,
+                                        return;
+                                    }
+                                    if (encodeWidth != targetWidth || encodeHeight != targetHeight)
+                                    {
+                                        Log($"[RPC] RenderSomeFrames: adjusted output size {targetWidth}x{targetHeight} -> {encodeWidth}x{encodeHeight} for libx264/yuv420p.");
+                                    }
 
-                                };
-                                renderer.PrepareRender(token);
-                                await renderer.GoRender(token, (uint)startIndex);
-                                builder.Writer.Finish(); //Finish doesn't support non-0 start frame, just end the writer
-                                Send(msg, new Dictionary<string, object?>
+                                    var destPath = Path.Combine(tempFolder, $"projectFrameCut_Render_{Guid.NewGuid()}.mp4");
+                                    Log($"[RPC] RenderSomeFrames request: frame #{startIndex}, length {length}");
+                                    using var builder = new VideoWriter(destPath, encodeWidth, encodeHeight, targetFramerate, "libx264", FFmpeg.AutoGen.AVPixelFormat.AV_PIX_FMT_YUV420P);
+                                    foreach (var item in Enumerable.Range(startIndex, length))
+                                    {
+                                        if (token.IsCancellationRequested)
+                                        {
+                                            Log("[RPC] RenderSomeFrames cancelled.");
+                                            Send(msg, new Dictionary<string, object?> { { "status", "cancelled" } });
+                                            return;
+                                        }
+                                        builder.Append(
+                                            Timeline.MixtureLayers(
+                                                Timeline.GetFramesInOneFrame(currentClips, (uint)item, encodeWidth, encodeHeight, true),
+                                                (uint)item, encodeWidth, encodeHeight));
+                                        LogDiagnostic($"Frame {item} in sequence rendered.");
+                                    }
+                                    builder.Finish();
+                                    Send(msg, new Dictionary<string, object?>
                                     {
                                         { "status", "ok" },
                                         { "path", destPath },
                                         { "width", encodeWidth },
                                         { "height", encodeHeight }
                                     });
-                                Log($"[RPC] RenderSomeFrames completed");
-#if !DEBUG
-                            }
+                                    Log($"[RPC] RenderSomeFrames completed");
+                                }
                                 catch (Exception ex)
                                 {
-                                Log(ex);
-                                Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", ex.Message } });
-                            }
-#endif
+                                    Log(ex);
+                                    Send(msg, new Dictionary<string, object?> { { "status", "error" }, { "message", ex.Message } });
+                                }
                             }, token);
                             break;
                         }
@@ -380,28 +381,15 @@ namespace projectFrameCut.Render.WindowsRender
 
                             foreach (var clip in clipsJson)
                             {
-                                var clipInstance = PluginManager.CreateClip(clip);
-                                if (switches.TryGetValue("proxyRoot", out var proxyRoot) && clipInstance.FilePath is not null)
-                                {
-                                    var proxiedPath = Path.Combine(proxyRoot,  $"{Path.GetFileNameWithoutExtension(clipInstance.FilePath)}.proxy.mp4");
-
-                                    if (Path.Exists(proxiedPath))
-                                    {
-                                        clipInstance.FilePath = proxiedPath;
-                                        Log($"The proxy for {clipInstance.Name} is used.");
-                                    }
-                                    else
-                                    {
-                                        Log($"The proxy for {clipInstance.Name} does not exist.");
-                                    }
-                                }
-
-                                clipInstance.ReInit();
-                                clipsList.Add(clipInstance);
-
+                                clipsList.Add(PluginManager.CreateClip(clip));
                             }
 
                             clips = clipsList.ToArray();
+
+                            foreach (var clip in clips)
+                            {
+                                clip.ReInit();
+                            }
 
                             Log($"[RPC] Updated clips, total {clips.Length} clips.");
                             Send(msg, new Dictionary<string, object?> { { "status", "ok" } });
@@ -427,11 +415,11 @@ namespace projectFrameCut.Render.WindowsRender
                                 {
                                     Log($"[RPC] GetAFrameData request: frame #{frameIndex}");
                                     var frameHash = Timeline.GetFrameHash(currentClips, frameIndex);
-
+                                    
                                     if (token.IsCancellationRequested) return;
 
                                     var layers = Timeline.GetFramesInOneFrame(currentClips, frameIndex, width, height, true);
-
+                                    
                                     if (token.IsCancellationRequested) return;
 
                                     Log($"Clips in frame #{frameIndex}:\r\n{JsonSerializer.Serialize(layers)}\r\n---");

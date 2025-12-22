@@ -15,9 +15,6 @@ using Thread = System.Threading.Thread;
 using projectFrameCut.Render.Plugin;
 using Microsoft.Extensions.Logging;
 using projectFrameCut.Shared;
-using CommunityToolkit.Maui.Storage;
-using LocalizedResources;
-
 
 
 #if ANDROID
@@ -238,16 +235,15 @@ namespace projectFrameCut
 #if ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER 
                        .UseMauiCommunityToolkitMediaElement();
 #pragma warning restore CA1416
+
 #endif
+                builder.Services.AddSingleton<IScreenReaderService, ScreenReaderService>();
 #if DEBUG
                 builder.Logging.SetMinimumLevel(LogLevel.Trace);
 #else
                 builder.Logging.SetMinimumLevel(LogLevel.Information);
 #endif
                 builder.Logging.AddProvider(new MyLoggerProvider());
-                builder.Services.AddSingleton<IScreenReaderService, ScreenReaderService>();
-                builder.Services.AddSingleton<IFileSaver>(FileSaver.Default);
-
 #if WINDOWS
                 builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
                 try
@@ -401,7 +397,7 @@ namespace projectFrameCut
 
                     Localized = SimpleLocalizer.Init(locate);
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
-                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResuorces = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
                     PluginManager.CurrentLocale = Localized._LocaleId_;
                     PluginManager.ExtenedLocalizationGetter = new((k) =>
                     {
@@ -443,7 +439,7 @@ namespace projectFrameCut
                     SimpleLocalizer.IsFallbackMatched = true;
                     Localized = ISimpleLocalizerBase.GetMapping().First().Value;
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().First().Value;
-                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResuorces = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
                     PluginManager.CurrentLocale = "en-US";
                     PluginManager.ExtenedLocalizationGetter = new((k) => ISimpleLocalizerBase.GetMapping().First().Value.DynamicLookup(k));
                     builder.ConfigureFonts(fonts =>

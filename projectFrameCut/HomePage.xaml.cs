@@ -17,11 +17,12 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 
 
+
+
+
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
 using Windows.ApplicationModel.UserActivities;
-using projectFrameCut.Render.WindowsRender;
-using ILGPU;
 
 #endif
 
@@ -78,6 +79,7 @@ public partial class HomePage : ContentPage
                                         RpcClient c = new();
                                         if (Process.GetProcessesByName("projectFrameCut.Render.WindowsRender").Any())
                                         {
+                                            await Task.Delay(1200);
                                             await PluginPipeTransport.SendEnabledPluginsAsync("pjfc_plugin_debug123");
                                             await c.StartAsync("pjfc_rpc_debug123", default);
                                             await GoDraft(draft, "Project", false, false, c, true);
@@ -493,7 +495,7 @@ public partial class HomePage : ContentPage
                 }
                 page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.projectName ?? "?", isReadonly, dbgBackend);
                 page.ProjectName = project?.projectName ?? "?";
-                page.UseLivePreviewInsteadOfBackend = SettingsManager.IsBoolSettingTrue("render_UseLivePreviewInsteadOfBackend");
+                page.UseLivePreviewInsteadOfBackend = SettingsManager.IsBoolSettingTrue("UseLivePreviewInsteadOfBackend");
                 page.IsReadonly = isReadonly;
                 page.PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "right");
                 page.MaximumSaveSlot = int.TryParse(SettingsManager.GetSetting("Edit_MaximumSaveSlot"), out var slotCount) ? slotCount : 10;
@@ -530,7 +532,7 @@ public partial class HomePage : ContentPage
                 }
                 await Dispatcher.DispatchAsync(async () =>
                 {
-                    await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_FailByException(ex4), "OK");
+                    await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex4), "OK");
                 });
             }
         });
@@ -574,14 +576,14 @@ public partial class HomePage : ContentPage
                     }
                     catch (Exception ex)
                     {
-                        Log(ex, "Log the activity for recall/timeline", this);
+
                     }
                 });
 
             }
             catch (Exception ex)
             {
-                Log(ex, "Log the activity for recall/timeline", this);
+
             }
 
 #endif

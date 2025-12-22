@@ -2,10 +2,9 @@ using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
+
 using projectFrameCut.DraftStuff;
 using projectFrameCut.PropertyPanel;
-using projectFrameCut.Services;
-using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -15,6 +14,7 @@ using System.Runtime.Versioning;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Path = System.IO.Path;
+using projectFrameCut.Shared;
 
 
 
@@ -55,11 +55,6 @@ public partial class TestPage : ContentPage
         b.GestureRecognizers.Add(g);
 
         DragTester.Children.Add(b);
-    }
-
-    private async void SettingMgntBtn_Clicked(object sender, EventArgs e)
-    {
-        await Navigation.PushAsync(new Setting.SettingPages.DebugSettingPage());
     }
 
     #region pan gesture test
@@ -681,12 +676,12 @@ public partial class TestPage : ContentPage
 
     private async void TestCrashButton_Clicked(object sender, EventArgs e)
     {
-        var type = await DisplayActionSheetAsync("Choose a favour you'd like", "Cancel", "Environment.FailFast", "Native(null pointer)", "Managed(NullReferenceException)", "Modify UI in another thread without dispatch");
+        var type = await DisplayActionSheetAsync("Choose a favour you'd like", "Cancel", "Environment.FailFast", "Native(null pointer)", "Managed(NullReferenceException)");
         switch (type)
         {
             case "Native(null pointer)":
 #if ANDROID
-                throw new Java.Lang.NullPointerException("test crash from Java code");
+                throw new Java.Lang.NullPointerException("test crash from native code");
 #elif iDevices
 
 #elif WINDOWS
@@ -698,12 +693,6 @@ public partial class TestPage : ContentPage
                 throw new NullReferenceException("test crash");
             case "Environment.FailFast":
                 Environment.FailFast("test crash");
-                break;
-            case "Modify UI in another thread without dispatch":
-                new Thread(() =>
-                {
-                    TestCrashButton.Text = "This should cause program crash.";
-                }).Start();
                 break;
         }
 
@@ -730,19 +719,6 @@ public partial class TestPage : ContentPage
             await DisplayAlert(Title, $"You selected {r}", "ok");
         }
 #endif
-    }
-
-    private async void TestResizeVideoBtn_Clicked(object sender, EventArgs e)
-    {
-        var result = await FilePicker.PickAsync(new PickOptions { });
-        if (result == null) return;
-        var inPath = result.FullPath;
-
-        var outPath = await FileSystemService.PickSavePathAsync($"{Path.GetFileNameWithoutExtension(inPath)}_convert.mp4", OperatingSystem.IsWindows() ? null : MauiProgram.DataPath);
-        int rWidth = int.TryParse(await DisplayPromptAsync("info","input width"), out var w) ? w : 1280;
-        int rHeight = int.TryParse(await DisplayPromptAsync("info","input height"), out var h) ? h : 720;   
-
-        projectFrameCut.Render.Videos.VideoResizer.ReencodeToResolution(inPath, outPath, rWidth, rHeight, "libx264");
     }
 
 

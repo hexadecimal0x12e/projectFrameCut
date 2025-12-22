@@ -20,14 +20,12 @@ namespace projectFrameCut.Render.Rendering
     {
         public IClip[]? Clips;
         public uint Duration;
-        public uint StartFrame { get; set; } = 0;
         public VideoBuilder? builder;
         public int MaxThreads = (int)(Environment.ProcessorCount * 1.75);
         public bool LogState = false;
         public int GCOption = 0;
         public bool LogStatToLogger = false;
         public bool Use16Bit { get; set; } = true;
-        public bool LogAnalyzeInfo { get; set; } = false;
 
         public event Action<double>? OnProgressChanged;
         public ConcurrentBag<TimeSpan> EachElapsed = new(), EachElapsedForPreparing = new();
@@ -57,11 +55,10 @@ namespace projectFrameCut.Render.Rendering
             StartY = 0
         };
 
-        public async Task GoRender(CancellationToken token, uint startFrame = 0)
+        public async Task GoRender(CancellationToken token)
         {
             ArgumentNullException.ThrowIfNull(builder, nameof(builder));
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
-            StartFrame = startFrame;
             BlankFrame = Use16Bit ? Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
 
             running = true;
@@ -75,18 +72,17 @@ namespace projectFrameCut.Render.Rendering
                     {
                         try
                         {
-                            if (!EachElapsed.IsEmpty)
+                            if (EachElapsed.Count > 0)
                                 each = new TimeSpan((long)EachElapsed.Average(x => x.Ticks));
-                            if (!EachElapsedForPreparing.IsEmpty)
+                            if (EachElapsedForPreparing.Count > 0)
                                 eachPrepare = new TimeSpan((long)EachElapsedForPreparing.Average(x => x.Ticks));
 
                             if (token.IsCancellationRequested) return;
-                            float renderRange = Duration - StartFrame;
                             Log($"[STAT] " +
                                 $"memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB, " +
-                                $"total prepared: {TotalEnqueued / renderRange:p2}, " +
-                                $"total rendered: {Volatile.Read(ref Finished) / renderRange:p2}, " +
-                                $"total wrote frames: {builder.FramePendedToWrite.Count(k => k.Value) / renderRange:p3}, " +
+                                $"total prepared: {TotalEnqueued / d:p2}, " +
+                                $"total rendered: {Volatile.Read(ref Finished) / d:p2}, " +
+                                $"total wrote frames: {builder.FramePendedToWrite.Count(k => k.Value) / d:p3}, " +
                                 $"total pended to write frames: {builder.FramePendedToWrite.Count(k => !k.Value)}/{builder.FramePendedToWrite.Count}, " +
                                 $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}. ");
                             Thread.Sleep(10000);
@@ -105,6 +101,9 @@ namespace projectFrameCut.Render.Rendering
             preparer.IsBackground = true;
             preparer.Start();
 
+            _width = builder.Width;
+            _height = builder.Height;
+
             await Task.Delay(50);
 
             while (true)
@@ -114,7 +113,7 @@ namespace projectFrameCut.Render.Rendering
                     Log("Render cancelled by user.", "info");
                     break;
                 }
-                if (PreparerFinished && Volatile.Read(ref Finished) >= Duration - StartFrame)
+                if (PreparerFinished && Volatile.Read(ref Finished) >= Duration)
                     break;
 
                 int working = Volatile.Read(ref ThreadWorking);
@@ -179,7 +178,7 @@ namespace projectFrameCut.Render.Rendering
                 if (LogState)
                 {
                     int f = Volatile.Read(ref Finished);
-                    Console.Error.WriteLine($"@@{StartFrame + f},{Duration}");
+                    Console.Error.WriteLine($"@@{f},{Duration}");
                 }
 
             }
@@ -208,10 +207,8 @@ namespace projectFrameCut.Render.Rendering
 
         public void PrepareRender(CancellationToken token)
         {
-            _width = builder.Width;
-            _height = builder.Height;
             bool found = false;
-            for (uint idx = StartFrame; idx < Duration; idx++)
+            for (uint idx = 0; idx < Duration; idx++)
             {
                 found = false;
                 if (token.IsCancellationRequested) return;
@@ -237,7 +234,7 @@ namespace projectFrameCut.Render.Rendering
 
                 if (idx % 50 == 0)
                 {
-                    Log($"[Preparer] source preparing finished {(float)(idx - StartFrame) / (float)(Duration - StartFrame):p3} ({idx}/{Duration})");
+                    Log($"[Preparer] source preparing finished {(float)idx / (float)Duration:p3} ({idx}/{Duration})");
                 }
 
             }

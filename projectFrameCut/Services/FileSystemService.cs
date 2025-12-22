@@ -11,7 +11,6 @@ using System.Threading;
 #elif ANDROID
 using Android.Content;
 using Android.Net;
-using Android.Provider;
 using AndroidX.Core.Content;
 using projectFrameCut.Platforms.Android;
 #endif
@@ -34,57 +33,6 @@ namespace projectFrameCut.Services
             {
                 return null;
             }
-        }
-
-        public static async Task<string> PickSavePathAsync(string defaultName, string? defaultRootDir = null)
-        {
-#if WINDOWS
-        var picker = new Windows.Storage.Pickers.FileSavePicker();
-
-        // 获取当前窗口句柄
-        var hwnd = ((MauiWinUIWindow)Application.Current.Windows[0].Handler.PlatformView).WindowHandle;
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
-
-        // 设置文件类型过滤器
-        picker.FileTypeChoices.Add("视频文件", new List<string> { ".mp4", ".mkv", ".avi", ".mov" });
-        //picker.FileTypeChoices.Add("所有文件", new List<string> { ".*" });
-
-        // 设置默认文件名
-        picker.SuggestedFileName = defaultName ?? $"Export_{DateTime.Now:yyyyMMdd_HHmmss}";
-
-        if(defaultRootDir is not null && Directory.Exists(defaultRootDir)) 
-        {
-            var folder = await Windows.Storage.StorageFolder.GetFolderFromPathAsync(defaultRootDir);
-            picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Desktop;
-        }
-
-        // 显示保存对话框
-        var file = await picker.PickSaveFileAsync();
-
-        return file?.Path ?? string.Empty;
-#elif ANDROID
-            if (!HasAllFilesAccess())
-            {
-                var result = await FileSaver.Default.SaveAsync(defaultRootDir ?? string.Empty,defaultName, new MemoryStream([0]));
-                if (result.IsSuccessful)
-                {
-                    return result.FilePath;
-
-                }
-                else
-                {
-                    throw new OperationCanceledException("User cancelled the save file operation.");
-                }
-            }
-            else 
-            {
-                if (defaultRootDir is null || defaultName is null) throw new ArgumentNullException("On this case (android and no full-file-access permission), defaultRootDir and defaultName must be provided.");
-                return Path.Combine(defaultRootDir, defaultName);
-            }
-#else
-            if (defaultRootDir is null || defaultName is null) throw new ArgumentNullException("On this platform, defaultRootDir and defaultName must be provided.");
-            return Path.Combine(defaultRootDir, defaultName);
-#endif
         }
 
 
@@ -315,32 +263,6 @@ namespace projectFrameCut.Services
             {
                 Debug.WriteLine($"Error in TryOpenWithFileManager: {ex.Message}");
                 return false;
-            }
-        }
-#endif
-
-#if ANDROID
-        public static bool HasAllFilesAccess()
-        {
-#if ANDROID30_0_OR_GREATER
-            if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.R)
-            {
-                return Android.OS.Environment.IsExternalStorageManager;
-            }
-#endif
-            return true;
-        }
-
-        public static void RequestAllFilesAccess()
-        {
-            var ctx = MainApplication.MainContext ?? throw new InvalidOperationException("MainApplication.MainContext is null");
-
-            if (Android.OS.Build.VERSION.SdkInt >= Android.OS.BuildVersionCodes.R && !Android.OS.Environment.IsExternalStorageManager)
-            {
-                Intent intent = new Intent(Settings.ActionManageAppAllFilesAccessPermission);
-                intent.SetData(Android.Net.Uri.Parse($"package:{ctx.PackageName}"));
-                intent.AddFlags(ActivityFlags.NewTask);
-                ctx.StartActivity(intent);
             }
         }
 #endif

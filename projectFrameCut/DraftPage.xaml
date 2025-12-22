@@ -47,13 +47,6 @@
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit}" Command="{Binding GotoCommand}">
-                <MenuFlyoutItem.KeyboardAccelerators>
-                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
-                                Key="G" />
-                </MenuFlyoutItem.KeyboardAccelerators>
-            </MenuFlyoutItem>
-            <MenuFlyoutSeparator></MenuFlyoutSeparator>
 
 
             <MenuFlyoutItem Text="{l:Localized Key=_Settings}" Command="{Binding SettingsCommand}"/>

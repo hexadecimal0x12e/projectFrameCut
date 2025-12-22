@@ -6,13 +6,13 @@ using SixLabors.ImageSharp.Drawing.Processing;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using static projectFrameCut.Render.Videos.Video;
 using SixLabors.ImageSharp.Processing;
 using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Render.Videos;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Render.Plugin;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
@@ -27,7 +27,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
         public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
-        public string? FilePath { get; set; }
+        public string? FilePath { get; init; }
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
@@ -50,7 +50,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         void IClip.ReInit()
         {
-            Decoder = PluginManager.CreateVideoSource(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null."));
+            Decoder = new Video(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null.")).Decoder;
         }
 
 
@@ -73,7 +73,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
         public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
-        public string? FilePath { get; set; } = string.Empty;
+        public string? FilePath { get; init; } = string.Empty;
 
         [System.Text.Json.Serialization.JsonIgnore]
         public Picture? source { get; set; } = null;
@@ -132,7 +132,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string BindedSoundTrack { get; init; } = "";
 
 
-        string? IClip.FilePath { get => null; set => throw new InvalidOperationException("Set path is not supported by this type of clip."); }
+        string? IClip.FilePath { get => null; init => throw new InvalidOperationException("Set path is not supported by this type of clip."); }
 
         public ushort R { get; init; }
         public ushort G { get; init; }
@@ -185,7 +185,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string BindedSoundTrack { get; init; } = "";
 
 
-        string? IClip.FilePath { get => null; set => throw new InvalidOperationException("Set path is not supported by this type of clip."); }
+        string? IClip.FilePath { get => null; init => throw new InvalidOperationException("Set path is not supported by this type of clip."); }
 
         public List<TextClipEntry> TextEntries { get; init; } = new List<TextClipEntry>();
 

@@ -212,38 +212,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Edit_ProxyMode",
-        "Value": "\u914D\u7F6E\u9ED8\u8BA4\u4EE3\u7406\u9009\u9879",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_Ask",
-        "Value": "\u8BE2\u95EE\u662F\u5426\u521B\u5EFA\u4EE3\u7406",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_Auto",
-        "Value": "\u81EA\u52A8\u521B\u5EFA\u4EE3\u7406",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_None",
-        "Value": "\u4E0D\u521B\u5EFA\u4EE3\u7406",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
         "Id": "General_Language",
         "Value": "\u8BED\u8A00/Language",
         "Mode": "ConstString",
@@ -406,63 +374,6 @@
       {
         "Id": "General_UserData_Subtitle",
         "Value": "\u914D\u7F6E\u4F60\u7684\u6570\u636E\u548C\u8D44\u6E90\u6587\u4EF6",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "GeneralUI_DefaultTheme",
-        "Value": "\u9ED8\u8BA4\u914D\u8272\u65B9\u6848",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "GeneralUI_DefaultTheme_Bright",
-        "Value": "\u6D45\u8272",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "GeneralUI_DefaultTheme_Dark",
-        "Value": "\u6DF1\u8272",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "GeneralUI_DefaultTheme_OSDefault",
-        "Value": "\u7CFB\u7EDF\u9ED8\u8BA4",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "GeneralUI_DefaultWidthOfContent",
-        "Value": "\u5185\u5BB9\u5BBD\u5EA6\r(\u9002\u7528\u4E8E\u5C5E\u6027\u9762\u677F\u7B49\u90E8\u5206\u754C\u9762\uFF0C\u5305\u62EC\u8FD9\u4E2A\u754C\u9762)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u5728\u201C\u5185\u5BB9\u5BBD\u5EA6\u201D\u548C\u4E0B\u9762\u7684\u89E3\u91CA\u6027\u6587\u672C\u4E2D\u95F4\u63D2\u5165\u4E00\u4E2A\u6362\u884C",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "GeneralUI_Subtitle",
-        "Value": "\u6309\u4F4F\u4F60\u7684\u559C\u597D\u914D\u7F6E\u7528\u6237\u754C\u9762",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "GeneralUI_Title",
-        "Value": "\u7528\u6237\u754C\u9762\u914D\u7F6E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -924,7 +835,7 @@
       },
       {
         "Id": "Plugin_VersionMismatch",
-        "Value": "\u63D2\u4EF6\u7248\u672C\u4E0D\u5339\u914D\u3002\u8BF7\u5C1D\u8BD5\u4ECE\u5F00\u53D1\u8005\u90A3\u91CC\u83B7\u53D6\u9002\u914D\u7684\u7248\u672C\uFF0C\u6216\u8005\u8054\u7CFB\u5F00\u53D1\u8005\u8BA9\u4ED6\u4EEC\u66F4\u65B0\u8FD9\u4E2A\u63D2\u4EF6\u3002",
+        "Value": "\u63D2\u4EF6\u4E0D\u591F\u65B0\uFF0C\u56E0\u4E3A\u5B83\u6CA1\u6709\u5B9E\u73B0\u65B0\u7684API\u3002\u5C1D\u8BD5\u66F4\u65B0\u5B83\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1029,57 +940,8 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_GCOption",
-        "Value": "\u540E\u7AEF .NET CLR \u5783\u573E\u56DE\u6536\u9009\u9879",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_DoLOHCompression",
-        "Value": "\u5F3A\u5236\u963B\u65AD\u6027\u56DE\u6536\uFF0C\u5E76\u4E14\u4E3B\u52A8\u538B\u7F29\u5927\u5BF9\u8C61\uFF08\u4E0D\u63A8\u8350\uFF0C\u4EC5\u5EFA\u8BAE\u7528\u4E8E\u5C0F\u5185\u5B58\u7684\u8BBE\u5907\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u4E0D\u8981\u89E3\u91CA\u201C\u5927\u5BF9\u8C61\u201D/LOH\u5177\u4F53\u6307\u4EC0\u4E48\uFF0C\u5426\u5219\u592A\u957F\u4E86",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_DoNormalCollection",
-        "Value": "\u5B9A\u671F\u7684\u4E3B\u52A8\u8BA1\u5212\u56DE\u6536",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_LetCLRDoGC",
-        "Value": "\u8BA9 .NET CLR \u51B3\u5B9A\u4F55\u65F6\u8FDB\u884C\u5783\u573E\u56DE\u6536\uFF08\u9ED8\u8BA4\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_LoadingAccels",
         "Value": "\u83B7\u53D6\u53EF\u7528\u7684\u52A0\u901F\u5668\u4E2D...",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "\u4F7F\u7528\u72EC\u7ACB\u540E\u7AEF\u4F5C\u4E3A\u7F16\u8F91\u754C\u9762\u6E32\u67D3\u4E3B\u673A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseLivePreviewInsteadOfBackend",
-        "Value": "\u4F7F\u7528\u4E3B\u7A0B\u5E8F\u4F5C\u4E3A\u7F16\u8F91\u754C\u9762\u6E32\u67D3\u4E3B\u673A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1094,14 +956,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_SelectAccel_MultiAccel",
-        "Value": "\u9009\u62E9\u6E32\u67D3\u65F6\uFF0C\u8981\u4F7F\u7528\u7684\u786C\u4EF6\u52A0\u901F\u5668\uFF08\u591A\u9009\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_SelectAccel_SelectAll",
         "Value": "\u5168\u9009",
         "Mode": "ConstString",
@@ -1110,8 +964,56 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_SelectRenderHost",
-        "Value": "\u9009\u62E9\u7F16\u8F91\u754C\u9762\u7684\u6E32\u67D3\u4E3B\u673A",
+        "Id": "GeneralUI_Title",
+        "Value": "\u7528\u6237\u754C\u9762\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralUI_Subtitle",
+        "Value": "\u6309\u4F4F\u4F60\u7684\u559C\u597D\u914D\u7F6E\u7528\u6237\u754C\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralUI_DefaultTheme",
+        "Value": "\u9ED8\u8BA4\u914D\u8272\u65B9\u6848",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralUI_DefaultTheme_OSDefault",
+        "Value": "\u7CFB\u7EDF\u9ED8\u8BA4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralUI_DefaultTheme_Dark",
+        "Value": "\u6DF1\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralUI_DefaultTheme_Bright",
+        "Value": "\u6D45\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralUI_DefaultWidthOfContent",
+        "Value": "\u5185\u5BB9\u5BBD\u5EA6\r(\u9002\u7528\u4E8E\u5C5E\u6027\u9762\u677F\u7B49\u90E8\u5206\u754C\u9762)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1125,6 +1027,8 @@
         "ArgsComment": [],
         "HasValidationErrors": false
       }
+
+      
     ],
     "en-US": [
       {
@@ -2094,7 +1998,7 @@
       },
       {
         "Id": "Plugin_VersionMismatch",
-        "Value": "Plugin version mismatch. Please try to get a compatible version from the developer, or contact the developer to have them update this plugin.",
+        "Value": "The plugin is outdated because it does not implement the new API. Try updating it.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2166,191 +2070,83 @@
       },
       {
         "Id": "GeneralUI_Title",
-        "Value": "User Interface Configuration",
+        "Value": "Unset localization item:GeneralUI_Title()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_Subtitle",
-        "Value": "Hold to configure your preferred UI",
+        "Value": "Unset localization item:GeneralUI_Subtitle()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme",
-        "Value": "Default Theme",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_OSDefault",
-        "Value": "System Default",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_OSDefault()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_Dark",
-        "Value": "Dark",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_Dark()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_Bright",
-        "Value": "Light",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_Bright()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultWidthOfContent",
-        "Value": "Content Width\r(Applicable to partial interfaces like the property panel, including this one)",
+        "Value": "Unset localization item:GeneralUI_DefaultWidthOfContent()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "A line break is inserted between \u0027Content Width\u0027 and the explanatory text below.",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_ShowBackendConsole",
-        "Value": "Show backend console window (some features may become unavailable)",
+        "Value": "Unset localization item:Render_ShowBackendConsole()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_SelectAccel_MultiAccel",
-        "Value": "Select hardware accelerator(s) to use when rendering (multiple selection)",
+        "Value": "Unset localization item:Render_SelectAccel_MultiAccel()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption",
-        "Value": "Backend .NET CLR Garbage Collection Options",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_LetCLRDoGC",
-        "Value": "Let .NET CLR decide when to perform garbage collection (default)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_DoNormalCollection",
-        "Value": "Periodic Active Plan Recycling",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_DoLOHCompression",
-        "Value": "Force blocking garbage collection and actively compact the Large Object. (Not recommended; suggested only for low-memory devices.)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Translated the GC option description and the cautionary note, maintaining technical accuracy for a software UI context.",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode",
-        "Value": "Configure Default Proxy Options",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_None",
-        "Value": "Do not create proxy",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_Auto",
-        "Value": "Auto-create proxy",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_Ask",
-        "Value": "Ask whether to create a proxy?",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_SelectRenderHost",
-        "Value": "Select render host for the editing interface",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseLivePreviewInsteadOfBackend",
-        "Value": "Use the main program as the rendering host for the editing interface",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "Use a standalone backend as the render host for the editor interface.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_LiveVideoPreviewBufferLength",
-        "Value": "Live video preview buffer size (frames)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -3321,7 +3117,7 @@
       },
       {
         "Id": "Plugin_VersionMismatch",
-        "Value": "\u63D2\u4EF6\u7248\u672C\u4E0D\u76F8\u7B26\u3002\u8ACB\u5617\u8A66\u5F9E\u958B\u767C\u8005\u90A3\u88E1\u53D6\u5F97\u5408\u9069\u7684\u7248\u672C\uFF0C\u6216\u662F\u806F\u7D61\u958B\u767C\u8005\u8ACB\u4ED6\u5011\u66F4\u65B0\u9019\u500B\u63D2\u4EF6\u3002",
+        "Value": "\u5916\u639B\u7A0B\u5F0F\u4E0D\u5920\u65B0\uFF0C\u56E0\u70BA\u5B83\u6C92\u6709\u5BE6\u4F5C\u65B0\u7684API\u3002\u8ACB\u5617\u8A66\u66F4\u65B0\u5B83\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3393,191 +3189,83 @@
       },
       {
         "Id": "GeneralUI_Title",
-        "Value": "\u4F7F\u7528\u8005\u4ECB\u9762\u914D\u7F6E",
+        "Value": "Unset localization item:GeneralUI_Title()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_Subtitle",
-        "Value": "\u6839\u64DA\u4F60\u7684\u559C\u597D\u8A2D\u5B9A\u4F7F\u7528\u8005\u4ECB\u9762",
+        "Value": "Unset localization item:GeneralUI_Subtitle()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme",
-        "Value": "\u9810\u8A2D\u914D\u8272\u65B9\u6848",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_OSDefault",
-        "Value": "\u7CFB\u7D71\u9810\u8A2D",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_OSDefault()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_Dark",
-        "Value": "\u6DF1\u8272",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_Dark()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_Bright",
-        "Value": "\u6DFA\u8272",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_Bright()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultWidthOfContent",
-        "Value": "\u5167\u5BB9\u5BEC\u5EA6\r(\u9069\u7528\u65BC\u5C6C\u6027\u9762\u677F\u7B49\u90E8\u5206\u4ECB\u9762\uFF0C\u5305\u62EC\u9019\u500B\u4ECB\u9762)",
+        "Value": "Unset localization item:GeneralUI_DefaultWidthOfContent()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_ShowBackendConsole",
-        "Value": "\u986F\u793A\u5F8C\u7AEF\u7D42\u7AEF\u8996\u7A97 (\u53EF\u80FD\u6703\u5C0E\u81F4\u4E00\u4E9B\u529F\u80FD\u4E0D\u53EF\u7528)",
+        "Value": "Unset localization item:Render_ShowBackendConsole()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_SelectAccel_MultiAccel",
-        "Value": "\u9078\u64C7\u6E32\u67D3\u6642\uFF0C\u8981\u4F7F\u7528\u7684\u786C\u9AD4\u52A0\u901F\u5668\uFF08\u591A\u9078\uFF09",
+        "Value": "Unset localization item:Render_SelectAccel_MultiAccel()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption",
-        "Value": "\u5F8C\u7AEF .NET CLR \u5783\u573E\u56DE\u6536\u9078\u9805",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_LetCLRDoGC",
-        "Value": "\u8B93 .NET CLR \u6C7A\u5B9A\u4F55\u6642\u9032\u884C\u5783\u573E\u56DE\u6536\uFF08\u9810\u8A2D\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_DoNormalCollection",
-        "Value": "\u5B9A\u671F\u7684\u4E3B\u52D5\u8A08\u5283\u56DE\u6536",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_DoLOHCompression",
-        "Value": "\u5F37\u5236\u963B\u65B7\u5F0F\u56DE\u6536\uFF0C\u4E26\u4E14\u4E3B\u52D5\u58D3\u7E2E\u5927\u578B\u7269\u4EF6\uFF08\u4E0D\u63A8\u85A6\uFF0C\u50C5\u5EFA\u8B70\u7528\u65BC\u8A18\u61B6\u9AD4\u8F03\u5C0F\u7684\u88DD\u7F6E\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode",
-        "Value": "\u914D\u7F6E\u9810\u8A2D\u4EE3\u7406\u9078\u9805",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_None",
-        "Value": "\u4E0D\u5EFA\u7ACB\u4EE3\u7406",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_Auto",
-        "Value": "\u81EA\u52D5\u5EFA\u7ACB\u4EE3\u7406",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_Ask",
-        "Value": "\u8A62\u554F\u662F\u5426\u5EFA\u7ACB\u4EE3\u7406",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_SelectRenderHost",
-        "Value": "\u9078\u64C7\u7DE8\u8F2F\u4ECB\u9762\u7684\u6E32\u67D3\u4E3B\u6A5F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseLivePreviewInsteadOfBackend",
-        "Value": "\u4F7F\u7528\u4E3B\u7A0B\u5F0F\u4F5C\u70BA\u7DE8\u8F2F\u4ECB\u9762\u6E32\u67D3\u4E3B\u6A5F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "\u4F7F\u7528\u7368\u7ACB\u5F8C\u7AEF\u4F5C\u70BA\u7DE8\u8F2F\u4ECB\u9762\u6E32\u67D3\u4E3B\u6A5F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_LiveVideoPreviewBufferLength",
-        "Value": "\u5373\u6642\u8996\u8A0A\u9810\u89BD\u7684\u7DE9\u885D\u5340\u5927\u5C0F\uFF08\u5E40\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -4197,7 +3885,7 @@
       },
       {
         "Id": "Plugin_Remove",
-        "Value": "\u30D7\u30E9\u30B0\u30A4\u30F3\u3092\u30A2\u30F3\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB",
+        "Value": "\u62E1\u5F35\u6A5F\u80FD\u3092\u30A2\u30F3\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4549,7 +4237,7 @@
       },
       {
         "Id": "Plugin_VersionMismatch",
-        "Value": "\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u30D0\u30FC\u30B8\u30E7\u30F3\u304C\u4E00\u81F4\u3057\u307E\u305B\u3093\u3002\u958B\u767A\u8005\u304B\u3089\u9069\u5207\u306A\u30D0\u30FC\u30B8\u30E7\u30F3\u3092\u5165\u624B\u3059\u308B\u304B\u3001\u958B\u767A\u8005\u306B\u9023\u7D61\u3057\u3066\u3053\u306E\u30D7\u30E9\u30B0\u30A4\u30F3\u3092\u66F4\u65B0\u3057\u3066\u3082\u3089\u3063\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Value": "\u30D7\u30E9\u30B0\u30A4\u30F3\u306F\u6700\u65B0\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002\u65B0\u3057\u3044API\u3092\u5B9F\u88C5\u3057\u3066\u3044\u306A\u3044\u305F\u3081\u3067\u3059\u3002\u66F4\u65B0\u3092\u8A66\u307F\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4621,191 +4309,83 @@
       },
       {
         "Id": "GeneralUI_Title",
-        "Value": "\u30E6\u30FC\u30B6\u30FC\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u8A2D\u5B9A",
+        "Value": "Unset localization item:GeneralUI_Title()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_Subtitle",
-        "Value": "\u9577\u62BC\u3057\u3067UI\u3092\u597D\u307F\u306B\u5408\u308F\u305B\u3066\u8A2D\u5B9A",
+        "Value": "Unset localization item:GeneralUI_Subtitle()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme",
-        "Value": "\u30C7\u30D5\u30A9\u30EB\u30C8\u30AB\u30E9\u30FC\u30B9\u30AD\u30FC\u30E0",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_OSDefault",
-        "Value": "\u30B7\u30B9\u30C6\u30E0\u30C7\u30D5\u30A9\u30EB\u30C8",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_OSDefault()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_Dark",
-        "Value": "\u30C0\u30FC\u30AF",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_Dark()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_Bright",
-        "Value": "\u30E9\u30A4\u30C8",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_Bright()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultWidthOfContent",
-        "Value": "\u30B3\u30F3\u30C6\u30F3\u30C4\u5E45\r\uFF08\u30D7\u30ED\u30D1\u30C6\u30A3\u30D1\u30CD\u30EB\u306A\u3069\u306E\u4E00\u90E8\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u306B\u9069\u7528\u3001\u3053\u306E\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u3092\u542B\u3080\uFF09",
+        "Value": "Unset localization item:GeneralUI_DefaultWidthOfContent()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_ShowBackendConsole",
-        "Value": "\u30D0\u30C3\u30AF\u30A8\u30F3\u30C9\u30B3\u30F3\u30BD\u30FC\u30EB\u3092\u8868\u793A\uFF08\u4E00\u90E8\u6A5F\u80FD\u304C\u4F7F\u7528\u3067\u304D\u306A\u304F\u306A\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\uFF09",
+        "Value": "Unset localization item:Render_ShowBackendConsole()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_SelectAccel_MultiAccel",
-        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u6642\u306B\u4F7F\u7528\u3059\u308B\u30CF\u30FC\u30C9\u30A6\u30A7\u30EA\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30BF\u3092\u9078\u629E\uFF08\u8907\u6570\u9078\u629E\u53EF\uFF09",
+        "Value": "Unset localization item:Render_SelectAccel_MultiAccel()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption",
-        "Value": "\u30D0\u30C3\u30AF\u30A8\u30F3\u30C9 .NET CLR \u30AC\u30D9\u30FC\u30B8\u30B3\u30EC\u30AF\u30B7\u30E7\u30F3\u30AA\u30D7\u30B7\u30E7\u30F3",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_LetCLRDoGC",
-        "Value": ".NET CLR\u306B\u30AC\u30D9\u30FC\u30B8\u30B3\u30EC\u30AF\u30B7\u30E7\u30F3\u306E\u30BF\u30A4\u30DF\u30F3\u30B0\u3092\u6C7A\u5B9A\u3055\u305B\u308B\uFF08\u30C7\u30D5\u30A9\u30EB\u30C8\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_DoNormalCollection",
-        "Value": "\u5B9A\u671F\u7684\u306A\u81EA\u52D5\u8A08\u753B\u56DE\u53CE",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_DoLOHCompression",
-        "Value": "\u5F37\u5236\u7684\u306B\u30D6\u30ED\u30C3\u30AD\u30F3\u30B0GC\u3092\u5B9F\u884C\u3057\u3001\u3055\u3089\u306B\u5927\u304D\u306A\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u3092\u7A4D\u6975\u7684\u306B\u5727\u7E2E\u3057\u307E\u3059\uFF08\u63A8\u5968\u3055\u308C\u307E\u305B\u3093\u3002\u30E1\u30E2\u30EA\u5BB9\u91CF\u306E\u5C0F\u3055\u3044\u30C7\u30D0\u30A4\u30B9\u3067\u306E\u307F\u3054\u691C\u8A0E\u304F\u3060\u3055\u3044\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode",
-        "Value": "\u30C7\u30D5\u30A9\u30EB\u30C8\u30D7\u30ED\u30AD\u30B7\u30AA\u30D7\u30B7\u30E7\u30F3\u3092\u8A2D\u5B9A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_None",
-        "Value": "\u30D7\u30ED\u30AD\u30B7\u3092\u4F5C\u6210\u3057\u306A\u3044",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_Auto",
-        "Value": "\u30D7\u30ED\u30AD\u30B7\u3092\u81EA\u52D5\u7684\u306B\u4F5C\u6210",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_Ask",
-        "Value": "\u30D7\u30ED\u30AD\u30B7\u306E\u4F5C\u6210\u3092\u78BA\u8A8D\u3057\u307E\u3059\u304B\uFF1F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_SelectRenderHost",
-        "Value": "\u7DE8\u96C6\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u306E\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30DB\u30B9\u30C8\u3092\u9078\u629E",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseLivePreviewInsteadOfBackend",
-        "Value": "\u30E1\u30A4\u30F3\u30D7\u30ED\u30B0\u30E9\u30E0\u3092\u7DE8\u96C6\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u306E\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30DB\u30B9\u30C8\u3068\u3057\u3066\u4F7F\u7528",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "\u72EC\u7ACB\u30D0\u30C3\u30AF\u30A8\u30F3\u30C9\u3092\u7DE8\u96C6\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u306E\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30DB\u30B9\u30C8\u3068\u3057\u3066\u4F7F\u7528\u3059\u308B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_LiveVideoPreviewBufferLength",
-        "Value": "\u30E9\u30A4\u30D6\u30D3\u30C7\u30AA\u30D7\u30EC\u30D3\u30E5\u30FC\u306E\u30D0\u30C3\u30D5\u30A1\u30B5\u30A4\u30BA (\u30D5\u30EC\u30FC\u30E0)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -5777,7 +5357,7 @@
       },
       {
         "Id": "Plugin_VersionMismatch",
-        "Value": "\uD50C\uB7EC\uADF8\uC778 \uBC84\uC804\uC774 \uC77C\uCE58\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uAC1C\uBC1C\uC790\uC5D0\uAC8C\uC11C \uC801\uD569\uD55C \uBC84\uC804\uC744 \uAC00\uC838\uC624\uAC70\uB098, \uAC1C\uBC1C\uC790\uC5D0\uAC8C \uC5F0\uB77D\uD558\uC5EC \uC774 \uD50C\uB7EC\uADF8\uC778\uC744 \uC5C5\uB370\uC774\uD2B8\uD558\uB3C4\uB85D \uC694\uCCAD\uD574 \uBCF4\uC138\uC694.",
+        "Value": "\uD50C\uB7EC\uADF8\uC778\uC774 \uCD5C\uC2E0\uC774 \uC544\uB2D9\uB2C8\uB2E4. \uC0C8\uB85C\uC6B4 API\uB97C \uAD6C\uD604\uD558\uC9C0 \uC54A\uC558\uAE30 \uB54C\uBB38\uC785\uB2C8\uB2E4. \uC5C5\uB370\uC774\uD2B8\uB97C \uC2DC\uB3C4\uD574 \uBCF4\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5849,191 +5429,83 @@
       },
       {
         "Id": "GeneralUI_Title",
-        "Value": "\uC0AC\uC6A9\uC790 \uC778\uD130\uD398\uC774\uC2A4 \uAD6C\uC131",
+        "Value": "Unset localization item:GeneralUI_Title()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_Subtitle",
-        "Value": "\uAE38\uAC8C \uB20C\uB7EC \uC120\uD638 \uC124\uC815 \uC0AC\uC6A9\uC790 \uC778\uD130\uD398\uC774\uC2A4 \uAD6C\uC131",
+        "Value": "Unset localization item:GeneralUI_Subtitle()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme",
-        "Value": "\uAE30\uBCF8 \uC0C9\uC0C1 \uAD6C\uC131",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_OSDefault",
-        "Value": "\uC2DC\uC2A4\uD15C \uAE30\uBCF8\uAC12",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_OSDefault()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_Dark",
-        "Value": "\uB2E4\uD06C",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_Dark()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_Bright",
-        "Value": "\uBC1D\uC740 \uC0C9",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_Bright()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultWidthOfContent",
-        "Value": "\uCF58\uD150\uCE20 \uB108\uBE44\r(\uC18D\uC131 \uD328\uB110 \uB4F1 \uC77C\uBD80 \uC778\uD130\uD398\uC774\uC2A4\uC5D0 \uC801\uC6A9\uB418\uBA70, \uC774 \uC778\uD130\uD398\uC774\uC2A4 \uD3EC\uD568)",
+        "Value": "Unset localization item:GeneralUI_DefaultWidthOfContent()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_ShowBackendConsole",
-        "Value": "\uBC31\uC5D4\uB4DC \uCF58\uC194 \uCC3D \uD45C\uC2DC (\uC77C\uBD80 \uAE30\uB2A5\uC744 \uC0AC\uC6A9\uD558\uC9C0 \uBABB\uD560 \uC218 \uC788\uC74C)",
+        "Value": "Unset localization item:Render_ShowBackendConsole()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_SelectAccel_MultiAccel",
-        "Value": "\uB80C\uB354\uB9C1 \uC2DC \uC0AC\uC6A9\uD560 \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D\uAE30 \uC120\uD0DD (\uB2E4\uC911 \uC120\uD0DD)",
+        "Value": "Unset localization item:Render_SelectAccel_MultiAccel()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption",
-        "Value": "\uBC31\uC5D4\uB4DC .NET CLR \uAC00\uBE44\uC9C0 \uC218\uC9D1 \uC635\uC158",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_LetCLRDoGC",
-        "Value": ".NET CLR\uC774 \uAC00\uBE44\uC9C0 \uC218\uC9D1 \uC2DC\uC810\uC744 \uACB0\uC815\uD558\uB3C4\uB85D \uD568(\uAE30\uBCF8\uAC12)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_DoNormalCollection",
-        "Value": "\uC815\uAE30\uC801\uC778 \uC8FC\uB3C4\uC801 \uACC4\uD68D \uC218\uAC70",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_DoLOHCompression",
-        "Value": "\uAC15\uC81C \uBE14\uB85C\uD0B9 \uC218\uC9D1\uC744 \uC218\uD589\uD558\uACE0 \uB300\uD615 \uAC1D\uCCB4\uB97C \uC801\uADF9\uC801\uC73C\uB85C \uC555\uCD95\uD569\uB2C8\uB2E4(\uAD8C\uC7A5\uD558\uC9C0 \uC54A\uC73C\uBA70, \uC18C\uADDC\uBAA8 \uBA54\uBAA8\uB9AC \uC7A5\uCE58\uC5D0\uB9CC \uC0AC\uC6A9\uD558\uB294 \uAC83\uC774 \uC88B\uC2B5\uB2C8\uB2E4).",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode",
-        "Value": "\uAE30\uBCF8 \uD504\uB85D\uC2DC \uC635\uC158 \uAD6C\uC131",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_None",
-        "Value": "\uD504\uB85D\uC2DC\uB97C \uC0DD\uC131\uD558\uC9C0 \uC54A\uC74C",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_Auto",
-        "Value": "\uC790\uB3D9 \uD504\uB85D\uC2DC \uC0DD\uC131",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_Ask",
-        "Value": "\uD504\uB85D\uC2DC\uB97C \uC0DD\uC131\uD560\uC9C0 \uBB3B\uAE30",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_SelectRenderHost",
-        "Value": "\uD3B8\uC9D1 \uC778\uD130\uD398\uC774\uC2A4\uC758 \uB80C\uB354\uB9C1 \uD638\uC2A4\uD2B8 \uC120\uD0DD",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseLivePreviewInsteadOfBackend",
-        "Value": "\uBA54\uC778 \uD504\uB85C\uADF8\uB7A8\uC744 \uD3B8\uC9D1 \uC778\uD130\uD398\uC774\uC2A4 \uB80C\uB354\uB9C1 \uD638\uC2A4\uD2B8\uB85C \uC0AC\uC6A9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "\uB3C5\uB9BD \uBC31\uC5D4\uB4DC\uB97C \uD3B8\uC9D1 \uD654\uBA74 \uB80C\uB354\uB9C1 \uD638\uC2A4\uD2B8\uB85C \uC0AC\uC6A9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_LiveVideoPreviewBufferLength",
-        "Value": "\uC2E4\uC2DC\uAC04 \uC601\uC0C1 \uBBF8\uB9AC\uBCF4\uAE30 \uBC84\uD37C \uD06C\uAE30 (\uD504\uB808\uC784)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -7005,7 +6477,7 @@
       },
       {
         "Id": "Plugin_VersionMismatch",
-        "Value": "La version du plugin ne correspond pas. Essayez d\u0027obtenir une version compatible aupr\u00E8s du d\u00E9veloppeur, ou contactez le d\u00E9veloppeur pour qu\u0027il mette \u00E0 jour ce plugin.",
+        "Value": "Le plugin n\u0027est pas assez r\u00E9cent car il n\u0027impl\u00E9mente pas les nouvelles API. Essayez de le mettre \u00E0 jour.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7077,191 +6549,83 @@
       },
       {
         "Id": "GeneralUI_Title",
-        "Value": "Configuration de l\u0027interface utilisateur",
+        "Value": "Unset localization item:GeneralUI_Title()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_Subtitle",
-        "Value": "Configurez l\u0027interface selon vos pr\u00E9f\u00E9rences",
+        "Value": "Unset localization item:GeneralUI_Subtitle()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme",
-        "Value": "Sch\u00E9ma de couleurs par d\u00E9faut",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_OSDefault",
-        "Value": "Par d\u00E9faut du syst\u00E8me",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_OSDefault()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_Dark",
-        "Value": "Sombre",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_Dark()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_Bright",
-        "Value": "Clair",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_Bright()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultWidthOfContent",
-        "Value": "Largeur du contenu\r(S\u0027applique \u00E0 certaines interfaces comme le panneau des propri\u00E9t\u00E9s, y compris celle-ci)",
+        "Value": "Unset localization item:GeneralUI_DefaultWidthOfContent()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_ShowBackendConsole",
-        "Value": "Afficher la console du backend (peut rendre certaines fonctionnalit\u00E9s indisponibles)",
+        "Value": "Unset localization item:Render_ShowBackendConsole()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_SelectAccel_MultiAccel",
-        "Value": "S\u00E9lectionnez les acc\u00E9l\u00E9rateurs mat\u00E9riels \u00E0 utiliser pour le rendu (plusieurs choix possibles)",
+        "Value": "Unset localization item:Render_SelectAccel_MultiAccel()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption",
-        "Value": "Options de Garbage Collection du CLR .NET",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_LetCLRDoGC",
-        "Value": "Laisser le CLR .NET d\u00E9cider du moment du garbage collection (par d\u00E9faut)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_DoNormalCollection",
-        "Value": "Planification p\u00E9riodique de la collecte active",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_DoLOHCompression",
-        "Value": "Forcer le garbage collection et effectuer une compaction active du tas des objets volumineux (LOH) (Non recommand\u00E9, uniquement conseill\u00E9 pour les appareils avec peu de m\u00E9moire).",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode",
-        "Value": "Configurer les options de proxy par d\u00E9faut",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_None",
-        "Value": "Pas de proxy",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_Auto",
-        "Value": "Cr\u00E9ation automatique de proxy",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_Ask",
-        "Value": "Demander s\u0027il faut cr\u00E9er un proxy",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_SelectRenderHost",
-        "Value": "S\u00E9lectionner l\u0027h\u00F4te de rendu pour l\u0027interface d\u0027\u00E9dition",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseLivePreviewInsteadOfBackend",
-        "Value": "Utiliser l\u0027application principale comme h\u00F4te de rendu pour l\u0027interface d\u0027\u00E9dition",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "Utiliser le backend ind\u00E9pendant comme h\u00F4te de rendu de l\u0027interface d\u0027\u00E9dition",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_LiveVideoPreviewBufferLength",
-        "Value": "Taille du tampon de pr\u00E9visualisation vid\u00E9o en temps r\u00E9el (images)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -8233,7 +7597,7 @@
       },
       {
         "Id": "Plugin_VersionMismatch",
-        "Value": "\u63D2\u4EF6\u7248\u672C\u4E0D\u5339\u914D\u3002\u8BF7\u5C1D\u8BD5\u4ECE\u5F00\u53D1\u8005\u5904\u83B7\u53D6\u9002\u914D\u4E4B\u7248\u672C\uFF0C\u6216\u8054\u7CFB\u5F00\u53D1\u8005\u4F7F\u5176\u66F4\u65B0\u6B64\u63D2\u4EF6\u3002",
+        "Value": "\u63D2\u4EF6\u672A\u65B0\uFF0C\u4EE5\u5176\u672A\u5907\u65B0\u6CD5\u3002\u8BD5\u66F4\u4E4B\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8305,191 +7669,83 @@
       },
       {
         "Id": "GeneralUI_Title",
-        "Value": "\u7528\u6237\u754C\u9762\u4E4B\u8BBE",
+        "Value": "Unset localization item:GeneralUI_Title()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_Subtitle",
-        "Value": "\u4F9D\u5C14\u6240\u597D\uFF0C\u8BBE\u7528\u6237\u4E4B\u754C\u9762\u3002",
+        "Value": "Unset localization item:GeneralUI_Subtitle()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme",
-        "Value": "\u9ED8\u8BBE\u8272\u65B9",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_OSDefault",
-        "Value": "\u7CFB\u7EDF\u9ED8\u5B9A",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_OSDefault()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_Dark",
-        "Value": "\u6DF1\u8272",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_Dark()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultTheme_Bright",
-        "Value": "\u6DE1\u8272",
+        "Value": "Unset localization item:GeneralUI_DefaultTheme_Bright()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "GeneralUI_DefaultWidthOfContent",
-        "Value": "\u5185\u5BB9\u4E4B\u9614\r\uFF08\u9002\u4E8E\u5C5E\u6027\u9762\u677F\u7B49\u5904\u4E4B\u754C\u9762\uFF0C\u4EA6\u542B\u6B64\u754C\u9762\uFF09",
+        "Value": "Unset localization item:GeneralUI_DefaultWidthOfContent()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u5C06\u201C\u5185\u5BB9\u5BBD\u5EA6\u201D\u8BD1\u4E3A\u201C\u5185\u5BB9\u4E4B\u9614\u201D\uFF0C\u4EE5\u6C42\u6587\u96C5\u3002\u62EC\u53F7\u5185\u8BF4\u660E\u6587\u5B57\u4EA6\u8F6C\u4E3A\u6587\u8A00\u53E5\u5F0F\uFF0C\u5E76\u4FDD\u7559\u6362\u884C\u7B26\u4F4D\u7F6E\u3002",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_ShowBackendConsole",
-        "Value": "\u542F\u540E\u53F0\u7EC8\u7AEF\uFF08\u6050\u81F4\u90E8\u5206\u529F\u80FD\u5931\u7528\uFF09",
+        "Value": "Unset localization item:Render_ShowBackendConsole()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u610F\u4E3A\u201C\u663E\u793A\u540E\u7AEF\u7EC8\u7AEF\uFF08\u53EF\u80FD\u5BFC\u81F4\u90E8\u5206\u529F\u80FD\u5931\u6548\uFF09\u201D\u3002\u5176\u4E2D\u201C\u540E\u53F0\u201D\u5BF9\u5E94\u201C\u540E\u7AEF\u201D\uFF0C\u201C\u7EC8\u7AEF\u201D\u4E3A\u73B0\u4EE3\u672F\u8BED\u4FDD\u7559\uFF0C\u201C\u6050\u81F4\u201D\u8868\u53EF\u80FD\u5BFC\u81F4\uFF0C\u201C\u5931\u7528\u201D\u5373\u5931\u6548\u4E0D\u53EF\u7528\u3002",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_SelectAccel_MultiAccel",
-        "Value": "\u62E9\u663E\u50CF\u65F6\u6240\u7528\u4E4B\u786C\u4EF6\u52A0\u901F\u5668\uFF08\u591A\u62E9\uFF09",
+        "Value": "Unset localization item:Render_SelectAccel_MultiAccel()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption",
-        "Value": ".NET CLR \u5E95\u52A1\u4F59\u70EC\u6E05\u7406\u6CD5",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u8BD1\u2018\u5783\u573E\u56DE\u6536\u2019\u4E3A\u2018\u4F59\u70EC\u6E05\u7406\u2019\uFF0C\u53D6\u2018\u71C3\u5C3D\u4E4B\u7269\u2019\u4E4B\u610F\uFF0C\u55BB\u6307\u5185\u5B58\u4E2D\u65E0\u7528\u5BF9\u8C61\uFF1B\u2018\u9009\u9879\u2019\u8BD1\u4E3A\u2018\u6CD5\u2019\uFF0C\u5373\u65B9\u6CD5\u3001\u7B56\u7565\u3002\u6574\u4F53\u529B\u6C42\u6587\u96C5\u8FBE\u610F\u3002",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_LetCLRDoGC",
-        "Value": "\u4EE4 .NET CLR \u51B3\u4F55\u65F6\u9664\u79FD\uFF08\u9ED8\u8BA4\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_DoNormalCollection",
-        "Value": "\u5B9A\u671F\u4E4B\u4E3B\u52A8\u8BA1\u5212\u56DE\u6536",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_GCOption_DoLOHCompression",
-        "Value": "\u5F3A\u4EE4\u9664\u79FD\uFF0C\u4E14\u81EA\u4E3A\u538B\u5DE8\u7269\uFF08\u975E\u6240\u8350\uFF0C\u552F\u5B9C\u4E8E\u5185\u5B58\u5BE1\u4E4B\u5668\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode",
-        "Value": "\u8BBE\u9ED8\u4EE3\u7406\u4E4B\u9879",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_None",
-        "Value": "\u4E0D\u8BBE\u4EE3\u7406",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_Auto",
-        "Value": "\u81EA\u4E3A\u7ACB\u4EE3",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_ProxyMode_Ask",
-        "Value": "\u8BE2\u53EF\u5426\u8BBE\u4EE3\u7406\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_SelectRenderHost",
-        "Value": "\u62E9\u7F16\u754C\u9762\u4E4B\u6E32\u67D3\u4E3B\u673A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u6587\u8A00\u6587\u8868\u8FBE\uFF0C\u610F\u4E3A\u201C\u9009\u62E9\u7F16\u8F91\u754C\u9762\u7684\u6E32\u67D3\u4E3B\u673A\u201D\u3002",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseLivePreviewInsteadOfBackend",
-        "Value": "\u4EE5\u4E3B\u7A0B\u5F0F\u4E3A\u7F16\u57DF\u6E32\u673A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "\u4EE5\u72EC\u540E\u7AEF\u4E3A\u7F16\u4FEE\u754C\u9762\u6E32\u67D3\u4E3B\u673A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u6587\u8A00\u6587\u8BD1\u6CD5\uFF0C\u610F\u540C\u0027\u4F7F\u7528\u72EC\u7ACB\u540E\u7AEF\u4F5C\u4E3A\u7F16\u8F91\u754C\u9762\u6E32\u67D3\u4E3B\u673A\u0027",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_LiveVideoPreviewBufferLength",
-        "Value": "\u5B9E\u65F6\u89C6\u9891\u9884\u89C8\u7F13\u51B2\u533A\u5927\u5C0F\uFF08\u5E27\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]

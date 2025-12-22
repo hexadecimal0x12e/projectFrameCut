@@ -7,9 +7,10 @@ using System.Text.Json.Serialization;
 using Microsoft.Maui.Platform;
 using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using static SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.Render.Plugin;
-using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
+
 
 #if WINDOWS
 using Microsoft.UI.Xaml;
@@ -69,8 +70,8 @@ namespace projectFrameCut.DraftStuff
                     var effectKey = effectKvp.Key;
                     var effect = effectKvp.Value;
                     ppb.AddText(new TitleAndDescriptionLineLabel(effect.Name, PluginManager.GetLocalizationItem($"EffectType_{effect.TypeName}", effect.TypeName)));
-                    ppb.AddCheckbox($"Effect|{effectKey}|Enabled", PPLocalizedResources._Enabled, effect.Enabled);
-                    ppb.AddEntry($"Effect|{effectKey}|Index", PPLocalizedResources.EffectProp_Index, effect.Index.ToString(), "-1");
+                    ppb.AddCheckbox($"Effect|{effectKey}|Enabled", PPLocalizedResuorces._Enabled, effect.Enabled);
+                    ppb.AddEntry($"Effect|{effectKey}|Index", PPLocalizedResuorces.EffectProp_Index, effect.Index.ToString(), "-1");
                     foreach (var paramName in effect.ParametersNeeded)
                     {
                         if (!effect.ParametersType.TryGetValue(paramName, out var paramType)) continue;
@@ -102,14 +103,14 @@ namespace projectFrameCut.DraftStuff
                             ppb.AddEntry(controlId, PluginManager.GetLocalizationItem($"_{paramName}", paramName), valStr, "");
                         }
                     }
-                    ppb.AddButton($"Effect|{effectKey}|Remove", PPLocalizedResources.EffectProp_Remove);
+                    ppb.AddButton($"Effect|{effectKey}|Remove", PPLocalizedResuorces.EffectProp_Remove);
                     ppb.AddSeparator();
                 }
             }
 
-            ppb.AddPicker("NewEffectType", PPLocalizedResources.Add_Effect_Select, EffectHelper.GetEffectTypes().ToArray(),
+            ppb.AddPicker("NewEffectType", PPLocalizedResuorces.Add_Effect_Select, EffectHelper.GetEffectTypes().ToArray(),
                 EffectHelper.GetEffectTypes().FirstOrDefault());
-            ppb.AddButton("AddEffect", PPLocalizedResources.Add_Effect);
+            ppb.AddButton("AddEffect", PPLocalizedResuorces.Add_Effect);
 
             ppb.PropertyChanged += async (s, e) =>
             {

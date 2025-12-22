@@ -1,9 +1,7 @@
-﻿using Microsoft.Maui.Controls.PlatformConfiguration;
-using projectFrameCut.Render.Plugin;
+﻿using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
-using projectFrameCut.Render.Videos;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp.Formats.Png;
 using System;
@@ -16,18 +14,14 @@ namespace projectFrameCut.LivePreview
     public class LivePreviewer
     {
         public IClip[]? Clips;
-        public uint TotalDuration;
         public string TempPath;
-        public string? ProxyRoot;
-        public event Action<double>? OnProgressChanged;
 
         public string RenderFrame(uint frameIndex, int targetWidth, int targetHeight)
         {
-            ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");
-            LogDiagnostic($"[LiveRender] RenderOne request: frame #{frameIndex}");
-            var frameHash = Timeline.GetFrameHash(Clips, frameIndex);
+            Log($"[LiveRender] RenderOne request: frame #{frameIndex}");
+            var frameHash = Timeline.GetFrameHash(Clips ?? throw new NullReferenceException("Clips not set yet."), frameIndex);
             var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{frameHash}.png");
-            LogDiagnostic($"[LiveRender] FrameHash:{frameHash}");
+            Log($"[LiveRender] FrameHash:{frameHash}");
             if (Path.Exists(destPath))
             {
                 LogDiagnostic($"[LiveRender] Frame already exist; skip");
@@ -35,7 +29,7 @@ namespace projectFrameCut.LivePreview
             }
             else
             {
-                LogDiagnostic($"[LiveRender] Generating frame #{frameIndex} ({frameHash})...");
+                Log($"[LiveRender] Generating frame #{frameIndex} ({frameHash})...");
             }
             var layers = Timeline.GetFramesInOneFrame(Clips, frameIndex, targetWidth, targetHeight, true);
             var pic = Timeline.MixtureLayers(layers, frameIndex, targetWidth, targetHeight);
@@ -45,82 +39,24 @@ namespace projectFrameCut.LivePreview
 
         public void UpdateDraft(DraftStructureJSON json)
         {
-            var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
+            var elements = JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips; //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
+            if (elements is null) throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClip.");
 
             var clipsList = new List<IClip>();
 
-            foreach (var clip in elements.Cast<JsonElement>())
+            foreach (var clip in elements.Select(c => (JsonElement)c))
             {
-                var clipInstance = PluginManager.CreateClip(clip);
-                if (ProxyRoot is not null && clipInstance.FilePath is not null)
-                {
-                    var proxiedPath = Path.Combine(ProxyRoot, $"{Path.GetFileNameWithoutExtension(clipInstance.FilePath)}.proxy.mp4");
-
-                    if (Path.Exists(proxiedPath))
-                    {
-                        clipInstance.FilePath = proxiedPath;
-                        Log($"The proxy for {clipInstance.Name} is used.");
-                    }
-                    else
-                    {
-                        Log($"The proxy for {clipInstance.Name} does not exist.");
-                    }
-                }
-
-                clipInstance.ReInit();
-                clipsList.Add(clipInstance);
-
+                clipsList.Add(PluginManager.CreateClip(clip));
             }
 
             Clips = clipsList.ToArray();
-            long max = 0;
+
             foreach (var clip in Clips)
             {
-                max = Math.Max(clip.StartFrame + clip.Duration, max);
-
+                clip.ReInit();
             }
-
-            if (max > uint.MaxValue)
-            {
-                throw new OverflowException($"Project duration overflow, total frames exceed {uint.MaxValue}.");
-            }
-
-            TotalDuration = (uint)max;
 
             Log($"[LiveRender] Updated clips, total {Clips.Length} clips.");
-        }
-
-        public async Task<string> RenderSomeFrames(int startIndex, int length, int targetWidth, int targetFramerate, int targetHeight, CancellationToken token)
-        {
-
-            var encodeWidth = (targetWidth % 2 == 0) ? targetWidth : targetWidth - 1;
-            var encodeHeight = (targetHeight % 2 == 0) ? targetHeight : targetHeight - 1;
-
-            var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{Guid.NewGuid()}.mp4");
-            LogDiagnostic($"[LiveRender] RenderSomeFrames request: frame #{startIndex}, length {length}, adjusted output size {targetWidth}x{targetHeight}");
-            using var builder = new VideoBuilder(destPath, encodeWidth, encodeHeight, targetFramerate, "libx264", FFmpeg.AutoGen.AVPixelFormat.AV_PIX_FMT_YUV420P)
-            {
-                Duration = uint.MaxValue,
-                BlockWrite = true //builder doesn't write from non-0 start index when blockwrite is not true
-            };
-            Renderer renderer = new Renderer
-            {
-                StartFrame = (uint)startIndex,
-                Duration = (uint)(startIndex + length),
-                builder = builder,
-                Clips = Clips,
-                Use16Bit = false,
-                MaxThreads = 1,
-
-            };
-            renderer.PrepareRender(token);
-            renderer.OnProgressChanged += OnProgressChanged;
-            await renderer.GoRender(token, (uint)startIndex);
-            renderer.OnProgressChanged -= OnProgressChanged;
-
-            builder.Writer.Finish(); //Finish doesn't support non-0 start frame, just end the writer
-            LogDiagnostic($"[LiveRender] RenderSomeFrames finished: {destPath}");
-            return destPath;
         }
 
         private static PngEncoder encoder = new()

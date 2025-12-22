@@ -28,7 +28,6 @@ using projectFrameCut.LivePreview;
 using CommunityToolkit.Maui.Views;
 
 
-
 #if WINDOWS
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
@@ -70,8 +69,7 @@ public partial class DraftPage : ContentPage
         "thumbs",
         "assets",
         "export",
-        "temp",
-        "proxy"
+        "temp"
     ];
 
     readonly JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
@@ -79,8 +77,6 @@ public partial class DraftPage : ContentPage
 
     #region members
     public ProjectJSONStructure ProjectInfo { get; set; } = new();
-
-    ConcurrentDictionary<string, DraftTasks> RunningTasks = new();
 
     ConcurrentDictionary<string, double> HandleStartWidth = new();
 
@@ -153,12 +149,7 @@ public partial class DraftPage : ContentPage
     public ICommand DeleteCommand { get; private set; }
     public ICommand SaveCommand { get; private set; }
     public ICommand ManageJobsCommand { get; private set; }
-    public ICommand GotoCommand { get; private set; }
-
-#if WINDOWS
-    public Accelerator AcceleratorToUse { get; set; }
-#endif
-#endregion
+    #endregion
 
     #region options
     public string ProjectName { get; set; } = "Unknown project";
@@ -173,8 +164,7 @@ public partial class DraftPage : ContentPage
     public TimeSpan SyncCooldown { get; set; } = TimeSpan.FromMilliseconds(500);
     public bool AlwaysShowToolbarBtns { get; set; }
     public bool ShowBackendConsole { get; set; } = false;
-    public int LiveVideoPreviewBufferLength { get; set; } = 240;
-    public float LiveVideoPreviewResolutionScale { get; set; } = 15.0f;
+    public int LiveVideoPreviewBufferLength { get; set; } = 50;
     #endregion
 
     #region init
@@ -189,8 +179,7 @@ public partial class DraftPage : ContentPage
         SpiltCommand = new Command(() => Split_Clicked(this, EventArgs.Empty));
         DeleteCommand = new Command(() => DeleteAClip());
         SaveCommand = new Command(() => OnRefreshButtonClicked(this, EventArgs.Empty));
-        GotoCommand = new Command(async () => await GotoButtonClicked());
-        ManageJobsCommand = new Command(async () => await OnManageJobsClicked());
+
         InitializeComponent();
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
         ClipEditorHost.Content = ClipEditor;
@@ -218,8 +207,6 @@ public partial class DraftPage : ContentPage
         SpiltCommand = new Command(() => Split_Clicked(this, EventArgs.Empty));
         DeleteCommand = new Command(() => DeleteAClip());
         SaveCommand = new Command(() => OnRefreshButtonClicked(this, EventArgs.Empty));
-        GotoCommand = new Command(async () => await GotoButtonClicked());
-        ManageJobsCommand = new Command(async () => await OnManageJobsClicked());
 
         InitializeComponent();
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
@@ -275,8 +262,6 @@ public partial class DraftPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        if (DeviceInfo.Idiom == DeviceIdiom.Phone) RightMenuBar.IsVisible = false; //screen too small
-        else RightMenuBar.IsVisible = true;
         if (AlreadyDisappeared)
         {
             await Task.Delay(500);
@@ -297,8 +282,12 @@ public partial class DraftPage : ContentPage
         var w = this.Window?.Width ?? 0;
         var h = this.Window?.Height ?? 0;
         WindowSize = new Size(w, h);
-
-        DraftChanged(this, new());
+#if WINDOWS
+        if (_rpc is null && !UseLivePreviewInsteadOfBackend)
+        {
+            try { await BootRPC(); } catch { }
+        }
+#endif
     }
 
     private bool Inited = false;
@@ -353,7 +342,10 @@ public partial class DraftPage : ContentPage
 #elif WINDOWS
         if (UseLivePreviewInsteadOfBackend)
         {
-            projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [AcceleratorToUse];
+            Context context = Context.CreateDefault();
+            var devices = context.Devices.ToList();
+            projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Select(d => d.CreateAccelerator(context)).ToArray();
+
         }
 
 #endif
@@ -371,17 +363,13 @@ public partial class DraftPage : ContentPage
                 this.Window.SizeChanged += Window_SizeChanged;
             }
             if (!Directory.Exists(workingPath)) Title = Localized.DraftPage_IsInMode_Special(Title);
-
-            if (DeviceInfo.Idiom == DeviceIdiom.Phone) RightMenuBar.IsVisible = false; //screen too small
-            else RightMenuBar.IsVisible = true;
         });
     }
 #if WINDOWS
-    public async Task BootRPC()
+    private async Task BootRPC()
     {
         var pipeId = RpcClient.BootRPCServer(out backendProc,
             tmpDir: Path.Combine(workingPath, "thumbs"),
-            proxyDir: Path.Combine(workingPath, "proxy"),
             VerboseBackendLog: ShowBackendConsole,
             stderrCallback: new Action<string>((s) =>
             {
@@ -433,7 +421,7 @@ public partial class DraftPage : ContentPage
     private void DraftPage_Loaded(object? sender, EventArgs e)
     {
         if (AlwaysShowToolbarBtns || !OperatingSystem.IsWindows()) AddToolbarBtns();
-        //if (Width < Height) RightMenuBar.IsVisible = false;
+        if (Width < Height) RightMenuBar.IsVisible = false;
 
         //PlayheadLine.TranslationY = UpperContent.Height - RulerLayout.Height;
         RulerLayout.GestureRecognizers.Add(rulerTapGesture);
@@ -1429,13 +1417,12 @@ public partial class DraftPage : ContentPage
         SetStateBusy(Localized.DraftPage_PrepareAsset);
         try
         {
-
-            if (Assets.Values.Any((v) => v.Name == Path.GetFileNameWithoutExtension(path))) 
+            var srcHash = "";// await HashServices.ComputeFileSHA512Async(path, null);
+            Log($"New asset {path}'s hash: {srcHash}");
+            if (false && Assets.Values.Any((v) => v.SourceHash == srcHash)) //todo: use tasks to do this
             {
-                var existing = Assets.Values.First((v) => v.Name == Path.GetFileNameWithoutExtension(path));
-
                 string opt = await DisplayActionSheetAsync(
-                    Localized.DraftPage_DuplicatedAsset(Path.GetFileNameWithoutExtension(path), existing.Name),
+                    Localized.DraftPage_DuplicatedAsset(Path.GetFileNameWithoutExtension(path), Assets.Values.First((v) => v.SourceHash == srcHash).Name),
                     null,
                     null,
                     [Localized.DraftPage_DuplicatedAsset_Relpace, Localized.DraftPage_DuplicatedAsset_Skip, Localized.DraftPage_DuplicatedAsset_Together]
@@ -1443,6 +1430,7 @@ public partial class DraftPage : ContentPage
 
                 if (opt == Localized.DraftPage_DuplicatedAsset_Relpace)
                 {
+                    var existing = Assets.Values.First((v) => v.SourceHash == srcHash);
                     Assets.TryRemove(existing.AssetId, out _);
                     Log($"Replaced existing asset {existing.Name} with new one from {path}");
                 }
@@ -1463,91 +1451,78 @@ public partial class DraftPage : ContentPage
             {
                 Name = System.IO.Path.GetFileNameWithoutExtension(path),
                 Path = path,
+                SourceHash = srcHash,
                 Type = ClipElementUI.DetermineClipMode(path),
                 AssetId = cid
             };
-            item.SecondPerFrame = float.PositiveInfinity;
-            item.FrameCount = 0;
 
-            switch (item.Type)
+            if (item.Type != ClipMode.VideoClip)
             {
-                case ClipMode.VideoClip:
-                    {
-                        try
-                        {
-                            if (OperatingSystem.IsWindows() && UseLivePreviewInsteadOfBackend)
-                            {
-
-
-#if WINDOWS
-                                var cts = new CancellationTokenSource();
-                                cts.CancelAfter(5000);
-                                JsonElement? info = null;
-                                if (!_isClosing && _rpc is not null)
-                                    info = await _rpc.SendAsync("GetVideoFileInfo", JsonSerializer.SerializeToElement(item.Path), cts.Token);
-                                if (info is not null)
-                                {
-                                    info.Value.TryGetProperty("frameCount", out var fc);
-                                    info.Value.TryGetProperty("fps", out var fps);
-                                    info.Value.TryGetProperty("width", out var w);
-                                    info.Value.TryGetProperty("height", out var h);
-                                    if (fc.ValueKind == JsonValueKind.Number && fps.ValueKind == JsonValueKind.Number && w.ValueKind == JsonValueKind.Number && h.ValueKind == JsonValueKind.Number)
-                                    {
-                                        item.FrameCount = fc.GetInt64();
-                                        item.SecondPerFrame = 1 / fps.GetSingle();
-                                        item.Width = w.GetInt32();
-                                        item.Height = h.GetInt32();
-                                    }
-
-                                }
-                                cts = new CancellationTokenSource();
-                                cts.CancelAfter(5000);
-                                JsonElement? thumbNail = null;
-                                if (!_isClosing && _rpc is not null)
-                                    thumbNail = await _rpc.SendAsync("ReadAFrame", JsonSerializer.SerializeToElement(new Dictionary<string, object>
-                                {
-                                    { "path", item.Path },
-                                    { "frameToRead", 0U },
-                                    { "size", "640x480" }
-                                }), cts.Token);
-
-                                if (thumbNail is not null && thumbNail.Value.TryGetProperty("path", out var tPath))
-                                {
-                                    var p = tPath.GetString();
-                                    if (!string.IsNullOrWhiteSpace(p))
-                                    {
-                                        File.Move(p, Path.Combine(workingPath, "thumbs", item.AssetId + "thumb.png"), true);
-                                        item.ThumbnailPath = Path.Combine(workingPath, "thumbs", item.AssetId + "thumb.png");
-                                    }
-                                }
-#endif
-                            }
-                            else
-                            {
-                                var vid = PluginManager.CreateVideoSource(item.Path);
-                                item.FrameCount = vid.TotalFrames;
-                                item.SecondPerFrame = (float)(1f / vid.Fps);
-
-
-                            }
-
-
-                        }
-                        catch (Exception ex)
-                        {
-                            Log(ex, "Add a asset", this);
-                            await DisplayAlertAsync(Localized._Error, Localized.DraftPage_Asset_InvaildSrc(item.Name), Localized._OK);
-                            item.FrameCount = 1024;
-                            item.SecondPerFrame = 1 / 42f;
-                        }
-
-                        break;
-
-
-                    }
+                item.SecondPerFrame = float.PositiveInfinity;
+                item.FrameCount = 0;
             }
+            else
+            {
+#if WINDOWS
+                var cts = new CancellationTokenSource();
+                cts.CancelAfter(5000);
+                JsonElement? info = null;
+                if (!_isClosing && _rpc is not null)
+                    info = await _rpc.SendAsync("GetVideoFileInfo", JsonSerializer.SerializeToElement(item.Path), cts.Token);
+                if (info is not null)
+                {
+                    info.Value.TryGetProperty("frameCount", out var fc);
+                    info.Value.TryGetProperty("fps", out var fps);
+                    info.Value.TryGetProperty("width", out var w);
+                    info.Value.TryGetProperty("height", out var h);
+                    if (fc.ValueKind == JsonValueKind.Number && fps.ValueKind == JsonValueKind.Number && w.ValueKind == JsonValueKind.Number && h.ValueKind == JsonValueKind.Number)
+                    {
+                        item.FrameCount = fc.GetInt64();
+                        item.SecondPerFrame = 1 / fps.GetSingle();
+                        item.Width = w.GetInt32();
+                        item.Height = h.GetInt32();
+                    }
+
+                }
+                cts = new CancellationTokenSource();
+                cts.CancelAfter(5000);
+                JsonElement? thumbNail = null;
+                if (!_isClosing && _rpc is not null)
+                    thumbNail = await _rpc.SendAsync("ReadAFrame", JsonSerializer.SerializeToElement(new Dictionary<string, object>
+                        {
+                            { "path", item.Path },
+                            { "frameToRead", 0U },
+                            { "size", "640x480" }
+                        }), cts.Token);
+
+                if (thumbNail is not null && thumbNail.Value.TryGetProperty("path", out var tPath))
+                {
+                    var p = tPath.GetString();
+                    if (!string.IsNullOrWhiteSpace(p))
+                    {
+                        File.Move(p, Path.Combine(workingPath, "thumbs", item.AssetId + "thumb.png"), true);
+                        item.ThumbnailPath = Path.Combine(workingPath, "thumbs", item.AssetId + "thumb.png");
+                    }
+                }
+#else
+
+                try
+                {
+                    var vid = PluginManager.CreateVideoSource(item.Path);
+                    item.FrameCount = vid.TotalFrames;
+                    item.SecondPerFrame = (float)(1f / vid.Fps);
 
 
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "get video length", this);
+                    item.FrameCount = 1024;
+                    item.SecondPerFrame = 1 / 42f;
+                }
+
+#endif
+            }
             Log($"Added asset '{item.Path}'s info: {item.FrameCount} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.FrameCount * item.SecondPerFrame} s");
             Assets.AddOrUpdate(cid, item, (_, _) => item);
             Dispatcher.Dispatch(() =>
@@ -1555,17 +1530,6 @@ public partial class DraftPage : ContentPage
                 Popup.Content = new ScrollView { Content = BuildAssetPanel() };
             });
             SetStateOK(Localized.DraftPage_AssetAdded(Path.GetFileNameWithoutExtension(path)));
-            var createProxy = await DisplayAlertAsync(Localized.DraftPage_CreateProxy(item.Name), Localized.DraftPage_CreateProxy_Info, Localized._Confirm, Localized._Cancel);
-            var task = new DraftTasks(cid, (c) => Task.Run(cancellationToken: c, action: async () =>
-            {
-                if (createProxy)
-                {
-                    var proxiedPath = Path.Combine(workingPath, "proxy", $"{Path.GetFileNameWithoutExtension(path)}.proxy.mp4");
-                    VideoResizer.ReencodeToResolution(item.Path, proxiedPath, 1280, 720, "libx264");
-                }
-                Assets[cid].SourceHash = await HashServices.ComputeFileHashAsync(path, null, c);
-            }), $"Add asset {item.Name}", $"Add asset {item.Name}");
-            RunningTasks.AddOrUpdate(cid, task, (_, _) => task);
 
         }
         catch (Exception ex)
@@ -1603,7 +1567,7 @@ public partial class DraftPage : ContentPage
         {
             await HidePopup();
         };
-        //if (includeHeader) layout.Children.Add(closeButton);
+        if (includeHeader) layout.Children.Add(closeButton);
         foreach (var kvp in Assets)
         {
             var asset = kvp.Value;
@@ -2243,20 +2207,15 @@ public partial class DraftPage : ContentPage
 
     #region popup
 #pragma warning disable CS0414 //this stuff only need on iDevices, because of OverlayLayer can't handle any input...... 
-    private IView? OriginalUIContent = null;
+    private IView? OrigionalUIContent = null;
 #pragma warning restore CS0414
     private async Task ShowAPopup(View? content = null, Border? border = null, ClipElementUI? clip = null, string mode = "")
     {
-        content ??= (border != null && clip != null) ? BuildPropertyPanel(clip) :
-            new Label
-            {
-                Text = "No content for this popup provided. This SHOULD be a bug, please submit a issue about that.\r\n" +
-                      $"{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}",
-            };
+        content ??= (border != null && clip != null) ? BuildPropertyPanel(clip) : new Label { Text = "No content." };
 #if iDevices
-        if (OriginalUIContent is null && MainUpperContent.Children.Count > 0)
+        if (OrigionalUIContent is null && MainUpperContent.Children.Count > 0)
         {
-            OriginalUIContent = MainUpperContent.Children.First();
+            OrigionalUIContent = MainUpperContent.Children.First();
         }
         MainUpperContent.Children.Clear();
         MainUpperContent.Children.Add(new VerticalStackLayout
@@ -2273,9 +2232,17 @@ public partial class DraftPage : ContentPage
         return;
 #endif
 
+        if (!SettingsManager.IsSettingExists("PreferredPopupMode"))
+        {
+#if WINDOWS
+            SettingsManager.WriteSetting("PreferredPopupMode", "right");
+#else
+            SettingsManager.WriteSetting("PreferredPopupMode", "bottom");
+#endif
+        }
         try
         {
-            switch (!string.IsNullOrWhiteSpace(mode) ? mode : PreferredPopupMode)
+            switch (!string.IsNullOrWhiteSpace(mode) ? mode : SettingsManager.GetSetting("PreferredPopupMode"))
             {
                 case "right":
                     {
@@ -2507,18 +2474,18 @@ public partial class DraftPage : ContentPage
     private async Task HidePopup()
     {
 #if iDevices
-        if (OriginalUIContent is not null)
+        if (OrigionalUIContent is not null)
         {
             MainUpperContent.Children.Clear();
-            MainUpperContent.Children.Add(OriginalUIContent);
-            OriginalUIContent = null;
+            MainUpperContent.Children.Add(OrigionalUIContent);
+            OrigionalUIContent = null;
         }
         return;
 #endif
         //if (!isPopupShowing) return;
         OverlayLayer.InputTransparent = true;
         await Task.WhenAll(HideClipPopup(), HideFullscreenPopup());
-#if ANDROID
+#if ANDROID || iDevices
         OverlayLayer.IsVisible = false;
         OverlayLayer.InputTransparent = true;
 #endif
@@ -2810,21 +2777,13 @@ public partial class DraftPage : ContentPage
             PlayPauseButton.Text = "\u23f8\ufe0f"; //pause
             LogDiagnostic("Start playing...");
             SetStateBusy();
-            if (!_isLivePreviewPlayerEventsHooked)
+            LivePreviewPlayer.MediaEnded += (s, e) =>
             {
-                LivePreviewPlayer.MediaEnded += (s, e) =>
-                {
-                    if (!isPlaying) return;
-                    playbackDone = true;
-                    try
-                    {
-                        if (_lastPlaybackPath is not null && File.Exists(_lastPlaybackPath ?? ""))
-                            File.Delete(_lastPlaybackPath);
-                    }
-                    catch { }
-                };
-                _isLivePreviewPlayerEventsHooked = true;
-            }
+                if (!isPlaying) return;
+                playbackDone = true;
+                if (_lastPlaybackPath is not null && File.Exists(_lastPlaybackPath ?? "")) File.Delete(_lastPlaybackPath);
+
+            };
             Task.Run(PrepareLivePreview);
         }
         else
@@ -2862,28 +2821,28 @@ public partial class DraftPage : ContentPage
             _playbackStartFrame = _currentFrame;
             _nextPlaybackPath = null;
 
-
-            var path = await RenderSomeFrames((int)_currentFrame, token);
+#if WINDOWS
+            var path = await RpcClient.RenderSomeFrames((int)_currentFrame, LiveVideoPreviewBufferLength, previewWidth / 15, previewHeight / 15, (int)ProjectInfo.targetFrameRate, _rpc, token);
             Dispatcher.Dispatch(() =>
             {
                 LivePreviewPlayer.Source = MediaSource.FromFile(path);
                 LivePreviewPlayer.Play();
             });
 
-
+#endif
             int currentStartFrame = (int)_currentFrame;
-            while (!token.IsCancellationRequested)
+            while(_playbackCts != null && !_playbackCts.IsCancellationRequested)
             {
                 try
                 {
                     var nextStart = currentStartFrame + LiveVideoPreviewBufferLength;
                     LogDiagnostic($"Start continue Render from {nextStart}...");
-
-                    _nextPlaybackPath = await RenderSomeFrames(nextStart,_playbackCts.Token );
-
+#if WINDOWS
+                    _nextPlaybackPath = await RpcClient.RenderSomeFrames(nextStart, LiveVideoPreviewBufferLength, previewWidth / 15, previewHeight / 15, (int)ProjectInfo.targetFrameRate, _rpc, _playbackCts?.Token ?? default);
+#endif
                     _currentFrame = (uint)nextStart;
                     LogDiagnostic($"Next preview is ready. Path:{_nextPlaybackPath}");
-                    while (!playbackDone && !token.IsCancellationRequested) await Task.Delay(100, token);
+                    while (!playbackDone) await Task.Delay(100);
                     LogDiagnostic("Previewer is ready!");
                     playbackDone = false;
                     Dispatcher.Dispatch(() =>
@@ -2905,7 +2864,7 @@ public partial class DraftPage : ContentPage
                 finally
                 {
                     _isPreRendering = false;
-
+                    
                 }
             }
 
@@ -2925,62 +2884,16 @@ public partial class DraftPage : ContentPage
 
     private async Task PauseLivePreview()
     {
-        try
-        {
-            _playbackCts?.Cancel();
-            _playbackCts?.Dispose();
-        }
-        catch { }
-        finally
-        {
-            _playbackCts = null;
-        }
-
-        await Dispatcher.DispatchAsync(() =>
-        {
-            try
-            {
-                LivePreviewPlayer.Stop();
-                LivePreviewPlayer.Source = null;
-            }
-            catch { }
-            LivePreviewPlayer.IsVisible = false;
-            PreviewOverlayImage.IsVisible = true;
-        });
-
-#if WINDOWS
-        try { _ = _rpc?.SendAsync("CancelTask", JsonSerializer.SerializeToElement(new { }), default); } catch { }
-#endif
+        _playbackCts?.Cancel();
+        _playbackCts = null;
+        LivePreviewPlayer.IsVisible = false;
+        PreviewOverlayImage.IsVisible = true;
         _nextPlaybackPath = null;
         _isPreRendering = false;
         PlayPauseButton.Text = "\u25b6\ufe0f";
+        await Task.CompletedTask;
     }
 
-    private async Task<string> RenderSomeFrames(int startPoint, CancellationToken ct)
-    {
-        if (OperatingSystem.IsWindows() && !UseLivePreviewInsteadOfBackend)
-        {
-#if WINDOWS
-            return await RpcClient.RenderSomeFrames((int)_currentFrame, LiveVideoPreviewBufferLength, (int)(previewWidth / LiveVideoPreviewResolutionScale), (int)(previewHeight / LiveVideoPreviewResolutionScale), (int)ProjectInfo.targetFrameRate, _rpc, ct);
-#endif
-            throw new NotSupportedException("This platform does not support RpcClient.");
-        }
-        else
-        {
-            Stopwatch cd = Stopwatch.StartNew();
-            void progChanged(double p)
-            {
-                if (cd.ElapsedMilliseconds < 500) return;
-                cd.Restart(); 
-                SetStateBusy(Localized._ProcessingWithProgress(p));
-            }
-            previewer.OnProgressChanged += progChanged;
-            var path = await previewer.RenderSomeFrames((int)_currentFrame, LiveVideoPreviewBufferLength, (int)(previewWidth / LiveVideoPreviewResolutionScale), (int)(previewHeight / LiveVideoPreviewResolutionScale), (int)ProjectInfo.targetFrameRate, ct);
-            previewer.OnProgressChanged -= progChanged;
-            return path;
-
-        }
-    }
     #endregion
 
     #region show and save changes
@@ -3228,63 +3141,6 @@ public partial class DraftPage : ContentPage
 
     #region misc
 
-    private async Task GotoButtonClicked()
-    {
-        var input = await DisplayPromptAsync(Localized._Info, Localized.DraftPage_GotoFrame, Localized._OK, Localized._Cancel, null, 0, null, "");
-        if (string.IsNullOrEmpty(input)) return;
-        try
-        {
-            double result = _currentFrame;
-            if (input.StartsWith('-') || input.StartsWith('+'))
-            {
-                var length = input.Substring(1);
-                if (length.StartsWith('#'))
-                {
-                    var delta = int.Parse(length.Substring(1));
-                    result += input switch
-                    {
-                        var v when v.StartsWith('-') => -delta,
-                        _ => delta
-                    };
-                }
-                else
-                {
-                    var delta = int.Parse(length);
-                    result += input switch
-                    {
-                        var v when v.StartsWith('-') => -delta,
-                        _ => delta
-                    } * (1 / SecondsPerFrame);
-                }
-            }
-            else
-            {
-                if (input.StartsWith('#'))
-                {
-                    result = int.Parse(input.Substring(1));
-                }
-                else
-                {
-                    var ts = TimeSpan.Parse(input);
-                    result = ts.TotalSeconds * (1 / SecondsPerFrame);
-                }
-            }
-
-            _currentFrame = result;
-            UnSelectTapGesture_Tapped(null!, null!);
-            SetTimelineScrollEnabled(true);
-            UpdatePlayheadPosition();
-        }
-        catch (Exception ex)
-        {
-            Log(ex, $"Go to specific position {input}", this);
-        }
-        var t = TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame).ToString("mm\\:ss\\.ff");
-        await DisplayAlertAsync(Localized._Info, Localized.DraftPage_GotoFrame_Success(t), Localized._OK);
-
-    }
-
-
     ToolbarItem RunningTaskToolbarItem = new();
 
     void AddToolbarBtns()
@@ -3514,7 +3370,6 @@ public partial class DraftPage : ContentPage
     protected override async void OnDisappearing()
     {
         AlreadyDisappeared = true;
-        await PauseLivePreview();
         Content = new VerticalStackLayout
         {
             HorizontalOptions = LayoutOptions.Center,
@@ -3537,7 +3392,7 @@ public partial class DraftPage : ContentPage
 #if WINDOWS
         _isClosing = true;
 #endif
-        await HidePopup();
+        HidePopup();
 #if WINDOWS
         try
         {
@@ -3623,83 +3478,6 @@ public partial class DraftPage : ContentPage
         ReRenderUI();
     }
 
-    #endregion
-
-    #region task
-    public async Task<ScrollView> CreateJobsPanel()
-    {
-        var ppb = new PropertyPanelBuilder().AddText(new SingleLineLabel(Localized.DraftPage_Tasks_Title, 20));
-        if (RunningTasks.IsEmpty)
-        {
-            ppb.AddText(Localized.DraftPage_Tasks_NoneTasks);
-        }
-        else
-        {
-            foreach (var item in RunningTasks)
-            {
-                ppb.AddSeparator();
-                var task = item.Value;
-                ppb.AddText(new TitleAndDescriptionLineLabel(item.Value.Name, item.Value.Description))
-                    .AddText(item.Value.IsRunningDisplay);
-                if (task.InnerTask.IsCompleted)
-                {
-                    ppb.AddButton("Remove", async (s, e) =>
-                    {
-                        RunningTasks.Remove(item.Key, out _);
-                        Popup.Content = await CreateJobsPanel();
-
-                    });
-                }
-                else
-                {
-                    ppb.AddButton($"Cancel,{item.Key}", Localized._Cancel);
-
-                }
-
-            }
-        }
-#if DEBUG
-        ppb.AddButton("Add some task", async (s, e) =>
-        {
-            var t = new DraftTasks("123", (c) => Thread.Sleep(9999), "A sleeping thread", "nothing here");
-            RunningTasks.TryAdd(t.Id, t);
-            var t1 = new DraftTasks("456", (c) => Task.Delay(99999, c), "A sleeping task with cts", "nothing here");
-            RunningTasks.TryAdd(t1.Id, t1);
-            Popup.Content = await CreateJobsPanel();
-
-        });
-#endif
-        ppb.ListenToChanges(async (a) =>
-        {
-            var action = a.Id.Split(',')[0];
-            var id = a.Id.Split(',', 2)[1];
-            if (!RunningTasks.TryGetValue(id, out var task))
-            {
-                await DisplayAlertAsync(Localized._Error, $"Task {id} not found in Tasks.", Localized._OK);
-                return;
-            }
-            switch (action)
-            {
-                case "Cancel":
-                    {
-                        var sure = await DisplayAlertAsync(Localized._Warn, Localized.DraftPage_Tasks_CancelWarn(task.Name), Localized._Confirm, Localized._Cancel);
-                        if (sure) task.Cancel();
-                        break;
-                    }
-                default:
-                    break;
-            }
-
-            Popup.Content = await CreateJobsPanel();
-        });
-        return ppb.BuildWithScrollView();
-    }
-
-    public async Task OnManageJobsClicked()
-    {
-        await HidePopup();
-        await ShowAPopup(await CreateJobsPanel());
-    }
     #endregion
 
     #region status
