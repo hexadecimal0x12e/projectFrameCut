@@ -36,6 +36,19 @@ namespace projectFrameCut.Services
         }
 
 
+        public static async Task<string?> PickFileAsync()
+        {
+            var result = await FilePicker.Default.PickAsync();
+            if (result?.FullPath != null)
+            {
+                return result.FullPath;
+            }
+            else
+            {
+                return null;
+            }
+        }
+
         /// <summary>
         /// 打开文件夹
         /// </summary>

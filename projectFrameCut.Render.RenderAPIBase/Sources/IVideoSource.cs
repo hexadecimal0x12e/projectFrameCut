@@ -76,5 +76,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// </summary>
         public bool Disposed { get; }
 
+        /// <summary>
+        /// Enable or disable read-lock to avoid potential crashes.
+        /// </summary>
+        public bool EnableLock { get; set; }
+
     }
 }

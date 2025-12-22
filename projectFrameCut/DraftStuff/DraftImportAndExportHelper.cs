@@ -116,7 +116,7 @@ namespace projectFrameCut.DraftStuff
             return new ConcurrentDictionary<string, AssetItem>(assetDict);
         }
 
-        public static (ConcurrentDictionary<string, ClipElementUI>, int) ImportFromJSON(DraftStructureJSON draft)
+        public static (ConcurrentDictionary<string, ClipElementUI>, int) ImportFromJSON(DraftStructureJSON draft, ProjectJSONStructure proj)
         {
             if (draft == null) throw new ArgumentNullException(nameof(draft));
 
@@ -179,7 +179,7 @@ namespace projectFrameCut.DraftStuff
                 element.FromPlugin = dto.FromPlugin;
                 element.Effects = dto.Effects?.ToDictionary(
                     e => string.IsNullOrWhiteSpace(e.Name) ? $"Effect-{Guid.NewGuid()}" : e.Name,
-                    PluginManager.CreateEffect
+                    e => PluginManager.CreateEffect(e,proj.RelativeWidth, proj.RelativeHeight)
                 );
 
                 if(element.Effects is null ) 

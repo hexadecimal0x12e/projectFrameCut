@@ -102,6 +102,25 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "_ProcessingWithProg",
+        "Value": "\u5904\u7406\u4E2D\uFF0C\u5DF2\u5B8C\u6210 {n:p2}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "n\u662F\u4E00\u4E2A0\u52301\u7684\u6D6E\u70B9\u6570\uFF0C\u6240\u4EE5\u4E0D\u8981\u4FEE\u6539\u683C\u5F0F\u5B57\u7B26\u4E32\u6216\u8005\u52A0\u767E\u5206\u53F7",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "_Settings",
         "Value": "\u8BBE\u7F6E",
         "Mode": "ConstString",
@@ -208,6 +227,24 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Asset_InvaildSrc",
+        "Value": "\u7D20\u6750\u300C{name}\u300D\u4F3C\u4E4E\u65E0\u6CD5\u88AB {AppBrand} \u6253\u5F00\u3002\u8BF7\u68C0\u67E5\u4F60\u7684\u6E90\u7D20\u6750\u662F\u4E0D\u662F\u635F\u574F\uFF0C\u6216\u8005\u5C1D\u8BD5\u8F6C\u7801\u4F60\u7684\u7D20\u6750\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
         "HasValidationErrors": false
       },
       {
@@ -364,6 +401,32 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_CreateProxy",
+        "Value": "\u8981\u7ED9\u300C{name}\u300D\u521B\u5EFA\u4E00\u4E2A\u4EE3\u7406\u5417\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CreateProxy_Info",
+        "Value": "\u521B\u5EFA\u4EE3\u7406\u53EF\u4EE5\u52A0\u5FEB\u9884\u89C8\uFF0C\u8FD9\u4E0D\u4F1A\u5F71\u54CD\u5230\u5B9E\u9645\u6E32\u67D3\u65F6\u7684\u7D20\u6750\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_DuplicatedAsset",
         "Value": "\u7D20\u6750{newAsset}\u4F3C\u4E4E\u548C{existed}\u91CD\u590D\u4E86{Environment.NewLine}\u4F60\u60F3\u8981\u505A\u4EC0\u4E48\uFF1F",
         "Mode": "InterpolationString",
@@ -407,6 +470,14 @@
       {
         "Id": "DraftPage_EverythingFine",
         "Value": "\u5C31\u7EEA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ExitWarn",
+        "Value": "\u8FD8\u6709\u4EFB\u52A1\u6B63\u5728\u6267\u884C\uFF0C\u4F60\u786E\u8BA4\u8981\u9000\u51FA\u5417\uFF1F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -708,6 +779,54 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "\u4EFB\u52A1\u5DF2\u53D6\u6D88",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "\u5C1D\u8BD5\u53D6\u6D88\u4EFB\u52A1...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "\u4EFB\u52A1\u6210\u529F\u7684\u5B8C\u6210\u4E86",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "\u4EFB\u52A1\u6267\u884C\u5931\u8D25",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "\u4EFB\u52A1\u6B63\u5728\u6267\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "\u4EFB\u52A1\u72B6\u6001\u4F4D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_Track",
         "Value": "\u8F68\u9053 #{trackId}",
         "Mode": "InterpolationString",
@@ -785,6 +904,25 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "HomePage_DraftLoadFail",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C\u6211\u4EEC\u65E0\u6CD5\u52A0\u8F7D\u4F60\u7684\u9879\u76EE\uFF0C\u56E0\u4E3A{_ExceptionTemplate(ex)}\u3002\r\u5982\u679C\u4F60\u9700\u8981\u4E86\u89E3\u66F4\u591A\uFF0C\u53EF\u4EE5\u67E5\u770B\u65E5\u5FD7\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "{_ExceptionTemplate(ex)}\u5BF9\u5E94\u4E86\u53E6\u4E00\u4E2A\u672C\u5730\u5316\u8D44\u6E90\u5B57\u7B26\u4E32\u201C\u4E00\u4E2A\u672A\u88AB\u5904\u7406\u7684 {ex.GetType().Name} \u5F02\u5E38\u53D1\u751F ({ex.Message})\u201D\r\u6240\u4EE5\u8BF7\u4E0D\u8981\u5728{_ExceptionTemplate(ex)}\u8FB9\u4E0A\u52A0\u8BCD\u3002",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "HomePage_DraftLoadFailed",
         "Value": "\u5F88\u62B1\u6B49\uFF0C\u6211\u4EEC\u65E0\u6CD5\u8BFB\u53D6\u4F60\u7684\u9879\u76EE\u3002{(OperatingSystem.IsWindows() ? \u0022\u8BF7\u68C0\u67E5\u4F60\u7684\u6740\u6BD2\u8F6F\u4EF6\u662F\u5426\u963B\u6B62\u4E86\u8BFB\u53D6\u64CD\u4F5C\u3002\u0022 : (OperatingSystem.IsAndroid() ? \u0022\u8BF7\u8003\u8651\u5907\u4EFD\u6240\u6709\u7684\u8349\u7A3F\uFF0C\u7136\u540E\u91CD\u7F6E\u5E94\u7528\u6570\u636E\u3002\u0022 : \u0022\u0022))}",
         "Mode": "InterpolationString",
@@ -848,6 +986,24 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_GoDraft_FailByException",
+        "Value": "\u6253\u5F00\u8349\u7A3F\u7684\u65F6\u5019\u51FA\u73B0\u4E86{_ExceptionTemplate(ex)}\u3002\u8BF7\u518D\u8BD5\u4E00\u6B21\uFF0C\u6216\u8005\u5199\u4E00\u4E2AIssue\u6765\u5411\u6211\u4EEC\u53CD\u9988\u8FD9\u4E2A\u95EE\u9898\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
         "HasValidationErrors": false
       },
       {
@@ -1187,7 +1343,7 @@
       },
       {
         "Id": "LandingPage_TakingToDraft",
-        "Value": "\u8BF7\u7A0D\u540E\uFF0C\u6B63\u5728\u6253\u5F00\u8349\u7A3F \u300C{name}\u300D",
+        "Value": "\u6B63\u5728\u6253\u5F00\u8349\u7A3F \u300C{name}\u300D...",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3092,6 +3248,173 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_DraftLoadFail",
+        "Value": "Unset localization item:HomePage_DraftLoadFail(Exception ex)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_ProcessingWithProg",
+        "Value": "Unset localization item:_ProcessingWithProg(double n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CreateProxy",
+        "Value": "Unset localization item:DraftPage_CreateProxy(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ExitWarn",
+        "Value": "Unset localization item:DraftPage_ExitWarn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Canceled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Cancelling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Completed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Fail()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Running()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Unknown()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_GoDraft_FailByException",
+        "Value": "Unset localization item:HomePage_GoDraft_FailByException(Exception ex)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Asset_InvaildSrc",
+        "Value": "Unset localization item:DraftPage_Asset_InvaildSrc(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CreateProxy_Info",
+        "Value": "Unset localization item:DraftPage_CreateProxy_Info()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -4695,6 +5018,173 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_DraftLoadFail",
+        "Value": "Unset localization item:HomePage_DraftLoadFail(Exception ex)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_ProcessingWithProg",
+        "Value": "Unset localization item:_ProcessingWithProg(double n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CreateProxy",
+        "Value": "Unset localization item:DraftPage_CreateProxy(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ExitWarn",
+        "Value": "Unset localization item:DraftPage_ExitWarn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Canceled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Cancelling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Completed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Fail()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Running()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Unknown()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_GoDraft_FailByException",
+        "Value": "Unset localization item:HomePage_GoDraft_FailByException(Exception ex)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Asset_InvaildSrc",
+        "Value": "Unset localization item:DraftPage_Asset_InvaildSrc(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CreateProxy_Info",
+        "Value": "Unset localization item:DraftPage_CreateProxy_Info()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -6318,6 +6808,173 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_DraftLoadFail",
+        "Value": "Unset localization item:HomePage_DraftLoadFail(Exception ex)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_ProcessingWithProg",
+        "Value": "Unset localization item:_ProcessingWithProg(double n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CreateProxy",
+        "Value": "Unset localization item:DraftPage_CreateProxy(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ExitWarn",
+        "Value": "Unset localization item:DraftPage_ExitWarn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Canceled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Cancelling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Completed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Fail()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Running()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Unknown()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_GoDraft_FailByException",
+        "Value": "Unset localization item:HomePage_GoDraft_FailByException(Exception ex)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Asset_InvaildSrc",
+        "Value": "Unset localization item:DraftPage_Asset_InvaildSrc(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CreateProxy_Info",
+        "Value": "Unset localization item:DraftPage_CreateProxy_Info()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -7940,6 +8597,173 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_DraftLoadFail",
+        "Value": "Unset localization item:HomePage_DraftLoadFail(Exception ex)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_ProcessingWithProg",
+        "Value": "Unset localization item:_ProcessingWithProg(double n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CreateProxy",
+        "Value": "Unset localization item:DraftPage_CreateProxy(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ExitWarn",
+        "Value": "Unset localization item:DraftPage_ExitWarn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Canceled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Cancelling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Completed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Fail()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Running()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Unknown()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_GoDraft_FailByException",
+        "Value": "Unset localization item:HomePage_GoDraft_FailByException(Exception ex)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Asset_InvaildSrc",
+        "Value": "Unset localization item:DraftPage_Asset_InvaildSrc(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CreateProxy_Info",
+        "Value": "Unset localization item:DraftPage_CreateProxy_Info()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -9543,6 +10367,173 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "[Translation Error]: An error occurred while sending the request.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_DraftLoadFail",
+        "Value": "Unset localization item:HomePage_DraftLoadFail(Exception ex)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_ProcessingWithProg",
+        "Value": "Unset localization item:_ProcessingWithProg(double n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CreateProxy",
+        "Value": "Unset localization item:DraftPage_CreateProxy(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ExitWarn",
+        "Value": "Unset localization item:DraftPage_ExitWarn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Canceled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Cancelling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Completed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Fail()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Running()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Unknown()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_GoDraft_FailByException",
+        "Value": "Unset localization item:HomePage_GoDraft_FailByException(Exception ex)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Asset_InvaildSrc",
+        "Value": "Unset localization item:DraftPage_Asset_InvaildSrc(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CreateProxy_Info",
+        "Value": "Unset localization item:DraftPage_CreateProxy_Info()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -11165,6 +12156,173 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_DraftLoadFail",
+        "Value": "Unset localization item:HomePage_DraftLoadFail(Exception ex)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_ProcessingWithProg",
+        "Value": "Unset localization item:_ProcessingWithProg(double n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CreateProxy",
+        "Value": "Unset localization item:DraftPage_CreateProxy(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ExitWarn",
+        "Value": "Unset localization item:DraftPage_ExitWarn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Canceled()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Cancelling()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Completed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Fail()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Running()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "Unset localization item:DraftPage_Tasks_Status_Unknown()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_GoDraft_FailByException",
+        "Value": "Unset localization item:HomePage_GoDraft_FailByException(Exception ex)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Asset_InvaildSrc",
+        "Value": "Unset localization item:DraftPage_Asset_InvaildSrc(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CreateProxy_Info",
+        "Value": "Unset localization item:DraftPage_CreateProxy_Info()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]

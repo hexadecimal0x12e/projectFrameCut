@@ -239,22 +239,22 @@ namespace projectFrameCut.Render.VideoMakeEngine
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            int startX = StartX;
-            int startY = StartY;
 
-            if (RelativeWidth > 0 && RelativeHeight > 0)
+            if (targetWidth <= 0 || targetHeight <= 0)
             {
-                startX = (int)((long)StartX * targetWidth / RelativeWidth);
-                startY = (int)((long)StartY * targetHeight / RelativeHeight);
+                throw new ArgumentException("targetWidth and targetHeight must be positive");
             }
 
-            var pixelMapping = ComputePixelMapping(
-                source.Width, source.Height, targetWidth, targetHeight, startX, startY);
+            int startX = StartX;
+            int startY = StartY;
+            if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
+            {
+                startX = (int)Math.Round((double)StartX * targetWidth / RelativeWidth);
+                startY = (int)Math.Round((double)StartY * targetHeight / RelativeHeight);
+            }
 
             if (source is IPicture<ushort> p16)
             {
-                p16.a ??= Enumerable.Repeat(1f, p16.Pixels).ToArray();
-
                 Picture result = new Picture(targetWidth, targetHeight)
                 {
                     r = new ushort[targetWidth * targetHeight],
@@ -264,24 +264,40 @@ namespace projectFrameCut.Render.VideoMakeEngine
                     hasAlphaChannel = true
                 };
 
-                foreach (var mapping in pixelMapping)
+                bool sourceHasAlpha = p16.a != null && source.hasAlphaChannel;
+                int targetIndex = 0, sourceIndex = 0;
+                for (int y = 0; y < source.Height; y++)
                 {
-                    int sourceIndex = mapping.Key;
-                    int targetIndex = mapping.Value;
+                    for (int x = 0; x < source.Width; x++)
+                    {
+                        if (!source.TryFromXYToArrayIndex(x, y, out sourceIndex))
+                        {
+                            continue;
+                        }
 
-                    result.r[targetIndex] = p16.r[sourceIndex];
-                    result.g[targetIndex] = p16.g[sourceIndex];
-                    result.b[targetIndex] = p16.b[sourceIndex];
-                    result.a[targetIndex] = p16.a[sourceIndex];
+                        if (!result.TryFromXYToArrayIndex(x + startX, y + startY, out targetIndex))
+                        {
+                            continue;
+                        }
+
+                        result.r[targetIndex] = p16.r[sourceIndex];
+                        result.g[targetIndex] = p16.g[sourceIndex];
+                        result.b[targetIndex] = p16.b[sourceIndex];
+
+                        float a = sourceHasAlpha ? p16.a![sourceIndex] : 1f;
+                        if (float.IsNaN(a) || float.IsInfinity(a)) a = 1f;
+                        if (a < 0f) a = 0f;
+                        if (a > 1f) a = 1f;
+                        result.a[targetIndex] = a;
+                    }
                 }
 
-                result.ProcessStack += $"Place to ({StartX},{StartY}) with canvas size {targetWidth}*{targetHeight}\r\n";
+                var srcStack = source.ProcessStack ?? string.Empty;
+                result.ProcessStack = $"{srcStack}\r\nPlace to ({startX},{startY}) with canvas size {targetWidth}*{targetHeight}\r\n";
                 return result;
             }
             else if (source is IPicture<byte> p8)
             {
-                p8.a ??= Enumerable.Repeat(1f, p8.Pixels).ToArray();
-
                 Picture8bpp result = new Picture8bpp(targetWidth, targetHeight)
                 {
                     r = new byte[targetWidth * targetHeight],
@@ -291,50 +307,44 @@ namespace projectFrameCut.Render.VideoMakeEngine
                     hasAlphaChannel = true
                 };
 
-                foreach (var mapping in pixelMapping)
+                bool sourceHasAlpha = p8.a != null && source.hasAlphaChannel;
+                int targetIndex = 0, sourceIndex = 0;
+                for (int y = 0; y < source.Height; y++)
                 {
-                    int sourceIndex = mapping.Key;
-                    int targetIndex = mapping.Value;
-
-                    result.r[targetIndex] = p8.r[sourceIndex];
-                    result.g[targetIndex] = p8.g[sourceIndex];
-                    result.b[targetIndex] = p8.b[sourceIndex];
-                    result.a[targetIndex] = p8.a[sourceIndex];
-                }
-
-                result.ProcessStack += $"Place to ({StartX},{StartY}) with canvas size {targetWidth}*{targetHeight}\r\n";
-                return result;
-            }
-            throw new NotSupportedException();
-        }
-
-
-        public static Dictionary<int, int> ComputePixelMapping(int sourceWidth, int sourceHeight,
-            int targetWidth, int targetHeight, int startX, int startY)
-        {
-            var mapping = new Dictionary<int, int>();
-
-            for (int y = 0; y < sourceHeight; y++)
-            {
-                for (int x = 0; x < sourceWidth; x++)
-                {
-                    int newX = x + startX;
-                    int newY = y + startY;
-
-                    if (newX >= targetWidth || newY >= targetHeight)
-                        continue;
-
-                    if (newX >= 0 && newY >= 0)
+                    for (int x = 0; x < source.Width; x++)
                     {
-                        int sourceIndex = y * sourceWidth + x;
-                        int targetIndex = newY * targetWidth + newX;
-                        mapping[sourceIndex] = targetIndex;
+                        if (!source.TryFromXYToArrayIndex(x, y, out sourceIndex))
+                        {
+                            continue;
+                        }
+
+                        if (!result.TryFromXYToArrayIndex(x + startX, y + startY, out targetIndex))
+                        {
+                            continue;
+                        }
+
+                        result.r[targetIndex] = p8.r[sourceIndex];
+                        result.g[targetIndex] = p8.g[sourceIndex];
+                        result.b[targetIndex] = p8.b[sourceIndex];
+
+                        float a = sourceHasAlpha ? p8.a![sourceIndex] : 1f;
+                        if (float.IsNaN(a) || float.IsInfinity(a)) a = 1f;
+                        if (a < 0f) a = 0f;
+                        if (a > 1f) a = 1f;
+                        result.a[targetIndex] = a;
                     }
                 }
+
+                var srcStack = source.ProcessStack ?? string.Empty;
+                result.ProcessStack = $"{srcStack}\r\nPlace to ({startX},{startY}) with canvas size {targetWidth}*{targetHeight}\r\n";
+                return result;
             }
 
-            return mapping;
+            throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
         }
+
+
+
     }
 
     public class CropEffect : IEffect
@@ -409,105 +419,102 @@ namespace projectFrameCut.Render.VideoMakeEngine
         [DebuggerStepThrough()]
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
-            int startX = StartX;
-            int startY = StartY;
-            int width = Width;
-            int height = Height;
-
-            if (RelativeWidth > 0 && RelativeHeight > 0)
+            if (Width <= 0 || Height <= 0)
             {
-                startX = (int)((long)StartX * targetWidth / RelativeWidth);
-                startY = (int)((long)StartY * targetHeight / RelativeHeight);
-                width = (int)((long)Width * targetWidth / RelativeWidth);
-                height = (int)((long)Height * targetHeight / RelativeHeight);
+                throw new ArgumentException("Width and Height must be positive");
             }
-
-            // 使用 ManagedCropComputer 计算像素映射
-            var pixelMapping = ComputePixelMapping(
-                source.Width, source.Height, width, height, startX, startY);
 
             if (source is IPicture<ushort> p16)
             {
-                p16.a ??= Enumerable.Repeat(1f, p16.Pixels).ToArray();
-
-                Picture result = new Picture(width, height)
+                Picture result = new Picture(Width, Height)
                 {
-                    r = new ushort[width * height],
-                    g = new ushort[width * height],
-                    b = new ushort[width * height],
-                    a = new float[width * height],
+                    r = new ushort[Width * Height],
+                    g = new ushort[Width * Height],
+                    b = new ushort[Width * Height],
+                    a = new float[Width * Height],
                     hasAlphaChannel = true
                 };
 
-                // 按照像素映射复制像素
-                foreach (var mapping in pixelMapping)
+                bool sourceHasAlpha = p16.a != null && source.hasAlphaChannel;
+                int targetIndex = 0, sourceIndex = 0;
+                for (int y = 0; y < Height; y++)
                 {
-                    int sourceIndex = mapping.Key;
-                    int targetIndex = mapping.Value;
+                    for (int x = 0; x < Width; x++)
+                    {
+                        if (!source.TryFromXYToArrayIndex(x + StartX, y + StartY, out sourceIndex))
+                        {
+                            continue;
+                        }
 
-                    result.r[targetIndex] = p16.r[sourceIndex];
-                    result.g[targetIndex] = p16.g[sourceIndex];
-                    result.b[targetIndex] = p16.b[sourceIndex];
-                    result.a[targetIndex] = p16.a[sourceIndex];
+                        if (!result.TryFromXYToArrayIndex(x, y, out targetIndex))
+                        {
+                            continue;
+                        }
+
+                        result.r[targetIndex] = p16.r[sourceIndex];
+                        result.g[targetIndex] = p16.g[sourceIndex];
+                        result.b[targetIndex] = p16.b[sourceIndex];
+
+                        float a = sourceHasAlpha ? p16.a![sourceIndex] : 1f;
+                        if (float.IsNaN(a) || float.IsInfinity(a)) a = 1f;
+                        if (a < 0f) a = 0f;
+                        if (a > 1f) a = 1f;
+                        result.a[targetIndex] = a;
+                    }
                 }
 
-                result.ProcessStack += $"Crop from ({StartX},{StartY}) with size {Width}*{Height}, with canvas size {targetWidth}*{targetHeight}\r\n";
+                var srcStack = source.ProcessStack ?? string.Empty;
+                result.ProcessStack = $"{srcStack}\r\nCrop from ({StartX},{StartY}) with size {Width}*{Height}\r\n";
                 return result;
             }
             else if (source is IPicture<byte> p8)
             {
-                Picture8bpp result = new Picture8bpp(width, height)
+                Picture8bpp result = new Picture8bpp(Width, Height)
                 {
-                    r = new byte[width * height],
-                    g = new byte[width * height],
-                    b = new byte[width * height],
-                    a = new float[width * height],
+                    r = new byte[Width * Height],
+                    g = new byte[Width * Height],
+                    b = new byte[Width * Height],
+                    a = new float[Width * Height],
                     hasAlphaChannel = true
                 };
 
-                p8.a ??= Enumerable.Repeat(1f, p8.Pixels).ToArray();
-
-                foreach (var mapping in pixelMapping)
+                bool sourceHasAlpha = p8.a != null && source.hasAlphaChannel;
+                int targetIndex = 0, sourceIndex = 0;
+                for (int y = 0; y < Height; y++)
                 {
-                    int sourceIndex = mapping.Key;
-                    int targetIndex = mapping.Value;
+                    for (int x = 0; x < Width; x++)
+                    {
+                        if (!source.TryFromXYToArrayIndex(x + StartX, y + StartY, out sourceIndex))
+                        {
+                            continue;
+                        }
 
-                    result.r[targetIndex] = p8.r[sourceIndex];
-                    result.g[targetIndex] = p8.g[sourceIndex];
-                    result.b[targetIndex] = p8.b[sourceIndex];
-                    result.a[targetIndex] = p8.a[sourceIndex];
+                        if (!result.TryFromXYToArrayIndex(x, y, out targetIndex))
+                        {
+                            continue;
+                        }
+
+                        result.r[targetIndex] = p8.r[sourceIndex];
+                        result.g[targetIndex] = p8.g[sourceIndex];
+                        result.b[targetIndex] = p8.b[sourceIndex];
+
+                        float a = sourceHasAlpha ? p8.a![sourceIndex] : 1f;
+                        if (float.IsNaN(a) || float.IsInfinity(a)) a = 1f;
+                        if (a < 0f) a = 0f;
+                        if (a > 1f) a = 1f;
+                        result.a[targetIndex] = a;
+                    }
                 }
 
-                result.ProcessStack += $"Crop from ({StartX},{StartY}) with size {Width}*{Height} with canvas size {targetWidth}*{targetHeight}\r\n";
+                var srcStack = source.ProcessStack ?? string.Empty;
+                result.ProcessStack = $"{srcStack}\r\nCrop from ({StartX},{StartY}) with size {Width}*{Height}\r\n";
                 return result;
             }
-            throw new NotSupportedException();
+
+            throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
         }
 
 
-        public static Dictionary<int, int> ComputePixelMapping(int sourceWidth, int sourceHeight,
-            int cropWidth, int cropHeight, int startX, int startY)
-        {
-            var mapping = new Dictionary<int, int>();
-
-            for (int y = 0; y < cropHeight; y++)
-            {
-                for (int x = 0; x < cropWidth; x++)
-                {
-                    int sourceX = x + startX;
-                    int sourceY = y + startY;
-
-                    if (sourceX < 0 || sourceY < 0 || sourceX >= sourceWidth || sourceY >= sourceHeight)
-                        continue;
-
-                    int sourceIndex = sourceY * sourceWidth + sourceX;
-                    int targetIndex = y * cropWidth + x;
-                    mapping[sourceIndex] = targetIndex;
-                }
-            }
-
-            return mapping;
-        }
 
     }
 
@@ -540,7 +547,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
         {
             "Height",
             "Width",
-            "PreserveAspectRatio"
+            //"PreserveAspectRatio"
         };
 
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
@@ -559,17 +566,22 @@ namespace projectFrameCut.Render.VideoMakeEngine
             {
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
-            if (parameters.Count != ParametersNeeded.Count)
-            {
-                throw new ArgumentException("Too many parameters provided.");
-            }
+            //if (parameters.Count != ParametersNeeded.Count)
+            //{
+            //    throw new ArgumentException("Too many parameters provided.");
+            //}
 
+            bool preserve = false;
+            if (parameters.TryGetValue("PreserveAspectRatio", out var val))
+            {
+                preserve = Convert.ToBoolean(val);
+            }
 
             return new ResizeEffect
             {
                 Height = Convert.ToInt32(parameters["Height"]),
                 Width = Convert.ToInt32(parameters["Width"]),
-                PreserveAspectRatio = Convert.ToBoolean(parameters["PreserveAspectRatio"]),
+                PreserveAspectRatio = preserve,
             };
         }
 
@@ -580,12 +592,22 @@ namespace projectFrameCut.Render.VideoMakeEngine
             int width = Width;
             int height = Height;
 
-            if (RelativeWidth > 0 && RelativeHeight > 0)
+            if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
             {
-                width = (int)((long)Width * targetWidth / RelativeWidth);
-                height = (int)((long)Height * targetHeight / RelativeHeight);
+                width = Math.Max(1, (int)Math.Round((double)Width * targetWidth / RelativeWidth));
+                height = Math.Max(1, (int)Math.Round((double)Height * targetHeight / RelativeHeight));
             }
-            return source.Resize(width, height, PreserveAspectRatio);
+            else
+            {
+                width = Math.Max(1, width);
+                height = Math.Max(1, height);
+            }
+
+            var resized = source.Resize(width, height, PreserveAspectRatio);
+
+            var srcStack = source.ProcessStack ?? string.Empty;
+            resized.ProcessStack = $"{srcStack}\r\nResize to {width}*{height} preserve:{PreserveAspectRatio}\r\n";
+            return resized;
         }
 
 

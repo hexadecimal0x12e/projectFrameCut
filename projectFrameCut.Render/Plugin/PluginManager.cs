@@ -31,42 +31,12 @@ namespace projectFrameCut.Render.Plugin
                 loadedPlugins.Add(plugin.PluginID, plugin);
                 Logger.Log($"Plugin {plugin.PluginID} loaded.");
 #if DEBUG
-                Logger.Log(GetWhatProvided(plugin));
+                Logger.Log(PluginMetadata.GetWhatProvided(plugin));
 
 #endif
             }
         }
 
-        public static string GetWhatProvided(IPluginBase pluginBase)
-        {
-            StringBuilder providedContent = new($"{pluginBase.Name} ({pluginBase.PluginID}) provide these:\r\n");
-            providedContent.AppendLine("Clips:");
-            foreach (var item in pluginBase.ClipProvider)
-            {
-                providedContent.AppendLine($"- {item.Key}");
-            }
-            providedContent.AppendLine("Effect:");
-            foreach (var item in pluginBase.EffectProvider)
-            {
-                providedContent.AppendLine($"- {item.Key}");
-            }
-            providedContent.AppendLine("Mixture:");
-            foreach (var item in pluginBase.MixtureProvider)
-            {
-                providedContent.AppendLine($"- {item.Key}");
-            }
-            providedContent.AppendLine("Computer:");
-            foreach (var item in pluginBase.ComputerProvider)
-            {
-                providedContent.AppendLine($"- {item.Key}");
-            }
-            providedContent.AppendLine("VideoSource:");
-            foreach (var item in pluginBase.VideoSourceProvider)
-            {
-                providedContent.AppendLine($"- {item.Key}");
-            }
-            return providedContent.ToString();
-        }
 
         public static void LoadFrom(IPluginBase pluginInstance)
         {
@@ -135,6 +105,23 @@ namespace projectFrameCut.Render.Plugin
 
         public static IEffect CreateEffect(EffectAndMixtureJSONStructure stru)
         {
+            if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
+            {
+                var effect = plugin.EffectCreator(stru);
+                effect.Index = stru.Index;
+                effect.Enabled = stru.Enabled;
+                return effect;
+            }
+            else
+            {
+                throw new ArgumentException($"Plugin not found: {stru.FromPlugin}");
+            }
+        }
+        public static IEffect CreateEffect(EffectAndMixtureJSONStructure stru, int relativeWidth, int relativeHeight)
+        {
+            // Only use the provided resolution as fallback when the effect doesn't have its own
+            if (stru.RelativeWidth <= 0) stru.RelativeWidth = relativeWidth;
+            if (stru.RelativeHeight <= 0) stru.RelativeHeight = relativeHeight;
             if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
             {
                 return plugin.EffectCreator(stru);

@@ -2,6 +2,7 @@ using Microsoft.Maui.Controls;
 using projectFrameCut.Setting.SettingPages;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
 
 namespace projectFrameCut
@@ -20,6 +21,11 @@ namespace projectFrameCut
 #if iDevices && !DEBUG // no reflection in momo on ios, plugin can't work at all.
             PluginSettingButton.IsVisible = false; 
 #endif
+            if (IsBoolSettingTrue("DeveloperMode"))
+            {
+                TestPageButton.IsVisible = true;
+                ManageSettingPageButton.IsVisible = true;
+            }
         }
 
         private async void OnGeneralSettingClicked(object sender, EventArgs e)
@@ -47,10 +53,36 @@ namespace projectFrameCut
             await NavigateAsync(new AboutSettingPage());
         }
 
+        private async void TestPageButton_Clicked(object sender, EventArgs e)
+        {
+            await NavigateAsync(new TestPage());
+        }
+
+        private async void ManageSettingPageButton_Clicked(object sender, EventArgs e)
+        {
+            await NavigateAsync(new Setting.SettingPages.DebugSettingPage());
+        }
+
         private Task NavigateAsync(Page page)
         {
-            // Ensure we use Navigation stack from Shell or current NavigationPage
-            return Navigation.PushAsync(page);
+            try
+            {
+                return Navigation.PushAsync(page);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Navigate to {page.GetType().Name}", this);
+                var errpage = new ContentPage
+                {
+                    Content = new Label
+                    {
+                        Text = Localized.AppShell_NavFailed(ex, page.GetType().Name),
+                        HorizontalOptions = LayoutOptions.Center,
+                        VerticalOptions = LayoutOptions.Center
+                    }
+                };
+                return Navigation.PushAsync(errpage);
+            }
         }
 
         public static async Task RebootApp(Page currentPage)
@@ -68,37 +100,39 @@ namespace projectFrameCut
                     Environment.Exit(0);
                 }
 #if WINDOWS
-            string path = "projectFrameCut_Protocol:";
-            if (!MauiProgram.IsPackaged())
-            {
-                var exePath = Process.GetCurrentProcess().MainModule?.FileName;
-                if (exePath != null)
+                string path = "projectFrameCut_Protocol:";
+                if (!MauiProgram.IsPackaged())
                 {
-                    path = exePath;
+                    var exePath = Process.GetCurrentProcess().MainModule?.FileName;
+                    if (exePath != null)
+                    {
+                        path = exePath;
+                    }
                 }
-            }
-            var script =
-$$"""
+                var script =
+    $$"""
 
 Clear-Host;Write-Output "projectFrameCut is now rebooting, please wait for a while...";Start-Process "{{path}}";exit
 
 """;
-            var proc = new Process();
-            proc.StartInfo.FileName = "powershell.exe";
-            proc.StartInfo.UseShellExecute = false;
-            proc.StartInfo.RedirectStandardInput = true;
-            proc.StartInfo.CreateNoWindow = false;
-            proc.Start();
-            var procWriter = proc.StandardInput;
-            if (procWriter != null)
-            {
-                procWriter.AutoFlush = true;
-                procWriter.WriteLine(script);
-            }
+                var proc = new Process();
+                proc.StartInfo.FileName = "powershell.exe";
+                proc.StartInfo.UseShellExecute = false;
+                proc.StartInfo.RedirectStandardInput = true;
+                proc.StartInfo.CreateNoWindow = false;
+                proc.Start();
+                var procWriter = proc.StandardInput;
+                if (procWriter != null)
+                {
+                    procWriter.AutoFlush = true;
+                    procWriter.WriteLine(script);
+                }
 #endif
                 Environment.Exit(0);
 
             }
         }
+
+
     }
 }

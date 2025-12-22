@@ -470,7 +470,7 @@ namespace InteractableEditor
                     StartX = (int)Math.Round(x),
                     StartY = (int)Math.Round(y),
                     Enabled = true,
-                    Index = int.MinValue + 1,
+                    Index = int.MaxValue -100,
                     Name = InternalPlaceKey,
                     RelativeWidth = relW,
                     RelativeHeight = relH
@@ -514,7 +514,7 @@ namespace InteractableEditor
                         Height = (int)Math.Round(h),
                         PreserveAspectRatio = false,
                         Enabled = true,
-                        Index = int.MinValue,
+                        Index = int.MinValue + 50,
                         Name = InternalResizeKey,
                         RelativeWidth = relW,
                         RelativeHeight = relH

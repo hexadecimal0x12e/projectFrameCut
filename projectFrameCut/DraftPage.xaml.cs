@@ -117,6 +117,9 @@ public partial class DraftPage : ContentPage
 
     bool AlreadyDisappeared = false;
 
+    ConcurrentDictionary<string, DraftTasks> RunningTasks = new();
+
+
 #if WINDOWS
     Process backendProc;
     RpcClient _rpc;
@@ -165,7 +168,10 @@ public partial class DraftPage : ContentPage
     public bool AlwaysShowToolbarBtns { get; set; }
     public bool ShowBackendConsole { get; set; } = false;
     public int LiveVideoPreviewBufferLength { get; set; } = 50;
-    #endregion
+#if WINDOWS
+    public Accelerator AcceleratorToUse { get; set; }
+#endif
+#endregion
 
     #region init
     public DraftPage()
@@ -297,6 +303,9 @@ public partial class DraftPage : ContentPage
         if (Inited) return;
         Inited = true;
 
+        // Sync preview render resolution with editor coordinate space
+        previewWidth = ProjectInfo.RelativeWidth;
+        previewHeight = ProjectInfo.RelativeHeight;
         ClipEditor.UpdateVideoResolution(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
         var resString = $"{ProjectInfo.RelativeWidth}x{ProjectInfo.RelativeHeight}";
         if (ResolutionPicker.ItemsSource is List<string> list && list.Contains(resString))
@@ -342,10 +351,7 @@ public partial class DraftPage : ContentPage
 #elif WINDOWS
         if (UseLivePreviewInsteadOfBackend)
         {
-            Context context = Context.CreateDefault();
-            var devices = context.Devices.ToList();
-            projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Select(d => d.CreateAccelerator(context)).ToArray();
-
+            projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [AcceleratorToUse];
         }
 
 #endif
@@ -366,7 +372,7 @@ public partial class DraftPage : ContentPage
         });
     }
 #if WINDOWS
-    private async Task BootRPC()
+    public async Task BootRPC()
     {
         var pipeId = RpcClient.BootRPCServer(out backendProc,
             tmpDir: Path.Combine(workingPath, "thumbs"),
@@ -1417,12 +1423,13 @@ public partial class DraftPage : ContentPage
         SetStateBusy(Localized.DraftPage_PrepareAsset);
         try
         {
-            var srcHash = "";// await HashServices.ComputeFileSHA512Async(path, null);
-            Log($"New asset {path}'s hash: {srcHash}");
-            if (false && Assets.Values.Any((v) => v.SourceHash == srcHash)) //todo: use tasks to do this
+
+            if (Assets.Values.Any((v) => v.Name == Path.GetFileNameWithoutExtension(path)))
             {
+                var existing = Assets.Values.First((v) => v.Name == Path.GetFileNameWithoutExtension(path));
+
                 string opt = await DisplayActionSheetAsync(
-                    Localized.DraftPage_DuplicatedAsset(Path.GetFileNameWithoutExtension(path), Assets.Values.First((v) => v.SourceHash == srcHash).Name),
+                    Localized.DraftPage_DuplicatedAsset(Path.GetFileNameWithoutExtension(path), existing.Name),
                     null,
                     null,
                     [Localized.DraftPage_DuplicatedAsset_Relpace, Localized.DraftPage_DuplicatedAsset_Skip, Localized.DraftPage_DuplicatedAsset_Together]
@@ -1430,7 +1437,6 @@ public partial class DraftPage : ContentPage
 
                 if (opt == Localized.DraftPage_DuplicatedAsset_Relpace)
                 {
-                    var existing = Assets.Values.First((v) => v.SourceHash == srcHash);
                     Assets.TryRemove(existing.AssetId, out _);
                     Log($"Replaced existing asset {existing.Name} with new one from {path}");
                 }
@@ -1451,78 +1457,91 @@ public partial class DraftPage : ContentPage
             {
                 Name = System.IO.Path.GetFileNameWithoutExtension(path),
                 Path = path,
-                SourceHash = srcHash,
                 Type = ClipElementUI.DetermineClipMode(path),
                 AssetId = cid
             };
+            item.SecondPerFrame = float.PositiveInfinity;
+            item.FrameCount = 0;
 
-            if (item.Type != ClipMode.VideoClip)
+            switch (item.Type)
             {
-                item.SecondPerFrame = float.PositiveInfinity;
-                item.FrameCount = 0;
-            }
-            else
-            {
-#if WINDOWS
-                var cts = new CancellationTokenSource();
-                cts.CancelAfter(5000);
-                JsonElement? info = null;
-                if (!_isClosing && _rpc is not null)
-                    info = await _rpc.SendAsync("GetVideoFileInfo", JsonSerializer.SerializeToElement(item.Path), cts.Token);
-                if (info is not null)
-                {
-                    info.Value.TryGetProperty("frameCount", out var fc);
-                    info.Value.TryGetProperty("fps", out var fps);
-                    info.Value.TryGetProperty("width", out var w);
-                    info.Value.TryGetProperty("height", out var h);
-                    if (fc.ValueKind == JsonValueKind.Number && fps.ValueKind == JsonValueKind.Number && w.ValueKind == JsonValueKind.Number && h.ValueKind == JsonValueKind.Number)
+                case ClipMode.VideoClip:
                     {
-                        item.FrameCount = fc.GetInt64();
-                        item.SecondPerFrame = 1 / fps.GetSingle();
-                        item.Width = w.GetInt32();
-                        item.Height = h.GetInt32();
-                    }
-
-                }
-                cts = new CancellationTokenSource();
-                cts.CancelAfter(5000);
-                JsonElement? thumbNail = null;
-                if (!_isClosing && _rpc is not null)
-                    thumbNail = await _rpc.SendAsync("ReadAFrame", JsonSerializer.SerializeToElement(new Dictionary<string, object>
+                        try
                         {
-                            { "path", item.Path },
-                            { "frameToRead", 0U },
-                            { "size", "640x480" }
-                        }), cts.Token);
-
-                if (thumbNail is not null && thumbNail.Value.TryGetProperty("path", out var tPath))
-                {
-                    var p = tPath.GetString();
-                    if (!string.IsNullOrWhiteSpace(p))
-                    {
-                        File.Move(p, Path.Combine(workingPath, "thumbs", item.AssetId + "thumb.png"), true);
-                        item.ThumbnailPath = Path.Combine(workingPath, "thumbs", item.AssetId + "thumb.png");
-                    }
-                }
-#else
-
-                try
-                {
-                    var vid = PluginManager.CreateVideoSource(item.Path);
-                    item.FrameCount = vid.TotalFrames;
-                    item.SecondPerFrame = (float)(1f / vid.Fps);
+                            if (OperatingSystem.IsWindows() && UseLivePreviewInsteadOfBackend)
+                            {
 
 
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, "get video length", this);
-                    item.FrameCount = 1024;
-                    item.SecondPerFrame = 1 / 42f;
-                }
+#if WINDOWS
+                                var cts = new CancellationTokenSource();
+                                cts.CancelAfter(5000);
+                                JsonElement? info = null;
+                                if (!_isClosing && _rpc is not null)
+                                    info = await _rpc.SendAsync("GetVideoFileInfo", JsonSerializer.SerializeToElement(item.Path), cts.Token);
+                                if (info is not null)
+                                {
+                                    info.Value.TryGetProperty("frameCount", out var fc);
+                                    info.Value.TryGetProperty("fps", out var fps);
+                                    info.Value.TryGetProperty("width", out var w);
+                                    info.Value.TryGetProperty("height", out var h);
+                                    if (fc.ValueKind == JsonValueKind.Number && fps.ValueKind == JsonValueKind.Number && w.ValueKind == JsonValueKind.Number && h.ValueKind == JsonValueKind.Number)
+                                    {
+                                        item.FrameCount = fc.GetInt64();
+                                        item.SecondPerFrame = 1 / fps.GetSingle();
+                                        item.Width = w.GetInt32();
+                                        item.Height = h.GetInt32();
+                                    }
 
+                                }
+                                cts = new CancellationTokenSource();
+                                cts.CancelAfter(5000);
+                                JsonElement? thumbNail = null;
+                                if (!_isClosing && _rpc is not null)
+                                    thumbNail = await _rpc.SendAsync("ReadAFrame", JsonSerializer.SerializeToElement(new Dictionary<string, object>
+                                {
+                                    { "path", item.Path },
+                                    { "frameToRead", 0U },
+                                    { "size", "640x480" }
+                                }), cts.Token);
+
+                                if (thumbNail is not null && thumbNail.Value.TryGetProperty("path", out var tPath))
+                                {
+                                    var p = tPath.GetString();
+                                    if (!string.IsNullOrWhiteSpace(p))
+                                    {
+                                        File.Move(p, Path.Combine(workingPath, "thumbs", item.AssetId + "thumb.png"), true);
+                                        item.ThumbnailPath = Path.Combine(workingPath, "thumbs", item.AssetId + "thumb.png");
+                                    }
+                                }
 #endif
+                            }
+                            else
+                            {
+                                var vid = PluginManager.CreateVideoSource(item.Path);
+                                item.FrameCount = vid.TotalFrames;
+                                item.SecondPerFrame = (float)(1f / vid.Fps);
+
+
+                            }
+
+
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, "Add a asset", this);
+                            await DisplayAlertAsync(Localized._Error, Localized.DraftPage_Asset_InvaildSrc(item.Name), Localized._OK);
+                            item.FrameCount = 1024;
+                            item.SecondPerFrame = 1 / 42f;
+                        }
+
+                        break;
+
+
+                    }
             }
+
+
             Log($"Added asset '{item.Path}'s info: {item.FrameCount} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.FrameCount * item.SecondPerFrame} s");
             Assets.AddOrUpdate(cid, item, (_, _) => item);
             Dispatcher.Dispatch(() =>
@@ -1530,6 +1549,17 @@ public partial class DraftPage : ContentPage
                 Popup.Content = new ScrollView { Content = BuildAssetPanel() };
             });
             SetStateOK(Localized.DraftPage_AssetAdded(Path.GetFileNameWithoutExtension(path)));
+            var createProxy = await DisplayAlertAsync(Localized.DraftPage_CreateProxy(item.Name), Localized.DraftPage_CreateProxy_Info, Localized._Confirm, Localized._Cancel);
+            var task = new DraftTasks(cid, (c) => Task.Run(cancellationToken: c, action: async () =>
+            {
+                if (createProxy)
+                {
+                    var proxiedPath = Path.Combine(workingPath, "proxy", $"{Path.GetFileNameWithoutExtension(path)}.proxy.mp4");
+                    VideoResizer.ReencodeToResolution(item.Path, proxiedPath, 1280, 720, "libx264");
+                }
+                Assets[cid].SourceHash = await HashServices.ComputeFileHashAsync(path, null, c);
+            }), $"Add asset {item.Name}", $"Add asset {item.Name}");
+            RunningTasks.AddOrUpdate(cid, task, (_, _) => task);
 
         }
         catch (Exception ex)
@@ -1538,7 +1568,6 @@ public partial class DraftPage : ContentPage
             SetStatusText(Localized._ExceptionTemplate(ex));
         }
     }
-
     private async void AssetPanelButton_Clicked(object sender, EventArgs e)
     {
         try
@@ -1710,7 +1739,7 @@ public partial class DraftPage : ContentPage
         {
             await Task.Run(() =>
             {
-                path = previewer.RenderFrame(duration, width ?? 1280, height ?? 720);
+                path = previewer.RenderFrame(duration, width ?? previewWidth, height ?? previewHeight);
             });
         }
         else
@@ -3092,7 +3121,7 @@ public partial class DraftPage : ContentPage
                 SetStateOK(Localized.DraftPage_RedoAndUndo_Failed);
                 return;
             }
-            (var clips, var tracks) = DraftImportAndExportHelper.ImportFromJSON(draftJson);
+            (var clips, var tracks) = DraftImportAndExportHelper.ImportFromJSON(draftJson,ProjectInfo);
             Clips = new ConcurrentDictionary<string, ClipElementUI>(clips);
             Assets = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (a) => a));
 
@@ -3237,8 +3266,9 @@ public partial class DraftPage : ContentPage
 
     }
 
-    public int previewWidth = 1280;
-    public int previewHeight = 720;
+    // Default preview resolution should match InteractableEditor defaults (1920x1080)
+    public int previewWidth = 1920;
+    public int previewHeight = 1080;
 
     private async void SettingsClick(object sender, EventArgs e)
     {
@@ -3264,6 +3294,8 @@ public partial class DraftPage : ContentPage
                    int.TryParse(parts[1].Trim(), out int h1))
                 {
                     SetStatusText($"Set output resolution to {w1} x {h1}");
+                    previewWidth = w1;
+                    previewHeight = h1;
                     ClipEditor.UpdateVideoResolution(w1, h1);
 
 #if WINDOWS
@@ -3283,6 +3315,9 @@ public partial class DraftPage : ContentPage
             previewWidth = w;
             previewHeight = h;
             ClipEditor.UpdateVideoResolution(w, h);
+            if (UseLivePreviewInsteadOfBackend)
+            {
+            }
 #if WINDOWS
             if (!_isClosing && _rpc is not null)
                 await _rpc.SendAsync("ConfigurePreview", JsonSerializer.SerializeToElement(new { width = w, height = h }), default);
@@ -3466,6 +3501,27 @@ public partial class DraftPage : ContentPage
         }
         if (DeviceInfo.Idiom == DeviceIdiom.Phone) RightMenuBar.IsVisible = false; //screen too small
         else RightMenuBar.IsVisible = true;
+    }
+
+    private bool ignoreRunningTasks = false;
+
+    protected override bool OnBackButtonPressed()
+    {
+        if(RunningTasks.Any(c => !c.Value.InnerTask.IsCompleted))
+        {
+            Dispatcher.Dispatch(async () =>
+            {
+                await Task.Delay(250);
+                ignoreRunningTasks = await DisplayAlertAsync(Localized._Warn, Localized.DraftPage_EverythingFine, Localized._Confirm, Localized._Cancel);
+                if (ignoreRunningTasks)
+                {
+                    await Navigation.PopAsync();
+                }
+            });
+            return false;
+        }
+
+        return ignoreRunningTasks;
     }
 
     public async void OnRefreshButtonClicked(object sender, EventArgs e)

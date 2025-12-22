@@ -180,7 +180,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
             var type = stru.GetType();
             if (EffectProvider.TryGetValue(stru.TypeName, out var creator))
             {
-                return creator().WithParameters(stru.Parameters ?? new Dictionary<string, object>());
+                var blankInstance = creator();
+                var param = EffectArgsHelper.ConvertElementDictToObjectDict(stru.Parameters ?? new Dictionary<string, object>(), blankInstance.ParametersType);
+                var instance = blankInstance.WithParameters(param);
+                instance.Name = stru.Name;
+                instance.RelativeWidth = stru.RelativeWidth;
+                instance.RelativeHeight = stru.RelativeHeight;
+                instance.Enabled = stru.Enabled;
+                return instance;
             }
             else
             {
@@ -381,6 +388,69 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Hash of the plugin's source or assembly file.
         /// </summary>
         public string PluginHash { get; set; }
+
+        public static string GetWhatProvided(IPluginBase pluginBase)
+        {
+            StringBuilder providedContent = new($"{pluginBase.Name} ({pluginBase.PluginID}) provide these:\r\n");
+            if (pluginBase.ClipProvider.Any())
+            {
+                providedContent.AppendLine("Clips:");
+                foreach (var item in pluginBase.ClipProvider)
+                {
+                    providedContent.AppendLine($"- {item.Key}");
+                }
+            }
+            if (pluginBase.EffectProvider.Any())
+            {
+                providedContent.AppendLine("Effect:");
+                foreach (var item in pluginBase.EffectProvider)
+                {
+                    providedContent.AppendLine($"- {item.Key}");
+                }
+            }
+            //if (pluginBase.ContinuousEffectProvider.Any())
+            //{
+            //    providedContent.AppendLine("ContinuousEffect:");
+            //    foreach (var item in pluginBase.ContinuousEffectProvider)
+            //    {
+            //        providedContent.AppendLine($"- {item.Key}");
+            //    }
+            //}
+            //if (pluginBase.VariableArgumentEffectProvider.Any())
+            //{
+            //    providedContent.AppendLine("VariableArgumentEffect:");
+            //    foreach (var item in pluginBase.VariableArgumentEffectProvider)
+            //    {
+            //        providedContent.AppendLine($"- {item.Key}");
+            //    }
+            //}
+
+            if (pluginBase.MixtureProvider.Any())
+            {
+                providedContent.AppendLine("Mixture:");
+                foreach (var item in pluginBase.MixtureProvider)
+                {
+                    providedContent.AppendLine($"- {item.Key}");
+                }
+            }
+            if (pluginBase.ComputerProvider.Any())
+            {
+                providedContent.AppendLine("Computer:");
+                foreach (var item in pluginBase.ComputerProvider)
+                {
+                    providedContent.AppendLine($"- {item.Key}");
+                }
+            }
+            if (pluginBase.VideoSourceProvider.Any())
+            {
+                providedContent.AppendLine("VideoSource:");
+                foreach (var item in pluginBase.VideoSourceProvider)
+                {
+                    providedContent.AppendLine($"- {item.Key}");
+                }
+            }
+            return providedContent.ToString();
+        }
     }
 
 }

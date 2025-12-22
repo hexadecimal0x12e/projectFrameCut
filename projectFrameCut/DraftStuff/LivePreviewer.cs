@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Render.Plugin;
+﻿using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
@@ -15,6 +16,8 @@ namespace projectFrameCut.LivePreview
     {
         public IClip[]? Clips;
         public string TempPath;
+        public int targetWidth;
+        public int targetHeight;
 
         public string RenderFrame(uint frameIndex, int targetWidth, int targetHeight)
         {
@@ -54,6 +57,7 @@ namespace projectFrameCut.LivePreview
             foreach (var clip in Clips)
             {
                 clip.ReInit();
+                if (clip is VideoClip c) c.Decoder?.EnableLock = true; //program'll crash when you read frames from multiple threads
             }
 
             Log($"[LiveRender] Updated clips, total {Clips.Length} clips.");

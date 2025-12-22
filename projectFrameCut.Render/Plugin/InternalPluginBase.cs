@@ -86,7 +86,7 @@ public class InternalPluginBase : IPluginBase
 
     public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider => new Dictionary<string, Func<string, IAudioSource>> { };
 
-    public IEffect EffectCreator(EffectAndMixtureJSONStructure stru) => EffectHelper.CreateFromJSONStructure(stru);
+    //public IEffect EffectCreator(EffectAndMixtureJSONStructure stru) => EffectHelper.CreateFromJSONStructure(stru);
 
     IClip IPluginBase.ClipCreator(JsonElement element)
     {

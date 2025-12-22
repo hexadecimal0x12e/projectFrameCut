@@ -21,7 +21,6 @@ namespace projectFrameCut
             {
                 Routing.RegisterRoute("home", typeof(HomePage));
                 Routing.RegisterRoute("assets", typeof(AssetsLibraryPage));
-                Routing.RegisterRoute("debug", typeof(DebuggingMainPage));
                 Routing.RegisterRoute("options", typeof(MainSettingsPage));
             }
             catch (Exception ex)

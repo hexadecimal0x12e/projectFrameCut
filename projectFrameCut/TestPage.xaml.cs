@@ -15,6 +15,16 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Path = System.IO.Path;
 using projectFrameCut.Shared;
+using projectFrameCut.Render.VideoMakeEngine;
+using SixLabors.ImageSharp;
+using projectFrameCut.Services;
+using projectFrameCut.Render.Plugin;
+using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
+
+
+
+
+
 
 
 
@@ -749,6 +759,82 @@ public partial class TestPage : ContentPage
 #endif
         await DisplayAlert("FFmpeg Version", ver, "OK");
 
+    }
+
+    private void TestMixtureButton_Clicked(object sender, EventArgs e)
+    {
+        Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
+        PlaceEffect p = new()
+        {
+            StartX = 50,
+            StartY = 120
+        };
+        var result = p.Render(src, null, 2560, 1440);
+        Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
+        OverlayMixture m = new()
+        {
+
+        };
+        var final = m.Mix(canvas, result, PluginManager.CreateComputer(m.ComputerId, false));   
+        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+        {
+            MemoryStream ms = new();
+            final.SaveToSixLaborsImage().SaveAsPng(ms);
+            ms.Position = 0;
+            return ms;
+        });
+    }
+
+    private void TestPlaceButton_Clicked(object sender, EventArgs e)
+    {
+        Picture8bpp src = Picture8bpp.GenerateSolidColor(200,300,128,128,128,1);
+        PlaceEffect p = new()
+        {
+            StartX = 50,
+            StartY = 120
+        };
+        var result = p.Render(src, null, 2560,1440);
+        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+        {
+            MemoryStream ms = new();
+            result.SaveToSixLaborsImage().SaveAsPng(ms);
+            ms.Position = 0;
+            return ms;
+        });
+
+
+
+    }
+
+    private async void TestPlaceAndResizeButton_Clicked(object sender, EventArgs e)
+    {
+        Picture8bpp src = new Picture8bpp(await FileSystemService.PickFileAsync());
+        PlaceEffect p = new()
+        {
+            StartX = 250,
+            StartY = 180
+        };
+        ResizeEffect r = new()
+        {
+            Height = 300,
+            Width = 1000,
+            PreserveAspectRatio = false
+        };
+        var resized = r.Render(src, null, 2560, 1440);
+        var placed = p.Render(resized, null, 2560, 1440);
+        Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
+        OverlayMixture m = new()
+        {
+
+        };
+        var final = m.Mix(canvas, placed, PluginManager.CreateComputer(m.ComputerId, false));
+        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+        {
+            MemoryStream ms = new();
+            final.SaveToSixLaborsImage().SaveAsPng(ms);
+            ms.Position = 0;
+            return ms;
+        });
     }
 
     #endregion

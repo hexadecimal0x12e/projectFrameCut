@@ -6,15 +6,12 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
-using static projectFrameCut.Render.Videos.Video;
 
 namespace projectFrameCut.Render.Videos
 {
 
     public sealed unsafe class DecoderContext16Bit : IVideoSource
     {
-        private readonly object locker = new();
-
         private readonly string _path;
         private AVFormatContext* _fmt = null;
         private AVCodecContext* _codec = null;
@@ -46,6 +43,9 @@ namespace projectFrameCut.Render.Videos
 
         public string[] PreferredExtension => ["mkv"];
         public int? ResultBitPerPixel => 8;
+
+        public bool EnableLock { get; set; } = false;
+        private Lock locker = new();
 
         public DecoderContext16Bit(string path)
         {
@@ -219,6 +219,8 @@ namespace projectFrameCut.Render.Videos
 
         public IPicture GetFrame(uint targetFrame, bool hasAlpha = false)
         {
+            if (EnableLock) locker.Enter();
+
             if (targetFrame < _currentFrameNumber)
             {
                 ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
@@ -264,6 +266,7 @@ namespace projectFrameCut.Render.Videos
             }
 
         not_found:
+            if (EnableLock) locker.Exit();
             if (Math.Abs(targetFrame - TotalFrames) < 5)
             {
                 Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - TotalFrames} instead.");
@@ -284,7 +287,7 @@ namespace projectFrameCut.Render.Videos
                              _rgb->data,
                              _rgb->linesize
                              );
-
+            if (EnableLock) locker.Exit();
             return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha,_path,targetFrame);
         }
 
@@ -342,7 +345,6 @@ namespace projectFrameCut.Render.Videos
 
     public sealed unsafe class DecoderContext8Bit : IVideoSource
     {
-        private readonly object locker = new();
 
         private readonly string _path;
         private AVFormatContext* _fmt = null;
@@ -378,6 +380,9 @@ namespace projectFrameCut.Render.Videos
         public string[] PreferredExtension => ["mp4","mov"];
 
         public int? ResultBitPerPixel => 8;
+
+        public bool EnableLock { get; set; } = false;
+        private Lock locker = new();
 
         public DecoderContext8Bit(string path)
         {
@@ -569,10 +574,12 @@ namespace projectFrameCut.Render.Videos
             }
         }
 
+
+
         [DebuggerNonUserCode()]
         public IPicture GetFrame(uint targetFrame, bool hasAlpha)
         {
-
+            if(EnableLock) locker.Enter();
             if (targetFrame < _currentFrameNumber)
             {
                 ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
@@ -631,7 +638,8 @@ namespace projectFrameCut.Render.Videos
             }
 
         not_found:
-            if(Math.Abs(targetFrame - TotalFrames) < 5)
+            if (EnableLock) locker.Exit();
+            if (Math.Abs(targetFrame - TotalFrames) < 5)
             {
                 Log($"[VideoDecoder] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
                 return GetFrame(targetFrame - 1, hasAlpha);
@@ -650,6 +658,7 @@ namespace projectFrameCut.Render.Videos
                                 _height,
                                 _rgb->data,
                                 _rgb->linesize);
+            if (EnableLock) locker.Exit();
             return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha,_path,targetFrame);
 
 

@@ -20,6 +20,8 @@
                     <Button x:Name="PluginSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Plugin}" FontSize="24" Clicked="OnPluginSettingClicked" />
                     <Button x:Name="MiscSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Misc}" FontSize="24" Clicked="OnMiscSettingClicked" />
                     <Button x:Name="AboutSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_About}" FontSize="24" Clicked="OnAboutSettingClicked" />
+                    <Button x:Name="TestPageButton" Text="Test" FontSize="24" Clicked="TestPageButton_Clicked" IsVisible="False" />
+                    <Button x:Name="ManageSettingPageButton" Text="Manaul edit setting" FontSize="24" Clicked="ManageSettingPageButton_Clicked" IsVisible="False" />
                 </VerticalStackLayout>
             </VerticalStackLayout>
 

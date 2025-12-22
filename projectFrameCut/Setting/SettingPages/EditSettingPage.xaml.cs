@@ -34,8 +34,10 @@ public partial class EditSettingPage : ContentPage
                                                  new KeyValuePair<string, string>("right", "right")).Key
             )
             .AddEntry("Edit_MaximumSaveSlot", SettingLocalizedResources.Edit_MaxiumSaveSlot, GetSetting("Edit_MaximumSaveSlot", "10"), "10")
+            .AddEntry("edit_LiveVideoPreviewBufferLength", SettingLocalizedResources.Edit_LiveVideoPreviewBufferLength, GetSetting("edit_LiveVideoPreviewBufferLength", "240"), "240")
 #if WINDOWS
-            .AddSwitch("Edit_AlwaysShowToolbarButtons", SettingLocalizedResources.Edit_AlwaysShowToolbarButtons, bool.TryParse(GetSetting("Edit_AlwaysShowToolbarButtons","false"), out var result) ? result : false, null)
+            .AddSwitch("Edit_AlwaysShowToolbarButtons", SettingLocalizedResources.Edit_AlwaysShowToolbarButtons, bool.TryParse(GetSetting("Edit_AlwaysShowToolbarButtons", "false"), out var result) ? result : false, null)
+            .AddPicker("render_SelectRenderHost", SettingLocalizedResources.Render_SelectRenderHost, [SettingLocalizedResources.Render_RenderHost_UseLivePreviewInsteadOfBackend, SettingLocalizedResources.Render_RenderHost_UseBackendAsRenderHost], GetSetting("edit_UseLivePreviewInsteadOfBackend", "True") == "True" ? SettingLocalizedResources.Render_RenderHost_UseLivePreviewInsteadOfBackend : SettingLocalizedResources.Render_RenderHost_UseBackendAsRenderHost);
 #endif
             ;
 
@@ -51,9 +53,22 @@ public partial class EditSettingPage : ContentPage
         {
             switch (args.Id)
             {
+                case "render_SelectRenderHost":
+                    {
+                        var val = args.Value as string;
+                        if (val == SettingLocalizedResources.Render_RenderHost_UseLivePreviewInsteadOfBackend)
+                        {
+                            WriteSetting("edit_UseLivePreviewInsteadOfBackend", "True");
+                        }
+                        else
+                        {
+                            WriteSetting("edit_UseLivePreviewInsteadOfBackend", "False");
+                        }
 
+                        return;
+                    }
                 case "Edit_PreferredPopupMode":
-                    {   
+                    {
                         var mode = ModeStringMapping.FirstOrDefault(k => k.Key == args.Value,
                                                  new KeyValuePair<string, string>("right", "right")).Value;
                         WriteSetting("Edit_PreferredPopupMode", mode);

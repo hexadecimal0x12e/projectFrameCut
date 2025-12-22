@@ -173,9 +173,6 @@
 		<MauiXaml Update="Views\OverlayView.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
-		<MauiXaml Update="DebuggingMainPage.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
 	</ItemGroup>
 
 
@@ -190,9 +187,6 @@
 		</Compile>
 		<Compile Update="TestPage.xaml.cs">
 			<DependentUpon>TestPage.xaml</DependentUpon>
-		</Compile>
-		<Compile Update="DebuggingMainPage.xaml.cs">
-			<DependentUpon>DebuggingMainPage.xaml</DependentUpon>
 		</Compile>
 	</ItemGroup>
 

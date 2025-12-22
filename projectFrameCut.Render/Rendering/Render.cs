@@ -359,10 +359,10 @@ namespace projectFrameCut.Render.Rendering
                 {
                     foreach (var item in clip.EffectsInstances ?? EffectHelper.GetEffectsInstances(clip.Effects))
                     {
-                        frame = item.Render(frame,
+                        var renderedFrame = item.Render(frame,
                                             item.NeedComputer is not null ? PluginManager.CreateComputer(item.NeedComputer) : null,
-                                            _width, _height)
-                                    .Resize(_width, _height, true);
+                                            _width, _height);
+                        frame = renderedFrame;
                     }
                 }
 
@@ -373,10 +373,17 @@ namespace projectFrameCut.Render.Rendering
                 else
                 {
                     var mix = GetMixer(clip.MixtureMode);
-                    result = MixtureCache.GetOrAdd(clip.MixtureMode, mix)
+                    var mixedFrame = MixtureCache.GetOrAdd(clip.MixtureMode, mix)
                                          .Mix(result, frame,
-                                              mix.ComputerId is not null ? PluginManager.CreateComputer(mix.ComputerId) : null)
-                                         .Resize(_width, _height, true);
+                                              mix.ComputerId is not null ? PluginManager.CreateComputer(mix.ComputerId) : null);
+                    if (mixedFrame.Width != _width || mixedFrame.Height != _height)
+                    {
+                        result = mixedFrame.Resize(_width, _height, false);
+                    }
+                    else
+                    {
+                        result = mixedFrame;
+                    }
                 }
             }
             if (result?.Width == _width && result?.Height == _height) goto ok;
@@ -388,9 +395,9 @@ namespace projectFrameCut.Render.Rendering
             {
                 result = BlankPlace.Render(result, null, _width, _height);
             }
-            else if (result.Width > _width && result.Height > _height)
+            else if (result.Width > _width || result.Height > _height)
             {
-                result = result.Resize(_height, _height, false);
+                result = result.Resize(_width, _height, false);
             }
         ok:
             builder.Append(targetFrame, result);

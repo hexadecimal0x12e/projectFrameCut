@@ -4,6 +4,7 @@
              x:Class="projectFrameCut.DraftPage"
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:ie="clr-namespace:InteractableEditor"
+             Shell.NavBarIsVisible="False"
              Title="">
     <ContentPage.MenuBarItems>
         <MenuBarItem x:Name="ProjectNameMenuBarItem" Text="{Binding ProjectName}">

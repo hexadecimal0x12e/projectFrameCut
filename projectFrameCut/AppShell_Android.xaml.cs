@@ -1,5 +1,9 @@
 using Microsoft.Maui.Graphics.Platform;
 using System.Linq;
+using Microsoft.Maui.Controls.PlatformConfiguration.AndroidSpecific;
+using ShellItem = Microsoft.Maui.Controls.ShellItem;
+
+
 #if ANDROID
 using Android.App;
 using Android.Views;
@@ -58,49 +62,17 @@ namespace projectFrameCut
 
         }
 
+
         public void ShowNavView()
         {
-#if ANDROID
-            try
-            {
-                var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity as Activity;
-                if (activity == null) return;
-
-                var window = activity.Window;
-                var decorView = window.DecorView;
-
-                var controller = new WindowInsetsControllerCompat(window, decorView);
-                controller.Show(WindowInsetsCompat.Type.SystemBars());
-            }
-            catch (System.Exception ex)
-            {
-                try { Log(ex, "ShowNavView (Android)", this); } catch { System.Diagnostics.Debug.WriteLine(ex); }
-            }
-#endif
+            //Shell.SetNavBarIsVisible(this, true);
         }
 
         public void HideNavView()
         {
-#if ANDROID
-            try
-            {
-                var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity as Activity;
-                if (activity == null) return;
+            //Shell.SetNavBarIsVisible(this, false);
 
-                var window = activity.Window;
-                var decorView = window.DecorView;
 
-                var controller = new WindowInsetsControllerCompat(window, decorView);
-                // hide status + navigation bars
-                controller.Hide(WindowInsetsCompat.Type.SystemBars());
-                // allow transient reveal by swipe
-                controller.SystemBarsBehavior = WindowInsetsControllerCompat.BehaviorShowTransientBarsBySwipe;
-            }
-            catch (System.Exception ex)
-            {
-                try { Log(ex, "HideNavView (Android)", this); } catch { System.Diagnostics.Debug.WriteLine(ex); }
-            }
-#endif
         }
     }
 }

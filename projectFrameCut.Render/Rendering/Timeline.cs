@@ -37,11 +37,15 @@ namespace projectFrameCut.Render.Rendering
                     {
                         throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
-                    result.Add(new OneFrame(targetFrame, clip, clip.GetFrame(targetFrame, targetWidth, targetHeight, forceResize)));
+                    var frame = clip.GetFrame(targetFrame, targetWidth,targetHeight);
+                    if (frame is not null)
+                    {
+                        result.Add(new OneFrame(targetFrame, clip, frame));
+                    }
                 }
             }
 
-            return result.OrderByDescending((c) => c.LayerIndex);
+            return result.OrderBy((c) => c.LayerIndex);
         }
 
         public static string GetFrameHash(IClip[] video, uint targetFrame)
@@ -75,12 +79,13 @@ namespace projectFrameCut.Render.Rendering
         {
             try
             {
-                IPicture? result =null;
+                IPicture result = Picture.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0);
                 foreach (var srcFrame in frames)
                 {
-                    var frame = srcFrame.Clip.Resize(targetWidth, targetHeight, true);
-                    IPicture effected = frame;
-                    foreach (var effect in srcFrame?.Effects ?? [])
+                    // Don't resize the frame before applying effects!
+                    // The ResizeEffect and PlaceEffect will handle sizing and positioning.
+                    IPicture effected = srcFrame.Clip;
+                    foreach (var effect in srcFrame?.Effects?.OrderBy(e => e.Index)?.ToList() ?? new List<IEffect>())
                     {
                         effected = effect.Render(
                                    effected,
@@ -89,11 +94,9 @@ namespace projectFrameCut.Render.Rendering
                     }
                     var mix = GetMixer(srcFrame.MixtureMode);
 
-                    result = result is null ? effected :
-                                    MixtureCache.GetOrAdd(srcFrame!.MixtureMode, mix)
+                    result = MixtureCache.GetOrAdd(srcFrame!.MixtureMode, mix)
                                     .Mix(result, effected,
-                                       mix.ComputerId is not null ? PluginManager.CreateComputer(mix.ComputerId) : null)
-                                    .Resize(targetWidth, targetHeight, true);
+                                       mix.ComputerId is not null ? PluginManager.CreateComputer(mix.ComputerId) : null);
 
                 }
                 //LogDiagnostic($"Result's diag info:{result?.GetDiagnosticsInfo() ?? "unknown"}");
@@ -118,7 +121,7 @@ namespace projectFrameCut.Render.Rendering
             }
             catch (Exception ex)
             {
-                Log(ex,$"Render frame {frameIndex}","Timeline");
+                Log(ex, $"Render frame {frameIndex}", "Timeline");
                 throw;
                 return new Picture(Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png")).Resize(targetHeight, targetHeight, true);
             }
@@ -137,7 +140,7 @@ namespace projectFrameCut.Render.Rendering
             {
                 case MixtureMode.Overlay:
                     return new OverlayMixture();
-                
+
                 default:
                     throw new NotSupportedException($"Mixture mode {mixtureMode} is not supported.");
             }

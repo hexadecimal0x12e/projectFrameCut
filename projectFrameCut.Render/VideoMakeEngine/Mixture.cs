@@ -30,6 +30,11 @@ namespace projectFrameCut.Render.VideoMakeEngine
 
         public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer computer)
         {
+            if (topPicture.Width != basePicture.Width || topPicture.Height != basePicture.Height)
+            {
+                topPicture = topPicture.Resize(basePicture.Width, basePicture.Height, false);
+            }
+
             float[] baseR, baseG, baseB, baseA;
             if (basePicture is IPicture<ushort> bp16)
             {

@@ -176,7 +176,7 @@ namespace projectFrameCut.Services
                         var pem = File.ReadAllText(pemPath);
                         await SecureStorage.Default.SetAsync($"plugin_pem_{pluginInstance.PluginID}", pem);
                     }
-                    if(Directory.Exists(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID))) Directory.Delete(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID), true);
+                    if (Directory.Exists(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID))) Directory.Delete(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID), true);
                     Directory.CreateDirectory(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID));
                     File.Move(Path.Combine(pluginRoot, pluginInstance.PluginID + ".dll.enc"), Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, pluginInstance.PluginID + ".dll.enc"));
                     File.Move(Path.Combine(pluginRoot, pluginInstance.PluginID + ".dll.sig"), Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, pluginInstance.PluginID + ".dll.sig"));
@@ -185,6 +185,10 @@ namespace projectFrameCut.Services
                     if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "plugins.json")))
                     {
                         items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) ?? new();
+                    }
+                    if (items.Any(i => i.Id == pluginInstance.PluginID))
+                    {
+                        items = items.RemoveRange(items.Where(i => i.Id == pluginInstance.PluginID)).ToList();
                     }
                     items.Add(new PluginItem
                     {
@@ -300,11 +304,11 @@ namespace projectFrameCut.Services
             }
             var ldrMethod = ldr.GetMethod("Load");
             var pluginObj = ldrMethod?.Invoke(null, [Localized._LocaleId_]);
-            if(pluginObj is IPluginBase plugin)
+            if (pluginObj is IPluginBase plugin)
             {
                 if (plugin.PluginAPIVersion != PluginAPIVersion)
                 {
-                    Log($"Plugin {plugin.Name} has a mismatch PluginAPIVersion. Excepted {PluginAPIVersion}, got {plugin.PluginAPIVersion}.","error");
+                    Log($"Plugin {plugin.Name} has a mismatch PluginAPIVersion. Excepted {PluginAPIVersion}, got {plugin.PluginAPIVersion}.", "error");
                     return null;
                 }
                 return plugin;
@@ -341,7 +345,7 @@ namespace projectFrameCut.Services
                 {
                     Log(ex, $"load user plugin: {item.Id}");
                     var msg = $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
-                    if(!FailedLoadPlugin.TryAdd(item.Id, msg))
+                    if (!FailedLoadPlugin.TryAdd(item.Id, msg))
                     {
                         Log($"The plugin {item.Id} has been added many times.");
                     }

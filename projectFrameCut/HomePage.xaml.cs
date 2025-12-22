@@ -20,9 +20,11 @@ using System.Windows.Input;
 
 
 
+
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
 using Windows.ApplicationModel.UserActivities;
+using ILGPU;
 
 #endif
 
@@ -483,7 +485,7 @@ public partial class HomePage : ContentPage
                     return;
                 }
             ok:
-                (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline);
+                (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline, project);
                 ConcurrentDictionary<string, AssetItem> assetDict = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((AssetItem a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (AssetItem a) => a));
                 if (!SettingsManager.IsSettingExists("Edit_PreferredPopupMode"))
                 {
@@ -495,7 +497,7 @@ public partial class HomePage : ContentPage
                 }
                 page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.projectName ?? "?", isReadonly, dbgBackend);
                 page.ProjectName = project?.projectName ?? "?";
-                page.UseLivePreviewInsteadOfBackend = SettingsManager.IsBoolSettingTrue("UseLivePreviewInsteadOfBackend");
+                page.UseLivePreviewInsteadOfBackend = SettingsManager.IsBoolSettingTrue("edit_UseLivePreviewInsteadOfBackend");
                 page.IsReadonly = isReadonly;
                 page.PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "right");
                 page.MaximumSaveSlot = int.TryParse(SettingsManager.GetSetting("Edit_MaximumSaveSlot"), out var slotCount) ? slotCount : 10;
@@ -528,28 +530,30 @@ public partial class HomePage : ContentPage
                 }
                 await Dispatcher.DispatchAsync(async () =>
                 {
-                    await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex4), "OK");
+                    await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_FailByException(ex4), "OK");
                 });
             }
         });
-        Content = origContent;
-
-        if (!cancelled && page != null && project != null)
+        try
         {
+            Content = origContent;
+
+            if (!cancelled && page != null && project != null)
+            {
 #if WINDOWS
             AppShell.instance.HideNavView();
 #endif
-            foreach (var item in PluginManager.LoadedPlugins)
-            {
-                try
+                foreach (var item in PluginManager.LoadedPlugins)
                 {
-                    project = item.Value.OnProjectLoad(project) ?? project;
+                    try
+                    {
+                        project = item.Value.OnProjectLoad(project) ?? project;
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, $"plugin {item.Value.Name} OnProjectLoad", this);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Log(ex, $"plugin {item.Value.Name} OnProjectLoad", this);
-                }
-            }
 
 #if WINDOWS //for recall/timeline
             try
@@ -583,9 +587,26 @@ public partial class HomePage : ContentPage
             }
 
 #endif
-
-            await Navigation.PushAsync(page);
+                await Dispatcher.DispatchAsync(async () =>
+                {
+                    Shell.SetTabBarIsVisible(page, false);
+                    Shell.SetNavBarIsVisible(page, true);
+                    await Navigation.PushAsync(page);
+                });
+            }
         }
+        catch (Exception ex)
+        {
+            if (throwOnException)
+            {
+                throw;
+            }
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_FailByException(ex), "OK");
+            });
+        }
+
 
     }
 

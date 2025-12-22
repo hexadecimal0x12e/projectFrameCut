@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <!-- Main app theme for Android. Ensures no native ActionBar and normal status bar handling -->
-  <style name="MainTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+  <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
     <!-- remove native title bar so MAUI controls layout correctly -->
     <item name="android:windowNoTitle">true</item>
     <item name="windowNoTitle">true</item>
@@ -18,10 +18,5 @@
     <!-- let the system decide light/dark status bar icons where appropriate -->
     <item name="android:windowLightStatusBar">true</item>
   </style>
-	<style name="AppTheme" parent="Theme.MaterialComponents.Light.Bridge">
-		<!-- Customize your theme here. -->
-		<item name="colorPrimary">@color/colorPrimary</item>
-		<item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-		<item name="colorAccent">@color/colorAccent</item>
-	</style>
+
 </resources>
