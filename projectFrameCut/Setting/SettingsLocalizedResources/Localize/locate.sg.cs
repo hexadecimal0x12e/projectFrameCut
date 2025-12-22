@@ -131,13 +131,6 @@ public interface ISimpleLocalizerBase_Settings
     public string Edit_EditorPreference_Subtitle { get; }
     
     /// <summary>
-    /// Get the localized string for Edit_LiveVideoPreviewBufferLength (like '
-    /// 实时视频预览时的缓冲区大小 (帧)
-    ///')
-    /// </summary>
-    public string Edit_LiveVideoPreviewBufferLength { get; }
-    
-    /// <summary>
     /// Get the localized string for Edit_MaxiumSaveSlot (like '
     /// 最大保存步数 (用于撤销和还原)
     ///')
@@ -608,9 +601,7 @@ public interface ISimpleLocalizerBase_Settings
     /// <summary>
     /// Get the localized string for Plugin_SureRemove (like '
     /// 确认移除插件「{name}」？
-    ///
-    /// 如果你只是想要从插件包更新「{name}」，请在管理插件的主界面里添加你下载的包，因为如果你移除了它，插件的自定义配置会被移除。
-    ///
+    /// 插件的自定义配置也会被移除。
     /// 请注意，此插件的签名不会被移除。要移除它的签名并从不同的来源安装这个插件，请在高级设置里取消信任一个插件。
     ///')
     /// </summary>
@@ -793,6 +784,13 @@ public interface ISimpleLocalizerBase_Settings
     public string Render_SelectAccel_MultiAccel { get; }
     
     /// <summary>
+    /// Get the localized string for Edit_LiveVideoPreviewBufferLength (like '
+    /// 实时视频预览时的缓冲区大小 (帧)
+    ///')
+    /// </summary>
+    public string Edit_LiveVideoPreviewBufferLength { get; }
+    
+    /// <summary>
     /// Get the current Locale's ID (like 'zh-CN')
     /// </summary>
     public string _LocaleId_ { get; }
@@ -834,7 +832,6 @@ public interface ISimpleLocalizerBase_Settings
             "Edit_AlwaysShowToolbarButtons" => Edit_AlwaysShowToolbarButtons,
             "Edit_EditorPreference" => Edit_EditorPreference,
             "Edit_EditorPreference_Subtitle" => Edit_EditorPreference_Subtitle,
-            "Edit_LiveVideoPreviewBufferLength" => Edit_LiveVideoPreviewBufferLength,
             "Edit_MaxiumSaveSlot" => Edit_MaxiumSaveSlot,
             "Edit_PreferredPopupMode" => Edit_PreferredPopupMode,
             "Edit_PreferredPopupMode_Bottom" => Edit_PreferredPopupMode_Bottom,
@@ -905,6 +902,7 @@ public interface ISimpleLocalizerBase_Settings
             "GeneralUI_DefaultWidthOfContent" => GeneralUI_DefaultWidthOfContent,
             "Render_ShowBackendConsole" => Render_ShowBackendConsole,
             "Render_SelectAccel_MultiAccel" => Render_SelectAccel_MultiAccel,
+            "Edit_LiveVideoPreviewBufferLength" => Edit_LiveVideoPreviewBufferLength,
             _ => fallbackValue ?? $"Can't find the localized string for id '{id}'"
         };
     }
@@ -1079,14 +1077,6 @@ public class __ISimpleLocalizerBase_Settings_zh_CN__ : ISimpleLocalizerBase_Sett
     /// </summary>
     string ISimpleLocalizerBase_Settings.Edit_EditorPreference_Subtitle => Edit_EditorPreference_Subtitle;
     public const string Edit_EditorPreference_Subtitle = @"按照你的喜好调整编辑器界面";
-    
-    /// <summary>
-    /// Get the localized string for Edit_LiveVideoPreviewBufferLength in zh-CN (like '
-    /// 实时视频预览时的缓冲区大小 (帧)
-    /// ')
-    /// </summary>
-    string ISimpleLocalizerBase_Settings.Edit_LiveVideoPreviewBufferLength => Edit_LiveVideoPreviewBufferLength;
-    public const string Edit_LiveVideoPreviewBufferLength = @"实时视频预览时的缓冲区大小 (帧)";
     
     /// <summary>
     /// Get the localized string for Edit_MaxiumSaveSlot in zh-CN (like '
@@ -1643,17 +1633,13 @@ public class __ISimpleLocalizerBase_Settings_zh_CN__ : ISimpleLocalizerBase_Sett
     /// <summary>
     /// Get the localized string for Plugin_SureRemove in zh-CN (like '
     /// 确认移除插件「{name}」？
-    ///
-    /// 如果你只是想要从插件包更新「{name}」，请在管理插件的主界面里添加你下载的包，因为如果你移除了它，插件的自定义配置会被移除。
-    ///
+    /// 插件的自定义配置也会被移除。
     /// 请注意，此插件的签名不会被移除。要移除它的签名并从不同的来源安装这个插件，请在高级设置里取消信任一个插件。
     /// ')
     /// </summary>
     string ISimpleLocalizerBase_Settings.Plugin_SureRemove(string name) => Plugin_SureRemove(name);
     public string Plugin_SureRemove(string name) => @$"确认移除插件「{name}」？
-
-如果你只是想要从插件包更新「{name}」，请在管理插件的主界面里添加你下载的包，因为如果你移除了它，插件的自定义配置会被移除。
-
+插件的自定义配置也会被移除。
 请注意，此插件的签名不会被移除。要移除它的签名并从不同的来源安装这个插件，请在高级设置里取消信任一个插件。";
     
     /// <summary>
@@ -1857,6 +1843,14 @@ public class __ISimpleLocalizerBase_Settings_zh_CN__ : ISimpleLocalizerBase_Sett
     /// </summary>
     string ISimpleLocalizerBase_Settings.Render_SelectAccel_MultiAccel => Render_SelectAccel_MultiAccel;
     public const string Render_SelectAccel_MultiAccel = @"选择要使用的硬件加速器";
+    
+    /// <summary>
+    /// Get the localized string for Edit_LiveVideoPreviewBufferLength in zh-CN (like '
+    /// 实时视频预览时的缓冲区大小 (帧)
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Edit_LiveVideoPreviewBufferLength => Edit_LiveVideoPreviewBufferLength;
+    public const string Edit_LiveVideoPreviewBufferLength = @"实时视频预览时的缓冲区大小 (帧)";
     
     /// <summary>
     /// Get the current localized Id (like 'z')
@@ -2853,8 +2847,96 @@ Enable "{name}"
     /// <remarks>
     /// Auto-generated missing localization item
     /// </remarks>
-    string ISimpleLocalizerBase_Settings.Render_SelectAccel_MultiAccel => Render_SelectAccel_MultiAccel;
-    public const string Render_SelectAccel_MultiAccel = @"Unset localization item:Render_SelectAccel_MultiAccel()";
+    string ISimpleLocalizerBase_Settings.Render_GCOption_DoLOHCompression => Render_GCOption_DoLOHCompression;
+    public const string Render_GCOption_DoLOHCompression = @"Force blocking garbage collection and actively compact the Large Object. (Not recommended; suggested only for low-memory devices.)";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode in en-US (like '
+    /// Unset localization item:Edit_ProxyMode()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode => Edit_ProxyMode;
+    public const string Edit_ProxyMode = @"Unset localization item:Edit_ProxyMode()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_None in en-US (like '
+    /// Unset localization item:Edit_ProxyMode_None()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_None => Edit_ProxyMode_None;
+    public const string Edit_ProxyMode_None = @"Unset localization item:Edit_ProxyMode_None()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_Auto in en-US (like '
+    /// Unset localization item:Edit_ProxyMode_Auto()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_Auto => Edit_ProxyMode_Auto;
+    public const string Edit_ProxyMode_Auto = @"Unset localization item:Edit_ProxyMode_Auto()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_Ask in en-US (like '
+    /// Unset localization item:Edit_ProxyMode_Ask()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_Ask => Edit_ProxyMode_Ask;
+    public const string Edit_ProxyMode_Ask = @"Unset localization item:Edit_ProxyMode_Ask()";
+    
+    /// <summary>
+    /// Get the localized string for Render_SelectRenderHost in en-US (like '
+    /// Unset localization item:Render_SelectRenderHost()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_SelectRenderHost => Render_SelectRenderHost;
+    public const string Render_SelectRenderHost = @"Unset localization item:Render_SelectRenderHost()";
+    
+    /// <summary>
+    /// Get the localized string for Render_RenderHost_UseLivePreviewInsteadOfBackend in en-US (like '
+    /// Unset localization item:Render_RenderHost_UseLivePreviewInsteadOfBackend()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_RenderHost_UseLivePreviewInsteadOfBackend => Render_RenderHost_UseLivePreviewInsteadOfBackend;
+    public const string Render_RenderHost_UseLivePreviewInsteadOfBackend = @"Unset localization item:Render_RenderHost_UseLivePreviewInsteadOfBackend()";
+    
+    /// <summary>
+    /// Get the localized string for Render_RenderHost_UseBackendAsRenderHost in en-US (like '
+    /// Unset localization item:Render_RenderHost_UseBackendAsRenderHost()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_RenderHost_UseBackendAsRenderHost => Render_RenderHost_UseBackendAsRenderHost;
+    public const string Render_RenderHost_UseBackendAsRenderHost = @"Unset localization item:Render_RenderHost_UseBackendAsRenderHost()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_LiveVideoPreviewBufferLength in en-US (like '
+    /// Unset localization item:Edit_LiveVideoPreviewBufferLength()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_LiveVideoPreviewBufferLength => Edit_LiveVideoPreviewBufferLength;
+    public const string Edit_LiveVideoPreviewBufferLength = @"Unset localization item:Edit_LiveVideoPreviewBufferLength()";
     
     /// <summary>
     /// Get the current localized Id (like 'e')
@@ -3792,7 +3874,127 @@ public class __ISimpleLocalizerBase_Settings_zh_TW__ : ISimpleLocalizerBase_Sett
     /// Auto-generated missing localization item
     /// </remarks>
     string ISimpleLocalizerBase_Settings.Render_SelectAccel_MultiAccel => Render_SelectAccel_MultiAccel;
-    public const string Render_SelectAccel_MultiAccel = @"Unset localization item:Render_SelectAccel_MultiAccel()";
+    public const string Render_SelectAccel_MultiAccel = @"選擇渲染時，要使用的硬體加速器（多選）";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption in zh-TW (like '
+    /// 後端 .NET CLR 垃圾回收選項
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption => Render_GCOption;
+    public const string Render_GCOption = @"後端 .NET CLR 垃圾回收選項";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_LetCLRDoGC in zh-TW (like '
+    /// 讓 .NET CLR 決定何時進行垃圾回收（預設）
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_LetCLRDoGC => Render_GCOption_LetCLRDoGC;
+    public const string Render_GCOption_LetCLRDoGC = @"讓 .NET CLR 決定何時進行垃圾回收（預設）";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_DoNormalCollection in zh-TW (like '
+    /// 定期的主動計劃回收
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_DoNormalCollection => Render_GCOption_DoNormalCollection;
+    public const string Render_GCOption_DoNormalCollection = @"定期的主動計劃回收";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_DoLOHCompression in zh-TW (like '
+    /// 強制阻斷式回收，並且主動壓縮大型物件（不推薦，僅建議用於記憶體較小的裝置）
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_DoLOHCompression => Render_GCOption_DoLOHCompression;
+    public const string Render_GCOption_DoLOHCompression = @"強制阻斷式回收，並且主動壓縮大型物件（不推薦，僅建議用於記憶體較小的裝置）";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode in zh-TW (like '
+    /// Unset localization item:Edit_ProxyMode()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode => Edit_ProxyMode;
+    public const string Edit_ProxyMode = @"Unset localization item:Edit_ProxyMode()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_None in zh-TW (like '
+    /// Unset localization item:Edit_ProxyMode_None()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_None => Edit_ProxyMode_None;
+    public const string Edit_ProxyMode_None = @"Unset localization item:Edit_ProxyMode_None()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_Auto in zh-TW (like '
+    /// Unset localization item:Edit_ProxyMode_Auto()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_Auto => Edit_ProxyMode_Auto;
+    public const string Edit_ProxyMode_Auto = @"Unset localization item:Edit_ProxyMode_Auto()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_Ask in zh-TW (like '
+    /// Unset localization item:Edit_ProxyMode_Ask()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_Ask => Edit_ProxyMode_Ask;
+    public const string Edit_ProxyMode_Ask = @"Unset localization item:Edit_ProxyMode_Ask()";
+    
+    /// <summary>
+    /// Get the localized string for Render_SelectRenderHost in zh-TW (like '
+    /// Unset localization item:Render_SelectRenderHost()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_SelectRenderHost => Render_SelectRenderHost;
+    public const string Render_SelectRenderHost = @"Unset localization item:Render_SelectRenderHost()";
+    
+    /// <summary>
+    /// Get the localized string for Render_RenderHost_UseLivePreviewInsteadOfBackend in zh-TW (like '
+    /// Unset localization item:Render_RenderHost_UseLivePreviewInsteadOfBackend()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_RenderHost_UseLivePreviewInsteadOfBackend => Render_RenderHost_UseLivePreviewInsteadOfBackend;
+    public const string Render_RenderHost_UseLivePreviewInsteadOfBackend = @"Unset localization item:Render_RenderHost_UseLivePreviewInsteadOfBackend()";
+    
+    /// <summary>
+    /// Get the localized string for Render_RenderHost_UseBackendAsRenderHost in zh-TW (like '
+    /// Unset localization item:Render_RenderHost_UseBackendAsRenderHost()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_RenderHost_UseBackendAsRenderHost => Render_RenderHost_UseBackendAsRenderHost;
+    public const string Render_RenderHost_UseBackendAsRenderHost = @"Unset localization item:Render_RenderHost_UseBackendAsRenderHost()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_LiveVideoPreviewBufferLength in zh-TW (like '
+    /// Unset localization item:Edit_LiveVideoPreviewBufferLength()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_LiveVideoPreviewBufferLength => Edit_LiveVideoPreviewBufferLength;
+    public const string Edit_LiveVideoPreviewBufferLength = @"Unset localization item:Edit_LiveVideoPreviewBufferLength()";
     
     /// <summary>
     /// Get the current localized Id (like 'z')
@@ -4781,7 +4983,127 @@ public class __ISimpleLocalizerBase_Settings_ja_JP__ : ISimpleLocalizerBase_Sett
     /// Auto-generated missing localization item
     /// </remarks>
     string ISimpleLocalizerBase_Settings.Render_SelectAccel_MultiAccel => Render_SelectAccel_MultiAccel;
-    public const string Render_SelectAccel_MultiAccel = @"Unset localization item:Render_SelectAccel_MultiAccel()";
+    public const string Render_SelectAccel_MultiAccel = @"レンダリング時に使用するハードウェリアクセラレータを選択（複数選択可）";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption in ja-JP (like '
+    /// バックエンド .NET CLR ガベージコレクションオプション
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption => Render_GCOption;
+    public const string Render_GCOption = @"バックエンド .NET CLR ガベージコレクションオプション";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_LetCLRDoGC in ja-JP (like '
+    /// .NET CLRにガベージコレクションのタイミングを決定させる（デフォルト）
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_LetCLRDoGC => Render_GCOption_LetCLRDoGC;
+    public const string Render_GCOption_LetCLRDoGC = @".NET CLRにガベージコレクションのタイミングを決定させる（デフォルト）";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_DoNormalCollection in ja-JP (like '
+    /// 定期的な自動計画回収
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_DoNormalCollection => Render_GCOption_DoNormalCollection;
+    public const string Render_GCOption_DoNormalCollection = @"定期的な自動計画回収";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_DoLOHCompression in ja-JP (like '
+    /// 強制的にブロッキングGCを実行し、さらに大きなオブジェクトを積極的に圧縮します（推奨されません。メモリ容量の小さいデバイスでのみご検討ください）
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_DoLOHCompression => Render_GCOption_DoLOHCompression;
+    public const string Render_GCOption_DoLOHCompression = @"強制的にブロッキングGCを実行し、さらに大きなオブジェクトを積極的に圧縮します（推奨されません。メモリ容量の小さいデバイスでのみご検討ください）";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode in ja-JP (like '
+    /// Unset localization item:Edit_ProxyMode()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode => Edit_ProxyMode;
+    public const string Edit_ProxyMode = @"Unset localization item:Edit_ProxyMode()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_None in ja-JP (like '
+    /// Unset localization item:Edit_ProxyMode_None()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_None => Edit_ProxyMode_None;
+    public const string Edit_ProxyMode_None = @"Unset localization item:Edit_ProxyMode_None()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_Auto in ja-JP (like '
+    /// Unset localization item:Edit_ProxyMode_Auto()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_Auto => Edit_ProxyMode_Auto;
+    public const string Edit_ProxyMode_Auto = @"Unset localization item:Edit_ProxyMode_Auto()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_Ask in ja-JP (like '
+    /// Unset localization item:Edit_ProxyMode_Ask()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_Ask => Edit_ProxyMode_Ask;
+    public const string Edit_ProxyMode_Ask = @"Unset localization item:Edit_ProxyMode_Ask()";
+    
+    /// <summary>
+    /// Get the localized string for Render_SelectRenderHost in ja-JP (like '
+    /// Unset localization item:Render_SelectRenderHost()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_SelectRenderHost => Render_SelectRenderHost;
+    public const string Render_SelectRenderHost = @"Unset localization item:Render_SelectRenderHost()";
+    
+    /// <summary>
+    /// Get the localized string for Render_RenderHost_UseLivePreviewInsteadOfBackend in ja-JP (like '
+    /// Unset localization item:Render_RenderHost_UseLivePreviewInsteadOfBackend()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_RenderHost_UseLivePreviewInsteadOfBackend => Render_RenderHost_UseLivePreviewInsteadOfBackend;
+    public const string Render_RenderHost_UseLivePreviewInsteadOfBackend = @"Unset localization item:Render_RenderHost_UseLivePreviewInsteadOfBackend()";
+    
+    /// <summary>
+    /// Get the localized string for Render_RenderHost_UseBackendAsRenderHost in ja-JP (like '
+    /// Unset localization item:Render_RenderHost_UseBackendAsRenderHost()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_RenderHost_UseBackendAsRenderHost => Render_RenderHost_UseBackendAsRenderHost;
+    public const string Render_RenderHost_UseBackendAsRenderHost = @"Unset localization item:Render_RenderHost_UseBackendAsRenderHost()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_LiveVideoPreviewBufferLength in ja-JP (like '
+    /// Unset localization item:Edit_LiveVideoPreviewBufferLength()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_LiveVideoPreviewBufferLength => Edit_LiveVideoPreviewBufferLength;
+    public const string Edit_LiveVideoPreviewBufferLength = @"Unset localization item:Edit_LiveVideoPreviewBufferLength()";
     
     /// <summary>
     /// Get the current localized Id (like 'j')
@@ -5771,7 +6093,127 @@ $""""
     /// Auto-generated missing localization item
     /// </remarks>
     string ISimpleLocalizerBase_Settings.Render_SelectAccel_MultiAccel => Render_SelectAccel_MultiAccel;
-    public const string Render_SelectAccel_MultiAccel = @"Unset localization item:Render_SelectAccel_MultiAccel()";
+    public const string Render_SelectAccel_MultiAccel = @"렌더링 시 사용할 하드웨어 가속기 선택 (다중 선택)";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption in ko-KR (like '
+    /// 백엔드 .NET CLR 가비지 수집 옵션
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption => Render_GCOption;
+    public const string Render_GCOption = @"백엔드 .NET CLR 가비지 수집 옵션";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_LetCLRDoGC in ko-KR (like '
+    /// .NET CLR이 가비지 수집 시점을 결정하도록 함(기본값)
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_LetCLRDoGC => Render_GCOption_LetCLRDoGC;
+    public const string Render_GCOption_LetCLRDoGC = @".NET CLR이 가비지 수집 시점을 결정하도록 함(기본값)";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_DoNormalCollection in ko-KR (like '
+    /// 정기적인 주도적 계획 수거
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_DoNormalCollection => Render_GCOption_DoNormalCollection;
+    public const string Render_GCOption_DoNormalCollection = @"정기적인 주도적 계획 수거";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_DoLOHCompression in ko-KR (like '
+    /// 강제 블로킹 수집을 수행하고 대형 객체를 적극적으로 압축합니다(권장하지 않으며, 소규모 메모리 장치에만 사용하는 것이 좋습니다).
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_DoLOHCompression => Render_GCOption_DoLOHCompression;
+    public const string Render_GCOption_DoLOHCompression = @"강제 블로킹 수집을 수행하고 대형 객체를 적극적으로 압축합니다(권장하지 않으며, 소규모 메모리 장치에만 사용하는 것이 좋습니다).";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode in ko-KR (like '
+    /// Unset localization item:Edit_ProxyMode()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode => Edit_ProxyMode;
+    public const string Edit_ProxyMode = @"Unset localization item:Edit_ProxyMode()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_None in ko-KR (like '
+    /// Unset localization item:Edit_ProxyMode_None()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_None => Edit_ProxyMode_None;
+    public const string Edit_ProxyMode_None = @"Unset localization item:Edit_ProxyMode_None()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_Auto in ko-KR (like '
+    /// Unset localization item:Edit_ProxyMode_Auto()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_Auto => Edit_ProxyMode_Auto;
+    public const string Edit_ProxyMode_Auto = @"Unset localization item:Edit_ProxyMode_Auto()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_Ask in ko-KR (like '
+    /// Unset localization item:Edit_ProxyMode_Ask()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_Ask => Edit_ProxyMode_Ask;
+    public const string Edit_ProxyMode_Ask = @"Unset localization item:Edit_ProxyMode_Ask()";
+    
+    /// <summary>
+    /// Get the localized string for Render_SelectRenderHost in ko-KR (like '
+    /// Unset localization item:Render_SelectRenderHost()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_SelectRenderHost => Render_SelectRenderHost;
+    public const string Render_SelectRenderHost = @"Unset localization item:Render_SelectRenderHost()";
+    
+    /// <summary>
+    /// Get the localized string for Render_RenderHost_UseLivePreviewInsteadOfBackend in ko-KR (like '
+    /// Unset localization item:Render_RenderHost_UseLivePreviewInsteadOfBackend()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_RenderHost_UseLivePreviewInsteadOfBackend => Render_RenderHost_UseLivePreviewInsteadOfBackend;
+    public const string Render_RenderHost_UseLivePreviewInsteadOfBackend = @"Unset localization item:Render_RenderHost_UseLivePreviewInsteadOfBackend()";
+    
+    /// <summary>
+    /// Get the localized string for Render_RenderHost_UseBackendAsRenderHost in ko-KR (like '
+    /// Unset localization item:Render_RenderHost_UseBackendAsRenderHost()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_RenderHost_UseBackendAsRenderHost => Render_RenderHost_UseBackendAsRenderHost;
+    public const string Render_RenderHost_UseBackendAsRenderHost = @"Unset localization item:Render_RenderHost_UseBackendAsRenderHost()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_LiveVideoPreviewBufferLength in ko-KR (like '
+    /// Unset localization item:Edit_LiveVideoPreviewBufferLength()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_LiveVideoPreviewBufferLength => Edit_LiveVideoPreviewBufferLength;
+    public const string Edit_LiveVideoPreviewBufferLength = @"Unset localization item:Edit_LiveVideoPreviewBufferLength()";
     
     /// <summary>
     /// Get the current localized Id (like 'k')
@@ -6755,7 +7197,127 @@ Vos brouillons et ressources ne seront pas supprimés, mais le répertoire de st
     /// Auto-generated missing localization item
     /// </remarks>
     string ISimpleLocalizerBase_Settings.Render_SelectAccel_MultiAccel => Render_SelectAccel_MultiAccel;
-    public const string Render_SelectAccel_MultiAccel = @"Unset localization item:Render_SelectAccel_MultiAccel()";
+    public const string Render_SelectAccel_MultiAccel = @"Sélectionnez les accélérateurs matériels à utiliser pour le rendu (plusieurs choix possibles)";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption in fr-FR (like '
+    /// Options de Garbage Collection du CLR .NET
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption => Render_GCOption;
+    public const string Render_GCOption = @"Options de Garbage Collection du CLR .NET";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_LetCLRDoGC in fr-FR (like '
+    /// Laisser le CLR .NET décider du moment du garbage collection (par défaut)
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_LetCLRDoGC => Render_GCOption_LetCLRDoGC;
+    public const string Render_GCOption_LetCLRDoGC = @"Laisser le CLR .NET décider du moment du garbage collection (par défaut)";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_DoNormalCollection in fr-FR (like '
+    /// Planification périodique de la collecte active
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_DoNormalCollection => Render_GCOption_DoNormalCollection;
+    public const string Render_GCOption_DoNormalCollection = @"Planification périodique de la collecte active";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_DoLOHCompression in fr-FR (like '
+    /// Forcer le garbage collection et effectuer une compaction active du tas des objets volumineux (LOH) (Non recommandé, uniquement conseillé pour les appareils avec peu de mémoire).
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_DoLOHCompression => Render_GCOption_DoLOHCompression;
+    public const string Render_GCOption_DoLOHCompression = @"Forcer le garbage collection et effectuer une compaction active du tas des objets volumineux (LOH) (Non recommandé, uniquement conseillé pour les appareils avec peu de mémoire).";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode in fr-FR (like '
+    /// Unset localization item:Edit_ProxyMode()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode => Edit_ProxyMode;
+    public const string Edit_ProxyMode = @"Unset localization item:Edit_ProxyMode()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_None in fr-FR (like '
+    /// Unset localization item:Edit_ProxyMode_None()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_None => Edit_ProxyMode_None;
+    public const string Edit_ProxyMode_None = @"Unset localization item:Edit_ProxyMode_None()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_Auto in fr-FR (like '
+    /// Unset localization item:Edit_ProxyMode_Auto()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_Auto => Edit_ProxyMode_Auto;
+    public const string Edit_ProxyMode_Auto = @"Unset localization item:Edit_ProxyMode_Auto()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_Ask in fr-FR (like '
+    /// Unset localization item:Edit_ProxyMode_Ask()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_Ask => Edit_ProxyMode_Ask;
+    public const string Edit_ProxyMode_Ask = @"Unset localization item:Edit_ProxyMode_Ask()";
+    
+    /// <summary>
+    /// Get the localized string for Render_SelectRenderHost in fr-FR (like '
+    /// Unset localization item:Render_SelectRenderHost()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_SelectRenderHost => Render_SelectRenderHost;
+    public const string Render_SelectRenderHost = @"Unset localization item:Render_SelectRenderHost()";
+    
+    /// <summary>
+    /// Get the localized string for Render_RenderHost_UseLivePreviewInsteadOfBackend in fr-FR (like '
+    /// Unset localization item:Render_RenderHost_UseLivePreviewInsteadOfBackend()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_RenderHost_UseLivePreviewInsteadOfBackend => Render_RenderHost_UseLivePreviewInsteadOfBackend;
+    public const string Render_RenderHost_UseLivePreviewInsteadOfBackend = @"Unset localization item:Render_RenderHost_UseLivePreviewInsteadOfBackend()";
+    
+    /// <summary>
+    /// Get the localized string for Render_RenderHost_UseBackendAsRenderHost in fr-FR (like '
+    /// Unset localization item:Render_RenderHost_UseBackendAsRenderHost()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_RenderHost_UseBackendAsRenderHost => Render_RenderHost_UseBackendAsRenderHost;
+    public const string Render_RenderHost_UseBackendAsRenderHost = @"Unset localization item:Render_RenderHost_UseBackendAsRenderHost()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_LiveVideoPreviewBufferLength in fr-FR (like '
+    /// Unset localization item:Edit_LiveVideoPreviewBufferLength()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_LiveVideoPreviewBufferLength => Edit_LiveVideoPreviewBufferLength;
+    public const string Edit_LiveVideoPreviewBufferLength = @"Unset localization item:Edit_LiveVideoPreviewBufferLength()";
     
     /// <summary>
     /// Get the current localized Id (like 'f')
@@ -7794,8 +8356,120 @@ public class __ISimpleLocalizerBase_Settings______ : ISimpleLocalizerBase_Settin
     /// <remarks>
     /// Auto-generated missing localization item
     /// </remarks>
-    string ISimpleLocalizerBase_Settings.Render_SelectAccel_MultiAccel => Render_SelectAccel_MultiAccel;
-    public const string Render_SelectAccel_MultiAccel = @"Unset localization item:Render_SelectAccel_MultiAccel()";
+    string ISimpleLocalizerBase_Settings.Render_GCOption => Render_GCOption;
+    public const string Render_GCOption = @".NET CLR 底务余烬清理法";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_LetCLRDoGC in 文言文 (like '
+    /// 令 .NET CLR 决何时除秽（默认）
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_LetCLRDoGC => Render_GCOption_LetCLRDoGC;
+    public const string Render_GCOption_LetCLRDoGC = @"令 .NET CLR 决何时除秽（默认）";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_DoNormalCollection in 文言文 (like '
+    /// 定期之主动计划回收
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_DoNormalCollection => Render_GCOption_DoNormalCollection;
+    public const string Render_GCOption_DoNormalCollection = @"定期之主动计划回收";
+    
+    /// <summary>
+    /// Get the localized string for Render_GCOption_DoLOHCompression in 文言文 (like '
+    /// 强令除秽，且自为压巨物（非所荐，唯宜于内存寡之器）
+    /// ')
+    /// </summary>
+    string ISimpleLocalizerBase_Settings.Render_GCOption_DoLOHCompression => Render_GCOption_DoLOHCompression;
+    public const string Render_GCOption_DoLOHCompression = @"强令除秽，且自为压巨物（非所荐，唯宜于内存寡之器）";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode in 文言文 (like '
+    /// Unset localization item:Edit_ProxyMode()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode => Edit_ProxyMode;
+    public const string Edit_ProxyMode = @"Unset localization item:Edit_ProxyMode()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_None in 文言文 (like '
+    /// Unset localization item:Edit_ProxyMode_None()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_None => Edit_ProxyMode_None;
+    public const string Edit_ProxyMode_None = @"Unset localization item:Edit_ProxyMode_None()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_Auto in 文言文 (like '
+    /// Unset localization item:Edit_ProxyMode_Auto()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_Auto => Edit_ProxyMode_Auto;
+    public const string Edit_ProxyMode_Auto = @"Unset localization item:Edit_ProxyMode_Auto()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_ProxyMode_Ask in 文言文 (like '
+    /// Unset localization item:Edit_ProxyMode_Ask()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_ProxyMode_Ask => Edit_ProxyMode_Ask;
+    public const string Edit_ProxyMode_Ask = @"Unset localization item:Edit_ProxyMode_Ask()";
+    
+    /// <summary>
+    /// Get the localized string for Render_SelectRenderHost in 文言文 (like '
+    /// Unset localization item:Render_SelectRenderHost()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_SelectRenderHost => Render_SelectRenderHost;
+    public const string Render_SelectRenderHost = @"Unset localization item:Render_SelectRenderHost()";
+    
+    /// <summary>
+    /// Get the localized string for Render_RenderHost_UseLivePreviewInsteadOfBackend in 文言文 (like '
+    /// Unset localization item:Render_RenderHost_UseLivePreviewInsteadOfBackend()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_RenderHost_UseLivePreviewInsteadOfBackend => Render_RenderHost_UseLivePreviewInsteadOfBackend;
+    public const string Render_RenderHost_UseLivePreviewInsteadOfBackend = @"Unset localization item:Render_RenderHost_UseLivePreviewInsteadOfBackend()";
+    
+    /// <summary>
+    /// Get the localized string for Render_RenderHost_UseBackendAsRenderHost in 文言文 (like '
+    /// Unset localization item:Render_RenderHost_UseBackendAsRenderHost()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Render_RenderHost_UseBackendAsRenderHost => Render_RenderHost_UseBackendAsRenderHost;
+    public const string Render_RenderHost_UseBackendAsRenderHost = @"Unset localization item:Render_RenderHost_UseBackendAsRenderHost()";
+    
+    /// <summary>
+    /// Get the localized string for Edit_LiveVideoPreviewBufferLength in 文言文 (like '
+    /// Unset localization item:Edit_LiveVideoPreviewBufferLength()
+    /// ')
+    /// </summary>
+    /// <remarks>
+    /// Auto-generated missing localization item
+    /// </remarks>
+    string ISimpleLocalizerBase_Settings.Edit_LiveVideoPreviewBufferLength => Edit_LiveVideoPreviewBufferLength;
+    public const string Edit_LiveVideoPreviewBufferLength = @"Unset localization item:Edit_LiveVideoPreviewBufferLength()";
     
     /// <summary>
     /// Get the current localized Id (like '文')

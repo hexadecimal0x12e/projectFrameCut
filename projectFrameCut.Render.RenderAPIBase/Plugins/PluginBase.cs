@@ -63,7 +63,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// The first key of <see cref="LocalizationProvider"/> is the default localization.
         /// </remarks>
         public Dictionary<string, Dictionary<string, string>> LocalizationProvider { get; }
-
+ 
         /// <summary>
         /// Create an IClip instance from the given file path and JSON data.
         /// </summary>
@@ -80,20 +80,12 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// </remarks>
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
 
-
+      
 
         /// <summary>
         /// Create an IEffect instance from the given JSON structure.
         /// </summary>
         public Dictionary<string, Func<IEffect>> EffectProvider { get; }
-        /// <summary>
-        /// Create an IEffect instance from the given JSON structure.
-        /// </summary>
-        public Dictionary<string, Func<IEffect>> ContinuousEffectProvider { get; }
-        /// <summary>
-        /// Create an IEffect instance from the given JSON structure.
-        /// </summary>
-        public Dictionary<string, Func<IEffect>> VariableArgumentEffectProvider { get; }
         /// <summary>
         /// Create an IMixture instance from the given JSON structure.
         /// </summary>
@@ -102,7 +94,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Create an IComputer instance from the given JSON structure.
         /// </summary>
         public Dictionary<string, Func<IComputer>> ComputerProvider { get; }
-
+    
         /// <summary>
         /// Create an IVideoSource instance from the given file path.
         /// </summary>
@@ -133,7 +125,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Each key represents the locate code (like 'en-US'), and it's values represents the mapping of the setting strings. 
         /// For each locate's mapping, the key is the setting key, and the value is the display name.
         /// </remarks>
-        public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString { get; }
+        public Dictionary<string, Dictionary<string,string>> ConfigurationDisplayString { get; }
 
         /// <summary>
         /// Read a localization item from the provider.
@@ -146,14 +138,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <returns>string if key exists; null if key not exist.</returns>
         public virtual string? ReadLocalizationItem(string key, string locate)
         {
-            if (LocalizationProvider.TryGetValue(locate, out var pair))
+            if(LocalizationProvider.TryGetValue(locate, out var pair))
             {
                 if (pair.TryGetValue(key, out var result)) return result;
             }
             else
             {
                 if (!LocalizationProvider.Any()) return null;
-                if (LocalizationProvider.First().Value.TryGetValue(key, out var result)) return result;
+                if(LocalizationProvider.First().Value.TryGetValue(key, out var result)) return result;
             }
             return null;
         }
@@ -185,26 +177,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <exception cref="NotSupportedException"></exception>
         public virtual IEffect EffectCreator(EffectAndMixtureJSONStructure stru)
         {
+            var type = stru.GetType();
             if (EffectProvider.TryGetValue(stru.TypeName, out var creator))
             {
-                var blankInstance = creator();
-                var instance = blankInstance.WithParameters(EffectArgsHelper.ConvertElementDictToObjectDict(stru.Parameters ?? new Dictionary<string, object>(), blankInstance.ParametersType) ?? new Dictionary<string, object>());
-                instance.Initialize();
-                return instance;
-            }
-            else if (ContinuousEffectProvider.TryGetValue(stru.TypeName, out var creator1))
-            {
-                var blankInstance = creator1();
-                var instance = blankInstance.WithParameters(EffectArgsHelper.ConvertElementDictToObjectDict(stru.Parameters ?? new Dictionary<string, object>(), blankInstance.ParametersType) ?? new Dictionary<string, object>());
-                instance.Initialize();
-                return instance;
-            }
-            else if (VariableArgumentEffectProvider.TryGetValue(stru.TypeName, out var creator2))
-            {
-                var blankInstance = creator2();
-                var instance = blankInstance.WithParameters(EffectArgsHelper.ConvertElementDictToObjectDict(stru.Parameters ?? new Dictionary<string, object>(), blankInstance.ParametersType) ?? new Dictionary<string, object>());
-                instance.Initialize();
-                return instance;
+                return creator().WithParameters(stru.Parameters ?? new Dictionary<string, object>());
             }
             else
             {
@@ -356,69 +332,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public virtual ProjectJSONStructure? OnProjectClose(ProjectJSONStructure project)
         {
             return null;
-        }
-
-        public static string GetWhatProvided(IPluginBase pluginBase)
-        {
-            StringBuilder providedContent = new($"{pluginBase.Name} ({pluginBase.PluginID}) provide these:\r\n");
-            if (pluginBase.ClipProvider.Any())
-            {
-                providedContent.AppendLine("Clips:");
-                foreach (var item in pluginBase.ClipProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-            }
-            if (pluginBase.EffectProvider.Any())
-            {
-                providedContent.AppendLine("Effect:");
-                foreach (var item in pluginBase.EffectProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-            }
-            if (pluginBase.ContinuousEffectProvider.Any())
-            {
-                providedContent.AppendLine("ContinuousEffect:");
-                foreach (var item in pluginBase.ContinuousEffectProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-            }
-            if (pluginBase.VariableArgumentEffectProvider.Any())
-            {
-                providedContent.AppendLine("VariableArgumentEffect:");
-                foreach (var item in pluginBase.VariableArgumentEffectProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-            }
-
-            if (pluginBase.MixtureProvider.Any())
-            {
-                providedContent.AppendLine("Mixture:");
-                foreach (var item in pluginBase.MixtureProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-            }
-            if (pluginBase.ComputerProvider.Any())
-            {
-                providedContent.AppendLine("Computer:");
-                foreach (var item in pluginBase.ComputerProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-            }
-            if (pluginBase.VideoSourceProvider.Any())
-            {
-                providedContent.AppendLine("VideoSource:");
-                foreach (var item in pluginBase.VideoSourceProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-            }
-            return providedContent.ToString();
         }
     }
 

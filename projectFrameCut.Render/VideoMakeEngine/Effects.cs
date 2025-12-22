@@ -9,7 +9,6 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Path = System.IO.Path;
 
 namespace projectFrameCut.Render.VideoMakeEngine
 {
@@ -238,11 +237,11 @@ namespace projectFrameCut.Render.VideoMakeEngine
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight) 
-            => Place(source, StartX, StartY, targetWidth, targetHeight);
-
-        public IPicture Place(IPicture source, int startX, int startY, int targetWidth, int targetHeight)
+        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
+            int startX = StartX;
+            int startY = StartY;
+
             if (RelativeWidth > 0 && RelativeHeight > 0)
             {
                 startX = (int)((long)StartX * targetWidth / RelativeWidth);
@@ -262,9 +261,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
                     g = new ushort[targetWidth * targetHeight],
                     b = new ushort[targetWidth * targetHeight],
                     a = new float[targetWidth * targetHeight],
-                    hasAlphaChannel = true,
-                    ProcessStack = source.ProcessStack,
-                    filePath = source.filePath
+                    hasAlphaChannel = true
                 };
 
                 foreach (var mapping in pixelMapping)
@@ -279,12 +276,6 @@ namespace projectFrameCut.Render.VideoMakeEngine
                 }
 
                 result.ProcessStack += $"Place to ({StartX},{StartY}) with canvas size {targetWidth}*{targetHeight}\r\n";
-                if (!string.IsNullOrWhiteSpace(IPicture.DiagImagePath))
-                {
-                    var id = Guid.NewGuid().ToString();
-                    source.SaveAsPng8bpp(Path.Combine(IPicture.DiagImagePath, $"PlaceEffect-{id}-source.png"), null);
-                    result.SaveAsPng8bpp(Path.Combine(IPicture.DiagImagePath, $"PlaceEffect-{id}-result.png"), null);
-                }
                 return result;
             }
             else if (source is IPicture<byte> p8)
@@ -297,10 +288,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
                     g = new byte[targetWidth * targetHeight],
                     b = new byte[targetWidth * targetHeight],
                     a = new float[targetWidth * targetHeight],
-                    ProcessStack = source.ProcessStack,
-                    hasAlphaChannel = true,
-                    filePath = source.filePath
-
+                    hasAlphaChannel = true
                 };
 
                 foreach (var mapping in pixelMapping)
@@ -315,12 +303,6 @@ namespace projectFrameCut.Render.VideoMakeEngine
                 }
 
                 result.ProcessStack += $"Place to ({StartX},{StartY}) with canvas size {targetWidth}*{targetHeight}\r\n";
-                if (!string.IsNullOrWhiteSpace(IPicture.DiagImagePath))
-                {
-                    var id = Guid.NewGuid().ToString();
-                    source.SaveAsPng8bpp(Path.Combine(IPicture.DiagImagePath, $"PlaceEffect-{id}-source.png"), null);
-                    result.SaveAsPng8bpp(Path.Combine(IPicture.DiagImagePath, $"PlaceEffect-{id}-result.png"), null);
-                }
                 return result;
             }
             throw new NotSupportedException();
@@ -423,13 +405,15 @@ namespace projectFrameCut.Render.VideoMakeEngine
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
+
+        [DebuggerStepThrough()]
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
-            => Crop(source, StartX, StartY, Width, Height, targetWidth, targetHeight);
-
-
-        //[DebuggerStepThrough()]
-        public IPicture Crop(IPicture source, int startX, int startY, int width, int height,  int targetWidth, int targetHeight)
         {
+            int startX = StartX;
+            int startY = StartY;
+            int width = Width;
+            int height = Height;
+
             if (RelativeWidth > 0 && RelativeHeight > 0)
             {
                 startX = (int)((long)StartX * targetWidth / RelativeWidth);
@@ -452,9 +436,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
                     g = new ushort[width * height],
                     b = new ushort[width * height],
                     a = new float[width * height],
-                    hasAlphaChannel = true,
-                    filePath = source.filePath
-
+                    hasAlphaChannel = true
                 };
 
                 // 按照像素映射复制像素
@@ -469,7 +451,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
                     result.a[targetIndex] = p16.a[sourceIndex];
                 }
 
-                result.ProcessStack += $"Crop from ({startX},{startY}) with size {width}*{height}, with canvas size {targetWidth}*{targetHeight}\r\n";
+                result.ProcessStack += $"Crop from ({StartX},{StartY}) with size {Width}*{Height}, with canvas size {targetWidth}*{targetHeight}\r\n";
                 return result;
             }
             else if (source is IPicture<byte> p8)
@@ -480,9 +462,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
                     g = new byte[width * height],
                     b = new byte[width * height],
                     a = new float[width * height],
-                    hasAlphaChannel = true,
-                    filePath = source.filePath
-
+                    hasAlphaChannel = true
                 };
 
                 p8.a ??= Enumerable.Repeat(1f, p8.Pixels).ToArray();
@@ -498,7 +478,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
                     result.a[targetIndex] = p8.a[sourceIndex];
                 }
 
-                result.ProcessStack += $"Crop from ({startX},{startY}) with size {width}*{height}, with canvas size {targetWidth}*{targetHeight}\r\n";
+                result.ProcessStack += $"Crop from ({StartX},{StartY}) with size {Width}*{Height} with canvas size {targetWidth}*{targetHeight}\r\n";
                 return result;
             }
             throw new NotSupportedException();

@@ -71,8 +71,7 @@ namespace projectFrameCut.DraftStuff
                                 Enabled = kv.Value.Enabled,
                                 RelativeHeight = kv.Value.RelativeHeight,
                                 RelativeWidth = kv.Value.RelativeWidth,
-                                IsMixture = false,
-                                IsContinuousEffect = kv.Value is IContinuousEffect
+                                IsMixture = false
                             }).ToArray()
                         };
 

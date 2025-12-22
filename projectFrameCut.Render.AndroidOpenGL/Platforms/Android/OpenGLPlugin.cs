@@ -30,15 +30,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
         public Dictionary<string, Dictionary<string, string>> LocalizationProvider => new();
 
         Dictionary<string, Func<IEffect>> IPluginBase.EffectProvider => new Dictionary<string, Func<IEffect>> { };
-        public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>>
-        {
 
-        };
-
-        public Dictionary<string, Func<IEffect>> VariableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>
-        {
-
-        };
         Dictionary<string, Func<IMixture>> IPluginBase.MixtureProvider => new Dictionary<string, Func<IMixture>> { };
 
         Dictionary<string, Func< IComputer>> IPluginBase.ComputerProvider => 

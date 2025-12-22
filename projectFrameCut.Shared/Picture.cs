@@ -88,8 +88,6 @@ namespace projectFrameCut.Shared
             Alpha = 3
         }
 
-        public static string? DiagImagePath = "";
-
     }
     /// <summary>
     /// Represents a picture with pixel data of type T and a float alpha channel.
@@ -227,8 +225,8 @@ namespace projectFrameCut.Shared
                     hasAlphaChannel = false;
                 }
             }
+            
 
-            filePath = Guid.NewGuid().ToString();
             ProcessStack = $"Created from another, {Width}*{Height}, data {(copyData ? "copied" : "uncopied")},\r\n'{picture.ProcessStack}'\r\n";
         }
 
@@ -248,8 +246,6 @@ namespace projectFrameCut.Shared
             g = new ushort[Pixels];
             b = new ushort[Pixels];
             a = null;
-            filePath = Guid.NewGuid().ToString();
-
             ProcessStack = $"Created from scratch, {Width}*{Height}\r\n";
 
         }
@@ -314,7 +310,6 @@ namespace projectFrameCut.Shared
             Width = source.Width;
             Height = source.Height;
             Pixels = checked(Width * Height);
-            filePath = Guid.NewGuid().ToString();
             r = new ushort[Pixels];
             g = new ushort[Pixels];
             b = new ushort[Pixels];
@@ -434,12 +429,6 @@ namespace projectFrameCut.Shared
             {
                 if (targetWidth <= 0 || targetHeight <= 0) throw new ArgumentException("targetWidth and targetHeight must be positive");
                 if (Width <= 0 || Height <= 0) throw new InvalidOperationException("Source image has invalid dimensions");
-                string id = Guid.NewGuid().ToString();
-                if (!string.IsNullOrWhiteSpace(IPicture.DiagImagePath))
-                {
-                    Logger.LogDiagnostic($"Resize session is:{id}, resizing {filePath},\r\nProcessingStack:{ProcessStack}\r\n stacktrace:{Environment.StackTrace}");
-                    this.SaveAsPng8bpp(Path.Combine(IPicture.DiagImagePath, $"ResizeDiag-{id}-source.png"));
-                }
 
                 int destW = targetWidth;
                 int destH = targetHeight;
@@ -453,19 +442,9 @@ namespace projectFrameCut.Shared
                     destH = Math.Max(1, (int)Math.Round(Height * s));
                 }
 
-                if (destW == Width && destH == Height)
-                {
-                    if (!string.IsNullOrWhiteSpace(IPicture.DiagImagePath))
-                    {
-                        this.SaveAsPng8bpp(Path.Combine(IPicture.DiagImagePath, $"ResizeDiag-{id}-result.png"));
-                    }
-                    return this;
-                }
+                if (destW == Width && destH == Height) return this;
 
-                var result = new Picture(destW, destH)
-                {
-                    filePath = this.filePath
-                };
+                var result = new Picture(destW, destH);
                 int dstPixels = checked(destW * destH);
                 result.r = new ushort[dstPixels];
                 result.g = new ushort[dstPixels];
@@ -553,10 +532,7 @@ namespace projectFrameCut.Shared
                     }
                 }
                 result.ProcessStack = $"{ProcessStack}\r\nResize to {targetWidth}*{targetHeight}\r\n";
-                if (!string.IsNullOrWhiteSpace(IPicture.DiagImagePath))
-                {
-                    result.SaveAsPng8bpp(Path.Combine(IPicture.DiagImagePath, $"ResizeDiag-{id}-result.png"));
-                }
+
                 return result;
             }
         }
@@ -565,7 +541,6 @@ namespace projectFrameCut.Shared
         {
             var pic = new Picture(width, height)
             {
-                filePath = Guid.NewGuid().ToString(),
                 ProcessStack = $"SolidColor, {width}*{height}, rgba:{r},{g},{b},{(a is not null ? $"{a}" : "ff")}\r\n"
             };
             pic.r = Enumerable.Repeat(r, pic.Pixels).ToArray();
@@ -677,7 +652,7 @@ namespace projectFrameCut.Shared
             };
         }
 
-        public string GetDiagnosticsInfo() => $"16BitPerPixel image, id:{filePath}, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{ProcessStack}";
+        public string GetDiagnosticsInfo() => $"16BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{ProcessStack}";
     }
 
     /// <summary>
@@ -719,7 +694,6 @@ namespace projectFrameCut.Shared
             Width = picture.Width;
             Height = picture.Height;
             Pixels = picture.Pixels;
-            filePath = Guid.NewGuid().ToString();
             if (copyData)
             {
                 // Ensure pixel buffers reference the source buffers if present, otherwise allocate
@@ -753,7 +727,6 @@ namespace projectFrameCut.Shared
             Width = width;
             Height = height;
             Pixels = checked(width * height);
-            filePath = Guid.NewGuid().ToString();
 
             // allocate pixel buffers so the instance is safe to use immediately
             r = new byte[Pixels];
@@ -811,7 +784,6 @@ namespace projectFrameCut.Shared
             if (source == null) throw new ArgumentNullException(nameof(source));
             Width = source.Width;
             Height = source.Height;
-            filePath = Guid.NewGuid().ToString();
             Pixels = checked(Width * Height);
             r = new byte[Pixels];
             g = new byte[Pixels];
@@ -930,14 +902,9 @@ namespace projectFrameCut.Shared
         {
             lock (this)
             {
-                if (targetWidth <= 0 || targetHeight <= 0) throw new ArgumentException($"targetWidth and targetHeight ({targetWidth} * {targetHeight})  must be positive");
-                if (Width <= 0 || Height <= 0) throw new InvalidOperationException($"Source image ({Width} * {Height}) has invalid dimensions");
-                string id  = Guid.NewGuid().ToString(); 
-                if (!string.IsNullOrWhiteSpace(IPicture.DiagImagePath))
-                {
-                    Logger.LogDiagnostic($"Resize session is:{id}, resizing {filePath},\r\nProcessingStack:{ProcessStack}\r\n stacktrace:{Environment.StackTrace}");
-                    this.SaveAsPng8bpp(Path.Combine(IPicture.DiagImagePath, $"ResizeDiag-{id}-source.png"));
-                }
+                if (targetWidth <= 0 || targetHeight <= 0) throw new ArgumentException("targetWidth and targetHeight must be positive");
+                if (Width <= 0 || Height <= 0) throw new InvalidOperationException("Source image has invalid dimensions");
+
                 int destW = targetWidth;
                 int destH = targetHeight;
 
@@ -950,19 +917,9 @@ namespace projectFrameCut.Shared
                     destH = Math.Max(1, (int)Math.Round(Height * s));
                 }
 
-                if (destW == Width && destH == Height)
-                {
-                    if (!string.IsNullOrWhiteSpace(IPicture.DiagImagePath))
-                    {
-                        this.SaveAsPng8bpp(Path.Combine(IPicture.DiagImagePath, $"ResizeDiag-{id}-result.png"));
-                    }
-                    return this;
-                }
+                if (destW == Width && destH == Height) return this;
 
-                var result = new Picture8bpp(destW, destH)
-                {
-                    filePath = this.filePath
-                };
+                var result = new Picture8bpp(destW, destH);
                 int dstPixels = checked(destW * destH);
                 result.r = new byte[dstPixels];
                 result.g = new byte[dstPixels];
@@ -1050,10 +1007,6 @@ namespace projectFrameCut.Shared
                     }
                 }
                 result.ProcessStack = $"{ProcessStack}\r\nResize to {targetWidth}*{targetHeight}\r\n";
-                if (!string.IsNullOrWhiteSpace(IPicture.DiagImagePath))
-                {
-                    result.SaveAsPng8bpp(Path.Combine(IPicture.DiagImagePath, $"ResizeDiag-{id}-result.png"));
-                }
                 return result;
             }
         }
@@ -1062,7 +1015,6 @@ namespace projectFrameCut.Shared
         {
             var pic = new Picture8bpp(width, height)
             {
-                filePath = Guid.NewGuid().ToString(),
                 ProcessStack = $"SolidColor, {width}*{height}, rgba:{r},{g},{b},{(a is not null ? $"{a}" : "ff")}\r\n"
             };
             pic.r = Enumerable.Repeat(r, pic.Pixels).ToArray();
@@ -1174,7 +1126,7 @@ namespace projectFrameCut.Shared
             };
         }
 
-        public string GetDiagnosticsInfo() => $"8BitPerPixel image, id: {filePath}, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{ProcessStack}";
+        public string GetDiagnosticsInfo() => $"8BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{ProcessStack}";
 
 
     }
@@ -1183,12 +1135,12 @@ namespace projectFrameCut.Shared
     {
         public static void LogPicInfo(this IPicture<ushort> src)
         {
-            Logger.LogDiagnostic($"16BitPerPixel image, Size: {src.Width}*{src.Height}, id: {src.filePath}, avg R:{src.r.Average(Convert.ToDecimal)} G:{src.g.Average(Convert.ToDecimal)} B:{src.b.Average(Convert.ToDecimal)} A:{src.a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{src.ProcessStack}\r\nstacktrace:{Environment.StackTrace}");
+            Logger.LogDiagnostic($"16BitPerPixel image, Size: {src.Width}*{src.Height}, avg R:{src.r.Average(Convert.ToDecimal)} G:{src.g.Average(Convert.ToDecimal)} B:{src.b.Average(Convert.ToDecimal)} A:{src.a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{src.ProcessStack}");
 
         }
         public static void LogPicInfo(this IPicture<byte> src)
         {
-            Logger.LogDiagnostic($"8BitPerPixel image,Size: {src.Width}*{src.Height}, id: {src.filePath}, avg R:{src.r.Average(Convert.ToDecimal)} G:{src.g.Average(Convert.ToDecimal)} B:{src.b.Average(Convert.ToDecimal)} A:{src.a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{src.ProcessStack} \r\nstacktrace:{Environment.StackTrace}");
+            Logger.LogDiagnostic($"8BitPerPixel image,Size: {src.Width}*{src.Height}, avg R:{src.r.Average(Convert.ToDecimal)} G:{src.g.Average(Convert.ToDecimal)} B:{src.b.Average(Convert.ToDecimal)} A:{src.a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{src.ProcessStack}");
         }
 
         [DebuggerStepThrough()]

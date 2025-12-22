@@ -186,10 +186,6 @@ namespace projectFrameCut.Services
                     {
                         items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) ?? new();
                     }
-                    if(items.Any(i => i.Id == pluginInstance.PluginID))
-                    {
-                        items = items.RemoveRange(items.Where(i => i.Id == pluginInstance.PluginID)).ToList();
-                    }
                     items.Add(new PluginItem
                     {
                         Author = pluginInstance.Author,

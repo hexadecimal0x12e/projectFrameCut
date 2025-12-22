@@ -1,6 +1,5 @@
 ﻿using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -24,7 +23,6 @@ namespace projectFrameCut.Render.VideoMakeEngine
             return effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray();
         }
 
-
         public static IEffect CreateFromJSONStructure(EffectAndMixtureJSONStructure item)
         {
             IEffect effect;
@@ -42,7 +40,6 @@ namespace projectFrameCut.Render.VideoMakeEngine
                 case "Resize":
                     effect = ResizeEffect.FromParametersDictionary(EffectArgsHelper.ConvertElementDictToObjectDict(item.Parameters!, ResizeEffect.ParametersType));
                     break;
-   
                 default:
                     throw new NotImplementedException($"Effect type '{item.TypeName}' is not implemented.");
             }
@@ -55,33 +52,9 @@ namespace projectFrameCut.Render.VideoMakeEngine
         }
 
 
-        public static Dictionary<string, Func<IEffect>> EffectsEnum
-        {
-            get
-            {
-                Dictionary<string, Func<IEffect>> result = new();
-                foreach (var item in PluginManager.LoadedPlugins.Values)
-                {
-                    foreach (var effect in item.EffectProvider)
-                    {
-                        result.Add(effect.Key, effect.Value);
-                    }
-                    foreach (var effect in item.ContinuousEffectProvider)
-                    {
-                        result.Add(effect.Key, effect.Value);
-                    }
-                    foreach (var effect in item.VariableArgumentEffectProvider)
-                    {
-                        result.Add(effect.Key, effect.Value);
-                    }
-                }
-                return result;
-            }
-        }
+        public static Dictionary<string, Func<IEffect>> EffectsEnum => PluginManager.LoadedPlugins.Values.SelectMany(p => p.EffectProvider).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
         public static IEnumerable<string> GetEffectTypes() => EffectsEnum.Keys;
-
-
 
     }
 }

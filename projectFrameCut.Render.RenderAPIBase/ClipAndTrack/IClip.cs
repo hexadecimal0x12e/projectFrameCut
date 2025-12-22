@@ -54,7 +54,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         public uint RelativeStartFrame { get; init; } // in-point within the source
         /// <summary>
-        /// The original (in 1x speed ratio) duration of this clip in the draft.
+        /// Total duration of the source clip in frames. 0 will be treated as infinite length.
         /// </summary>
         public uint Duration { get; init; }
         /// <summary>

@@ -69,7 +69,7 @@ namespace projectFrameCut.Render.WindowsRender
             }
 
 #if DEBUG
-            //IPicture.DiagImagePath = tempFolder;
+            //OverlayMixture.TempSavePath = tempFolder;
 #endif
 
             if (pipeName is null)

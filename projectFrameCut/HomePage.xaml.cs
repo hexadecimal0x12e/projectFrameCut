@@ -517,10 +517,6 @@ public partial class HomePage : ContentPage
                     page.AcceleratorToUse = accelDevice.CreateAccelerator(context);
                 }
 #endif
-
-#if DEBUG
-                Shared.IPicture.DiagImagePath = Path.Combine(draftSourcePath, "thumbs");
-#endif
                 await page.PostInit();
 
             }

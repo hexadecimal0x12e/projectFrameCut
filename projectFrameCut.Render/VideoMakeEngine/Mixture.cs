@@ -28,7 +28,6 @@ namespace projectFrameCut.Render.VideoMakeEngine
         public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
         public string? ComputerId => "OverlayComputer";
 
-        [DebuggerStepThrough()]
         public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer computer)
         {
             float[] baseR, baseG, baseB, baseA;
@@ -110,8 +109,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
                         b = (outB[0] as float[]).Select(v => (byte)Math.Clamp(v / 257.0f, 0, 255)).ToArray(),
                         a = outA,
                         hasAlphaChannel = basePicture.hasAlphaChannel || topPicture.hasAlphaChannel,
-                        ProcessStack = $"Overlayed, \r\nbase:avg R:{baseR.Average(Convert.ToDecimal)} G:{baseG.Average(Convert.ToDecimal)} B:{baseB.Average(Convert.ToDecimal)} A:{baseA?.Average(Convert.ToDecimal) ?? -1}, ProcessStack:\r\n{basePicture.ProcessStack?.Replace("\n", "\n    ")}\r\ntop:avg R:{topR.Average(Convert.ToDecimal)} G:{topG.Average(Convert.ToDecimal)} B:{topB.Average(Convert.ToDecimal)} A:{topA?.Average(Convert.ToDecimal) ?? -1}, ProcessStack:\r\n{topPicture.ProcessStack?.Replace("\n", "\n    ")}",
-                        filePath  = $"base:{basePicture.filePath}, top:{topPicture.filePath}"
+                        ProcessStack = $"Overlayed, \r\nbase:avg R:{baseR.Average(Convert.ToDecimal)} G:{baseG.Average(Convert.ToDecimal)} B:{baseB.Average(Convert.ToDecimal)} A:{baseA?.Average(Convert.ToDecimal) ?? -1}, ProcessStack:\r\n{basePicture.ProcessStack?.Replace("\n", "\n    ")}\r\ntop:avg R:{topR.Average(Convert.ToDecimal)} G:{topG.Average(Convert.ToDecimal)} B:{topB.Average(Convert.ToDecimal)} A:{topA?.Average(Convert.ToDecimal) ?? -1}, ProcessStack:\r\n{topPicture.ProcessStack?.Replace("\n", "\n    ")}"
 
                     };
             }
@@ -129,9 +127,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
                     b = (outB[0] as float[]).Select(v => (ushort)Math.Clamp(v, 0, 65535)).ToArray(),
                     a = outA,
                     hasAlphaChannel = basePicture.hasAlphaChannel || topPicture.hasAlphaChannel,
-                    ProcessStack = $"Overlayed, \r\nbase:avg R:{baseR.Average(Convert.ToDecimal)} G:{baseG.Average(Convert.ToDecimal)} B:{baseB.Average(Convert.ToDecimal)} A:{baseA?.Average(Convert.ToDecimal) ?? -1}, ProcessStack:\r\n{basePicture.ProcessStack?.Replace("\n", "\n    ")}\r\ntop:avg R:{topR.Average(Convert.ToDecimal)} G:{topG.Average(Convert.ToDecimal)} B:{topB.Average(Convert.ToDecimal)} A:{topA?.Average(Convert.ToDecimal) ?? -1}, ProcessStack:\r\n{topPicture.ProcessStack?.Replace("\n", "\n    ")}",
-                    filePath = $"base:{basePicture.filePath}, top:{topPicture.filePath}"
-
+                    ProcessStack = $"Overlayed, \r\nbase:avg R:{baseR.Average(Convert.ToDecimal)} G:{baseG.Average(Convert.ToDecimal)} B:{baseB.Average(Convert.ToDecimal)} A:{baseA?.Average(Convert.ToDecimal) ?? -1}, ProcessStack:\r\n{basePicture.ProcessStack?.Replace("\n", "\n    ")}\r\ntop:avg R:{topR.Average(Convert.ToDecimal)} G:{topG.Average(Convert.ToDecimal)} B:{topB.Average(Convert.ToDecimal)} A:{topA?.Average(Convert.ToDecimal) ?? -1}, ProcessStack:\r\n{topPicture.ProcessStack?.Replace("\n", "\n    ")}"
                 };
             }
 #if DEBUG

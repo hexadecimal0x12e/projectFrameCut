@@ -217,7 +217,7 @@ namespace projectFrameCut.Render.Rendering
                     if (token.IsCancellationRequested) return;
 
 
-                    if (item.StartFrame <= idx && item.Duration * item.SecondPerFrameRatio + item.StartFrame >= idx)
+                    if (item.StartFrame * item.SecondPerFrameRatio <= idx && item.Duration * item.SecondPerFrameRatio + item.StartFrame * item.SecondPerFrameRatio >= idx)
                     {
                         found = true;
                         ClipNeedForFrame.AddOrUpdate(
@@ -321,7 +321,8 @@ namespace projectFrameCut.Render.Rendering
             {
                 if (token.IsCancellationRequested) return;
 
-                if (!FrameCache.TryGetValue(clip.Id, out var perClipCache) || !perClipCache.TryRemove(targetFrame, out var frame))
+                IPicture frame;
+                if (!FrameCache.TryGetValue(clip.Id, out var perClipCache) || !perClipCache.TryRemove(targetFrame, out frame))
                 {
                     Log($"[Render] WARN: Prepared frame {targetFrame} not found in cache for clip {clip.Id}. Regenerating.");
                     try
@@ -329,11 +330,11 @@ namespace projectFrameCut.Render.Rendering
                         var rawFrame = clip.GetFrame(targetFrame, _width, _height, true);
                         if (rawFrame != null)
                         {
-                            if (Use16Bit && rawFrame.bitPerPixel != 16)
+                            if (Use16Bit && rawFrame.bitPerPixel != 2)
                             {
                                 frame = rawFrame.ToBitPerPixel(16);
                             }
-                            else if (!Use16Bit && rawFrame.bitPerPixel != 8)
+                            else if (!Use16Bit && rawFrame.bitPerPixel != 1)
                             {
                                 frame = rawFrame.ToBitPerPixel(8);
                             }
@@ -354,27 +355,14 @@ namespace projectFrameCut.Render.Rendering
                     }
                 }
 
-                if (clip.Effects.ArrayAny())
+                if (clip.Effects != null)
                 {
                     foreach (var item in clip.EffectsInstances ?? EffectHelper.GetEffectsInstances(clip.Effects))
                     {
-                        if (item is IContinuousEffect c)
-                        {
-                            if (c.EndPoint == 0 && c.EndPoint == 0)
-                            {
-                                c.StartPoint = (int)(clip.StartFrame);
-                                c.EndPoint = (int)(c.StartPoint + clip.Duration * clip.SecondPerFrameRatio);
-                            }
-                            frame =
-                                c.Render(frame, targetFrame, PluginManager.CreateComputer(item.NeedComputer), _width, _height)
-                                 .Resize(_width, _height, true);
-                        }
-                        else
-                        {
-                            frame =
-                                item.Render(frame, PluginManager.CreateComputer(item.NeedComputer), _width, _height)
+                        frame = item.Render(frame,
+                                            item.NeedComputer is not null ? PluginManager.CreateComputer(item.NeedComputer) : null,
+                                            _width, _height)
                                     .Resize(_width, _height, true);
-                        }
                     }
                 }
 
@@ -469,6 +457,6 @@ namespace projectFrameCut.Render.Rendering
             }
         }
 
-        
+
     }
 }
