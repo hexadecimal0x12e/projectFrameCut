@@ -2,6 +2,7 @@
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
@@ -22,6 +23,10 @@ namespace projectFrameCut.Shared
     /// </summary>
     public interface IPicture : IDisposable
     {
+        /// <summary>
+        /// If set, the picture will be saved to this path for diagnostics.
+        /// </summary>
+        public static string? DiagImagePath { get; set; }
         /// <summary>
         /// Get how much bits in one pixel.
         /// </summary>
@@ -1133,6 +1138,33 @@ namespace projectFrameCut.Shared
 
     public static class PictureExtensions
     {
+        public static bool UseSixLaborsImageSharpToResize = true;
+
+        public static Picture8bpp Resize(this Picture8bpp source, int targetWidth, int targetHeight, bool preserveAspect = true)
+        {
+            if (!UseSixLaborsImageSharpToResize) return source.Resize(targetWidth, targetHeight, preserveAspect);
+            var img = source.SaveToSixLaborsImage();
+            img.Mutate(i => i.Resize(new ResizeOptions
+            {
+                Size = new Size(targetWidth, targetHeight),
+                Mode = preserveAspect ? ResizeMode.Max : ResizeMode.Stretch
+            }));
+            return new Picture8bpp(img);
+
+        }
+        public static Picture16bpp Resize(this Picture16bpp source, int targetWidth, int targetHeight, bool preserveAspect = true)
+        {
+            if (!UseSixLaborsImageSharpToResize) return source.Resize(targetWidth, targetHeight, preserveAspect);
+            var img = source.SaveToSixLaborsImage();
+            img.Mutate(i => i.Resize(new ResizeOptions
+            {
+                Size = new Size(targetWidth, targetHeight),
+                Mode = preserveAspect ? ResizeMode.Max : ResizeMode.Stretch
+            }));
+            return new Picture16bpp(img);
+
+        }
+
         public static void LogPicInfo(this IPicture<ushort> src)
         {
             Logger.LogDiagnostic($"16BitPerPixel image, Size: {src.Width}*{src.Height}, avg R:{src.r.Average(Convert.ToDecimal)} G:{src.g.Average(Convert.ToDecimal)} B:{src.b.Average(Convert.ToDecimal)} A:{src.a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{src.ProcessStack}");

@@ -357,22 +357,29 @@ namespace projectFrameCut.PropertyPanel
             Properties[Id] = null!;
             ButtonSetter?.Invoke(button);
             button.Clicked += (s, e) => pppcea.CreateAndInvoke(this, Id, null!);
-            //var grid = new Grid
-            //{
-            //    ColumnDefinitions = new ColumnDefinitionCollection
-            //    {
-            //        new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-            //        new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
-            //    },
-            //    RowDefinitions = new RowDefinitionCollection
-            //    {
-            //        new RowDefinition { Height = GridLength.Auto }
-            //    },
-            //    Padding = DefaultPadding
-            //};
-            //grid.Children.Add(label);
-            //grid.Children.Add(button);
-            //Grid.SetColumn(button, 1);
+            children.Add(button);
+            Components.Add(Id, button);
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a simple <seealso cref="Button"/> which not use <see cref="PropertyPanelBuilder"/>'s event processing system.
+        /// </summary>
+        /// <remarks>
+        /// Please note that <see cref="PropertyChanged"/> will NEVER be triggered, instead, you should handle <paramref name="OnClick"/> to do your own logic.
+        /// </remarks>
+        /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
+        public PropertyPanelBuilder AddButton(string buttonText, EventHandler OnClick, Action<Button>? ButtonSetter = null)
+        {
+            var Id = Guid.NewGuid().ToString();
+            var button = new Button
+            {
+                Text = buttonText,
+                HorizontalOptions = LayoutOptions.Fill
+            };
+            Properties[Id] = null!;
+            ButtonSetter?.Invoke(button);
+            button.Clicked += OnClick;
             children.Add(button);
             Components.Add(Id, button);
             return this;
@@ -583,6 +590,16 @@ namespace projectFrameCut.PropertyPanel
                 layout.Children.Add(item);
             }
             return layout;
+        }
+
+        public ScrollView BuildWithScrollView(Action<ScrollView>? Configurer = null)
+        {
+            var scrollView = new ScrollView
+            {
+                Content = Build(),
+            };
+            Configurer?.Invoke(scrollView);
+            return scrollView;
         }
 
         internal void _InvokeInternal(pppcea e)

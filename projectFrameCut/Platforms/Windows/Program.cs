@@ -13,8 +13,8 @@ namespace projectFrameCut.WinUI
         {
             try
             {
-                projectFrameCut.SplashScreen.SplashProgram.AppVersion = $"Version v{AppInfo.VersionString}";
-                var splash = new Thread(projectFrameCut.SplashScreen.SplashProgram.SplashMain);
+                projectFrameCut.Helper.HelperProgram.AppVersion = $"Version v{AppInfo.VersionString}";
+                var splash = new Thread(projectFrameCut.Helper.HelperProgram.SplashMain);
                 splash.Priority = ThreadPriority.Highest;
                 splash.IsBackground = false;
                 splash.Start();

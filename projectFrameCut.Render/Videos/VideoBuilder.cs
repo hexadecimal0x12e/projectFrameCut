@@ -77,6 +77,10 @@ namespace projectFrameCut.Render.Videos
 
         public void Append(uint index, IPicture frame)
         {
+            if (frame == null) throw new ArgumentNullException(nameof(frame));
+            if (frame.Width != Width || frame.Height != Height)
+                throw new ArgumentException($"The result ({frame.filePath})'s size {frame.Width}*{frame.Height} is different from original size ({Width}*{Height}). Please check the source.");
+
             if (index > Duration)
             {
                 Log($"[VideoBuilder] WARN: Frame #{index} is out of duration {Duration}, ignored.", "warn");

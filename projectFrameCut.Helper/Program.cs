@@ -1,9 +1,9 @@
-
+using projectFrameCut.SplashScreen;
 using System.Diagnostics;
 
-namespace projectFrameCut.SplashScreen
+namespace projectFrameCut.Helper
 {
-    public static class SplashProgram
+    public static class HelperProgram
     {
         /// <summary>
         ///  The main entry point for the application.
@@ -22,10 +22,31 @@ namespace projectFrameCut.SplashScreen
             SplashShowing = true;
             Application.Run();
         }
+        [STAThread]
+        public static void CrashMain(string[] args)
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            var form = new CrashForm(args);
+            form.ShowInTaskbar = false;
+            form.Show();
+            Application.Run();
+        }
 
         [STAThread]
         public static void Main(string[] args)
         {
+            if(args.Length > 1)
+            {
+                var mode = args[0];
+                switch (mode)
+                {
+                    case "crashHandler":
+                        CrashMain(args);
+                        return;
+                }
+            }
             Process.Start("projectFrameCut.exe", string.Join(' ', args));
             return;
         }

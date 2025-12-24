@@ -154,9 +154,10 @@ namespace projectFrameCut.Render.Plugin
 
         private static Dictionary<string, IComputer> ComputerCache = new();
 
-        public static IComputer CreateComputer(string computerType, bool forceCreate = false)
+        public static IComputer? CreateComputer(string? computerType, bool forceCreate = false)
         {
-            if(!forceCreate && ComputerCache.TryGetValue(computerType, out var cachedComputer))
+            if (computerType is null) return null;
+            if (!forceCreate && ComputerCache.TryGetValue(computerType, out var cachedComputer))
             {
                 return cachedComputer;
             }

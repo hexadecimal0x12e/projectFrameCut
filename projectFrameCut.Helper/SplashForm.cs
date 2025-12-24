@@ -1,3 +1,4 @@
+using projectFrameCut.Helper;
 using System.Diagnostics;
 
 namespace projectFrameCut.SplashScreen
@@ -12,8 +13,8 @@ namespace projectFrameCut.SplashScreen
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            VersionLabel.Text = SplashProgram.AppVersion;
-            TitleLabel.Text = SplashProgram.AppTitle;
+            VersionLabel.Text = HelperProgram.AppVersion;
+            TitleLabel.Text = HelperProgram.AppTitle;
         }
 
         private void closeButton_Click(object sender, EventArgs e)

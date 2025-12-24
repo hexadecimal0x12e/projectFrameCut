@@ -34,6 +34,7 @@ namespace projectFrameCut.Render.Rendering
         ConcurrentDictionary<string, ConcurrentDictionary<uint, IPicture>> FrameCache = new();
         ConcurrentDictionary<uint, IClip[]> ClipNeedForFrame = new();
         ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
+        ConcurrentDictionary<string, IEffect[]> EffectCache = new();
 
         List<Thread> Threads = new List<Thread>();
 
@@ -106,6 +107,9 @@ namespace projectFrameCut.Render.Rendering
 
             await Task.Delay(50);
 
+            Stopwatch lastActivity = Stopwatch.StartNew();
+            int lastEnqueued = Volatile.Read(ref TotalEnqueued);
+
             while (true)
             {
                 if (token.IsCancellationRequested)
@@ -120,14 +124,34 @@ namespace projectFrameCut.Render.Rendering
                 int availableSlots = Math.Max(0, MaxThreads - working);
 
                 int preparedCount = PreparedFrames.Count;
+                int currentEnqueued = Volatile.Read(ref TotalEnqueued);
 
-                if (preparedCount > 0 && availableSlots > 0 && working * 0.65 < MaxThreads)
+                if (currentEnqueued != lastEnqueued)
                 {
-                    int toStart = Math.Min(preparedCount, availableSlots);
-                    while (Duration - Volatile.Read(ref Finished) > MaxThreads / 2 - 2 && PreparedFrames.Count < MaxThreads / 2)
+                    lastEnqueued = currentEnqueued;
+                    lastActivity.Restart();
+                }
+
+                bool forceStart = lastActivity.Elapsed.TotalMinutes >= 1;
+
+                if (preparedCount > 0 && (forceStart || (availableSlots > 0 && working * 0.65 < MaxThreads)))
+                {
+                    int toStart = forceStart ? preparedCount : Math.Min(preparedCount, availableSlots);
+
+                    if (forceStart)
                     {
-                        await Task.Delay(5);
+                        Log($"[Watchdog] No activity for 1 minute. Force starting {toStart} prepared frames.", "warn");
                     }
+                    else
+                    {
+                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > MaxThreads / 2 - 2 && PreparedFrames.Count < MaxThreads / 2)
+                        {
+                            await Task.Delay(5);
+                        }
+                    }
+
+                    lastActivity.Restart();
+
                     if (GCOption == 2)
                     {
                         GC.Collect(2, GCCollectionMode.Forced, true, true);
@@ -172,6 +196,10 @@ namespace projectFrameCut.Render.Rendering
                 }
                 else
                 {
+                    if (PreparerFinished && PreparedFrames.IsEmpty && Volatile.Read(ref ThreadWorking) == 0 && !BlankFrames.IsEmpty)
+                    {
+                        FlushBlankFramesBefore(Duration, token);
+                    }
                     await Task.Delay(10);
                 }
 
@@ -217,7 +245,7 @@ namespace projectFrameCut.Render.Rendering
                     if (token.IsCancellationRequested) return;
 
 
-                    if (item.StartFrame * item.SecondPerFrameRatio <= idx && item.Duration * item.SecondPerFrameRatio + item.StartFrame * item.SecondPerFrameRatio >= idx)
+                    if (item.StartFrame <= idx && item.Duration * item.SecondPerFrameRatio + item.StartFrame >= idx)
                     {
                         found = true;
                         ClipNeedForFrame.AddOrUpdate(
@@ -230,6 +258,7 @@ namespace projectFrameCut.Render.Rendering
                 if (!found)
                 {
                     BlankFrames.Enqueue(idx);
+                    Interlocked.Increment(ref TotalEnqueued);
                 }
 
                 if (idx % 50 == 0)
@@ -239,6 +268,12 @@ namespace projectFrameCut.Render.Rendering
 
             }
             Log($"[Preparer] source preparing done.");
+            foreach (var item in Clips)
+            {
+                var effectInstances = EffectHelper.GetEffectsInstances(item.Effects);
+                EffectCache.AddOrUpdate(item.Id, effectInstances, (_, _) => effectInstances);
+                Log($"[Preparer] Cached {effectInstances.Length} effects for clip {item.Id}");
+            }
 
         }
 
@@ -248,7 +283,7 @@ namespace projectFrameCut.Render.Rendering
         private void PrepareSource(CancellationToken token)
         {
             Stopwatch sw = new();
-            foreach (var idx in ClipNeedForFrame.Keys)
+            foreach (var idx in ClipNeedForFrame.Keys.OrderBy(x => x))
             {
                 if (token.IsCancellationRequested) return;
                 sw.Restart();
@@ -262,11 +297,11 @@ namespace projectFrameCut.Render.Rendering
                         var frame = item.GetFrame(idx, _width, _height, true);
                         if (frame != null)
                         {
-                            if (Use16Bit && frame.bitPerPixel != 2)
+                            if (Use16Bit && frame.bitPerPixel != 16)
                             {
                                 frame = frame.ToBitPerPixel(16);
                             }
-                            else if (!Use16Bit && frame.bitPerPixel != 1)
+                            else if (!Use16Bit && frame.bitPerPixel != 8)
                             {
                                 frame = frame.ToBitPerPixel(8);
                             }
@@ -299,13 +334,7 @@ namespace projectFrameCut.Render.Rendering
             Stopwatch sw = Stopwatch.StartNew();
             IPicture result = null!;
 
-            if (!PreparedFlag.TryRemove(targetFrame, out _))
-            {
-                Log($"[Render] WARN: Target frame {targetFrame} not ready yet. Waiting...");
-                while (!PreparedFrames.Contains(targetFrame)) Thread.Sleep(500);
-                Log($"Target frame {targetFrame} is ready yet. Continue.");
-                PreparedFlag.TryRemove(targetFrame, out _);
-            }
+            PreparedFlag.TryRemove(targetFrame, out _);
 
             if (!ClipNeedForFrame.Remove(targetFrame, out var ClipsNeed) || ClipsNeed.Length == 0)
             {
@@ -330,11 +359,11 @@ namespace projectFrameCut.Render.Rendering
                         var rawFrame = clip.GetFrame(targetFrame, _width, _height, true);
                         if (rawFrame != null)
                         {
-                            if (Use16Bit && rawFrame.bitPerPixel != 2)
+                            if (Use16Bit && rawFrame.bitPerPixel != 16)
                             {
                                 frame = rawFrame.ToBitPerPixel(16);
                             }
-                            else if (!Use16Bit && rawFrame.bitPerPixel != 1)
+                            else if (!Use16Bit && rawFrame.bitPerPixel != 8)
                             {
                                 frame = rawFrame.ToBitPerPixel(8);
                             }
@@ -355,14 +384,27 @@ namespace projectFrameCut.Render.Rendering
                     }
                 }
 
-                if (clip.Effects != null)
+                if (clip.Effects.ArrayAny())
                 {
-                    foreach (var item in clip.EffectsInstances ?? EffectHelper.GetEffectsInstances(clip.Effects))
+                    foreach (var item in EffectCache.TryGetValue(clip.Id, out var value) ? value : [])
                     {
-                        var renderedFrame = item.Render(frame,
-                                            item.NeedComputer is not null ? PluginManager.CreateComputer(item.NeedComputer) : null,
-                                            _width, _height);
-                        frame = renderedFrame;
+                        if (item is IContinuousEffect c)
+                        {
+                            if (c.EndPoint == 0 && c.EndPoint == 0)
+                            {
+                                c.StartPoint = (int)(clip.StartFrame);
+                                c.EndPoint = (int)(c.StartPoint + clip.Duration * clip.SecondPerFrameRatio);
+                            }
+                            frame =
+                                c.Render(frame, targetFrame, PluginManager.CreateComputer(item.NeedComputer), _width, _height)
+                                 .Resize(_width, _height, true);
+                        }
+                        else
+                        {
+                            frame =
+                                item.Render(frame, PluginManager.CreateComputer(item.NeedComputer), _width, _height)
+                                    .Resize(_width, _height, true);
+                        }
                     }
                 }
 
@@ -391,7 +433,7 @@ namespace projectFrameCut.Render.Rendering
             {
                 result = Use16Bit ? Picture.GenerateSolidColor(_width, _height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(_width, _height, 0, 0, 0, 0);
             }
-            else if (result.Width < _width && result.Height < _height)
+            else if (result.Width < _width || result.Height < _height)
             {
                 result = BlankPlace.Render(result, null, _width, _height);
             }

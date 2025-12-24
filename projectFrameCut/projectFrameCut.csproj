@@ -127,7 +127,7 @@
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<ProjectReference Include="..\projectFrameCut.Render.WindowsRender\projectFrameCut.Render.WindowsRender.csproj" />
-		<ProjectReference Include="..\projectFrameCut.SplashScreen\projectFrameCut.SplashScreen.csproj" />
+		<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
 		<PackageReference Include="System.Management" Version="10.0.0" />
 		<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Update="AppShell_Windows.xaml.cs">
@@ -166,6 +166,9 @@
 		</MauiXaml>
 		<MauiXaml Update="Setting\SettingPages\DebugSettingPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Setting\SettingPages\SafeZoneSettingPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="TestPage.xaml">
 			<Generator>MSBuild:Compile</Generator>

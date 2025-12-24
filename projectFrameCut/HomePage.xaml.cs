@@ -50,9 +50,9 @@ public partial class HomePage : ContentPage
         Loaded += async (s, e) =>
         {
 #if WINDOWS
-            if (projectFrameCut.SplashScreen.SplashProgram.SplashShowing)
+            if (projectFrameCut.Helper.HelperProgram.SplashShowing)
             {
-                projectFrameCut.SplashScreen.SplashProgram.CloseSplash();
+                projectFrameCut.Helper.HelperProgram.CloseSplash();
             }
             await projectFrameCut.WinUI.App.BringToForeground();
             await ShowManyAlertsAsync();

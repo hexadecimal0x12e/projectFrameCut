@@ -1,0 +1,106 @@
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace projectFrameCut.Render.VideoMakeEngine
+{
+    public class ZoomInContinuousEffect : IContinuousEffect
+    {
+        public bool Enabled { get; set; } = true;
+        public int Index { get; set; }
+        public string Name { get; set; }
+        public string? NeedComputer => null;
+        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string TypeName => "ZoomIn";
+
+
+        public int RelativeWidth { get; set; }
+        public int RelativeHeight { get; set; }
+        public int StartPoint { get; set; }
+        public int EndPoint { get; set; }
+
+
+        public int TargetX { get; init; }
+        public int TargetY { get; init; }
+
+        public CropEffect Cropper { get; set; } = new();
+
+        public Dictionary<string, object> Parameters => new Dictionary<string, object>
+        {
+            {"TargetX", TargetX},
+            {"TargetY", TargetY},
+        };
+
+
+
+        public List<string> ParametersNeeded => s_ParametersNeeded;
+        public Dictionary<string, string> ParametersType => s_ParametersType;
+
+
+        public static List<string> s_ParametersNeeded { get; } = new List<string>
+        {
+            "TargetX",
+            "TargetY"
+        };
+
+        public static Dictionary<string, string> s_ParametersType { get; } = new Dictionary<string, string>
+        {
+            {"TargetX","int" },
+            {"TargetY","int" },
+        };
+
+
+
+        public IPicture Render(IPicture source, uint index, IComputer? computer, int targetWidth, int targetHeight)
+        {
+
+            // 计算本效果内的帧索引与进度，保证为 double 并限制在 [0,1]
+            int localIndex = (int)index - StartPoint;
+            double totalFrames = (double)(EndPoint - StartPoint);
+            double progress = totalFrames <= 0 ? 0.0 : (double)localIndex / totalFrames;
+            if (progress < 0.0) progress = 0.0;
+            if (progress > 1.0) progress = 1.0;
+
+            int currentWidth = (int)Math.Round(source.Width + (TargetX - source.Width) * progress);
+            int currentHeight = (int)Math.Round(source.Height + (TargetY - source.Height) * progress);
+            if (currentWidth < 1) currentWidth = 1;
+            if (currentHeight < 1) currentHeight = 1;
+
+            int startX = Math.Max(0, (source.Width - currentWidth) / 2);
+            int startY = Math.Max(0, (source.Height - currentHeight) / 2);
+            LogDiagnostic($"Cropping the image from {startX},{startY} to size {currentWidth}*{currentHeight}...");
+            var cropped = Cropper.Crop(source, startX, startY, currentWidth, currentHeight, currentWidth, currentHeight);
+            // 修复：Resize 应该使用 targetWidth 与 targetHeight
+            LogDiagnostic($"Crop done, result:{cropped.GetDiagnosticsInfo()}");
+            var resized = cropped.Resize(targetHeight, targetHeight, false);
+            //var placer = new PlaceEffect();
+            //var placed = placer.Render(cropped, null, targetWidth, targetHeight);
+            return resized;
+        }
+
+
+        public IEffect WithParameters(Dictionary<string, object> parameters)
+        {
+            return new ZoomInContinuousEffect
+            {
+                TargetX = (int)parameters["TargetX"],
+                TargetY = (int)parameters["TargetY"],
+                RelativeWidth = this.RelativeWidth,
+                RelativeHeight = this.RelativeHeight,
+                Name = this.Name,
+                Index = this.Index,
+                Enabled = this.Enabled,
+                StartPoint = this.StartPoint,
+                EndPoint = this.EndPoint,
+            };
+        }
+
+        public void Initialize()
+        {
+            Cropper.RelativeHeight = RelativeHeight;
+            Cropper.RelativeWidth = RelativeWidth;
+        }
+    }
+}

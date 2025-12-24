@@ -77,14 +77,9 @@
             <Grid Padding="4" HeightRequest="250" >
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition x:Name="RightContentColDefinition" Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Grid x:Name="MainUpperContent" Grid.Column="0">
-                    <Image x:Name="PreviewBox" 
-                            Background="Black"
-                            HeightRequest="240"
-                            Aspect="AspectFit" 
-                            ZIndex="9999"/>
                     <AbsoluteLayout x:Name="PreviewOverlayLayer"
                         ZIndex="10000"
                         InputTransparent="False"
@@ -111,23 +106,23 @@
                             AbsoluteLayout.LayoutFlags="All" />
                     </AbsoluteLayout>
                 </Grid>
-                <Border ZIndex="0" Grid.Column="1" StrokeThickness="5" HorizontalOptions="Fill">
+                <Border x:Name="RightContentBorder" ZIndex="0" Grid.Column="1" StrokeThickness="5" HorizontalOptions="Fill">
                     <ScrollView x:Name="CustomContent1" />
                 </Border>
             </Grid>
 
-            <Grid Margin="0,0,0,8">
+            <Grid Margin="0,8,0,8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <HorizontalStackLayout Grid.Column="0" x:Name="LeftMenuBar">
-                    <Button x:Name="AddClip" Text="Add clip" Clicked="AddClip_Clicked" />
-                    <Button x:Name="AssetPanelButton" Text="Assets"  Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
-                    <Button x:Name="SpiltButton" Text="Spilt" Margin="8,0,0,0" Clicked="Split_Clicked"/>
+                    <Button x:Name="AddClip" Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" Clicked="AddClip_Clicked" Margin="8,0,0,0" />
+                    <Button x:Name="AssetPanelButton" Text="{l:Localized Key=DraftPage_CenterMenuBar_Asset}"  Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
+                    <Button x:Name="SpiltButton" Text="{l:Localized Key=DraftPage_CenterMenuBar_Spilt}" Margin="8,0,0,0" Clicked="Split_Clicked"/>
                 </HorizontalStackLayout>
-                <HorizontalStackLayout Grid.Column="1" HorizontalOptions="Center">
+                <HorizontalStackLayout x:Name="PlayingControlLayout" Grid.Column="1" HorizontalOptions="Center">
                     <Button x:Name="PlayPauseButton" Text="▶" Clicked="PlayPauseButton_Clicked" WidthRequest="40" />
                     <Label x:Name="CurrentPlayheadLabel" Text="00:00/99:99" Margin="8,0,0,0" VerticalOptions="Center"></Label>
                 </HorizontalStackLayout>
@@ -137,6 +132,7 @@
                     <Button x:Name="ZoomOutButton" Text="+" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />
                     <Button x:Name="ZoomResetButton" Text="1x" Margin="8,0,0,0" Clicked="ZoomResetButton_Clicked"/>
                     <Button x:Name="ZoomInButton" Text="-" Margin="8,0,0,0" Clicked="ZoomInButton_Clicked"/>
+                    <Border BackgroundColor="Transparent" StrokeThickness="0" WidthRequest="8"/>
                 </HorizontalStackLayout>
             </Grid>
 
@@ -160,10 +156,10 @@
 
                     <VerticalStackLayout x:Name="TrackHeadLayout" Grid.Column="0" Padding="2">
                         <Button Margin="0,8,0,0"
-                    x:Name="AddTrackButton"
-                    Text="+"
-                    Clicked="AddTrackButton_Clicked"
-                    HeightRequest="80" />
+                                x:Name="AddTrackButton"
+                                Text="+"
+                                Clicked="AddTrackButton_Clicked"
+                                HeightRequest="80" />
                     </VerticalStackLayout>
 
                     <ScrollView x:Name="TimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled">
@@ -175,7 +171,7 @@
             <BoxView x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>
         </Grid>
 
-        <Grid Grid.Row="2" x:Name="StatusBarGrid" BackgroundColor="#001122" Margin="0,2,0,0">
+        <Grid Grid.Row="2" x:Name="StatusBarGrid" BackgroundColor="#80001122" Margin="0,0,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="25"/>
                 <ColumnDefinition Width="Auto"/>
@@ -194,7 +190,7 @@
 
             <HorizontalStackLayout HorizontalOptions="End" Grid.Column="3">
                 <Label x:Name="AlternativeStatusLabel" Text="" />
-                <VerticalStackLayout x:Name="ComputeView" WidthRequest="50" />
+                <VerticalStackLayout x:Name="ComputeView" WidthRequest="15" />
 
             </HorizontalStackLayout>
 

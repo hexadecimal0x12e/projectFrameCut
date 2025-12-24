@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:Shapes="clr-namespace:Microsoft.Maui.Controls.Shapes;assembly=Microsoft.Maui.Controls"
+             x:Class="projectFrameCut.Setting.SettingPages.SafeZoneSettingPage"
+             xmlns:l="clr-namespace:LocalizedResources"
+             BackgroundColor="#112233"
+             Title="SafeZoneSettingPage">
+    <Grid RowDefinitions="Auto, *, Auto" Padding="0">
+
+
+        <Grid Grid.Row="1">
+            <!-- 贴边的矩形框 -->
+            <Shapes:Rectangle x:Name="SafeRect"
+                              Stroke="#FFD272"
+                              StrokeThickness="5"
+                              Fill="Transparent"
+                              HorizontalOptions="Fill"
+                              VerticalOptions="Fill" />
+
+            <!-- 滑块位于底部，覆盖在矩形上方 -->
+            <StackLayout VerticalOptions="Center" HorizontalOptions="Center" Padding="8" MinimumWidthRequest="80" MaximumHeightRequest="250">
+                <Label Text="{l:Localized Key=MainSettingsPage_SetupSafeZone_Info}" VerticalOptions="Center" />
+                <StackLayout Orientation="Horizontal" Spacing="12" VerticalOptions="Start">
+                    <Label Text="{l:Localized Key=MainSettingsPage_SetupSafeZone_Radius}" VerticalOptions="Center" />
+                    <Label x:Name="ValueLabel" Text="10" VerticalOptions="Center" />
+                </StackLayout>
+                <Slider x:Name="CornerSlider" Minimum="0" Maximum="500" ValueChanged="CornerSlider_ValueChanged" />
+                <HorizontalStackLayout HorizontalOptions="Center">
+                    <Button x:Name="MinusOneButton" WidthRequest="60"  Text="-1" Clicked="MinusOneButton_Clicked" Margin="4,0,4,0"/>
+                    <Button x:Name="MinusPointOneButton" WidthRequest="60" Text="-0.1" Clicked="MinusPointOneButton_Clicked" Margin="0,0,4,0"/>
+                    <Button x:Name="AddPointOneButton" WidthRequest="60"  Text="+0.1" Clicked="AddPointOneButton_Clicked" Margin="4,0,4,0"/>
+                    <Button x:Name="AddOneButton" WidthRequest="60"  Text="+1" Clicked="AddOneButton_Clicked" Margin="4,0,4,0" />
+
+
+                </HorizontalStackLayout>
+                <Button x:Name="SaveButton" Margin="0,4,0,0" Text="{l:Localized Key=_Save}" Clicked="SaveButton_Clicked" />
+            </StackLayout>
+            <BoxView Grid.Row="2" HeightRequest="100" BackgroundColor="Gray" HorizontalOptions="Fill" VerticalOptions="End" Margin="2,2,2,2" ZIndex="-1" />
+
+        </Grid>
+        <!-- 页面最下面的白色长方形，高度100 -->
+    </Grid>
+</ContentPage>

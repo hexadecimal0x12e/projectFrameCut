@@ -87,6 +87,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// </summary>
         public Dictionary<string, Func<IEffect>> EffectProvider { get; }
         /// <summary>
+        /// Create an IEffect instance from the given JSON structure.
+        /// </summary>
+        public Dictionary<string, Func<IEffect>> ContinuousEffectProvider { get; }
+        /// <summary>
+        /// Create an IEffect instance from the given JSON structure.
+        /// </summary>
+        public Dictionary<string, Func<IEffect>> VariableArgumentEffectProvider { get; }
+        /// <summary>
         /// Create an IMixture instance from the given JSON structure.
         /// </summary>
         public Dictionary<string, Func<IMixture>> MixtureProvider { get; }
@@ -177,16 +185,37 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <exception cref="NotSupportedException"></exception>
         public virtual IEffect EffectCreator(EffectAndMixtureJSONStructure stru)
         {
-            var type = stru.GetType();
             if (EffectProvider.TryGetValue(stru.TypeName, out var creator))
             {
                 var blankInstance = creator();
-                var param = EffectArgsHelper.ConvertElementDictToObjectDict(stru.Parameters ?? new Dictionary<string, object>(), blankInstance.ParametersType);
-                var instance = blankInstance.WithParameters(param);
+                var instance = blankInstance.WithParameters(EffectArgsHelper.ConvertElementDictToObjectDict(stru.Parameters ?? new Dictionary<string, object>(), blankInstance.ParametersType) ?? new Dictionary<string, object>());
                 instance.Name = stru.Name;
                 instance.RelativeWidth = stru.RelativeWidth;
                 instance.RelativeHeight = stru.RelativeHeight;
                 instance.Enabled = stru.Enabled;
+                instance.Initialize();
+                return instance;
+            }
+            else if (ContinuousEffectProvider.TryGetValue(stru.TypeName, out var creator1))
+            {
+                var blankInstance = creator1();
+                var instance = blankInstance.WithParameters(EffectArgsHelper.ConvertElementDictToObjectDict(stru.Parameters ?? new Dictionary<string, object>(), blankInstance.ParametersType) ?? new Dictionary<string, object>());
+                instance.Name = stru.Name;
+                instance.RelativeWidth = stru.RelativeWidth;
+                instance.RelativeHeight = stru.RelativeHeight;
+                instance.Enabled = stru.Enabled;
+                instance.Initialize();
+                return instance;
+            }
+            else if (VariableArgumentEffectProvider.TryGetValue(stru.TypeName, out var creator2))
+            {
+                var blankInstance = creator2();
+                var instance = blankInstance.WithParameters(EffectArgsHelper.ConvertElementDictToObjectDict(stru.Parameters ?? new Dictionary<string, object>(), blankInstance.ParametersType) ?? new Dictionary<string, object>());
+                instance.Name = stru.Name;
+                instance.RelativeWidth = stru.RelativeWidth;
+                instance.RelativeHeight = stru.RelativeHeight;
+                instance.Enabled = stru.Enabled;
+                instance.Initialize();
                 return instance;
             }
             else
@@ -203,7 +232,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <exception cref="NotSupportedException"></exception>
         public virtual IVideoSource VideoSourceCreator(string filePath)
         {
-            var prefered = VideoSourceProvider.Values.Where((k) => k(null!).PreferredExtension.Contains(Path.GetExtension(filePath)));
+            var prefered = VideoSourceProvider.Values.Where((k) => k(null!).PreferredExtension.Contains("."+Path.GetExtension(filePath)));
             if (prefered.Any())
             {
                 return prefered.First()(filePath);
@@ -408,22 +437,22 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                     providedContent.AppendLine($"- {item.Key}");
                 }
             }
-            //if (pluginBase.ContinuousEffectProvider.Any())
-            //{
-            //    providedContent.AppendLine("ContinuousEffect:");
-            //    foreach (var item in pluginBase.ContinuousEffectProvider)
-            //    {
-            //        providedContent.AppendLine($"- {item.Key}");
-            //    }
-            //}
-            //if (pluginBase.VariableArgumentEffectProvider.Any())
-            //{
-            //    providedContent.AppendLine("VariableArgumentEffect:");
-            //    foreach (var item in pluginBase.VariableArgumentEffectProvider)
-            //    {
-            //        providedContent.AppendLine($"- {item.Key}");
-            //    }
-            //}
+            if (pluginBase.ContinuousEffectProvider.Any())
+            {
+                providedContent.AppendLine("ContinuousEffect:");
+                foreach (var item in pluginBase.ContinuousEffectProvider)
+                {
+                    providedContent.AppendLine($"- {item.Key}");
+                }
+            }
+            if (pluginBase.VariableArgumentEffectProvider.Any())
+            {
+                providedContent.AppendLine("VariableArgumentEffect:");
+                foreach (var item in pluginBase.VariableArgumentEffectProvider)
+                {
+                    providedContent.AppendLine($"- {item.Key}");
+                }
+            }
 
             if (pluginBase.MixtureProvider.Any())
             {

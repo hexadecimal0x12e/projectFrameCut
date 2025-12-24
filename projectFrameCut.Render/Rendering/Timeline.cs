@@ -31,7 +31,7 @@ namespace projectFrameCut.Render.Rendering
             List<OneFrame> result = new List<OneFrame>();
             foreach (var clip in video)
             {
-                if (clip.StartFrame * clip.SecondPerFrameRatio <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame * clip.SecondPerFrameRatio >= targetFrame)
+                if (clip.StartFrame <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame >= targetFrame)
                 {
                     if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
@@ -53,7 +53,7 @@ namespace projectFrameCut.Render.Rendering
             List<OneFrame> result = new List<OneFrame>();
             foreach (var clip in video)
             {
-                if (clip.StartFrame * clip.SecondPerFrameRatio <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame * clip.SecondPerFrameRatio >= targetFrame)
+                if (clip.StartFrame <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame >= targetFrame)
                 {
                     if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
@@ -87,10 +87,25 @@ namespace projectFrameCut.Render.Rendering
                     IPicture effected = srcFrame.Clip;
                     foreach (var effect in srcFrame?.Effects?.OrderBy(e => e.Index)?.ToList() ?? new List<IEffect>())
                     {
-                        effected = effect.Render(
-                                   effected,
-                                   effect.NeedComputer is not null ? PluginManager.CreateComputer(effect.NeedComputer) : null,
-                                   targetWidth, targetHeight);
+                        if (effect is IContinuousEffect c)
+                        {
+                            if (c.EndPoint == 0 && c.EndPoint == 0)
+                            {
+                                c.StartPoint = (int)(srcFrame.ParentClip.StartFrame);
+                                c.EndPoint = (int)(c.StartPoint + srcFrame.ParentClip.Duration * srcFrame.ParentClip.SecondPerFrameRatio);
+                            }
+                            effected = c.Render(
+                                       effected, frameIndex,
+                                       effect.NeedComputer is not null ? PluginManager.CreateComputer(effect.NeedComputer) : null,
+                                       targetWidth, targetHeight);
+                        }
+                        else
+                        {
+                            effected = effect.Render(
+                                       effected,
+                                       effect.NeedComputer is not null ? PluginManager.CreateComputer(effect.NeedComputer) : null,
+                                       targetWidth, targetHeight);
+                        }
                     }
                     var mix = GetMixer(srcFrame.MixtureMode);
 

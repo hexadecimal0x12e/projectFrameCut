@@ -52,7 +52,12 @@ namespace projectFrameCut.Render.VideoMakeEngine
         }
 
 
-        public static Dictionary<string, Func<IEffect>> EffectsEnum => PluginManager.LoadedPlugins.Values.SelectMany(p => p.EffectProvider).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        public static Dictionary<string, Func<IEffect>> EffectsEnum =>
+                PluginManager.LoadedPlugins.Values
+                .SelectMany(p => p.EffectProvider
+                    .Concat(p.ContinuousEffectProvider)
+                    .Concat(p.VariableArgumentEffectProvider))
+                .ToDictionary(kv => kv.Key, kv => kv.Value);
 
         public static IEnumerable<string> GetEffectTypes() => EffectsEnum.Keys;
 

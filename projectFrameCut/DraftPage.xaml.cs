@@ -26,6 +26,8 @@ using projectFrameCut.PropertyPanel;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.LivePreview;
 using CommunityToolkit.Maui.Views;
+using projectFrameCut.Services;
+
 
 
 #if WINDOWS
@@ -69,7 +71,7 @@ public partial class DraftPage : ContentPage
         "thumbs",
         "assets",
         "export",
-        "temp"
+        "proxy"
     ];
 
     readonly JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
@@ -151,6 +153,7 @@ public partial class DraftPage : ContentPage
     public ICommand SpiltCommand { get; private set; }
     public ICommand DeleteCommand { get; private set; }
     public ICommand SaveCommand { get; private set; }
+    public Command GotoCommand { get; private set; }
     public ICommand ManageJobsCommand { get; private set; }
     #endregion
 
@@ -171,7 +174,7 @@ public partial class DraftPage : ContentPage
 #if WINDOWS
     public Accelerator AcceleratorToUse { get; set; }
 #endif
-#endregion
+    #endregion
 
     #region init
     public DraftPage()
@@ -185,8 +188,8 @@ public partial class DraftPage : ContentPage
         SpiltCommand = new Command(() => Split_Clicked(this, EventArgs.Empty));
         DeleteCommand = new Command(() => DeleteAClip());
         SaveCommand = new Command(() => OnRefreshButtonClicked(this, EventArgs.Empty));
-
-        InitializeComponent();
+        GotoCommand = new Command(async () => await GotoButtonClicked());
+        ManageJobsCommand = new Command(async () => await OnManageJobsClicked()); InitializeComponent();
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
         ClipEditorHost.Content = ClipEditor;
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
@@ -213,7 +216,8 @@ public partial class DraftPage : ContentPage
         SpiltCommand = new Command(() => Split_Clicked(this, EventArgs.Empty));
         DeleteCommand = new Command(() => DeleteAClip());
         SaveCommand = new Command(() => OnRefreshButtonClicked(this, EventArgs.Empty));
-
+        GotoCommand = new Command(async () => await GotoButtonClicked());
+        ManageJobsCommand = new Command(async () => await OnManageJobsClicked());
         InitializeComponent();
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
         ClipEditorHost.Content = ClipEditor;
@@ -316,7 +320,6 @@ public partial class DraftPage : ContentPage
         ProjectInfo.NormallyExited = false;
         ProjectNameMenuBarItem.Text = ProjectInfo.projectName ?? "Unknown project";
 #if WINDOWS
-        PreviewBox.IsVisible = false;
         if (!(_rpc is not null || UseLivePreviewInsteadOfBackend)) await BootRPC();
 #endif
 
@@ -424,7 +427,7 @@ public partial class DraftPage : ContentPage
     }
 #endif
 
-    private void DraftPage_Loaded(object? sender, EventArgs e)
+    private async void DraftPage_Loaded(object? sender, EventArgs e)
     {
         if (AlwaysShowToolbarBtns || !OperatingSystem.IsWindows()) AddToolbarBtns();
         if (Width < Height) RightMenuBar.IsVisible = false;
@@ -456,6 +459,36 @@ public partial class DraftPage : ContentPage
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
         MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog;
+
+        if (!UseLivePreviewInsteadOfBackend && OperatingSystem.IsWindows()) await DisplayAlertAsync(Localized._Warn, Localized.DraftPage_ObsoleteBackend, Localized._OK);
+
+        var w = this.Window?.Width ?? 0;
+        var h = this.Window?.Height ?? 0;
+        if (w > 0 && h > 0)
+        {
+            WindowSize = new Size(w, h);
+        }
+
+        var safeZoneRad = UISafeZoneServices.GetSafeZone();
+        StatusBarGrid.Margin = new Thickness(safeZoneRad, StatusBarGrid.Margin.Top, safeZoneRad, StatusBarGrid.Margin.Bottom);
+
+        if (DeviceInfo.Idiom == DeviceIdiom.Phone || (w > 0 && w <= 300))
+        {
+            RightMenuBar.IsVisible = false; //screen too small
+            RightContentBorder.IsVisible = false;
+            SpiltButton.IsVisible = false;
+            AssetPanelButton.IsVisible = false;
+            PlayingControlLayout.HorizontalOptions = LayoutOptions.End;
+            AddClip.Text = "+";
+            RightContentColDefinition.Width = new GridLength(0, GridUnitType.Absolute);
+            Grid.SetColumn(PlayingControlLayout, 2);
+        }
+        else
+        {
+            RightMenuBar.IsVisible = true;
+            RightContentBorder.IsVisible = true;
+
+        }
 
     }
     #endregion
@@ -1469,7 +1502,7 @@ public partial class DraftPage : ContentPage
                     {
                         try
                         {
-                            if (OperatingSystem.IsWindows() && UseLivePreviewInsteadOfBackend)
+                            if (OperatingSystem.IsWindows() && !UseLivePreviewInsteadOfBackend)
                             {
 
 
@@ -1727,6 +1760,83 @@ public partial class DraftPage : ContentPage
 
     #endregion
 
+    #region task
+    public async Task<ScrollView> CreateJobsPanel()
+    {
+        var ppb = new PropertyPanelBuilder().AddText(new SingleLineLabel(Localized.DraftPage_Tasks_Title, 20));
+        if (RunningTasks.IsEmpty)
+        {
+            ppb.AddText(Localized.DraftPage_Tasks_NoneTasks);
+        }
+        else
+        {
+            foreach (var item in RunningTasks)
+            {
+                ppb.AddSeparator();
+                var task = item.Value;
+                ppb.AddText(new TitleAndDescriptionLineLabel(item.Value.Name, item.Value.Description))
+                    .AddText(item.Value.IsRunningDisplay);
+                if (task.InnerTask.IsCompleted)
+                {
+                    ppb.AddButton($"Remove,{item.Key}", Localized._Remove);
+                }
+                else
+                {
+                    ppb.AddButton($"Cancel,{item.Key}", Localized._Cancel);
+
+                }
+
+            }
+        }
+#if DEBUG
+        ppb.AddButton("Add some task", async (s, e) =>
+        {
+            var t = new DraftTasks("123", (c) => Thread.Sleep(9999), "A sleeping thread", "nothing here");
+            RunningTasks.TryAdd(t.Id, t);
+            var t1 = new DraftTasks("456", (c) => Task.Delay(99999, c), "A sleeping task with cts", "nothing here");
+            RunningTasks.TryAdd(t1.Id, t1);
+            Popup.Content = await CreateJobsPanel();
+
+        });
+#endif
+        ppb.ListenToChanges(async (a) =>
+        {
+            var action = a.Id.Split(',')[0];
+            var id = a.Id.Split(',', 2)[1];
+            if (!RunningTasks.TryGetValue(id, out var task))
+            {
+                await DisplayAlertAsync(Localized._Error, $"Task {id} not found in Tasks.", Localized._OK);
+                return;
+            }
+            switch (action)
+            {
+                case "Cancel":
+                    {
+                        var sure = await DisplayAlertAsync(Localized._Warn, Localized.DraftPage_Tasks_CancelWarn(task.Name), Localized._Confirm, Localized._Cancel);
+                        if (sure) task.Cancel();
+                        break;
+                    }
+                case "Remove":
+                    {
+                        RunningTasks.Remove(id, out _);
+                        break;
+                    }
+                default:
+                    break;
+            }
+
+            Popup.Content = await CreateJobsPanel();
+        });
+        return ppb.BuildWithScrollView();
+    }
+
+    public async Task OnManageJobsClicked()
+    {
+        await HidePopup();
+        await ShowAPopup(await CreateJobsPanel());
+    }
+    #endregion
+
     #region handle change
     private async Task RenderOneFrame(uint duration, int? width = null, int? height = null)
     {
@@ -1763,11 +1873,9 @@ public partial class DraftPage : ContentPage
 
 #endif
         }
-#if WINDOWS
+
         await PreviewOverlayImage.ForceLoadPNGToAImage(path);
-#else
-        await PreviewBox.ForceLoadPNGToAImage(path);
-#endif
+
 
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
@@ -1808,7 +1916,7 @@ public partial class DraftPage : ContentPage
 #endif // avoid any rpc/update during closing
             if (!OperatingSystem.IsWindows() || UseLivePreviewInsteadOfBackend)
             {
-                previewer.UpdateDraft(d);
+                    previewer.UpdateDraft(d);
             }
             else
             {
@@ -2649,6 +2757,8 @@ public partial class DraftPage : ContentPage
         OverlayLayer.Remove(Popup);
         OverlayLayer.InputTransparent = true;
 
+        popupShowingDirection = "none";
+
     }
 
     #endregion
@@ -2860,7 +2970,7 @@ public partial class DraftPage : ContentPage
 
 #endif
             int currentStartFrame = (int)_currentFrame;
-            while(_playbackCts != null && !_playbackCts.IsCancellationRequested)
+            while (_playbackCts != null && !_playbackCts.IsCancellationRequested)
             {
                 try
                 {
@@ -2893,7 +3003,7 @@ public partial class DraftPage : ContentPage
                 finally
                 {
                     _isPreRendering = false;
-                    
+
                 }
             }
 
@@ -3121,7 +3231,7 @@ public partial class DraftPage : ContentPage
                 SetStateOK(Localized.DraftPage_RedoAndUndo_Failed);
                 return;
             }
-            (var clips, var tracks) = DraftImportAndExportHelper.ImportFromJSON(draftJson,ProjectInfo);
+            (var clips, var tracks) = DraftImportAndExportHelper.ImportFromJSON(draftJson, ProjectInfo);
             Clips = new ConcurrentDictionary<string, ClipElementUI>(clips);
             Assets = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (a) => a));
 
@@ -3169,6 +3279,62 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region misc
+
+    private async Task GotoButtonClicked()
+    {
+        var input = await DisplayPromptAsync(Localized._Info, Localized.DraftPage_GotoFrame, Localized._OK, Localized._Cancel, null, 0, null, "");
+        if (string.IsNullOrEmpty(input)) return;
+        try
+        {
+            double result = _currentFrame;
+            if (input.StartsWith('-') || input.StartsWith('+'))
+            {
+                var length = input.Substring(1);
+                if (length.StartsWith('#'))
+                {
+                    var delta = int.Parse(length.Substring(1));
+                    result += input switch
+                    {
+                        var v when v.StartsWith('-') => -delta,
+                        _ => delta
+                    };
+                }
+                else
+                {
+                    var delta = int.Parse(length);
+                    result += input switch
+                    {
+                        var v when v.StartsWith('-') => -delta,
+                        _ => delta
+                    } * (1 / SecondsPerFrame);
+                }
+            }
+            else
+            {
+                if (input.StartsWith('#'))
+                {
+                    result = int.Parse(input.Substring(1));
+                }
+                else
+                {
+                    var ts = TimeSpan.Parse(input);
+                    result = ts.TotalSeconds * (1 / SecondsPerFrame);
+                }
+            }
+
+            _currentFrame = result;
+            UnSelectTapGesture_Tapped(null!, null!);
+            SetTimelineScrollEnabled(true);
+            UpdatePlayheadPosition();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Go to specific position {input}", this);
+        }
+        var t = TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame).ToString("mm\\:ss\\.ff");
+        await DisplayAlertAsync(Localized._Info, Localized.DraftPage_GotoFrame_Success(t), Localized._OK);
+
+    }
 
     ToolbarItem RunningTaskToolbarItem = new();
 
@@ -3259,10 +3425,16 @@ public partial class DraftPage : ContentPage
     private async void OnExportedClick(object sender, EventArgs e)
     {
 #if WINDOWS
-        backendProc.EnableRaisingEvents = false;
+        backendProc?.EnableRaisingEvents = false;
 #endif
         await Save(true);
-        await Navigation.PushAsync(new RenderPage(workingPath, projectDuration, ProjectInfo));
+        var page = new RenderPage(workingPath, projectDuration, ProjectInfo);
+        await Dispatcher.DispatchAsync(async () =>
+        {
+            Shell.SetTabBarIsVisible(page, false);
+            Shell.SetNavBarIsVisible(page, true);
+            await Navigation.PushAsync(page);
+        });
 
     }
 
@@ -3497,17 +3669,16 @@ public partial class DraftPage : ContentPage
         if (popupShowingDirection != "none")
         {
             await HidePopup();
-            await ShowClipPopup(Popup, _selected);
+            await ShowAPopup(Popup.Content);
         }
-        if (DeviceInfo.Idiom == DeviceIdiom.Phone) RightMenuBar.IsVisible = false; //screen too small
-        else RightMenuBar.IsVisible = true;
+
     }
 
     private bool ignoreRunningTasks = false;
 
     protected override bool OnBackButtonPressed()
     {
-        if(RunningTasks.Any(c => !c.Value.InnerTask.IsCompleted))
+        if (RunningTasks.Any(c => !c.Value.InnerTask.IsCompleted))
         {
             Dispatcher.Dispatch(async () =>
             {

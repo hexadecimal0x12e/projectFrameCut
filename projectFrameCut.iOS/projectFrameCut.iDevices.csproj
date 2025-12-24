@@ -110,6 +110,9 @@
 		<Using Include="LocalizedResources.SimpleLocalizerBaseGeneratedHelper">
 			<Static>True</Static>
 		</Using>
+		<Using Include="projectFrameCut.Setting.SettingManager">
+			<Static>False</Static>
+		</Using>
 	</ItemGroup>
 	<ItemGroup>
 		<MauiXaml Update="Resources\Styles\Colors.xaml">

@@ -637,6 +637,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_ObsoleteBackend",
+        "Value": "\u540E\u7AEF\u5DF2\u88AB\u5F03\u7528\uFF0C\u5B83\u5C06\u4E0D\u518D\u88AB\u66F4\u65B0\uFF0C\u5E76\u4E14\u4F1A\u5728\u672A\u6765\u7684\u7248\u672C\u88AB\u79FB\u9664\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_PrepareAsset",
         "Value": "\u51C6\u5907\u7D20\u6750...",
         "Mode": "ConstString",
@@ -1643,6 +1651,131 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Save",
+        "Value": "\u4FDD\u5B58",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Apply",
+        "Value": "\u5E94\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8FD9\u91CC\u7684\u201C\u5E94\u7528\u201D\u662F\u201C\u5E94\u7528\u66F4\u6539\u201D\u7684\u201C\u5E94\u7528\u201D",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_SetupSafeZone_Info",
+        "Value": "\u4F7F\u7528\u6ED1\u5757\u6216\u8005\u6309\u94AE\u8C03\u8282\u503C\uFF0C\u4F7F\u9EC4\u8272\u7684\u8FB9\u6846\u5C3D\u53EF\u80FD\u7684\u8D34\u5408\u8BBE\u5907\u7684\u5C4F\u5E55\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_SetupSafeZone_Radius",
+        "Value": "\u5B89\u5168\u533A\u5706\u89D2\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_Asset",
+        "Value": "\u7D20\u6750",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_AddClip",
+        "Value": "\u6DFB\u52A0...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_Spilt",
+        "Value": "\u62C6\u5206",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GotoFrame",
+        "Value": "\u8F93\u5165\u4F60\u8981\u8F6C\u5230\u7684\u4F4D\u7F6E\u3001\u5E27\u6216\u8005\u504F\u79FB\u91CF\uFF0C\u652F\u6301\u4E0B\u5217\u683C\u5F0F\uFF1A\r- \u7EDD\u5BF9\u65F6\u957F\uFF1Annnn\r- \u5E27\uFF1A #ffff\r- \u504F\u79FB\u91CF\uFF1A \u002Bnnnn \u6216\u8005 -nnnn\r- \u504F\u79FB\u91CF(\u5E27)\uFF1A\u002B#ffff \u6216\u8005 -#ffff",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GotoFrame_Success",
+        "Value": "\u6210\u529F\u7684\u8F6C\u5230\u4E86 {ts}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "ts"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ts",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Title",
+        "Value": "\u7BA1\u7406\u4EFB\u52A1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_NoneTasks",
+        "Value": "\u6CA1\u6709\u6B63\u5728\u6267\u884C\u7684\u4EFB\u52A1\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Remove",
+        "Value": "\u79FB\u9664",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_CancelWarn",
+        "Value": "\u4F60\u786E\u8BA4\u8981\u53D6\u6D88\u4EFB\u52A1\u300C{name}\u300D\u5417\uFF1F\r\u8FD9\u53EF\u80FD\u4F1A\u5BFC\u81F4\u65E0\u6CD5\u633D\u56DE\u7684\u635F\u5931\uFF01",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
         "HasValidationErrors": false
       }
     ],
@@ -3415,6 +3548,106 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ObsoleteBackend",
+        "Value": "Unset localization item:DraftPage_ObsoleteBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Save",
+        "Value": "Unset localization item:_Save()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Apply",
+        "Value": "Unset localization item:_Apply()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_SetupSafeZone_Info",
+        "Value": "Unset localization item:MainSettingsPage_SetupSafeZone_Info()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_SetupSafeZone_Radius",
+        "Value": "Unset localization item:MainSettingsPage_SetupSafeZone_Radius()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_Asset",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_Asset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_AddClip",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_AddClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_Spilt",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_Spilt()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GotoFrame",
+        "Value": "Unset localization item:DraftPage_GotoFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GotoFrame_Success",
+        "Value": "Unset localization item:DraftPage_GotoFrame_Success(string ts)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "ts"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ts",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -5184,6 +5417,106 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ObsoleteBackend",
+        "Value": "Unset localization item:DraftPage_ObsoleteBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Save",
+        "Value": "Unset localization item:_Save()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Apply",
+        "Value": "Unset localization item:_Apply()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_SetupSafeZone_Info",
+        "Value": "Unset localization item:MainSettingsPage_SetupSafeZone_Info()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_SetupSafeZone_Radius",
+        "Value": "Unset localization item:MainSettingsPage_SetupSafeZone_Radius()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_Asset",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_Asset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_AddClip",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_AddClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_Spilt",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_Spilt()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GotoFrame",
+        "Value": "Unset localization item:DraftPage_GotoFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GotoFrame_Success",
+        "Value": "Unset localization item:DraftPage_GotoFrame_Success(string ts)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "ts"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ts",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -6975,6 +7308,106 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ObsoleteBackend",
+        "Value": "Unset localization item:DraftPage_ObsoleteBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Save",
+        "Value": "Unset localization item:_Save()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Apply",
+        "Value": "Unset localization item:_Apply()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_SetupSafeZone_Info",
+        "Value": "Unset localization item:MainSettingsPage_SetupSafeZone_Info()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_SetupSafeZone_Radius",
+        "Value": "Unset localization item:MainSettingsPage_SetupSafeZone_Radius()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_Asset",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_Asset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_AddClip",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_AddClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_Spilt",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_Spilt()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GotoFrame",
+        "Value": "Unset localization item:DraftPage_GotoFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GotoFrame_Success",
+        "Value": "Unset localization item:DraftPage_GotoFrame_Success(string ts)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "ts"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ts",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -8764,6 +9197,106 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ObsoleteBackend",
+        "Value": "Unset localization item:DraftPage_ObsoleteBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Save",
+        "Value": "Unset localization item:_Save()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Apply",
+        "Value": "Unset localization item:_Apply()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_SetupSafeZone_Info",
+        "Value": "Unset localization item:MainSettingsPage_SetupSafeZone_Info()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_SetupSafeZone_Radius",
+        "Value": "Unset localization item:MainSettingsPage_SetupSafeZone_Radius()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_Asset",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_Asset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_AddClip",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_AddClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_Spilt",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_Spilt()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GotoFrame",
+        "Value": "Unset localization item:DraftPage_GotoFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GotoFrame_Success",
+        "Value": "Unset localization item:DraftPage_GotoFrame_Success(string ts)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "ts"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ts",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -10533,6 +11066,106 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ObsoleteBackend",
+        "Value": "Unset localization item:DraftPage_ObsoleteBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Save",
+        "Value": "Unset localization item:_Save()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Apply",
+        "Value": "Unset localization item:_Apply()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_SetupSafeZone_Info",
+        "Value": "Unset localization item:MainSettingsPage_SetupSafeZone_Info()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_SetupSafeZone_Radius",
+        "Value": "Unset localization item:MainSettingsPage_SetupSafeZone_Radius()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_Asset",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_Asset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_AddClip",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_AddClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_Spilt",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_Spilt()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GotoFrame",
+        "Value": "Unset localization item:DraftPage_GotoFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GotoFrame_Success",
+        "Value": "Unset localization item:DraftPage_GotoFrame_Success(string ts)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "ts"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ts",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -12322,6 +12955,106 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_ObsoleteBackend",
+        "Value": "Unset localization item:DraftPage_ObsoleteBackend()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Save",
+        "Value": "Unset localization item:_Save()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Apply",
+        "Value": "Unset localization item:_Apply()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_SetupSafeZone_Info",
+        "Value": "Unset localization item:MainSettingsPage_SetupSafeZone_Info()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_SetupSafeZone_Radius",
+        "Value": "Unset localization item:MainSettingsPage_SetupSafeZone_Radius()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_Asset",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_Asset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_AddClip",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_AddClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_Spilt",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_Spilt()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GotoFrame",
+        "Value": "Unset localization item:DraftPage_GotoFrame()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_GotoFrame_Success",
+        "Value": "Unset localization item:DraftPage_GotoFrame_Success(string ts)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "ts"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "ts",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }

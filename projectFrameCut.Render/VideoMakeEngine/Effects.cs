@@ -2,6 +2,7 @@
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp.Drawing;
+using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -238,6 +239,9 @@ namespace projectFrameCut.Render.VideoMakeEngine
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+            => Place(source, StartX, StartY, targetWidth, targetHeight);
+
+        public IPicture Place(IPicture source, int startX, int startY, int targetWidth, int targetHeight)
         {
 
             if (targetWidth <= 0 || targetHeight <= 0)
@@ -245,12 +249,10 @@ namespace projectFrameCut.Render.VideoMakeEngine
                 throw new ArgumentException("targetWidth and targetHeight must be positive");
             }
 
-            int startX = StartX;
-            int startY = StartY;
             if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
             {
-                startX = (int)Math.Round((double)StartX * targetWidth / RelativeWidth);
-                startY = (int)Math.Round((double)StartY * targetHeight / RelativeHeight);
+                startX = (int)Math.Round((double)startX * targetWidth / RelativeWidth);
+                startY = (int)Math.Round((double)startY * targetHeight / RelativeHeight);
             }
 
             if (source is IPicture<ushort> p16)
@@ -416,32 +418,44 @@ namespace projectFrameCut.Render.VideoMakeEngine
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        [DebuggerStepThrough()]
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+            => Crop(source, StartX, StartY, Width, Height, targetWidth, targetHeight);
+
+
+        //[DebuggerStepThrough()]
+        public IPicture Crop(IPicture source, int startX, int startY, int width, int height, int targetWidth, int targetHeight)
         {
-            if (Width <= 0 || Height <= 0)
+            if (width <= 0 || height <= 0)
             {
                 throw new ArgumentException("Width and Height must be positive");
             }
 
+            if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
+            {
+                startX = (int)Math.Round((double)startX * targetWidth / RelativeWidth);
+                startY = (int)Math.Round((double)startY * targetHeight / RelativeHeight);
+                width = (int)Math.Round((double)width * targetWidth / RelativeWidth);
+                height = (int)Math.Round((double)height * targetHeight / RelativeHeight);
+            }
+
             if (source is IPicture<ushort> p16)
             {
-                Picture result = new Picture(Width, Height)
+                Picture result = new Picture(width, height)
                 {
-                    r = new ushort[Width * Height],
-                    g = new ushort[Width * Height],
-                    b = new ushort[Width * Height],
-                    a = new float[Width * Height],
+                    r = new ushort[width * height],
+                    g = new ushort[width * height],
+                    b = new ushort[width * height],
+                    a = new float[width * height],
                     hasAlphaChannel = true
                 };
 
                 bool sourceHasAlpha = p16.a != null && source.hasAlphaChannel;
                 int targetIndex = 0, sourceIndex = 0;
-                for (int y = 0; y < Height; y++)
+                for (int y = 0; y < height; y++)
                 {
-                    for (int x = 0; x < Width; x++)
+                    for (int x = 0; x < width; x++)
                     {
-                        if (!source.TryFromXYToArrayIndex(x + StartX, y + StartY, out sourceIndex))
+                        if (!source.TryFromXYToArrayIndex(x + startX, y + startY, out sourceIndex))
                         {
                             continue;
                         }
@@ -464,27 +478,27 @@ namespace projectFrameCut.Render.VideoMakeEngine
                 }
 
                 var srcStack = source.ProcessStack ?? string.Empty;
-                result.ProcessStack = $"{srcStack}\r\nCrop from ({StartX},{StartY}) with size {Width}*{Height}\r\n";
+                result.ProcessStack = $"{srcStack}\r\nCrop from ({startX},{startY}) with size {width}*{height}\r\n";
                 return result;
             }
             else if (source is IPicture<byte> p8)
             {
-                Picture8bpp result = new Picture8bpp(Width, Height)
+                Picture8bpp result = new Picture8bpp(width, height)
                 {
-                    r = new byte[Width * Height],
-                    g = new byte[Width * Height],
-                    b = new byte[Width * Height],
-                    a = new float[Width * Height],
+                    r = new byte[width * height],
+                    g = new byte[width * height],
+                    b = new byte[width * height],
+                    a = new float[width * height],
                     hasAlphaChannel = true
                 };
 
                 bool sourceHasAlpha = p8.a != null && source.hasAlphaChannel;
                 int targetIndex = 0, sourceIndex = 0;
-                for (int y = 0; y < Height; y++)
+                for (int y = 0; y < height; y++)
                 {
-                    for (int x = 0; x < Width; x++)
+                    for (int x = 0; x < width; x++)
                     {
-                        if (!source.TryFromXYToArrayIndex(x + StartX, y + StartY, out sourceIndex))
+                        if (!source.TryFromXYToArrayIndex(x + startX, y + startY, out sourceIndex))
                         {
                             continue;
                         }
@@ -507,15 +521,11 @@ namespace projectFrameCut.Render.VideoMakeEngine
                 }
 
                 var srcStack = source.ProcessStack ?? string.Empty;
-                result.ProcessStack = $"{srcStack}\r\nCrop from ({StartX},{StartY}) with size {Width}*{Height}\r\n";
+                result.ProcessStack = $"{srcStack}\r\nCrop from ({startX},{startY}) with size {width}*{height}\r\n";
                 return result;
             }
-
-            throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
+            throw new NotSupportedException();
         }
-
-
-
     }
 
     public class ResizeEffect : IEffect
@@ -603,7 +613,19 @@ namespace projectFrameCut.Render.VideoMakeEngine
                 height = Math.Max(1, height);
             }
 
-            var resized = source.Resize(width, height, PreserveAspectRatio);
+            var img = source.SaveToSixLaborsImage();
+            img.Mutate(i => i.Resize(new ResizeOptions
+            {
+                Size = new SixLabors.ImageSharp.Size(width, height),
+                Mode = PreserveAspectRatio ? ResizeMode.Max : ResizeMode.Stretch
+            }));
+            IPicture resized = source.bitPerPixel switch
+            {
+                8 => new Picture8bpp(img),
+                16 => new Picture16bpp(img),
+                _ => throw new NotSupportedException($"Specific pixel-mode is not supported.")
+            };
+            
 
             var srcStack = source.ProcessStack ?? string.Empty;
             resized.ProcessStack = $"{srcStack}\r\nResize to {width}*{height} preserve:{PreserveAspectRatio}\r\n";

@@ -24,7 +24,6 @@ namespace projectFrameCut.Render.VideoMakeEngine
         {
             return new OverlayMixture();
         }
-        public static string TempSavePath = "";
         public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
         public string? ComputerId => "OverlayComputer";
 
@@ -53,7 +52,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
             else throw new NotSupportedException();
 #if DEBUG
             var id = Guid.NewGuid();
-            if (!string.IsNullOrWhiteSpace(TempSavePath))
+            if (!string.IsNullOrWhiteSpace(IPicture.DiagImagePath))
             {
                 LogDiagnostic(
                     $"""
@@ -65,8 +64,8 @@ namespace projectFrameCut.Render.VideoMakeEngine
                     {topPicture.GetDiagnosticsInfo()}
                     """
                     );
-                basePicture.SaveAsPng16bpp(Path.Combine(TempSavePath, $"_OverlayDiag-{id}-base.png"));
-                topPicture.SaveAsPng16bpp(Path.Combine(TempSavePath, $"_OverlayDiag-{id}-top.png"));
+                basePicture.SaveAsPng16bpp(Path.Combine(IPicture.DiagImagePath, $"_OverlayDiag-{id}-base.png"));
+                topPicture.SaveAsPng16bpp(Path.Combine(IPicture.DiagImagePath, $"_OverlayDiag-{id}-top.png"));
             }
 #endif
             float[] topR, topG, topB, topA;
@@ -136,7 +135,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
                 };
             }
 #if DEBUG
-            if (!string.IsNullOrWhiteSpace(TempSavePath))
+            if (!string.IsNullOrWhiteSpace(IPicture.DiagImagePath))
             {
                 LogDiagnostic(
                     $"""
@@ -145,7 +144,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
                     {result.GetDiagnosticsInfo()}
                     """
                     );
-                result.SaveAsPng16bpp(Path.Combine(TempSavePath, $"_OverlayDiag-{id}-result.png"));
+                result.SaveAsPng16bpp(Path.Combine(IPicture.DiagImagePath, $"_OverlayDiag-{id}-result.png"));
                 //if (Debugger.IsAttached) Debugger.Break();
 
             }

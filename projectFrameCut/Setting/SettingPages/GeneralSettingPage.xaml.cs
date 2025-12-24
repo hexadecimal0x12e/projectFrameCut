@@ -57,6 +57,7 @@ public partial class GeneralSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralUI_Title, SettingLocalizedResources.GeneralUI_Subtitle))
             .AddPicker("ui_defaultTheme", SettingLocalizedResources.GeneralUI_DefaultTheme, themeOpts.Values.ToArray(), themeOpts[GetSetting("ui_defaultTheme", "default")])
             .AddSlider("ui_defaultWidthOfContent", SettingLocalizedResources.GeneralUI_DefaultWidthOfContent, 1, 10, PropertyPanelBuilder.DefaultWidthOfContent)
+            .AddButton("setUISafeZone",SettingLocalizedResources.GeneralUI_SetupSafeZone)
             .AddSeparator()
             .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.General_UserData, SettingLocalizedResources.General_UserData_Subtitle, 20, 12))
 #if WINDOWS
@@ -159,7 +160,15 @@ public partial class GeneralSettingPage : ContentPage
 
 #endif
                     goto done;
-
+                case "setUISafeZone":
+                    var page = new SafeZoneSettingPage();
+                    await Dispatcher.DispatchAsync(async () =>
+                    {
+                        Shell.SetTabBarIsVisible(page, false); //ensure tab bar is hidden
+                        Shell.SetNavBarIsVisible(page, false);
+                        await Navigation.PushAsync(page);
+                    });
+                    break;
                 case "locate":
                     {
                         var locateDispName = args.Value?.ToString() ?? "default";

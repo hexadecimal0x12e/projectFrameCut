@@ -63,6 +63,16 @@ public class InternalPluginBase : IPluginBase
 
     };
 
+    public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>>
+    {
+        {"ZoomIn", new(() => new ZoomInContinuousEffect())  },
+    };
+
+    public Dictionary<string, Func<IEffect>> VariableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>
+    {
+
+    };
+
     public Dictionary<string, Func<string, string, IClip>> ClipProvider => new Dictionary<string, Func<string, string, IClip>>
     {
         {"VideoClip", new((i,n) => new VideoClip{Id = i, Name = n}) },
