@@ -27,7 +27,7 @@
 
             <VerticalStackLayout Grid.Row="1">
                 <Label Text="projectFramecCut" x:Name="VersionLabel" HorizontalOptions="Center" TextColor="Gray" />
-                <Label Text="© hexadecimal0x12e 2025." HorizontalOptions="Center" TextColor="Gray" />
+                <Label Text="© hexadecimal0x12e 2025-" x:Name="CopyrightText" HorizontalOptions="Center" TextColor="Gray" />
             </VerticalStackLayout>
         </Grid>
     </ScrollView>

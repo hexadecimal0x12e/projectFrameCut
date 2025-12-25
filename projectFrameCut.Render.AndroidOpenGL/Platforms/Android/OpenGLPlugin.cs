@@ -60,5 +60,17 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
         public Dictionary<string, string> Configuration { get => new Dictionary<string, string>(); set { } }
 
         public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString => new Dictionary<string, Dictionary<string, string>> { };
+
+        public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>> { };
+
+        public IClip ClipCreator(JsonElement element)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ISoundTrack SoundTrackCreator(JsonElement element)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

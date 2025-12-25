@@ -23,6 +23,8 @@ namespace projectFrameCut.Shared
         SolidColorClip,
         TextClip,
         ExtendClip,
+        AudioClip,
+        SubtitleClip,
         Special
     }
 

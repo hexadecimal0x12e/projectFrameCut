@@ -7,6 +7,7 @@ using System.IO;
 
 #if WINDOWS
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 #elif ANDROID
 using Android.Content;
@@ -22,6 +23,33 @@ namespace projectFrameCut.Services
     /// </summary>
     public static class FileSystemService
     {
+        public static async Task<string> PickASavePath(string defaultName, string defaultPath, CancellationToken ct = default)
+        {
+            using var stream = new MemoryStream([0]);
+            var fileSaverResult = await FileSaver.Default.SaveAsync(defaultName, stream, ct);
+            if (fileSaverResult.IsSuccessful)
+            {
+                return fileSaverResult.FilePath;
+            }
+            else
+            {
+                return "";
+            }
+        }
+
+        public static async Task<string> SaveAFile(string defaultName, Stream content, CancellationToken ct = default)
+        {
+            var fileSaverResult = await FileSaver.Default.SaveAsync(defaultName, content, ct);
+            if (fileSaverResult.IsSuccessful)
+            {
+                return fileSaverResult.FilePath;
+            }
+            else
+            {
+                return "";
+            }
+        }
+
         public static async Task<string?> PickFolderAsync(CancellationToken ct = default)
         {
             var result = await FolderPicker.Default.PickAsync(ct);

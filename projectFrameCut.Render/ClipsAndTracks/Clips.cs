@@ -6,13 +6,12 @@ using SixLabors.ImageSharp.Drawing.Processing;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using static projectFrameCut.Render.Videos.Video;
 using SixLabors.ImageSharp.Processing;
 using projectFrameCut.Render.VideoMakeEngine;
-using projectFrameCut.Render.Videos;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.Plugin;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
@@ -50,7 +49,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         void IClip.ReInit()
         {
-            Decoder = new Video(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null.")).Decoder;
+            Decoder = PluginManager.CreateVideoSource(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null."));
         }
 
 

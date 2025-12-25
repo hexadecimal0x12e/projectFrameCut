@@ -73,10 +73,17 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// The target frame rate of the draft.
         /// </summary>
         public uint targetFrameRate { get; set; } = 60;
+
         /// <summary>
         /// All of the clips in the draft.
         /// </summary>
-        public object[] Clips { get; init; } = Array.Empty<string>();
+        public object[] Clips { get; init; } = Array.Empty<object>();
+        /// <summary>
+        /// All of the soundtracks in the draft.
+        /// </summary>
+        public object[] SoundTracks { get; init; } = Array.Empty<object>();
+
+
         /// <summary>
         /// Get the total duration of the draft in frames.
         /// </summary>
@@ -108,6 +115,24 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public long? SourceDuration { get; set; } // in frames, null for infinite length source
         public bool IsInfiniteLength { get; set; }
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
+
+        [JsonExtensionData]
+        public Dictionary<string, object>? MetaData { get; set; }
+
+    }
+
+    public class SoundtrackDTO
+    {
+        public string FromPlugin { get; set; } = string.Empty;
+        public TrackMode TrackType { get; set; } = TrackMode.SpecialTrack;
+        public string TypeName { get; set; } = string.Empty;
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public uint LayerIndex { get; set; }
+        public uint StartFrame { get; set; }
+        public uint RelativeStartFrame { get; init; }
+        public uint Duration { get; set; }
+        public float SecondPerFrameRatio { get; set; }
 
         [JsonExtensionData]
         public Dictionary<string, object>? MetaData { get; set; }

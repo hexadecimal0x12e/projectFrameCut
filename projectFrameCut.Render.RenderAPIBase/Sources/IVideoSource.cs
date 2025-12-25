@@ -50,6 +50,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// <summary>
         /// The preferred file extensions for this video source.
         /// </summary>
+        /// <remarks>
+        /// For each extension, you'll need to add a '.' to the beginning of extension, like '.mp4'
+        /// </remarks>
         public string[] PreferredExtension { get; }
         /// <summary>
         /// Current index of the video source.
@@ -80,6 +83,49 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// Enable or disable read-lock to avoid potential crashes.
         /// </summary>
         public bool EnableLock { get; set; }
+
+    }
+
+    public interface IVideoWriter : IDisposable
+    {
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public string OutputPath { get; set; }
+        public int FramePerSecond { get; set; }
+        public string CodecName { get;  set; }
+        public string PixelFormat { get; set; }
+        public uint DurationWritten { get; }
+
+        public void Initialize();
+        public virtual bool TryInitialize()
+        {
+            try
+            {
+                Initialize();
+                return true;
+
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        public void Finish();
+
+
+        public void Append(IPicture<ushort> picture);
+        public void Append(IPicture<byte> picture);
+
+        public void Append(Picture16bpp pic) => Append((IPicture<ushort>)pic);
+        public void Append(Picture8bpp pic) => Append((IPicture<byte>)pic);
+        public void Append(IPicture source)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            if (source.bitPerPixel == 16) Append((IPicture<ushort>)source);
+            else if (source.bitPerPixel == 8) Append((IPicture<byte>)source);
+            else throw new NotSupportedException($"Unsupported pixel mode.");
+        }
+
 
     }
 }

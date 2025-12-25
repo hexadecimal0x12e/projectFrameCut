@@ -103,4 +103,114 @@ namespace projectFrameCut.Render.VideoMakeEngine
             Cropper.RelativeWidth = RelativeWidth;
         }
     }
+
+    public class JitterEffect : IContinuousEffect
+    {
+        public bool Enabled { get; set; } = true;
+        public int Index { get; set; }
+        public string Name { get; set; }
+        public int RelativeWidth { get; set; }
+        public int RelativeHeight { get; set; }
+
+        public int MaxOffsetX { get; init; }
+        public int MaxOffsetY { get; init; }
+        public int Seed { get; init; } = 0;
+
+        public Dictionary<string, object> Parameters => new Dictionary<string, object>
+        {
+            { "MaxOffsetX", MaxOffsetX },
+            { "MaxOffsetY", MaxOffsetY },
+            { "Seed", Seed },
+        };
+
+        List<string> IContinuousEffect.ParametersNeeded => ParametersNeeded;
+        Dictionary<string, string> IContinuousEffect.ParametersType => ParametersType;
+        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string? NeedComputer => null;
+
+        public int StartPoint { get; set; }
+        public int EndPoint { get; set; }
+
+        public Random rnd;
+        public PlaceEffect placer;
+
+        public List<string> ParametersNeeded { get; } = new List<string>
+        {
+            "MaxOffsetX",
+            "MaxOffsetY",
+        };
+
+        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        {
+            { "MaxOffsetX", "int" },
+            { "MaxOffsetY", "int" },
+            { "Seed", "int" },
+        };
+
+        public string TypeName => "Jitter";
+
+        public IEffect FromParametersDictionary(Dictionary<string, object> parameters)
+        {
+            ArgumentNullException.ThrowIfNull(parameters);
+            if (!ParametersNeeded.All(parameters.ContainsKey))
+            {
+                throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
+            }
+
+            int maxX = Convert.ToInt32(parameters["MaxOffsetX"]);
+            int maxY = Convert.ToInt32(parameters["MaxOffsetY"]);
+            int seed = 0;
+            if (parameters.TryGetValue("Seed", out var s))
+            {
+                seed = Convert.ToInt32(s);
+            }
+
+            return new JitterEffect
+            {
+                MaxOffsetX = maxX,
+                MaxOffsetY = maxY,
+                Seed = seed,
+            };
+        }
+
+        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
+
+        public void Initialize()
+        {
+            if (Seed != 0)
+            {
+                rnd = new(Seed);
+            }
+            else
+            {
+                rnd = new();
+            }
+
+            placer = new PlaceEffect
+            {
+                RelativeWidth = this.RelativeWidth,
+                RelativeHeight = this.RelativeHeight,
+            };
+
+        }
+
+        /// <summary>
+        /// Render single frame with deterministic random offset based on frame index and seed.
+        /// </summary>
+        public IPicture Render(IPicture source, uint index, IComputer? computer, int targetWidth, int targetHeight)
+        {
+
+            int offX = 0, offY = 0;
+            if (MaxOffsetX > 0)
+            {
+                offX = rnd.Next(-MaxOffsetX, MaxOffsetX + 1);
+            }
+            if (MaxOffsetY > 0)
+            {
+                offY = rnd.Next(-MaxOffsetY, MaxOffsetY + 1);
+            }
+
+            return placer.Place(source, offX, offY, targetWidth, targetHeight);
+        }
+    }
 }

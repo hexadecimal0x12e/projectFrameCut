@@ -2,7 +2,6 @@
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.VideoMakeEngine;
-using projectFrameCut.Render.Videos;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
@@ -61,6 +60,7 @@ namespace projectFrameCut.Render.Rendering
             ArgumentNullException.ThrowIfNull(builder, nameof(builder));
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             BlankFrame = Use16Bit ? Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+            List<Exception> exceptions = new List<Exception>();
 
             running = true;
             if (LogStatToLogger)
@@ -178,7 +178,7 @@ namespace projectFrameCut.Render.Rendering
                             catch (Exception ex)
                             {
                                 Log($"Error rendering frame {targetFrame}: {ex}", "error");
-                                throw;
+                                exceptions.Add(ex);
                             }
                             finally
                             {
@@ -207,6 +207,19 @@ namespace projectFrameCut.Render.Rendering
                 {
                     int f = Volatile.Read(ref Finished);
                     Console.Error.WriteLine($"@@{f},{Duration}");
+                }
+
+                if(exceptions.Count > 0)
+                {
+                    Log("Exceptions occurred during rendering. Aborting.", "error");
+                    if(exceptions.Count == 1)
+                    {
+                        throw exceptions[0];
+                    }
+                    else
+                    {
+                        throw new AggregateException("Multiple exceptions occurred during rendering.", exceptions);
+                    }   
                 }
 
             }
@@ -297,13 +310,13 @@ namespace projectFrameCut.Render.Rendering
                         var frame = item.GetFrame(idx, _width, _height, true);
                         if (frame != null)
                         {
-                            if (Use16Bit && frame.bitPerPixel != 16)
+                            if (Use16Bit && frame.bitPerPixel != IPicture.PicturePixelMode.UShortPicture)
                             {
-                                frame = frame.ToBitPerPixel(16);
+                                frame = frame.ToBitPerPixel(IPicture.PicturePixelMode.UShortPicture);
                             }
-                            else if (!Use16Bit && frame.bitPerPixel != 8)
+                            else if (!Use16Bit && frame.bitPerPixel != IPicture.PicturePixelMode.BytePicture)
                             {
-                                frame = frame.ToBitPerPixel(8);
+                                frame = frame.ToBitPerPixel(IPicture.PicturePixelMode.BytePicture);
                             }
                             FrameCache.GetOrAdd(item.Id, (_) => new()).TryAdd(idx, frame);
                         }

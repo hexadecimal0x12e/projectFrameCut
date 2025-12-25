@@ -19,6 +19,7 @@ namespace projectFrameCut.DraftStuff
             if (page == null) throw new ArgumentNullException(nameof(page));
 
             var clips = new List<ClipDraftDTO>();
+            var soundtracks = new List<SoundtrackDTO>();
 
             var trackKeys = page.Tracks.Keys.OrderBy(k => k).ToArray();
             foreach (var trackKey in trackKeys)
@@ -42,40 +43,61 @@ namespace projectFrameCut.DraftStuff
 
                         string name = string.IsNullOrWhiteSpace(elem.displayName) ? ExtractLabelText(border) ?? elem.Id : elem.displayName;
 
-                        var dto = new ClipDraftDTO
+                        if (elem.ClipType == ClipMode.AudioClip)
                         {
-                            Id = elem.Id,
-                            Name = name,
-                            FromPlugin = elem.FromPlugin,
-                            TypeName = elem.TypeName,
-                            ClipType = elem.ClipType,
-                            LayerIndex = (uint)trackKey,
-                            StartFrame = startFrame,
-                            RelativeStartFrame = elem.relativeStartFrame,
-                            Duration = durationFrames,
-                            FrameTime = elem.sourceSecondPerFrame,
-                            MixtureMode = MixtureMode.Overlay,
-                            FilePath = elem.sourcePath,
-                            SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
-                            IsInfiniteLength = elem.isInfiniteLength,
-                            SecondPerFrameRatio = elem.SecondPerFrameRatio,
-                            MetaData = elem.ExtraData,
-                            Effects = elem.Effects?.Select((kv) =>
-                            new EffectAndMixtureJSONStructure
+                            var dto = new SoundtrackDTO
                             {
-                                Name = kv.Key,
-                                FromPlugin = kv.Value.FromPlugin,
-                                TypeName = kv.Value.TypeName,
-                                Parameters = kv.Value.Parameters,
-                                Index = kv.Value.Index,
-                                Enabled = kv.Value.Enabled,
-                                RelativeHeight = kv.Value.RelativeHeight,
-                                RelativeWidth = kv.Value.RelativeWidth,
-                                IsMixture = false
-                            }).ToArray()
-                        };
+                                Id = elem.Id,
+                                Name = name,
+                                FromPlugin = string.IsNullOrEmpty(elem.FromPlugin) ? "projectFrameCut.Render.Plugins.InternalPluginBase" : elem.FromPlugin,
+                                TypeName = string.IsNullOrEmpty(elem.TypeName) ? "NormalTrack" : elem.TypeName,
+                                TrackType = TrackMode.NormalTrack,
+                                LayerIndex = (uint)trackKey,
+                                StartFrame = startFrame,
+                                RelativeStartFrame = elem.relativeStartFrame,
+                                Duration = durationFrames,
+                                SecondPerFrameRatio = elem.SecondPerFrameRatio,
+                                MetaData = elem.ExtraData
+                            };
+                            soundtracks.Add(dto);
+                        }
+                        else
+                        {
+                            var dto = new ClipDraftDTO
+                            {
+                                Id = elem.Id,
+                                Name = name,
+                                FromPlugin = elem.FromPlugin,
+                                TypeName = elem.TypeName,
+                                ClipType = elem.ClipType,
+                                LayerIndex = (uint)trackKey,
+                                StartFrame = startFrame,
+                                RelativeStartFrame = elem.relativeStartFrame,
+                                Duration = durationFrames,
+                                FrameTime = elem.sourceSecondPerFrame,
+                                MixtureMode = MixtureMode.Overlay,
+                                FilePath = elem.sourcePath,
+                                SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
+                                IsInfiniteLength = elem.isInfiniteLength,
+                                SecondPerFrameRatio = elem.SecondPerFrameRatio,
+                                MetaData = elem.ExtraData,
+                                Effects = elem.Effects?.Select((kv) =>
+                                new EffectAndMixtureJSONStructure
+                                {
+                                    Name = kv.Key,
+                                    FromPlugin = kv.Value.FromPlugin,
+                                    TypeName = kv.Value.TypeName,
+                                    Parameters = kv.Value.Parameters,
+                                    Index = kv.Value.Index,
+                                    Enabled = kv.Value.Enabled,
+                                    RelativeHeight = kv.Value.RelativeHeight,
+                                    RelativeWidth = kv.Value.RelativeWidth,
+                                    IsMixture = false
+                                }).ToArray()
+                            };
 
-                        clips.Add(dto);
+                            clips.Add(dto);
+                        }
                     }
                 }
             }
@@ -101,6 +123,7 @@ namespace projectFrameCut.DraftStuff
             {
                 targetFrameRate = page.ProjectInfo.targetFrameRate,
                 Clips = clips.Cast<object>().ToArray(),
+                SoundTracks = soundtracks.Cast<object>().ToArray(),
                 Duration = (uint)max,
                 SavedAt = DateTime.Now
             };

@@ -10,9 +10,12 @@ namespace projectFrameCut.Helper
         /// </summary>
         /// 
         static SplashForm splash;
+        static LogForm log;
         [STAThread]
         public static void SplashMain()
         {
+            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
@@ -23,27 +26,51 @@ namespace projectFrameCut.Helper
             Application.Run();
         }
         [STAThread]
-        public static void CrashMain(string[] args)
+        public static void CrashMain()
         {
+            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+
+            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            var form = new CrashForm(args);
-            form.ShowInTaskbar = false;
+            var form = new CrashForm();
+            form.ShowInTaskbar = true;
             form.Show();
+            Application.Run();
+        }
+        [STAThread]
+        public static void LogMain()
+        {
+            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+
+            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            log = new LogForm();
+            log.ShowInTaskbar = false;
+            log.Show();
             Application.Run();
         }
 
         [STAThread]
         public static void Main(string[] args)
         {
-            if(args.Length > 1)
+            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+
+            if (args.Length > 1)
             {
                 var mode = args[0];
                 switch (mode)
                 {
-                    case "crashHandler":
-                        CrashMain(args);
+                    case "crashForm":
+                        ApplicationConfiguration.Initialize();
+                        Application.Run(new CrashForm());
+                        return;
+                    case "uriCallback":
+                        //todo
                         return;
                 }
             }
@@ -62,9 +89,18 @@ namespace projectFrameCut.Helper
             splash.Invoke(new Action(() =>
             {
                 splash.Close();
-                Application.Exit();
             }));
             SplashShowing = false;
+        }
+        public static void CloseLog()
+        {
+            Thread.Sleep(1500);
+            log.Invoke(log.Close);
+        }
+
+        public static void Cleanup()
+        {
+            Application.Exit();
         }
     }
 }

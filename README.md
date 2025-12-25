@@ -1,11 +1,11 @@
 # codename 'projectFrameCut'
 
-<image src="projectFrameCut\\\\\\\\Resources\\\\\\\\AppIcon\\\\\\\\projectframecut.svg" width="300" height="300" />
+<image src="projectFrameCut\Resources\AppIcon\projectframecut.svg" width="300" height="300" />
 
 一个强大，易上手且完全自由的视频剪辑软件
 
 > [!WARNING]
-> **projectFrameCut仍在开发**，目前并不能代替任何的视频剪辑软件（还缺一堆功能）。**请不要用于任何的生产用途**，并且我们不会由于projectFrameCut出现了异常导致你的工作流程被打断**做任何的担保**，这也是GNU GPL规定的一部分（不提供任何担保）
+> **projectFrameCut仍在开发**，目前并不能代替任何的视频剪辑软件（还缺一堆功能）。**请不要用于任何的生产用途**，并且我们不会由于projectFrameCut出现了异常导致你的工作流程被打断**做任何的担保**，这也是许可证规定的一部分（不提供任何担保）
 > 
 > 本人很忙，接下来的开发过程会很慢。如果你有很好的想法，建议你写个[Issue](https://github.com/hexadecimal0x12e/projectFrameCut/issues/new)。
 
@@ -23,17 +23,17 @@
 
 - [x] 基础特效（移色，裁剪，缩放...）
 
-- [ ] 高级特效（过渡，关键帧，对象跟踪...）
+- [x] 高级特效（过渡，关键帧，对象跟踪...）
 
 - [x] Windows - 硬件加速渲染
 
-- [ ] Android - 硬件加速渲染
+- [x] Android - 硬件加速渲染
 
 - [ ] MacOS/iOS - 硬件加速渲染
 
-- [ ] 音频处理
+- [x] 音频处理
 
-- [ ] 字幕和文本
+- [x] 字幕和文本
 
 - [ ] AI功能（AI生成字幕，配音，甚至素材）
 
@@ -113,11 +113,6 @@ c:\path\to\your\folder
 
 
 ### 许可和第三方库致谢
+详见[license.md](license.md)
 
-项目使用了 **GNU GPL v2** (or later) 进行开源。
-项目使用了[FFmpeg](https://ffmpeg.org)和[SixLabors.ImageSharp](https://sixlabors.com/products/imagesharp/)及其系列库作为基本的帧提取和处理，使用了FFmpeg\_droidFix.AutoGen来调用FFmpeg。
-
-对于Windows目标，还使用了[ILGPU](https://github.com/m4rs-mt/ILGPU/)做硬件加速。
-
-在Android目标上，我们使用了[Fishnet](https://github.com/Kyant0/Fishnet)做崩溃日志处理。
 

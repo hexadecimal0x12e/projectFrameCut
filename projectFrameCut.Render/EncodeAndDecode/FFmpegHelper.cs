@@ -9,54 +9,8 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace projectFrameCut.Render.Videos
+namespace projectFrameCut.Render.EncodeAndDecode
 {
-    [Obsolete("Use IVideoSource directly instead of wrapping it in Video.")]
-    public class Video : IDisposable
-    {
-        private readonly string filePath;
-        private bool is16Bit;
-
-        public Video(string path, bool? Is16Bit = null)
-        {
-            is16Bit = Is16Bit ?? Path.GetExtension(path) == ".mkv"; //只有ffv1支持16bit
-
-            filePath = path ?? throw new ArgumentNullException(nameof(path));
-            decoders.AddOrUpdate(
-                filePath,
-                path => is16Bit ? new DecoderContext16Bit(path) : new DecoderContext8Bit(path),
-                (path, existing) =>
-                {
-                    if (existing.Disposed) return is16Bit ? new DecoderContext16Bit(path) : new DecoderContext8Bit(path);
-                    return existing;
-                });
-        }
-
-        private static readonly ConcurrentDictionary<string, IVideoSource> decoders = new();
-
-        public IPicture ExtractFrame(uint targetFrame) => decoders.TryGetValue(filePath, out var value) ? value.GetFrame(targetFrame) : throw new NullReferenceException($"Video file '{filePath}''s decoder context is not exist.");
-
-        public IVideoSource Decoder => decoders.TryGetValue(filePath, out var value) ? value : throw new NullReferenceException($"Video file '{filePath}''s decoder context is not exist.");
-
-
-        public static void ReleaseDecoder(string videoPath)
-        {
-            if (string.IsNullOrWhiteSpace(videoPath)) return;
-            if (decoders.TryRemove(videoPath, out var dec))
-            {
-                dec.Dispose();
-            }
-        }
-
-
-        public void Dispose()
-        {
-            ReleaseDecoder(filePath);
-        }
-
-
-    }
-
     public static unsafe class FFmpegHelper
     {
         public static void Throw(int err, string api)

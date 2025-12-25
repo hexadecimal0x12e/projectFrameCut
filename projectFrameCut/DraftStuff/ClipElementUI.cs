@@ -201,8 +201,14 @@ namespace projectFrameCut.DraftStuff
             // Common video extensions
             string[] video = [".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"];
             string[] image = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"];
+            string[] audio = [".mp3", ".wav", ".aac", ".flac", ".m4a", ".ogg"];
+            string[] subtitle = [".srt", ".vtt", ".ass", ".ssa"];
+
             if (video.Contains(ext)) return ClipMode.VideoClip;
             if (image.Contains(ext)) return ClipMode.PhotoClip;
+            if (audio.Contains(ext)) return ClipMode.AudioClip;
+            if (subtitle.Contains(ext)) return ClipMode.SubtitleClip;
+
             return ClipMode.Special; // fallback
         }
 

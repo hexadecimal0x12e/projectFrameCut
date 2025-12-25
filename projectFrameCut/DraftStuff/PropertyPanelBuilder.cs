@@ -87,7 +87,7 @@ namespace projectFrameCut.PropertyPanel
 
         public PropertyPanelBuilder AddText(PropertyPanelItemLabel label, string Id = "")
         {
-            var l = label.LabelConfigurer();
+            var l = label.LabelConfigure();
             if (!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, l);
             children.Add(l);
             return this;
@@ -107,7 +107,7 @@ namespace projectFrameCut.PropertyPanel
                 HorizontalOptions = LayoutOptions.Fill,
                 BindingContext = this
             };
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
 
             Properties[Id] = defaultValue;
             switch (mode)
@@ -162,7 +162,7 @@ namespace projectFrameCut.PropertyPanel
                 HorizontalOptions = LayoutOptions.End,
                 BindingContext = this
             };
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
             Properties[Id] = defaultValue;
             checkbox.CheckedChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, e.Value);
             CheckboxSetter?.Invoke(checkbox);
@@ -200,7 +200,7 @@ namespace projectFrameCut.PropertyPanel
                 BindingContext = this,
 
             };
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
             Properties[Id] = defaultValue;
             swtch.Toggled += async (s, e) =>
             {
@@ -243,7 +243,7 @@ namespace projectFrameCut.PropertyPanel
             picker.ItemsSource = values;
             picker.SelectedIndex = Array.IndexOf(values, defaultOne);
 
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
             Properties[Id] = defaultOne;
 #if !iDevices
             picker.SelectedIndexChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, picker.SelectedItem as string);
@@ -287,7 +287,7 @@ namespace projectFrameCut.PropertyPanel
                 HorizontalOptions = LayoutOptions.FillAndExpand,
                 BindingContext = this
             };
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
 
             Properties[Id] = defaultValue;
             if (eventCallMode == SliderUpdateEventCallMode.OnValueChanged)
@@ -421,7 +421,7 @@ namespace projectFrameCut.PropertyPanel
         /// </summary>
         public PropertyPanelBuilder AddCustomChild(PropertyPanelItemLabel title, View child, string id = "")
         {
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
 
             var grid = new Grid
             {
@@ -500,7 +500,7 @@ namespace projectFrameCut.PropertyPanel
         {
             var child = maker((o) => pppcea.CreateAndInvoke(this, Id, o));
             Properties[Id] = defaultValue;
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
             var grid = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitionCollection
@@ -639,7 +639,7 @@ namespace projectFrameCut.PropertyPanel
 
         public PropertyPanelChildrenBuilder AddText(PropertyPanelItemLabel label, GridLength? width = null)
         {
-            addChild(label.LabelConfigurer(), width);
+            addChild(label.LabelConfigure(), width);
             return this;
         }
 
@@ -872,7 +872,7 @@ namespace projectFrameCut.PropertyPanel
 
     public class SingleLineLabel(string text, int fontsize = 14, FontAttributes fontAttributes = FontAttributes.None, Color? TextColor = null) : PropertyPanelItemLabel
     {
-        public override View LabelConfigurer()
+        public override View LabelConfigure()
         {
             var l = new Label { Text = text, FontSize = fontsize, FontAttributes = fontAttributes, VerticalOptions = LayoutOptions.Center };
             if (TextColor is not null) l.TextColor = TextColor;
@@ -884,7 +884,7 @@ namespace projectFrameCut.PropertyPanel
 
     public class TitleAndDescriptionLineLabel(string title, string description, int titleFontSize = 20, int contentFontSize = 12) : PropertyPanelItemLabel
     {
-        public override View LabelConfigurer() => new VerticalStackLayout
+        public override View LabelConfigure() => new VerticalStackLayout
         {
             Children =
             {
@@ -900,7 +900,7 @@ namespace projectFrameCut.PropertyPanel
 
         public PropertyPanelItemLabel() { }
         public PropertyPanelItemLabel(View v) => _view = v;
-        public virtual View LabelConfigurer() => _view ?? throw new NullReferenceException("Trying to set a null label.");
+        public virtual View LabelConfigure() => _view ?? throw new NullReferenceException("Trying to set a null label.");
 
         public static implicit operator PropertyPanelItemLabel(string text) => new SingleLineLabel(text);
 

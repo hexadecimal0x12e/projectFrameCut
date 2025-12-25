@@ -13,11 +13,14 @@ using System.Linq;
 using System.Numerics;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
+using static projectFrameCut.Shared.IPicture;
 using static System.Net.Mime.MediaTypeNames;
 using Image = SixLabors.ImageSharp.Image;
 
 namespace projectFrameCut.Shared
 {
+
+
     /// <summary>
     /// This class is for placing Picture information and as a base of the actual picture (<see cref="IPicture{T}"/>).
     /// </summary>
@@ -29,8 +32,9 @@ namespace projectFrameCut.Shared
         public static string? DiagImagePath { get; set; }
         /// <summary>
         /// Get how much bits in one pixel.
+        /// Please refer to <see cref="PicturePixelMode"/> for more information.
         /// </summary>
-        public int bitPerPixel { get; }
+        public PicturePixelMode bitPerPixel { get; }
         /// <summary>
         /// The width of this picture
         /// </summary>
@@ -70,7 +74,12 @@ namespace projectFrameCut.Shared
         /// <summary>
         /// Convert this picture to the specified bits per pixel.
         /// </summary>
-        IPicture ToBitPerPixel(int bitPerPixel);
+        IPicture ToBitPerPixel(PicturePixelMode bitPerPixel);
+
+        /// <summary>
+        /// Convert this picture to the specified bits per pixel.
+        /// </summary>
+        public sealed IPicture ToBitPerPixel(int bpp) => ToBitPerPixel(new PicturePixelMode(bpp));
 
         /// <summary>
         /// Get a specific channel's data.
@@ -91,6 +100,27 @@ namespace projectFrameCut.Shared
             Green = 1,
             Blue = 2,
             Alpha = 3
+        }
+
+        public readonly record struct PicturePixelMode(int Value)
+        {
+            public static implicit operator int(PicturePixelMode bpp) => bpp.Value;
+            public static implicit operator PicturePixelMode(int value) => new(value);
+            public override int GetHashCode() => Value;
+            public override string ToString() => Value.ToString();
+
+            public bool Equals(PicturePixelMode mode)
+            {
+                return Value == mode.Value;
+            }
+            /// <summary>
+            /// Represents a picture of 8 bits per pixel, aka <see cref="Picture8bpp"/>.
+            /// </summary>
+            public static PicturePixelMode BytePicture => new PicturePixelMode(8);
+            /// <summary>
+            /// Represents a picture of 16 bits per pixel, aka <see cref="Picture16bpp"/>.
+            /// </summary>
+            public static PicturePixelMode UShortPicture => new PicturePixelMode(16);
         }
 
     }
@@ -198,7 +228,7 @@ namespace projectFrameCut.Shared
 
         public bool hasAlphaChannel { get; set; } = false;
 
-        public int bitPerPixel => 16;
+        public PicturePixelMode bitPerPixel => 16;
 
 
         /// <summary>
@@ -591,7 +621,7 @@ namespace projectFrameCut.Shared
             GC.SuppressFinalize(this);
         }
 
-        public IPicture ToBitPerPixel(int bitPerPixel)
+        public IPicture ToBitPerPixel(PicturePixelMode bitPerPixel)
         {
             if (bitPerPixel == 16)
             {
@@ -685,7 +715,7 @@ namespace projectFrameCut.Shared
 
         public bool hasAlphaChannel { get; set; } = false;
 
-        public int bitPerPixel => 8;
+        public PicturePixelMode bitPerPixel => 8;
 
 
         /// <summary>
@@ -1065,7 +1095,7 @@ namespace projectFrameCut.Shared
             GC.SuppressFinalize(this);
         }
 
-        public IPicture ToBitPerPixel(int bitPerPixel)
+        public IPicture ToBitPerPixel(PicturePixelMode bitPerPixel)
         {
             if (bitPerPixel == 8)
             {
@@ -1135,6 +1165,8 @@ namespace projectFrameCut.Shared
 
 
     }
+
+
 
     public static class PictureExtensions
     {

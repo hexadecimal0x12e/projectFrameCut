@@ -785,6 +785,16 @@ public partial class TestPage : ContentPage
         });
     }
 
+    private void ContextMenuTestBtn_Clicked(object sender, EventArgs e)
+    {
+        void dialog(string msg) => Dispatcher.Dispatch(async () => await DisplayAlertAsync("info", msg, "ok"));
+#if WINDOWS
+        WindowsContextMenuBuilder b = new();
+        b.AddCommand("Command 1", () => dialog("You clicked 1")).AddSeparator().AddCommand("Command 2", () => dialog("You clicked 2")).AddCommand("Command 1", () => dialog("You clicked 3"));
+        b.TryShow(ContextMenuTestBtn);
+#endif
+    }
+
     private void TestPlaceButton_Clicked(object sender, EventArgs e)
     {
         Picture8bpp src = Picture8bpp.GenerateSolidColor(200,300,128,128,128,1);

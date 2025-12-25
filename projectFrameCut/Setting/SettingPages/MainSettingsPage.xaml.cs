@@ -18,6 +18,7 @@ namespace projectFrameCut
             instance = this;
             HintLabel.Text = SettingLocalizedResources.General_SelectAPageToGo;
             VersionLabel.Text = $"{Localized.AppBrand} v{AppInfo.VersionString}";
+            CopyrightText.Text += DateTime.Now.Year.ToString();
 #if iDevices && !DEBUG // no reflection in momo on ios, plugin can't work at all.
             PluginSettingButton.IsVisible = false; 
 #endif

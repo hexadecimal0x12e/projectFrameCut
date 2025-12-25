@@ -453,6 +453,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "GeneralUI_SetupSafeZone",
+        "Value": "\u914D\u7F6EUI\u5B89\u5168\u533A...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "GeneralUI_Subtitle",
         "Value": "\u6309\u4F4F\u4F60\u7684\u559C\u597D\u914D\u7F6E\u7528\u6237\u754C\u9762",
         "Mode": "ConstString",
@@ -1120,14 +1128,6 @@
       {
         "Id": "Render_ShowBackendConsole",
         "Value": "\u663E\u793A\u540E\u7AEF\u7EC8\u7AEF\u7A97\u53E3 (\u53EF\u80FD\u4F1A\u5BFC\u81F4\u4E00\u4E9B\u529F\u80FD\u4E0D\u53EF\u7528)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "GeneralUI_SetupSafeZone",
-        "Value": "\u914D\u7F6EUI\u5B89\u5168\u533A...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1915,7 +1915,7 @@
       },
       {
         "Id": "Plugin_DetailConfig_Subtitle",
-        "Value": "These options are provided by \u0022{name}\u0022. To understand what they mean, please refer to the plugin\u0027s documentation.\r\nYou may need to restart {Localized.AppBrand} for these changes to take effect.",
+        "Value": "These options are provided by \u0022{name}\u0022. To understand their purpose, please refer to the plugin\u0027s documentation.\r\nYou may need to restart {Localized.AppBrand} for these changes to take effect.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1981,7 +1981,7 @@
       },
       {
         "Id": "Plugin_SureRemove",
-        "Value": "Confirm removal of plugin \u0027{name}\u0027?\r\nCustom configurations for the plugin will also be removed.\r\nNote that the plugin\u0027s signature will not be removed. To remove its signature and install this plugin from a different source, please revoke trust for the plugin in advanced settings.",
+        "Value": "Are you sure you want to remove the plugin \u0022{name}\u0022?\r\rIf you only want to update \u0022{name}\u0022 from a plugin package, please add the package you downloaded in the main interface of the plugin manager, because if you remove it, the plugin\u0027s custom configuration will be deleted.\r\rPlease note that the signature of this plugin will not be removed. To remove its signature and install this plugin from a different source, please untrust the plugin in the advanced settings.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2345,7 +2345,7 @@
       },
       {
         "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "Use a standalone backend as the render host for the editor interface.",
+        "Value": "Use independent backend as rendering host for the editing interface (not recommended)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2363,11 +2363,11 @@
       },
       {
         "Id": "GeneralUI_SetupSafeZone",
-        "Value": "Unset localization item:GeneralUI_SetupSafeZone()",
+        "Value": "Configuring UI safe zone...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -3151,7 +3151,7 @@
       },
       {
         "Id": "Plugin_DetailConfig_Subtitle",
-        "Value": "\u9019\u4E9B\u9078\u9805\u7531\u300C{name}\u300D\u63D0\u4F9B\u3002\u8981\u4E86\u89E3\u5B83\u5011\u7684\u542B\u7FA9\uFF0C\u8ACB\u67E5\u770B\u5916\u639B\u7684\u6587\u4EF6\u3002\r\u4F60\u53EF\u80FD\u9700\u8981\u91CD\u65B0\u555F\u52D5 {Localized.AppBrand} \u4EE5\u4F7F\u9019\u4E9B\u8B8A\u66F4\u751F\u6548\u3002",
+        "Value": "\u9019\u4E9B\u9078\u9805\u7531\u300C{name}\u300D\u63D0\u4F9B\u3002\u8981\u4E86\u89E3\u5B83\u5011\u7684\u4F5C\u7528\uFF0C\u8ACB\u67E5\u770B\u63D2\u4EF6\u7684\u8AAA\u660E\u6587\u4EF6\u3002\r\u4F60\u53EF\u80FD\u9700\u8981\u91CD\u65B0\u555F\u52D5 {Localized.AppBrand} \u4F86\u8B93\u9019\u4E9B\u8B8A\u66F4\u751F\u6548\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3217,7 +3217,7 @@
       },
       {
         "Id": "Plugin_SureRemove",
-        "Value": "\u78BA\u8A8D\u79FB\u9664\u63D2\u4EF6\u300C{name}\u300D\uFF1F\r\n\u63D2\u4EF6\u7684\u81EA\u5B9A\u7FA9\u914D\u7F6E\u4E5F\u6703\u88AB\u79FB\u9664\u3002\r\n\u8ACB\u6CE8\u610F\uFF0C\u6B64\u63D2\u4EF6\u7684\u7C3D\u540D\u4E0D\u6703\u88AB\u79FB\u9664\u3002\u8981\u79FB\u9664\u5B83\u7684\u7C3D\u540D\u4E26\u5F9E\u4E0D\u540C\u7684\u4F86\u6E90\u5B89\u88DD\u9019\u500B\u63D2\u4EF6\uFF0C\u8ACB\u5728\u9032\u968E\u8A2D\u5B9A\u88E1\u53D6\u6D88\u4FE1\u4EFB\u6B64\u63D2\u4EF6\u3002",
+        "Value": "\u78BA\u8A8D\u79FB\u9664\u63D2\u4EF6\u300C{name}\u300D\uFF1F\r\r\u82E5\u4F60\u50C5\u60F3\u5F9E\u63D2\u4EF6\u5957\u4EF6\u66F4\u65B0\u300C{name}\u300D\uFF0C\u8ACB\u5728\u7BA1\u7406\u63D2\u4EF6\u7684\u4E3B\u4ECB\u9762\u4E2D\u6DFB\u52A0\u4F60\u4E0B\u8F09\u7684\u5957\u4EF6\uFF0C\u56E0\u70BA\u82E5\u4F60\u79FB\u9664\u4E86\u5B83\uFF0C\u63D2\u4EF6\u7684\u81EA\u8A02\u8A2D\u5B9A\u5C07\u6703\u88AB\u522A\u9664\u3002\r\r\u8ACB\u6CE8\u610F\uFF0C\u6B64\u63D2\u4EF6\u7684\u7C3D\u540D\u4E0D\u6703\u88AB\u79FB\u9664\u3002\u82E5\u8981\u79FB\u9664\u5B83\u7684\u7C3D\u540D\u4E26\u5F9E\u4E0D\u540C\u7684\u4F86\u6E90\u5B89\u88DD\u9019\u500B\u63D2\u4EF6\uFF0C\u8ACB\u5728\u9032\u968E\u8A2D\u5B9A\u88E1\u53D6\u6D88\u4FE1\u4EFB\u4E00\u500B\u63D2\u4EF6\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3231,7 +3231,7 @@
             "Value": ""
           }
         ],
-        "Comment": "",
+        "Comment": "\u7C21\u9AD4\u4E2D\u6587\u8F49\u7E41\u9AD4\u4E2D\u6587\uFF0C\u4E26\u6839\u64DA\u53F0\u7063\u7528\u8A9E\u8ABF\u6574\u4E86\u90E8\u5206\u8A5E\u5F59\uFF0C\u4F8B\u5982\u300C\u5305\u300D\u6539\u70BA\u300C\u5957\u4EF6\u300D\u3001\u300C\u81EA\u5B9A\u4E49\u914D\u7F6E\u300D\u6539\u70BA\u300C\u81EA\u8A02\u8A2D\u5B9A\u300D\u3001\u300C\u9AD8\u7EA7\u8BBE\u7F6E\u300D\u6539\u70BA\u300C\u9032\u968E\u8A2D\u5B9A\u300D\u3002",
         "HasValidationErrors": false
       },
       {
@@ -3581,7 +3581,7 @@
       },
       {
         "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "\u4F7F\u7528\u7368\u7ACB\u5F8C\u7AEF\u4F5C\u70BA\u7DE8\u8F2F\u4ECB\u9762\u6E32\u67D3\u4E3B\u6A5F",
+        "Value": "\u4F7F\u7528\u7368\u7ACB\u5F8C\u7AEF\u4F5C\u70BA\u7DE8\u8F2F\u4ECB\u9762\u6E32\u67D3\u4E3B\u6A5F\uFF08\u4E0D\u63A8\u85A6\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3599,11 +3599,11 @@
       },
       {
         "Id": "GeneralUI_SetupSafeZone",
-        "Value": "Unset localization item:GeneralUI_SetupSafeZone()",
+        "Value": "\u8A2D\u5B9AUI\u5B89\u5168\u5340\u57DF...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -4388,7 +4388,7 @@
       },
       {
         "Id": "Plugin_DetailConfig_Subtitle",
-        "Value": "\u3053\u308C\u3089\u306E\u30AA\u30D7\u30B7\u30E7\u30F3\u306F\u300C{name}\u300D\u306B\u3088\u3063\u3066\u63D0\u4F9B\u3055\u308C\u3066\u3044\u307E\u3059\u3002\u5404\u30AA\u30D7\u30B7\u30E7\u30F3\u306E\u610F\u5473\u306B\u3064\u3044\u3066\u306F\u3001\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u30C9\u30AD\u30E5\u30E1\u30F3\u30C8\u3092\u3054\u89A7\u304F\u3060\u3055\u3044\u3002\r\n\u3053\u308C\u3089\u306E\u5909\u66F4\u3092\u53CD\u6620\u3055\u305B\u308B\u306B\u306F\u3001{Localized.AppBrand} \u306E\u518D\u8D77\u52D5\u304C\u5FC5\u8981\u306B\u306A\u308B\u5834\u5408\u304C\u3042\u308A\u307E\u3059\u3002",
+        "Value": "\u3053\u308C\u3089\u306E\u30AA\u30D7\u30B7\u30E7\u30F3\u306F\u300C{name}\u300D\u306B\u3088\u3063\u3066\u63D0\u4F9B\u3055\u308C\u3066\u3044\u307E\u3059\u3002\u305D\u306E\u6A5F\u80FD\u306B\u3064\u3044\u3066\u306F\u3001\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u30C9\u30AD\u30E5\u30E1\u30F3\u30C8\u3092\u3054\u53C2\u7167\u304F\u3060\u3055\u3044\u3002\r\u3053\u308C\u3089\u306E\u5909\u66F4\u3092\u6709\u52B9\u306B\u3059\u308B\u306B\u306F\u3001{Localized.AppBrand} \u306E\u518D\u8D77\u52D5\u304C\u5FC5\u8981\u306A\u5834\u5408\u304C\u3042\u308A\u307E\u3059\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -4402,7 +4402,7 @@
             "Value": ""
           }
         ],
-        "Comment": "",
+        "Comment": "\u30D7\u30E9\u30B0\u30A4\u30F3\u8A2D\u5B9A\u30AA\u30D7\u30B7\u30E7\u30F3\u306E\u8AAC\u660E\u6587\u30021\u6587\u76EE\u306F\u30AA\u30D7\u30B7\u30E7\u30F3\u63D0\u4F9B\u5143\u3068\u30C9\u30AD\u30E5\u30E1\u30F3\u30C8\u53C2\u7167\u3092\u4FC3\u3059\u30022\u6587\u76EE\u306F\u5909\u66F4\u3092\u53CD\u6620\u3059\u308B\u305F\u3081\u306B\u30A2\u30D7\u30EA\u518D\u8D77\u52D5\u304C\u5FC5\u8981\u306A\u53EF\u80FD\u6027\u3092\u793A\u5506\u3002",
         "HasValidationErrors": false
       },
       {
@@ -4454,7 +4454,7 @@
       },
       {
         "Id": "Plugin_SureRemove",
-        "Value": "\u30D7\u30E9\u30B0\u30A4\u30F3\u300C{name}\u300D\u3092\u524A\u9664\u3057\u3066\u3082\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F\r\n\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u30AB\u30B9\u30BF\u30E0\u8A2D\u5B9A\u3082\u524A\u9664\u3055\u308C\u307E\u3059\u3002\r\n\u306A\u304A\u3001\u3053\u306E\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u7F72\u540D\u306F\u524A\u9664\u3055\u308C\u307E\u305B\u3093\u3002\u7F72\u540D\u3092\u524A\u9664\u3057\u3001\u5225\u306E\u30BD\u30FC\u30B9\u304B\u3089\u3053\u306E\u30D7\u30E9\u30B0\u30A4\u30F3\u3092\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u3059\u308B\u306B\u306F\u3001\u8A73\u7D30\u8A2D\u5B9A\u3067\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u4FE1\u983C\u3092\u30AD\u30E3\u30F3\u30BB\u30EB\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Value": "\u30D7\u30E9\u30B0\u30A4\u30F3\u300C{name}\u300D\u3092\u524A\u9664\u3057\u3066\u3082\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F\r\n\r\n\u3082\u3057\u300C{name}\u300D\u3092\u30D7\u30E9\u30B0\u30A4\u30F3\u30D1\u30C3\u30B1\u30FC\u30B8\u304B\u3089\u66F4\u65B0\u3057\u305F\u3044\u3060\u3051\u306E\u5834\u5408\u3001\u7BA1\u7406\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u30E1\u30A4\u30F3\u753B\u9762\u304B\u3089\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9\u3057\u305F\u30D1\u30C3\u30B1\u30FC\u30B8\u3092\u8FFD\u52A0\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u524A\u9664\u3057\u3066\u3057\u307E\u3046\u3068\u3001\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u30AB\u30B9\u30BF\u30E0\u8A2D\u5B9A\u304C\u5931\u308F\u308C\u307E\u3059\u3002\r\n\r\n\u306A\u304A\u3001\u3053\u306E\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u7F72\u540D\u306F\u524A\u9664\u3055\u308C\u307E\u305B\u3093\u3002\u7F72\u540D\u3092\u524A\u9664\u3057\u3001\u5225\u306E\u30BD\u30FC\u30B9\u304B\u3089\u3053\u306E\u30D7\u30E9\u30B0\u30A4\u30F3\u3092\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u3059\u308B\u306B\u306F\u3001\u8A73\u7D30\u8A2D\u5B9A\u3067\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u7F72\u540D\u306E\u4FE1\u983C\u3092\u89E3\u9664\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -4818,7 +4818,7 @@
       },
       {
         "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "\u72EC\u7ACB\u30D0\u30C3\u30AF\u30A8\u30F3\u30C9\u3092\u7DE8\u96C6\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u306E\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30DB\u30B9\u30C8\u3068\u3057\u3066\u4F7F\u7528\u3059\u308B",
+        "Value": "\u72EC\u7ACB\u30D0\u30C3\u30AF\u30A8\u30F3\u30C9\u3092\u7DE8\u96C6\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u306E\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30DB\u30B9\u30C8\u3068\u3057\u3066\u4F7F\u7528\u3059\u308B\uFF08\u975E\u63A8\u5968\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4836,11 +4836,11 @@
       },
       {
         "Id": "GeneralUI_SetupSafeZone",
-        "Value": "Unset localization item:GeneralUI_SetupSafeZone()",
+        "Value": "UI\u30BB\u30FC\u30D5\u30BE\u30FC\u30F3\u3092\u8A2D\u5B9A\u4E2D...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -5625,7 +5625,7 @@
       },
       {
         "Id": "Plugin_DetailConfig_Subtitle",
-        "Value": "\uC774 \uC635\uC158\uB4E4\uC740 \u0022{name}\u0022\uC5D0\uC11C \uC81C\uACF5\uD569\uB2C8\uB2E4. \uADF8 \uC758\uBBF8\uB97C \uC54C\uB824\uBA74 \uD50C\uB7EC\uADF8\uC778 \uBB38\uC11C\uB97C \uCC38\uC870\uD558\uC138\uC694.\r\n\uC774\uB7EC\uD55C \uBCC0\uACBD \uC0AC\uD56D\uC774 \uC801\uC6A9\uB418\uB824\uBA74 {Localized.AppBrand}\uB97C \uB2E4\uC2DC \uC2DC\uC791\uD574\uC57C \uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Value": "\uC774 \uC635\uC158\uB4E4\uC740 \u0027{name}\u0027\uC5D0\uC11C \uC81C\uACF5\uD569\uB2C8\uB2E4. \uADF8\uB4E4\uC758 \uAE30\uB2A5\uC744 \uC54C\uB824\uBA74 \uD50C\uB7EC\uADF8\uC778 \uBB38\uC11C\uB97C \uCC38\uC870\uD558\uC138\uC694.\r\n\uC774\uB7EC\uD55C \uBCC0\uACBD \uC0AC\uD56D\uC774 \uC801\uC6A9\uB418\uB824\uBA74 {Localized.AppBrand}\uB97C \uB2E4\uC2DC \uC2DC\uC791\uD574\uC57C \uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -5691,7 +5691,7 @@
       },
       {
         "Id": "Plugin_SureRemove",
-        "Value": "\uD50C\uB7EC\uADF8\uC778 \u0027{name}\u0027\uC744(\uB97C) \uC815\uB9D0\uB85C \uC81C\uAC70\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?\r\n\uD50C\uB7EC\uADF8\uC778\uC758 \uC0AC\uC6A9\uC790 \uC815\uC758 \uC124\uC815\uB3C4 \uD568\uAED8 \uC81C\uAC70\uB429\uB2C8\uB2E4.\r\n\uCC38\uACE0\uB85C, \uC774 \uD50C\uB7EC\uADF8\uC778\uC758 \uC11C\uBA85\uC740 \uC81C\uAC70\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC11C\uBA85\uC744 \uC81C\uAC70\uD558\uACE0 \uB2E4\uB978 \uCD9C\uCC98\uC5D0\uC11C \uC774 \uD50C\uB7EC\uADF8\uC778\uC744 \uC124\uCE58\uD558\uB824\uBA74, \uACE0\uAE09 \uC124\uC815\uC5D0\uC11C \uD574\uB2F9 \uD50C\uB7EC\uADF8\uC778\uC758 \uC2E0\uB8B0\uB97C \uCDE8\uC18C\uD558\uC138\uC694.",
+        "Value": "\uD50C\uB7EC\uADF8\uC778 \u0027{name}\u0027\uC744(\uB97C) \uC815\uB9D0\uB85C \uC81C\uAC70\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?\r\r\uB9CC\uC57D \u0027{name}\u0027\uC744(\uB97C) \uD50C\uB7EC\uADF8\uC778 \uD328\uD0A4\uC9C0\uC5D0\uC11C \uC5C5\uB370\uC774\uD2B8\uD558\uAE30 \uC6D0\uD558\uC2E0\uB2E4\uBA74, \uAD00\uB9AC \uD50C\uB7EC\uADF8\uC778\uC758 \uBA54\uC778 \uC778\uD130\uD398\uC774\uC2A4\uC5D0\uC11C \uB2E4\uC6B4\uB85C\uB4DC\uD55C \uD328\uD0A4\uC9C0\uB97C \uCD94\uAC00\uD574 \uC8FC\uC138\uC694. \uC81C\uAC70\uD558\uBA74 \uD50C\uB7EC\uADF8\uC778\uC758 \uC0AC\uC6A9\uC790 \uC815\uC758 \uC124\uC815\uC774 \uC0AD\uC81C\uB429\uB2C8\uB2E4.\r\r\uCC38\uACE0\uB85C, \uC774 \uD50C\uB7EC\uADF8\uC778\uC758 \uC11C\uBA85\uC740 \uC81C\uAC70\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC11C\uBA85\uC744 \uC81C\uAC70\uD558\uACE0 \uB2E4\uB978 \uCD9C\uCC98\uC5D0\uC11C \uC774 \uD50C\uB7EC\uADF8\uC778\uC744 \uC124\uCE58\uD558\uB824\uBA74, \uACE0\uAE09 \uC124\uC815\uC5D0\uC11C \uD574\uB2F9 \uD50C\uB7EC\uADF8\uC778\uC758 \uC2E0\uB8B0\uB97C \uCDE8\uC18C\uD558\uC138\uC694.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -6055,7 +6055,7 @@
       },
       {
         "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "\uB3C5\uB9BD \uBC31\uC5D4\uB4DC\uB97C \uD3B8\uC9D1 \uD654\uBA74 \uB80C\uB354\uB9C1 \uD638\uC2A4\uD2B8\uB85C \uC0AC\uC6A9",
+        "Value": "\uB3C5\uB9BD \uBC31\uC5D4\uB4DC\uB97C \uD3B8\uC9D1 \uC778\uD130\uD398\uC774\uC2A4 \uB80C\uB354\uB9C1 \uD638\uC2A4\uD2B8\uB85C \uC0AC\uC6A9 (\uBE44\uAD8C\uC7A5)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6073,11 +6073,11 @@
       },
       {
         "Id": "GeneralUI_SetupSafeZone",
-        "Value": "Unset localization item:GeneralUI_SetupSafeZone()",
+        "Value": "UI \uC548\uC804 \uC601\uC5ED \uAD6C\uC131 \uC911...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -6862,7 +6862,7 @@
       },
       {
         "Id": "Plugin_DetailConfig_Subtitle",
-        "Value": "Ces options sont fournies par \u00AB {name} \u00BB. Pour savoir ce qu\u0027elles signifient, consultez la documentation du plugin.\rVous devrez peut-\u00EAtre red\u00E9marrer {Localized.AppBrand} pour que ces modifications prennent effet.",
+        "Value": "Ces options sont fournies par \u00AB\u202F{name}\u202F\u00BB. Pour comprendre leur utilit\u00E9, veuillez consulter la documentation du plugin.\r\nVous devrez peut-\u00EAtre red\u00E9marrer {Localized.AppBrand} pour que ces modifications prennent effet.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -6928,7 +6928,7 @@
       },
       {
         "Id": "Plugin_SureRemove",
-        "Value": "Confirmer la suppression du plugin \u00AB\u202F{name}\u202F\u00BB\u202F?\r\nLes configurations personnalis\u00E9es du plugin seront \u00E9galement supprim\u00E9es.\r\nVeuillez noter que la signature de ce plugin ne sera pas supprim\u00E9e. Pour supprimer sa signature et installer ce plugin depuis une source diff\u00E9rente, veuillez r\u00E9voquer la confiance envers ce plugin dans les param\u00E8tres avanc\u00E9s.",
+        "Value": "Voulez-vous vraiment supprimer le plugin \u00AB {name} \u00BB ?\r\rSi vous souhaitez simplement mettre \u00E0 jour \u00AB {name} \u00BB \u00E0 partir d\u0027un package de plugin, veuillez ajouter le package que vous avez t\u00E9l\u00E9charg\u00E9 dans l\u0027interface principale de gestion des plugins, car si vous le supprimez, les configurations personnalis\u00E9es du plugin seront supprim\u00E9es.\r\rVeuillez noter que la signature de ce plugin ne sera pas supprim\u00E9e. Pour supprimer sa signature et installer ce plugin \u00E0 partir d\u0027une source diff\u00E9rente, veuillez r\u00E9voquer la confiance d\u0027un plugin dans les param\u00E8tres avanc\u00E9s.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -6942,7 +6942,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Avertissement de confirmation pour la suppression d\u0027un plugin, avec des pr\u00E9cisions sur la suppression des configurations et la gestion des signatures.",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -7292,7 +7292,7 @@
       },
       {
         "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "Utiliser le backend ind\u00E9pendant comme h\u00F4te de rendu de l\u0027interface d\u0027\u00E9dition",
+        "Value": "Utiliser un backend ind\u00E9pendant comme h\u00F4te de rendu pour l\u0027interface d\u0027\u00E9dition (Non recommand\u00E9)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7310,11 +7310,11 @@
       },
       {
         "Id": "GeneralUI_SetupSafeZone",
-        "Value": "Unset localization item:GeneralUI_SetupSafeZone()",
+        "Value": "Configuration de la zone s\u00FBre de l\u0027interface...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -8099,7 +8099,7 @@
       },
       {
         "Id": "Plugin_DetailConfig_Subtitle",
-        "Value": "\u6B64\u8BF8\u9009\u9879\uFF0C\u4E43\u7531\u300C{name}\u300D\u6240\u4F9B\u3002\u6B32\u77E5\u5176\u610F\uFF0C\u8BF7\u89C8\u63D2\u4EF6\u4E4B\u6587\u6863\u3002\r\u6216\u9700\u91CD\u542F {Localized.AppBrand}\uFF0C\u65B9\u4F7F\u6B64\u66F4\u751F\u6548\u3002",
+        "Value": "\u6B64\u8BF8\u9009\u9879\u4E43\u300C{name}\u300D\u6240\u4F9B\u3002\u6B32\u77E5\u5176\u7528\uFF0C\u8BF7\u9605\u63D2\u4EF6\u4E4B\u6587\u6863\u3002\r\u6216\u9700\u91CD\u542F {Localized.AppBrand} \u4EE5\u4F7F\u66F4\u6539\u751F\u6548\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -8165,7 +8165,7 @@
       },
       {
         "Id": "Plugin_SureRemove",
-        "Value": "\u786E\u8BA4\u79FB\u9664\u63D2\u4EF6\u300C{name}\u300D\u4E4E\uFF1F\u63D2\u4EF6\u4E4B\u81EA\u5B9A\u4E49\u914D\u7F6E\u4EA6\u5C06\u9664\u4E4B\u3002\u8BF7\u6CE8\u610F\uFF0C\u6B64\u63D2\u4EF6\u4E4B\u7B7E\u540D\u4E0D\u9664\u3002\u6B32\u9664\u5176\u7B7E\u540D\uFF0C\u53E6\u4ECE\u4ED6\u6E90\u5B89\u88C5\uFF0C\u8BF7\u4E8E\u9AD8\u7EA7\u8BBE\u7F6E\u4E2D\u53D6\u6D88\u4FE1\u4EFB\u4E00\u63D2\u4EF6\u3002",
+        "Value": "\u786E\u8BA4\u79FB\u9664\u63D2\u4EF6\u300E{name}\u300F\u4E4E\uFF1F\r\r\u82E5\u6C5D\u4EC5\u6B32\u81EA\u63D2\u4EF6\u5305\u66F4\u65B0\u300E{name}\u300F\uFF0C\u8BF7\u4E8E\u7BA1\u7406\u63D2\u4EF6\u4E4B\u4E3B\u754C\u9762\u6DFB\u52A0\u6C5D\u6240\u4E0B\u8F7D\u4E4B\u5305\u3002\u76D6\u82E5\u79FB\u9664\u4E4B\uFF0C\u63D2\u4EF6\u4E4B\u81EA\u5B9A\u4E49\u914D\u7F6E\u4EA6\u5C06\u88AB\u79FB\u9664\u3002\r\r\u8BF7\u6CE8\u610F\uFF0C\u6B64\u63D2\u4EF6\u4E4B\u7B7E\u540D\u4E0D\u4F1A\u88AB\u79FB\u9664\u3002\u6B32\u79FB\u9664\u5176\u7B7E\u540D\u5E76\u81EA\u4E0D\u540C\u4E4B\u6E90\u5B89\u88C5\u6B64\u63D2\u4EF6\uFF0C\u8BF7\u4E8E\u9AD8\u7EA7\u8BBE\u7F6E\u4E2D\u53D6\u6D88\u4FE1\u4EFB\u4EFB\u4E00\u63D2\u4EF6\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -8179,7 +8179,7 @@
             "Value": ""
           }
         ],
-        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u6301\u539F\u610F\uFF0C\u4F7F\u7528\u53E4\u6C49\u8BED\u8868\u8FBE\u65B9\u5F0F\u3002",
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u6301\u6280\u672F\u51C6\u786E\u6027\uFF0C\u4F7F\u7528\u6587\u8A00\u53E5\u5F0F\u5982\u300E\u4E4E\u300F\u3001\u300E\u4E4B\u300F\u3001\u300E\u77E3\u300F\u7B49\uFF0C\u4FDD\u7559\u63D2\u503C\u53D8\u91CF{name}\u3002",
         "HasValidationErrors": false
       },
       {
@@ -8529,11 +8529,11 @@
       },
       {
         "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "\u4EE5\u72EC\u540E\u7AEF\u4E3A\u7F16\u4FEE\u754C\u9762\u6E32\u67D3\u4E3B\u673A",
+        "Value": "\u4EE5\u72EC\u7ACB\u540E\u7AEF\u4E3A\u7F16\u7E82\u754C\u9762\u6E32\u67D3\u4E3B\u673A\uFF0C\u4E0D\u5B9C\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u6587\u8A00\u6587\u8BD1\u6CD5\uFF0C\u610F\u540C\u0027\u4F7F\u7528\u72EC\u7ACB\u540E\u7AEF\u4F5C\u4E3A\u7F16\u8F91\u754C\u9762\u6E32\u67D3\u4E3B\u673A\u0027",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -8547,11 +8547,11 @@
       },
       {
         "Id": "GeneralUI_SetupSafeZone",
-        "Value": "Unset localization item:GeneralUI_SetupSafeZone()",
+        "Value": "\u914D\u7F6EUI\u5B89\u5168\u533A...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]

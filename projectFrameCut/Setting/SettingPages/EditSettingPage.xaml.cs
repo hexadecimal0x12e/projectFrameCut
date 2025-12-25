@@ -37,7 +37,7 @@ public partial class EditSettingPage : ContentPage
             .AddEntry("edit_LiveVideoPreviewBufferLength", SettingLocalizedResources.Edit_LiveVideoPreviewBufferLength, GetSetting("edit_LiveVideoPreviewBufferLength", "240"), "240")
 #if WINDOWS
             .AddSwitch("Edit_AlwaysShowToolbarButtons", SettingLocalizedResources.Edit_AlwaysShowToolbarButtons, bool.TryParse(GetSetting("Edit_AlwaysShowToolbarButtons", "false"), out var result) ? result : false, null)
-            .AddPicker("render_SelectRenderHost", SettingLocalizedResources.Render_SelectRenderHost, [SettingLocalizedResources.Render_RenderHost_UseLivePreviewInsteadOfBackend, SettingLocalizedResources.Render_RenderHost_UseBackendAsRenderHost], GetSetting("edit_UseLivePreviewInsteadOfBackend", "True") == "True" ? SettingLocalizedResources.Render_RenderHost_UseLivePreviewInsteadOfBackend : SettingLocalizedResources.Render_RenderHost_UseBackendAsRenderHost);
+            //.AddPicker("render_SelectRenderHost", SettingLocalizedResources.Render_SelectRenderHost, [SettingLocalizedResources.Render_RenderHost_UseLivePreviewInsteadOfBackend, SettingLocalizedResources.Render_RenderHost_UseBackendAsRenderHost], GetSetting("edit_UseLivePreviewInsteadOfBackend", "True") == "True" ? SettingLocalizedResources.Render_RenderHost_UseLivePreviewInsteadOfBackend : SettingLocalizedResources.Render_RenderHost_UseBackendAsRenderHost);
 #endif
             ;
 

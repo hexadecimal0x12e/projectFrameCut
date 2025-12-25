@@ -149,25 +149,16 @@ public partial class RenderSettingPage : ContentPage
     {
         try
         {
-            string accelInfoJson = "";
-            Process p = new Process
+            ILGPU.Context context = ILGPU.Context.CreateDefault();
+            var devices = context.Devices.ToList();
+            List<AcceleratorInfo> listAccels = new();
+            for (uint i = 0; i < devices.Count; i++)
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Render.WindowsRender.exe"),
-                    WorkingDirectory = Path.Combine(AppContext.BaseDirectory),
-                    Arguments = $""" list_accels """,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = false,
-                }
-            };
-            p.Start();
-            p.WaitForExit();
-            accelInfoJson = p.StandardError.ReadToEnd();
+                var item = devices[(int)i];
+                listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
+            }
 
-            return JsonSerializer.Deserialize<AcceleratorInfo[]>(accelInfoJson);
+            return listAccels.ToArray();
         }
         catch (Exception ex)
         {

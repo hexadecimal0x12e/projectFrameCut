@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace projectFrameCut.Render.Videos
+namespace projectFrameCut.Render.EncodeAndDecode
 {
     public static unsafe class VideoResizer
     {

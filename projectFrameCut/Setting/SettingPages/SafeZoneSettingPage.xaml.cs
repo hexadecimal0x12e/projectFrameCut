@@ -58,25 +58,27 @@ namespace projectFrameCut.Setting.SettingPages
 
         private void AddOneButton_Clicked(object sender, EventArgs e)
         {
-            radius+= 10;
+            radius += 1;
             SyncValue();
         }
 
         private void AddPointOneButton_Clicked(object sender, EventArgs e)
         {
-            radius += 1;
+            radius += 0.1;
             SyncValue();
         }
 
         private void MinusOneButton_Clicked(object sender, EventArgs e)
         {
-            radius-= 10;
+            if (radius - 1 >= 0)
+                radius -= 1;
             SyncValue();
         }
 
         private void MinusPointOneButton_Clicked(object sender, EventArgs e)
         {
-            radius -= 1;
+            if (radius - 0.1 >= 0)
+                radius -= 0.1;
             SyncValue();
         }
     }

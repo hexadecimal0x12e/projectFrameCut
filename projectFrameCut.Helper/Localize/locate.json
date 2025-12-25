@@ -1,0 +1,78 @@
+{
+  "DefaultLocate": "zh-CN",
+  "AdditionalUsing": "projectFrameCut.Helper",
+  "NameSpaceOfLocalizerInstance": "",
+  "ClassNameSpaceOfLocalizerInstance": "SimpleLocalizerBaseGeneratedHelper",
+  "NameOfLocalizerInstance": "Localized",
+  "NameOfBaseInterface": "ISimpleLocalizerBase",
+  "EnableDynamicGenerate": false,
+  "EnableBaseGenerate": true,
+  "Values": {
+    "zh-CN": [
+      {
+        "Id": "AppLoading",
+        "Value": "\u52A0\u8F7D\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Title",
+        "Value": "{HelperProgram.AppTitle} \u5D29\u6E83\u62A5\u544A",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Restart",
+        "Value": "\u91CD\u542F\u5E94\u7528\u7A0B\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Feedback",
+        "Value": "\u53CD\u9988",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_OpenLog",
+        "Value": "\u6253\u5F00\u65E5\u5FD7\u6587\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_Copyright",
+        "Value": "\u7248\u6743\u6240\u6709 hexadecimal0x12e 2025-{DateTime.Now.Year}\r",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_Version",
+        "Value": "\u7248\u672C {HelperProgram.AppVersion}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_License",
+        "Value": "\u6B64\u7248\u672C\u7684 {HelperProgram.AppTitle} \u53EA\u53EF\u7528\u4E8E\u975E\u5546\u7528\u573A\u666F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      }
+    ]
+  }
+}

@@ -90,7 +90,7 @@ namespace projectFrameCut.Render.WindowsRender
 
             if (Sync)
             {
-                lock (Program.globalLocker!)
+                using (ILGPUComputerHelper.locker.EnterScope())
                 {
                     krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
                     accelerator.Synchronize();
@@ -298,7 +298,7 @@ namespace projectFrameCut.Render.WindowsRender
         {
             if (ForceSync)
             {
-                lock (Program.globalLocker)
+                using (ILGPUComputerHelper.locker.EnterScope())
                 {
                     action();
                 }
@@ -313,23 +313,7 @@ namespace projectFrameCut.Render.WindowsRender
 
     public static class ILGPUComputerHelper
     {
-        //public static void RegisterComputerGetter(Accelerator[] accels)
-        //{
-        //    AcceleratedComputerBridge.RequireAComputer = new((name) =>
-        //    {
-        //        switch (name)
-        //        {
-        //            case "Overlay":
-        //                return new OverlayComputer(accels, null);
-        //            case "RemoveColor":
-        //                return new RemoveColorComputer(accels, null);
-        //            default:
-        //                Log($"Computer {name} not found.", "Error");
-        //                return null;
-
-        //        }
-        //    });
-        //}
+        public static Lock locker = new();
 
         public static Device? PickOneAccel(string accelType, int acceleratorId, List<Device> devices)
         {

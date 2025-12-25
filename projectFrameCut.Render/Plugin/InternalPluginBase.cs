@@ -1,16 +1,17 @@
-﻿using projectFrameCut.Render.ClipsAndTracks;
+﻿using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.VideoMakeEngine;
-using projectFrameCut.Render.Videos;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using projectFrameCut.Render.EncodeAndDecode;
 
 namespace projectFrameCut.Render.Plugin;
 
@@ -36,12 +37,12 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, Dictionary<string, string>> LocalizationProvider => new Dictionary<string, Dictionary<string, string>>
     {
         {
-            "zh-CN", 
+            "zh-CN",
             new Dictionary<string, string>
             {
                 {"_PluginBase_Name_", "projectFrameCut 内部基础插件" },
                 {"_PluginBase_Description_", "作为 projectFrameCut 的一部分，提供 projectFrameCut 的基本功能" }
-            } 
+            }
         }
     };
 
@@ -66,6 +67,7 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>>
     {
         {"ZoomIn", new(() => new ZoomInContinuousEffect())  },
+        {"Jitter", new(() => new JitterEffect()) }
     };
 
     public Dictionary<string, Func<IEffect>> VariableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>
@@ -92,9 +94,21 @@ public class InternalPluginBase : IPluginBase
 
     public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString => new Dictionary<string, Dictionary<string, string>> { };
 
-    public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new Dictionary<string, Func<string, string, ISoundTrack>> { };
+    public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new Dictionary<string, Func<string, string, ISoundTrack>>
+    {
+        {"NormalTrack", new((i,n) => new NormalSoundTrack{Id = i, Name = n}) }
+    };
 
-    public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider => new Dictionary<string, Func<string, IAudioSource>> { };
+    public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider => new Dictionary<string, Func<string, IAudioSource>>
+    {
+        {"AudioDecoder", (s) => new AudioDecoder(s) }
+    };
+
+    public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>> 
+    {
+        {"VideoWriter", new((c) => {if(VideoWriter.DetectCodec(c)) return new VideoWriter(); throw new NotSupportedException($"Codec {c} not found."); }) }
+    };
+
 
     //public IEffect EffectCreator(EffectAndMixtureJSONStructure stru) => EffectHelper.CreateFromJSONStructure(stru);
 
@@ -109,6 +123,17 @@ public class InternalPluginBase : IPluginBase
             ClipMode.SolidColorClip => element.Deserialize<SolidColorClip>() ?? throw new NullReferenceException(),
             ClipMode.TextClip => element.Deserialize<TextClip>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
+        };
+    }
+
+    ISoundTrack IPluginBase.SoundTrackCreator(JsonElement element)
+    {
+        TrackMode type = (TrackMode)element.GetProperty("TrackType").GetInt32();
+        Console.WriteLine($"Found sound track {type}, name: {element.GetProperty("Name").GetString()}, id: {element.GetProperty("Id").GetString()}");
+        return type switch
+        {
+            TrackMode.NormalTrack => element.Deserialize<NormalSoundTrack>() ?? throw new NullReferenceException(),
+            _ => throw new NotSupportedException($"Unknown or unsupported sound track type {type}."),
         };
     }
 

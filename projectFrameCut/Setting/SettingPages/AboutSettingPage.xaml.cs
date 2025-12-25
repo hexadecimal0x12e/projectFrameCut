@@ -58,13 +58,16 @@ public partial class AboutSettingPage : ContentPage
     {
         try
         {
-            var filePath = $"AboutApplication/{Localized._LocaleId_}/About.md";
+            var filePath = $"AboutApplication/{Localized._LocaleId_}/About.html";
             using var stream = await FileSystem.OpenAppPackageFileAsync(filePath);
             using var reader = new StreamReader(stream);
             var text = await reader.ReadToEndAsync();
             Dispatcher.Dispatch(() =>
             {
-                AboutTextEntry.Text = text ?? string.Empty;
+                AboutWebview.Source = new HtmlWebViewSource
+                {
+                    Html = text
+                };
             });
 
         }
@@ -72,7 +75,10 @@ public partial class AboutSettingPage : ContentPage
         {
             Dispatcher.Dispatch(() =>
             {
-                AboutTextEntry.Text = "Sorry, about content is unavailable.";
+                AboutWebview.Source = new HtmlWebViewSource
+                {
+                    Html = $"<html><body><h2>Error loading about content</h2><p>{ex.Message}</p></body></html>"
+                };
             });
         }
     }

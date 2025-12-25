@@ -13,7 +13,7 @@ namespace projectFrameCut.WinUI
         {
             try
             {
-                projectFrameCut.Helper.HelperProgram.AppVersion = $"Version v{AppInfo.VersionString}";
+                projectFrameCut.Helper.HelperProgram.AppVersion = AppInfo.Version.ToString();   
                 var splash = new Thread(projectFrameCut.Helper.HelperProgram.SplashMain);
                 splash.Priority = ThreadPriority.Highest;
                 splash.IsBackground = false;
@@ -29,6 +29,14 @@ namespace projectFrameCut.WinUI
                         System.Threading.Thread.CurrentThread.CurrentCulture = culture;
                         System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
                     }
+                    if (args.Any(c => c == "--log"))
+                    {
+                        Thread logThread = new Thread(Helper.HelperProgram.LogMain);
+                        logThread.Priority = ThreadPriority.Highest;
+                        logThread.IsBackground = false;
+                        logThread.Start();
+                        Log($"Logger window started.");
+                    }
                 }
                 catch
                 {
@@ -42,8 +50,10 @@ namespace projectFrameCut.WinUI
                     SynchronizationContext.SetSynchronizationContext(context);
                     new App();
                 });
-
+                Log("Application exited.");
                 SettingsManager.FlushAndStopAsync().GetAwaiter().GetResult();
+                Helper.HelperProgram.Cleanup();
+                return;
             }
             catch (Exception ex)
             {
@@ -133,7 +143,7 @@ Current directory: {Environment.CurrentDirectory}
                     File.WriteAllText(logPath, logMessage);
                 }
                 Thread.Sleep(100);
-                Process.Start(new ProcessStartInfo { FileName = logPath, UseShellExecute = true });
+                Process.Start(new ProcessStartInfo { FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.exe"), Arguments = $"crashForm \"{logPath}\"", UseShellExecute = true });
                 Environment.FailFast(logMessage, ex);
                 Environment.Exit(ex.HResult);
             }

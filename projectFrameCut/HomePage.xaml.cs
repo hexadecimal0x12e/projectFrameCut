@@ -15,6 +15,9 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Microsoft.Maui.Dispatching;
+
+
 
 
 
@@ -24,6 +27,7 @@ using System.Windows.Input;
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
 using Windows.ApplicationModel.UserActivities;
+using Microsoft.UI.Xaml.Media;
 using ILGPU;
 
 #endif
@@ -375,7 +379,7 @@ public partial class HomePage : ContentPage
         ProjectJSONStructure project = new();
         try
         {
-            project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(draftSourcePath, "project.json")));
+            project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(draftSourcePath, "project.json")), DraftPage.DraftJSONOption);
 
         }
         catch (Exception ex)
@@ -407,8 +411,8 @@ public partial class HomePage : ContentPage
                 DraftStructureJSON timeline;
                 try
                 {
-                    assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(draftSourcePath, "assets.json"))) ?? new();
-                    timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(draftSourcePath, "timeline.json"))) ?? new();
+                    assets = JsonSerializer.Deserialize<List<AssetItem>>(File.ReadAllText(Path.Combine(draftSourcePath, "assets.json")), DraftPage.DraftJSONOption) ?? new();
+                    timeline = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(draftSourcePath, "timeline.json")), DraftPage.DraftJSONOption) ?? new();
                     goto ok;
                 }
                 catch (Exception ex)
@@ -495,9 +499,9 @@ public partial class HomePage : ContentPage
                     SettingsManager.WriteSetting("Edit_PreferredPopupMode", "bottom");
 #endif
                 }
-                page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.projectName ?? "?", isReadonly, dbgBackend);
+                page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.projectName ?? "?", isReadonly);
                 page.ProjectName = project?.projectName ?? "?";
-                page.UseLivePreviewInsteadOfBackend = SettingsManager.IsBoolSettingTrue("edit_UseLivePreviewInsteadOfBackend");
+                //page.UseLivePreviewInsteadOfBackend = SettingsManager.IsBoolSettingTrue("edit_UseLivePreviewInsteadOfBackend");
                 page.IsReadonly = isReadonly;
                 page.PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "right");
                 page.MaximumSaveSlot = int.TryParse(SettingsManager.GetSetting("Edit_MaximumSaveSlot"), out var slotCount) ? slotCount : 10;
@@ -505,44 +509,15 @@ public partial class HomePage : ContentPage
                 page.ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole");
                 page.LiveVideoPreviewBufferLength = int.TryParse(SettingsManager.GetSetting("edit_LiveVideoPreviewBufferLength", "240"), out var bufferLen) ? bufferLen : 240;
 #if WINDOWS
-                if (!page.UseLivePreviewInsteadOfBackend)
-                {
-                    await page.BootRPC();
-                }
-                else
-                {
-                    Context context = Context.CreateDefault();
-                    var devices = context.Devices.ToList();
-                    var accelDevice = devices.Index().Select(t => new KeyValuePair<int, ILGPU.Runtime.Device>(t.Index,t.Item))
-                                            .FirstOrDefault((t) => t.Key == (int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var accelIdx) ? accelIdx : -1),
-                                            new KeyValuePair<int, ILGPU.Runtime.Device>(-1, devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices.First()))).Value;
-                    page.AcceleratorToUse = accelDevice.CreateAccelerator(context);
-                }
+                Context context = Context.CreateDefault();
+                var devices = context.Devices.ToList();
+                var accelDevice = devices.Index().Select(t => new KeyValuePair<int, ILGPU.Runtime.Device>(t.Index, t.Item))
+                                        .FirstOrDefault((t) => t.Key == (int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var accelIdx) ? accelIdx : -1),
+                                        new KeyValuePair<int, ILGPU.Runtime.Device>(-1, devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices.First()))).Value;
+                page.AcceleratorToUse = accelDevice.CreateAccelerator(context);
 #endif
                 await page.PostInit();
 
-            }
-            catch (Exception ex4)
-            {
-                if (throwOnException)
-                {
-                    throw;
-                }
-                await Dispatcher.DispatchAsync(async () =>
-                {
-                    await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_FailByException(ex4), "OK");
-                });
-            }
-        });
-        try
-        {
-            Content = origContent;
-
-            if (!cancelled && page != null && project != null)
-            {
-#if WINDOWS
-            AppShell.instance.HideNavView();
-#endif
                 foreach (var item in PluginManager.LoadedPlugins)
                 {
                     try
@@ -552,46 +527,81 @@ public partial class HomePage : ContentPage
                     catch (Exception ex)
                     {
                         Log(ex, $"plugin {item.Value.Name} OnProjectLoad", this);
+                        if (!await DisplayAlertAsync(Localized._Warn, Localized.HomePage_InitPlugin_Fail(item.Value.Name, ex), Localized._Confirm, Localized._Cancel))
+                        {
+                            page = null;
+                            return;
+                        }
+
                     }
                 }
 
-#if WINDOWS //for recall/timeline
-            try
+            }
+            catch (Exception ex4)
             {
+                Log(ex4, $"Load project {project?.projectName}", this);
+                if (throwOnException)
+                {
+                    throw;
+                }
                 await Dispatcher.DispatchAsync(async () =>
                 {
-                    try
-                    {
-                        var platformPage = this.Handler?.PlatformView as Microsoft.UI.Xaml.Controls.Page;
-                        await platformPage?.Dispatcher.RunAsync(default, async () =>
-                        {
-                            _previousSession?.Dispose();
-                            var activity = await UserActivityChannel.GetDefault().GetOrCreateUserActivityAsync($"projectFrameCut_draft_{project?.projectName ?? "Project"}");
-                            activity.ActivationUri = new Uri($"projectFrameCut://draft/{draftSourcePath.Replace('\\', '/')}");
-                            activity.VisualElements.DisplayText = $"projectFrameCut draft-'{project?.projectName ?? "Project"}'";
-                            await activity.SaveAsync();
-                            _previousSession = activity.CreateSession();
-                        });
-
-                    }
-                    catch (Exception ex)
-                    {
-
-                    }
+                    await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_FailByException(ex4), Localized._OK);
                 });
-
             }
-            catch (Exception ex)
+        });
+        try
+        {
+            Content = origContent;
+
+            if (!cancelled && page != null && project != null)
             {
+#if WINDOWS //for recall/timeline
+                try
+                {
+                    await Dispatcher.DispatchAsync(async () =>
+                    {
+                        try
+                        {
+                            var platformPage = this.Handler?.PlatformView as Microsoft.UI.Xaml.Controls.Page;
+                            await platformPage?.Dispatcher.RunAsync(default, async () =>
+                            {
+                                _previousSession?.Dispose();
+                                var activity = await UserActivityChannel.GetDefault().GetOrCreateUserActivityAsync($"projectFrameCut_draft_{project?.projectName ?? "Project"}");
+                                activity.ActivationUri = new Uri($"projectFrameCut://draft/{draftSourcePath.Replace('\\', '/')}");
+                                activity.VisualElements.DisplayText = $"projectFrameCut draft-'{project?.projectName ?? "Project"}'";
+                                await activity.SaveAsync();
+                                _previousSession = activity.CreateSession();
+                            });
 
-            }
+                        }
+                        catch (Exception ex)
+                        {
+
+                        }
+                    });
+
+                }
+                catch (Exception ex)
+                {
+
+                }
 
 #endif
                 await Dispatcher.DispatchAsync(async () =>
                 {
-                    Shell.SetTabBarIsVisible(page, false);
-                    Shell.SetNavBarIsVisible(page, true);
-                    await Navigation.PushAsync(page);
+                    try
+                    {
+                        AppShell.instance.HideNavView();
+                        Shell.SetTabBarIsVisible(page, false);
+                        Shell.SetNavBarIsVisible(page, true);
+                        await Navigation.PushAsync(page);
+                    }
+                    catch (Exception ex)
+                    {
+                        await DisplayAlertAsync(Localized._Warn, Localized.HomePage_GoDraft_FailByException(ex), "OK");
+
+                    }
                 });
             }
         }
@@ -890,6 +900,7 @@ public partial class HomePage : ContentPage
         {
             Localized.HomePage_ProjectContextMenu_Open,
             Localized.HomePage_ProjectContextMenu_OpenReadonly,
+            Localized.DraftPage_GoRender,
             Localized.HomePage_ProjectContextMenu_Export,
             Localized.HomePage_ProjectContextMenu_OpenInFileManager,
             Localized.HomePage_ProjectContextMenu_Clone,
@@ -930,25 +941,42 @@ public partial class HomePage : ContentPage
                 case 1: //OpenReadonly 
                     await GoDraft(vmItem, isReadonly: true);
                     break;
-                case 2: //Export
+                case 2:
+                    ProjectJSONStructure project = new();
+                    DraftStructureJSON draft = new();
+                    try
+                    {
+                        project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(vmItem._projectPath, "project.json")), DraftPage.DraftJSONOption);
+                        draft = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(vmItem._projectPath, "timeline.json")), DraftPage.DraftJSONOption);
+
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, "get project info", this);
+                        await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n({ex.Message})", Localized._OK);
+                        return;
+                    }
+                    var page = new RenderPage(vmItem._projectPath, draft.Duration, project);
+                    await Dispatcher.DispatchAsync(async () =>
+                    {
+                        Shell.SetTabBarIsVisible(page, false);
+                        Shell.SetNavBarIsVisible(page, true);
+                        await Navigation.PushAsync(page);
+                    });
+                    break;
+                case 3: //Export
                     await ExportProject(vmItem);
                     break;
-                case 3: //OpenInFileManager
-#if WINDOWS
-                    Process.Start(new ProcessStartInfo { FileName = vmItem._projectPath, UseShellExecute = true });
-#elif ANDROID
-
-#elif iDevices
-
-#endif
+                case 4: //OpenInFileManager
+                    await FileSystemService.OpenFolderAsync(vmItem._projectPath);
                     break;
-                case 4: //Clone
+                case 5: //Clone
                     await CloneDraft(vmItem);
                     break;
-                case 5: //Rename
+                case 6: //Rename
                     await RenameProject(vmItem);
                     break;
-                case 6: //Delete
+                case 7: //Delete
                     await DeleteProject(vmItem);
                     break;
                 default: //unknown/cancel

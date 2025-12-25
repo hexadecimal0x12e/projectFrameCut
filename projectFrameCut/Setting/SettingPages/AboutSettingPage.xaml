@@ -15,8 +15,8 @@
             
         </HorizontalStackLayout>
 
-        <Editor Margin="0,8,0,0" MinimumHeightRequest="500" IsReadOnly="True" x:Name="AboutTextEntry">
+        <WebView Margin="0,8,0,0" MinimumHeightRequest="500"  x:Name="AboutWebview">
             
-        </Editor>
+        </WebView>
     </VerticalStackLayout>
 </ContentPage>

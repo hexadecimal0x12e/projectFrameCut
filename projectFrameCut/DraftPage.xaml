@@ -48,6 +48,17 @@
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_PlayPause}" Command="{Binding PlayPauseCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator  Key="Space" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_ClosePopup}" Command="{Binding ClosePopupCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="{OnPlatform WinUI=Escape, MacCatalyst=UIKeyInputEscape}" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
 
 
             <MenuFlyoutItem Text="{l:Localized Key=_Settings}" Command="{Binding SettingsCommand}"/>
@@ -148,24 +159,45 @@
             </Grid.RowDefinitions>
 
             <ScrollView Grid.Row="0" x:Name="TracksAndClipsLayout" Orientation="Vertical">
-                <Grid x:Name="MainTrackContentGrid">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1*"/>
-                        <ColumnDefinition Width="8*"/>
-                    </Grid.ColumnDefinitions>
+                <VerticalStackLayout>
+                    <Grid x:Name="MainTrackContentGrid">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*"/>
+                            <ColumnDefinition Width="8*"/>
+                        </Grid.ColumnDefinitions>
 
-                    <VerticalStackLayout x:Name="TrackHeadLayout" Grid.Column="0" Padding="2">
+                        <VerticalStackLayout x:Name="TrackHeadLayout" Grid.Column="0" Padding="2">
+
+                        </VerticalStackLayout>
+
+                        <ScrollView x:Name="TimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" HorizontalOptions="Fill" VerticalScrollBarVisibility="Never" HorizontalScrollBarVisibility="Never">
+                            <VerticalStackLayout x:Name="TrackContentLayout" Padding="2" HorizontalOptions="Fill" />
+                        </ScrollView>
+                    </Grid>
+
+                    <Grid x:Name="SubTrackContentGrid">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*"/>
+                            <ColumnDefinition Width="8*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <VerticalStackLayout x:Name="SubTrackHeadLayout" Grid.Column="0" Padding="2">
+
+                        </VerticalStackLayout>
+
+                        <ScrollView x:Name="SubTimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" HorizontalOptions="Fill">
+                            <VerticalStackLayout x:Name="SubTrackContentLayout" Padding="2" HorizontalOptions="Fill" />
+                        </ScrollView>
+                    </Grid>
+                    <Grid ColumnDefinitions="1*,8*">
                         <Button Margin="0,8,0,0"
+                                Grid.Column="0"
                                 x:Name="AddTrackButton"
                                 Text="+"
                                 Clicked="AddTrackButton_Clicked"
                                 HeightRequest="80" />
-                    </VerticalStackLayout>
-
-                    <ScrollView x:Name="TimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled">
-                        <VerticalStackLayout x:Name="TrackContentLayout" Padding="2" />
-                    </ScrollView>
-                </Grid>
+                    </Grid>
+                </VerticalStackLayout>
 
             </ScrollView>
             <BoxView x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>

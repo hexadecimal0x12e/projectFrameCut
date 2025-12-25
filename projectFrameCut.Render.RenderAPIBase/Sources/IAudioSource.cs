@@ -44,6 +44,13 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// </summary>
         public bool Disposed { get; }
 
-
+        /// <summary>
+        /// Get audio samples for a specific time range.
+        /// </summary>
+        /// <param name="startFrame">The start frame index (based on video framerate).</param>
+        /// <param name="frameCount">The number of frames to read.</param>
+        /// <param name="videoFramerate">The framerate of the video to synchronize with.</param>
+        /// <returns>An <see cref="AudioBuffer"/> containing the samples.</returns>
+        public AudioBuffer GetAudioSamples(uint startFrame, uint frameCount, int videoFramerate);
     }
 }

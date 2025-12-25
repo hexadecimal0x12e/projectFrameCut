@@ -179,11 +179,11 @@ Exception data:
 
         public static void Announce(string msg, string level = "info")
         {
-            Task.Run(() => OnLog?.Invoke(msg, level));
+            OnLog?.Invoke(msg, level);
         }
         public static void AnnounceException(Exception exc)
         {
-            Task.Run(() => OnExceptionLog?.Invoke(exc));
+            OnExceptionLog?.Invoke(exc);
         }
     }
 

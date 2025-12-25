@@ -1,4 +1,5 @@
 ﻿using projectFrameCut.Shared;
+using projectFrameCut.Render.RenderAPIBase.Sources;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -48,6 +49,12 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// Total duration of the source clip in frames. 0 will be treated as infinite length.
         /// </summary>
         public uint Duration { get; init; }
+
+        /// <summary>
+        /// The audio source for this track.
+        /// </summary>
+        public IAudioSource? AudioSource { get; set; }
+
         /// <summary>
         /// The actual sound's speed ratio
         /// </summary>

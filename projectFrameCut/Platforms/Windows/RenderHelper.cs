@@ -143,7 +143,14 @@ namespace projectFrameCut.Platforms.Windows
 
         internal void Cancel()
         {
-            _proc.Kill();
+            try
+            {
+                _proc.Kill();
+            }
+            catch
+            {
+
+            }
         }
 
         [GeneratedRegex(@"(?i)(?:^|\s)[-/]pluginConnectionPipe=(?:""([^""]+)""|(\S+))", RegexOptions.None, "zh-CN")]

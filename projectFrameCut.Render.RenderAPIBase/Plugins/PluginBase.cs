@@ -118,6 +118,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// </remarks>
         public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; }
 
+        public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; }
+
+
         /// <summary>
         /// Get or set the configuration of the plugin.
         /// </summary>
@@ -159,24 +162,21 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         }
 
         /// <summary>
-        /// Obtains an instance of IClip from the given JSON element. You may override this method to provide custom clip creation logic.
+        /// Obtains an instance of IClip from the given JSON element. Let this method throw an <see cref="NotImplementedException"/> to indicate that this plugin does not provide any clip.
         /// </summary>
         /// <param name="element">the source element</param>
         /// <returns>the clip</returns>
-        /// <exception cref="NotSupportedException"></exception>
-        public virtual IClip ClipCreator(JsonElement element)
-        {
-            var type = element.GetProperty("ClipType").GetString();
-            if (type != null && ClipProvider.TryGetValue(type, out var creator))
-            {
-                var filePath = element.GetProperty("FilePath").GetString() ?? string.Empty;
-                return creator(filePath, element.GetRawText());
-            }
-            else
-            {
-                throw new NotSupportedException($"No suitable clip found for the given type '{type}'.");
-            }
-        }
+        /// <exception cref="NotImplementedException">indicates that this plugin does not provide any clip.</exception>
+        public IClip ClipCreator(JsonElement element);
+
+        /// <summary>
+        /// Obtains an instance of ISoundTrack from the given JSON element. Let this method throw an <see cref="NotImplementedException"/> to indicate that this plugin does not provide any soundtrack.
+        /// </summary>
+        /// <param name="element">the source element</param>
+        /// <returns>the soundtrack</returns>
+        /// <exception cref="NotImplementedException">indicates that this plugin does not provide any clip.</exception>
+        public ISoundTrack SoundTrackCreator(JsonElement element);
+
         /// <summary>
         /// Creates an effect instance from the given JSON structure.
         /// </summary>
@@ -232,7 +232,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <exception cref="NotSupportedException"></exception>
         public virtual IVideoSource VideoSourceCreator(string filePath)
         {
-            var prefered = VideoSourceProvider.Values.Where((k) => k(null!).PreferredExtension.Contains("."+Path.GetExtension(filePath)));
+            var prefered = VideoSourceProvider.Values.Where((k) => k(null!).PreferredExtension.Contains(Path.GetExtension(filePath)));
             if (prefered.Any())
             {
                 return prefered.First()(filePath);
@@ -368,6 +368,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public virtual ProjectJSONStructure? OnProjectClose(ProjectJSONStructure project)
         {
             return null;
+        }
+
+        /// <summary>
+        /// Called when a command is triggered.
+        /// </summary>
+        public virtual void OnCommandCalled(string command, IClip? sender)
+        {
+
         }
     }
 

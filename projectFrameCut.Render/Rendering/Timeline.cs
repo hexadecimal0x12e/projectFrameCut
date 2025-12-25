@@ -15,11 +15,10 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using static projectFrameCut.Render.Videos.Video;
 
 namespace projectFrameCut.Render.Rendering
 {
-    public class Timeline
+    public static class Timeline
     {
         //public static ConcurrentDictionary<string, IComputer> ComputerCache = new();
         public static ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();

@@ -100,6 +100,59 @@ namespace projectFrameCut.Render.Plugin
             {
                 throw new ArgumentException($"Plugin not found: {type}");
             }
+        }
+
+        public static IClip CreateNewClip(string pluginID, string clipType, string id, string name)
+        {
+            if (PluginManager.LoadedPlugins.TryGetValue(pluginID, out var plugin))
+            {
+                if (plugin.ClipProvider.TryGetValue(clipType, out var creator))
+                {
+                    return creator(id, name);
+                }
+                else
+                {
+                    throw new ArgumentException($"Clip type not found: {clipType} in plugin {pluginID}");
+                }
+            }
+            else
+            {
+                throw new ArgumentException($"Plugin not found: {pluginID}");
+            }
+        }
+
+        public static ISoundTrack CreateSoundTrack(JsonElement source)
+        {
+            var type = source.GetProperty("FromPlugin").GetString();
+            var name = source.GetProperty("Name").GetString();
+
+            if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(name))
+            {
+                throw new ArgumentException("Invalid soundtrack data.");
+            }
+
+            if (PluginManager.LoadedPlugins.TryGetValue(type, out var plugin))
+            {
+                return plugin.SoundTrackCreator(source);
+            }
+            throw new ArgumentException($"Plugin not found: {type}");
+
+        }
+
+        public static ISoundTrack CreateNewSoundTrack(string pluginID, string soundTrackType, string id, string name)
+        {
+            if (PluginManager.LoadedPlugins.TryGetValue(pluginID, out var plugin))
+            {
+                if (plugin.SoundTrackProvider.TryGetValue(soundTrackType, out var creator))
+                {
+                    return creator(id, name);
+                }
+                else
+                {
+                    throw new ArgumentException($"SoundTrack type not found: {soundTrackType} in plugin {pluginID}");
+                }
+            }
+            throw new ArgumentException($"Plugin not found: {pluginID}");
 
         }
 
@@ -110,6 +163,15 @@ namespace projectFrameCut.Render.Plugin
                 var effect = plugin.EffectCreator(stru);
                 effect.Index = stru.Index;
                 effect.Enabled = stru.Enabled;
+                try
+                {
+                    effect.Initialize();
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Init effect {effect.Name}", effect);
+                    throw;
+                }
                 return effect;
             }
             else
@@ -150,6 +212,49 @@ namespace projectFrameCut.Render.Plugin
                 }
             }
             throw new NotSupportedException($"No suitable video source found for the given file '{filePath}'.");
+        }
+
+        public static IAudioSource CreateAudioSource(string filePath)
+        {
+            foreach (var plugin in LoadedPlugins.Values)
+            {
+                try
+                {
+                    var source = plugin.AudioSourceCreator(filePath);
+                    if (source != null)
+                    {
+                        return source;
+                    }
+                }
+                catch
+                {
+                    // Ignore and try next plugin
+                }
+            }
+            throw new NotSupportedException($"No suitable audio source found for the given file '{filePath}'.");
+        }
+
+        public static IVideoWriter CreateVideoWriter(string filePath)
+        {
+            foreach (var plugin in LoadedPlugins.Values)
+            {
+                try
+                {
+                    foreach (var item in plugin.VideoWriterProvider)
+                    {
+                        var instance = item.Value(filePath);
+                        if (instance.TryInitialize())
+                        {
+                            return instance;
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore and try next plugin
+                }
+            }
+            throw new NotSupportedException($"No suitable video writer found for the given file '{filePath}'.");
         }
 
         private static Dictionary<string, IComputer> ComputerCache = new();

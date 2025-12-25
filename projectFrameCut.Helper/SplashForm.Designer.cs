@@ -31,9 +31,10 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SplashForm));
             TitleLabel = new Label();
             VersionLabel = new Label();
-            label3 = new Label();
+            CopyrightLabel = new Label();
             label1 = new Label();
             closeButton = new Button();
+            LicenseLabel = new Label();
             SuspendLayout();
             // 
             // TitleLabel
@@ -46,10 +47,10 @@
             resources.ApplyResources(VersionLabel, "VersionLabel");
             VersionLabel.Name = "VersionLabel";
             // 
-            // label3
+            // CopyrightLabel
             // 
-            resources.ApplyResources(label3, "label3");
-            label3.Name = "label3";
+            resources.ApplyResources(CopyrightLabel, "CopyrightLabel");
+            CopyrightLabel.Name = "CopyrightLabel";
             // 
             // label1
             // 
@@ -61,8 +62,13 @@
             closeButton.BackColor = Color.Transparent;
             resources.ApplyResources(closeButton, "closeButton");
             closeButton.Name = "closeButton";
-            closeButton.UseVisualStyleBackColor = true;
+            closeButton.UseVisualStyleBackColor = false;
             closeButton.Click += closeButton_Click;
+            // 
+            // LicenseLabel
+            // 
+            resources.ApplyResources(LicenseLabel, "LicenseLabel");
+            LicenseLabel.Name = "LicenseLabel";
             // 
             // SplashForm
             // 
@@ -70,9 +76,10 @@
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(255, 210, 114);
             ControlBox = false;
+            Controls.Add(LicenseLabel);
             Controls.Add(closeButton);
             Controls.Add(label1);
-            Controls.Add(label3);
+            Controls.Add(CopyrightLabel);
             Controls.Add(VersionLabel);
             Controls.Add(TitleLabel);
             FormBorderStyle = FormBorderStyle.None;
@@ -90,8 +97,9 @@
 
         private Label TitleLabel;
         private Label VersionLabel;
-        private Label label3;
+        private Label CopyrightLabel;
         private Label label1;
         private Button closeButton;
+        private Label LicenseLabel;
     }
 }

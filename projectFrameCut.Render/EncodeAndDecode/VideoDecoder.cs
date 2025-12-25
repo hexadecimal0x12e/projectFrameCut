@@ -7,7 +7,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 
-namespace projectFrameCut.Render.Videos
+namespace projectFrameCut.Render.EncodeAndDecode
 {
 
     public sealed unsafe class DecoderContext16Bit : IVideoSource
@@ -41,7 +41,7 @@ namespace projectFrameCut.Render.Videos
 
         public uint Index { get; set; } = 0;
 
-        public string[] PreferredExtension => ["mkv"];
+        public string[] PreferredExtension => [".mkv"];
         public int? ResultBitPerPixel => 8;
 
         public bool EnableLock { get; set; } = false;
@@ -377,7 +377,7 @@ namespace projectFrameCut.Render.Videos
         public int Height => _height;
 
         public uint Index { get; set; } = 0;
-        public string[] PreferredExtension => ["mp4","mov"];
+        public string[] PreferredExtension => [".mp4",".mov"];
 
         public int? ResultBitPerPixel => 8;
 

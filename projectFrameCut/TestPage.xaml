@@ -12,6 +12,7 @@
             <Button x:Name="TestFFmpegButton" Text="Test FFmpeg" Clicked="TestFFmpegButton_Clicked"/>
             <Button x:Name="TestCrashButton" Text="Crash" Clicked="TestCrashButton_Clicked"/>
             <Button x:Name="WinUIDiagTestBtn" Text="Test WinUI3 diag" Clicked="WinUIDiagTestBtn_Clicked"/>
+            <Button x:Name="ContextMenuTestBtn" Text="Test context button" Clicked="ContextMenuTestBtn_Clicked" />
             <Border StrokeThickness="4">
                 <VerticalStackLayout>
                    <Button x:Name="TestPlaceButton" Text="Test place" Clicked="TestPlaceButton_Clicked"/>
