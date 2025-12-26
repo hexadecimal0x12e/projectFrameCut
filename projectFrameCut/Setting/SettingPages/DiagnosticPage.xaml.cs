@@ -61,7 +61,7 @@ public partial class DiagnosticSettingPage : ContentPage
                 IsReadOnly = true
             })
             .ListenToChanges(SettingInvoker);
-        Content = new ScrollView { Content = rootPPB.Build() };
+        Content = rootPPB.BuildWithScrollView();
         
     }
 

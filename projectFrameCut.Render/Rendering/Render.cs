@@ -19,6 +19,7 @@ namespace projectFrameCut.Render.Rendering
     {
         public IClip[]? Clips;
         public uint Duration;
+        public uint StartFrame = 0;
         public VideoBuilder? builder;
         public int MaxThreads = (int)(Environment.ProcessorCount * 1.75);
         public bool LogState = false;
@@ -60,7 +61,7 @@ namespace projectFrameCut.Render.Rendering
             ArgumentNullException.ThrowIfNull(builder, nameof(builder));
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             BlankFrame = Use16Bit ? Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
-            List<Exception> exceptions = new List<Exception>();
+            ConcurrentQueue<Exception> exceptions = new();
 
             running = true;
             if (LogStatToLogger)
@@ -68,6 +69,7 @@ namespace projectFrameCut.Render.Rendering
                 new Thread(() =>
                 {
                     float d = Duration;
+                    int finished = 0, wrote = 0, working = 0;
                     TimeSpan each = TimeSpan.Zero, eachPrepare = TimeSpan.Zero;
                     while (running)
                     {
@@ -79,12 +81,18 @@ namespace projectFrameCut.Render.Rendering
                                 eachPrepare = new TimeSpan((long)EachElapsedForPreparing.Average(x => x.Ticks));
 
                             if (token.IsCancellationRequested) return;
+                            finished = Volatile.Read(ref Finished);
+                            wrote = builder.FramePendedToWrite.Count(k => k.Value);
+                            working = Volatile.Read(ref ThreadWorking);
+
                             Log($"[STAT] " +
                                 $"memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB, " +
-                                $"total prepared: {TotalEnqueued / d:p2}, " +
-                                $"total rendered: {Volatile.Read(ref Finished) / d:p2}, " +
-                                $"total wrote frames: {builder.FramePendedToWrite.Count(k => k.Value) / d:p3}, " +
+                                $"total prepared: {TotalEnqueued} ({TotalEnqueued / d:p2}), " +
+                                $"total rendered: {finished} ({finished / d:p2}), " +
+                                $"total wrote frames: {wrote} ({wrote / d:p3}), " +
                                 $"total pended to write frames: {builder.FramePendedToWrite.Count(k => !k.Value)}/{builder.FramePendedToWrite.Count}, " +
+                                $"slots {Math.Max(0, MaxThreads - working)}/{MaxThreads}, threads {Threads.Select(t => t.IsAlive).Count()}/{Threads.Count}" +
+                                $"enqueued {Volatile.Read(ref TotalEnqueued)}, " +
                                 $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}. ");
                             Thread.Sleep(10000);
                         }
@@ -108,7 +116,7 @@ namespace projectFrameCut.Render.Rendering
             await Task.Delay(50);
 
             Stopwatch lastActivity = Stopwatch.StartNew();
-            int lastEnqueued = Volatile.Read(ref TotalEnqueued);
+            int lastFinished = Volatile.Read(ref Finished);
 
             while (true)
             {
@@ -124,11 +132,10 @@ namespace projectFrameCut.Render.Rendering
                 int availableSlots = Math.Max(0, MaxThreads - working);
 
                 int preparedCount = PreparedFrames.Count;
-                int currentEnqueued = Volatile.Read(ref TotalEnqueued);
-
-                if (currentEnqueued != lastEnqueued)
+                int currentFinished = Volatile.Read(ref Finished);
+                if (currentFinished != lastFinished)
                 {
-                    lastEnqueued = currentEnqueued;
+                    lastFinished = currentFinished;
                     lastActivity.Restart();
                 }
 
@@ -140,7 +147,11 @@ namespace projectFrameCut.Render.Rendering
 
                     if (forceStart)
                     {
-                        Log($"[Watchdog] No activity for 1 minute. Force starting {toStart} prepared frames.", "warn");
+                        Log($"[Watchdog] No rendered frame progress for 1 minute. prepared={preparedCount}, working={working}/{MaxThreads}, finished={Volatile.Read(ref Finished)}/{Duration}.", "warn");
+                        if (availableSlots == 0)
+                        {
+                            Log($"[Watchdog] No available slots (all render threads busy). This often means a render thread is blocked (e.g. in effects/mixer) or the writer is stuck waiting for a missing frame index.", "warn");
+                        }
                     }
                     else
                     {
@@ -178,13 +189,28 @@ namespace projectFrameCut.Render.Rendering
                             catch (Exception ex)
                             {
                                 Log($"Error rendering frame {targetFrame}: {ex}", "error");
-                                exceptions.Add(ex);
+                                // Try to avoid leaving a hole: the writer is strictly sequential and will block forever
+                                // if some index is never appended.
+                                try
+                                {
+                                    if (builder != null && !builder.FramePendedToWrite.ContainsKey(targetFrame))
+                                    {
+                                        builder.Append(targetFrame, BlankFrame);
+                                        Interlocked.Increment(ref Finished);
+                                        OnProgressChanged?.Invoke((double)Volatile.Read(ref Finished) / Duration);
+                                        Log($"[Render] Filled failed frame {targetFrame} with blank to avoid writer stall.", "warn");
+                                    }
+                                }
+                                catch (Exception fillEx)
+                                {
+                                    Log($"[Render] Failed to fill blank for frame {targetFrame}: {fillEx}", "error");
+                                }
+
+                                exceptions.Enqueue(ex);
                             }
                             finally
                             {
                                 Interlocked.Decrement(ref ThreadWorking);
-                                Interlocked.Increment(ref Finished);
-                                OnProgressChanged?.Invoke((double)Volatile.Read(ref Finished) / Duration);
                             }
                         });
 
@@ -198,7 +224,7 @@ namespace projectFrameCut.Render.Rendering
                 {
                     if (PreparerFinished && PreparedFrames.IsEmpty && Volatile.Read(ref ThreadWorking) == 0 && !BlankFrames.IsEmpty)
                     {
-                        FlushBlankFramesBefore(Duration, token);
+                        FlushBlankFramesBefore(StartFrame + Duration, token);
                     }
                     await Task.Delay(10);
                 }
@@ -209,17 +235,13 @@ namespace projectFrameCut.Render.Rendering
                     Console.Error.WriteLine($"@@{f},{Duration}");
                 }
 
-                if(exceptions.Count > 0)
+                if (!exceptions.IsEmpty)
                 {
                     Log("Exceptions occurred during rendering. Aborting.", "error");
-                    if(exceptions.Count == 1)
-                    {
-                        throw exceptions[0];
-                    }
-                    else
-                    {
-                        throw new AggregateException("Multiple exceptions occurred during rendering.", exceptions);
-                    }   
+                    var list = new List<Exception>();
+                    while (exceptions.TryDequeue(out var ex)) list.Add(ex);
+                    if (list.Count == 1) throw list[0];
+                    throw new AggregateException("Multiple exceptions occurred during rendering.", list);
                 }
 
             }
@@ -248,8 +270,9 @@ namespace projectFrameCut.Render.Rendering
 
         public void PrepareRender(CancellationToken token)
         {
+            ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             bool found = false;
-            for (uint idx = 0; idx < Duration; idx++)
+            for (uint idx = StartFrame; idx < StartFrame + Duration; idx++)
             {
                 found = false;
                 if (token.IsCancellationRequested) return;
@@ -276,7 +299,7 @@ namespace projectFrameCut.Render.Rendering
 
                 if (idx % 50 == 0)
                 {
-                    Log($"[Preparer] source preparing finished {(float)idx / (float)Duration:p3} ({idx}/{Duration})");
+                    Log($"[Preparer] source preparing finished {(float)(idx - StartFrame) / (float)Duration:p3} ({idx - StartFrame}/{Duration})");
                 }
 
             }
@@ -295,6 +318,7 @@ namespace projectFrameCut.Render.Rendering
 
         private void PrepareSource(CancellationToken token)
         {
+            ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             Stopwatch sw = new();
             foreach (var idx in ClipNeedForFrame.Keys.OrderBy(x => x))
             {
@@ -339,7 +363,8 @@ namespace projectFrameCut.Render.Rendering
 
         private void RenderAFrame(uint targetFrame, CancellationToken token)
         {
-            if (targetFrame > Duration)
+            ArgumentNullException.ThrowIfNull(builder, nameof(builder));
+            if (targetFrame >= StartFrame + Duration)
             {
                 Log($"[Render] WARN: Target frame {targetFrame} exceeds project duration. Ignore.");
                 return;
@@ -353,7 +378,9 @@ namespace projectFrameCut.Render.Rendering
             {
                 sw.Stop();
                 Log($"[Render] Frame {targetFrame} is empty.");
-                builder.Append(targetFrame, BlankFrame);
+                builder!.Append(targetFrame, BlankFrame);
+                Interlocked.Increment(ref Finished);
+                OnProgressChanged?.Invoke((double)Volatile.Read(ref Finished) / Duration);
                 EachElapsed.Add(sw.Elapsed);
                 return;
             }
@@ -363,8 +390,8 @@ namespace projectFrameCut.Render.Rendering
             {
                 if (token.IsCancellationRequested) return;
 
-                IPicture frame;
-                if (!FrameCache.TryGetValue(clip.Id, out var perClipCache) || !perClipCache.TryRemove(targetFrame, out frame))
+                IPicture? frame;
+                if (!FrameCache.TryGetValue(clip.Id, out var perClipCache) || !perClipCache.TryRemove(targetFrame, out frame) || frame is null)
                 {
                     Log($"[Render] WARN: Prepared frame {targetFrame} not found in cache for clip {clip.Id}. Regenerating.");
                     try
@@ -455,7 +482,9 @@ namespace projectFrameCut.Render.Rendering
                 result = result.Resize(_width, _height, false);
             }
         ok:
-            builder.Append(targetFrame, result);
+            builder!.Append(targetFrame, result);
+            Interlocked.Increment(ref Finished);
+            OnProgressChanged?.Invoke((double)Volatile.Read(ref Finished) / Duration);
             sw.Stop();
             Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}");
             EachElapsed.Add(sw.Elapsed);
@@ -494,6 +523,7 @@ namespace projectFrameCut.Render.Rendering
         {
             try
             {
+                ArgumentNullException.ThrowIfNull(builder, nameof(builder));
                 while (!token.IsCancellationRequested && BlankFrames.TryPeek(out var head) && head < frameIndex)
                 {
                     if (!BlankFrames.TryDequeue(out var blankIdx))
@@ -505,7 +535,7 @@ namespace projectFrameCut.Render.Rendering
                         break;
                     }
 
-                    builder.Append(blankIdx, BlankFrame);
+                    builder!.Append(blankIdx, BlankFrame);
                     EachElapsed.Add(TimeSpan.Zero);
                     Interlocked.Increment(ref Finished);
                     OnProgressChanged?.Invoke((double)Volatile.Read(ref Finished) / Duration);

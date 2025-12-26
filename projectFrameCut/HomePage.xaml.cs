@@ -76,25 +76,6 @@ public partial class HomePage : ContentPage
                     {
                         switch (args[0])
                         {
-#if WINDOWS && DEBUG
-                            case "go_draft_dbgBackend":
-                                {
-                                    var draft = args[1];
-                                    if (Directory.Exists(draft))
-                                    {
-                                        RpcClient c = new();
-                                        if (Process.GetProcessesByName("projectFrameCut.Render.WindowsRender").Any())
-                                        {
-                                            await Task.Delay(1200);
-                                            await PluginPipeTransport.SendEnabledPluginsAsync("pjfc_plugin_debug123");
-                                            await c.StartAsync("pjfc_rpc_debug123", default);
-                                            await GoDraft(draft, "Project", false, false, c, true);
-                                        }
-
-                                    }
-                                    break;
-                                }
-#endif
                             case "goDraft":
                                 {
                                     var draft = args[1];
@@ -501,13 +482,18 @@ public partial class HomePage : ContentPage
                 }
                 page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.projectName ?? "?", isReadonly);
                 page.ProjectName = project?.projectName ?? "?";
-                //page.UseLivePreviewInsteadOfBackend = SettingsManager.IsBoolSettingTrue("edit_UseLivePreviewInsteadOfBackend");
                 page.IsReadonly = isReadonly;
+                page.Denoise = SettingsManager.IsBoolSettingTrue("Edit_Denoise");
                 page.PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "right");
                 page.MaximumSaveSlot = int.TryParse(SettingsManager.GetSetting("Edit_MaximumSaveSlot"), out var slotCount) ? slotCount : 10;
                 page.AlwaysShowToolbarBtns = SettingsManager.IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons");
                 page.ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole");
-                page.LiveVideoPreviewBufferLength = int.TryParse(SettingsManager.GetSetting("edit_LiveVideoPreviewBufferLength", "240"), out var bufferLen) ? bufferLen : 240;
+                page.LiveVideoPreviewBufferLength = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), out var bufferLen) ? bufferLen : 240;
+                page.LivePreviewResolutionFactor = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), out var resolutionFactor) ? resolutionFactor : 8;
+                var resolution = SettingsManager.GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720");
+                page.DefaultPreviewWidth = int.TryParse(resolution.Split('x', 2)[0], out var w) ? w : 1280;
+                page.DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720;  
+                page.ProxyOption = SettingsManager.GetSetting("Edit_ProxyOption", "none");
 #if WINDOWS
                 Context context = Context.CreateDefault();
                 var devices = context.Devices.ToList();

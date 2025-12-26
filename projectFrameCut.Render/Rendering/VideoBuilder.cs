@@ -43,7 +43,7 @@ namespace projectFrameCut.Render.Rendering
         /// </summary>
         public string? PreviewPath { get; set; } = null;
 
-        public event EventHandler<IPicture> OnPreviewGenerated;
+        public event EventHandler<IPicture>? OnPreviewGenerated;
         /// <summary>
         /// the minimum number of frames between generating preview images.
         /// </summary>
@@ -56,6 +56,7 @@ namespace projectFrameCut.Render.Rendering
         public uint Duration { get; set; }
         public int Width => builder.Width;
         public int Height => builder.Height;
+        public IVideoWriter Writer => builder;
 
 
 
@@ -70,7 +71,7 @@ namespace projectFrameCut.Render.Rendering
         /// </remarks>
         public ConcurrentDictionary<uint, bool> FramePendedToWrite { get; private set; } = new();
 
-        public VideoBuilder(string path, int width, int height, int framerate, string encoder, AVPixelFormat fmt)
+        public VideoBuilder(string path, int width, int height, int framerate, string encoder, string fmt)
         {
             outputPath = path;
             index = 0;
@@ -78,7 +79,7 @@ namespace projectFrameCut.Render.Rendering
             builder.Width = width;
             builder.Height = height;
             builder.FramePerSecond = framerate;
-            builder.PixelFormat = fmt.ToString();
+            builder.PixelFormat = fmt;
             builder.OutputPath = outputPath;
             builder.CodecName = encoder;
             builder.Initialize();   
@@ -115,30 +116,18 @@ namespace projectFrameCut.Render.Rendering
             }
             if (!BlockWrite)
             {
-                Cache.AddOrUpdate(index, frame, (_, _) => throw new InvalidOperationException($"Frame #{index} has already been added."));
-                if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview)
-                {
-                    OnPreviewGenerated?.Invoke(this, frame);
-                    countSinceLastPreview = 0;
-                }
+                Cache.AddOrUpdate(index, frame, (_, _) => throw new InvalidOperationException($"Frame #{index} has already been added."));               
             }
             else
             {
-                if (!FramePendedToWrite.TryAdd(index, true))
-                {
-                    if (StrictMode)
-                    {
-                        throw new InvalidOperationException($"Frame #{index} has already been added.");
-                    }
-                    else
-                    {
-                        Log($"[VideoBuilder] WARN: Frame #{index} has already been added, ignored.", "warn");
-                        if (DisposeFrameAfterEachWrite) frame.Dispose();
-                        return;
-                    }
-                }
                 builder.Append(frame);
                 Log($"[VideoBuilder] Frame #{index} added.");
+            }
+
+            if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview)
+            {
+                OnPreviewGenerated?.Invoke(this, frame.DeepCopy());
+                countSinceLastPreview = 0;
             }
 
         }
@@ -171,19 +160,7 @@ namespace projectFrameCut.Render.Rendering
                         index++;
 
                         if (DisposeFrameAfterEachWrite) f.Dispose();
-                        if (DoGCAfterEachWrite)
-                        {
-                            if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
-                            {
-                                GC.Collect(2, GCCollectionMode.Forced, true, true);
-                                GC.WaitForFullGCComplete();
-                            }
-                            else //mono don't support full blocking GC
-                            {
-                                GC.Collect();
-                            }
-
-                        }
+                        if (DoGCAfterEachWrite) GC.Collect();
                         Log($"[VideoBuilder] Frame #{index} wrote.");
                     }
                     else

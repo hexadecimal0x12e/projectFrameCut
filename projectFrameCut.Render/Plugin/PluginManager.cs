@@ -4,6 +4,7 @@ using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
@@ -257,15 +258,14 @@ namespace projectFrameCut.Render.Plugin
             throw new NotSupportedException($"No suitable video writer found for the given file '{filePath}'.");
         }
 
-        private static Dictionary<string, IComputer> ComputerCache = new();
+        private static readonly ConcurrentDictionary<string, IComputer> ComputerCache = new();
 
         public static IComputer? CreateComputer(string? computerType, bool forceCreate = false)
         {
             if (computerType is null) return null;
             if (!forceCreate && ComputerCache.TryGetValue(computerType, out var cachedComputer))
-            {
                 return cachedComputer;
-            }
+
             foreach (var plugin in LoadedPlugins.Values)
             {
                 try
@@ -273,8 +273,13 @@ namespace projectFrameCut.Render.Plugin
                     var computer = plugin.ComputerCreator(computerType);
                     if (computer != null)
                     {
-                        ComputerCache[computerType] = computer;
-                        return computer;
+                        if (forceCreate)
+                        {
+                            // Caller explicitly requests a new instance (often for thread-safety).
+                            return computer;
+                        }
+
+                        return ComputerCache.GetOrAdd(computerType, computer);
                     }
                 }
                 catch

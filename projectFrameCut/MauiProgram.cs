@@ -53,7 +53,6 @@ namespace projectFrameCut
 
         public static MauiApp CreateMauiApp()
         {
-            System.Threading.Thread.CurrentThread.Name = "App Main thread";
             if (CmdlineArgs is null || CmdlineArgs.Length == 0)
             {
                 try
@@ -127,7 +126,7 @@ namespace projectFrameCut
                 $"                  os version {Environment.OSVersion}/{DeviceInfo.Version},\r\n" +
                 $"                  clr version {Environment.Version},\r\n" +
                 $"                  cmdline: {Environment.CommandLine}");
-            Log("Copyright (c) hexadecimal0x12e 2025, and thanks to other open-source code's authors. This project is licensed under GNU GPL V2.");
+            Log("Copyright (c) hexadecimal0x12e 2025, and thanks to other open-source code's authors.");
             Log($"BasicDataPath:{BasicDataPath}, DataPath:{DataPath}");
             try
             {
@@ -192,7 +191,22 @@ namespace projectFrameCut
                 SettingsManager.Settings = new();
 
             }
-
+#if WINDOWS
+            try
+            {
+                if (SettingsManager.IsBoolSettingTrue("DedicatedLogWindow") && !projectFrameCut.WinUI.Program.LogWindowShowing)
+                {
+                    Thread logThread = new Thread(Helper.HelperProgram.LogMain);
+                    logThread.Name = "LogWindow thread";
+                    logThread.Priority = ThreadPriority.Highest;
+                    logThread.IsBackground = false;
+                    logThread.Start();
+                    projectFrameCut.WinUI.Program.LogWindowShowing = true;
+                    Log($"Logger window started.");
+                }
+            }
+            catch { }
+#endif
             try
             {
                 if (File.Exists(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt")))
@@ -461,14 +475,15 @@ namespace projectFrameCut
 #endif
                     try
                     {
-                        if (Environment.GetCommandLineArgs().Contains("--forceLoadPlugins") || (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("disableAllUserPlugin")))
+                        if (Environment.GetCommandLineArgs().Contains("--forceLoadPlugins") || (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine")))
                         {
                             plugins.AddRange(PluginService.LoadUserPlugins());
                         }
                         else
                         {
                             if (AdminHelper.IsRunningAsAdministrator()) Log("Running as administrator, skip load user plugins for security reason.", "warn");
-                            else Log("User disabled user plugin.");
+                            else Log("User disabled the plugin engine.");
+                            PluginService.FailedLoadPlugin.Add("<No plugin ID available>", AdminHelper.IsRunningAsAdministrator() ? Localized.PluginEngine_DisabledBecauseAdmin : Localized.PluginEngine_DisabledBecauseUserDisabled);
                         }
                     }
                     catch (Exception ex)
@@ -491,7 +506,7 @@ namespace projectFrameCut
 #if ANDROID
                         Android.Util.Log.Wtf("projectFrameCut", $"FATAL: The pluginBase cannot be loaded. projectFrameCut may not work at all.\r\n(a {ex.GetType().Name} exception happends, {ex.Message})");
 #elif WINDOWS
-                        _ = MessageBox(new nint(0), $"FATAL: The pluginBase cannot be loaded. projectFrameCut may not work at all.\r\n(a {ex.GetType().Name} exception happends, {ex.Message})", "projectFrameCut", 0U);
+                        _ = MessageBox(new nint(0), $"FATAL: The pluginBase cannot be loaded. projectFrameCut may not work at all.\r\n(a {ex.GetType().Name} exception happens, {ex.Message})", "projectFrameCut", 0U);
 #endif
                     }
                 }

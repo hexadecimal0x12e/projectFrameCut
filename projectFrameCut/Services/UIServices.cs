@@ -69,5 +69,15 @@ namespace projectFrameCut.Services
 
     }
 
+#if ANDROID
+    public class DisableScrollListener : Java.Lang.Object, Android.Views.View.IOnTouchListener
+    {
+        public bool OnTouch(Android.Views.View? v, Android.Views.MotionEvent e)
+        {
+            return true;
+        }
+    }
+#endif
+
 
 }

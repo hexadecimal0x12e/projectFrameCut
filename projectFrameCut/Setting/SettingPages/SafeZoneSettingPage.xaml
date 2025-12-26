@@ -10,7 +10,6 @@
 
 
         <Grid Grid.Row="1">
-            <!-- 贴边的矩形框 -->
             <Shapes:Rectangle x:Name="SafeRect"
                               Stroke="#FFD272"
                               StrokeThickness="5"
@@ -18,7 +17,6 @@
                               HorizontalOptions="Fill"
                               VerticalOptions="Fill" />
 
-            <!-- 滑块位于底部，覆盖在矩形上方 -->
             <StackLayout VerticalOptions="Center" HorizontalOptions="Center" Padding="8" MinimumWidthRequest="80" MaximumHeightRequest="250">
                 <Label Text="{l:Localized Key=MainSettingsPage_SetupSafeZone_Info}" VerticalOptions="Center" />
                 <StackLayout Orientation="Horizontal" Spacing="12" VerticalOptions="Start">
@@ -35,10 +33,14 @@
 
                 </HorizontalStackLayout>
                 <Button x:Name="SaveButton" Margin="0,4,0,0" Text="{l:Localized Key=_Save}" Clicked="SaveButton_Clicked" />
+                <HorizontalStackLayout>
+                    <Switch x:Name="AlwaysUseThisValue" Toggled="AlwaysUseThisValue_Toggled" VerticalOptions="Center" />
+                    <Label Text="{l:Localized Key=MainSettingsPage_SetupSafeZone_AlwaysUseThisValue}" VerticalOptions="Center" HorizontalOptions="Start"></Label>
+                </HorizontalStackLayout>
             </StackLayout>
             <BoxView Grid.Row="2" HeightRequest="100" BackgroundColor="Gray" HorizontalOptions="Fill" VerticalOptions="End" Margin="2,2,2,2" ZIndex="-1" />
 
         </Grid>
-        <!-- 页面最下面的白色长方形，高度100 -->
+
     </Grid>
 </ContentPage>

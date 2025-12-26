@@ -20,12 +20,15 @@
                     <Button x:Name="PluginSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Plugin}" FontSize="24" Clicked="OnPluginSettingClicked" />
                     <Button x:Name="MiscSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Misc}" FontSize="24" Clicked="OnMiscSettingClicked" />
                     <Button x:Name="AboutSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_About}" FontSize="24" Clicked="OnAboutSettingClicked" />
+                    <Button x:Name="AdvancedSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Advanced}" IsVisible="False" FontSize="24" Clicked="AdvancedSettingButton_Clicked" />
                     <Button x:Name="TestPageButton" Text="Test" FontSize="24" Clicked="TestPageButton_Clicked" IsVisible="False" />
-                    <Button x:Name="ManageSettingPageButton" Text="Manaul edit setting" FontSize="24" Clicked="ManageSettingPageButton_Clicked" IsVisible="False" />
                 </VerticalStackLayout>
             </VerticalStackLayout>
 
             <VerticalStackLayout Grid.Row="1">
+                <VerticalStackLayout.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="TapGestureRecognizer_Tapped"/>
+                </VerticalStackLayout.GestureRecognizers>
                 <Label Text="projectFramecCut" x:Name="VersionLabel" HorizontalOptions="Center" TextColor="Gray" />
                 <Label Text="© hexadecimal0x12e 2025-" x:Name="CopyrightText" HorizontalOptions="Center" TextColor="Gray" />
             </VerticalStackLayout>

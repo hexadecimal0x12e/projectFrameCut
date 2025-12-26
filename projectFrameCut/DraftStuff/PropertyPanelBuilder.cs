@@ -92,6 +92,13 @@ namespace projectFrameCut.PropertyPanel
             children.Add(l);
             return this;
         }
+        public PropertyPanelBuilder AddText(Label label, string Id = "", Action<Label>? LabelSetter = null)
+        {
+            if (!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, label);
+            LabelSetter?.Invoke(label);
+            children.Add(label);
+            return this;
+        }
 
         /// <summary>
         /// Adds a text input box (<seealso cref="Entry"/>) with an associated label to the property panel.

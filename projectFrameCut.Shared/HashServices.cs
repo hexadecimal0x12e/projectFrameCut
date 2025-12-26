@@ -25,6 +25,19 @@ namespace projectFrameCut.Shared
             }
             throw new FileNotFoundException("File not found", fileName);
         }
+        [DebuggerNonUserCode()]
+        public static string ComputeFileHash(string fileName, HashAlgorithm? algorithm = null)
+        {
+            algorithm ??= SHA256.Create();
+            if (System.IO.File.Exists(fileName))
+            {
+                using System.IO.FileStream fs = new System.IO.FileStream(fileName, System.IO.FileMode.Open, System.IO.FileAccess.Read);
+                byte[] buffer = algorithm.ComputeHash(fs);
+                algorithm.Clear();
+                return buffer.Select(c => c.ToString("x2")).Aggregate((a, b) => a + b);
+            }
+            throw new FileNotFoundException("File not found", fileName);
+        }
 
         [DebuggerNonUserCode()]
         public static string ComputeStringHash(string input, HashAlgorithm? algorithm = null) 

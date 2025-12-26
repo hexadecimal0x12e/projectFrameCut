@@ -18,6 +18,8 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.Plugin;
 using SixLabors.ImageSharp;
 using projectFrameCut.Services;
+using projectFrameCut.DraftStuff;
+
 
 
 
@@ -166,13 +168,6 @@ public partial class RenderPage : ContentPage
     {
         var outputDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
 
-#if WINDOWS
-        string outputPath = await FileSystemService.PickASavePath($"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mp4", outputDir);
-#else
-        string outputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mp4");
-#endif
-
-        if (string.IsNullOrWhiteSpace(outputPath)) return;
         RenderOptionPanel.IsVisible = false;
         PreviewLayout.IsVisible = true;
         ProgressBox.IsVisible = true;
@@ -188,6 +183,38 @@ public partial class RenderPage : ContentPage
 
         if (BindingContext is RenderPageViewModel vm)
         {
+            var fmt = vm.BitDepth switch
+            {
+                "8bit" => "AV_PIX_FMT_YUV420P",
+                "10bit" => "AV_PIX_FMT_YUV420P10LE",
+                "12bit" => "AV_PIX_FMT_YUV444P12LE",
+                _ => "AV_PIX_FMT_GBRP16LE"
+            };
+            var enc = vm.BitDepth switch
+            {
+                "8bit" => "libx264",
+                "10bit" => "libx265",
+                "12bit" => "libx265",
+                _ => "ffv1"
+            };
+            var ext = enc switch
+            {
+                "libx264" => ".mp4",
+                "libx265" => ".mov",
+                "ffv1" => ".mkv",
+                _ => ".mp4"
+            };
+            string outputPath = Path.Combine(outputDir,$"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mp4");
+
+#if WINDOWS
+            string resultPath = await FileSystemService.PickASavePath($"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", outputDir);
+#elif ANDROID
+        Directory.CreateDirectory("/sdcard/Movies/projectFrameCut");
+        string resultPath = Path.Combine("/sdcard/Movies/projectFrameCut", $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+#else
+        string resultPath = Path.Combine(outputDir, $"{_project.projectName}_export_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+#endif
+
             running = true;
             DeviceDisplay.Current.KeepScreenOn = true;
             Log("Output options:\r\n" + vm.BuildSummary());
@@ -198,7 +225,49 @@ public partial class RenderPage : ContentPage
             _logUpdateTimer?.Stop();
             await FlushLogQueue();
             await TotalProgress.ProgressTo(1, 50, Easing.Linear);
+#if WINDOWS
 
+            //todo: compose audio and attrs (like bitrate) into final video
+            Dispatcher.Dispatch(() =>
+            {
+                SubProgLabel.Text = Localized.RenderPage_SubProg_FinalEncoding;
+            });
+
+            ffmpeg.totalFrames = _duration;
+
+            ffmpeg.OnProgressChanged += (p) =>
+            {
+                totalProg = p + lastProg;
+
+                Dispatcher.Dispatch(async () =>
+                {
+                    await SubProgress.ProgressTo(p, 250, Easing.Linear);
+                    await TotalProgress.ProgressTo(totalProg / 3d, 5, Easing.Linear);
+
+                });
+            };
+
+            ffmpeg.OnLog += _logQueue.Enqueue;
+
+            var ffArgs = $"-i \"{outputPath}\" " +
+                //$"-i \"{audio}\" " +
+                $"-c:v h264_qsv " +
+                $"-pix_fmt yuv420p " +
+                $"\"{resultPath}\" " +
+                $"-b:v 4096M -maxrate 4096M -bufsize 1024M" +
+                /*     //vbr
+
+                      -b:v {avg}M //cbr
+
+                      -crf {num} //crf
+                 */
+                $"-y";
+            Log($"FFmpeg args: {ffArgs}");
+
+            var ffRet = await ffmpeg.Run(ffArgs);
+
+            Log($"FFmpeg process exited with code {ffRet}.");
+#endif
 
             await DisplayAlertAsync(Localized._Info, Localized.RenderPage_Done, Localized._OK);
             running = false;
@@ -213,6 +282,27 @@ public partial class RenderPage : ContentPage
     {
         try
         {
+            var fmt = vm.BitDepth switch
+            {
+                "8bit" => "AV_PIX_FMT_YUV420P",
+                "10bit" => "AV_PIX_FMT_YUV420P10LE",
+                "12bit" => "AV_PIX_FMT_YUV444P12LE",
+                _ => "AV_PIX_FMT_GBRP16LE"
+            };
+            var enc = vm.BitDepth switch
+            {
+                "8bit" => "libx264",
+                "10bit" => "libx265",
+                "12bit" => "libx265",
+                _ => "ffv1"
+            };
+            var ext = enc switch
+            {
+                "libx264" => ".mp4",
+                "libx265" => ".mov",
+                "ffv1" => ".mkv",
+                _ => ".mp4"
+            };
 
 
             void SetSubProg(string s)
@@ -245,17 +335,13 @@ public partial class RenderPage : ContentPage
 
             MyLoggerExtensions.OnLog += _WriteToLogBox;
 
-            var outTempFile = Path.Combine(_workingPath, "export", $"output-{Guid.NewGuid()}.mp4");
-            var outPreview = Path.Combine(_workingPath, "export", $"preview-{Guid.NewGuid()}.png");
+            var outTempFile = outputPath + ext;
             Directory.CreateDirectory(Path.GetDirectoryName(outTempFile) ?? throw new NullReferenceException());
 
-            int parallelThreadCount = (int)MaxParallelThreadsCount.Value / 2;
-            if (parallelThreadCount < Environment.ProcessorCount / 2)
-            {
-                parallelThreadCount = Environment.ProcessorCount / 2;
-            }
+            int parallelThreadCount = (int)MaxParallelThreadsCount.Value;
+
 #if ANDROID
-        ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
+            ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
 #elif iDevices
 
 #elif WINDOWS
@@ -331,9 +417,9 @@ public partial class RenderPage : ContentPage
             int height = int.Parse(vm.Height);
             int fps = int.Parse(vm.Framerate);
 
-            VideoBuilder builder = new VideoBuilder(outputPath, width, height, fps, "libx264", AVPixelFormat.AV_PIX_FMT_YUV420P)
+            VideoBuilder builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt)
             {
-                EnablePreview = false,
+                EnablePreview = true,
                 DoGCAfterEachWrite = true,
                 DisposeFrameAfterEachWrite = true,
                 Duration = duration
@@ -347,7 +433,7 @@ public partial class RenderPage : ContentPage
                 MaxThreads = parallelThreadCount,
                 LogState = false,
                 LogStatToLogger = true,
-                GCOption = 0,
+                GCOption = OperatingSystem.IsWindows() ? (int.TryParse(SettingsManager.GetSetting("render_GCOption","0"), out var value) ? value : 0 ) : 0,
             };
 
             renderer.OnProgressChanged += (p) =>
@@ -364,12 +450,7 @@ public partial class RenderPage : ContentPage
             {
                 try
                 {
-                    var src = ImageSource.FromStream(() =>
-                    {
-                        MemoryStream ms = new();
-                        e.SaveToSixLaborsImage(8).SaveAsPng(ms);
-                        return ms;
-                    });
+                    var src = e.ToImageSource();
                     if (src is not null)
                     {
                         Dispatcher.Dispatch(() =>
@@ -414,48 +495,7 @@ public partial class RenderPage : ContentPage
 
             Log($"All done! Total elapsed {sw1}.");
 
-#if WINDOWS
 
-            //todo: compose audio and attrs (like bitrate) into final video
-            Dispatcher.Dispatch(() =>
-            {
-                SubProgLabel.Text = Localized.RenderPage_SubProg_FinalEncoding;
-            });
-
-            ffmpeg.totalFrames = _duration;
-
-            ffmpeg.OnProgressChanged += (p) =>
-            {
-                totalProg = p + lastProg;
-
-                Dispatcher.Dispatch(async () =>
-                {
-                    await SubProgress.ProgressTo(p, 250, Easing.Linear);
-                    await TotalProgress.ProgressTo(totalProg / 3d, 5, Easing.Linear);
-
-                });
-            };
-
-            ffmpeg.OnLog += _logQueue.Enqueue;
-
-            var ffArgs = $"-i \"{outTempFile}\" " +
-                //$"-i \"{audio}\" " +
-                $"-c:v h264_qsv " +
-                $"-pix_fmt yuv420p " +
-                $"\"{outputPath}\" " +
-                /*    -b:v {avg}M -maxrate {max}M -bufsize {buf}M //vbr
-
-                      -b:v {avg}M //cbr
-
-                      -crf {num} //crf
-                 */
-                $"-y";
-            Log($"FFmpeg args: {ffArgs}");
-
-            var ffRet = await ffmpeg.Run(ffArgs);
-
-            Log($"FFmpeg process exited with code {ffRet}.");
-#endif
         }
         catch (Exception ex)
         {

@@ -25,7 +25,7 @@ namespace projectFrameCut
             if (IsBoolSettingTrue("DeveloperMode"))
             {
                 TestPageButton.IsVisible = true;
-                ManageSettingPageButton.IsVisible = true;
+                AdvancedSettingButton.IsVisible = true;
             }
         }
 
@@ -54,14 +54,14 @@ namespace projectFrameCut
             await NavigateAsync(new AboutSettingPage());
         }
 
+        private async void AdvancedSettingButton_Clicked(object sender, EventArgs e)
+        {
+            await NavigateAsync(new AdvancedSettingPage());
+        }
+
         private async void TestPageButton_Clicked(object sender, EventArgs e)
         {
             await NavigateAsync(new TestPage());
-        }
-
-        private async void ManageSettingPageButton_Clicked(object sender, EventArgs e)
-        {
-            await NavigateAsync(new Setting.SettingPages.DebugSettingPage());
         }
 
         private Task NavigateAsync(Page page)
@@ -111,7 +111,7 @@ namespace projectFrameCut
                     }
                 }
                 var script =
-    $$"""
+$$"""
 
 Clear-Host;Write-Output "projectFrameCut is now rebooting, please wait for a while...";Start-Process "{{path}}";exit
 
@@ -130,6 +130,16 @@ Clear-Host;Write-Output "projectFrameCut is now rebooting, please wait for a whi
                 }
 #endif
                 Environment.Exit(0);
+
+            }
+        }
+        int count = 0;
+        private async void TapGestureRecognizer_Tapped(object sender, TappedEventArgs e)
+        {
+            count++;
+            if(count == 20)
+            {
+                await NavigateAsync(new AdvancedSettingPage());
 
             }
         }

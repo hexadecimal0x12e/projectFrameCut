@@ -44,7 +44,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
-        public string? FilePath { get; init; }
+        public string? FilePath { get; set; }
 
         public ISoundTrack SoundTrack { get; set; }
 

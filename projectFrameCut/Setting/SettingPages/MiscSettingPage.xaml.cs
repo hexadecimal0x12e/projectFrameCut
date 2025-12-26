@@ -30,9 +30,6 @@ public partial class MiscSettingPage : ContentPage
             .AddButton("makeDiagReport", SettingLocalizedResources.Misc_MakeDiagReport, null)
             .AddButton("openSettingsButton", SettingLocalizedResources.Misc_OpenSettingsJson, null!)
             .AddSwitch("LogDiagnostics", SettingLocalizedResources.Misc_LogDiagnostics, bool.TryParse(GetSetting("LogDiagnostics", "false"), out var logDiagnostics) ? logDiagnostics : false, null)
-#if DEBUG
-            .AddSwitch("DeveloperMode", SettingLocalizedResources.Misc_DebugMode, bool.TryParse(GetSetting("DeveloperMode", "false"), out var devMode) ? devMode : false, null)
-#endif
             .AddSeparator()
             .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Misc_Reset, 20, default))
             .AddButton("reset_ClearPluginSign", SettingLocalizedResources.Misc_ForgetPluginSign,
@@ -54,7 +51,7 @@ public partial class MiscSettingPage : ContentPage
                 b.TextColor = Colors.Black;
             })
             .ListenToChanges(SettingInvoker);
-        Content = new ScrollView { Content = rootPPB.Build() };
+        Content = rootPPB.BuildWithScrollView();
     }
 
     private async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args)

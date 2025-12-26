@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace projectFrameCut.Services
 {
@@ -92,8 +93,15 @@ namespace projectFrameCut.Services
             bool PEMExists = false;
             await Task.Run(async () =>
             {
+                string? localizedPluginBrokenReason = null;
+                try
+                {
+                    localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing;
+                }
+                catch { }
+                failReason = localizedPluginBrokenReason ?? "Some of the plugin files are missing. Try reinstall it.";
                 Directory.CreateDirectory(Path.Combine(MauiProgram.BasicDataPath, "Plugins"));
-                pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", Path.GetFileNameWithoutExtension(pluginPath));
+                pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", $"{Path.GetFileNameWithoutExtension(pluginPath)}_{Guid.NewGuid()}");
 
                 //1 extract plugin
                 ZipFile.ExtractToDirectory(pluginPath, pluginRoot, true);
@@ -109,7 +117,19 @@ namespace projectFrameCut.Services
 
                 if (metadata is null)
                 {
-                    failReason = "Unable to read plugin metadata.";
+                    return;
+                }
+
+                if(!File.Exists(Path.Combine(pluginRoot, metadata.PluginID + ".dll.enc")) ||
+                   !File.Exists(Path.Combine(pluginRoot, metadata.PluginID + ".dll.sig")) ||
+                   !File.Exists(Path.Combine(pluginRoot, "hashtable.json")))
+                {
+                    return;
+                }
+                var htb = File.ReadAllText(Path.Combine(pluginRoot, "hashtable.json"));
+                //3 chech hashtable
+                if (!ChechHashtable(pluginRoot, htb, out failReason))
+                {
                     return;
                 }
 
@@ -119,7 +139,6 @@ namespace projectFrameCut.Services
                 var pemPath = Path.Combine(pluginRoot, "publickey.pem");
                 if (await HashServices.ComputeFileHashAsync(pemPath, SHA512.Create()) != metadata.PluginKey)
                 {
-                    failReason = "Plugin key mismatch.";
                     return;
                 }
 
@@ -135,26 +154,22 @@ namespace projectFrameCut.Services
                 var decBytes = FileCryptoService.DecryptToFileWithPassword(metadata.PluginKey, await File.ReadAllBytesAsync(encPath));
                 if (decBytes.Length < 64)
                 {
-                    failReason = "Decrypted plugin data is too short or failed to decrypt.";
                     return;
                 }
                 if (HashServices.ComputeBytesHash(decBytes) != metadata.PluginHash)
                 {
-                    failReason = "Plugin hash mismatch.";
                     return;
                 }
                 var pluginSig = File.ReadAllText(sigPath);
                 var pluginPem = File.ReadAllText(pemPath);
                 if (!FileSignerService.VerifyFileSignature(pluginPem, decBytes, pluginSig))
                 {
-                    failReason = "Plugin signature verification failed.";
                     return;
                 }
                 Assembly plugin = Assembly.Load(decBytes);
-                pluginInstance = CreateIPluginFromAsb(plugin);
+                pluginInstance = CreateIPluginFromAsb(plugin, pluginRoot);
                 if (pluginInstance is null)
                 {
-                    failReason = "Unable to create plugin instance from assembly.";
                     return;
                 }
 
@@ -167,6 +182,7 @@ namespace projectFrameCut.Services
             }
             else
             {
+                failReason = "";
                 var conf = await currentPage.DisplayAlertAsync(Localized._Warn, SettingsManager.SettingLocalizedResources.Plugin_AddWarn(pluginInstance.Name), Localized._OK, Localized._Cancel);
                 if (conf)
                 {
@@ -177,10 +193,11 @@ namespace projectFrameCut.Services
                         await SecureStorage.Default.SetAsync($"plugin_pem_{pluginInstance.PluginID}", pem);
                     }
                     if (Directory.Exists(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID))) Directory.Delete(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID), true);
-                    Directory.CreateDirectory(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID));
-                    File.Move(Path.Combine(pluginRoot, pluginInstance.PluginID + ".dll.enc"), Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, pluginInstance.PluginID + ".dll.enc"));
-                    File.Move(Path.Combine(pluginRoot, pluginInstance.PluginID + ".dll.sig"), Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, pluginInstance.PluginID + ".dll.sig"));
-                    Directory.Delete(pluginRoot, true);
+                    Directory.Move(pluginRoot, Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID));
+                    File.Delete(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, "metadata.json"));
+                    File.Delete(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, "publickey.pem"));
+                    FileCryptoService.EncryptToFileWithPassword(metadata.PluginKey, Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, "hashtable.json"), Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, "hashtable.json.enc"));
+                    File.Delete(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID, "hashtable.json"));
                     List<PluginItem> items = new();
                     if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "plugins.json")))
                     {
@@ -205,14 +222,42 @@ namespace projectFrameCut.Services
 
         }
 
+        private static bool ChechHashtable(string pluginRoot, string hashtable, out string failReason)
+        {
+            var hashTable = JsonSerializer.Deserialize<Dictionary<string, string>>(hashtable);
+            var files = Directory.GetFiles(pluginRoot);
+            if (hashTable is null)
+            {
+                failReason = "Failed to read hashtable.";
+                return false;
+            }
+            foreach (var item in hashTable)
+            {
+                if (File.Exists(Path.Combine(pluginRoot, item.Key)))
+                {
+                    var hash = HashServices.ComputeFileHash(Path.Combine(pluginRoot, item.Key));
+                    if (hash != item.Value)
+                    {
+                        string? localizedFailReason = null;
+                        try
+                        {
+                            localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_InvaildFileHash(item.Key);
+                        }
+                        catch { }
+                        failReason = localizedFailReason ?? $"File hash mismatch for {item.Key}.";
+                        return false;
+                    }
+                }
+            }
+            failReason = "";
+            return true;
+        }
 
         public static IPluginBase? CreateFromID(string pluginID, out string failReason)
         {
             failReason = "";
             try
             {
-
-
                 var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
                 if (Directory.Exists(pluginRoot))
                 {
@@ -221,9 +266,29 @@ namespace projectFrameCut.Services
                     {
                         throw new FileNotFoundException("Plugin PEM not found in secure storage", pluginID);
                     }
+
+                    if (!File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.enc")) || !File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.sig")) || !File.Exists(Path.Combine(pluginRoot, "hashtable.json.enc")))
+                    {
+                        string? localizedPluginBrokenReason = null;
+                        try
+                        {
+                            localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing;
+                        }
+                        catch { }
+                        failReason = localizedPluginBrokenReason ?? "Some of the plugin files are missing. Try reinstall it.";
+                        return null;
+                    }
+
                     var pemHash = HashServices.ComputeStringHash(pluginPem ?? string.Empty, SHA512.Create());
                     var pluginEnc = File.ReadAllBytes(Path.Combine(pluginRoot, pluginID + ".dll.enc"));
+                    var htbEnc = File.ReadAllBytes(Path.Combine(pluginRoot, "hashtable.json.enc"));
                     var decBytes = FileCryptoService.DecryptToFileWithPassword(pemHash, pluginEnc);
+                    var decHashtable = FileCryptoService.DecryptToFileWithPassword(pemHash, htbEnc);
+                    var htbJson = Encoding.UTF8.GetString(decHashtable);
+                    if (!ChechHashtable(pluginRoot, htbJson, out failReason))
+                    {
+                        return null;
+                    }
                     var pluginSig = File.ReadAllText(Path.Combine(pluginRoot, pluginID + ".dll.sig"));
                     if (!FileSignerService.VerifyFileSignature(pluginPem, decBytes, pluginSig))
                     {
@@ -237,8 +302,18 @@ namespace projectFrameCut.Services
                         return null;
                     }
                     var asb = Assembly.Load(decBytes);
-                    var plugin = CreateIPluginFromAsb(asb)!;
-
+                    var plugin = CreateIPluginFromAsb(asb, pluginRoot);
+                    if (plugin is null)
+                    {
+                        string? localizedFailReason = null;
+                        try
+                        {
+                            localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_CannotCreateInstance("The type 'PluginLoader' not found in the assembly.");
+                        }
+                        catch { }
+                        failReason = localizedFailReason ?? $"The type 'PluginLoader' not found in the assembly.";
+                        return null;
+                    }
                     var optionFilePath = Path.Combine(pluginRoot, "option.json");
                     if (File.Exists(optionFilePath))
                     {
@@ -261,18 +336,18 @@ namespace projectFrameCut.Services
                         }
                     }
 
-                    var success = plugin.OnLoaded(out failReason);
-
-                    if (!success)
-                    {
-                        return null;
-                    }
-
-                    return plugin;
+                    return plugin.OnLoaded(out failReason) ? plugin : null;
                 }
                 else
                 {
-                    failReason = $"Plugin file for {pluginID} not found.";
+                    string? localizedPluginBrokenReason = null;
+                    try
+                    {
+                        localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing_DirectoryNotFound;
+                    }
+                    catch { }
+                    failReason = localizedPluginBrokenReason ?? "Plugin file not found.";
+                    return null;
                 }
             }
             catch (ReflectionTypeLoadException)
@@ -288,12 +363,18 @@ namespace projectFrameCut.Services
 
             catch (Exception ex)
             {
-                failReason = $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
+                string? localizedPluginBrokenReason = null;
+                try
+                {
+                    localizedPluginBrokenReason = Localized._ExceptionTemplate(ex);
+                }
+                catch { }
+                failReason = localizedPluginBrokenReason ?? $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
             }
             return null;
         }
 
-        public static IPluginBase? CreateIPluginFromAsb(Assembly asb)
+        public static IPluginBase? CreateIPluginFromAsb(Assembly asb, string workingPath)
         {
             var module = asb.GetModule(asb.GetName().Name + ".dll");
             var types = module?.GetTypes();
@@ -302,14 +383,21 @@ namespace projectFrameCut.Services
             {
                 return null;
             }
-            var ldrMethod = ldr.GetMethod("Load");
-            var pluginObj = ldrMethod?.Invoke(null, [Localized._LocaleId_]);
+            var ldrMethod = ldr.GetMethod("CreateInstance");
+            var pluginObj = ldrMethod?.Invoke(null, [Localized._LocaleId_, workingPath]);
             if (pluginObj is IPluginBase plugin)
             {
                 if (plugin.PluginAPIVersion != PluginAPIVersion)
                 {
                     Log($"Plugin {plugin.Name} has a mismatch PluginAPIVersion. Excepted {PluginAPIVersion}, got {plugin.PluginAPIVersion}.", "error");
-                    return null;
+                    string? localizedFailReason = null;
+                    try
+                    {
+                        localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
+                    }
+                    catch { }
+                    var failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
+                    throw new FeatureNotSupportedException(failReason);
                 }
                 return plugin;
             }

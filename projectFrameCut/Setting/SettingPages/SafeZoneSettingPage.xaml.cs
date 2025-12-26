@@ -25,6 +25,7 @@ namespace projectFrameCut.Setting.SettingPages
             }
 
             CornerSlider.Value = radius * 10;
+            AlwaysUseThisValue.IsToggled = SettingsManager.IsBoolSettingTrue("ui_ForceUseUserDefinedSafeZone");
             SyncValue();
         }
 
@@ -80,6 +81,11 @@ namespace projectFrameCut.Setting.SettingPages
             if (radius - 0.1 >= 0)
                 radius -= 0.1;
             SyncValue();
+        }
+
+        private void AlwaysUseThisValue_Toggled(object sender, ToggledEventArgs e)
+        {
+            SettingsManager.WriteSetting("ui_ForceUseUserDefinedSafeZone", e.Value.ToString());
         }
     }
 }

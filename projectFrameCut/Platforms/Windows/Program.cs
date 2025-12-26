@@ -8,12 +8,15 @@ namespace projectFrameCut.WinUI
 {
     public static class Program
     {
+        public static bool LogWindowShowing = false;
+
         [STAThread] //avoid failed to initialize COM library error, cause a lot of issue like IME not work at all...
         static void Main(string[] args)
         {
+            System.Threading.Thread.CurrentThread.Name = "App Main thread";
             try
             {
-                projectFrameCut.Helper.HelperProgram.AppVersion = AppInfo.Version.ToString();   
+                projectFrameCut.Helper.HelperProgram.AppVersion = AppInfo.Version.ToString();
                 var splash = new Thread(projectFrameCut.Helper.HelperProgram.SplashMain);
                 splash.Priority = ThreadPriority.Highest;
                 splash.IsBackground = false;
@@ -33,8 +36,10 @@ namespace projectFrameCut.WinUI
                     {
                         Thread logThread = new Thread(Helper.HelperProgram.LogMain);
                         logThread.Priority = ThreadPriority.Highest;
+                        logThread.Name = "LogWindow thread";
                         logThread.IsBackground = false;
                         logThread.Start();
+                        LogWindowShowing = true;
                         Log($"Logger window started.");
                     }
                 }
@@ -53,6 +58,7 @@ namespace projectFrameCut.WinUI
                 Log("Application exited.");
                 SettingsManager.FlushAndStopAsync().GetAwaiter().GetResult();
                 Helper.HelperProgram.Cleanup();
+                MauiProgram.LogWriter.Flush();
                 return;
             }
             catch (Exception ex)
@@ -74,9 +80,12 @@ namespace projectFrameCut.WinUI
         {
             try
             {
-                Log(ex, "Application crashed", null);
+                Log(ex, "Application crashed", "Application");
+                MauiProgram.LogWriter?.Flush();
+                Helper.HelperProgram.Cleanup();
 
             }
+            catch (Exception) { }
             finally
             {
                 string innerExceptionInfo = "None";
@@ -143,7 +152,15 @@ Current directory: {Environment.CurrentDirectory}
                     File.WriteAllText(logPath, logMessage);
                 }
                 Thread.Sleep(100);
-                Process.Start(new ProcessStartInfo { FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.exe"), Arguments = $"crashForm \"{logPath}\"", UseShellExecute = true });
+                if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.exe")))
+                {
+                    Process.Start(new ProcessStartInfo { FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.exe"), Arguments = $"crashForm \"{logPath}\"", UseShellExecute = true });
+                }
+                else
+                {
+                    Process.Start(new ProcessStartInfo { FileName = logPath, UseShellExecute = true });
+                }
+
                 Environment.FailFast(logMessage, ex);
                 Environment.Exit(ex.HResult);
             }

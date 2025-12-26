@@ -75,11 +75,9 @@ public partial class PluginSettingPage : ContentPage
             }
         }
 
-        rootPPB
-            .AddSeparator()
-            .ListenToChanges((e) => SettingInvoker(e, this));
+        Content = rootPPB.AddSeparator().ListenToChanges((e) => SettingInvoker(e, this)).BuildWithScrollView();
 
-        Content = new ScrollView { Content = rootPPB.Build() };
+
     }
 
     private async Task BuildAdvancedConfig(string id)
@@ -175,7 +173,7 @@ public partial class PluginSettingPage : ContentPage
                 {
                     FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
                     {
-                        { DevicePlatform.WinUI, new[] { ".dll", ".pjfcPlugin" } },
+                        { DevicePlatform.WinUI, new[] { ".pjfcPlugin", ".bin" } },
                         { DevicePlatform.Android, new[] { "application/octet-stream", "application/x-msdownload", "application/x-dosexec" } },
 #if iDevices
                         {DevicePlatform.iOS, new[] {""} },
@@ -186,36 +184,7 @@ public partial class PluginSettingPage : ContentPage
 
                 if (result != null)
                 {
-                    string dllPath = result.FullPath;
-                    if (dllPath.EndsWith(".dll"))
-                    {
-                        var asb = Assembly.LoadFrom(dllPath);
-                        var module = asb.GetModule(asb.GetName().Name + ".dll");
-                        var types = module.GetTypes();
-                        var ldr = types.First(a => a.Name == "PluginLoader");
-                        if (ldr is null)
-                        {
-                            await DisplayAlertAsync(Localized._Warn, "unable to find loader", Localized._OK);
-                            return;
-                        }
-                        var ldrMethod = ldr.GetMethod("Load");
-                        var pluginObj = ldrMethod?.Invoke(null, [Localized._LocaleId_]);
-                        if (pluginObj is IPluginBase pluginInstance)
-                        {
-                            var conf = await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_AddWarn(pluginInstance.Name), Localized._OK, Localized._Cancel);
-                            if (conf)
-                            {
-                                PluginManager.LoadFrom(pluginInstance);
-                                BuildPPB();
-                            }
-                        }
-                    }
-                    else
-                    {
-                        await PluginService.AddAPlugin(dllPath, this);
-                    }
-
-
+                    await PluginService.AddAPlugin(result.FullPath, this);
                 }
                 return;
             }

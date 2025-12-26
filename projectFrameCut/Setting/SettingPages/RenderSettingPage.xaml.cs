@@ -15,7 +15,7 @@ public partial class RenderSettingPage : ContentPage
     PropertyPanel.PropertyPanelBuilder rootPPB;
     AcceleratorInfo[] AcceleratorInfos = Array.Empty<AcceleratorInfo>();
     bool showMoreOpts = false;
-    Dictionary<string, string> GCOptionMapping = new();
+    Dictionary<int, string> GCOptionMapping = new();
     public RenderSettingPage()
     {
         Title = Localized.MainSettingsPage_Tab_Render;
@@ -39,11 +39,11 @@ public partial class RenderSettingPage : ContentPage
             HorizontalOptions = LayoutOptions.Center,
             VerticalOptions = LayoutOptions.Center
         };
-        GCOptionMapping = new Dictionary<string, string>
+        GCOptionMapping = new Dictionary<int, string>
         {
-            {"letCLRDoCollection", SettingLocalizedResources.Render_GCOption_LetCLRDoGC },
-            {"doNormalCollection", SettingLocalizedResources.Render_GCOption_DoNormalCollection },
-            {"doLOHCompression", SettingLocalizedResources.Render_GCOption_DoLOHCompression }
+            {0, SettingLocalizedResources.Render_GCOption_LetCLRDoGC },
+            {1, SettingLocalizedResources.Render_GCOption_DoNormalCollection },
+            {2, SettingLocalizedResources.Render_GCOption_DoLOHCompression }
         };
     }
 
@@ -83,13 +83,13 @@ public partial class RenderSettingPage : ContentPage
         catch (Exception ex) { Log(ex); }
 
 #endif
-
+        var multiAccel = bool.TryParse(GetSetting("accel_enableMultiAccel", "false"), out var result1) ? result1 : false;
         rootPPB = new();
         rootPPB
             .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle, 20, 12))
 #if WINDOWS
-            .AddPicker("accel_DeviceId", SettingLocalizedResources.Render_SelectAccel, accels, int.TryParse(GetSetting("accel_DeviceId", ""), out var result) ? accels[result] : "", null)
-            .AddSwitch("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, bool.TryParse(GetSetting("accel_enableMultiAccel", "false"), out var result1) ? result1 : false, null);
+            .AddSwitch("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, multiAccel, null)
+            .AddPicker("accel_DeviceId", multiAccel ? SettingLocalizedResources.Render_SelectAccel_WhenMultiAccelEnabled : SettingLocalizedResources.Render_SelectAccel, accels, int.TryParse(GetSetting("accel_DeviceId", ""), out var result) ? accels[result] : "", null);
 
         try
         {
@@ -133,9 +133,8 @@ public partial class RenderSettingPage : ContentPage
             rootPPB
                 .AddSeparator()
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AdvanceOpts, SettingLocalizedResources.Misc_DiagOptions_Subtitle, 20, 12))
-                .AddEntry("render_UserDefinedOpts", SettingLocalizedResources.Render_CustomOpts, GetSetting("render_UserDefinedOpts", ""), SettingLocalizedResources.Render_CustomOpts_Placeholder)
-                .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.TryGetValue(GetSetting("render_GCOption", "letCLRDoCollection"), out var value) ? value : SettingLocalizedResources.Render_GCOption_LetCLRDoGC)
-                .AddSwitch("render_ShowBackendConsole", SettingLocalizedResources.Render_ShowBackendConsole, IsBoolSettingTrue("render_ShowBackendConsole"), null);
+                .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.TryGetValue(int.Parse(GetSetting("render_GCOption", "0")), out var value) ? value : SettingLocalizedResources.Render_GCOption_LetCLRDoGC)
+                .AddSwitch("render_BlockWrite", SettingLocalizedResources.Render_BlockWrite, IsBoolSettingTrue("render_BlockWrite"), null);
         }
         else
         {
@@ -273,8 +272,8 @@ public partial class RenderSettingPage : ContentPage
                     return;
                 case "render_GCOption":
                     {
-                        var key = GCOptionMapping.FirstOrDefault(k => k.Value == args.Value as string, new("letCLRDoCollection", "letCLRDoCollection"));
-                        WriteSetting("render_GCOption", key.Key);
+                        var key = GCOptionMapping.FirstOrDefault(k => k.Value == args.Value as string, new(0, "letCLRDoCollection"));
+                        WriteSetting("render_GCOption", key.Key.ToString());
                         return;
                     }
 

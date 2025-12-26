@@ -10,6 +10,103 @@
   "Values": {
     "zh-CN": [
       {
+        "Id": "Advanced_AutoRecoverDraft",
+        "Value": "\u81EA\u52A8\u6062\u590D\u635F\u574F\u7684\u8349\u7A3F\uFF08\u53EF\u80FD\u9020\u6210\u610F\u5916\u884C\u4E3A\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DedicatedLogWindow",
+        "Value": "\u542F\u7528\u72EC\u7ACB\u65E5\u5FD7\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DeveloperMode",
+        "Value": "\u5F00\u53D1\u8005\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DisablePluginEngine",
+        "Value": "\u7981\u7528\u6240\u6709\u7684\u7528\u6237\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DontPanicOnUnhandledException",
+        "Value": "\u8BD5\u56FE\u5728\u51FA\u73B0\u5168\u5C40\u672A\u5904\u7406\u5F02\u5E38\u65F6\u633D\u6551\u7A0B\u5E8F\uFF08\u53EF\u80FD\u9020\u6210\u540E\u7EED\u7A0B\u5E8F\u4E0D\u7A33\u5B9A\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_KeyBox_Hint",
+        "Value": "\u8F93\u5165\u8BBE\u7F6E\u7684\u952E\uFF0C\u7136\u540E\u4F1A\u81EA\u52A8\u586B\u5145\u503C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_KeyNotFound",
+        "Value": "\u6CA1\u6709\u627E\u5230\u8FD9\u4E2A\u8BBE\u7F6E\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_LogUIMessageToLogger",
+        "Value": "\u8BB0\u5F55\u7F16\u8F91\u754C\u9762\u7684\u72B6\u6001\u680F\u6D88\u606F\u5230\u65E5\u5FD7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ManualEditSetting",
+        "Value": "\u624B\u52A8\u914D\u7F6E\u8BBE\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ResetUserID",
+        "Value": "\u91CD\u8BBE\u7528\u6237ID",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Success",
+        "Value": "\u64CD\u4F5C\u6210\u529F\u5B8C\u6210\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_WarnLabel",
+        "Value": "\u8B66\u544A\uFF1A\u968F\u610F\u4FEE\u6539\u8FD9\u4E9B\u9009\u9879\u53EF\u80FD\u5BFC\u81F4projectFrameCut\u4E0D\u7A33\u5B9A\uFF0C\u9020\u6210\u6570\u636E\u4E22\u5931\u7B49\u610F\u5916\u7684\u60C5\u51B5\u3002\u8BF7\u8C28\u614E\u4FEE\u6539\u4ED6\u4EEC\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut\u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "CommonStr_Go",
         "Value": "\u524D\u5F80\u9875\u9762",
         "Mode": "ConstString",
@@ -132,6 +229,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Edit_Denoise",
+        "Value": "\u4E3A\u62D6\u52A8\u64CD\u4F5C\u964D\u566A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Edit_EditorPreference",
         "Value": "\u9879\u76EE\u7F16\u8F91\u5668 - \u4E2A\u6027\u5316",
         "Mode": "ConstString",
@@ -150,6 +255,22 @@
       {
         "Id": "Edit_LiveVideoPreviewBufferLength",
         "Value": "\u5B9E\u65F6\u89C6\u9891\u9884\u89C8\u65F6\u7684\u7F13\u51B2\u533A\u5927\u5C0F (\u5E27)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LiveVideoPreviewDefaultResolution",
+        "Value": "\u9ED8\u8BA4\u9884\u89C8\u5206\u8FA8\u7387",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LiveVideoPreviewZoomFactor",
+        "Value": "\u5B9E\u65F6\u89C6\u9891\u9884\u89C8\u7684\u5206\u8FA8\u7387\u7F29\u653E\u56E0\u5B50",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -238,6 +359,38 @@
       {
         "Id": "Edit_ProxyMode_None",
         "Value": "\u4E0D\u521B\u5EFA\u4EE3\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption",
+        "Value": "\u4EE3\u7406\u521B\u5EFA\u9009\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Always",
+        "Value": "\u59CB\u7EC8\u81EA\u52A8\u521B\u5EFA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Ask",
+        "Value": "\u8BE2\u95EE\u662F\u5426\u8981\u521B\u5EFA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Never",
+        "Value": "\u4E0D\u8981\u521B\u5EFA",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -494,14 +647,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Misc_DebugMode",
-        "Value": "\u5F00\u53D1\u8005\u6A21\u5F0F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Misc_DiagOptions",
         "Value": "\u8BCA\u65AD\uFF0C\u5F00\u53D1\u548C\u8C03\u8BD5",
         "Mode": "ConstString",
@@ -661,6 +806,24 @@
         "ArgsComment": [
           {
             "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_CannotCreateInstance",
+        "Value": "\u6211\u4EEC\u65E0\u6CD5\u521D\u59CB\u5316\u63D2\u4EF6\uFF0C\u56E0\u4E3A\uFF1A{reason} ",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
             "Value": ""
           }
         ],
@@ -837,8 +1000,42 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Plugin_FileMissing",
+        "Value": "\u63D2\u4EF6\u7684\u5173\u952E\u6587\u4EF6\u7F3A\u5931\u6216\u8005\u635F\u574F\u4E86\u3002\u4F60\u9700\u8981\u91CD\u65B0\u5B89\u88C5\u5B83\u6765\u4FEE\u590D\u8FD9\u4E2A\u95EE\u9898\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FileMissing_DirectoryNotFound",
+        "Value": "\u627E\u4E0D\u5230\u8FD9\u4E2A\u63D2\u4EF6\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Plugin_GotoHomepage",
         "Value": "\u524D\u5F80\u300C{name}\u300D\u7684\u4E3B\u9875",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_InvaildFileHash",
+        "Value": "\u6587\u4EF6 {name} \u4F3C\u4E4E\u635F\u574F\u4E86\uFF0C\u56E0\u4E3A\u5B83\u7684\u7684\u54C8\u5E0C\u503C\u4E0D\u5339\u914D\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -997,16 +1194,8 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_CustomOpts",
-        "Value": "\u81EA\u5B9A\u4E49\u6E32\u67D3\u5668\u53C2\u6570",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_CustomOpts_Placeholder",
-        "Value": "\u901A\u5E38\u60C5\u51B5\u4E0B\u4E0D\u9700\u8981\u8BBE\u7F6E\uFF0C\u8BE6\u60C5\u8BF7\u53C2\u9605\u6587\u6863",
+        "Id": "Render_BlockWrite",
+        "Value": "\u7981\u7528\u5E76\u53D1\uFF0C\u5E76\u4E14\u542F\u7528\u540C\u6B65\u5199\u5165\uFF08\u4E0D\u63A8\u8350\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1078,22 +1267,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "\u4F7F\u7528\u72EC\u7ACB\u540E\u7AEF\u4F5C\u4E3A\u7F16\u8F91\u754C\u9762\u6E32\u67D3\u4E3B\u673A\uFF08\u4E0D\u63A8\u8350\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseLivePreviewInsteadOfBackend",
-        "Value": "\u4F7F\u7528\u4E3B\u7A0B\u5E8F\u4F5C\u4E3A\u7F16\u8F91\u754C\u9762\u6E32\u67D3\u4E3B\u673A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_SelectAccel",
         "Value": "\u9009\u62E9\u7528\u4E8E\u6E32\u67D3/\u7F16\u8F91\u65F6\u786C\u4EF6\u52A0\u901F\u7684GPU",
         "Mode": "ConstString",
@@ -1118,16 +1291,8 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_SelectRenderHost",
-        "Value": "\u9009\u62E9\u7F16\u8F91\u754C\u9762\u7684\u6E32\u67D3\u4E3B\u673A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_ShowBackendConsole",
-        "Value": "\u663E\u793A\u540E\u7AEF\u7EC8\u7AEF\u7A97\u53E3 (\u53EF\u80FD\u4F1A\u5BFC\u81F4\u4E00\u4E9B\u529F\u80FD\u4E0D\u53EF\u7528)",
+        "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
+        "Value": "\u9009\u62E9\u7528\u4E8E\u7F16\u8F91\u65F6\u786C\u4EF6\u52A0\u901F\u7684GPU",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1470,15 +1635,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DebugMode",
-        "Value": "Developer Mode",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Translation of \u0027\u5F00\u53D1\u8005\u6A21\u5F0F\u0027 to indicate a special mode for developers with debugging features.",
         "HasValidationErrors": false
       },
       {
@@ -2110,24 +2266,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_CustomOpts",
-        "Value": "Custom Renderer Parameters",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_CustomOpts_Placeholder",
-        "Value": "Usually no need to set, see documentation for details",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_AdvanceOpts",
         "Value": "Advanced Options",
         "Mode": "ConstString",
@@ -2236,15 +2374,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_ShowBackendConsole",
-        "Value": "Show backend console window (some features may become unavailable)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_SelectAccel_MultiAccel",
         "Value": "Select hardware accelerator(s) to use when rendering (multiple selection)",
         "Mode": "ConstString",
@@ -2326,33 +2455,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_SelectRenderHost",
-        "Value": "Select render host for the editing interface",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseLivePreviewInsteadOfBackend",
-        "Value": "Use the main program as the rendering host for the editing interface",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "Use independent backend as rendering host for the editing interface (not recommended)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Edit_LiveVideoPreviewBufferLength",
         "Value": "Live video preview buffer size (frames)",
         "Mode": "ConstString",
@@ -2364,6 +2466,250 @@
       {
         "Id": "GeneralUI_SetupSafeZone",
         "Value": "Configuring UI safe zone...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_InvaildFileHash",
+        "Value": "The file {name} appears to be corrupted because its hash does not match.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FileMissing",
+        "Value": "The plugin\u0027s key file is missing or corrupted. You need to reinstall it to fix this issue.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FileMissing_DirectoryNotFound",
+        "Value": "Plugin not found.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_CannotCreateInstance",
+        "Value": "We cannot initialize the plugin because: {reason}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_BlockWrite",
+        "Value": "Disable concurrency and enable synchronous writes (not recommended)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
+        "Value": "Select GPU for hardware acceleration during editing",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LiveVideoPreviewZoomFactor",
+        "Value": "Real-time video preview resolution scaling factor",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LiveVideoPreviewDefaultResolution",
+        "Value": "Default Preview Resolution",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption",
+        "Value": "Proxy Creation Options",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Ask",
+        "Value": "Ask whether to create",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Never",
+        "Value": "Do not create",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Always",
+        "Value": "Always create automatically",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_WarnLabel",
+        "Value": "Warning: Modifying these options arbitrarily may cause projectFrameCut instability, leading to unexpected situations such as data loss. Please modify them with caution.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DeveloperMode",
+        "Value": "Developer Mode",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_AutoRecoverDraft",
+        "Value": "Auto-recover corrupted drafts (may cause unexpected behavior)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DontPanicOnUnhandledException",
+        "Value": "Attempt to rescue the program when an unhandled global exception occurs (may cause subsequent instability).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DisablePluginEngine",
+        "Value": "Disable all user plugins",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DedicatedLogWindow",
+        "Value": "Enable Dedicated Log Window",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ResetUserID",
+        "Value": "Reset User ID",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_LogUIMessageToLogger",
+        "Value": "Log the status bar message from the editing interface to the logger.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ManualEditSetting",
+        "Value": "Manual Configuration Settings",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_KeyBox_Hint",
+        "Value": "Enter the preset key, and the value will be auto-filled.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_KeyNotFound",
+        "Value": "This setting was not found.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Success",
+        "Value": "Operation completed successfully.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_Denoise",
+        "Value": "Denoise Drag",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2703,15 +3049,6 @@
       {
         "Id": "General_UserData_Subtitle",
         "Value": "\u914D\u7F6E\u4F60\u7684\u6578\u64DA\u548C\u8CC7\u6E90\u6587\u4EF6",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DebugMode",
-        "Value": "\u958B\u767C\u8005\u6A21\u5F0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3346,24 +3683,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_CustomOpts",
-        "Value": "\u81EA\u8A02\u8F49\u8B6F\u5668\u53C3\u6578",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_CustomOpts_Placeholder",
-        "Value": "\u901A\u5E38\u60C5\u6CC1\u4E0B\u4E0D\u9700\u8981\u8A2D\u5B9A\uFF0C\u8A73\u60C5\u8ACB\u53C3\u95B1\u6587\u4EF6",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_AdvanceOpts",
         "Value": "\u9032\u968E\u9078\u9805",
         "Mode": "ConstString",
@@ -3472,15 +3791,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_ShowBackendConsole",
-        "Value": "\u986F\u793A\u5F8C\u7AEF\u7D42\u7AEF\u8996\u7A97 (\u53EF\u80FD\u6703\u5C0E\u81F4\u4E00\u4E9B\u529F\u80FD\u4E0D\u53EF\u7528)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_SelectAccel_MultiAccel",
         "Value": "\u9078\u64C7\u6E32\u67D3\u6642\uFF0C\u8981\u4F7F\u7528\u7684\u786C\u9AD4\u52A0\u901F\u5668\uFF08\u591A\u9078\uFF09",
         "Mode": "ConstString",
@@ -3562,33 +3872,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_SelectRenderHost",
-        "Value": "\u9078\u64C7\u7DE8\u8F2F\u4ECB\u9762\u7684\u6E32\u67D3\u4E3B\u6A5F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseLivePreviewInsteadOfBackend",
-        "Value": "\u4F7F\u7528\u4E3B\u7A0B\u5F0F\u4F5C\u70BA\u7DE8\u8F2F\u4ECB\u9762\u6E32\u67D3\u4E3B\u6A5F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "\u4F7F\u7528\u7368\u7ACB\u5F8C\u7AEF\u4F5C\u70BA\u7DE8\u8F2F\u4ECB\u9762\u6E32\u67D3\u4E3B\u6A5F\uFF08\u4E0D\u63A8\u85A6\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Edit_LiveVideoPreviewBufferLength",
         "Value": "\u5373\u6642\u8996\u8A0A\u9810\u89BD\u7684\u7DE9\u885D\u5340\u5927\u5C0F\uFF08\u5E40\uFF09",
         "Mode": "ConstString",
@@ -3600,6 +3883,251 @@
       {
         "Id": "GeneralUI_SetupSafeZone",
         "Value": "\u8A2D\u5B9AUI\u5B89\u5168\u5340\u57DF...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_InvaildFileHash",
+        "Value": "\u6A94\u6848 {name} \u4F3C\u4E4E\u640D\u58DE\u4E86\uFF0C\u56E0\u70BA\u5B83\u7684\u96DC\u6E4A\u503C\u4E0D\u7B26\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FileMissing",
+        "Value": "\u63D2\u4EF6\u7684\u95DC\u9375\u6587\u4EF6\u7F3A\u5931\u6216\u8005\u640D\u58DE\u4E86\u3002\u4F60\u9700\u8981\u91CD\u65B0\u5B89\u88DD\u5B83\u4F86\u4FEE\u5FA9\u9019\u500B\u554F\u984C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FileMissing_DirectoryNotFound",
+        "Value": "\u627E\u4E0D\u5230\u9019\u500B\u63D2\u4EF6\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_CannotCreateInstance",
+        "Value": "\u6211\u5011\u7121\u6CD5\u521D\u59CB\u5316\u63D2\u4EF6\uFF0C\u539F\u56E0\u70BA\uFF1A{reason}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_BlockWrite",
+        "Value": "\u7981\u7528\u4E26\u767C\uFF0C\u4E26\u4E14\u555F\u7528\u540C\u6B65\u5BEB\u5165\uFF08\u4E0D\u63A8\u85A6\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
+        "Value": "\u9078\u64C7\u7528\u65BC\u7DE8\u8F2F\u6642\u786C\u9AD4\u52A0\u901F\u7684GPU",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LiveVideoPreviewZoomFactor",
+        "Value": "\u5373\u6642\u5F71\u7247\u9810\u89BD\u7684\u89E3\u6790\u5EA6\u7E2E\u653E\u56E0\u5B50",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LiveVideoPreviewDefaultResolution",
+        "Value": "\u9810\u8A2D\u9810\u89BD\u89E3\u6790\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption",
+        "Value": "\u4EE3\u7406\u5EFA\u7ACB\u9078\u9805",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Ask",
+        "Value": "\u662F\u5426\u8981\u5EFA\u7ACB\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Never",
+        "Value": "\u4E0D\u8981\u5EFA\u7ACB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Always",
+        "Value": "\u59CB\u7D42\u81EA\u52D5\u5EFA\u7ACB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_WarnLabel",
+        "Value": "\u8B66\u544A\uFF1A\u96A8\u610F\u4FEE\u6539\u9019\u4E9B\u9078\u9805\u53EF\u80FD\u5C0E\u81F4projectFrameCut\u4E0D\u7A69\u5B9A\uFF0C\u9020\u6210\u6578\u64DA\u4E1F\u5931\u7B49\u610F\u5916\u7684\u60C5\u6CC1\u3002\u8ACB\u8B39\u614E\u4FEE\u6539\u5B83\u5011\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DeveloperMode",
+        "Value": "\u958B\u767C\u8005\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_AutoRecoverDraft",
+        "Value": "\u81EA\u52D5\u6062\u5FA9\u640D\u58DE\u7684\u8349\u7A3F\uFF08\u53EF\u80FD\u9020\u6210\u610F\u5916\u884C\u70BA\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DontPanicOnUnhandledException",
+        "Value": "\u5617\u8A66\u5728\u5168\u57DF\u672A\u8655\u7406\u4F8B\u5916\u767C\u751F\u6642\u633D\u6551\u7A0B\u5F0F\uFF08\u53EF\u80FD\u5C0E\u81F4\u5F8C\u7E8C\u7A0B\u5F0F\u4E0D\u7A69\u5B9A\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DisablePluginEngine",
+        "Value": "\u505C\u7528\u6240\u6709\u7684\u4F7F\u7528\u8005\u5916\u639B\u7A0B\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DedicatedLogWindow",
+        "Value": "\u555F\u7528\u7368\u7ACB\u65E5\u8A8C\u8996\u7A97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ResetUserID",
+        "Value": "\u91CD\u8A2D\u4F7F\u7528\u8005ID",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_LogUIMessageToLogger",
+        "Value": "\u8A18\u9304\u7DE8\u8F2F\u4ECB\u9762\u7684\u72C0\u614B\u5217\u8A0A\u606F\u5230\u65E5\u8A8C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ManualEditSetting",
+        "Value": "\u624B\u52D5\u914D\u7F6E\u8A2D\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_KeyBox_Hint",
+        "Value": "\u8F38\u5165\u8A2D\u5B9A\u7684\u9375\uFF0C\u7136\u5F8C\u6703\u81EA\u52D5\u586B\u5165\u503C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_KeyNotFound",
+        "Value": "\u627E\u4E0D\u5230\u6B64\u8A2D\u5B9A\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Success",
+        "Value": "\u64CD\u4F5C\u6210\u529F\u5B8C\u6210\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_Denoise",
+        "Value": "\u70BA\u62D6\u52D5\u64CD\u4F5C\u964D\u566A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3943,15 +4471,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "Configure your data and resource files",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DebugMode",
-        "Value": "\u958B\u767A\u8005\u30E2\u30FC\u30C9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -4583,24 +5102,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_CustomOpts",
-        "Value": "\u30AB\u30B9\u30BF\u30E0\u30EC\u30F3\u30C0\u30E9\u30FC\u30D1\u30E9\u30E1\u30FC\u30BF",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_CustomOpts_Placeholder",
-        "Value": "\u901A\u5E38\u306F\u8A2D\u5B9A\u4E0D\u8981\u3067\u3059\u3002\u8A73\u7D30\u306F\u30C9\u30AD\u30E5\u30E1\u30F3\u30C8\u3092\u53C2\u7167\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_AdvanceOpts",
         "Value": "\u8A73\u7D30\u8A2D\u5B9A",
         "Mode": "ConstString",
@@ -4709,15 +5210,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_ShowBackendConsole",
-        "Value": "\u30D0\u30C3\u30AF\u30A8\u30F3\u30C9\u30B3\u30F3\u30BD\u30FC\u30EB\u3092\u8868\u793A\uFF08\u4E00\u90E8\u6A5F\u80FD\u304C\u4F7F\u7528\u3067\u304D\u306A\u304F\u306A\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_SelectAccel_MultiAccel",
         "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u6642\u306B\u4F7F\u7528\u3059\u308B\u30CF\u30FC\u30C9\u30A6\u30A7\u30EA\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30BF\u3092\u9078\u629E\uFF08\u8907\u6570\u9078\u629E\u53EF\uFF09",
         "Mode": "ConstString",
@@ -4799,33 +5291,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_SelectRenderHost",
-        "Value": "\u7DE8\u96C6\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u306E\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30DB\u30B9\u30C8\u3092\u9078\u629E",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseLivePreviewInsteadOfBackend",
-        "Value": "\u30E1\u30A4\u30F3\u30D7\u30ED\u30B0\u30E9\u30E0\u3092\u7DE8\u96C6\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u306E\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30DB\u30B9\u30C8\u3068\u3057\u3066\u4F7F\u7528",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "\u72EC\u7ACB\u30D0\u30C3\u30AF\u30A8\u30F3\u30C9\u3092\u7DE8\u96C6\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u306E\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30DB\u30B9\u30C8\u3068\u3057\u3066\u4F7F\u7528\u3059\u308B\uFF08\u975E\u63A8\u5968\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Edit_LiveVideoPreviewBufferLength",
         "Value": "\u30E9\u30A4\u30D6\u30D3\u30C7\u30AA\u30D7\u30EC\u30D3\u30E5\u30FC\u306E\u30D0\u30C3\u30D5\u30A1\u30B5\u30A4\u30BA (\u30D5\u30EC\u30FC\u30E0)",
         "Mode": "ConstString",
@@ -4837,6 +5302,251 @@
       {
         "Id": "GeneralUI_SetupSafeZone",
         "Value": "UI\u30BB\u30FC\u30D5\u30BE\u30FC\u30F3\u3092\u8A2D\u5B9A\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_InvaildFileHash",
+        "Value": "\u30D5\u30A1\u30A4\u30EB {name} \u306F\u7834\u640D\u3057\u3066\u3044\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002\u30CF\u30C3\u30B7\u30E5\u5024\u304C\u4E00\u81F4\u3057\u307E\u305B\u3093\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FileMissing",
+        "Value": "\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u30AD\u30FC\u30D5\u30A1\u30A4\u30EB\u304C\u6B20\u843D\u3057\u3066\u3044\u308B\u304B\u7834\u640D\u3057\u3066\u3044\u307E\u3059\u3002\u3053\u306E\u554F\u984C\u3092\u89E3\u6C7A\u3059\u308B\u306B\u306F\u3001\u518D\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u304C\u5FC5\u8981\u3067\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FileMissing_DirectoryNotFound",
+        "Value": "\u3053\u306E\u30D7\u30E9\u30B0\u30A4\u30F3\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_CannotCreateInstance",
+        "Value": "\u30D7\u30E9\u30B0\u30A4\u30F3\u3092\u521D\u671F\u5316\u3067\u304D\u307E\u305B\u3093\u3002\u7406\u7531\uFF1A{reason}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_BlockWrite",
+        "Value": "\u4E26\u884C\u51E6\u7406\u3092\u7121\u52B9\u5316\u3057\u3001\u540C\u671F\u66F8\u304D\u8FBC\u307F\u3092\u6709\u52B9\u5316\uFF08\u975E\u63A8\u5968\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
+        "Value": "\u7DE8\u96C6\u6642\u306E\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u306B\u4F7F\u7528\u3059\u308BGPU\u3092\u9078\u629E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LiveVideoPreviewZoomFactor",
+        "Value": "\u30EA\u30A2\u30EB\u30BF\u30A4\u30E0\u30D3\u30C7\u30AA\u30D7\u30EC\u30D3\u30E5\u30FC\u306E\u89E3\u50CF\u5EA6\u30B9\u30B1\u30FC\u30EB\u30D5\u30A1\u30AF\u30BF\u30FC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LiveVideoPreviewDefaultResolution",
+        "Value": "\u30C7\u30D5\u30A9\u30EB\u30C8\u30D7\u30EC\u30D3\u30E5\u30FC\u89E3\u50CF\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption",
+        "Value": "\u30D7\u30ED\u30AD\u30B7\u4F5C\u6210\u30AA\u30D7\u30B7\u30E7\u30F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Ask",
+        "Value": "\u4F5C\u6210\u3059\u308B\u304B\u3069\u3046\u304B\u3092\u78BA\u8A8D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Never",
+        "Value": "\u4F5C\u6210\u3057\u306A\u3044",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Always",
+        "Value": "\u5E38\u306B\u81EA\u52D5\u7684\u306B\u4F5C\u6210\u3059\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_WarnLabel",
+        "Value": "\u8B66\u544A\uFF1A\u3053\u308C\u3089\u306E\u30AA\u30D7\u30B7\u30E7\u30F3\u3092\u7121\u65AD\u3067\u5909\u66F4\u3059\u308B\u3068\u3001projectFrameCut\u304C\u4E0D\u5B89\u5B9A\u306B\u306A\u308A\u3001\u30C7\u30FC\u30BF\u640D\u5931\u306A\u3069\u306E\u4E88\u671F\u305B\u306C\u72B6\u6CC1\u3092\u5F15\u304D\u8D77\u3053\u3059\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002\u5909\u66F4\u306F\u614E\u91CD\u306B\u884C\u3063\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DeveloperMode",
+        "Value": "\u958B\u767A\u8005\u30E2\u30FC\u30C9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_AutoRecoverDraft",
+        "Value": "\u7834\u640D\u3057\u305F\u4E0B\u66F8\u304D\u306E\u81EA\u52D5\u5FA9\u5143\uFF08\u4E88\u671F\u3057\u306A\u3044\u52D5\u4F5C\u3092\u5F15\u304D\u8D77\u3053\u3059\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DontPanicOnUnhandledException",
+        "Value": "\u30B0\u30ED\u30FC\u30D0\u30EB\u672A\u51E6\u7406\u4F8B\u5916\u767A\u751F\u6642\u306E\u30D7\u30ED\u30B0\u30E9\u30E0\u6551\u6E08\u3092\u8A66\u307F\u307E\u3059\uFF08\u5F8C\u7D9A\u306E\u30D7\u30ED\u30B0\u30E9\u30E0\u304C\u4E0D\u5B89\u5B9A\u306B\u306A\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DisablePluginEngine",
+        "Value": "\u3059\u3079\u3066\u306E\u30E6\u30FC\u30B6\u30FC\u30D7\u30E9\u30B0\u30A4\u30F3\u3092\u7121\u52B9\u306B\u3059\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DedicatedLogWindow",
+        "Value": "\u5C02\u7528\u30ED\u30B0\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u6709\u52B9\u306B\u3059\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ResetUserID",
+        "Value": "\u30E6\u30FC\u30B6\u30FCID\u3092\u30EA\u30BB\u30C3\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_LogUIMessageToLogger",
+        "Value": "\u7DE8\u96C6\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u306E\u30B9\u30C6\u30FC\u30BF\u30B9\u30D0\u30FC\u30E1\u30C3\u30BB\u30FC\u30B8\u3092\u30ED\u30B0\u306B\u8A18\u9332",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ManualEditSetting",
+        "Value": "\u624B\u52D5\u8A2D\u5B9A\u7DE8\u96C6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_KeyBox_Hint",
+        "Value": "\u8A2D\u5B9A\u3057\u305F\u30AD\u30FC\u3092\u5165\u529B\u3059\u308B\u3068\u3001\u5024\u304C\u81EA\u52D5\u7684\u306B\u5165\u529B\u3055\u308C\u307E\u3059",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_KeyNotFound",
+        "Value": "\u3053\u306E\u8A2D\u5B9A\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Success",
+        "Value": "\u64CD\u4F5C\u304C\u6B63\u5E38\u306B\u5B8C\u4E86\u3057\u307E\u3057\u305F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_Denoise",
+        "Value": "\u30C9\u30E9\u30C3\u30B0\u64CD\u4F5C\u306E\u30CE\u30A4\u30BA\u4F4E\u6E1B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5180,15 +5890,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130\uC640 \uB9AC\uC18C\uC2A4 \uD30C\uC77C\uC744 \uC124\uC815\uD558\uB294 \uB0B4\uC6A9",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DebugMode",
-        "Value": "\uAC1C\uBC1C\uC790 \uBAA8\uB4DC",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Indicates the software is running in developer/debug mode",
         "HasValidationErrors": false
       },
       {
@@ -5820,24 +6521,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_CustomOpts",
-        "Value": "\uC0AC\uC6A9\uC790 \uC9C0\uC815 \uB80C\uB354\uB7EC \uB9E4\uAC1C\uBCC0\uC218",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_CustomOpts_Placeholder",
-        "Value": "\uC77C\uBC18\uC801\uC73C\uB85C \uC124\uC815\uD560 \uD544\uC694 \uC5C6\uC2B5\uB2C8\uB2E4. \uC790\uC138\uD55C \uB0B4\uC6A9\uC740 \uBB38\uC11C\uB97C \uCC38\uC870\uD558\uC138\uC694.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_AdvanceOpts",
         "Value": "\uACE0\uAE09 \uC635\uC158",
         "Mode": "ConstString",
@@ -5946,15 +6629,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_ShowBackendConsole",
-        "Value": "\uBC31\uC5D4\uB4DC \uCF58\uC194 \uCC3D \uD45C\uC2DC (\uC77C\uBD80 \uAE30\uB2A5\uC744 \uC0AC\uC6A9\uD558\uC9C0 \uBABB\uD560 \uC218 \uC788\uC74C)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_SelectAccel_MultiAccel",
         "Value": "\uB80C\uB354\uB9C1 \uC2DC \uC0AC\uC6A9\uD560 \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D\uAE30 \uC120\uD0DD (\uB2E4\uC911 \uC120\uD0DD)",
         "Mode": "ConstString",
@@ -6036,33 +6710,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_SelectRenderHost",
-        "Value": "\uD3B8\uC9D1 \uC778\uD130\uD398\uC774\uC2A4\uC758 \uB80C\uB354\uB9C1 \uD638\uC2A4\uD2B8 \uC120\uD0DD",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseLivePreviewInsteadOfBackend",
-        "Value": "\uBA54\uC778 \uD504\uB85C\uADF8\uB7A8\uC744 \uD3B8\uC9D1 \uC778\uD130\uD398\uC774\uC2A4 \uB80C\uB354\uB9C1 \uD638\uC2A4\uD2B8\uB85C \uC0AC\uC6A9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "\uB3C5\uB9BD \uBC31\uC5D4\uB4DC\uB97C \uD3B8\uC9D1 \uC778\uD130\uD398\uC774\uC2A4 \uB80C\uB354\uB9C1 \uD638\uC2A4\uD2B8\uB85C \uC0AC\uC6A9 (\uBE44\uAD8C\uC7A5)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Edit_LiveVideoPreviewBufferLength",
         "Value": "\uC2E4\uC2DC\uAC04 \uC601\uC0C1 \uBBF8\uB9AC\uBCF4\uAE30 \uBC84\uD37C \uD06C\uAE30 (\uD504\uB808\uC784)",
         "Mode": "ConstString",
@@ -6074,6 +6721,251 @@
       {
         "Id": "GeneralUI_SetupSafeZone",
         "Value": "UI \uC548\uC804 \uC601\uC5ED \uAD6C\uC131 \uC911...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_InvaildFileHash",
+        "Value": "\uD30C\uC77C {name}\uC774(\uAC00) \uC190\uC0C1\uB41C \uAC83 \uAC19\uC2B5\uB2C8\uB2E4. \uD574\uC2DC \uAC12\uC774 \uC77C\uCE58\uD558\uC9C0 \uC54A\uAE30 \uB54C\uBB38\uC785\uB2C8\uB2E4.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FileMissing",
+        "Value": "\uD50C\uB7EC\uADF8\uC778\uC758 \uD575\uC2EC \uD30C\uC77C\uC774 \uB204\uB77D\uB418\uC5C8\uAC70\uB098 \uC190\uC0C1\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC774 \uBB38\uC81C\uB97C \uD574\uACB0\uD558\uB824\uBA74 \uD50C\uB7EC\uADF8\uC778\uC744 \uB2E4\uC2DC \uC124\uCE58\uD574\uC57C \uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FileMissing_DirectoryNotFound",
+        "Value": "\uC774 \uD50C\uB7EC\uADF8\uC778\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_CannotCreateInstance",
+        "Value": "\uD50C\uB7EC\uADF8\uC778\uC744 \uCD08\uAE30\uD654\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC774\uC720: {reason}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_BlockWrite",
+        "Value": "\uB3D9\uC2DC\uC131\uC744 \uBE44\uD65C\uC131\uD654\uD558\uACE0 \uB3D9\uAE30 \uC4F0\uAE30\uB97C \uD65C\uC131\uD654\uD569\uB2C8\uB2E4(\uAD8C\uC7A5\uD558\uC9C0 \uC54A\uC74C)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
+        "Value": "\uD3B8\uC9D1 \uC2DC \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D\uC5D0 \uC0AC\uC6A9\uD560 GPU \uC120\uD0DD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LiveVideoPreviewZoomFactor",
+        "Value": "\uC2E4\uC2DC\uAC04 \uBE44\uB514\uC624 \uBBF8\uB9AC\uBCF4\uAE30\uC758 \uD574\uC0C1\uB3C4 \uBC30\uC728",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LiveVideoPreviewDefaultResolution",
+        "Value": "\uAE30\uBCF8 \uBBF8\uB9AC\uBCF4\uAE30 \uD574\uC0C1\uB3C4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption",
+        "Value": "\uD504\uB85D\uC2DC \uC0DD\uC131 \uC635\uC158",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Ask",
+        "Value": "\uC0DD\uC131\uD560\uC9C0 \uBB3B\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Never",
+        "Value": "\uC0DD\uC131 \uC548 \uD568",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Always",
+        "Value": "\uD56D\uC0C1 \uC790\uB3D9 \uC0DD\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_WarnLabel",
+        "Value": "\uACBD\uACE0: \uC774 \uC635\uC158\uB4E4\uC744 \uD568\uBD80\uB85C \uBCC0\uACBD\uD558\uBA74 projectFrameCut\uC774 \uBD88\uC548\uC815\uD574\uC9C0\uAC70\uB098 \uB370\uC774\uD130 \uC190\uC2E4 \uB4F1\uC758 \uC608\uAE30\uCE58 \uC54A\uC740 \uC0C1\uD669\uC774 \uBC1C\uC0DD\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uC2E0\uC911\uD558\uAC8C \uBCC0\uACBD\uD574 \uC8FC\uC2ED\uC2DC\uC624.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DeveloperMode",
+        "Value": "\uAC1C\uBC1C\uC790 \uBAA8\uB4DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_AutoRecoverDraft",
+        "Value": "\uC190\uC0C1\uB41C \uCD08\uC548 \uC790\uB3D9 \uBCF5\uAD6C (\uC608\uAE30\uCE58 \uC54A\uC740 \uB3D9\uC791\uC744 \uC720\uBC1C\uD560 \uC218 \uC788\uC74C)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DontPanicOnUnhandledException",
+        "Value": "\uC804\uC5ED \uCC98\uB9AC\uB418\uC9C0 \uC54A\uC740 \uC608\uC678 \uBC1C\uC0DD \uC2DC \uD504\uB85C\uADF8\uB7A8\uC744 \uBCF5\uAD6C\uD558\uB824 \uC2DC\uB3C4\uD569\uB2C8\uB2E4(\uD6C4\uC18D \uD504\uB85C\uADF8\uB7A8 \uBD88\uC548\uC815\uC744 \uCD08\uB798\uD560 \uC218 \uC788\uC74C).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DisablePluginEngine",
+        "Value": "\uBAA8\uB4E0 \uC0AC\uC6A9\uC790 \uD50C\uB7EC\uADF8\uC778 \uBE44\uD65C\uC131\uD654",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DedicatedLogWindow",
+        "Value": "\uB3C5\uB9BD \uB85C\uADF8 \uCC3D \uD65C\uC131\uD654",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ResetUserID",
+        "Value": "\uC0AC\uC6A9\uC790 ID \uC7AC\uC124\uC815",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_LogUIMessageToLogger",
+        "Value": "\uD3B8\uC9D1 \uC778\uD130\uD398\uC774\uC2A4 \uC0C1\uD0DC \uD45C\uC2DC\uC904 \uBA54\uC2DC\uC9C0\uB97C \uB85C\uADF8\uC5D0 \uAE30\uB85D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ManualEditSetting",
+        "Value": "\uC218\uB3D9 \uAD6C\uC131 \uC124\uC815",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_KeyBox_Hint",
+        "Value": "\uC124\uC815\uB41C \uD0A4\uB97C \uC785\uB825\uD558\uBA74 \uAC12\uC774 \uC790\uB3D9\uC73C\uB85C \uCC44\uC6CC\uC9D1\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_KeyNotFound",
+        "Value": "\uC774 \uC124\uC815\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Success",
+        "Value": "\uC791\uC5C5\uC774 \uC131\uACF5\uC801\uC73C\uB85C \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_Denoise",
+        "Value": "\uB4DC\uB798\uADF8 \uC791\uC5C5 \uB178\uC774\uC988 \uAC10\uC18C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6417,15 +7309,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DebugMode",
-        "Value": "Mode d\u00E9veloppeur",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Translation of \u0027\u5F00\u53D1\u8005\u6A21\u5F0F\u0027 to French, maintaining the formal software UI context",
         "HasValidationErrors": false
       },
       {
@@ -7057,24 +7940,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_CustomOpts",
-        "Value": "Param\u00E8tres du moteur de rendu personnalis\u00E9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_CustomOpts_Placeholder",
-        "Value": "G\u00E9n\u00E9ralement, aucun r\u00E9glage n\u0027est n\u00E9cessaire. Pour plus de d\u00E9tails, veuillez consulter la documentation.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_AdvanceOpts",
         "Value": "Options avanc\u00E9es",
         "Mode": "ConstString",
@@ -7183,15 +8048,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_ShowBackendConsole",
-        "Value": "Afficher la console du backend (peut rendre certaines fonctionnalit\u00E9s indisponibles)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_SelectAccel_MultiAccel",
         "Value": "S\u00E9lectionnez les acc\u00E9l\u00E9rateurs mat\u00E9riels \u00E0 utiliser pour le rendu (plusieurs choix possibles)",
         "Mode": "ConstString",
@@ -7273,33 +8129,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_SelectRenderHost",
-        "Value": "S\u00E9lectionner l\u0027h\u00F4te de rendu pour l\u0027interface d\u0027\u00E9dition",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseLivePreviewInsteadOfBackend",
-        "Value": "Utiliser l\u0027application principale comme h\u00F4te de rendu pour l\u0027interface d\u0027\u00E9dition",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "Utiliser un backend ind\u00E9pendant comme h\u00F4te de rendu pour l\u0027interface d\u0027\u00E9dition (Non recommand\u00E9)",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Edit_LiveVideoPreviewBufferLength",
         "Value": "Taille du tampon de pr\u00E9visualisation vid\u00E9o en temps r\u00E9el (images)",
         "Mode": "ConstString",
@@ -7311,6 +8140,251 @@
       {
         "Id": "GeneralUI_SetupSafeZone",
         "Value": "Configuration de la zone s\u00FBre de l\u0027interface...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_InvaildFileHash",
+        "Value": "Le fichier {name} semble corrompu car son hachage ne correspond pas.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FileMissing",
+        "Value": "Un fichier cl\u00E9 du plugin est manquant ou corrompu. Vous devez le r\u00E9installer pour r\u00E9soudre ce probl\u00E8me.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FileMissing_DirectoryNotFound",
+        "Value": "Ce plugin est introuvable.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_CannotCreateInstance",
+        "Value": "Nous ne pouvons pas initialiser le plugin car : {reason}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_BlockWrite",
+        "Value": "D\u00E9sactiver la concurrence et activer l\u0027\u00E9criture synchrone (non recommand\u00E9)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
+        "Value": "S\u00E9lectionner le GPU pour l\u0027acc\u00E9l\u00E9ration mat\u00E9rielle lors de l\u0027\u00E9dition",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LiveVideoPreviewZoomFactor",
+        "Value": "Facteur de zoom de la r\u00E9solution de l\u0027aper\u00E7u vid\u00E9o en direct",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LiveVideoPreviewDefaultResolution",
+        "Value": "R\u00E9solution d\u0027aper\u00E7u par d\u00E9faut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption",
+        "Value": "Options de cr\u00E9ation de proxy",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Ask",
+        "Value": "Demander s\u0027il faut cr\u00E9er",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Never",
+        "Value": "Ne pas cr\u00E9er",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Always",
+        "Value": "Toujours cr\u00E9er automatiquement",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_WarnLabel",
+        "Value": "Avertissement : Modifier ces options arbitrairement peut entra\u00EEner une instabilit\u00E9 de projectFrameCut, une perte de donn\u00E9es ou d\u0027autres situations inattendues. Veuillez les modifier avec prudence.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DeveloperMode",
+        "Value": "Mode d\u00E9veloppeur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_AutoRecoverDraft",
+        "Value": "R\u00E9cup\u00E9ration automatique des brouillons endommag\u00E9s (peut entra\u00EEner un comportement inattendu)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DontPanicOnUnhandledException",
+        "Value": "Tente de sauver le programme lorsqu\u0027une exception non g\u00E9r\u00E9e globale se produit (peut entra\u00EEner une instabilit\u00E9 ult\u00E9rieure du programme).",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DisablePluginEngine",
+        "Value": "D\u00E9sactiver tous les plugins utilisateur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DedicatedLogWindow",
+        "Value": "Activer la fen\u00EAtre de journal d\u00E9di\u00E9e",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ResetUserID",
+        "Value": "R\u00E9initialiser l\u0027ID utilisateur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_LogUIMessageToLogger",
+        "Value": "Enregistrer les messages de la barre d\u0027\u00E9tat de l\u0027interface d\u0027\u00E9dition dans le journal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ManualEditSetting",
+        "Value": "Configuration manuelle des param\u00E8tres",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_KeyBox_Hint",
+        "Value": "Entrez une cl\u00E9 pour remplir automatiquement la valeur.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_KeyNotFound",
+        "Value": "Ce param\u00E8tre n\u0027a pas \u00E9t\u00E9 trouv\u00E9.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Success",
+        "Value": "Op\u00E9ration termin\u00E9e avec succ\u00E8s.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_Denoise",
+        "Value": "R\u00E9duction du bruit pour les op\u00E9rations de glisser-d\u00E9poser",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7654,15 +8728,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u914D\u7F6E\u7528\u6237\u6570\u636E\u53CA\u8D44\u6E90\u6587\u4EF6\u4E4B\u6587\u8A00\u8868\u8FF0",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DebugMode",
-        "Value": "\u5320\u8005\u4E4B\u5F0F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Developer mode in classical Chinese",
         "HasValidationErrors": false
       },
       {
@@ -8294,24 +9359,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_CustomOpts",
-        "Value": "\u81EA\u5B9A\u6E32\u67D3\u5668\u4E4B\u53C2",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_CustomOpts_Placeholder",
-        "Value": "\u5E38\u4F8B\u6BCB\u987B\u8BBE\uFF0C\u7EC6\u5219\u8BE6\u89C1\u6587\u4E66\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_AdvanceOpts",
         "Value": "\u8FDB\u9636\u4E4B\u9009",
         "Mode": "ConstString",
@@ -8420,15 +9467,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_ShowBackendConsole",
-        "Value": "\u542F\u540E\u53F0\u7EC8\u7AEF\uFF08\u6050\u81F4\u90E8\u5206\u529F\u80FD\u5931\u7528\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u610F\u4E3A\u201C\u663E\u793A\u540E\u7AEF\u7EC8\u7AEF\uFF08\u53EF\u80FD\u5BFC\u81F4\u90E8\u5206\u529F\u80FD\u5931\u6548\uFF09\u201D\u3002\u5176\u4E2D\u201C\u540E\u53F0\u201D\u5BF9\u5E94\u201C\u540E\u7AEF\u201D\uFF0C\u201C\u7EC8\u7AEF\u201D\u4E3A\u73B0\u4EE3\u672F\u8BED\u4FDD\u7559\uFF0C\u201C\u6050\u81F4\u201D\u8868\u53EF\u80FD\u5BFC\u81F4\uFF0C\u201C\u5931\u7528\u201D\u5373\u5931\u6548\u4E0D\u53EF\u7528\u3002",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Render_SelectAccel_MultiAccel",
         "Value": "\u62E9\u663E\u50CF\u65F6\u6240\u7528\u4E4B\u786C\u4EF6\u52A0\u901F\u5668\uFF08\u591A\u62E9\uFF09",
         "Mode": "ConstString",
@@ -8510,33 +9548,6 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Render_SelectRenderHost",
-        "Value": "\u62E9\u7F16\u754C\u9762\u4E4B\u6E32\u67D3\u4E3B\u673A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u6587\u8A00\u6587\u8868\u8FBE\uFF0C\u610F\u4E3A\u201C\u9009\u62E9\u7F16\u8F91\u754C\u9762\u7684\u6E32\u67D3\u4E3B\u673A\u201D\u3002",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseLivePreviewInsteadOfBackend",
-        "Value": "\u4EE5\u4E3B\u7A0B\u5F0F\u4E3A\u7F16\u57DF\u6E32\u673A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Render_RenderHost_UseBackendAsRenderHost",
-        "Value": "\u4EE5\u72EC\u7ACB\u540E\u7AEF\u4E3A\u7F16\u7E82\u754C\u9762\u6E32\u67D3\u4E3B\u673A\uFF0C\u4E0D\u5B9C\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
         "Id": "Edit_LiveVideoPreviewBufferLength",
         "Value": "\u5B9E\u65F6\u89C6\u9891\u9884\u89C8\u7F13\u51B2\u533A\u5927\u5C0F\uFF08\u5E27\uFF09",
         "Mode": "ConstString",
@@ -8548,6 +9559,251 @@
       {
         "Id": "GeneralUI_SetupSafeZone",
         "Value": "\u914D\u7F6EUI\u5B89\u5168\u533A...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_InvaildFileHash",
+        "Value": "\u6587\u4EF6 {name} \u4F3C\u6709\u635F\u6BC1\uFF0C\u76D6\u56E0\u5176\u54C8\u5E0C\u503C\u4E0D\u7B26\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FileMissing",
+        "Value": "\u8F85\u4EF6\u4E4B\u8981\u6587\u9619\u635F\uFF0C\u5F53\u590D\u7F6E\u4E4B\uFF0C\u4EE5\u4FEE\u6B64\u5F0A\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_FileMissing_DirectoryNotFound",
+        "Value": "\u63D2\u4EF6\u672A\u5F97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_CannotCreateInstance",
+        "Value": "\u63D2\u4EF6\u672A\u80FD\u521D\u542F\uFF0C\u76D6\u56E0\uFF1A{reason}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u5C06\u73B0\u4EE3\u4E2D\u6587\u7FFB\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u4FDD\u6301\u53C2\u6570{reason}\u4E0D\u53D8\uFF0C\u4F7F\u7528\u53E4\u5178\u8BED\u6CD5\u8868\u8FBE\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_BlockWrite",
+        "Value": "\u7981\u5E76\u884C\uFF0C\u800C\u542F\u540C\u6B69\u4E66\uFF08\u4E0D\u5B9C\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
+        "Value": "\u62E9GPU\u4EE5\u52A9\u7F16\u7E82\u4E4B\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LiveVideoPreviewZoomFactor",
+        "Value": "\u5B9E\u65F6\u89C6\u9891\u9884\u89C8\u4E4B\u5206\u8FA8\u7387\u7F29\u653E\u56E0\u5B50",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LiveVideoPreviewDefaultResolution",
+        "Value": "\u9ED8\u8BBE\u9884\u89C2\u6E05\u6670\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption",
+        "Value": "\u8BBE\u4EE3\u884C\u4E4B\u9009",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Ask",
+        "Value": "\u8BE2\u53EF\u521B\u5426",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Never",
+        "Value": "\u52FF\u521B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ProxyOption_Always",
+        "Value": "\u6052\u81EA\u521B\u7ACB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u59CB\u7EC8\u81EA\u52A8\u521B\u5EFA\u4E4B\u610F",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_WarnLabel",
+        "Value": "\u544A\uFF1A\u5984\u6539\u6B64\u7B49\u9009\u9879\uFF0C\u6216\u81F4projectFrameCut\u4E0D\u56FA\uFF0C\u800C\u751F\u6570\u636E\u9057\u5931\u7B49\u610F\u5916\u3002\u8BF7\u614E\u6539\u4E4B\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5DF2\u5C06\u73B0\u4EE3\u6C49\u8BED\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u4FDD\u7559\u2018projectFrameCut\u2019\u4E0D\u8BD1\uFF0C\u56E0\u5176\u4E3A\u8F6F\u4EF6\u540D\u3002\u8BD1\u6587\u529B\u6C42\u7B80\u7EC3\uFF0C\u7B26\u5408\u6587\u8A00\u6587\u6CD5\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DeveloperMode",
+        "Value": "\u5F00\u53D1\u8005\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_AutoRecoverDraft",
+        "Value": "\u81EA\u590D\u635F\u7A3F\uFF08\u6216\u81F4\u5F02\u884C\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DontPanicOnUnhandledException",
+        "Value": "\u6B32\u4E8E\u5168\u5C40\u672A\u5904\u7406\u5F02\u5E38\u751F\u65F6\u6551\u7A0B\u5E8F\uFF0C\u6216\u81F4\u540E\u5E8F\u4E0D\u5B89\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DisablePluginEngine",
+        "Value": "\u7981\u8BF8\u7528\u6237\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u8868\u8FBE\uFF0C\u610F\u4E3A\u7981\u7528\u6240\u6709\u7528\u6237\u63D2\u4EF6\uFF0C\u7B80\u6D01\u660E\u4E86",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_DedicatedLogWindow",
+        "Value": "\u542F\u72EC\u7ACB\u65E5\u5FD7\u7A97",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ResetUserID",
+        "Value": "\u91CD\u7F6E\u7528\u6237ID",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_LogUIMessageToLogger",
+        "Value": "\u5F55\u7F16\u4FEE\u754C\u9762\u72B6\u680F\u4E4B\u8BAF\u5165\u65E5\u5FD7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ManualEditSetting",
+        "Value": "\u624B\u8C03\u914D\u8BBE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_KeyBox_Hint",
+        "Value": "\u8F93\u5165\u6240\u8BBE\u4E4B\u952E\uFF0C\u5219\u503C\u81EA\u5145\u4E4B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_KeyNotFound",
+        "Value": "\u672A\u5F97\u6B64\u8BBE\u7F6E\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Success",
+        "Value": "\u64CD\u4F5C\u6210\u529F\u5B8C\u6210\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_Denoise",
+        "Value": "\u51CF\u62D6\u62FD\u4E4B\u6270",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

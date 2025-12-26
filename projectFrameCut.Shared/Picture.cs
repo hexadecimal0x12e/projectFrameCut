@@ -1170,6 +1170,177 @@ namespace projectFrameCut.Shared
 
     public static class PictureExtensions
     {
+        public static IPicture DeepCopy(this IPicture source)
+        {
+            if (source is null) throw new ArgumentNullException(nameof(source));
+            lock (source)
+            {
+                int width = source.Width;
+                int height = source.Height;
+                int pixels = source.Pixels;
+
+                if (source.bitPerPixel == 16)
+                {
+                    // Prefer typed interface if available
+                    if (source is IPicture<ushort> s16)
+                    {
+                        if (s16.r == null || s16.g == null || s16.b == null)
+                            throw new InvalidOperationException("Source 16bpp picture has null channel buffers.");
+
+                        var dst = new Picture16bpp(width, height)
+                        {
+                            frameIndex = s16.frameIndex,
+                            filePath = s16.filePath,
+                            ProcessStack = s16.ProcessStack,
+                            hasAlphaChannel = s16.hasAlphaChannel
+                        };
+
+                        // ensure destination arrays exist
+                        dst.r = new ushort[pixels];
+                        dst.g = new ushort[pixels];
+                        dst.b = new ushort[pixels];
+                        Array.Copy(s16.r, dst.r, pixels);
+                        Array.Copy(s16.g, dst.g, pixels);
+                        Array.Copy(s16.b, dst.b, pixels);
+
+                        if (s16.hasAlphaChannel && s16.a != null)
+                        {
+                            dst.a = new float[pixels];
+                            Array.Copy(s16.a, dst.a, pixels);
+                            dst.hasAlphaChannel = true;
+                        }
+                        else
+                        {
+                            dst.a = null;
+                            dst.hasAlphaChannel = false;
+                        }
+
+                        return dst;
+                    }
+                    else
+                    {
+                        // Fallback using GetSpecificChannel
+                        var rr = source.GetSpecificChannel(IPicture.ChannelId.Red) as ushort[] ?? throw new InvalidOperationException("Red channel missing for 16bpp picture.");
+                        var gg = source.GetSpecificChannel(IPicture.ChannelId.Green) as ushort[] ?? throw new InvalidOperationException("Green channel missing for 16bpp picture.");
+                        var bb = source.GetSpecificChannel(IPicture.ChannelId.Blue) as ushort[] ?? throw new InvalidOperationException("Blue channel missing for 16bpp picture.");
+                        var aa = source.hasAlphaChannel ? source.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+
+                        if (rr.Length != pixels || gg.Length != pixels || bb.Length != pixels || (aa != null && aa.Length != pixels))
+                            throw new InvalidOperationException("Source channel buffer lengths do not match picture pixel count.");
+
+                        var dst = new Picture16bpp(width, height)
+                        {
+                            frameIndex = source.frameIndex,
+                            filePath = source.filePath,
+                            ProcessStack = source.ProcessStack,
+                            hasAlphaChannel = source.hasAlphaChannel
+                        };
+
+                        dst.r = new ushort[pixels];
+                        dst.g = new ushort[pixels];
+                        dst.b = new ushort[pixels];
+                        Array.Copy(rr, dst.r, pixels);
+                        Array.Copy(gg, dst.g, pixels);
+                        Array.Copy(bb, dst.b, pixels);
+
+                        if (aa != null)
+                        {
+                            dst.a = new float[pixels];
+                            Array.Copy(aa, dst.a, pixels);
+                            dst.hasAlphaChannel = true;
+                        }
+                        else
+                        {
+                            dst.a = null;
+                            dst.hasAlphaChannel = false;
+                        }
+
+                        return dst;
+                    }
+                }
+                else if (source.bitPerPixel == 8)
+                {
+                    if (source is IPicture<byte> s8)
+                    {
+                        if (s8.r == null || s8.g == null || s8.b == null)
+                            throw new InvalidOperationException("Source 8bpp picture has null channel buffers.");
+
+                        var dst = new Picture8bpp(width, height)
+                        {
+                            frameIndex = s8.frameIndex,
+                            filePath = s8.filePath,
+                            ProcessStack = s8.ProcessStack,
+                            hasAlphaChannel = s8.hasAlphaChannel
+                        };
+
+                        dst.r = new byte[pixels];
+                        dst.g = new byte[pixels];
+                        dst.b = new byte[pixels];
+                        Array.Copy(s8.r, dst.r, pixels);
+                        Array.Copy(s8.g, dst.g, pixels);
+                        Array.Copy(s8.b, dst.b, pixels);
+
+                        if (s8.hasAlphaChannel && s8.a != null)
+                        {
+                            dst.a = new float[pixels];
+                            Array.Copy(s8.a, dst.a, pixels);
+                            dst.hasAlphaChannel = true;
+                        }
+                        else
+                        {
+                            dst.a = null;
+                            dst.hasAlphaChannel = false;
+                        }
+
+                        return dst;
+                    }
+                    else
+                    {
+                        var rr = source.GetSpecificChannel(IPicture.ChannelId.Red) as byte[] ?? throw new InvalidOperationException("Red channel missing for 8bpp picture.");
+                        var gg = source.GetSpecificChannel(IPicture.ChannelId.Green) as byte[] ?? throw new InvalidOperationException("Green channel missing for 8bpp picture.");
+                        var bb = source.GetSpecificChannel(IPicture.ChannelId.Blue) as byte[] ?? throw new InvalidOperationException("Blue channel missing for 8bpp picture.");
+                        var aa = source.hasAlphaChannel ? source.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+
+                        if (rr.Length != pixels || gg.Length != pixels || bb.Length != pixels || (aa != null && aa.Length != pixels))
+                            throw new InvalidOperationException("Source channel buffer lengths do not match picture pixel count.");
+
+                        var dst = new Picture8bpp(width, height)
+                        {
+                            frameIndex = source.frameIndex,
+                            filePath = source.filePath,
+                            ProcessStack = source.ProcessStack,
+                            hasAlphaChannel = source.hasAlphaChannel
+                        };
+
+                        dst.r = new byte[pixels];
+                        dst.g = new byte[pixels];
+                        dst.b = new byte[pixels];
+                        Array.Copy(rr, dst.r, pixels);
+                        Array.Copy(gg, dst.g, pixels);
+                        Array.Copy(bb, dst.b, pixels);
+
+                        if (aa != null)
+                        {
+                            dst.a = new float[pixels];
+                            Array.Copy(aa, dst.a, pixels);
+                            dst.hasAlphaChannel = true;
+                        }
+                        else
+                        {
+                            dst.a = null;
+                            dst.hasAlphaChannel = false;
+                        }
+
+                        return dst;
+                    }
+                }
+                else
+                {
+                    throw new NotSupportedException("Only 8bpp and 16bpp images are supported for deep copy.");
+                }
+            }
+        }
+
         public static bool UseSixLaborsImageSharpToResize = true;
 
         public static Picture8bpp Resize(this Picture8bpp source, int targetWidth, int targetHeight, bool preserveAspect = true)

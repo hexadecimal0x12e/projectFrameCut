@@ -67,7 +67,7 @@ public partial class GeneralSettingPage : ContentPage
             .AddButton("manageUsedDataButton", SettingLocalizedResources.General_UserData_ManagePageOpen, null)
 
             .ListenToChanges(SettingInvoker);
-        Content = new ScrollView { Content = rootPPB.Build() };
+        Content = rootPPB.BuildWithScrollView();
     }
 
     private async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args)
