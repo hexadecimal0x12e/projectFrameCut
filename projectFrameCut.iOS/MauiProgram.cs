@@ -15,6 +15,8 @@ using projectFrameCut.MetalAccelerater;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 
 using projectFrameCut.Services;
+using projectFrameCut.Asset;
+
 
 
 
@@ -27,6 +29,9 @@ using projectFrameCut.Services;
 using UIKit;
 using projectFrameCut.Platforms;
 
+#endif
+#if WINDOWS
+#error This project shouldn't be built in Windows target.
 #endif
 
 
@@ -41,8 +46,10 @@ namespace projectFrameCut
         private static readonly string[] FoldersNeedInUserdata =
             [
             "My Drafts",
-            "My Assets"
-            ];
+            "My Assets",
+            "My Assets/.database",
+            "My Assets/.thumbnails"
+        ];
         private static object locker;
 
         public static StreamWriter LogWriter { get; internal set; }
@@ -52,7 +59,6 @@ namespace projectFrameCut
 
         public static MauiApp CreateMauiApp()
         {
-            System.Threading.Thread.CurrentThread.Name = "App Main thread";
             if (CmdlineArgs is null || CmdlineArgs.Length == 0)
             {
                 try
@@ -61,28 +67,14 @@ namespace projectFrameCut
                 }
                 catch { } //safe to ignore it
             }
-            System.Threading.Thread.CurrentThread.Name = "App Main thread";
-            string loggingDir = "";
             try
             {
-                loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging");
-                DataPath = FileSystem.AppDataDirectory;
-#if WINDOWS
-#elif IOS
-                //files->my [iDevices]->projectFrameCut
-                DataPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+#if IOS          
+                DataPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments); //files->my [iDevices]->projectFrameCut
 
 #elif MACCATALYST
                 DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
-                loggingDir = System.IO.Path.Combine(DataPath, "logging");
 #endif
-                Directory.CreateDirectory(loggingDir);
-                LogWriter = new StreamWriter(System.IO.Path.Combine(loggingDir, $"log-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log"), append: true)
-                {
-                    AutoFlush = true
-                };
-
-                MyLoggerExtensions.OnLog += MyLoggerExtensions_OnLog;
 
                 try
                 {
@@ -108,7 +100,7 @@ namespace projectFrameCut
                 $"                  os version {Environment.OSVersion},\r\n" +
                 $"                  clr version {Environment.Version},\r\n" +
                 $"                  cmdline: {Environment.CommandLine}");
-            Log("Copyright (c) hexadecimal0x12e 2025, and thanks to other open-source code's authors. This project is licensed under GNU GPL V2.");
+            Log("Copyright (c) hexadecimal0x12e 2025, and thanks to other open-source code's authors.");
             Log($"BasicDataPath:{BasicDataPath}, DataPath:{DataPath}");
             try
             {
@@ -165,33 +157,32 @@ namespace projectFrameCut
             catch (Exception ex)
             {
                 Log(ex, "load settings", typeof(MauiProgram));
-#if ANDROID
-                Android.Util.Log.Wtf("projectFrameCut", $"Failed to init the settings because of a {ex.GetType().Name} exception:{ex.Message}");
-#elif WINDOWS
-                _ = MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot init the settings because of a {ex.GetType().Name} exception:{ex.Message}\r\nYour settings will be reset temporarily.\r\nTry fix the setting.json manually, or submit a issue with a screenshot of this dialogue.", "projectFrameCut", 0U);
-#endif
                 SettingsManager.Settings = new();
 
             }
 
             try
             {
-                if (File.Exists(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt")))
-                {
-                    var newPath = File.ReadAllText(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt"));
-                    if (!Directory.Exists(newPath))
-                    {
-#if WINDOWS
-                        _ = MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot setup the UserData because of the path your defined is not exist now.\r\nYou may found your drafts disappeared.\r\nTry reset the data directory path later.", "projectFrameCut", 0U);
-#endif
-                    }
-                    DataPath = newPath;
-                    Log($"User override Data path to:{DataPath}");
-                }
 
                 foreach (var item in FoldersNeedInUserdata)
                 {
                     Directory.CreateDirectory(Path.Combine(DataPath, item));
+                }
+
+                if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "@WARNING.txt")))
+                {
+                    File.WriteAllText(Path.Combine(DataPath, "My Assets", ".database", "@WARNING.txt"),
+                        """
+                        WARNING: Do not modify or delete any files in this folder manually, or your asset database may be corrupted!
+                        """);
+                }
+                if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "database.json")))
+                {
+                    AssetDatabase.Initialize("{}");
+                }
+                else
+                {
+                    AssetDatabase.Initialize(File.ReadAllText(Path.Combine(DataPath, "My Assets", ".database", "database.json")));
                 }
             }
             catch (Exception ex)

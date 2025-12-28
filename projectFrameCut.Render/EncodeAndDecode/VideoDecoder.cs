@@ -53,6 +53,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
             Initialize();
         }
 
+        public IVideoSource CreateNew(string newSource) => new DecoderContext16Bit(newSource);
+
 
         public void Initialize()
         {
@@ -389,6 +391,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _path = path;
             Initialize();
         }
+
+        public IVideoSource CreateNew(string newSource) => new DecoderContext8Bit(newSource);
+
 
         public void Initialize()
         {

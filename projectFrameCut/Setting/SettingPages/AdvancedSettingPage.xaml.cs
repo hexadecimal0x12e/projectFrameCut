@@ -78,6 +78,7 @@ public partial class AdvancedSettingPage : ContentPage
         {
             Text = SettingLocalizedResources.Advanced_WarnLabel,
             TextColor = Colors.Yellow,
+            BackgroundColor = Colors.Black,
             FontSize = 32,
             FontAttributes = FontAttributes.Bold,
         })

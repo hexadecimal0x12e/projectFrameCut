@@ -28,6 +28,10 @@ namespace projectFrameCut.PropertyPanel
         public static double DefaultWidthOfContent = 5;
 
         private List<View> children = new();
+
+        /// <summary>
+        /// Represents a collection of components added to the property panel, identified by their unique string IDs.
+        /// </summary>
         public Dictionary<string, View> Components { get; private init; } = new();
 
         /// <summary>
@@ -251,11 +255,21 @@ namespace projectFrameCut.PropertyPanel
             picker.SelectedIndex = Array.IndexOf(values, defaultOne);
 
             var label = title.LabelConfigure();
-            Properties[Id] = defaultOne;
+            Properties[Id] = defaultOne!;
 #if !iDevices
-            picker.SelectedIndexChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, picker.SelectedItem as string);
+            picker.SelectedIndexChanged += (s, e) =>
+            {
+                var selected = picker.SelectedItem as string;
+                if (selected is null) return;
+                pppcea.CreateAndInvoke(this, Id, selected);
+            };
 #else //avoid picker disappears before selection done
-            picker.Closed += (s, e) => pppcea.CreateAndInvoke(this, Id, picker.SelectedItem as string);
+            picker.Closed += (s, e) =>
+            {
+                var selected = picker.SelectedItem as string;
+                if (selected is null) return;
+                pppcea.CreateAndInvoke(this, Id, selected);
+            };
 #endif
             PickerSetter?.Invoke(picker);
             var grid = new Grid
@@ -291,7 +305,7 @@ namespace projectFrameCut.PropertyPanel
                 Minimum = min,
                 Maximum = max,
                 Value = defaultValue,
-                HorizontalOptions = LayoutOptions.FillAndExpand,
+                HorizontalOptions = LayoutOptions.Fill,
                 BindingContext = this
             };
             var label = title.LabelConfigure();
@@ -375,7 +389,6 @@ namespace projectFrameCut.PropertyPanel
         /// <remarks>
         /// Please note that <see cref="PropertyChanged"/> will NEVER be triggered, instead, you should handle <paramref name="OnClick"/> to do your own logic.
         /// </remarks>
-        /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
         public PropertyPanelBuilder AddButton(string buttonText, EventHandler OnClick, Action<Button>? ButtonSetter = null)
         {
             var Id = Guid.NewGuid().ToString();
@@ -389,6 +402,114 @@ namespace projectFrameCut.PropertyPanel
             button.Clicked += OnClick;
             children.Add(button);
             Components.Add(Id, button);
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a card-like option row: left icon + right (title + description), similar to the screenshot.
+        /// </summary>
+        /// <remarks>
+        /// - By default this view is tappable and will trigger <see cref="PropertyChanged"/> with <paramref name="tappedValue"/>.
+        /// - Use the setter callbacks to style borders/spacing to match your theme.
+        /// </remarks>
+        /// <param name="Id">The unique identifier for the property associated with this card. Cannot be null.</param>
+        /// <param name="icon">Icon image source shown on the left.</param>
+        /// <param name="title">Main title (first line).</param>
+        /// <param name="description">Secondary description (second line).</param>
+        /// <param name="defaultValue">Initial value stored in <see cref="Properties"/> for <paramref name="Id"/>.</param>
+        /// <param name="tappedValue">Value sent when tapped. If null, will fall back to <paramref name="defaultValue"/>; if still null, uses new object().</param>
+        /// <param name="invokeOnTap">Whether tapping triggers <see cref="PropertyChanged"/> via the unified event mechanism.</param>
+        public PropertyPanelBuilder AddIconTitleDescriptionCard(
+            string Id,
+            ImageSource icon,
+            string title,
+            string description,
+            object? defaultValue = null,
+            object? tappedValue = null,
+            bool invokeOnTap = true,
+            Action<Border>? CardSetter = null,
+            Action<Border>? IconContainerSetter = null,
+            Action<Image>? IconSetter = null,
+            Action<Label>? TitleSetter = null,
+            Action<Label>? DescriptionSetter = null)
+        {
+            var iconImage = new Image
+            {
+                Source = icon,
+                Aspect = Aspect.AspectFit,
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center
+            };
+            IconSetter?.Invoke(iconImage);
+
+            var iconContainer = new Border
+            {
+                Content = iconImage,
+                Padding = new Thickness(8),
+                HorizontalOptions = LayoutOptions.Start,
+                VerticalOptions = LayoutOptions.Center
+            };
+            IconContainerSetter?.Invoke(iconContainer);
+
+            var titleLabel = new Label
+            {
+                Text = title,
+                FontAttributes = FontAttributes.Bold,
+                VerticalOptions = LayoutOptions.Center
+            };
+            TitleSetter?.Invoke(titleLabel);
+
+            var descriptionLabel = new Label
+            {
+                Text = description,
+                FontSize = 12,
+                VerticalOptions = LayoutOptions.Center
+            };
+            DescriptionSetter?.Invoke(descriptionLabel);
+
+            var textStack = new VerticalStackLayout
+            {
+                Spacing = 2,
+                VerticalOptions = LayoutOptions.Center,
+                Children = { titleLabel, descriptionLabel }
+            };
+
+            var grid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitionCollection
+                {
+                    new ColumnDefinition { Width = GridLength.Auto },
+                    new ColumnDefinition { Width = GridLength.Star }
+                },
+                ColumnSpacing = 12,
+                RowDefinitions = new RowDefinitionCollection
+                {
+                    new RowDefinition { Height = GridLength.Auto }
+                }
+            };
+            grid.Children.Add(iconContainer);
+            grid.Children.Add(textStack);
+            Grid.SetColumn(textStack, 1);
+
+            var card = new Border
+            {
+                Content = grid,
+                Padding = new Thickness(12),
+                Margin = DefaultPadding
+            };
+            CardSetter?.Invoke(card);
+
+            Properties[Id] = defaultValue!;
+            var effectiveTappedValue = tappedValue ?? defaultValue ?? new object();
+            if (invokeOnTap)
+            {
+                var tap = new TapGestureRecognizer();
+                tap.Tapped += (s, e) => pppcea.CreateAndInvoke(this, Id, effectiveTappedValue);
+                card.GestureRecognizers.Add(tap);
+            }
+
+            children.Add(card);
+            Components.Add(Id, card);
             return this;
         }
 
@@ -781,6 +902,102 @@ namespace projectFrameCut.PropertyPanel
             button.Clicked += (s, e) => pppcea.CreateAndInvoke(parent, Id, new());
 
             addChild(button, width);
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a card-like option row (icon + title/description) as a child in this line builder.
+        /// </summary>
+        public PropertyPanelChildrenBuilder AddIconTitleDescriptionCard(
+            string Id,
+            ImageSource icon,
+            string title,
+            string description,
+            object? defaultValue = null,
+            object? tappedValue = null,
+            bool invokeOnTap = true,
+            GridLength? width = null,
+            Action<Border>? CardSetter = null,
+            Action<Border>? IconContainerSetter = null,
+            Action<Image>? IconSetter = null,
+            Action<Label>? TitleSetter = null,
+            Action<Label>? DescriptionSetter = null)
+        {
+            var iconImage = new Image
+            {
+                Source = icon,
+                Aspect = Aspect.AspectFit,
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center
+            };
+            IconSetter?.Invoke(iconImage);
+
+            var iconContainer = new Border
+            {
+                Content = iconImage,
+                Padding = new Thickness(8),
+                HorizontalOptions = LayoutOptions.Start,
+                VerticalOptions = LayoutOptions.Center
+            };
+            IconContainerSetter?.Invoke(iconContainer);
+
+            var titleLabel = new Label
+            {
+                Text = title,
+                FontAttributes = FontAttributes.Bold,
+                VerticalOptions = LayoutOptions.Center
+            };
+            TitleSetter?.Invoke(titleLabel);
+
+            var descriptionLabel = new Label
+            {
+                Text = description,
+                FontSize = 12,
+                VerticalOptions = LayoutOptions.Center
+            };
+            DescriptionSetter?.Invoke(descriptionLabel);
+
+            var textStack = new VerticalStackLayout
+            {
+                Spacing = 2,
+                VerticalOptions = LayoutOptions.Center,
+                Children = { titleLabel, descriptionLabel }
+            };
+
+            var grid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitionCollection
+                {
+                    new ColumnDefinition { Width = GridLength.Auto },
+                    new ColumnDefinition { Width = GridLength.Star }
+                },
+                ColumnSpacing = 12,
+                RowDefinitions = new RowDefinitionCollection
+                {
+                    new RowDefinition { Height = GridLength.Auto }
+                }
+            };
+            grid.Children.Add(iconContainer);
+            grid.Children.Add(textStack);
+            Grid.SetColumn(textStack, 1);
+
+            var card = new Border
+            {
+                Content = grid,
+                Padding = new Thickness(12)
+            };
+            CardSetter?.Invoke(card);
+
+            parent.Properties[Id] = defaultValue!;
+            var effectiveTappedValue = tappedValue ?? defaultValue ?? new object();
+            if (invokeOnTap)
+            {
+                var tap = new TapGestureRecognizer();
+                tap.Tapped += (s, e) => pppcea.CreateAndInvoke(parent, Id, effectiveTappedValue);
+                card.GestureRecognizers.Add(tap);
+            }
+
+            addChild(card, width);
             return this;
         }
 

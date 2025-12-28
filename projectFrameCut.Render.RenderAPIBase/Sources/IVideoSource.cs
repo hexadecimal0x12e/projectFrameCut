@@ -36,6 +36,12 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
             }
         }
         /// <summary>
+        /// Create a new instance of the video source with a different source.
+        /// </summary>
+
+        public IVideoSource CreateNew(string newSource);
+
+        /// <summary>
         /// Read the actual frame from the video source.
         /// </summary>
         /// <param name="targetFrame">the frame index to read</param>

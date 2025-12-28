@@ -27,7 +27,8 @@ namespace projectFrameCut.Shared
                 if(sender is string StringSender) senderStr = StringSender;
                 else senderStr = sender.GetType().FullName ?? "Unknown sender";
             }
-            Log($"A {ex.GetType().Name} exception happens when trying to {message ?? "do undefined action"} \r\nerror message: {ex.Message}\r\nFrom:{senderStr}", "error");
+            if (string.IsNullOrWhiteSpace(message)) message = "do undefined action";
+            Log($"A {ex.GetType().Name} exception happens when trying to {message} \r\nerror message: {ex.Message}\r\nFrom:{senderStr}", "error");
 
             MyLoggerExtensions.AnnounceException(ex);
             try
@@ -64,7 +65,7 @@ namespace projectFrameCut.Shared
                     }
                 }
 
-                Log($"{GetExceptionMessages(ex, false)}{info}", "error");
+                Log($"More exception info:\r\n{GetExceptionMessages(ex, false)}{info}", "error");
 
 
             }
@@ -73,10 +74,6 @@ namespace projectFrameCut.Shared
                 var ex1 = new InvalidDataException($"An error occurred while trying to log the {ex.GetType().Name}'s detailed information.", new AggregateException(ex, e));
                 Log(ex1, message, sender);
             }
-            //finally
-            //{
-            //    if(Debugger.IsAttached) Debugger.Break();
-            //}
 
 
         }
@@ -146,9 +143,8 @@ Exception data:
         public static void Log(string msg, string level = "info")
         {
 #if DEBUG
-            Debug.WriteLine($"log:[{level}] {msg}");
+            Debug.WriteLine($"[{level}] {msg}");
 #endif
-            Console.WriteLine($"[{level}] {msg}");
 
             MyLoggerExtensions.Announce(msg, level);
 
@@ -157,8 +153,7 @@ Exception data:
         public static void LogDiagnostic(string msg)
         {
 #if DEBUG
-            Console.WriteLine($"[Diag] {msg}");
-            Debug.WriteLine($"log:[Diag] {msg}");
+            Debug.WriteLine($"[Diag] {msg}");
 #endif
 
             if (MyLoggerExtensions.LoggingDiagnosticInfo)

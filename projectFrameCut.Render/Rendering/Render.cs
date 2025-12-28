@@ -500,9 +500,57 @@ namespace projectFrameCut.Render.Rendering
             {
                 running = false;
                 Log("Release resources...");
+                try
+                {
+                    // Dispose any cached frames that were prepared but never consumed.
+                    foreach (var perClip in FrameCache.Values)
+                    {
+                        foreach (var pic in perClip.Values)
+                        {
+                            try { pic?.Dispose(); } catch { }
+                        }
+                        perClip.Clear();
+                    }
+                }
+                catch { }
+
                 FrameCache.Clear();
                 ClipNeedForFrame.Clear();
+
+                try
+                {
+                    foreach (var mix in MixtureCache.Values)
+                    {
+                        if (mix is IDisposable d)
+                        {
+                            try { d.Dispose(); } catch { }
+                        }
+                    }
+                }
+                catch { }
                 MixtureCache.Clear();
+
+                try
+                {
+                    foreach (var effects in EffectCache.Values)
+                    {
+                        foreach (var eff in effects)
+                        {
+                            if (eff is IDisposable d)
+                            {
+                                try { d.Dispose(); } catch { }
+                            }
+                        }
+                    }
+                }
+                catch { }
+                EffectCache.Clear();
+
+                try { BlankFrame?.Dispose(); } catch { }
+
+                PreparedFlag.Clear();
+                while (PreparedFrames.TryDequeue(out _)) { }
+                while (BlankFrames.TryDequeue(out _)) { }
             }
             catch { }
 

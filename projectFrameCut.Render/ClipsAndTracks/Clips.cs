@@ -188,6 +188,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public List<TextClipEntry> TextEntries { get; init; } = new List<TextClipEntry>();
 
+        public string FontPath { get; set; } = string.Empty;
+
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
         {
             Image<Rgba64> canvas = new(targetWidth, targetHeight);
@@ -224,7 +226,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             return new Picture(canvas)
             {
-                ProcessStack = $"Created from text '{TextEntries.Aggregate("",(a,b) => $"{a},{b.text}")}'"
+                ProcessStack = $"Created from text '{TextEntries.Aggregate("", (a, b) => $"{a},{b.text}")}'"
             };
         }
 
@@ -240,8 +242,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit()
         {
+            if (!string.IsNullOrWhiteSpace(FontPath))
+            {
+                fontsCache.Add(FontPath);
+            }
 
         }
+
 
         public void Dispose()
         {
@@ -252,13 +259,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public record TextClipEntry(string text, int x, int y, string fontFamily, float fontSize, ushort r, ushort g, ushort b, float? a = null);
 
-        private FontCollection fontsCache = null!;
-        public  FontCollection GetFont()
+        private static FontCollection fontsCache = new();
+        public static FontCollection FontsCache { get { return fontsCache; } }
+        public static FontCollection GetFont()
         {
-            if (fontsCache is not null) return fontsCache;
-            fontsCache = new FontCollection();
             fontsCache.AddSystemFonts();
-            foreach (var item in Directory.GetFiles(AppContext.BaseDirectory,"*.ttf"))
+            foreach (var item in Directory.GetFiles(AppContext.BaseDirectory, "*.ttf"))
             {
                 fontsCache.Add(item);
             }

@@ -136,6 +136,18 @@ namespace projectFrameCut.Render.Rendering
         {
             if (Disposed) return;
             Disposed = true;
+            // Best-effort cleanup: if anything remains in cache, dispose it.
+            try
+            {
+                running = false;
+                foreach (var kv in Cache)
+                {
+                    try { kv.Value?.Dispose(); } catch { }
+                }
+                Cache.Clear();
+                FramePendedToWrite.Clear();
+            }
+            catch { }
             builder.Dispose();
         }
 

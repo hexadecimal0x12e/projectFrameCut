@@ -28,6 +28,15 @@ namespace projectFrameCut.Shared
         Special
     }
 
+    public enum AssetType
+    {
+        Video,
+        Audio,
+        Image,
+        Font,
+        Other
+    }
+
     public enum TrackMode
     {
         NormalTrack,

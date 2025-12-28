@@ -104,7 +104,7 @@ public partial class PluginSettingPage : ContentPage
                     item.Value, item.Value);
             }
         }
-        ppb.AddText(new SingleLineLabel(Localized.HomePage_ProjectContextMenu(plugin.Name), 20, FontAttributes.None))
+        ppb.AddText(new SingleLineLabel(Localized.HomePage_ProjectContextMenu(name), 20, FontAttributes.None))
             .AddButton($"ViewProvided,{id}", SettingLocalizedResources.Plugin_ViewWhatProvided(plugin.Name));
         if (!plugin.PluginID.StartsWith("projectFrameCut"))
         {

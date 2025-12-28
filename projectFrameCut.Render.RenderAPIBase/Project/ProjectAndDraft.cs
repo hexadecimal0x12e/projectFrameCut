@@ -147,12 +147,35 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string Name { get; set; } = string.Empty;
         public string? Path { get; set; }
         public string? SourceHash { get; set; }
-        public ClipMode Type { get; set; }
+        public AssetType AssetType { get; set; } = AssetType.Other;
+        public ClipMode Type { 
+            get
+            {
+                return AssetType switch
+                {
+                    AssetType.Video => projectFrameCut.Shared.ClipMode.VideoClip,
+                    AssetType.Image => projectFrameCut.Shared.ClipMode.PhotoClip,
+                    AssetType.Audio => projectFrameCut.Shared.ClipMode.AudioClip,
+                    _ => projectFrameCut.Shared.ClipMode.Special
+                };
+            }
+            set
+            {
+                AssetType = value switch
+                {
+                    projectFrameCut.Shared.ClipMode.VideoClip => AssetType.Video,
+                    projectFrameCut.Shared.ClipMode.PhotoClip => AssetType.Image,
+                    projectFrameCut.Shared.ClipMode.AudioClip => AssetType.Audio,
+                    _ => AssetType.Other
+                };
+            }
+        }
 
         public long? FrameCount { get; set; }
-        public float SecondPerFrame { get; set; } = float.PositiveInfinity;
+        public float SecondPerFrame { get; set; } = -1;
         public string? ThumbnailPath { get; set; }
         public string? AssetId { get; set; }
+        public DateTime CreatedAt { get; set; } 
 
         public int Width { get; set; }
         public int Height { get; set; }
@@ -161,7 +184,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public object? Background { get; set; }
 
         [JsonIgnore]
-        public bool isInfiniteLength => FrameCount == null || FrameCount <= 0 || float.IsPositiveInfinity(SecondPerFrame);
+        public bool isInfiniteLength => FrameCount == null || FrameCount <= 0 || SecondPerFrame <= 0;
 
         [JsonIgnore]
         public string? Icon
@@ -171,12 +194,34 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 projectFrameCut.Shared.ClipMode.VideoClip => "📽️",
                 projectFrameCut.Shared.ClipMode.PhotoClip => "🖼️",
                 projectFrameCut.Shared.ClipMode.SolidColorClip => "🟦",
+                projectFrameCut.Shared.ClipMode.AudioClip => "🎵",
                 _ => "❔"
             };
         }
 
-        [JsonIgnore()]
-        public DateTime AddedAt { get; set; } = DateTime.Now;
+        [JsonIgnore]
+        public string DurationDisplay
+        {
+            get => AssetType switch
+            {
+                AssetType.Video or AssetType.Audio => TimeSpan.FromSeconds((double)(FrameCount ?? 0 * SecondPerFrame)).ToString("hh\\:mm\\:ss"),
+                _ => ""
+            };
+        }
+
+        public static AssetType GetAssetType(string path)
+        {
+            var ext = System.IO.Path.GetExtension(path).ToLower();
+            return ext switch
+            {
+                ".mp4" or ".mov" or ".avi" or ".mkv" or ".webm" => AssetType.Video,
+                ".mp3" or ".wav" or ".aac" or ".flac" or ".ogg" => AssetType.Audio,
+                ".jpg" or ".jpeg" or ".png" or ".bmp" or ".svg" or ".gif" => AssetType.Image,
+                ".ttf" or ".otf" => AssetType.Font,
+                _ => AssetType.Other
+            };
+        }
+
     }
 
     

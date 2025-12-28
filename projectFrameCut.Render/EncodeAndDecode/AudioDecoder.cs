@@ -31,6 +31,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
             Initialize();
         }
 
+        public IAudioSource CreateNew(string newSource) => new AudioDecoder(newSource);
+
+
         public void Initialize()
         {
             if (string.IsNullOrEmpty(_path)) return;

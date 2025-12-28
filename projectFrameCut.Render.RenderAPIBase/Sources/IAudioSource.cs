@@ -30,6 +30,12 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
                 return false;
             }
         }
+
+        /// <summary>
+        /// Create a new instance of the video source with a different source.
+        /// </summary>
+        public IAudioSource CreateNew(string newSource);
+
         /// <summary>
         /// The preferred file extensions for this audio source.
         /// </summary>

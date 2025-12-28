@@ -15,6 +15,8 @@ using Thread = System.Threading.Thread;
 using projectFrameCut.Render.Plugin;
 using Microsoft.Extensions.Logging;
 using projectFrameCut.Shared;
+using projectFrameCut.Asset;
+
 
 
 #if ANDROID
@@ -28,7 +30,6 @@ using Java.Lang;
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
-
 #endif
 
 
@@ -45,8 +46,15 @@ namespace projectFrameCut
         private static readonly string[] FoldersNeedInUserdata =
             [
             "My Drafts",
-            "My Assets"
-            ];
+            "My Assets",
+#if WINDOWS
+            "My Assets\\.database",
+            "My Assets\\.thumbnails"
+#else
+            "My Assets/.database",
+            "My Assets/.thumbnails"
+#endif
+        ];
 
         public static string[] CmdlineArgs = Array.Empty<string>();
 
@@ -226,6 +234,22 @@ namespace projectFrameCut
                 {
                     Directory.CreateDirectory(Path.Combine(DataPath, item));
                 }
+
+                if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "@WARNING.txt")))
+                {
+                    File.WriteAllText(Path.Combine(DataPath, "My Assets", ".database", "@WARNING.txt"),
+                        """
+                        WARNING: Do not modify or delete any files in this folder manually, or your asset database may be corrupted!
+                        """);
+                }
+                if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "database.json")))
+                {
+                    AssetDatabase.Initialize("{}");
+                }
+                else
+                {
+                    AssetDatabase.Initialize(File.ReadAllText(Path.Combine(DataPath, "My Assets", ".database", "database.json")));
+                }
             }
             catch (Exception ex)
             {
@@ -246,18 +270,26 @@ namespace projectFrameCut
                        {
                            options.SetShouldEnableSnackbarOnWindows(true);
                        })
-#if ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER 
+#if ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER
                        .UseMauiCommunityToolkitMediaElement();
 #pragma warning restore CA1416
 
 #endif
                 builder.Services.AddSingleton<IScreenReaderService, ScreenReaderService>();
-#if DEBUG
-                builder.Logging.SetMinimumLevel(LogLevel.Trace);
-#else
-                builder.Logging.SetMinimumLevel(LogLevel.Information);
-#endif
-                builder.Logging.AddProvider(new MyLoggerProvider());
+                LogLevel logLevel = LogLevel.Information;
+                if (Debugger.IsAttached || SettingsManager.IsBoolSettingTrue("LogDiagnostics"))
+                {
+                    if (File.Exists(Path.Combine(BasicDataPath, "trace.logging")))
+                    {
+                        logLevel = LogLevel.Trace;
+                    }
+                    else
+                    {
+                        logLevel = LogLevel.Debug;
+                    }
+                }
+                builder.Logging.SetMinimumLevel(logLevel);
+                builder.Logging.AddProvider(new MyLoggerProvider(logLevel));
 #if WINDOWS
                 builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
                 try
@@ -532,6 +564,7 @@ namespace projectFrameCut
 
         private static object locker = new();
 
+        [DebuggerNonUserCode()]
         private static void MyLoggerExtensions_OnLog(string msg, string level)
         {
             lock (locker) LogWriter.WriteLine($"[{DateTime.Now:T} @ {level}] {msg}");

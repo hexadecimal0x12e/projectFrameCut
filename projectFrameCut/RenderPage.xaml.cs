@@ -2,10 +2,10 @@ using FFmpeg.AutoGen;
 using Microsoft.Maui.ApplicationModel;
 using projectFrameCut.Shared;
 using System;
+using System.Runtime;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Runtime;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics.X86;
 using System.Text;
@@ -261,7 +261,7 @@ public partial class RenderPage : ContentPage
 
                       -crf {num} //crf
                  */
-                $"-y";
+                $" -y";
             Log($"FFmpeg args: {ffArgs}");
 
             var ffRet = await ffmpeg.Run(ffArgs);
@@ -433,7 +433,7 @@ public partial class RenderPage : ContentPage
                 MaxThreads = parallelThreadCount,
                 LogState = false,
                 LogStatToLogger = true,
-                GCOption = OperatingSystem.IsWindows() ? (int.TryParse(SettingsManager.GetSetting("render_GCOption","0"), out var value) ? value : 0 ) : 0,
+                GCOption =(int.TryParse(SettingsManager.GetSetting("render_GCOption","0"), out var value) ? value : 0 ) ,
             };
 
             renderer.OnProgressChanged += (p) =>
@@ -491,6 +491,19 @@ public partial class RenderPage : ContentPage
                 item?.Dispose();
             }
 
+            // Drop references to large graphs ASAP.
+            renderer.builder = null;
+#if WINDOWS
+            var origMode = GCSettings.LargeObjectHeapCompactionMode;
+            GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+            GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+            GC.WaitForPendingFinalizers();
+            GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+            GCSettings.LargeObjectHeapCompactionMode = origMode;
+#else
+            GC.Collect(); 
+            GC.WaitForPendingFinalizers();
+#endif
             MyLoggerExtensions.OnLog -= _WriteToLogBox;
 
             Log($"All done! Total elapsed {sw1}.");

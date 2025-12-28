@@ -235,7 +235,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
             var prefered = VideoSourceProvider.Values.Where((k) => k(null!).PreferredExtension.Contains(Path.GetExtension(filePath)));
             if (prefered.Any())
             {
-                return prefered.First()(filePath);
+                return prefered.First()(null!).CreateNew(filePath);
             }
             else
             {
@@ -266,7 +266,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
             var prefered = AudioSourceProvider.Values.Where((k) => k(null!).PreferredExtension.Contains(Path.GetExtension(filePath)));
             if (prefered.Any())
             {
-                return prefered.First()(filePath);
+                return prefered.First()(null!).CreateNew(filePath);
             }
             else
             {

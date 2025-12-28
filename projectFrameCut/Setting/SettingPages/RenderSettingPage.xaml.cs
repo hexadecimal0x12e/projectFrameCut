@@ -43,7 +43,9 @@ public partial class RenderSettingPage : ContentPage
         {
             {0, SettingLocalizedResources.Render_GCOption_LetCLRDoGC },
             {1, SettingLocalizedResources.Render_GCOption_DoNormalCollection },
+#if WINDOWS
             {2, SettingLocalizedResources.Render_GCOption_DoLOHCompression }
+#endif
         };
     }
 
@@ -273,6 +275,11 @@ public partial class RenderSettingPage : ContentPage
                 case "render_GCOption":
                     {
                         var key = GCOptionMapping.FirstOrDefault(k => k.Value == args.Value as string, new(0, "letCLRDoCollection"));
+                        if(!OperatingSystem.IsWindows() && key.Key == 2)
+                        {
+                            await DisplayAlertAsync(Localized._Warn, "LOH is not supported on this platform.", Localized._OK);
+                            return;
+                        }
                         WriteSetting("render_GCOption", key.Key.ToString());
                         return;
                     }
