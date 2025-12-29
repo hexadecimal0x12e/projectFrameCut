@@ -25,7 +25,7 @@
         <Grid.GestureRecognizers>
             <DropGestureRecognizer AllowDrop="True" Drop="OnDrop" />
         </Grid.GestureRecognizers>
-        <Grid Grid.Row="0" Margin="0,0,0,8" Padding="0,0" ColumnDefinitions="*,*,Auto" >
+        <Grid Grid.Row="0" Margin="8,0,8,8" Padding="0,0" ColumnDefinitions="*,*,Auto" >
             <SearchBar Grid.Column="0"
                        x:Name="AssetSearchBar"
                        Placeholder="{l:Localized Key=AssetPage_Search}"
@@ -36,6 +36,7 @@
             </Grid>
         </Grid>
         <CollectionView Grid.Row="1"
+                        Margin="4,0,4,0"
                         x:Name="AssetsCollectionView"
                         HorizontalOptions="Fill"
                         VerticalOptions="Fill"
@@ -49,7 +50,7 @@
             </CollectionView.ItemsLayout>
             <CollectionView.ItemTemplate>
                 <DataTemplate>
-                    <Border StrokeShape="RoundRectangle 10" StrokeThickness="0" BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2A2A2A}" HeightRequest="150" WidthRequest="200"  Loaded="Border_Loaded">
+                    <Border StrokeThickness="0" BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2A2A2A}" HeightRequest="150" WidthRequest="200"  Loaded="Border_Loaded">
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup Name="CommonStates">
                                 <VisualState Name="Normal" />
@@ -61,14 +62,15 @@
                                 </VisualState>
                             </VisualStateGroup>
                         </VisualStateManager.VisualStateGroups>
-                        <Grid RowDefinitions="*, Auto" Padding="0">
-                            <Image Grid.Row="0" Source="{Binding ThumbnailPath}" Aspect="AspectFill" Margin="0"/>
-                            <Label Text="{Binding Icon}" Margin="2,4,0,0" VerticalOptions="Start" HorizontalOptions="Start" BackgroundColor="#C0808080" />
-                            <Grid Grid.Row="0" VerticalOptions="End" BackgroundColor="#C0808080" ColumnDefinitions="*,Auto" HeightRequest="30" Padding="4">
+                        <VerticalStackLayout Padding="0"  Background="#C0808080">
+                            <Grid>
+                                <Image Source="{Binding ThumbnailPath}" Aspect="AspectFit" HeightRequest="130" WidthRequest="200"  Margin="0"/>
+                            </Grid>
+                            <Grid VerticalOptions="End" BackgroundColor="#112233" ColumnDefinitions="*,Auto" HeightRequest="20" Padding="4,0,4,0">
                                 <Label Grid.Column="0" Text="{Binding Name}" LineBreakMode="TailTruncation" HorizontalOptions="Start" VerticalOptions="Center" FontSize="12" Margin="0,0,6,0" MaxLines="1" />
                                 <Label Grid.Column="1" Text="{Binding DurationDisplay}" LineBreakMode="TailTruncation" HorizontalOptions="End" VerticalOptions="Center" FontSize="12" Margin="0" MaxLines="1" />
                             </Grid>
-                        </Grid>
+                        </VerticalStackLayout>
                     </Border>
                 </DataTemplate>
             </CollectionView.ItemTemplate>

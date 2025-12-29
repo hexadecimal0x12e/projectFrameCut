@@ -24,6 +24,13 @@
         </MenuBarItem>
 
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Edit}" >
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Add}" Command="{Binding AddCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
+                    Key="A" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" Command="{Binding SpiltCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
@@ -142,9 +149,9 @@
 
                 <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar">
                     <Picker x:Name="ResolutionPicker" WidthRequest="150"  SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
-                    <Button x:Name="ZoomOutButton" Text="+" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />
+                    <Button x:Name="ZoomOutButton" Text="-" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />
                     <Button x:Name="ZoomResetButton" Text="1x" Margin="8,0,0,0" Clicked="ZoomResetButton_Clicked"/>
-                    <Button x:Name="ZoomInButton" Text="-" Margin="8,0,0,0" Clicked="ZoomInButton_Clicked"/>
+                    <Button x:Name="ZoomInButton" Text="+" Margin="8,0,0,0" Clicked="ZoomInButton_Clicked"/>
                     <Border BackgroundColor="Transparent" StrokeThickness="0" WidthRequest="8"/>
                 </HorizontalStackLayout>
             </Grid>
@@ -239,12 +246,6 @@
                         HorizontalOptions="Fill"
                         VerticalOptions="Fill">
 
-            <Label Text="Overlay" 
-                   TextColor="White"
-                   BackgroundColor="#66000000"
-                   Padding="6"
-                   AbsoluteLayout.LayoutBounds="1,0,AutoSize,AutoSize"
-                   AbsoluteLayout.LayoutFlags="PositionProportional" />
         </AbsoluteLayout>
     </Grid>
 </ContentPage>

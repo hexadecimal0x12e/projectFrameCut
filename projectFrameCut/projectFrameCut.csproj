@@ -237,4 +237,8 @@
 		<Compile Remove="AppShell_Windows.xaml.cs" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <MauiImage Include="Resources\Raw\Images\unknown_music.png" />
+	</ItemGroup>
+
 </Project>

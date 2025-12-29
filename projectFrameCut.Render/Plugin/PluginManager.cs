@@ -197,6 +197,10 @@ namespace projectFrameCut.Render.Plugin
 
         public static IVideoSource CreateVideoSource(string filePath)
         {
+            if(!File.Exists(filePath) && !filePath.StartsWith("#"))
+            {
+                throw new FileNotFoundException("The specified video file was not found.", filePath);
+            }
             foreach (var plugin in LoadedPlugins.Values)
             {
                 try
@@ -217,6 +221,10 @@ namespace projectFrameCut.Render.Plugin
 
         public static IAudioSource CreateAudioSource(string filePath)
         {
+            if (!File.Exists(filePath) && !filePath.StartsWith("#"))
+            {
+                throw new FileNotFoundException("The specified video file was not found.", filePath);
+            }
             foreach (var plugin in LoadedPlugins.Values)
             {
                 try

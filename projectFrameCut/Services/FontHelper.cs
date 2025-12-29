@@ -24,6 +24,22 @@ namespace projectFrameCut.Services
 {
     public static class FontHelper
     {
+
+        public static double MeasureTextLength(string text, float fontSize = 14f)
+        {
+            try
+            {
+                Font font = SystemFonts.CreateFont(SystemFonts.Families.First().Name, fontSize);
+                FontRectangle rect = TextMeasurer.MeasureSize(text, new TextOptions(font));
+                return rect.Width > 0 ? rect.Width : 100;
+            }
+            catch
+            {
+                return text.Length * fontSize * 0.6 + 50;
+            }
+        }
+
+
         public static Shared.IPicture GenerateFontThumbnail(string fontPath)
         {
             if (string.IsNullOrEmpty(fontPath) || !File.Exists(fontPath))
@@ -39,7 +55,7 @@ namespace projectFrameCut.Services
                 canvas.Mutate((ctx) =>
                 {
                     ctx.Fill(Color.White);
-                    TextLanguage lang = UnicodeRanges.DetectPrimaryLanguage(family);
+                    TextLanguage lang = DetectPrimaryLanguage(family);
                     string sampleText = GetSampleText(lang);
                     Font font = family.CreateFont(72, FontStyle.Regular);
 
@@ -81,12 +97,8 @@ namespace projectFrameCut.Services
             Arabic
         }
 
-    }
 
-    public static class UnicodeRanges
-    {
-
-        public static TextLanguage DetectPrimaryLanguage(FontFamily family)
+        private static TextLanguage DetectPrimaryLanguage(FontFamily family)
         {
             TextLanguage result = TextLanguage.Unknown;
             if (family.Culture.ThreeLetterISOLanguageName == "ivl")
@@ -94,7 +106,7 @@ namespace projectFrameCut.Services
                 result = family.Name.ToLowerInvariant() switch
                 {
                     string name when name.Contains("ja") || name.Contains("jp") => TextLanguage.Japanese,
-                    string name when name.Contains("kr")  || name.Contains("ko") => TextLanguage.Korean,
+                    string name when name.Contains("kr") || name.Contains("ko") => TextLanguage.Korean,
                     string name when name.Contains("ru") => TextLanguage.Russian,
                     string name when name.Contains("th") => TextLanguage.Thai,
                     string name when name.Contains("ar") => TextLanguage.Arabic,
@@ -118,9 +130,7 @@ namespace projectFrameCut.Services
 
             return result;
         }
-
-
-
     }
+
 
 }

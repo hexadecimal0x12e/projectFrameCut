@@ -38,31 +38,39 @@ namespace projectFrameCut.Render.EncodeAndDecode
         {
             if (string.IsNullOrEmpty(_path)) return;
 
+            // Check if file exists first
+            if (!File.Exists(_path))
+            {
+                throw new FileNotFoundException($"Audio file not found: {_path}");
+            }
+
             _fmt = ffmpeg.avformat_alloc_context();
             fixed (AVFormatContext** fmtPtr = &_fmt)
             {
-                if (ffmpeg.avformat_open_input(fmtPtr, _path, null, null) != 0)
+                int err = ffmpeg.avformat_open_input(fmtPtr, _path, null, null);
+                if (err != 0)
                 {
-                    throw new FileNotFoundException($"Could not open audio file: {_path}");
+                    var errMsg = FFmpegHelper.GetErrorString(err);
+                    throw new InvalidOperationException($"Could not open audio file '{_path}': {errMsg} (error code: {err})");
                 }
             }
 
             if (ffmpeg.avformat_find_stream_info(_fmt, null) < 0)
             {
-                throw new InvalidDataException("Could not find stream information.");
+                throw new InvalidDataException($"Could not find stream information in '{_path}'.");
             }
 
             _audioStreamIndex = ffmpeg.av_find_best_stream(_fmt, AVMediaType.AVMEDIA_TYPE_AUDIO, -1, -1, null, 0);
             if (_audioStreamIndex < 0)
             {
-                throw new InvalidDataException("No audio stream found.");
+                throw new InvalidDataException($"No audio stream found in '{_path}'.");
             }
 
             AVStream* stream = _fmt->streams[_audioStreamIndex];
             AVCodec* codec = ffmpeg.avcodec_find_decoder(stream->codecpar->codec_id);
             if (codec == null)
             {
-                throw new NotSupportedException("Audio codec not supported.");
+                throw new NotSupportedException($"Audio codec (id: {stream->codecpar->codec_id}) is not supported. Make sure FFmpeg is compiled with the required decoder.");
             }
 
             _codec = ffmpeg.avcodec_alloc_context3(codec);
@@ -76,7 +84,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _frm = ffmpeg.av_frame_alloc();
 
             // Calculate duration in frames (assuming 30fps for now, but should be dynamic)
-            Duration = (uint)(stream->duration * ffmpeg.av_q2d(stream->time_base) * 30); // Placeholder
+            Duration = (uint)(stream->duration * ffmpeg.av_q2d(stream->time_base)); // Placeholder
         }
 
         public AudioBuffer GetAudioSamples(uint startFrame, uint frameCount, int videoFramerate)

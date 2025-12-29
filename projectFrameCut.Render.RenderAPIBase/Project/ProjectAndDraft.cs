@@ -148,28 +148,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string? Path { get; set; }
         public string? SourceHash { get; set; }
         public AssetType AssetType { get; set; } = AssetType.Other;
-        public ClipMode Type { 
-            get
-            {
-                return AssetType switch
-                {
-                    AssetType.Video => projectFrameCut.Shared.ClipMode.VideoClip,
-                    AssetType.Image => projectFrameCut.Shared.ClipMode.PhotoClip,
-                    AssetType.Audio => projectFrameCut.Shared.ClipMode.AudioClip,
-                    _ => projectFrameCut.Shared.ClipMode.Special
-                };
-            }
-            set
-            {
-                AssetType = value switch
-                {
-                    projectFrameCut.Shared.ClipMode.VideoClip => AssetType.Video,
-                    projectFrameCut.Shared.ClipMode.PhotoClip => AssetType.Image,
-                    projectFrameCut.Shared.ClipMode.AudioClip => AssetType.Audio,
-                    _ => AssetType.Other
-                };
-            }
-        }
+        public ClipMode Type { get; set; }
 
         public long? FrameCount { get; set; }
         public float SecondPerFrame { get; set; } = -1;
@@ -189,22 +168,32 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         [JsonIgnore]
         public string? Icon
         {
-            get => Type switch
+            get => AssetType switch
             {
-                projectFrameCut.Shared.ClipMode.VideoClip => "📽️",
-                projectFrameCut.Shared.ClipMode.PhotoClip => "🖼️",
-                projectFrameCut.Shared.ClipMode.SolidColorClip => "🟦",
-                projectFrameCut.Shared.ClipMode.AudioClip => "🎵",
-                _ => "❔"
+                projectFrameCut.Shared.AssetType.Video => "\ud83d\udcfd\ufe0f", //📽️
+                projectFrameCut.Shared.AssetType.Image => "\ud83d\uddbc\ufe0f",//🖼️
+                projectFrameCut.Shared.AssetType.Audio => "\ud83c\udfb5",//🎵
+                projectFrameCut.Shared.AssetType.Font => "\ud83d\udd24",//🔤
+                _ => Type switch
+                {
+                    projectFrameCut.Shared.ClipMode.VideoClip => "\ud83d\udcfd\ufe0f",//📽️
+                    projectFrameCut.Shared.ClipMode.PhotoClip => "\ud83d\uddbc\ufe0f",//🖼️
+                    projectFrameCut.Shared.ClipMode.AudioClip => "\ud83c\udfb5",//🎵
+                    projectFrameCut.Shared.ClipMode.SolidColorClip => "\ud83d\udfe6",//🟦
+                    projectFrameCut.Shared.ClipMode.SubtitleClip => "\ud83d\udcad",//💭
+                    projectFrameCut.Shared.ClipMode.ExtendClip => "\ud83d\udd0c",//🔌
+                    _ => "\u2754" // ❔
+                }
             };
         }
 
         [JsonIgnore]
         public string DurationDisplay
         {
-            get => AssetType switch
+            get => Icon + " " + AssetType switch
             {
-                AssetType.Video or AssetType.Audio => TimeSpan.FromSeconds((double)(FrameCount ?? 0 * SecondPerFrame)).ToString("hh\\:mm\\:ss"),
+                AssetType.Video  => TimeSpan.FromSeconds((double)(FrameCount ?? 0 * SecondPerFrame)).ToString(),
+                AssetType.Audio => TimeSpan.FromSeconds((double)(FrameCount ?? 0d)).ToString(),
                 _ => ""
             };
         }

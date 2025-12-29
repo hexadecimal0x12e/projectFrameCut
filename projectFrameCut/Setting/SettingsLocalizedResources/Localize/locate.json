@@ -1297,6 +1297,14 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_UseSystemFont",
+        "Value": "\u4F7F\u7528\u7CFB\u7EDF\u9ED8\u8BA4\u5B57\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
       }
     ],
     "en-US": [

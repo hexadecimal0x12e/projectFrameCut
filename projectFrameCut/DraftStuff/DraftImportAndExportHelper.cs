@@ -179,7 +179,7 @@ namespace projectFrameCut.DraftStuff
                     trackIndex: (int)dto.LayerIndex,
                     id: string.IsNullOrWhiteSpace(dto.Id) ? null : dto.Id,
                     labelText: string.IsNullOrWhiteSpace(dto.Name) ? null : dto.Name,
-                    background: null,
+                    background: ClipElementUI.DetermineAssetColor(dto.ClipType),
                     prototype: null,
                     relativeStart: dto.RelativeStartFrame,
                     maxFrames: maxFrames

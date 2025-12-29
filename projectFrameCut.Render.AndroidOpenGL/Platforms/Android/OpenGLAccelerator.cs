@@ -111,9 +111,9 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             using (ShaderLibrary.locker.EnterScope())
             {
                 // We need to run on MainThread because we are touching UI elements (NativeGLSurfaceView)
-                var result = MainThread.InvokeOnMainThreadAsync(async () =>
+                // Use GetAwaiter().GetResult() with timeout to avoid deadlock when main thread is busy
+                var mainThreadTask = MainThread.InvokeOnMainThreadAsync(async () =>
                 {
-
                     NativeGLSurfaceView accelerator = new NativeGLSurfaceView
                     {
                         ShaderSource = ShaderLibrary.Alpha,
@@ -127,9 +127,11 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     if (handler?.PlatformView is not GLComputeView glView)
                         throw new InvalidOperationException("Accelerator is not ready or not attached.");
 
-                    await glView.WaitUntilReadyAsync();
-                    // Force update inputs on platform view
-                    //NativeGLSurfceViewHandler.MapInputs(handler, accelerator);
+                    // Add timeout to WaitUntilReadyAsync to prevent infinite wait
+                    var readyTask = glView.WaitUntilReadyAsync();
+                    if (await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromSeconds(30))) != readyTask)
+                        throw new TimeoutException("GLComputeView.WaitUntilReadyAsync timed out after 30 seconds.");
+                    await readyTask; // Propagate any exception
 
                     var alphaResult = await glView.RunComputeAsync();
 
@@ -141,7 +143,15 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     var colorResult = await glView.RunComputeAsync();
 
                     return new float[][] { colorResult, alphaResult };
-                }).Result;
+                });
+
+                // Use Task.Wait with timeout instead of .Result to detect deadlocks
+                if (!mainThreadTask.Wait(TimeSpan.FromSeconds(60)))
+                {
+                    throw new TimeoutException($"OverlayComputer.Compute timed out after 60 seconds - likely deadlock due to main thread congestion. Consider reducing MaxThreads on Android.");
+                }
+
+                var result = mainThreadTask.Result;
 
                 if (result is null)
                     throw new InvalidOperationException($"OverlayComputer Compute failed: accelerator returned null result.");
@@ -211,7 +221,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                 """;
             using (ShaderLibrary.locker.EnterScope())
             {
-                float[] result = MainThread.InvokeOnMainThreadAsync(async () =>
+                var mainThreadTask = MainThread.InvokeOnMainThreadAsync(async () =>
                 {
                     NativeGLSurfaceView accelerator = new NativeGLSurfaceView
                     {
@@ -226,9 +236,22 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     if (handler?.PlatformView is not GLComputeView glView)
                         throw new InvalidOperationException("Accelerator is not ready or not attached.");
 
-                    await glView.WaitUntilReadyAsync();
+                    // Add timeout to WaitUntilReadyAsync to prevent infinite wait
+                    var readyTask = glView.WaitUntilReadyAsync();
+                    if (await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromSeconds(30))) != readyTask)
+                        throw new TimeoutException("GLComputeView.WaitUntilReadyAsync timed out after 30 seconds.");
+                    await readyTask; // Propagate any exception
+
                     return await glView.RunComputeAsync();
-                }).Result;
+                });
+
+                // Use Task.Wait with timeout instead of .Result to detect deadlocks
+                if (!mainThreadTask.Wait(TimeSpan.FromSeconds(60)))
+                {
+                    throw new TimeoutException($"RemoveColorComputer.Compute timed out after 60 seconds - likely deadlock due to main thread congestion. Consider reducing MaxThreads on Android.");
+                }
+
+                float[] result = mainThreadTask.Result;
 
                 if (result is null)
                     throw new InvalidOperationException($"RemoveColorComputer Compute failed: accelerator returned null result.");

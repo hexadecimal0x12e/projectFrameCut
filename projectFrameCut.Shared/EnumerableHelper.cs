@@ -30,5 +30,11 @@ namespace projectFrameCut.Shared
             return input.Where(c => !ToRemove.Contains(c, comparer));
         }
 
+        public static IEnumerable<T> PickRandom<T>(this IEnumerable<T> input, int count, Random? rand = null)
+        {
+            rand ??= new Random();
+            return input.OrderBy(x => rand.Next()).Take(count);
+        }
+
     }
 }

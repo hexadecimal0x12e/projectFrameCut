@@ -107,6 +107,15 @@ namespace projectFrameCut.DraftStuff
         public static ImageSource LoadFromAsset(string assetName)
         {
 #if WINDOWS
+            int[] zooms = [800, 400, 200, 125, 125, 100];
+            foreach (var zoom in zooms)
+            {
+                var path = Path.Combine(AppContext.BaseDirectory, assetName + $".scale-{zoom}.png");
+                if (System.IO.File.Exists(path))
+                {
+                    return ImageSource.FromFile(path);
+                }
+            }
             return ImageSource.FromFile(Path.Combine(AppContext.BaseDirectory, assetName + ".scale-100.png"));
 #endif
             return ImageSource.FromFile(assetName);

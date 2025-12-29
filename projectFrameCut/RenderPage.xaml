@@ -75,10 +75,10 @@
                     <Entry Placeholder="BitDepth" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
                        Keyboard="Text"
                        Text="{Binding BitDepth, Mode=TwoWay}" />
-                </HorizontalStackLayout>
+                </HorizontalStackLayout>4
 
                 <Label x:Name="MaxParallelThreadsCountLabel"  Margin="0,8,0,0" Text="RenderPage_MaxParallelThreadsCount" />
-                <Slider x:Name="MaxParallelThreadsCount" Minimum="8" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
+                <Slider x:Name="MaxParallelThreadsCount" Minimum="1" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
                 <Button Margin="0,8,0,8"  x:Name="StartRender" Text="{l:Localized Key=RenderPage_StartRender}" Clicked="StartRender_Clicked" />
             </VerticalStackLayout>
 

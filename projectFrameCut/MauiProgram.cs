@@ -237,9 +237,9 @@ namespace projectFrameCut
 
                 if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "@WARNING.txt")))
                 {
-                    File.WriteAllText(Path.Combine(DataPath, "My Assets", ".database", "@WARNING.txt"),
+                    File.WriteAllText(Path.Combine(DataPath, "My Assets", "@WARNING.txt"),
                         """
-                        WARNING: Do not modify or delete any files in this folder manually, or your asset database may be corrupted!
+                        WARNING: Do not modify or delete any files in this folder manually, or your assets may be corrupted!
                         """);
                 }
                 if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "database.json")))
@@ -453,7 +453,7 @@ namespace projectFrameCut
 
                     try
                     {
-                        ConfigFontFromCulture(builder, culture);
+                        if(!SettingsManager.IsSettingExists("UseSystemFont")) ConfigFontFromCulture(builder, culture);
                     }
                     catch
                     {
@@ -644,26 +644,26 @@ namespace projectFrameCut
                     });
                     break;
                 case 932: //Japanese
-#if ANDROID
+#if !ANDROID
                     builder.ConfigureFonts(fonts =>
                     {
                         fonts.AddFont("HarmonyOS_Sans_SC_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_SC_Bold.ttf", "Font_Semibold");
                     });
 #else
-                    builder.ConfigureFonts(fonts =>
-                    {
-                        fonts.AddFont("NotoSansJP-Regular.ttf", "Font_Regular");
-                        fonts.AddFont("NotoSansJP-Bold.ttf", "Font_Semibold");
-                    });
+                    //use system ones
 #endif
                     break;
                 case 949: //Korean
+#if !ANDROID
                     builder.ConfigureFonts(fonts =>
                     {
                         fonts.AddFont("NotoSansKR-Regular.ttf", "Font_Regular");
                         fonts.AddFont("NotoSansKR-Bold.ttf", "Font_Semibold");
                     });
+#else
+                    //use system ones
+#endif
                     break;
                 case 1256: //Arabic
                     builder.ConfigureFonts(fonts =>

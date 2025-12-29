@@ -150,12 +150,12 @@ namespace projectFrameCut.DraftStuff
             var cont = new HorizontalStackLayout
             {
                 Children =
-            {
-                new Label
                 {
-                    Text = string.IsNullOrWhiteSpace(labelText) ? $"Clip {cid[^4..]}" : labelText
-                }
-            },
+                    new Label
+                    {
+                        Text = string.IsNullOrWhiteSpace(labelText) ? $"Clip {cid[^4..]}" : labelText
+                    }
+                },
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Center,
             };
@@ -210,6 +210,19 @@ namespace projectFrameCut.DraftStuff
             if (subtitle.Contains(ext)) return ClipMode.SubtitleClip;
 
             return ClipMode.Special; // fallback
+        }
+
+        public static Brush DetermineAssetColor(ClipMode mode) 
+        {
+            return mode switch
+            {
+                ClipMode.VideoClip => new SolidColorBrush(Colors.CornflowerBlue),
+                ClipMode.PhotoClip => new SolidColorBrush(Colors.MediumSeaGreen),
+                ClipMode.AudioClip => new SolidColorBrush(Colors.Goldenrod),
+                ClipMode.SubtitleClip => new SolidColorBrush(Colors.SlateGray),
+                ClipMode.SolidColorClip => new SolidColorBrush(Colors.OrangeRed),
+                _ => new SolidColorBrush(Colors.Gray),
+            };
         }
 
     }

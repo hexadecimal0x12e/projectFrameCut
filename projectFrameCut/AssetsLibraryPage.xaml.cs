@@ -1,12 +1,13 @@
 #nullable enable
-using projectFrameCut.ViewModels;
+using Microsoft.Maui.Controls;
 using projectFrameCut.Asset;
 using projectFrameCut.Render.RenderAPIBase.Project;
-using Microsoft.Maui.Controls;
+using projectFrameCut.Services;
+using projectFrameCut.Shared;
+using projectFrameCut.ViewModels;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
-using System.Diagnostics;
-using projectFrameCut.Services;
 using System.Threading.Tasks;
 
 
@@ -31,7 +32,7 @@ public partial class AssetsLibraryPage : ContentPage
     public AssetsLibraryPage()
     {
         InitializeComponent();
-        SourcePicker.ItemsSource = new string[] { Environment.MachineName, Localized.AssetPage_AddASource };
+        SourcePicker.ItemsSource = new string[] { OperatingSystem.IsWindows() ? Environment.MachineName : "Your devices", Localized.AssetPage_AddASource };
         SourcePicker.SelectedIndex = 0;
     }
 
@@ -84,15 +85,11 @@ public partial class AssetsLibraryPage : ContentPage
 
     public async Task AddAsset(string path)
     {
-        if (string.IsNullOrWhiteSpace(path)) return;
-        if (BindingContext is not AssetViewModel vm) return;
-        await Task.Run(() =>
+        await AssetDatabase.Add(path, this);
+        if (BindingContext is AssetViewModel vm)
         {
-            if (AssetDatabase.Add(path, out var asset))
-            {
-                vm.Assets.Add(asset);
-            }
-        });
+            vm.LoadAssets();
+        }
     }
 
 
@@ -109,14 +106,18 @@ public partial class AssetsLibraryPage : ContentPage
 
     private void Border_Loaded(object sender, EventArgs e)
     {
-        if (sender is Microsoft.Maui.Controls.Border border && BindingContext is AssetViewModel vm && border.BindingContext is AssetItem asset)
+        if (sender is Microsoft.Maui.Controls.Border border && BindingContext is AssetViewModel vm)
         {
 #if WINDOWS || MACCATALYST
             // Windows: Right-click to show context menu
             var tap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Secondary };
             tap.Tapped += async (_, _) =>
             {
-                await ShowContextMenu(asset);
+                // 动态获取当前绑定的 asset，避免闭包捕获旧引用
+                if (border.BindingContext is AssetItem currentAsset)
+                {
+                    await ShowContextMenu(currentAsset);
+                }
             };
 
             // remove existing tap to avoid duplicates
@@ -136,6 +137,9 @@ public partial class AssetsLibraryPage : ContentPage
             pointerGesture.PointerReleased += async (s, e) =>
             {
                 var duration = (DateTime.Now - pointerDownTime).TotalMilliseconds;
+                // 动态获取当前绑定的 asset，避免闭包捕获旧引用
+                if (border.BindingContext is not AssetItem currentAsset) return;
+                
                 if (duration >= 500)
                 {
                     Dispatcher.Dispatch(async () =>
@@ -144,14 +148,14 @@ public partial class AssetsLibraryPage : ContentPage
                         {
                             if (Vibration.Default.IsSupported)
                                 Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(500));
-                            await ShowContextMenu(asset);
+                            await ShowContextMenu(currentAsset);
                         }
                         catch { }
                     });
                 }
                 else if (duration > 0)
                 {
-                    AssetsCollectionView.SelectedItem = asset;
+                    AssetsCollectionView.SelectedItem = currentAsset;
                 }
             };
 
@@ -190,36 +194,8 @@ public partial class AssetsLibraryPage : ContentPage
                     case 1:
                         var confirm0 = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm0(asset.Name), Localized._Confirm, Localized._Cancel);
                         if (!confirm0) return;
-#if WINDOWS
-                        bool confirm2 = false;
-                        Microsoft.UI.Xaml.Controls.ContentDialog lastDiag = new Microsoft.UI.Xaml.Controls.ContentDialog
-                        {
-                            Title = Localized._Warn,
-                            Content = Localized.HomePage_ProjectContextMenu_Delete_Confirm1(asset.Name),
-                            PrimaryButtonText = Localized.HomePage_ProjectContextMenu_Delete_Confirm3(asset.Name),
-                            CloseButtonText = Localized._Cancel,
-                            PrimaryButtonStyle = new Microsoft.UI.Xaml.Style(typeof(Microsoft.UI.Xaml.Controls.Button))
-                            {
-                                Setters =
-                                {
-                                    new Microsoft.UI.Xaml.Setter(
-                                        Microsoft.UI.Xaml.Controls.Control.BackgroundProperty,
-                                        Microsoft.UI.Xaml.Application.Current.Resources["SystemFillColorCriticalBackgroundBrush"]
-                                    )
-                                }
-                            }
-                        };
-                        var services = Application.Current?.Handler?.MauiContext?.Services;
-                        var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
-                        if (dialogueHelper != null)
-                        {
-                            var result = await dialogueHelper.ShowContentDialogue(lastDiag);
-                            confirm2 = result == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary;
-                        }
-#else
-                        var confirm2 = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm1(asset.Name), Localized.HomePage_ProjectContextMenu_Delete_Confirm3(asset.Name), Localized._Cancel);
-#endif
-                        if (confirm2) 
+                        var confirm1 = await DisplayPromptAsync(Localized._Warn, Localized.AssetPage_DeleteAAsset_Confirm1(asset.Name), Localized._OK, Localized._Cancel, asset.Name);
+                        if (confirm1 == asset.Name)
                         {
                             vm.DeleteAsset(asset);
                             await DisplayAlertAsync(Localized._Info, Localized.HomePage_ProjectContextMenu_Delete_Deleted(asset.Name), Localized._OK);
@@ -250,7 +226,10 @@ public partial class AssetsLibraryPage : ContentPage
 
     private void AssetSearchBar_TextChanged(object sender, TextChangedEventArgs e)
     {
-
+        if (BindingContext is AssetViewModel vm)
+        {
+            vm.SearchText = e.NewTextValue ?? string.Empty;
+        }
     }
 
     private void SourcePicker_SelectedIndexChanged(object sender, EventArgs e)

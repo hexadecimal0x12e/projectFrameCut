@@ -98,6 +98,14 @@ public partial class RenderPage : ContentPage
         MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)MaxParallelThreadsCount.Value);
         CancelRender.IsEnabled = false;
         InitializeLogTimer();
+
+#if ANDROID
+        MaxParallelThreadsCount.Maximum = Environment.ProcessorCount;
+        MaxParallelThreadsCount.Value = Math.Max(Environment.ProcessorCount / 2, 6);
+#else
+        MaxParallelThreadsCount.Maximum = Environment.ProcessorCount * 8;
+        MaxParallelThreadsCount.Value = Math.Max(Environment.ProcessorCount * 2, 16);
+#endif
     }
     private void InitializeLogTimer()
     {

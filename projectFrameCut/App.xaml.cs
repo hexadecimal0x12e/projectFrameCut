@@ -121,9 +121,8 @@ namespace projectFrameCut
                 homeItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Folder };
 
                 assetItem = new NavigationViewItem { Content = Localized.AppShell_AssetsTab, Tag = "Assets", Height = 36, Padding = new(4) };
-                assetItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.MapDrive };
-
-                
+                assetItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.SlideShow };
+            
 
                 nav.MenuItems.Add(homeItem);
                 nav.MenuItems.Add(assetItem);
@@ -132,12 +131,6 @@ namespace projectFrameCut
                 settingItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Setting };
                 nav.FooterMenuItems.Add(settingItem);
 
-                //if (bool.TryParse(SettingsManager.GetSetting("DeveloperMode", false.ToString()), out var dbg) ? dbg : false)
-                //{
-                //    debugItem = new NavigationViewItem { Content = Localized.AppShell_DebugTab, Tag = "Debug", Height = 36, Padding = new(4) };
-                //    debugItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Repair };
-                //    nav.MenuItems.Add(debugItem);
-                //}
 
                 try
                 {
@@ -175,9 +168,6 @@ namespace projectFrameCut
                                     break;
                                 case "Setting":
                                     await Shell.Current.Navigation.PushAsync(new MainSettingsPage());
-                                    break;
-                                case "Debug":
-                                    //await Shell.Current.Navigation.PushAsync(new DebuggingMainPage());
                                     break;
                             }
                         }

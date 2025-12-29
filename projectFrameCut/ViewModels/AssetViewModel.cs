@@ -15,7 +15,23 @@ namespace projectFrameCut.ViewModels
 {
     public class AssetViewModel : INotifyPropertyChanged
     {
+        private List<AssetItem> _allAssets = new();
         public ObservableCollection<AssetItem> Assets { get; } = new();
+
+        private string _searchText = string.Empty;
+        public string SearchText
+        {
+            get => _searchText;
+            set
+            {
+                if (_searchText != value)
+                {
+                    _searchText = value;
+                    OnPropertyChanged();
+                    FilterAssets();
+                }
+            }
+        }
 
         private AssetItem? _selectedAsset;
         public AssetItem? SelectedAsset
@@ -43,13 +59,40 @@ namespace projectFrameCut.ViewModels
 
         public void LoadAssets()
         {
+            _allAssets.Clear();
             Assets.Clear();
             if (AssetDatabase.Assets != null)
             {
                 foreach (var asset in AssetDatabase.Assets.Values)
                 {
-                    Assets.Add(asset);
+                    _allAssets.Add(asset);
                 }
+            }
+            FilterAssets();
+        }
+
+        public void FilterAssets()
+        {
+            Assets.Clear();
+            var query = _searchText?.Trim() ?? string.Empty;
+
+            IEnumerable<AssetItem> filtered;
+            if (string.IsNullOrEmpty(query))
+            {
+                filtered = _allAssets;
+            }
+            else
+            {
+                filtered = _allAssets.Where(a =>
+                    (a.Name?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (a.Path?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (a.AssetType.ToString().Contains(query, StringComparison.OrdinalIgnoreCase))
+                );
+            }
+
+            foreach (var asset in filtered)
+            {
+                Assets.Add(asset);
             }
         }
 

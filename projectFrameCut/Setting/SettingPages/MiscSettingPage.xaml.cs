@@ -121,7 +121,7 @@ public partial class MiscSettingPage : ContentPage
                         {
 
 
-                            await DisplayPromptAsync(Localized._Info,
+                            await DisplayPromptAsync(Localized._Warn,
                                 SettingLocalizedResources.Misc_ResetSettings_Warn,
                                 Localized._Confirm,
                                 Localized._Cancel,

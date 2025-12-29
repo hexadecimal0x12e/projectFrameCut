@@ -60,6 +60,17 @@ namespace projectFrameCut.Render.Rendering
         {
             ArgumentNullException.ThrowIfNull(builder, nameof(builder));
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
+            
+            // On Android, limit max threads to avoid overwhelming the main thread (OpenGL compute runs on main thread)
+            // and to prevent thread starvation due to Android's thread limits
+#if ANDROID
+            if (MaxThreads > 4)
+            {
+                Log($"[Render] Android detected: limiting MaxThreads from {MaxThreads} to 4 to prevent main-thread bottleneck.", "warn");
+                MaxThreads = 4;
+            }
+#endif
+            
             BlankFrame = Use16Bit ? Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
             ConcurrentQueue<Exception> exceptions = new();
 
@@ -86,14 +97,13 @@ namespace projectFrameCut.Render.Rendering
                             working = Volatile.Read(ref ThreadWorking);
 
                             Log($"[STAT] " +
-                                $"memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB, " +
-                                $"total prepared: {TotalEnqueued} ({TotalEnqueued / d:p2}), " +
-                                $"total rendered: {finished} ({finished / d:p2}), " +
-                                $"total wrote frames: {wrote} ({wrote / d:p3}), " +
-                                $"total pended to write frames: {builder.FramePendedToWrite.Count(k => !k.Value)}/{builder.FramePendedToWrite.Count}, " +
-                                $"slots {Math.Max(0, MaxThreads - working)}/{MaxThreads}, threads {Threads.Select(t => t.IsAlive).Count()}/{Threads.Count}" +
-                                $"enqueued {Volatile.Read(ref TotalEnqueued)}, " +
-                                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}. ");
+                                $"Overall finished {finished / d:p2}, and {TotalEnqueued /d:p2} is reasy to render. " +
+                                $"Memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB. \r\n" +
+                                $"(Total {TotalEnqueued}/{d} prepared and {finished}/{d} finished, " +
+                                $"pending to render: {Volatile.Read(ref TotalEnqueued) - finished}, " +
+                                $"total write frames: {wrote} wrote and {builder.FramePendedToWrite.Count() - wrote} pended, " +
+                                $"slots {Math.Max(0, MaxThreads - working)}/{MaxThreads}, threads {Threads.Count(t => t.IsAlive)}/{Threads.Count}, " +
+                                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}.)");
                             Thread.Sleep(10000);
                         }
                         catch { }
@@ -155,9 +165,18 @@ namespace projectFrameCut.Render.Rendering
                     }
                     else
                     {
+                        // Add timeout to avoid infinite wait when preparer is slow (e.g., on Android with OpenGL main-thread bottleneck)
+                        int waitIterations = 0;
+                        const int maxWaitIterations = 200; // ~1 second max wait
                         while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > MaxThreads / 2 - 2 && PreparedFrames.Count < MaxThreads / 2)
                         {
                             await Task.Delay(5);
+                            waitIterations++;
+                            if (waitIterations >= maxWaitIterations)
+                            {
+                                Log($"[Render] Wait timeout reached, proceeding with {PreparedFrames.Count} prepared frames.", "warn");
+                                break;
+                            }
                         }
                     }
 
@@ -218,6 +237,12 @@ namespace projectFrameCut.Render.Rendering
                         thread.IsBackground = false;
                         thread.Start();
                         Threads.Add(thread);
+                    }
+
+                    // Periodically clean up finished threads to avoid memory bloat
+                    if (Threads.Count > MaxThreads * 3)
+                    {
+                        Threads.RemoveAll(t => !t.IsAlive);
                     }
                 }
                 else
