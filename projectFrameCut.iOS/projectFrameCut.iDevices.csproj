@@ -89,6 +89,7 @@
 		</Compile>
 
 		<Compile Include="..\projectFrameCut\Asset\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut\Controls\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Localize\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\ViewModels\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\DraftStuff\**\*.cs" Exclude="..\projectFrameCut\DraftStuff\InteractableEditor\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />

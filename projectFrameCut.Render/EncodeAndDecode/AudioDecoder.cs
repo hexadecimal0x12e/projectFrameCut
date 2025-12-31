@@ -102,6 +102,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
             double startTime = (double)startFrame / videoFramerate;
             long timestamp = (long)(startTime / ffmpeg.av_q2d(_fmt->streams[_audioStreamIndex]->time_base));
             ffmpeg.av_seek_frame(_fmt, _audioStreamIndex, timestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
+            
+            // Flush codec buffers after seek
+            ffmpeg.avcodec_flush_buffers(_codec);
 
             // Initialize SwrContext for resampling if needed
             if (_swr == null)
@@ -132,12 +135,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
                             // Convert and copy samples to buffer
                             int outSamples = ffmpeg.swr_get_out_samples(_swr, _frm->nb_samples);
                             
+                            // Limit output samples to remaining buffer space
+                            int remainingSpace = targetSampleCount - samplesCollected;
+                            if (remainingSpace <= 0) break;
+                            int samplesToConvert = Math.Min(outSamples, remainingSpace);
+                            
                             fixed (float* p0 = buffer.Samples[0], p1 = buffer.Samples[1])
                             {
                                 outDataPtr[0] = (byte*)(p0 + samplesCollected);
                                 outDataPtr[1] = (byte*)(p1 + samplesCollected);
 
-                                int converted = ffmpeg.swr_convert(_swr, outDataPtr, outSamples, (byte**)&_frm->data, _frm->nb_samples);
+                                int converted = ffmpeg.swr_convert(_swr, outDataPtr, samplesToConvert, (byte**)&_frm->data, _frm->nb_samples);
                                 if (converted > 0)
                                 {
                                     samplesCollected += converted;

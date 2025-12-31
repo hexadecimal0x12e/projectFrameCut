@@ -29,6 +29,7 @@ using projectFrameCut.Services;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Asset;
 using projectFrameCut.ViewModels;
+using projectFrameCut.Render.Rendering;
 
 
 
@@ -451,6 +452,27 @@ public partial class DraftPage : ContentPage
         AddAClip(element);
 
         return element;
+    }
+
+    private ClipElementUI CreateFromAsset(AssetItem asset, int trackIndex, string fromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase")
+    {
+        var elem = ClipElementUI.CreateClip(
+                           startX: 0,
+                           width: FrameToPixel(asset.isInfiniteLength ? 300 : AssetDatabase.DetermineLengthInFrame(asset, ProjectInfo.targetFrameRate)),
+                           trackIndex: trackIndex,
+                           labelText: asset.Name,
+                           background: ClipElementUI.DetermineAssetColor(asset.AssetType, asset.GetClipMode()),
+                           maxFrames: AssetDatabase.DetermineLengthInFrame(asset, ProjectInfo.targetFrameRate),
+                           relativeStart: 0
+                          );
+
+        elem.sourcePath = asset.Path;
+        elem.ClipType = asset.GetClipMode();
+        elem.FromPlugin = fromPlugin;
+        elem.sourceSecondPerFrame = asset.SecondPerFrame;
+        elem.SecondPerFrameRatio = 1f;
+        elem.ExtraData = new();
+        return elem;
     }
 
     private void RegisterClip(ClipElementUI element, bool resolveOverlap)
@@ -1701,60 +1723,13 @@ public partial class DraftPage : ContentPage
                     Log($"Adding duplicated asset from {path} together with existing one.");
                 }
             }
-
-            var cid = Guid.NewGuid().ToString();
-            var item = new AssetItem
+            var item = AssetDatabase.Create(path, System.IO.Path.GetFileNameWithoutExtension(path), AssetItem.GetAssetType(path));
+            if (item is null)
             {
-                Name = System.IO.Path.GetFileNameWithoutExtension(path),
-                Path = path,
-                Type = ClipElementUI.DetermineClipMode(path),
-                AssetId = cid
-            };
-            item.SecondPerFrame = float.PositiveInfinity;
-            item.FrameCount = 0;
-
-            switch (item.Type)
-            {
-                case ClipMode.VideoClip:
-                    {
-                        try
-                        {
-                            var vid = PluginManager.CreateVideoSource(item.Path);
-                            item.FrameCount = vid.TotalFrames;
-                            item.SecondPerFrame = (float)(1f / vid.Fps);
-                        }
-                        catch (Exception ex)
-                        {
-                            Log(ex, "Add a asset", this);
-                            await DisplayAlertAsync(Localized._Error, Localized.DraftPage_Asset_InvaildSrc(item.Name), Localized._OK);
-                            item.FrameCount = 1024;
-                            item.SecondPerFrame = 1 / 42f;
-                        }
-
-                        break;
-
-
-                    }
-
-                case ClipMode.AudioClip:
-                    {
-                        try
-                        {
-                            var vid = PluginManager.CreateAudioSource(item.Path);
-                            item.FrameCount = vid.Duration;
-                            item.SecondPerFrame = (float)(1f);
-                        }
-                        catch (Exception ex)
-                        {
-                            Log(ex, "Add a asset", this);
-                            await DisplayAlertAsync(Localized._Error, Localized.DraftPage_Asset_InvaildSrc(item.Name), Localized._OK);
-                            item.FrameCount = 1024;
-                            item.SecondPerFrame = 1 / 42f;
-                        }
-                        break;
-                    }
+                await DisplayAlertAsync(Localized._Error, Localized.DraftPage_Asset_InvaildSrc(System.IO.Path.GetFileNameWithoutExtension(path)), Localized._OK);
+                return;
             }
-
+            var cid = item.AssetId;
 
             Log($"Added asset '{item.Path}'s info: {item.FrameCount} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.FrameCount * item.SecondPerFrame} s");
             Assets.AddOrUpdate(cid, item, (_, _) => item);
@@ -1864,23 +1839,7 @@ public partial class DraftPage : ContentPage
                     trackIndex = maxMain;
                 }
 
-                var elem = ClipElementUI.CreateClip(
-                            startX: 0,
-                            width: FrameToPixel((uint)(asset.isInfiniteLength ? 300 : asset.FrameCount ?? 1024)),
-                            trackIndex: trackIndex,
-                            labelText: asset.Name,
-                            background: ClipElementUI.DetermineAssetColor(mode),
-                            maxFrames: (uint)(asset.FrameCount ?? 0U),
-                            relativeStart: 0
-                           );
-
-                elem.sourcePath = asset.Path;
-                elem.ClipType = asset.Type;
-                elem.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-                elem.sourceSecondPerFrame = asset.SecondPerFrame;
-                elem.SecondPerFrameRatio = 1f;
-                elem.ExtraData = new();
-
+                var elem = CreateFromAsset(asset, trackIndex);
                 RegisterClip(elem, true);
                 AddAClip(elem);
 
@@ -1957,23 +1916,7 @@ public partial class DraftPage : ContentPage
                     trackIndex = maxMain;
                 }
 
-                var elem = ClipElementUI.CreateClip(
-                            startX: 0,
-                            width: FrameToPixel((uint)(asset.isInfiniteLength ? 300 : asset.FrameCount ?? 1024)),
-                            trackIndex: trackIndex,
-                            labelText: asset.Name,
-                            background: ClipElementUI.DetermineAssetColor(mode),
-                            maxFrames: (uint)(asset.FrameCount ?? 0U),
-                            relativeStart: 0
-                           );
-
-                elem.sourcePath = asset.Path;
-                elem.ClipType = asset.Type;
-                elem.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-                elem.sourceSecondPerFrame = asset.SecondPerFrame;
-                elem.SecondPerFrameRatio = 1f;
-                elem.ExtraData = new();
-
+                var elem = CreateFromAsset(asset, trackIndex);
                 RegisterClip(elem, true);
                 AddAClip(elem);
 
@@ -2071,22 +2014,7 @@ public partial class DraftPage : ContentPage
                                                 trackIndex = maxMain;
                                             }
 
-                                            var elem = ClipElementUI.CreateClip(
-                                                startX: 0,
-                                                width: FrameToPixel((uint)(asset.isInfiniteLength ? 300 : asset.FrameCount ?? 1024)),
-                                                trackIndex: trackIndex,
-                                                labelText: asset.Name,
-                                                background: ClipElementUI.DetermineAssetColor(mode),
-                                                maxFrames: (uint)(asset.FrameCount ?? 0U),
-                                                relativeStart: 0
-                                               );
-
-                                            elem.sourcePath = asset.Path;
-                                            elem.ClipType = asset.Type;
-                                            elem.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-                                            elem.sourceSecondPerFrame = asset.SecondPerFrame;
-                                            elem.SecondPerFrameRatio = 1f;
-                                            elem.ExtraData = new();
+                                            var elem = CreateFromAsset(asset, trackIndex);
 
                                             await Dispatcher.DispatchAsync(async () =>
                                             {
@@ -2236,13 +2164,6 @@ public partial class DraftPage : ContentPage
     private async Task ReRenderUI()
     {
         SetStateBusy(Localized._Processing);
-        var prevOVLVisible = OverlayLayer.IsVisible;
-        var prevOVLInputTranspert = OverlayLayer.InputTransparent;
-        Dispatcher.Dispatch(() =>
-        {
-            OverlayLayer.IsVisible = true;
-            OverlayLayer.InputTransparent = false;
-        });
         try
         {
             var snapshot = Clips.ToList();
@@ -2354,11 +2275,6 @@ public partial class DraftPage : ContentPage
         }
         finally
         {
-            Dispatcher.Dispatch(() =>
-            {
-                OverlayLayer.IsVisible = prevOVLVisible;
-                OverlayLayer.InputTransparent = prevOVLInputTranspert;
-            });
             SetStateOK();
         }
     }
@@ -2390,13 +2306,6 @@ public partial class DraftPage : ContentPage
     private async Task UpdateAdjacencyForTrack(int trackIndex)
     {
         SetStateBusy(Localized._Processing);
-        var prevOVLVisible = OverlayLayer.IsVisible;
-        var prevOVLInputTranspert = OverlayLayer.InputTransparent;
-        Dispatcher.Dispatch(() =>
-        {
-            OverlayLayer.IsVisible = true;
-            OverlayLayer.InputTransparent = false;
-        });
         if (!Tracks.TryGetValue(trackIndex, out var track)) return;
         var byorder = track.Children.OfType<Border>()
             .Select(b => b.BindingContext)
@@ -2459,17 +2368,13 @@ public partial class DraftPage : ContentPage
 
 
         }
-
-        foreach (var item in byorder)
+        await Dispatcher.DispatchAsync(() =>
         {
-            var i = byorder.IndexOf(item);
-            // capture radius locally to avoid races when dispatcher runs later
-            var r = localRadius[i];
-            await Dispatcher.DispatchAsync(() =>
+            foreach (var item in byorder)
             {
+                var r = localRadius[byorder.IndexOf(item)];
                 try
                 {
-
                     item.Clip.Clip.StrokeShape = new RoundRectangle
                     {
                         CornerRadius = new Microsoft.Maui.CornerRadius(r.tl, r.tr, r.br, r.bl)
@@ -2480,15 +2385,9 @@ public partial class DraftPage : ContentPage
                     Log(e, "update round rectangle", this);
                     SetStateFail("Failed to update clip border.");
                 }
-            });
-
-        }
-
-        Dispatcher.Dispatch(() =>
-        {
-            OverlayLayer.IsVisible = prevOVLVisible;
-            OverlayLayer.InputTransparent = prevOVLInputTranspert;
+            }
         });
+
     }
 
     public void CleanupGhostAndShadow()
@@ -3912,12 +3811,25 @@ public partial class DraftPage : ContentPage
             {"_Settings", SettingsCommand },
             {"DraftPage_MenuBar_Jobs_ManageJobs", ManageJobsCommand },
 #if DEBUG
-            {"Debug_CreatePopup" ,new Command(async () =>
             {
-                string[] type = ["right", "bottom","center","dialog"];
-                var select = await DisplayActionSheetAsync("info", "select", null, type);
-                await ShowAPopup(content: BuildPropertyPanel(_selected), border: _selected?.Clip, clip:_selected, mode: select);
-            }) }
+                "Debug_CreatePopup" ,new Command(async () =>
+                {
+                    string[] type = ["right", "bottom","center","dialog"];
+                    var select = await DisplayActionSheetAsync("info", "select", null, type);
+                    await ShowAPopup(content: BuildPropertyPanel(_selected), border: _selected?.Clip, clip:_selected, mode: select);
+                }) 
+            },
+            {
+                "Debug_ComposeAudio", new Command(() =>
+                {
+                    var clip = DraftImportAndExportHelper.JSONToIClips(DraftImportAndExportHelper.ExportFromDraftPage(this,true));
+                    var buf = AudioComposer.Compose(clip, null, (int)ProjectInfo.targetFrameRate, 44100, 2);
+                    AudioWriter w = new(Path.Combine(MauiProgram.DataPath,$"audioExport-{DateTime.Now:yyyyMMddHHmmss}.wav"));
+                    w.Append(buf);
+                    w.Finish();
+                    w.Dispose();
+                })
+            }
 #endif
         };
 

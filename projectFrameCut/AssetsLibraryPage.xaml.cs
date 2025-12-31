@@ -1,6 +1,11 @@
 #nullable enable
+using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Core;
+using CommunityToolkit.Maui.Extensions;
+using CommunityToolkit.Maui.Views;
 using Microsoft.Maui.Controls;
 using projectFrameCut.Asset;
+using projectFrameCut.Controls;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
@@ -26,12 +31,15 @@ namespace projectFrameCut;
 
 public partial class AssetsLibraryPage : ContentPage
 {
+    private static AssetsLibraryPage? instance = null;
+
     private readonly int ItemSize = 200;
     private readonly int ItemSpacing = 5;
 
     public AssetsLibraryPage()
     {
         InitializeComponent();
+        instance = this;    
         SourcePicker.ItemsSource = new string[] { OperatingSystem.IsWindows() ? Environment.MachineName : "Your devices", Localized.AssetPage_AddASource };
         SourcePicker.SelectedIndex = 0;
     }
@@ -94,15 +102,7 @@ public partial class AssetsLibraryPage : ContentPage
 
 
     DateTime pointerDownTime = DateTime.MinValue;
-
-
-    private async void TapGestureRecognizer_Tapped(object sender, TappedEventArgs e)
-    {
-        if (BindingContext is AssetViewModel vm && sender is Border menuItem && menuItem.BindingContext is AssetItem asset)
-        {
-            await ShowContextMenu(asset);
-        }
-    }
+    string lastClick = "";
 
     private void Border_Loaded(object sender, EventArgs e)
     {
@@ -113,19 +113,30 @@ public partial class AssetsLibraryPage : ContentPage
             var tap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Secondary };
             tap.Tapped += async (_, _) =>
             {
-                // 动态获取当前绑定的 asset，避免闭包捕获旧引用
                 if (border.BindingContext is AssetItem currentAsset)
                 {
                     await ShowContextMenu(currentAsset);
                 }
             };
 
+            var play = new TapGestureRecognizer { NumberOfTapsRequired = 2, Buttons = ButtonsMask.Primary };
+            play.Tapped += async (s, e) =>
+            {
+                if (border.BindingContext is AssetItem currentAsset)
+                {
+                    ShowPreview(currentAsset);
+                }
+            };
+
             // remove existing tap to avoid duplicates
-            var existing = border.GestureRecognizers.OfType<TapGestureRecognizer>().FirstOrDefault();
-            if (existing is not null) border.GestureRecognizers.Remove(existing);
+            var existing = border.GestureRecognizers.OfType<TapGestureRecognizer>().ToList();
+            foreach (var gesture in existing)
+            {
+                border.GestureRecognizers.Remove(gesture);
+            }
             border.GestureRecognizers.Add(tap);
+            border.GestureRecognizers.Add(play);
 #elif ANDROID || IOS
-            // Android/iOS: Single tap to open, long press (>500ms) to show context menu
             var pointerGesture = new PointerGestureRecognizer();
             DateTime pointerDownTime = DateTime.MinValue;
 
@@ -137,9 +148,8 @@ public partial class AssetsLibraryPage : ContentPage
             pointerGesture.PointerReleased += async (s, e) =>
             {
                 var duration = (DateTime.Now - pointerDownTime).TotalMilliseconds;
-                // 动态获取当前绑定的 asset，避免闭包捕获旧引用
                 if (border.BindingContext is not AssetItem currentAsset) return;
-                
+
                 if (duration >= 500)
                 {
                     Dispatcher.Dispatch(async () =>
@@ -155,19 +165,71 @@ public partial class AssetsLibraryPage : ContentPage
                 }
                 else if (duration > 0)
                 {
-                    AssetsCollectionView.SelectedItem = currentAsset;
+                    if (lastClick == currentAsset.AssetId)
+                    {
+                        ShowPreview(currentAsset);
+                    }
+                    else
+                    {
+                        lastClick = currentAsset.AssetId;
+                        AssetsCollectionView.SelectedItem = currentAsset;
+
+                    }
                 }
             };
 
-            // Remove any existing pointer gesture recognizer to avoid duplicates
             var existingPointer = border.GestureRecognizers.OfType<PointerGestureRecognizer>().FirstOrDefault();
             if (existingPointer is not null) border.GestureRecognizers.Remove(existingPointer);
 
             border.GestureRecognizers.Add(pointerGesture);
 #endif
+
+            ToolTipProperties.SetText(border, Localized.AssetPage_DoubleClickToPreview);
         }
     }
 
+    private async void ShowPreview(AssetItem currentAsset)
+    {
+        try
+        {
+            if((currentAsset.AssetType is AssetType.Font) || (currentAsset.AssetType is AssetType.Other))
+            {
+                if (!string.IsNullOrWhiteSpace(currentAsset.Path) && File.Exists(currentAsset.Path))
+                {
+                    await FileSystemService.OpenFileAsync(currentAsset.Path);
+                }
+            }
+            else
+            {
+                await Dispatcher.DispatchAsync(async () =>
+                {
+                    await Navigation.PushAsync(new AssetPlaybackPage(currentAsset));
+                });
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Showing asset playback popup", this);
+            await DisplayAlertAsync(Localized._Error, Localized._ExceptionTemplate(ex), Localized._OK);
+        }
+
+
+
+    }
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        try
+        {
+            AssetPlaybackPage.StopMedia();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Stopping media on AssetsLibraryPage appearing", this);
+        }
+    }
 
     private async Task ShowContextMenu(AssetItem asset)
     {
@@ -175,6 +237,8 @@ public partial class AssetsLibraryPage : ContentPage
         {
             var verbs = new List<string>
             {
+                Localized.AssetPage_ShowPreview,
+                Localized.AssetPage_OpenInSystem,
                 Localized.HomePage_ProjectContextMenu_Rename,
                 Localized.HomePage_ProjectContextMenu_Delete
             };
@@ -184,14 +248,23 @@ public partial class AssetsLibraryPage : ContentPage
                 switch (verbs.IndexOf(action))
                 {
                     case 0:
-                        var newName = await DisplayPromptAsync("Rename", "New name:", initialValue: asset.Name);
+                        ShowPreview(asset);
+                        break;
+                    case 1:
+                        if (!string.IsNullOrWhiteSpace(asset.Path) && File.Exists(asset.Path))
+                        {
+                            await FileSystemService.OpenFileAsync(asset.Path);
+                        }
+                        break; 
+                    case 2:
+                        var newName = await DisplayPromptAsync(Localized._Info, Localized.AssetPage_InputNewName, initialValue: asset.Name);
                         if (!string.IsNullOrWhiteSpace(newName) && newName != asset.Name)
                         {
                             vm.RenameAsset(asset, newName);
                         }
                         break;
 
-                    case 1:
+                    case 3:
                         var confirm0 = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm0(asset.Name), Localized._Confirm, Localized._Cancel);
                         if (!confirm0) return;
                         var confirm1 = await DisplayPromptAsync(Localized._Warn, Localized.AssetPage_DeleteAAsset_Confirm1(asset.Name), Localized._OK, Localized._Cancel, asset.Name);
@@ -215,11 +288,7 @@ public partial class AssetsLibraryPage : ContentPage
         {
             if (i.BindingContext is AssetItem a)
             {
-                if (!string.IsNullOrWhiteSpace(a.Path) && File.Exists(a.Path))
-                {
-                    await FileSystemService.OpenFileAsync(a.Path);
-
-                }
+                ShowPreview(a);
             }
         }
     }

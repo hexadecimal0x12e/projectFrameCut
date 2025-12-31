@@ -23,12 +23,31 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private bool _isHeaderWritten = false;
         private bool _isDisposed = false;
 
-        public AudioWriter(string outputPath, int sampleRate = 44100, int channels = 2, string codecName = "libmp3lame")
+        public AudioWriter(string outputPath, int sampleRate = 44100, int channels = 2, string? codecName = null)
         {
             _outputPath = outputPath;
             _sampleRate = sampleRate;
             _channels = channels;
-            _codecName = codecName;
+            
+            // Auto-detect codec based on file extension if not specified
+            if (string.IsNullOrEmpty(codecName))
+            {
+                string ext = Path.GetExtension(outputPath).ToLowerInvariant();
+                _codecName = ext switch
+                {
+                    ".wav" => "pcm_s16le",
+                    ".mp3" => "libmp3lame",
+                    ".aac" or ".m4a" => "aac",
+                    ".ogg" => "libvorbis",
+                    ".flac" => "flac",
+                    _ => "pcm_s16le"  // Default to PCM
+                };
+            }
+            else
+            {
+                _codecName = codecName;
+            }
+            
             Init();
         }
 
@@ -47,7 +66,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _codecCtx->codec_id = codec->id;
             _codecCtx->codec_type = AVMediaType.AVMEDIA_TYPE_AUDIO;
             _codecCtx->sample_rate = _sampleRate;
-            _codecCtx->sample_fmt = AVSampleFormat.AV_SAMPLE_FMT_FLTP; 
+            
+            // Use appropriate sample format for the codec
+            // PCM codecs need S16/S32, while others typically use FLTP
+            AVSampleFormat sampleFmt = _codecName switch
+            {
+                "pcm_s16le" or "pcm_s16be" => AVSampleFormat.AV_SAMPLE_FMT_S16,
+                "pcm_s32le" or "pcm_s32be" => AVSampleFormat.AV_SAMPLE_FMT_S32,
+                "flac" => AVSampleFormat.AV_SAMPLE_FMT_S16,
+                _ => AVSampleFormat.AV_SAMPLE_FMT_FLTP
+            };
+            _codecCtx->sample_fmt = sampleFmt;
             _codecCtx->bit_rate = 192000;
             
             AVChannelLayout chLayout;
@@ -128,7 +157,22 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private void EncodeFrame(AVFrame* frame)
         {
-            FFmpegHelper.Throw(ffmpeg.avcodec_send_frame(_codecCtx, frame), "avcodec_send_frame");
+            int sendRet = ffmpeg.avcodec_send_frame(_codecCtx, frame);
+            // When flushing (frame == null), EOF is expected and not an error
+            if (sendRet == ffmpeg.AVERROR_EOF)
+            {
+                return;
+            }
+            // EAGAIN means we need to receive packets first
+            if (sendRet == ffmpeg.AVERROR(ffmpeg.EAGAIN))
+            {
+                // Drain packets first, then retry
+            }
+            else if (sendRet < 0)
+            {
+                FFmpegHelper.Throw(sendRet, "avcodec_send_frame");
+            }
+            
             while (true)
             {
                 AVPacket* pkt = ffmpeg.av_packet_alloc();
@@ -148,20 +192,40 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
+        private bool _isFinished = false;
+        
         public void Finish()
         {
-            if (_isDisposed) return;
-            EncodeFrame(null); // Flush
-            if (_isHeaderWritten)
+            if (_isDisposed || _isFinished) return;
+            _isFinished = true;
+            
+            // Only flush and write trailer if we actually wrote something
+            if (_isHeaderWritten && _codecCtx != null)
             {
-                ffmpeg.av_write_trailer(_fmtCtx);
+                // Flush encoder
+                EncodeFrame(null);
+                
+                // Write trailer
+                if (_fmtCtx != null)
+                {
+                    ffmpeg.av_write_trailer(_fmtCtx);
+                }
             }
         }
 
         public void Dispose()
         {
             if (_isDisposed) return;
-            Finish();
+            
+            try
+            {
+                Finish();
+            }
+            catch
+            {
+                // Ignore errors during finish in dispose
+            }
+            
             if (_frame != null) { fixed (AVFrame** p = &_frame) ffmpeg.av_frame_free(p); }
             if (_codecCtx != null) { fixed (AVCodecContext** p = &_codecCtx) ffmpeg.avcodec_free_context(p); }
             if (_fmtCtx != null)

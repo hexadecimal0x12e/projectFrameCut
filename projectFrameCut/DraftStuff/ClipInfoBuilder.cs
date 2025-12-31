@@ -30,6 +30,22 @@ namespace projectFrameCut.DraftStuff
 
         static JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
 
+        /// <summary>
+        /// Gets the default color hex string based on clip type.
+        /// </summary>
+        private static string GetDefaultColorHex(projectFrameCut.Shared.ClipMode clipType)
+        {
+            return clipType switch
+            {
+                projectFrameCut.Shared.ClipMode.VideoClip => Colors.CornflowerBlue.ToArgbHex(),
+                projectFrameCut.Shared.ClipMode.PhotoClip => Colors.MediumSeaGreen.ToArgbHex(),
+                projectFrameCut.Shared.ClipMode.AudioClip => Colors.Goldenrod.ToArgbHex(),
+                projectFrameCut.Shared.ClipMode.SubtitleClip => Colors.SlateGray.ToArgbHex(),
+                projectFrameCut.Shared.ClipMode.SolidColorClip => Colors.OrangeRed.ToArgbHex(),
+                _ => Colors.Gray.ToArgbHex(),
+            };
+        }
+
 
         public ClipInfoBuilder(DraftPage page)
         {
@@ -57,10 +73,71 @@ namespace projectFrameCut.DraftStuff
 
         public View Build(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
+            // Get current color or default
+            string currentColorHex = clip.ClipColor ?? GetDefaultColorHex(clip.ClipType);
+
             var ppb = new PropertyPanelBuilder()
             .AddText(new SingleLineLabel(Localized.PropertyPanel_General, 20))
             .AddEntry("displayName", Localized.PropertyPanel_General_DisplayName, clip.displayName, "Clip 1")
             .AddEntry("speedRatio", Localized.PropertyPanel_General_SpeedRatio, clip.SecondPerFrameRatio.ToString(), "1")
+            .AddCustomChild(new SingleLineLabel("Clip Color"), (invoker) =>
+            {
+                var colorPreview = new BoxView
+                {
+                    WidthRequest = 30,
+                    HeightRequest = 30,
+                    CornerRadius = 5,
+                    Color = Color.FromArgb(currentColorHex),
+                    VerticalOptions = LayoutOptions.Center
+                };
+
+                var colorEntry = new Entry
+                {
+                    Text = currentColorHex,
+                    Placeholder = "#RRGGBB",
+                    WidthRequest = 100,
+                    VerticalOptions = LayoutOptions.Center
+                };
+
+                colorEntry.TextChanged += (s, e) =>
+                {
+                    try
+                    {
+                        var color = Color.FromArgb(e.NewTextValue);
+                        colorPreview.Color = color;
+                    }
+                    catch { }
+                };
+
+                colorEntry.Unfocused += (s, e) =>
+                {
+                    invoker(colorEntry.Text);
+                };
+
+                var resetButton = new Button
+                {
+                    Text = "↺",
+                    WidthRequest = 40,
+                    HeightRequest = 35,
+                    Padding = 0,
+                    VerticalOptions = LayoutOptions.Center
+                };
+                resetButton.Clicked += (s, e) =>
+                {
+                    var defaultColor = GetDefaultColorHex(clip.ClipType);
+                    colorEntry.Text = defaultColor;
+                    colorPreview.Color = Color.FromArgb(defaultColor);
+                    invoker(null!); // Reset to default
+                };
+
+                var layout = new HorizontalStackLayout
+                {
+                    Spacing = 8,
+                    Children = { colorPreview, colorEntry, resetButton }
+                };
+
+                return layout;
+            }, "clipColor", currentColorHex)
             .AddSeparator(null);
 
             if (clip.Effects != null)
@@ -114,6 +191,20 @@ namespace projectFrameCut.DraftStuff
 
             ppb.PropertyChanged += async (s, e) =>
             {
+                if (e.Id == "clipColor")
+                {
+                    if (e.Value == null || string.IsNullOrWhiteSpace(e.Value?.ToString()))
+                    {
+                        clip.ClipColor = null; // Reset to default
+                    }
+                    else
+                    {
+                        clip.ClipColor = e.Value?.ToString();
+                    }
+                    clip.ApplyClipColor();
+                    handler?.Invoke(s, e);
+                    return;
+                }
                 if (e.Id.StartsWith("Effect|"))
                 {
                     var parts = e.Id.Split('|');

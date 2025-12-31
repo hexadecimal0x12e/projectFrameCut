@@ -42,6 +42,8 @@ namespace projectFrameCut.LivePreview
             return destPath;
         }
 
+
+
         public void UpdateDraft(DraftStructureJSON json)
         {
             var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.

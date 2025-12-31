@@ -159,6 +159,17 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public int Width { get; set; }
         public int Height { get; set; }
 
+        public ClipMode GetClipMode()
+        {
+            return AssetType switch
+            {
+                AssetType.Video => ClipMode.VideoClip,
+                AssetType.Image => ClipMode.PhotoClip,
+                AssetType.Audio => ClipMode.AudioClip,
+                _ => Type
+            };
+        }
+
         [JsonIgnore]
         public object? Background { get; set; }
 
@@ -208,6 +219,18 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
                 ".jpg" or ".jpeg" or ".png" or ".bmp" or ".svg" or ".gif" => AssetType.Image,
                 ".ttf" or ".otf" => AssetType.Font,
                 _ => AssetType.Other
+            };
+        }
+
+        public  static string GetAssetTypeDisplayName(AssetType assetType)
+        {
+            return assetType switch
+            {
+                AssetType.Video => "Video",
+                AssetType.Audio => "Audio",
+                AssetType.Image => "Image",
+                AssetType.Font => "Font",
+                _ => "Other"
             };
         }
 

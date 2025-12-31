@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
+
 #if WINDOWS
 using System.Runtime.InteropServices;
 using System.Text;
@@ -27,8 +28,13 @@ namespace projectFrameCut.Services
         {
             using var stream = new MemoryStream([0]);
             var fileSaverResult = await FileSaver.Default.SaveAsync(defaultName, stream, ct);
-            if (fileSaverResult.IsSuccessful)
+            if (fileSaverResult.IsSuccessful && fileSaverResult.FilePath is not null)
             {
+                try
+                {
+                    File.Delete(fileSaverResult.FilePath);
+                }
+                catch (Exception) { }
                 return fileSaverResult.FilePath;
             }
             else
@@ -115,7 +121,7 @@ namespace projectFrameCut.Services
                 var intent = new Intent(Intent.ActionView);
                 intent.SetDataAndType(uri, "resource/folder");
                 intent.AddFlags(ActivityFlags.NewTask);
-                
+
                 try
                 {
                     ctx.StartActivity(intent);
@@ -151,13 +157,10 @@ namespace projectFrameCut.Services
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(filePath))
+                if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
                     return false;
 
 #if WINDOWS
-                // Windows 平台
-                if (!File.Exists(filePath))
-                    return false;
 
                 // 使用默认关联程序打开文件
                 var processInfo = new ProcessStartInfo
@@ -171,40 +174,18 @@ namespace projectFrameCut.Services
                 {
                     return process != null;
                 }
-
-#elif ANDROID
-                if (!File.Exists(filePath))
-                    return false;
-
-                var ctx = MainApplication.MainContext ?? throw new InvalidOperationException("MainApplication.MainContext is null");
-                var file = new Java.IO.File(filePath);
-                var uri = AndroidX.Core.Content.FileProvider.GetUriForFile(ctx, $"{ctx.PackageName}.fileprovider", file);
-                
-                var intent = new Intent(Intent.ActionView);
-                intent.SetData(uri);
-                intent.AddFlags(ActivityFlags.NewTask | ActivityFlags.GrantReadUriPermission);
-                
-                try
-                {
-                    ctx.StartActivity(intent);
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-
-#elif IOS || MACCATALYST
-                // iOS/Mac Catalyst 平台 - 不支持直接打开文件
-                return false;
-
 #else
-                return false;
+                await Launcher.OpenAsync(new OpenFileRequest
+                {
+                    File = new ReadOnlyFile(filePath)
+                });
+                return true;
 #endif
+
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error opening file: {ex.Message}");
+                Log(ex, $"Open file {filePath}");
                 return false;
             }
         }
@@ -270,7 +251,7 @@ namespace projectFrameCut.Services
             try
             {
                 var ctx = MainApplication.MainContext ?? throw new InvalidOperationException("MainApplication.MainContext is null");
-                
+
                 // 尝试使用常见的文件管理器
                 var fileManagerPackages = new[]
                 {

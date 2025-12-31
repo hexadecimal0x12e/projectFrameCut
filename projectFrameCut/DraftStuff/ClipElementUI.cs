@@ -3,6 +3,7 @@ using projectFrameCut.Render;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -12,6 +13,7 @@ using Path = System.IO.Path;
 
 namespace projectFrameCut.DraftStuff
 {
+    [DebuggerDisplay("{displayName}, {ClipType}")]
     public class ClipElementUI
     {
         public required string Id { get; set; }
@@ -49,12 +51,35 @@ namespace projectFrameCut.DraftStuff
         public string TypeName { get; set; } = string.Empty;
         public string? sourcePath { get; set; } = null;
 
+        public string? ClipColor { get; set; } = null;
+
         public Dictionary<string, IEffect>? Effects { get; set; } = new();
         public Dictionary<string, object> ExtraData { get; set; } = new();
 
         public void ApplySpeedRatio()
         {
             Clip.WidthRequest = origLength * SecondPerFrameRatio;
+        }
+
+        public void ApplyClipColor()
+        {
+            if (!string.IsNullOrWhiteSpace(ClipColor))
+            {
+                try
+                {
+                    var color = Color.FromArgb(ClipColor);
+                    Clip.Background = new SolidColorBrush(color);
+                }
+                catch
+                {
+                    // Invalid color string, use default
+                    Clip.Background = DetermineAssetColor(ClipType);
+                }
+            }
+            else
+            {
+                Clip.Background = DetermineAssetColor(ClipType);
+            }
         }
 
 
@@ -69,15 +94,15 @@ namespace projectFrameCut.DraftStuff
         private static double _defaultClipHeight = 62;
 
         public static ClipElementUI CreateClip(
-    double startX,
-    double width,
-    int trackIndex,
-    string? id = null,
-    string? labelText = null,
-    Brush? background = null,
-    Border? prototype = null,
-    uint relativeStart = 0,
-    uint maxFrames = 0)
+        double startX,
+        double width,
+        int trackIndex,
+        string? id = null,
+        string? labelText = null,
+        Brush? background = null,
+        Border? prototype = null,
+        uint relativeStart = 0,
+        uint maxFrames = 0)
         {
 
             string cid = id ?? Guid.NewGuid().ToString();
@@ -167,29 +192,22 @@ namespace projectFrameCut.DraftStuff
             element.Clip.Content = new Grid
             {
                 Children =
-            {
-                element.LeftHandle,
-                cont,
-                element.RightHandle
-            },
-                ColumnDefinitions =
-            {
-                new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) },
-                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) }
-            }
+                {
+                    element.LeftHandle,
+                    cont,
+                    element.RightHandle
+                },
+                    ColumnDefinitions =
+                {
+                    new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) },
+                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                    new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) }
+                }
             };
 
             element.Clip.BindingContext = element;
             element.LeftHandle.BindingContext = element;
             element.RightHandle.BindingContext = element;
-
-            //element.Effects = new Dictionary<string, IEffect>
-            //{
-            //    {"__Internal_Place__", new PlaceEffect{ Index = int.MinValue, Enabled = false  } },
-            //    {"__Internal_Crop__", new CropEffect{ Index = int.MinValue + 1, Enabled = false  } }
-            //};
-
 
             return element;
         }
@@ -212,7 +230,7 @@ namespace projectFrameCut.DraftStuff
             return ClipMode.Special; // fallback
         }
 
-        public static Brush DetermineAssetColor(ClipMode mode) 
+        public static Brush DetermineAssetColor(ClipMode? mode) 
         {
             return mode switch
             {
@@ -222,6 +240,16 @@ namespace projectFrameCut.DraftStuff
                 ClipMode.SubtitleClip => new SolidColorBrush(Colors.SlateGray),
                 ClipMode.SolidColorClip => new SolidColorBrush(Colors.OrangeRed),
                 _ => new SolidColorBrush(Colors.Gray),
+            };
+        }
+        public static Brush DetermineAssetColor(AssetType type, ClipMode? mode = null) 
+        {
+            return type switch
+            {
+                AssetType.Video => new SolidColorBrush(Colors.CornflowerBlue),
+                AssetType.Image => new SolidColorBrush(Colors.MediumSeaGreen),
+                AssetType.Audio => new SolidColorBrush(Colors.Goldenrod),
+                _ => DetermineAssetColor(mode)
             };
         }
 

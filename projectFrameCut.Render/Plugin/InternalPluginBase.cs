@@ -115,13 +115,14 @@ public class InternalPluginBase : IPluginBase
     IClip IPluginBase.ClipCreator(JsonElement element)
     {
         ClipMode type = (ClipMode)element.GetProperty("ClipType").GetInt32();
-        Console.WriteLine($"Found clip {type}, name: {element.GetProperty("Name").GetString()}, id: {element.GetProperty("Id").GetString()}");
+        Logger.Log($"Found clip {type}, name: {element.GetProperty("Name").GetString()}, id: {element.GetProperty("Id").GetString()}");
         return type switch
         {
             ClipMode.VideoClip => element.Deserialize<VideoClip>() ?? throw new NullReferenceException(),
             ClipMode.PhotoClip => element.Deserialize<PhotoClip>() ?? throw new NullReferenceException(),
             ClipMode.SolidColorClip => element.Deserialize<SolidColorClip>() ?? throw new NullReferenceException(),
             ClipMode.TextClip => element.Deserialize<TextClip>() ?? throw new NullReferenceException(),
+            ClipMode.AudioClip => element.Deserialize<SoundTrackToClipWrapper>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
         };
     }
@@ -129,7 +130,7 @@ public class InternalPluginBase : IPluginBase
     ISoundTrack IPluginBase.SoundTrackCreator(JsonElement element)
     {
         TrackMode type = (TrackMode)element.GetProperty("TrackType").GetInt32();
-        Console.WriteLine($"Found sound track {type}, name: {element.GetProperty("Name").GetString()}, id: {element.GetProperty("Id").GetString()}");
+        Logger.Log($"Found sound track {type}, name: {element.GetProperty("Name").GetString()}, id: {element.GetProperty("Id").GetString()}");
         return type switch
         {
             TrackMode.NormalTrack => element.Deserialize<NormalSoundTrack>() ?? throw new NullReferenceException(),

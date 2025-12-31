@@ -88,7 +88,19 @@ namespace projectFrameCut.Asset
 
         public static bool Add(string path, string name, AssetType type, out AssetItem asset)
         {
-            asset = new AssetItem
+            asset = Create(path, name, type);
+            if (asset is null) return false;
+            if (AssetDatabase.Assets.TryAdd(asset.AssetId, asset))
+            {
+                File.Copy(path, asset.Path);
+                File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftPage.DraftJSONOption));
+                return true;
+            }
+            return false;
+        }
+        public static AssetItem? Create(string path, string name, AssetType type)
+        {
+            var asset = new AssetItem
             {
                 AssetId = Guid.NewGuid().ToString(),
                 Name = name,
@@ -96,7 +108,7 @@ namespace projectFrameCut.Asset
                 CreatedAt = DateTime.Now,
                 ThumbnailPath = type == AssetType.Image ? path : null
             };
-            var destPath = Path.Combine(MauiProgram.DataPath, "My Assets", $"{Path.GetFileNameWithoutExtension(path)}-{asset.AssetId}{Path.GetExtension(path)}");
+            var destPath = Path.Combine(MauiProgram.DataPath, "My Assets", $"{asset.AssetId}{Path.GetExtension(path)}");
             asset.Path = destPath;
             asset.SecondPerFrame = -1;
             asset.FrameCount = 0;
@@ -173,13 +185,7 @@ namespace projectFrameCut.Asset
                         break;
                     }
             }
-            if(AssetDatabase.Assets.TryAdd(asset.AssetId, asset))
-            {
-                File.Copy(path, destPath);
-                File.WriteAllText(Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json"), JsonSerializer.Serialize(Assets, DraftPage.DraftJSONOption));
-                return !fail;
-            }
-            return false;
+            return fail ? null : asset; 
         }
 
         public static bool Remove(string assetId)
@@ -222,6 +228,18 @@ namespace projectFrameCut.Asset
             return false;
         }
 
+
+        public static uint DetermineLengthInFrame(AssetItem asset, uint targetFPS)
+        {
+            if (asset.isInfiniteLength) return 0U;
+            return (uint)(asset.AssetType switch
+            {
+                AssetType.Video => asset.FrameCount ?? 0,
+                AssetType.Audio => (asset.FrameCount ?? 0) * targetFPS, // Duration is in seconds, multiply by targetFPS to get frames
+                AssetType.Image => 0,
+                _ => asset.FrameCount ?? 0
+            });
+        }
 
     }
 

@@ -98,6 +98,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Advanced_UseSystemFont",
+        "Value": "\u4F7F\u7528\u7CFB\u7EDF\u9ED8\u8BA4\u5B57\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Advanced_WarnLabel",
         "Value": "\u8B66\u544A\uFF1A\u968F\u610F\u4FEE\u6539\u8FD9\u4E9B\u9009\u9879\u53EF\u80FD\u5BFC\u81F4projectFrameCut\u4E0D\u7A33\u5B9A\uFF0C\u9020\u6210\u6570\u636E\u4E22\u5931\u7B49\u610F\u5916\u7684\u60C5\u51B5\u3002\u8BF7\u8C28\u614E\u4FEE\u6539\u4ED6\u4EEC\u3002",
         "Mode": "ConstString",
@@ -1293,14 +1301,6 @@
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
         "Value": "\u9009\u62E9\u7528\u4E8E\u7F16\u8F91\u65F6\u786C\u4EF6\u52A0\u901F\u7684GPU",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Advanced_UseSystemFont",
-        "Value": "\u4F7F\u7528\u7CFB\u7EDF\u9ED8\u8BA4\u5B57\u4F53",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2723,6 +2723,15 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_UseSystemFont",
+        "Value": "Use system default font",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -4136,6 +4145,15 @@
       {
         "Id": "Edit_Denoise",
         "Value": "\u70BA\u62D6\u52D5\u64CD\u4F5C\u964D\u566A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_UseSystemFont",
+        "Value": "\u4F7F\u7528\u7CFB\u7D71\u9810\u8A2D\u5B57\u578B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5560,6 +5578,15 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_UseSystemFont",
+        "Value": "\u30B7\u30B9\u30C6\u30E0\u30C7\u30D5\u30A9\u30EB\u30C8\u30D5\u30A9\u30F3\u30C8\u3092\u4F7F\u7528\u3059\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -6974,6 +7001,15 @@
       {
         "Id": "Edit_Denoise",
         "Value": "\uB4DC\uB798\uADF8 \uC791\uC5C5 \uB178\uC774\uC988 \uAC10\uC18C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_UseSystemFont",
+        "Value": "\uC2DC\uC2A4\uD15C \uAE30\uBCF8 \uAE00\uAF34 \uC0AC\uC6A9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8398,6 +8434,15 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_UseSystemFont",
+        "Value": "Utiliser la police syst\u00E8me par d\u00E9faut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -9812,6 +9857,15 @@
       {
         "Id": "Edit_Denoise",
         "Value": "\u51CF\u62D6\u62FD\u4E4B\u6270",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_UseSystemFont",
+        "Value": "\u7528\u7CFB\u7EDF\u9884\u8BBE\u5B57\u4F53",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
