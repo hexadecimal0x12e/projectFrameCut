@@ -4,6 +4,8 @@
              x:Class="projectFrameCut.DraftPage"
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:ie="clr-namespace:InteractableEditor"
+             xmlns:local="clr-namespace:projectFrameCut"
+             x:DataType="local:DraftPage"
              Shell.NavBarIsVisible="False"
              Title="">
     <ContentPage.MenuBarItems>

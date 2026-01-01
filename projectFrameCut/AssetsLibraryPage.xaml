@@ -4,7 +4,10 @@
              x:Class="projectFrameCut.AssetsLibraryPage"
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:vm="clr-namespace:projectFrameCut.ViewModels"
+             xmlns:asset="clr-namespace:projectFrameCut.Render.RenderAPIBase.Project;assembly=projectFrameCut.Render.RenderAPIBase"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:converters="clr-namespace:projectFrameCut.Converters"
+             x:DataType="vm:AssetViewModel"
              Title="{l:Localized Key=AppShell_AssetsTab}">
 
     <ContentPage.ToolbarItems>
@@ -18,6 +21,7 @@
     <ContentPage.Resources>
         <ResourceDictionary>
             <toolkit:IsNotNullConverter x:Key="IsNotNullConverter" />
+            <converters:AssetTypeToLocalizedConverter x:Key="AssetTypeToLocalizedConverter" />
         </ResourceDictionary>
     </ContentPage.Resources>
 
@@ -49,7 +53,7 @@
                 <GridItemsLayout x:Name="AssetsGridLayout" Orientation="Vertical" Span="6" VerticalItemSpacing="5" HorizontalItemSpacing="5" />
             </CollectionView.ItemsLayout>
             <CollectionView.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="asset:AssetItem">
                     <Border StrokeThickness="0" BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2A2A2A}" HeightRequest="150" WidthRequest="200"  Loaded="Border_Loaded">
                         <VisualStateManager.VisualStateGroups>
                             <VisualStateGroup Name="CommonStates">
@@ -98,7 +102,7 @@
                         <Label Grid.Row="0" Grid.Column="1" Text="{Binding SelectedAsset.Name}" />
 
                         <Label Grid.Row="1" Grid.Column="0" Text="{l:Localized Key=AssetPage_Info_Type}" FontAttributes="Bold" />
-                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding SelectedAsset.AssetType}" />
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding SelectedAsset.AssetType, Converter={StaticResource AssetTypeToLocalizedConverter}}" />
 
                         <Label Grid.Row="2" Grid.Column="0" Text="{l:Localized Key=AssetPage_Info_CreatedAt}" FontAttributes="Bold" />
                         <Label Grid.Row="2" Grid.Column="1" Text="{Binding SelectedAsset.CreatedAt}" />
@@ -108,7 +112,7 @@
                     </Grid>
                 </VerticalStackLayout>
                 <VerticalStackLayout HorizontalOptions="End" IsVisible="{OnIdiom Desktop=True, Default=False}">
-                    <Image Grid.Row="0" BindingContext="{Binding SelectedAsset}" Source="{Binding ThumbnailPath}" HorizontalOptions="End" HeightRequest="150" WidthRequest="200" Margin="0">
+                    <Image Grid.Row="0" x:DataType="asset:AssetItem" BindingContext="{Binding SelectedAsset}" Source="{Binding ThumbnailPath}" HorizontalOptions="End" HeightRequest="150" WidthRequest="200" Margin="0">
                         <Image.GestureRecognizers>
                             <TapGestureRecognizer NumberOfTapsRequired="2" Tapped="OnAssetPreviewDoubleClicked"/>
                         </Image.GestureRecognizers>

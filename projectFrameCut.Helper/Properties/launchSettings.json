@@ -2,7 +2,9 @@
   "profiles": {
     "projectFrameCut.Helper": {
       "commandName": "Project",
-      "commandLineArgs": "crashForm \"D:\\code\\playground\\projectFrameCut\\Crashlogs\\Crashlog-2025-12-24-09-08-25.log\""
+      "environmentVariables": {
+        "asbPath": "D:\\code\\projectFrameCut\\projectFrameCut\\bin\\Debug\\net10.0-windows10.0.19041.0\\win-x64\\projectFrameCut.dll"
+      }
     }
   }
 }

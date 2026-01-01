@@ -1,4 +1,5 @@
 using LocalizedResources;
+using Microsoft.Maui.Dispatching;
 using Microsoft.Maui.Graphics;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.PropertyPanel;
@@ -12,11 +13,10 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using Microsoft.Maui.Dispatching;
-using System.Runtime.InteropServices;
 
 
 
@@ -891,12 +891,25 @@ public partial class HomePage : ContentPage
 
     private async Task GoRender(ProjectsViewModel vmItem)
     {
-        ProjectJSONStructure project = new();
-        DraftStructureJSON draft = new();
         try
         {
-            project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(vmItem._projectPath, "project.json")), DraftPage.DraftJSONOption);
-            draft = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(vmItem._projectPath, "timeline.json")), DraftPage.DraftJSONOption);
+            var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(vmItem._projectPath, "project.json")), DraftPage.DraftJSONOption);
+            var tml = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(vmItem._projectPath, "timeline.json")), DraftPage.DraftJSONOption);
+            if (tml is null || project is null)
+            {
+                await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
+                return;
+            }
+            (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(tml, project);
+            var draftPage = new DraftPage(project ?? new ProjectJSONStructure(), dict, new(), trackCount, vmItem._projectPath, project?.projectName ?? "?", false);
+            var draft = DraftImportAndExportHelper.ExportFromDraftPage(draftPage, true);
+            var renderPage = new RenderPage(vmItem._projectPath, tml.Duration, project, draft);
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                Shell.SetTabBarIsVisible(renderPage, false);
+                Shell.SetNavBarIsVisible(renderPage, true);
+                await Navigation.PushAsync(renderPage);
+            });
 
         }
         catch (Exception ex)
@@ -905,18 +918,7 @@ public partial class HomePage : ContentPage
             await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n({ex.Message})", Localized._OK);
             return;
         }
-        if(draft is null || project is null)
-        {
-            await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
-            return;
-        }
-        var page = new RenderPage(vmItem._projectPath, draft.Duration, project, draft);
-        await Dispatcher.DispatchAsync(async () =>
-        {
-            Shell.SetTabBarIsVisible(page, false);
-            Shell.SetNavBarIsVisible(page, true);
-            await Navigation.PushAsync(page);
-        });
+
     }
 
     private async Task RenameProject(ProjectsViewModel vmItem)

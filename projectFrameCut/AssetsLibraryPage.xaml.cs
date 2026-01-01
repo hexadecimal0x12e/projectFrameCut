@@ -40,7 +40,7 @@ public partial class AssetsLibraryPage : ContentPage
     {
         InitializeComponent();
         instance = this;    
-        SourcePicker.ItemsSource = new string[] { OperatingSystem.IsWindows() ? Environment.MachineName : "Your devices", Localized.AssetPage_AddASource };
+        SourcePicker.ItemsSource = new string[] { OperatingSystem.IsWindows() ? Environment.MachineName : "Your devices",/* Localized.AssetPage_AddASource */};
         SourcePicker.SelectedIndex = 0;
     }
 

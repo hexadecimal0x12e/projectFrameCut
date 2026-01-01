@@ -1,6 +1,8 @@
-﻿using System;
+﻿using projectFrameCut.Shared;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -11,42 +13,57 @@ namespace projectFrameCut.WinUI
         public static bool LogWindowShowing = false;
 
         [STAThread] //avoid failed to initialize COM library error, cause a lot of issue like IME not work at all...
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             System.Threading.Thread.CurrentThread.Name = "App Main thread";
             try
             {
+                if (args.Any(c => c.StartsWith("--overrideCulture")))
+                {
+                    var overrideCulture = args.First(c => c.StartsWith("--overrideCulture")).Split('=')[1];
+                    var culture = new System.Globalization.CultureInfo(overrideCulture);
+                    System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;
+                    System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;
+                    System.Threading.Thread.CurrentThread.CurrentCulture = culture;
+                    System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+                }
+                if (args.Any(c => c == "--log"))
+                {
+                    Thread logThread = new Thread(Helper.HelperProgram.LogMain);
+                    logThread.Priority = ThreadPriority.Highest;
+                    logThread.Name = "LogWindow thread";
+                    logThread.IsBackground = false;
+                    logThread.Start();
+                    LogWindowShowing = true;
+                    Log($"Logger window started.");
+                }
+                if(args.Any(c => c == "--consoleLog"))
+                {
+                    MyLoggerExtensions.OnLog += (msg,level) =>
+                    {
+                        Console.WriteLine($"[{level}] {msg}");
+                    };
+                }
+            }
+            catch
+            {
+
+            }
+            try
+            {
                 projectFrameCut.Helper.HelperProgram.AppVersion = AppInfo.Version.ToString();
+            }
+            catch
+            {
+                projectFrameCut.Helper.HelperProgram.AppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
+            }
+            try
+            {
                 var splash = new Thread(projectFrameCut.Helper.HelperProgram.SplashMain);
                 splash.Priority = ThreadPriority.Highest;
                 splash.IsBackground = false;
                 splash.Start();
-                try
-                {
-                    if (args.Any(c => c.StartsWith("--overrideCulture")))
-                    {
-                        var overrideCulture = args.First(c => c.StartsWith("--overrideCulture")).Split('=')[1];
-                        var culture = new System.Globalization.CultureInfo(overrideCulture);
-                        System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;
-                        System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;
-                        System.Threading.Thread.CurrentThread.CurrentCulture = culture;
-                        System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
-                    }
-                    if (args.Any(c => c == "--log"))
-                    {
-                        Thread logThread = new Thread(Helper.HelperProgram.LogMain);
-                        logThread.Priority = ThreadPriority.Highest;
-                        logThread.Name = "LogWindow thread";
-                        logThread.IsBackground = false;
-                        logThread.Start();
-                        LogWindowShowing = true;
-                        Log($"Logger window started.");
-                    }
-                }
-                catch
-                {
 
-                }
                 WinRT.ComWrappersSupport.InitializeComWrappers();
                 Microsoft.UI.Xaml.Application.Start((p) =>
                 {

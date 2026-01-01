@@ -75,7 +75,18 @@ public partial class PluginSettingPage : ContentPage
             }
         }
 
-        Content = rootPPB.AddSeparator().ListenToChanges((e) => SettingInvoker(e, this)).BuildWithScrollView();
+        var scv = rootPPB.AddSeparator().ListenToChanges((e) => SettingInvoker(e, this)).BuildWithScrollView();
+        DropGestureRecognizer drop = new();
+        drop.AllowDrop = true;
+        drop.Drop += async (s, e) =>
+        {
+            foreach (var item in await FileDropHelper.GetFilePathsFromDrop(e))
+            {
+                await PluginService.AddAPlugin(item, this);
+            }
+        };
+        scv.GestureRecognizers.Add(drop);
+        Content = scv;
 
 
     }
@@ -111,7 +122,7 @@ public partial class PluginSettingPage : ContentPage
             ppb
                .AddButton($"DisablePlugin,{id}", SettingLocalizedResources.Plugin_Disable(plugin.Name))
                .AddButton($"GotoHomepage,{id}", SettingLocalizedResources.Plugin_GotoHomepage(plugin.Name))
-               .AddButton($"UpdatePlugin,{id}", SettingLocalizedResources.Plugin_UpdatePlugin(plugin.Name))
+               //.AddButton($"UpdatePlugin,{id}", SettingLocalizedResources.Plugin_UpdatePlugin(plugin.Name)) //todo
                .AddButton($"OpenDataDir,{id}", SettingLocalizedResources.Plugin_OpenDataDir)
                .AddButton($"RemovePlugin,{id}", SettingLocalizedResources.Plugin_Remove);
         }

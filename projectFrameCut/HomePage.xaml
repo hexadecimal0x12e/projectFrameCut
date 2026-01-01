@@ -4,6 +4,8 @@
              x:Class="projectFrameCut.HomePage"
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:vm="clr-namespace:projectFrameCut.ViewModels"
+             xmlns:local="clr-namespace:projectFrameCut"
+             x:DataType="local:ProjectsListViewModel"
              Title="{l:Localized Key=AppShell_ProjectsTab}">
     <ContentPage.ToolbarItems>
         <ToolbarItem x:Name="ImportButton" Text="{l:Localized Key=HomePage_ImportAProject}" Clicked="ImportButton_Clicked" />

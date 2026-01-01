@@ -265,7 +265,26 @@ public partial class RenderPage : ContentPage
                 return;
             }
 
+            if (_cts.IsCancellationRequested) return;
 
+            double targetFps = double.Parse(vm.Framerate);
+            if (Math.Abs(targetFps - Math.Round(targetFps)) > 0.001)
+            {
+                Log($"Resampling video from {(int)Math.Round(targetFps)} to {targetFps}...");
+                SetSubProg("Resample");
+#if WINDOWS
+                var tempVid = vidOutputPath + ".temp" + ext;
+                if (File.Exists(vidOutputPath))
+                {
+                    File.Move(vidOutputPath, tempVid);
+                    string args = $"-i \"{tempVid}\" -r {targetFps} -c:v {enc} -crf 18 -preset fast \"{vidOutputPath}\"";
+                    if (enc == "ffv1") args = $"-i \"{tempVid}\" -r {targetFps} -c:v ffv1 \"{vidOutputPath}\"";
+
+                    await ffmpeg.Run(args);
+                    File.Delete(tempVid);
+                }
+#endif
+            }
 
 
             if (_cts.IsCancellationRequested) return;
@@ -312,6 +331,9 @@ public partial class RenderPage : ContentPage
             }
 #else
             await Task.Run(() => File.Move(compOutputPath, resultPath));
+#if WINDOWS
+            await FileSystemService.ShowFileInFolderAsync(resultPath);
+#endif
 #endif
 
 
@@ -433,7 +455,7 @@ public partial class RenderPage : ContentPage
 
             int width = int.Parse(vm.Width);
             int height = int.Parse(vm.Height);
-            int fps = int.Parse(vm.Framerate);
+            int fps = (int)Math.Round(double.Parse(vm.Framerate));
 
             VideoBuilder builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt)
             {

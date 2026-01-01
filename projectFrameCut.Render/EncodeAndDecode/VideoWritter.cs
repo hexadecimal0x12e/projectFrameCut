@@ -244,6 +244,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
             byte* srcData0 = _frameSrc->data[0];
             int srcLinesize = _frameSrc->linesize[0];
 
+            int rLen = picture.r?.Length ?? 0;
+            int gLen = picture.g?.Length ?? 0;
+            int bLen = picture.b?.Length ?? 0;
+            int aLen = picture.a?.Length ?? 0;
+            bool hasAlpha = picture.hasAlphaChannel;
+
             fixed (ushort* pr = picture.r)
             fixed (ushort* pg = picture.g)
             fixed (ushort* pb = picture.b)
@@ -258,12 +264,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         for (int x = 0; x < _width; x++)
                         {
                             int k = baseIndex + x;
-                            ushort r16 = (pr != null && k < picture.r.Length) ? pr[k] : (ushort)0;
-                            ushort g16 = (pg != null && k < picture.g.Length) ? pg[k] : (ushort)0;
-                            ushort b16 = (pb != null && k < picture.b.Length) ? pb[k] : (ushort)0;
+                            ushort r16 = (pr != null && k < rLen) ? pr[k] : (ushort)0;
+                            ushort g16 = (pg != null && k < gLen) ? pg[k] : (ushort)0;
+                            ushort b16 = (pb != null && k < bLen) ? pb[k] : (ushort)0;
 
                             ushort a16 = 65535;
-                            if (picture.hasAlphaChannel && picture.a != null && pa != null && k < picture.a.Length)
+                            if (hasAlpha && pa != null && k < aLen)
                             {
                                 float af = pa[k];
                                 if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
@@ -289,14 +295,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         for (int x = 0; x < _width; x++)
                         {
                             int k = baseIndex + x;
-                            ushort r16 = pr != null && k < picture.r.Length ? pr[k] : (ushort)0;
-                            ushort g16 = pg != null && k < picture.g.Length ? pg[k] : (ushort)0;
-                            ushort b16 = pb != null && k < picture.b.Length ? pb[k] : (ushort)0;
+                            ushort r16 = pr != null && k < rLen ? pr[k] : (ushort)0;
+                            ushort g16 = pg != null && k < gLen ? pg[k] : (ushort)0;
+                            ushort b16 = pb != null && k < bLen ? pb[k] : (ushort)0;
                             byte r8 = (byte)(r16 >> 8);
                             byte g8 = (byte)(g16 >> 8);
                             byte b8 = (byte)(b16 >> 8);
                             byte a8 = 255;
-                            if (picture.hasAlphaChannel && picture.a != null && pa != null && k < picture.a.Length)
+                            if (hasAlpha && pa != null && k < aLen)
                             {
                                 float af = pa[k];
                                 if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
@@ -347,6 +353,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
             byte* srcData0 = _frameSrc->data[0];
             int srcLinesize = _frameSrc->linesize[0];
 
+            int rLen = picture.r?.Length ?? 0;
+            int gLen = picture.g?.Length ?? 0;
+            int bLen = picture.b?.Length ?? 0;
+            int aLen = picture.a?.Length ?? 0;
+            bool hasAlpha = picture.hasAlphaChannel;
+
             fixed (byte* pr = picture.r)
             fixed (byte* pg = picture.g)
             fixed (byte* pb = picture.b)
@@ -361,16 +373,16 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         for (int x = 0; x < _width; x++)
                         {
                             int k = baseIndex + x;
-                            byte r8 = (pr != null && k < picture.r.Length) ? pr[k] : (byte)0;
-                            byte g8 = (pg != null && k < picture.g.Length) ? pg[k] : (byte)0;
-                            byte b8 = (pb != null && k < picture.b.Length) ? pb[k] : (byte)0;
+                            byte r8 = (pr != null && k < rLen) ? pr[k] : (byte)0;
+                            byte g8 = (pg != null && k < gLen) ? pg[k] : (byte)0;
+                            byte b8 = (pb != null && k < bLen) ? pb[k] : (byte)0;
 
                             ushort r16 = (ushort)(r8 * 257);
                             ushort g16 = (ushort)(g8 * 257);
                             ushort b16 = (ushort)(b8 * 257);
 
                             ushort a16 = 65535;
-                            if (picture.hasAlphaChannel && picture.a != null && pa != null && k < picture.a.Length)
+                            if (hasAlpha && pa != null && k < aLen)
                             {
                                 float af = pa[k];
                                 if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;
@@ -396,11 +408,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         for (int x = 0; x < _width; x++)
                         {
                             int k = baseIndex + x;
-                            byte r8 = pr != null && k < picture.r.Length ? pr[k] : (byte)0;
-                            byte g8 = pg != null && k < picture.g.Length ? pg[k] : (byte)0;
-                            byte b8 = pb != null && k < picture.b.Length ? pb[k] : (byte)0;
+                            byte r8 = pr != null && k < rLen ? pr[k] : (byte)0;
+                            byte g8 = pg != null && k < gLen ? pg[k] : (byte)0;
+                            byte b8 = pb != null && k < bLen ? pb[k] : (byte)0;
                             byte a8 = 255;
-                            if (picture.hasAlphaChannel && picture.a != null && pa != null && k < picture.a.Length)
+                            if (hasAlpha && pa != null && k < aLen)
                             {
                                 float af = pa[k];
                                 if (float.IsNaN(af) || float.IsInfinity(af)) af = 1f;

@@ -143,10 +143,6 @@
 		<Compile Update="AppShell_Android.xaml.cs">
 			<DependentUpon>AppShell_Android.xaml</DependentUpon>
 		</Compile>
-		<PackageReference Include="Xamarin.AndroidX.Media3.Common" Version="1.8.0" />
-		<PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer" Version="1.8.0" />
-		<PackageReference Include="Xamarin.AndroidX.Media3.Session" Version="1.8.0" />
-		<PackageReference Include="Xamarin.AndroidX.Media3.UI" Version="1.8.0" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -1,5 +1,7 @@
+using projectFrameCut.Shared;
 using projectFrameCut.SplashScreen;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace projectFrameCut.Helper
 {
@@ -15,7 +17,7 @@ namespace projectFrameCut.Helper
         public static void SplashMain()
         {
             SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
-
+            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
@@ -58,6 +60,14 @@ namespace projectFrameCut.Helper
         [STAThread]
         public static void Main(string[] args)
         {
+            if(args.Contains("--wait"))
+            {
+                while (!Debugger.IsAttached)
+                {
+                    Thread.Sleep(500);
+                }
+                return;
+            }
             SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
 
             if (args.Length > 1)
@@ -74,8 +84,14 @@ namespace projectFrameCut.Helper
                         return;
                 }
             }
-            Process.Start("projectFrameCut.exe", string.Join(' ', args));
-            return;
+            var proc = new ProcessStartInfo
+            {
+                FileName = "projectFrameCut.exe",
+                Arguments = args.Length > 0 ? string.Join(" ", args.Select(a => $"\"{a}\"")) : "",
+            };  
+            Process.Start(proc);
+
+
         }
 
         public static bool SplashShowing { get; set; }
