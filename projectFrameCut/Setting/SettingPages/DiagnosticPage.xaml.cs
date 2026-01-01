@@ -1,5 +1,7 @@
+using FFmpeg.AutoGen;
 using Microsoft.Maui.Storage;
 using projectFrameCut.PropertyPanel;
+using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Shared;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -59,7 +61,7 @@ public partial class DiagnosticSettingPage : ContentPage
                 IsReadOnly = true
             })
             .ListenToChanges(SettingInvoker);
-        Content = new ScrollView { Content = rootPPB.Build() };
+        Content = rootPPB.BuildWithScrollView();
         
     }
 
@@ -258,19 +260,38 @@ public partial class DiagnosticSettingPage : ContentPage
         {
             ModulesInfo.Add($"{item.Assembly.FullName}: \r\nin '{item.FullyQualifiedName}',uuid: {item.ModuleVersionId}\r\nAttributes:\r\n{GetAttributeData(item.CustomAttributes)}\r\n\r\n");
         }
+        string internalFFmpegVersion = "unknown", internalFFmpegCfg = "unknown";
+        List<FFmpegHelper.CodecUtils.CodecInfo> codecs = new();
+        try
+        {
+            internalFFmpegVersion = $"version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}";
+            internalFFmpegCfg = ffmpeg.avcodec_configuration();
+            codecs = FFmpegHelper.CodecUtils.GetAllCodecs();
+
+        }
+        catch { }
+
+
         return
             $"""
             {Localized.AppBrand} - {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} ({AppInfo.BuildString})
             - CPU arch: {RuntimeInformation.ProcessArchitecture}
             - AppDataPath: {MauiProgram.BasicDataPath}
             - UserDataPath: {MauiProgram.DataPath}
-            - {(OperatingSystem.IsWindows() ? $"IsPackaged: {IsPackaged}" : "")}
+            {(OperatingSystem.IsWindows() ? $"- IsPackaged: {IsPackaged}" : "")}
+            CmdLine:{string.Join(' ', MauiProgram.CmdlineArgs)}
 
             Assembly: {asb.FullName}
             - Runtime version: {asb.ImageRuntimeVersion}
             - HostContext: {asb.HostContext}
             - Modules:
             {string.Join("\r\n  -", ModulesInfo)}
+
+            Internal FFmpeg:
+            - version: {internalFFmpegVersion}
+            - config: {internalFFmpegCfg}
+            - Codecs: 
+            {string.Join("\r\n",codecs.Select(c => $"{c.Id}: {c.Name}, decoder:{c.IsDecoder}, encoder:{c.IsEncoder}"))}
 
             """;
     }

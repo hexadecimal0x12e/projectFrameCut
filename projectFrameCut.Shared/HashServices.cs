@@ -1,7 +1,10 @@
-﻿using System;
+﻿using SixLabors.ImageSharp.Memory;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.Intrinsics.Arm;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,27 +13,44 @@ namespace projectFrameCut.Shared
     public class HashServices
     {
         [DebuggerNonUserCode()]
-        public static async Task<string> ComputeFileSHA512Async(string fileName, CancellationToken? ct = null)
+        public static async Task<string> ComputeFileHashAsync(string fileName, HashAlgorithm? algorithm = null, CancellationToken? ct = null)
         {
-            string hashSHA512 = "";
+            algorithm ??= SHA256.Create();
             if (System.IO.File.Exists(fileName))
             {
-                using (System.IO.FileStream fs = new System.IO.FileStream(fileName, System.IO.FileMode.Open, System.IO.FileAccess.Read))
-                {
-
-                    System.Security.Cryptography.SHA512 calculator = System.Security.Cryptography.SHA512.Create();
-                    Byte[] buffer = await calculator.ComputeHashAsync(fs, ct ?? CancellationToken.None);
-                    calculator.Clear();
-
-                    StringBuilder stringBuilder = new StringBuilder();
-                    for (int i = 0; i < buffer.Length; i++)
-                    {
-                        stringBuilder.Append(buffer[i].ToString("x2"));
-                    }
-                    hashSHA512 = stringBuilder.ToString();
-                }
+                using System.IO.FileStream fs = new System.IO.FileStream(fileName, System.IO.FileMode.Open, System.IO.FileAccess.Read);
+                byte[] buffer = await algorithm.ComputeHashAsync(fs, ct ?? CancellationToken.None);
+                algorithm.Clear();
+                return buffer.Select(c => c.ToString("x2")).Aggregate((a, b) => a + b);
             }
-            return hashSHA512;
+            throw new FileNotFoundException("File not found", fileName);
         }
+        [DebuggerNonUserCode()]
+        public static string ComputeFileHash(string fileName, HashAlgorithm? algorithm = null)
+        {
+            algorithm ??= SHA256.Create();
+            if (System.IO.File.Exists(fileName))
+            {
+                using System.IO.FileStream fs = new System.IO.FileStream(fileName, System.IO.FileMode.Open, System.IO.FileAccess.Read);
+                byte[] buffer = algorithm.ComputeHash(fs);
+                algorithm.Clear();
+                return buffer.Select(c => c.ToString("x2")).Aggregate((a, b) => a + b);
+            }
+            throw new FileNotFoundException("File not found", fileName);
+        }
+
+        [DebuggerNonUserCode()]
+        public static string ComputeStringHash(string input, HashAlgorithm? algorithm = null) 
+            => (algorithm ?? SHA512.Create())
+                .ComputeHash(Encoding.UTF8.GetBytes(input))
+                .Select(c => c.ToString("x2"))
+                .Aggregate((a, b) => a + b);
+
+        [DebuggerNonUserCode()]
+        public static string ComputeBytesHash(byte[] input, HashAlgorithm? algorithm = null)
+            => (algorithm ?? SHA256.Create())
+                .ComputeHash(input)
+                .Select(c => c.ToString("x2"))
+                .Aggregate((a, b) => a + b);
     }
 }

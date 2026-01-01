@@ -1,0 +1,2 @@
+﻿# About the Shared Library
+This directory contains the shared library for the projectFrameCut application. The shared library provides common functionalities and utilities that can be used across different components of the application.

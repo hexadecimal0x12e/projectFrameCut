@@ -4,34 +4,44 @@
              x:Class="projectFrameCut.HomePage"
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:vm="clr-namespace:projectFrameCut.ViewModels"
+             xmlns:local="clr-namespace:projectFrameCut"
+             x:DataType="local:ProjectsListViewModel"
              Title="{l:Localized Key=AppShell_ProjectsTab}">
-    <VerticalStackLayout>
-        <Label 
+    <ContentPage.ToolbarItems>
+        <ToolbarItem x:Name="ImportButton" Text="{l:Localized Key=HomePage_ImportAProject}" Clicked="ImportButton_Clicked" />
+    </ContentPage.ToolbarItems>
+    <ScrollView>
+
+        <VerticalStackLayout>
+            <Label 
          Text="{l:Localized Key=WelcomeMessage}"
           x:Name="WelcomeLabel"
          VerticalOptions="Center" 
          HorizontalOptions="Center" />
-
-        <CollectionView 
+            <CollectionView 
                         x:Name="ProjectsCollection"
                         ItemsSource="{Binding Projects}"
                         SelectionMode="Single"
                         Margin="12">
-            <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="vm:ProjectsViewModel">
-                    <Border Padding="8" Margin="4" Loaded="ItemBorder_Loaded">
+                <CollectionView.GestureRecognizers>
+                    <DropGestureRecognizer AllowDrop="True" Drop="DropGestureRecognizer_Drop"/>
+                </CollectionView.GestureRecognizers>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ProjectsViewModel">
+                        <Border Padding="8" Margin="4" Loaded="ItemBorder_Loaded">
 
-                        <Grid ColumnDefinitions="64, *" RowDefinitions="Auto">
-                            <Image Grid.Column="0" Source="{Binding ThumbImage}" WidthRequest="64" HeightRequest="64" Aspect="AspectFill"/>
-                            <VerticalStackLayout Grid.Column="1" Spacing="2" Padding="8,0,0,0">
-                                <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="20" LineBreakMode="TailTruncation"/>
-                                <Label Text="{Binding LastChangedDisplay}" FontSize="Small" TextColor="Gray"/>
-                            </VerticalStackLayout>
+                            <Grid ColumnDefinitions="64, *" RowDefinitions="Auto">
+                                <Image Grid.Column="0" Source="{Binding ThumbImage}" WidthRequest="64" HeightRequest="64" Aspect="AspectFill"/>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" Padding="8,0,0,0">
+                                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="20" LineBreakMode="TailTruncation"/>
+                                    <Label Text="{Binding LastChangedDisplay}" FontSize="Small" TextColor="Gray"/>
+                                </VerticalStackLayout>
 
-                        </Grid>
-                    </Border>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
-    </VerticalStackLayout>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

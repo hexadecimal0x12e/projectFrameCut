@@ -4,9 +4,13 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using projectFrameCut.VideoMakeEngine;
-using projectFrameCut.Shared;
 using Microsoft.Maui.Platform;
+using projectFrameCut.Render.VideoMakeEngine;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using static SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
+using Microsoft.Maui.Controls.Shapes;
+using projectFrameCut.Render.Plugin;
+
 
 #if WINDOWS
 using Microsoft.UI.Xaml;
@@ -26,6 +30,22 @@ namespace projectFrameCut.DraftStuff
 
         static JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
 
+        /// <summary>
+        /// Gets the default color hex string based on clip type.
+        /// </summary>
+        private static string GetDefaultColorHex(projectFrameCut.Shared.ClipMode clipType)
+        {
+            return clipType switch
+            {
+                projectFrameCut.Shared.ClipMode.VideoClip => Colors.CornflowerBlue.ToArgbHex(),
+                projectFrameCut.Shared.ClipMode.PhotoClip => Colors.MediumSeaGreen.ToArgbHex(),
+                projectFrameCut.Shared.ClipMode.AudioClip => Colors.Goldenrod.ToArgbHex(),
+                projectFrameCut.Shared.ClipMode.SubtitleClip => Colors.SlateGray.ToArgbHex(),
+                projectFrameCut.Shared.ClipMode.SolidColorClip => Colors.OrangeRed.ToArgbHex(),
+                _ => Colors.Gray.ToArgbHex(),
+            };
+        }
+
 
         public ClipInfoBuilder(DraftPage page)
         {
@@ -33,58 +53,102 @@ namespace projectFrameCut.DraftStuff
         }
 
         // Helper to recreate effect with updated parameters / flags (init-only properties)
-        private static IEffect ReCreateEffect(IEffect effect, Dictionary<string, object>? parameters = null, bool? enabled = null, int? index = null)
+        // This method adapts to plugin-based IEffect by using the standard WithParameters interface
+        private IEffect ReCreateEffect(IEffect effect, Dictionary<string, object>? parameters = null, bool? enabled = null, int? index = null)
         {
-            var paramDict = parameters ?? effect.Parameters;
-            return effect switch
-            {
-                RemoveColorEffect => new RemoveColorEffect
-                {
-                    Enabled = enabled ?? effect.Enabled,
-                    Index = index ?? effect.Index,
-                    R = Convert.ToUInt16(paramDict["R"]),
-                    G = Convert.ToUInt16(paramDict["G"]),
-                    B = Convert.ToUInt16(paramDict["B"]),
-                    A = Convert.ToUInt16(paramDict["A"]),
-                    Tolerance = Convert.ToUInt16(paramDict["Tolerance"]),
-                },
-                PlaceEffect => new PlaceEffect
-                {
-                    Enabled = enabled ?? effect.Enabled,
-                    Index = index ?? effect.Index,
-                    StartX = Convert.ToInt32(paramDict["StartX"]),
-                    StartY = Convert.ToInt32(paramDict["StartY"]),
-                },
-                CropEffect => new CropEffect
-                {
-                    Enabled = enabled ?? effect.Enabled,
-                    Index = index ?? effect.Index,
-                    StartX = Convert.ToInt32(paramDict["StartX"]),
-                    StartY = Convert.ToInt32(paramDict["StartY"]),
-                    Height = Convert.ToInt32(paramDict["Height"]),
-                    Width = Convert.ToInt32(paramDict["Width"]),
-                },
-                _ => effect.WithParameters(paramDict), // fallback (won't update Enabled/Index for unknown types)
-            };
+            // Create a new effect with updated parameters using the standard IEffect interface
+            var newEffect = effect.WithParameters(parameters ?? effect.Parameters);
+
+            // Update mutable properties (Enabled and Index)
+            if (enabled.HasValue)
+                newEffect.Enabled = enabled.Value;
+            if (index.HasValue)
+                newEffect.Index = index.Value;
+
+            newEffect.RelativeWidth = page.ProjectInfo.RelativeWidth;
+            newEffect.RelativeHeight = page.ProjectInfo.RelativeHeight;
+
+            return newEffect;
         }
 
         public View Build(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
+            // Get current color or default
+            string currentColorHex = clip.ClipColor ?? GetDefaultColorHex(clip.ClipType);
+
             var ppb = new PropertyPanelBuilder()
-        .AddText(new TitleAndDescriptionLineLabel(Localized.PropertyPanel_General, "general stuff"))
-        .AddEntry("displayName", Localized.PropertyPanel_General_DisplayName, clip.displayName, "Clip 1")
-        .AddEntry("speedRatio", Localized.PropertyPanel_General_SpeedRatio, clip.SecondPerFrameRatio.ToString(), "1")
-        .AddSeparator(null);
+            .AddText(new SingleLineLabel(Localized.PropertyPanel_General, 20))
+            .AddEntry("displayName", Localized.PropertyPanel_General_DisplayName, clip.displayName, "Clip 1")
+            .AddEntry("speedRatio", Localized.PropertyPanel_General_SpeedRatio, clip.SecondPerFrameRatio.ToString(), "1")
+            .AddCustomChild(new SingleLineLabel("Clip Color"), (invoker) =>
+            {
+                var colorPreview = new BoxView
+                {
+                    WidthRequest = 30,
+                    HeightRequest = 30,
+                    CornerRadius = 5,
+                    Color = Color.FromArgb(currentColorHex),
+                    VerticalOptions = LayoutOptions.Center
+                };
+
+                var colorEntry = new Entry
+                {
+                    Text = currentColorHex,
+                    Placeholder = "#RRGGBB",
+                    WidthRequest = 100,
+                    VerticalOptions = LayoutOptions.Center
+                };
+
+                colorEntry.TextChanged += (s, e) =>
+                {
+                    try
+                    {
+                        var color = Color.FromArgb(e.NewTextValue);
+                        colorPreview.Color = color;
+                    }
+                    catch { }
+                };
+
+                colorEntry.Unfocused += (s, e) =>
+                {
+                    invoker(colorEntry.Text);
+                };
+
+                var resetButton = new Button
+                {
+                    Text = "↺",
+                    WidthRequest = 40,
+                    HeightRequest = 35,
+                    Padding = 0,
+                    VerticalOptions = LayoutOptions.Center
+                };
+                resetButton.Clicked += (s, e) =>
+                {
+                    var defaultColor = GetDefaultColorHex(clip.ClipType);
+                    colorEntry.Text = defaultColor;
+                    colorPreview.Color = Color.FromArgb(defaultColor);
+                    invoker(null!); // Reset to default
+                };
+
+                var layout = new HorizontalStackLayout
+                {
+                    Spacing = 8,
+                    Children = { colorPreview, colorEntry, resetButton }
+                };
+
+                return layout;
+            }, "clipColor", currentColorHex)
+            .AddSeparator(null);
 
             if (clip.Effects != null)
             {
-                foreach (var effectKvp in clip.Effects)
+                foreach (var effectKvp in clip.Effects.OrderBy(c => c.Value.Index))
                 {
                     var effectKey = effectKvp.Key;
                     var effect = effectKvp.Value;
-                    ppb.AddText(new TitleAndDescriptionLineLabel(effect.TypeName, effectKey));
-                    ppb.AddCheckbox($"Effect|{effectKey}|Enabled", "Enabled", effect.Enabled);
-                    ppb.AddEntry($"Effect|{effectKey}|Index", "Index", effect.Index.ToString(),"-1");
+                    ppb.AddText(new TitleAndDescriptionLineLabel(effect.Name, PluginManager.GetLocalizationItem($"EffectType_{effect.TypeName}", effect.TypeName)));
+                    ppb.AddCheckbox($"Effect|{effectKey}|Enabled", PPLocalizedResuorces._Enabled, effect.Enabled);
+                    ppb.AddEntry($"Effect|{effectKey}|Index", PPLocalizedResuorces.EffectProp_Index, effect.Index.ToString(), "-1");
                     foreach (var paramName in effect.ParametersNeeded)
                     {
                         if (!effect.ParametersType.TryGetValue(paramName, out var paramType)) continue;
@@ -108,26 +172,39 @@ namespace projectFrameCut.DraftStuff
                             bool val = false;
                             if (currentVal is bool b) val = b;
                             else if (bool.TryParse(currentVal?.ToString(), out var bParsed)) val = bParsed;
-                            ppb.AddCheckbox(controlId, paramName, val);
+                            ppb.AddCheckbox(controlId, PluginManager.GetLocalizationItem($"_{paramName}", paramName), val);
                         }
                         else
                         {
                             string valStr = currentVal?.ToString() ?? "";
-                            ppb.AddEntry(controlId, paramName, valStr, "");
+                            ppb.AddEntry(controlId, PluginManager.GetLocalizationItem($"_{paramName}", paramName), valStr, "");
                         }
                     }
-                    ppb.AddButton($"Effect|{effectKey}|Remove", "Remove this effect");
+                    ppb.AddButton($"Effect|{effectKey}|Remove", PPLocalizedResuorces.EffectProp_Remove);
                     ppb.AddSeparator();
                 }
             }
 
-            ppb.AddText(new TitleAndDescriptionLineLabel("Add Effect", "Add a new effect"));
-            ppb.AddPicker("NewEffectType", "Effect Type", EffectHelper.GetEffectTypes().ToArray(), 
+            ppb.AddPicker("NewEffectType", PPLocalizedResuorces.Add_Effect_Select, EffectHelper.GetEffectTypes().ToArray(),
                 EffectHelper.GetEffectTypes().FirstOrDefault());
-            ppb.AddButton("AddEffect", "Add Effect");
+            ppb.AddButton("AddEffect", PPLocalizedResuorces.Add_Effect);
 
             ppb.PropertyChanged += async (s, e) =>
             {
+                if (e.Id == "clipColor")
+                {
+                    if (e.Value == null || string.IsNullOrWhiteSpace(e.Value?.ToString()))
+                    {
+                        clip.ClipColor = null; // Reset to default
+                    }
+                    else
+                    {
+                        clip.ClipColor = e.Value?.ToString();
+                    }
+                    clip.ApplyClipColor();
+                    handler?.Invoke(s, e);
+                    return;
+                }
                 if (e.Id.StartsWith("Effect|"))
                 {
                     var parts = e.Id.Split('|');
@@ -202,13 +279,13 @@ namespace projectFrameCut.DraftStuff
                     if (ppb.Properties.TryGetValue("NewEffectType", out var typeObj) && typeObj is string typeName)
                     {
                         IEffect? newEffect = null;
-                        if(EffectHelper.EffectsEnum.TryGetValue(typeName, out var creator))
+                        if (EffectHelper.EffectsEnum.TryGetValue(typeName, out var creator))
                         {
                             try
                             {
                                 newEffect = creator?.Invoke();
                             }
-                            catch(Exception ex)
+                            catch (Exception ex)
                             {
                                 Log(ex, $"create effect of type {typeName}", this);
                             }
@@ -225,66 +302,44 @@ namespace projectFrameCut.DraftStuff
                         }
                         else
                         {
-                            Log($"Failed to create effect of type {typeName}.","error");
-                            throw new InvalidDataException($"Failed to create effect of type {typeName}."); 
+                            Log($"Failed to create effect of type {typeName}.", "error");
+                            throw new InvalidDataException($"Failed to create effect of type {typeName}.");
                         }
                     }
                 }
                 handler?.Invoke(s, e);
             };
-
+#if DEBUG //end user don't want to see raw json editor
             ppb.AddCustomChild((ivk) =>
-        {
-            var editor = new Editor
             {
-                Text = JsonSerializer.Serialize(clip, savingOpts),
-                HeightRequest = 300,
-            };
-            editor.TextChanged += (s, e) =>
-            {
-                try
+                var editor = new Editor
                 {
-                    if (JsonSerializer.Deserialize<ClipElementUI>(editor.Text) is not ClipElementUI updatedClip)
+                    Text = JsonSerializer.Serialize(clip, savingOpts),
+                    HeightRequest = 300,
+                };
+                editor.TextChanged += (s, e) =>
+                {
+                    try
                     {
-                        return;
+                        if (JsonSerializer.Deserialize<ClipElementUI>(editor.Text) is not ClipElementUI updatedClip)
+                        {
+                            return;
+                        }
+                        ivk(editor.Text);
                     }
-                    ivk(editor.Text);
-                }
-                catch (Exception)
-                {
-                }
-            };
-            return editor;
-        }, "rawJsonEditor", JsonSerializer.Serialize(clip, savingOpts));
-
+                    catch (Exception)
+                    {
+                    }
+                };
+                return editor;
+            }, "rawJsonEditor", JsonSerializer.Serialize(clip, savingOpts))
+            .AddCustomChild(new Rectangle { WidthRequest = 50, HeightRequest = 120, Fill = Colors.Transparent });
+#endif
 
             var panel = ppb.Build();
-
-#if WINDOWS
-            ApplyAcrylic(panel);
-#elif iDevices
-            // panel.AddGlassEffect("SystemChromeMaterial", 8.0, 0.8);
-#endif
             return panel;
 
         }
-#if WINDOWS
-        private void ApplyAcrylic(Layout panel)
-        {
-            var acrylicBrush = new Microsoft.UI.Xaml.Media.AcrylicBrush
-            {
-                TintOpacity = 0.3,
-                FallbackColor = Microsoft.UI.Colors.Gray,
-            };
-            panel.HandlerChanged += (s, e) =>
-            {
-                var stack = panel.Handler?.PlatformView as LayoutPanel;
-                if (stack != null)
-                {
-                    stack.Background = acrylicBrush;
-                }
-            };
-        }
-#endif
+
     }
 }

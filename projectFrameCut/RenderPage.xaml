@@ -8,7 +8,7 @@
              x:DataType="vm:RenderPageViewModel"
              Title="RenderPage">
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/>
+       <!-- <ToolbarItem Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/> -->
 
     </ContentPage.ToolbarItems>
     <Grid>
@@ -64,15 +64,30 @@
                        Text="{Binding Encoding, Mode=TwoWay}" />
                 </HorizontalStackLayout>
 
+                <Picker
+                Margin="0,8,0,0"
+                x:Name="bitDepthPicker"
+                Title="{l:Localized Key=RenderPage_SelectBitdepth}"
+                ItemsSource="{Binding ExportOptions_BitDepth}"
+                SelectedItem="{Binding BitDepthDisplay, Mode=TwoWay}" />
+                <HorizontalStackLayout x:Name="CustomBitDepthBox" Margin="0,8,0,8"
+                                   IsVisible="{Binding IsCustomBitDepthVisible}">
+                    <Entry Placeholder="BitDepth" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
+                       Keyboard="Text"
+                       Text="{Binding BitDepth, Mode=TwoWay}" />
+                </HorizontalStackLayout>
+
                 <Label x:Name="MaxParallelThreadsCountLabel"  Margin="0,8,0,0" Text="RenderPage_MaxParallelThreadsCount" />
-                <Slider x:Name="MaxParallelThreadsCount" Minimum="8" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
+                <Slider x:Name="MaxParallelThreadsCount" Minimum="1" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
                 <Button Margin="0,8,0,8"  x:Name="StartRender" Text="{l:Localized Key=RenderPage_StartRender}" Clicked="StartRender_Clicked" />
+                <Editor x:Name="DraftJSONViewer" IsReadOnly="True" HeightRequest="250" IsVisible="False"></Editor>
+
             </VerticalStackLayout>
 
             <VerticalStackLayout x:Name="PreviewLayout" IsVisible="False" Grid.Column="1" Padding="32,0">
                 <Label  Text="{l:Localized Key=RenderPage_PreviewLabel}"  Margin="0,8,0,8"/>
-                <Border StrokeThickness="5" >
-                    <Image  x:Name="PreviewImage" MaximumHeightRequest="1280" MaximumWidthRequest="720"  ></Image>
+                <Border StrokeThickness="5"  Padding="4" HorizontalOptions="Center" VerticalOptions="Start">
+                    <Image x:Name="PreviewImage" Aspect="AspectFit" HorizontalOptions="Center" VerticalOptions="Center" WidthRequest="400" HeightRequest="200" />
                 </Border>
             </VerticalStackLayout>
 

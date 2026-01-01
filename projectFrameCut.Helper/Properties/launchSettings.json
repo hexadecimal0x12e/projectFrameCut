@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "projectFrameCut.Helper": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "asbPath": "D:\\code\\projectFrameCut\\projectFrameCut\\bin\\Debug\\net10.0-windows10.0.19041.0\\win-x64\\projectFrameCut.dll"
+      }
+    }
+  }
+}

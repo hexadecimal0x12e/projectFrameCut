@@ -15,6 +15,18 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Path = System.IO.Path;
 using projectFrameCut.Shared;
+using projectFrameCut.Render.VideoMakeEngine;
+using SixLabors.ImageSharp;
+using projectFrameCut.Services;
+using projectFrameCut.Render.Plugin;
+using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
+using projectFrameCut.Render.EncodeAndDecode;
+
+
+
+
+
+
 
 
 
@@ -721,6 +733,9 @@ public partial class TestPage : ContentPage
 #endif
     }
 
+
+    #region misc
+
     private void MetalRenderStartButton_Clicked(object sender, EventArgs e)
     {
 
@@ -748,7 +763,99 @@ public partial class TestPage : ContentPage
 
     }
 
+    private void TestMixtureButton_Clicked(object sender, EventArgs e)
+    {
+        Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
+        PlaceEffect p = new()
+        {
+            StartX = 50,
+            StartY = 120
+        };
+        var result = p.Render(src, null, 2560, 1440);
+        Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
+        OverlayMixture m = new()
+        {
 
+        };
+        var final = m.Mix(canvas, result, PluginManager.CreateComputer(m.ComputerId, false));   
+        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+        {
+            MemoryStream ms = new();
+            final.SaveToSixLaborsImage().SaveAsPng(ms);
+            ms.Position = 0;
+            return ms;
+        });
+    }
+
+    private void ContextMenuTestBtn_Clicked(object sender, EventArgs e)
+    {
+        void dialog(string msg) => Dispatcher.Dispatch(async () => await DisplayAlertAsync("info", msg, "ok"));
+#if WINDOWS
+        WindowsContextMenuBuilder b = new();
+        b.AddCommand("Command 1", () => dialog("You clicked 1")).AddSeparator().AddCommand("Command 2", () => dialog("You clicked 2")).AddCommand("Command 1", () => dialog("You clicked 3"));
+        b.TryShow(ContextMenuTestBtn);
+#endif
+    }
+
+    private void MuxVideoTestBtn_Clicked(object sender, EventArgs e)
+    {
+        VideoAudioMuxer.MuxFromFiles(@"D:\code\playground\projectFrameCut\RenderCache\A Short Project 1_20260101_164404.mp4", @"D:\code\playground\projectFrameCut\RenderCache\A Short Project 1_20260101_164404.wav", @"D:\code\playground\projectFrameCut\output1.mp4", true);
+
+    }
+
+    private void TestPlaceButton_Clicked(object sender, EventArgs e)
+    {
+        Picture8bpp src = Picture8bpp.GenerateSolidColor(200,300,128,128,128,1);
+        PlaceEffect p = new()
+        {
+            StartX = 50,
+            StartY = 120
+        };
+        var result = p.Render(src, null, 2560,1440);
+        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+        {
+            MemoryStream ms = new();
+            result.SaveToSixLaborsImage().SaveAsPng(ms);
+            ms.Position = 0;
+            return ms;
+        });
+
+
+
+    }
+
+    private async void TestPlaceAndResizeButton_Clicked(object sender, EventArgs e)
+    {
+        Picture8bpp src = new Picture8bpp(await FileSystemService.PickFileAsync());
+        PlaceEffect p = new()
+        {
+            StartX = 250,
+            StartY = 180
+        };
+        ResizeEffect r = new()
+        {
+            Height = 300,
+            Width = 1000,
+            PreserveAspectRatio = false
+        };
+        var resized = r.Render(src, null, 2560, 1440);
+        var placed = p.Render(resized, null, 2560, 1440);
+        Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
+        OverlayMixture m = new()
+        {
+
+        };
+        var final = m.Mix(canvas, placed, PluginManager.CreateComputer(m.ComputerId, false));
+        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+        {
+            MemoryStream ms = new();
+            final.SaveToSixLaborsImage().SaveAsPng(ms);
+            ms.Position = 0;
+            return ms;
+        });
+    }
+
+    #endregion
 
 
 

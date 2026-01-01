@@ -3,11 +3,123 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.AssetsLibraryPage"
              xmlns:l="clr-namespace:LocalizedResources"
-            Title="{l:Localized Key=AppShell_AssetsTab}">
-    <VerticalStackLayout>
-        <Label 
-            Text="Assets will be available in next release!"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
-    </VerticalStackLayout>
+             xmlns:vm="clr-namespace:projectFrameCut.ViewModels"
+             xmlns:asset="clr-namespace:projectFrameCut.Render.RenderAPIBase.Project;assembly=projectFrameCut.Render.RenderAPIBase"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:converters="clr-namespace:projectFrameCut.Converters"
+             x:DataType="vm:AssetViewModel"
+             Title="{l:Localized Key=AppShell_AssetsTab}">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="{l:Localized Key=AssetPage_AddAAsset}" Clicked="AddAAsset_Clicked" />
+    </ContentPage.ToolbarItems>
+
+    <ContentPage.BindingContext>
+        <vm:AssetViewModel />
+    </ContentPage.BindingContext>
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <toolkit:IsNotNullConverter x:Key="IsNotNullConverter" />
+            <converters:AssetTypeToLocalizedConverter x:Key="AssetTypeToLocalizedConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto,*, Auto" Padding="0">
+        <Grid.GestureRecognizers>
+            <DropGestureRecognizer AllowDrop="True" Drop="OnDrop" />
+        </Grid.GestureRecognizers>
+        <Grid Grid.Row="0" Margin="8,0,8,8" Padding="0,0" ColumnDefinitions="*,*,Auto" >
+            <SearchBar Grid.Column="0"
+                       x:Name="AssetSearchBar"
+                       Placeholder="{l:Localized Key=AssetPage_Search}"
+                       TextChanged="AssetSearchBar_TextChanged" />  
+            <Grid Grid.Column="2" ColumnDefinitions="Auto,Auto">
+                <Label Grid.Column="0" Text="{l:Localized Key=AssetPage_Source}" VerticalOptions="Center" HorizontalOptions="End" Margin="0,0,5,0" />
+                <Picker Grid.Column="1" x:Name="SourcePicker" HorizontalOptions="End" SelectedIndexChanged="SourcePicker_SelectedIndexChanged"/>
+            </Grid>
+        </Grid>
+        <CollectionView Grid.Row="1"
+                        Margin="4,0,4,0"
+                        x:Name="AssetsCollectionView"
+                        HorizontalOptions="Fill"
+                        VerticalOptions="Fill"
+                        ItemsSource="{Binding Assets}"
+                        SelectionMode="Single"
+                        SelectedItem="{Binding SelectedAsset}"
+                        EmptyView="{l:Localized Key=AssetPage_AddAAsset_Hint}"
+                        SizeChanged="OnCollectionViewSizeChanged">
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout x:Name="AssetsGridLayout" Orientation="Vertical" Span="6" VerticalItemSpacing="5" HorizontalItemSpacing="5" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="asset:AssetItem">
+                    <Border StrokeThickness="0" BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2A2A2A}" HeightRequest="150" WidthRequest="200"  Loaded="Border_Loaded">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup Name="CommonStates">
+                                <VisualState Name="Normal" />
+                                <VisualState Name="Selected">
+                                    <VisualState.Setters>
+                                        <Setter Property="Stroke" Value="{AppThemeBinding Light=Black, Dark=White}" />
+                                        <Setter Property="StrokeThickness" Value="2" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <VerticalStackLayout Padding="0"  Background="#C0808080">
+                            <Grid>
+                                <Image Source="{Binding ThumbnailPath}" Aspect="AspectFit" HeightRequest="130" WidthRequest="200"  Margin="0"/>
+                            </Grid>
+                            <Grid VerticalOptions="End" BackgroundColor="#112233" ColumnDefinitions="*,Auto" HeightRequest="20" Padding="4,0,4,0">
+                                <Label Grid.Column="0" Text="{Binding Name}" LineBreakMode="TailTruncation" HorizontalOptions="Start" VerticalOptions="Center" FontSize="12" Margin="0,0,6,0" MaxLines="1" />
+                                <Label Grid.Column="1" Text="{Binding DurationDisplay}" LineBreakMode="TailTruncation" HorizontalOptions="End" VerticalOptions="Center" FontSize="12" Margin="0" MaxLines="1" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Details Panel -->
+        <Border Grid.Row="2" 
+                StrokeShape="RoundRectangle 10,10,0,0" 
+                StrokeThickness="0"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
+                Margin="-10,10,-10,-10"
+                Padding="20"
+                MaximumHeightRequest="250"
+                IsVisible="{Binding SelectedAsset, Converter={StaticResource IsNotNullConverter}}">
+            <Border.Shadow>
+                <Shadow Brush="Black" Offset="0,-5" Radius="10" Opacity="0.1" />
+            </Border.Shadow>
+
+            <Grid MaximumHeightRequest="300">
+                <VerticalStackLayout Spacing="8" HorizontalOptions="Start">
+                    <Label Text="{l:Localized Key=AssetPage_Info}" FontSize="18" FontAttributes="Bold" Margin="0,0,0,10"/>
+
+                    <Grid ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto, Auto, Auto" ColumnSpacing="10" RowSpacing="5">
+                        <Label Grid.Row="0" Grid.Column="0" Text="{l:Localized Key=AssetPage_Info_Name}" FontAttributes="Bold" />
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding SelectedAsset.Name}" />
+
+                        <Label Grid.Row="1" Grid.Column="0" Text="{l:Localized Key=AssetPage_Info_Type}" FontAttributes="Bold" />
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding SelectedAsset.AssetType, Converter={StaticResource AssetTypeToLocalizedConverter}}" />
+
+                        <Label Grid.Row="2" Grid.Column="0" Text="{l:Localized Key=AssetPage_Info_CreatedAt}" FontAttributes="Bold" />
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding SelectedAsset.CreatedAt}" />
+
+                        <Label Grid.Row="3" Grid.Column="0" Text="{l:Localized Key=AssetPage_Info_Path}" FontAttributes="Bold" IsVisible="{OnIdiom Phone=False,Default=True}" />
+                        <Label Grid.Row="3" Grid.Column="1" Text="{Binding SelectedAsset.Path}" LineBreakMode="MiddleTruncation" IsVisible="{OnIdiom Phone=False,Default=True}"  />
+                    </Grid>
+                </VerticalStackLayout>
+                <VerticalStackLayout HorizontalOptions="End" IsVisible="{OnIdiom Desktop=True, Default=False}">
+                    <Image Grid.Row="0" x:DataType="asset:AssetItem" BindingContext="{Binding SelectedAsset}" Source="{Binding ThumbnailPath}" HorizontalOptions="End" HeightRequest="150" WidthRequest="200" Margin="0">
+                        <Image.GestureRecognizers>
+                            <TapGestureRecognizer NumberOfTapsRequired="2" Tapped="OnAssetPreviewDoubleClicked"/>
+                        </Image.GestureRecognizers>
+                    </Image>
+                    <Label TextColor="Gray" Text="{l:Localized Key=AssetPage_Info_OpenHint}" IsVisible="{Binding SelectedAsset.ThumbnailPath, Converter={toolkit:IsStringNotNullOrWhiteSpaceConverter}}"></Label>
+                </VerticalStackLayout>            
+            </Grid>
+        </Border>
+    </Grid>
 </ContentPage>

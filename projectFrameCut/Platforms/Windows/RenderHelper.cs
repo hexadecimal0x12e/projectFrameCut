@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace projectFrameCut.Platforms.Windows
 {
-    public class RenderHelper
+    public partial class RenderHelper
     {
 
         Process _proc = new();
@@ -24,6 +24,10 @@ namespace projectFrameCut.Platforms.Windows
         public async Task<int> StartRender(string args)
         {
             _proc = new();
+
+            var pipeName = ExtractPipeName(args) ?? ("pjfc_plugin_" + Guid.NewGuid().ToString("N"));
+            if (!args.Contains("pluginConnectionPipe=", StringComparison.OrdinalIgnoreCase))
+                args = args.TrimEnd() + $" -pluginConnectionPipe={pipeName}";
 
             _proc.StartInfo = new ProcessStartInfo
             {
@@ -42,6 +46,24 @@ namespace projectFrameCut.Platforms.Windows
 #endif
                 }
             };
+
+            if (SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole"))
+            {
+                _proc.StartInfo.RedirectStandardOutput = false;
+                _proc.StartInfo.CreateNoWindow = false;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await PluginPipeTransport.SendEnabledPluginsAsync(pipeName);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "send plugins via pipe", nameof(RenderHelper));
+                }
+            });
 
             _proc.OutputDataReceived += (s, e) =>
             {
@@ -88,8 +110,10 @@ namespace projectFrameCut.Platforms.Windows
             };
 
             _proc.Start();
-
-            _proc.BeginOutputReadLine();
+            if (!SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole"))
+            {
+                _proc.BeginOutputReadLine();
+            }
             _proc.BeginErrorReadLine();
 
             Log("Render process started.", "Render");
@@ -99,10 +123,38 @@ namespace projectFrameCut.Platforms.Windows
             return _proc.ExitCode;
         }
 
+        private static string? ExtractPipeName(string args)
+        {
+            if (string.IsNullOrWhiteSpace(args))
+                return null;
+            try
+            {
+                var m = PluginConnectionPipeRegex().Match(args);
+                if (!m.Success)
+                    return null;
+                var raw = (m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value).Trim();
+                return string.IsNullOrWhiteSpace(raw) ? null : raw;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         internal void Cancel()
         {
-            _proc.Kill();
+            try
+            {
+                _proc.Kill();
+            }
+            catch
+            {
+
+            }
         }
+
+        [GeneratedRegex(@"(?i)(?:^|\s)[-/]pluginConnectionPipe=(?:""([^""]+)""|(\S+))", RegexOptions.None, "zh-CN")]
+        private static partial Regex PluginConnectionPipeRegex();
     }
 
     public class FFmpegStatistics
@@ -138,7 +190,7 @@ namespace projectFrameCut.Platforms.Windows
                 _proc = new();
                 _proc.StartInfo = new ProcessStartInfo
                 {
-                    FileName = Path.Combine(AppContext.BaseDirectory, "ffmpeg.exe"),
+                    FileName = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal", "ffmpeg.exe"),
                     WorkingDirectory = Path.Combine(AppContext.BaseDirectory),
                     Arguments = args,
                     UseShellExecute = false,

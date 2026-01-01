@@ -36,14 +36,15 @@
                 case Type t when t == typeof(AssetsLibraryPage):
                     App.MainNavView?.SelectedItem = App.assetItem;
                     break;
-                case Type t when t == typeof(DebuggingMainPage):
-                    App.MainNavView?.SelectedItem = App.debugItem;
-                    break;
+                //case Type t when t == typeof(DebuggingMainPage):
+                //    App.MainNavView?.SelectedItem = App.debugItem;
+                //    break;
                 case Type t when t.Name.Contains("Setting",StringComparison.InvariantCultureIgnoreCase):
                     App.MainNavView?.SelectedItem = App.settingItem;
                     break;
                 default:
-                    App.MainNavView?.SelectedItem = App.homeItem;
+                    //keep unchange
+                    // App.MainNavView?.SelectedItem = App.homeItem;
                     break;
             }
         }

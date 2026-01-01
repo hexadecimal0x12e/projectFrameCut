@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Reflection.Metadata;
 using UIKit;
 
-namespace projectFrameCut.iOS
+namespace projectFrameCut.Platforms.MacCatalyst
 {
     public class Program
     {
@@ -12,15 +12,10 @@ namespace projectFrameCut.iOS
         // This is the main entry point of the application.
         static void Main(string[] args)
         {
+            System.Threading.Thread.CurrentThread.Name = "App Main thread";
 
-            loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging");
-#if IOS
-            //files->my [iDevices]->projectFrameCut
-            loggingDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "logging");
-
-#elif MACCATALYST
             loggingDir = Path.Combine(FileSystem.AppDataDirectory, "logging"); // ~/Library/Containers/<bundle>/Data/Library/Application Support/<bundle>）
-#endif
+
             try
             {
                 Directory.CreateDirectory(loggingDir);

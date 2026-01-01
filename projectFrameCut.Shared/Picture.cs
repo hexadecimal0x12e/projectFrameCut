@@ -2,6 +2,7 @@
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using System;
 using System.Buffers.Binary;
 using System.Diagnostics;
@@ -12,37 +13,96 @@ using System.Linq;
 using System.Numerics;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
+using static projectFrameCut.Shared.IPicture;
 using static System.Net.Mime.MediaTypeNames;
 using Image = SixLabors.ImageSharp.Image;
 
 namespace projectFrameCut.Shared
 {
+
+
     /// <summary>
     /// This class is for placing Picture information and as a base of the actual picture (<see cref="IPicture{T}"/>).
     /// </summary>
     public interface IPicture : IDisposable
     {
-        public int bitPerPixel { get; }
-
+        /// <summary>
+        /// If set, the picture will be saved to this path for diagnostics.
+        /// </summary>
+        public static string? DiagImagePath { get; set; }
+        /// <summary>
+        /// Get how much bits in one pixel.
+        /// Please refer to <see cref="PicturePixelMode"/> for more information.
+        /// </summary>
+        public PicturePixelMode bitPerPixel { get; }
+        /// <summary>
+        /// The width of this picture
+        /// </summary>
         public int Width { get; set; }
+        /// <summary>
+        /// The height of this picture
+        /// </summary>
         public int Height { get; set; }
+        /// <summary>
+        /// Total pixels of this picture
+        /// </summary>
         public int Pixels { get; init; }
-
+        /// <summary>
+        /// The frame index this picture comes from. Used for diagnostics only.
+        /// </summary>
         public uint? frameIndex { get; init; } //诊断用
+        /// <summary>
+        /// The file path this picture comes from. Used for diagnostics only.
+        /// </summary>
         public string? filePath { get; init; } //诊断用
-
+        /// <summary>
+        /// Determine some flag for the picture.
+        /// </summary>
+        public PictureFlag Flag { get; set; }
+        /// <summary>
+        /// Records each step of the image processed.
+        /// </summary>
+        /// <remarks>
+        /// If you're developing a Plugin that implements image processing, please append your processing step information to this property.
+        /// </remarks>
         public string? ProcessStack { get; set; }
-
+        /// <summary>
+        /// Indicates whether this picture has an alpha channel.
+        /// </summary>
         public bool hasAlphaChannel { get; set; }
+        /// <summary>
+        /// Get whether this picture has been disposed.
+        /// </summary>
+        /// <remarks>
+        /// if <see cref="Disposed"/> is null, this picture'll never be disposed.
+        /// </remarks>
+        public bool? Disposed { get; set; }
 
+        /// <summary>
+        /// Resize the picture. 
+        /// </summary>
         IPicture Resize(int targetWidth, int targetHeight, bool preserveAspect = true);
-        IPicture ToBitPerPixel(int bitPerPixel);
+        /// <summary>
+        /// Convert this picture to the specified bits per pixel.
+        /// </summary>
+        IPicture ToBitPerPixel(PicturePixelMode bitPerPixel);
 
-        //void SaveAsPng8bpp(string path, IImageEncoder? imageEncoder = null);
-        //void SaveAsPng16bpp(string path, IImageEncoder? imageEncoder = null);
+        /// <summary>
+        /// Convert this picture to the specified bits per pixel.
+        /// </summary>
+        public sealed IPicture ToBitPerPixel(int bpp) => ToBitPerPixel(new PicturePixelMode(bpp));
 
+        /// <summary>
+        /// Get a specific channel's data.
+        /// </summary>
+        /// <param name="channelId">The channel want to get</param>
+        /// <returns>the data. Must in a array</returns>
         object? GetSpecificChannel(ChannelId channelId);
 
+        /// <summary>
+        /// Get the diagnostics information of this picture.
+        /// </summary>
+        /// <returns>The Diagnostics info</returns>
         string GetDiagnosticsInfo();
 
         public enum ChannelId
@@ -53,7 +113,39 @@ namespace projectFrameCut.Shared
             Alpha = 3
         }
 
+        [Flags]
+        public enum PictureFlag
+        {
+            None = 0,
+            IsGenerated = 1 << 0,
+            NoDisposeAfterWrite = 1 << 1,
+        }
+
+        public readonly record struct PicturePixelMode(int Value)
+        {
+            public static implicit operator int(PicturePixelMode bpp) => bpp.Value;
+            public static implicit operator PicturePixelMode(int value) => new(value);
+            public override int GetHashCode() => Value;
+            public override string ToString() => Value.ToString();
+
+            public bool Equals(PicturePixelMode mode)
+            {
+                return Value == mode.Value;
+            }
+            /// <summary>
+            /// Represents a picture of 8 bits per pixel, aka <see cref="Picture8bpp"/>.
+            /// </summary>
+            public static PicturePixelMode BytePicture => new PicturePixelMode(8);
+            /// <summary>
+            /// Represents a picture of 16 bits per pixel, aka <see cref="Picture16bpp"/>.
+            /// </summary>
+            public static PicturePixelMode UShortPicture => new PicturePixelMode(16);
+        }
+
     }
+
+
+
     /// <summary>
     /// Represents a picture with pixel data of type T and a float alpha channel.
     /// </summary>
@@ -111,7 +203,7 @@ namespace projectFrameCut.Shared
     }
 
     /// <summary>
-    /// This class is for compatibility with older codes. It's basically equals to <see cref="Picture16bpp"/>.
+    /// This class is for compatibility with some pretty old codes (mostly written before the main application appears in the Git repository). It's basically equals to <see cref="Picture16bpp"/>.
     /// </summary>
     [DebuggerDisplay("ProcessStack: {ProcessStack}")]
     public class Picture : Picture16bpp
@@ -132,9 +224,6 @@ namespace projectFrameCut.Shared
         {
         }
     }
-
-
-
 
     /// <summary>
     /// The projectFrameCut's 16-bit Picture structure. It's the base of everything you see in the final video.
@@ -157,11 +246,13 @@ namespace projectFrameCut.Shared
 
         public uint? frameIndex { get; init; } //诊断用
         public string? filePath { get; init; } //诊断用
+        public PictureFlag Flag { get; set; }
         public string? ProcessStack { get; set; }
+        public bool? Disposed { get; set; } = false;
 
         public bool hasAlphaChannel { get; set; } = false;
 
-        public int bitPerPixel => 16;
+        public PicturePixelMode bitPerPixel => 16;
 
 
         /// <summary>
@@ -170,29 +261,32 @@ namespace projectFrameCut.Shared
         /// <remarks>The new Picture instance shares the same pixel data reference as the source Picture.
         /// Changes to the pixel data in one instance will affect the other.</remarks>
         /// <param name="picture">The Picture instance to copy the width, height, and pixel data from. Cannot be null.</param>
-        public Picture16bpp(IPicture<ushort> picture)
+        public Picture16bpp(IPicture<ushort> picture, bool copyData = false)
         {
             Width = picture.Width;
             Height = picture.Height;
             Pixels = picture.Pixels;
-
-            // Ensure pixel buffers reference the source buffers if present, otherwise allocate
-            r = (picture.r != null && picture.r.Length == Pixels) ? picture.r : new ushort[Pixels];
-            g = (picture.g != null && picture.g.Length == Pixels) ? picture.g : new ushort[Pixels];
-            b = (picture.b != null && picture.b.Length == Pixels) ? picture.b : new ushort[Pixels];
-
-            if (picture.a != null && picture.a.Length == Pixels)
+            if (copyData)
             {
-                a = picture.a;
-                hasAlphaChannel = true;
-            }
-            else
-            {
-                a = null;
-                hasAlphaChannel = false;
+                // Ensure pixel buffers reference the source buffers if present, otherwise allocate
+                r = (picture.r != null && picture.r.Length == Pixels) ? picture.r : new ushort[Pixels];
+                g = (picture.g != null && picture.g.Length == Pixels) ? picture.g : new ushort[Pixels];
+                b = (picture.b != null && picture.b.Length == Pixels) ? picture.b : new ushort[Pixels];
+
+                if (picture.a != null && picture.a.Length == Pixels)
+                {
+                    a = picture.a;
+                    hasAlphaChannel = true;
+                }
+                else
+                {
+                    a = null;
+                    hasAlphaChannel = false;
+                }
             }
 
-            ProcessStack = $"Created from another, {Width}*{Height},\r\n'{picture.ProcessStack}'\r\n";
+
+            ProcessStack = $"Created from another, {Width}*{Height}, data {(copyData ? "copied" : "uncopied")},\r\n'{picture.ProcessStack}'\r\n";
         }
 
         /// <summary>
@@ -263,6 +357,11 @@ namespace projectFrameCut.Shared
 
         }
 
+        /// <summary>
+        /// Create a new Picture from a SixLabors.ImageSharp.Image source.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <exception cref="ArgumentNullException"></exception>
         [DebuggerNonUserCode()]
         public Picture16bpp(SixLabors.ImageSharp.Image source)
         {
@@ -382,7 +481,7 @@ namespace projectFrameCut.Shared
         /// <param name="targetHeight">The target height.</param>
         /// <param name="preserveAspect">Whether to preserve aspect ratio.</param>
         /// <returns>A new Picture instance with the resized image data.</returns>
-        [DebuggerNonUserCode()]
+        //[DebuggerNonUserCode()]
         public Picture16bpp Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
         {
             lock (this)
@@ -414,6 +513,7 @@ namespace projectFrameCut.Shared
 
                 double xRatio = (double)Width / destW;
                 double yRatio = (double)Height / destH;
+                int srcArraySize = this.r.Length;
 
                 for (int y = 0; y < destH; y++)
                 {
@@ -425,6 +525,7 @@ namespace projectFrameCut.Shared
                     {
                         y0 = 0; y1 = 0; wy = 0;
                     }
+                    else if (y0 >= Height) { y0 = Height - 1; y1 = Height - 1; wy = 0; }
                     if (y1 >= Height) { y1 = Height - 1; }
 
                     for (int x = 0; x < destW; x++)
@@ -437,12 +538,13 @@ namespace projectFrameCut.Shared
                         {
                             x0 = 0; x1 = 0; wx = 0;
                         }
+                        else if (x0 >= Width) { x0 = Width - 1; x1 = Width - 1; wx = 0; }
                         if (x1 >= Width) { x1 = Width - 1; }
 
-                        int k00 = y0 * Width + x0;
-                        int k10 = y0 * Width + x1;
-                        int k01 = y1 * Width + x0;
-                        int k11 = y1 * Width + x1;
+                        int k00 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x0));
+                        int k10 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x1));
+                        int k01 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x0));
+                        int k11 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x1));
 
                         double r00 = this.r[k00];
                         double r10 = this.r[k10];
@@ -520,6 +622,7 @@ namespace projectFrameCut.Shared
 
         protected virtual void Dispose(bool disposing)
         {
+            if (disposedValue || Disposed is null) return;
             lock (this)
             {
                 if (!disposedValue)
@@ -534,6 +637,7 @@ namespace projectFrameCut.Shared
 
                     disposedValue = true;
                 }
+                Disposed = disposedValue;
             }
         }
 
@@ -543,7 +647,7 @@ namespace projectFrameCut.Shared
             GC.SuppressFinalize(this);
         }
 
-        public IPicture ToBitPerPixel(int bitPerPixel)
+        public IPicture ToBitPerPixel(PicturePixelMode bitPerPixel)
         {
             if (bitPerPixel == 16)
             {
@@ -633,40 +737,47 @@ namespace projectFrameCut.Shared
 
         public uint? frameIndex { get; init; } //诊断用
         public string? filePath { get; init; } //诊断用
+        public PictureFlag Flag { get; set; }
         public string? ProcessStack { get; set; }
+        public bool? Disposed { get; set; } = false;
 
         public bool hasAlphaChannel { get; set; } = false;
 
-        public int bitPerPixel => 8;
+        public PicturePixelMode bitPerPixel => 8;
 
 
         /// <summary>
-        /// Initializes a new instance of the Picture8bpp class by copying the properties of an existing Picture8bpp.
+        /// Initializes a new instance of the Picture class by copying the properties of an existing Picture.
         /// </summary>
-        /// <param name="picture">The Picture8bpp instance to copy the width, height, and pixel data from. Cannot be null.</param>
-        public Picture8bpp(Picture8bpp picture)
+        /// <remarks>The new Picture instance shares the same pixel data reference as the source Picture.
+        /// Changes to the pixel data in one instance will affect the other.</remarks>
+        /// <param name="picture">The Picture instance to copy the width, height, and pixel data from. Cannot be null.</param>
+        public Picture8bpp(IPicture<byte> picture, bool copyData = false)
         {
             Width = picture.Width;
             Height = picture.Height;
             Pixels = picture.Pixels;
-
-            // reuse source buffers if they match length, otherwise allocate
-            r = (picture.r != null && picture.r.Length == Pixels) ? picture.r : new byte[Pixels];
-            g = (picture.g != null && picture.g.Length == Pixels) ? picture.g : new byte[Pixels];
-            b = (picture.b != null && picture.b.Length == Pixels) ? picture.b : new byte[Pixels];
-
-            if (picture.a != null && picture.a.Length == Pixels)
+            if (copyData)
             {
-                a = picture.a;
-                hasAlphaChannel = true;
-            }
-            else
-            {
-                a = null;
-                hasAlphaChannel = false;
-            }
-            ProcessStack = $"Created from another, {Width}*{Height},\r\n'{picture.ProcessStack}'\r\n";
+                // Ensure pixel buffers reference the source buffers if present, otherwise allocate
+                r = (picture.r != null && picture.r.Length == Pixels) ? picture.r : new byte[Pixels];
+                g = (picture.g != null && picture.g.Length == Pixels) ? picture.g : new byte[Pixels];
+                b = (picture.b != null && picture.b.Length == Pixels) ? picture.b : new byte[Pixels];
 
+                if (picture.a != null && picture.a.Length == Pixels)
+                {
+                    a = picture.a;
+                    hasAlphaChannel = true;
+                }
+                else
+                {
+                    a = null;
+                    hasAlphaChannel = false;
+                }
+            }
+
+
+            ProcessStack = $"Created from another, {Width}*{Height}, data {(copyData ? "copied" : "uncopied")},\r\n'{picture.ProcessStack}'\r\n";
         }
 
         /// <summary>
@@ -881,6 +992,7 @@ namespace projectFrameCut.Shared
 
                 double xRatio = (double)Width / destW;
                 double yRatio = (double)Height / destH;
+                int srcArraySize = this.r.Length;
 
                 for (int y = 0; y < destH; y++)
                 {
@@ -892,6 +1004,7 @@ namespace projectFrameCut.Shared
                     {
                         y0 = 0; y1 = 0; wy = 0;
                     }
+                    else if (y0 >= Height) { y0 = Height - 1; y1 = Height - 1; wy = 0; }
                     if (y1 >= Height) { y1 = Height - 1; }
 
                     for (int x = 0; x < destW; x++)
@@ -904,12 +1017,13 @@ namespace projectFrameCut.Shared
                         {
                             x0 = 0; x1 = 0; wx = 0;
                         }
+                        else if (x0 >= Width) { x0 = Width - 1; x1 = Width - 1; wx = 0; }
                         if (x1 >= Width) { x1 = Width - 1; }
 
-                        int k00 = y0 * Width + x0;
-                        int k10 = y0 * Width + x1;
-                        int k01 = y1 * Width + x0;
-                        int k11 = y1 * Width + x1;
+                        int k00 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x0));
+                        int k10 = Math.Max(0, Math.Min(srcArraySize - 1, y0 * Width + x1));
+                        int k01 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x0));
+                        int k11 = Math.Max(0, Math.Min(srcArraySize - 1, y1 * Width + x1));
 
                         double r00 = this.r[k00];
                         double r10 = this.r[k10];
@@ -986,6 +1100,7 @@ namespace projectFrameCut.Shared
 
         protected virtual void Dispose(bool disposing)
         {
+            if (disposedValue || Disposed is null) return;
             lock (this)
             {
                 if (!disposedValue)
@@ -1000,6 +1115,8 @@ namespace projectFrameCut.Shared
 
                     disposedValue = true;
                 }
+                Disposed = disposedValue;
+
             }
         }
 
@@ -1009,7 +1126,7 @@ namespace projectFrameCut.Shared
             GC.SuppressFinalize(this);
         }
 
-        public IPicture ToBitPerPixel(int bitPerPixel)
+        public IPicture ToBitPerPixel(PicturePixelMode bitPerPixel)
         {
             if (bitPerPixel == 8)
             {
@@ -1080,8 +1197,209 @@ namespace projectFrameCut.Shared
 
     }
 
+
+
     public static class PictureExtensions
     {
+        public static IPicture DeepCopy(this IPicture source)
+        {
+            if (source is null) throw new ArgumentNullException(nameof(source));
+            if (source.Disposed is not null && source.Disposed.Value) throw new ObjectDisposedException(nameof(source));
+            lock (source)
+            {
+                int width = source.Width;
+                int height = source.Height;
+                int pixels = source.Pixels;
+
+                if (source.bitPerPixel == 16)
+                {
+                    // Prefer typed interface if available
+                    if (source is IPicture<ushort> s16)
+                    {
+                        if (s16.r == null || s16.g == null || s16.b == null)
+                            throw new InvalidOperationException("Source 16bpp picture has null channel buffers.");
+
+                        var dst = new Picture16bpp(width, height)
+                        {
+                            frameIndex = s16.frameIndex,
+                            filePath = s16.filePath,
+                            ProcessStack = s16.ProcessStack,
+                            hasAlphaChannel = s16.hasAlphaChannel
+                        };
+
+                        // ensure destination arrays exist
+                        dst.r = new ushort[pixels];
+                        dst.g = new ushort[pixels];
+                        dst.b = new ushort[pixels];
+                        Array.Copy(s16.r, dst.r, pixels);
+                        Array.Copy(s16.g, dst.g, pixels);
+                        Array.Copy(s16.b, dst.b, pixels);
+
+                        if (s16.hasAlphaChannel && s16.a != null)
+                        {
+                            dst.a = new float[pixels];
+                            Array.Copy(s16.a, dst.a, pixels);
+                            dst.hasAlphaChannel = true;
+                        }
+                        else
+                        {
+                            dst.a = null;
+                            dst.hasAlphaChannel = false;
+                        }
+
+                        return dst;
+                    }
+                    else
+                    {
+                        // Fallback using GetSpecificChannel
+                        var rr = source.GetSpecificChannel(IPicture.ChannelId.Red) as ushort[] ?? throw new InvalidOperationException("Red channel missing for 16bpp picture.");
+                        var gg = source.GetSpecificChannel(IPicture.ChannelId.Green) as ushort[] ?? throw new InvalidOperationException("Green channel missing for 16bpp picture.");
+                        var bb = source.GetSpecificChannel(IPicture.ChannelId.Blue) as ushort[] ?? throw new InvalidOperationException("Blue channel missing for 16bpp picture.");
+                        var aa = source.hasAlphaChannel ? source.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+
+                        if (rr.Length != pixels || gg.Length != pixels || bb.Length != pixels || (aa != null && aa.Length != pixels))
+                            throw new InvalidOperationException("Source channel buffer lengths do not match picture pixel count.");
+
+                        var dst = new Picture16bpp(width, height)
+                        {
+                            frameIndex = source.frameIndex,
+                            filePath = source.filePath,
+                            ProcessStack = source.ProcessStack,
+                            hasAlphaChannel = source.hasAlphaChannel
+                        };
+
+                        dst.r = new ushort[pixels];
+                        dst.g = new ushort[pixels];
+                        dst.b = new ushort[pixels];
+                        Array.Copy(rr, dst.r, pixels);
+                        Array.Copy(gg, dst.g, pixels);
+                        Array.Copy(bb, dst.b, pixels);
+
+                        if (aa != null)
+                        {
+                            dst.a = new float[pixels];
+                            Array.Copy(aa, dst.a, pixels);
+                            dst.hasAlphaChannel = true;
+                        }
+                        else
+                        {
+                            dst.a = null;
+                            dst.hasAlphaChannel = false;
+                        }
+
+                        return dst;
+                    }
+                }
+                else if (source.bitPerPixel == 8)
+                {
+                    if (source is IPicture<byte> s8)
+                    {
+                        if (s8.r == null || s8.g == null || s8.b == null)
+                            throw new InvalidOperationException("Source 8bpp picture has null channel buffers.");
+
+                        var dst = new Picture8bpp(width, height)
+                        {
+                            frameIndex = s8.frameIndex,
+                            filePath = s8.filePath,
+                            ProcessStack = s8.ProcessStack,
+                            hasAlphaChannel = s8.hasAlphaChannel
+                        };
+
+                        dst.r = new byte[pixels];
+                        dst.g = new byte[pixels];
+                        dst.b = new byte[pixels];
+                        Array.Copy(s8.r, dst.r, pixels);
+                        Array.Copy(s8.g, dst.g, pixels);
+                        Array.Copy(s8.b, dst.b, pixels);
+
+                        if (s8.hasAlphaChannel && s8.a != null)
+                        {
+                            dst.a = new float[pixels];
+                            Array.Copy(s8.a, dst.a, pixels);
+                            dst.hasAlphaChannel = true;
+                        }
+                        else
+                        {
+                            dst.a = null;
+                            dst.hasAlphaChannel = false;
+                        }
+
+                        return dst;
+                    }
+                    else
+                    {
+                        var rr = source.GetSpecificChannel(IPicture.ChannelId.Red) as byte[] ?? throw new InvalidOperationException("Red channel missing for 8bpp picture.");
+                        var gg = source.GetSpecificChannel(IPicture.ChannelId.Green) as byte[] ?? throw new InvalidOperationException("Green channel missing for 8bpp picture.");
+                        var bb = source.GetSpecificChannel(IPicture.ChannelId.Blue) as byte[] ?? throw new InvalidOperationException("Blue channel missing for 8bpp picture.");
+                        var aa = source.hasAlphaChannel ? source.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+
+                        if (rr.Length != pixels || gg.Length != pixels || bb.Length != pixels || (aa != null && aa.Length != pixels))
+                            throw new InvalidOperationException("Source channel buffer lengths do not match picture pixel count.");
+
+                        var dst = new Picture8bpp(width, height)
+                        {
+                            frameIndex = source.frameIndex,
+                            filePath = source.filePath,
+                            ProcessStack = source.ProcessStack,
+                            hasAlphaChannel = source.hasAlphaChannel
+                        };
+
+                        dst.r = new byte[pixels];
+                        dst.g = new byte[pixels];
+                        dst.b = new byte[pixels];
+                        Array.Copy(rr, dst.r, pixels);
+                        Array.Copy(gg, dst.g, pixels);
+                        Array.Copy(bb, dst.b, pixels);
+
+                        if (aa != null)
+                        {
+                            dst.a = new float[pixels];
+                            Array.Copy(aa, dst.a, pixels);
+                            dst.hasAlphaChannel = true;
+                        }
+                        else
+                        {
+                            dst.a = null;
+                            dst.hasAlphaChannel = false;
+                        }
+
+                        return dst;
+                    }
+                }
+                else
+                {
+                    throw new NotSupportedException("Only 8bpp and 16bpp images are supported for deep copy.");
+                }
+            }
+        }
+
+        public static bool UseSixLaborsImageSharpToResize = true;
+
+        public static Picture8bpp Resize(this Picture8bpp source, int targetWidth, int targetHeight, bool preserveAspect = true)
+        {
+            if (!UseSixLaborsImageSharpToResize) return source.Resize(targetWidth, targetHeight, preserveAspect);
+            var img = source.SaveToSixLaborsImage();
+            img.Mutate(i => i.Resize(new ResizeOptions
+            {
+                Size = new Size(targetWidth, targetHeight),
+                Mode = preserveAspect ? ResizeMode.Max : ResizeMode.Stretch
+            }));
+            return new Picture8bpp(img);
+
+        }
+        public static Picture16bpp Resize(this Picture16bpp source, int targetWidth, int targetHeight, bool preserveAspect = true)
+        {
+            if (!UseSixLaborsImageSharpToResize) return source.Resize(targetWidth, targetHeight, preserveAspect);
+            var img = source.SaveToSixLaborsImage();
+            img.Mutate(i => i.Resize(new ResizeOptions
+            {
+                Size = new Size(targetWidth, targetHeight),
+                Mode = preserveAspect ? ResizeMode.Max : ResizeMode.Stretch
+            }));
+            return new Picture16bpp(img);
+
+        }
+
         public static void LogPicInfo(this IPicture<ushort> src)
         {
             Logger.LogDiagnostic($"16BitPerPixel image, Size: {src.Width}*{src.Height}, avg R:{src.r.Average(Convert.ToDecimal)} G:{src.g.Average(Convert.ToDecimal)} B:{src.b.Average(Convert.ToDecimal)} A:{src.a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{src.ProcessStack}");
@@ -1107,7 +1425,7 @@ namespace projectFrameCut.Shared
             if (Debugger.IsAttached || MyLoggerExtensions.LoggingDiagnosticInfo)
             {
                 if (image is Picture16bpp p1) p1.LogPicInfo();
-                else if(image is Picture8bpp p2) p2.LogPicInfo();
+                else if (image is Picture8bpp p2) p2.LogPicInfo();
                 else Logger.LogDiagnostic("Unknown picture type, cannot get info.");
             }
             ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(path));
@@ -1181,6 +1499,7 @@ namespace projectFrameCut.Shared
             }
             else
             {
+                if (Debugger.IsAttached) Debugger.Break();
                 throw new InvalidOperationException("The source enumerable is empty.");
             }
         }

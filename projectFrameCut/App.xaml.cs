@@ -16,9 +16,41 @@ namespace projectFrameCut
 {
     public partial class App : Microsoft.Maui.Controls.Application
     {
+
+        public static App instance;
+
+        // If the app was launched/opened via a .pjfc file, this will hold the incoming URI string.
+        public string? LaunchedPjfcUri { get; private set; }
+
         public App()
         {
+            instance = this;
             InitializeComponent();
+            try
+            {
+                instance?.UserAppTheme = SettingsManager.GetSetting("ui_defaultTheme", "default") switch
+                {
+                    "dark" => AppTheme.Dark,
+                    "light" => AppTheme.Light,
+                    _ => AppTheme.Unspecified
+                };
+            }
+            catch { }
+
+            try
+            {
+                var uri = Microsoft.Maui.Storage.Preferences.Get("OpenedPjfcUri", (string?)null);
+                if (!string.IsNullOrWhiteSpace(uri))
+                {
+                    LaunchedPjfcUri = uri;
+                    // remove preference once read to avoid reprocessing
+                    Microsoft.Maui.Storage.Preferences.Remove("OpenedPjfcUri");
+                }
+            }
+            catch
+            {
+                // ignore if preferences fail
+            }
         }
 
 #if WINDOWS
@@ -89,9 +121,8 @@ namespace projectFrameCut
                 homeItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Folder };
 
                 assetItem = new NavigationViewItem { Content = Localized.AppShell_AssetsTab, Tag = "Assets", Height = 36, Padding = new(4) };
-                assetItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.MapDrive };
-
-                
+                assetItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.SlideShow };
+            
 
                 nav.MenuItems.Add(homeItem);
                 nav.MenuItems.Add(assetItem);
@@ -100,12 +131,6 @@ namespace projectFrameCut
                 settingItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Setting };
                 nav.FooterMenuItems.Add(settingItem);
 
-                if (bool.TryParse(SettingsManager.GetSetting("DeveloperMode", false.ToString()), out var dbg) ? dbg : false)
-                {
-                    debugItem = new NavigationViewItem { Content = Localized.AppShell_DebugTab, Tag = "Debug", Height = 36, Padding = new(4) };
-                    debugItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Repair };
-                    nav.MenuItems.Add(debugItem);
-                }
 
                 try
                 {
@@ -143,9 +168,6 @@ namespace projectFrameCut
                                     break;
                                 case "Setting":
                                     await Shell.Current.Navigation.PushAsync(new MainSettingsPage());
-                                    break;
-                                case "Debug":
-                                    await Shell.Current.Navigation.PushAsync(new DebuggingMainPage());
                                     break;
                             }
                         }

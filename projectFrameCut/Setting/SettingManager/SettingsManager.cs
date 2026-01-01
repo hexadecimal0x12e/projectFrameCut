@@ -54,6 +54,7 @@ namespace projectFrameCut.Setting.SettingManager
         [DebuggerNonUserCode()]
         public static bool IsBoolSettingTrue(string key) => Settings.ContainsKey(key) && (bool.TryParse(GetSetting(key, "False"), out var result) ? result : false);
 
+        [DebuggerStepThrough()]
         public static void ToggleSaveSignal() => saveSignal.Set();
 
         private static JsonSerializerOptions serializerOptions = new JsonSerializerOptions
@@ -150,6 +151,7 @@ namespace projectFrameCut.Setting.SettingManager
 
         private static bool SettingSaveSlotIndicator = true;
 
+        [DebuggerStepThrough()]
         private static async Task SaveSettingAsync(CancellationToken token = default)
         {
             if (Settings == null) return;

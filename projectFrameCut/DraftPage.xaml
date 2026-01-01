@@ -3,17 +3,36 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.DraftPage"
              xmlns:l="clr-namespace:LocalizedResources"
-             xmlns:ie="clr-namespace:projectFrameCut.DraftStuff.InteractableEditor"
+             xmlns:ie="clr-namespace:InteractableEditor"
+             xmlns:local="clr-namespace:projectFrameCut"
+             x:DataType="local:DraftPage"
+             Shell.NavBarIsVisible="False"
              Title="">
     <ContentPage.MenuBarItems>
         <MenuBarItem x:Name="ProjectNameMenuBarItem" Text="{Binding ProjectName}">
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_GoRender}"  Command="{Binding GoRenderCommand}" />
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Save}" Command="{Binding SaveCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
+                                Key="S" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_CleanRenderCache}" Command="{Binding CleanRenderCacheCommand}"/>
+
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Share}"/>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Cooperate}"/>
         </MenuBarItem>
 
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Edit}" >
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Add}" Command="{Binding AddCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
+                    Key="A" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" Command="{Binding SpiltCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
@@ -40,24 +59,34 @@
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            
-            
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_PlayPause}" Command="{Binding PlayPauseCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator  Key="Space" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_ClosePopup}" Command="{Binding ClosePopupCommand}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="{OnPlatform WinUI=Escape, MacCatalyst=UIKeyInputEscape}" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
+
+
             <MenuFlyoutItem Text="{l:Localized Key=_Settings}" Command="{Binding SettingsCommand}"/>
         </MenuBarItem>
 
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs}">
             <MenuFlyoutItem x:Name="JobRunningIndicator" Text="{l:Localized Key=DraftPage_NoJobRunning}" IsEnabled="False" />
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs_ManageJobs}" >
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs_ManageJobs}" Command="{Binding ManageJobsCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
                 Key="T" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
         </MenuBarItem>
-        
 
     </ContentPage.MenuBarItems>
-    
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -69,88 +98,123 @@
         <VerticalStackLayout Grid.Row="0" x:Name="UpperContent">
             <Grid Padding="4" HeightRequest="250" >
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="800"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition x:Name="RightContentColDefinition" Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid x:Name="MainUpperContent" Grid.Column="0">
+                    <AbsoluteLayout x:Name="PreviewOverlayLayer"
+                        ZIndex="10000"
+                        InputTransparent="False"
+                        BackgroundColor="#01000000"
+                        IsVisible="True"
+                        HorizontalOptions="Fill"
+                        VerticalOptions="Fill">
+                        <Image x:Name="PreviewOverlayImage"
+                            BackgroundColor="#112233"
+                            Aspect="AspectFit"
+                            InputTransparent="True"
+                            AbsoluteLayout.LayoutBounds="0,0,1,1"
+                            AbsoluteLayout.LayoutFlags="All"
+                            HorizontalOptions="Fill" />
+                        <ContentView x:Name="LivePreviewerHost"
+                            BackgroundColor="Transparent"
+                            InputTransparent="True"
+                            AbsoluteLayout.LayoutBounds="0,0,1,1"
+                            AbsoluteLayout.LayoutFlags="All" />
+                        <ContentView x:Name="ClipEditorHost"
+                            BackgroundColor="Transparent"
+                            InputTransparent="False"
+                            AbsoluteLayout.LayoutBounds="0,0,1,1"
+                            AbsoluteLayout.LayoutFlags="All" />
+                    </AbsoluteLayout>
+                </Grid>
+                <Border x:Name="RightContentBorder" ZIndex="0" Grid.Column="1" StrokeThickness="5" HorizontalOptions="Fill">
+                    <ScrollView x:Name="CustomContent1" />
+                </Border>
+            </Grid>
+
+            <Grid Margin="0,8,0,8" x:Name="MainControlGrid">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <VerticalStackLayout x:Name="MainUpperContent" Grid.Column="0">
-                    <Image x:Name="PreviewBox" 
-                            Background="Black"
-                            HeightRequest="240"
-                            Aspect="AspectFit" 
-                            ZIndex="9999"/>
-                </VerticalStackLayout>
-                <Border ZIndex="0" Grid.Column="1" StrokeThickness="5" HorizontalOptions="Fill">
-                    <VerticalStackLayout x:Name="CustomContent1" />
-                </Border>
-                <Border  ZIndex="0" Grid.Column="2" StrokeThickness="5" HorizontalOptions="Fill">
+                <HorizontalStackLayout Grid.Column="0" x:Name="LeftMenuBar">
+                    <Button x:Name="AddClip" Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" Clicked="AddClip_Clicked" Margin="2,0,0,0" />
+                    <Button x:Name="AssetPanelButton" Text="{l:Localized Key=DraftPage_CenterMenuBar_Asset}"  Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
+                    <Button x:Name="SpiltButton" Text="{l:Localized Key=DraftPage_CenterMenuBar_Spilt}" Margin="8,0,0,0" Clicked="Split_Clicked"/>
+                </HorizontalStackLayout>
+                <HorizontalStackLayout x:Name="PlayingControlLayout" Grid.Column="1" HorizontalOptions="Center">
+                    <Button x:Name="PlayPauseButton" Text="▶" Clicked="PlayPauseButton_Clicked" WidthRequest="40" />
+                    <Label x:Name="CurrentPlayheadLabel" Text="00:00/99:99" Margin="8,0,0,0" VerticalOptions="Center"></Label>
+                </HorizontalStackLayout>
 
-                </Border>
-
-                <!--
-                <Border StrokeThickness="5" Padding="4" HeightRequest="250" WidthRequest="500" Margin="10,0,0,0" HorizontalOptions="End">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="50"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Entry x:Name="FrameIndexEntry" Placeholder="Frame index to view" Grid.Row="0" TextChanged="FrameIndexEntry_TextChanged"/>
-                        <Editor x:Name="FrameContentEditor" Placeholder="Content" Grid.Row="1" IsReadOnly="True"  />
-                    </Grid>
-                </Border> -->
+                <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar">
+                    <Picker x:Name="ResolutionPicker" WidthRequest="150"  SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
+                    <Button x:Name="ZoomOutButton" Text="-" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />
+                    <Button x:Name="ZoomResetButton" Text="1x" Margin="8,0,0,0" Clicked="ZoomResetButton_Clicked"/>
+                    <Button x:Name="ZoomInButton" Text="+" Margin="8,0,0,0" Clicked="ZoomInButton_Clicked"/>
+                    <Border BackgroundColor="Transparent" StrokeThickness="0" WidthRequest="8"/>
+                </HorizontalStackLayout>
             </Grid>
 
-            <StackLayout Orientation="Horizontal" Padding="4,0">
-                <VerticalStackLayout x:Name="ComputeView" WidthRequest="50" />
-                <Button x:Name="MoveLeftButton" Text="&lt;-"  Clicked="MoveLeftButton_Clicked"/>
-                <Button x:Name="MoveRightButton" Text="-&gt;"  Clicked="MoveRightButton_Clicked"/>
-                <Button x:Name="ZoomOutButton" Text="+" Clicked="ZoomOutButton_Clicked" />
-                <Button x:Name="ZoomInButton" Text="-" Clicked="ZoomInButton_Clicked"/>
-                <Button x:Name="SpiltButton" Text="Spilt" Clicked="Split_Clicked"/>
-                <Button x:Name="AssetPanelButton" Text="Assets" Clicked="AssetPanelButton_Clicked"/>
-                <Button Clicked="OnRefreshButtonClicked" Text="Refresh"/>
-                <Button x:Name="AddTextButton" Text="Add a text" Clicked="AddTextButton_Clicked"/>
-                <Picker x:Name="ResolutionPicker" WidthRequest="250" SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
-                <Button 
-x:Name="AddClip"
-Text="Add clip"
-Clicked="AddClip_Clicked" />
-            </StackLayout>
-            <Button x:Name="FullscreenFlyoutTestButton" Text="Pop a flyout" Clicked="FullscreenFlyoutTestButton_Clicked"/>
-            <HorizontalStackLayout x:Name="RulerLayout" HeightRequest="12" WidthRequest="-1" BackgroundColor="Grey">
+            <HorizontalStackLayout x:Name="RulerLayout" HeightRequest="12" WidthRequest="-1" BackgroundColor="LightGray">
 
             </HorizontalStackLayout>
         </VerticalStackLayout>
 
-        <Grid Grid.Row="1">
+        <Grid x:Name="LowerContent" Grid.Row="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="25"/>
             </Grid.RowDefinitions>
 
-            <ScrollView Grid.Row="0" x:Name="NativeView" Orientation="Vertical">
-                <Grid x:Name="MainTrackContentGrid">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1*"/>
-                        <ColumnDefinition Width="8*"/>
-                    </Grid.ColumnDefinitions>
+            <ScrollView Grid.Row="0" x:Name="TracksAndClipsLayout" Orientation="Vertical">
+                <VerticalStackLayout>
+                    <Grid x:Name="MainTrackContentGrid">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*"/>
+                            <ColumnDefinition Width="8*"/>
+                        </Grid.ColumnDefinitions>
 
-                    <VerticalStackLayout x:Name="TrackHeadLayout" Grid.Column="0" Padding="2">
+                        <VerticalStackLayout x:Name="TrackHeadLayout" Grid.Column="0" Padding="2">
+
+                        </VerticalStackLayout>
+
+                        <ScrollView x:Name="TimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" HorizontalOptions="Fill" VerticalScrollBarVisibility="Never" HorizontalScrollBarVisibility="Never">
+                            <VerticalStackLayout x:Name="TrackContentLayout" Padding="2" HorizontalOptions="Fill" />
+                        </ScrollView>
+                    </Grid>
+
+                    <Grid x:Name="SubTrackContentGrid">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1*"/>
+                            <ColumnDefinition Width="8*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <VerticalStackLayout x:Name="SubTrackHeadLayout" Grid.Column="0" Padding="2">
+
+                        </VerticalStackLayout>
+
+                        <ScrollView x:Name="SubTimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" HorizontalOptions="Fill">
+                            <VerticalStackLayout x:Name="SubTrackContentLayout" Padding="2" HorizontalOptions="Fill" />
+                        </ScrollView>
+                    </Grid>
+                    <Grid ColumnDefinitions="1*,8*">
                         <Button Margin="0,8,0,0"
-                    x:Name="AddTrackButton"
-                    Text="+"
-                    Clicked="AddTrackButton_Clicked"
-                    HeightRequest="80" />
-                    </VerticalStackLayout>
-
-                    <VerticalStackLayout x:Name="TrackContentLayout" Grid.Column="1" Padding="2" />
-                </Grid>
+                                Grid.Column="0"
+                                x:Name="AddTrackButton"
+                                Text="+"
+                                Clicked="AddTrackButton_Clicked"
+                                HeightRequest="80" />
+                    </Grid>
+                </VerticalStackLayout>
 
             </ScrollView>
-
+            <BoxView x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>
         </Grid>
 
-        <Grid Grid.Row="2" x:Name="StatusBarGrid" BackgroundColor="#001122" Margin="0,2,0,0">
+        <Grid Grid.Row="2" x:Name="StatusBarGrid" BackgroundColor="#80001122" Margin="0,0,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="25"/>
                 <ColumnDefinition Width="Auto"/>
@@ -169,41 +233,21 @@ Clicked="AddClip_Clicked" />
 
             <HorizontalStackLayout HorizontalOptions="End" Grid.Column="3">
                 <Label x:Name="AlternativeStatusLabel" Text="" />
+                <VerticalStackLayout x:Name="ComputeView" WidthRequest="15" />
 
             </HorizontalStackLayout>
 
         </Grid>
 
-       <AbsoluteLayout x:Name="OverlayLayer"
+        <AbsoluteLayout x:Name="OverlayLayer"
                         Grid.RowSpan="3"
-                        ZIndex="1000"
-                        InputTransparent="True"
-                        CascadeInputTransparent="True"
-                       BackgroundColor="Transparent"
+                        ZIndex="10000"
+                        InputTransparent="False"
+                       BackgroundColor="#01000000"
                         IsVisible="True"
                         HorizontalOptions="Fill"
                         VerticalOptions="Fill">
-            <BoxView x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True"/>
-            <Image x:Name="PreviewOverlayImage"
-           BackgroundColor="#112233"
-           Aspect="AspectFit"
-           InputTransparent="True"
-           WidthRequest="800"
-           HeightRequest="240"
-           AbsoluteLayout.LayoutBounds="0,0,800,240"
-           AbsoluteLayout.LayoutFlags="None" />
 
-            <ie:InteractableEditor x:Name="ClipEditor"
-                                   AbsoluteLayout.LayoutBounds="0,0,800,240"
-                                   AbsoluteLayout.LayoutFlags="None"
-                                   IsVisible="False"/>
-
-            <Label Text="Overlay"
-                   TextColor="White"
-                   BackgroundColor="#66000000"
-                   Padding="6"
-                   AbsoluteLayout.LayoutBounds="1,0,AutoSize,AutoSize"
-                   AbsoluteLayout.LayoutFlags="PositionProportional" />
         </AbsoluteLayout>
     </Grid>
 </ContentPage>

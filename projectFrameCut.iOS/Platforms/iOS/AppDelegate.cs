@@ -1,6 +1,6 @@
 ﻿using Foundation;
 
-namespace projectFrameCut.iOS
+namespace projectFrameCut.Platforms.iOS
 {
     [Register("AppDelegate")]
     public class AppDelegate : MauiUIApplicationDelegate

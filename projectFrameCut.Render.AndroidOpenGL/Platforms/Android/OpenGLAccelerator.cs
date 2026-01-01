@@ -1,7 +1,7 @@
 ﻿using Android.Renderscripts;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Handlers;
-using projectFrameCut.Shared;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -87,82 +87,103 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             }
             """;
 
+        public static Lock locker = new();
+
     }
 
     public class OverlayComputer : IComputer
     {
-        public float[][] Compute(float[][] args)
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "Overlay";
+
+        public object[] Compute(object[] args)
         {
             // args: [A, B, aAlpha, bAlpha]
-            var A = args[0];
-            var B = args[1];
-            var aAlpha = args[2];
-            var bAlpha = args[3];
+            var A = args[0] as float[];
+            var B = args[1] as float[];
+            var aAlpha = args[2] as float[];
+            var bAlpha = args[3] as float[];
 
             // Ensure inputs are not null
             if (aAlpha == null) aAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
             if (bAlpha == null) bAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
 
-            // We need to run on MainThread because we are touching UI elements (NativeGLSurfaceView)
-            var result = MainThread.InvokeOnMainThreadAsync(async () =>
+            using (ShaderLibrary.locker.EnterScope())
             {
-                
-                NativeGLSurfaceView accelerator = new NativeGLSurfaceView
+                // We need to run on MainThread because we are touching UI elements (NativeGLSurfaceView)
+                // Use GetAwaiter().GetResult() with timeout to avoid deadlock when main thread is busy
+                var mainThreadTask = MainThread.InvokeOnMainThreadAsync(async () =>
                 {
-                    ShaderSource = ShaderLibrary.Alpha,
-                    Inputs = new float[][] { aAlpha, bAlpha },
-                    WidthRequest = 50,
-                    HeightRequest = 50,
-                    JobID = "OverlayComputer"
-                };
-                ComputerHelper.AddGLViewHandler?.Invoke(accelerator);
-                var handler = accelerator.Handler as NativeGLSurfaceViewHandler;
-                if (handler?.PlatformView is not GLComputeView glView)
-                    throw new InvalidOperationException("Accelerator is not ready or not attached.");
+                    NativeGLSurfaceView accelerator = new NativeGLSurfaceView
+                    {
+                        ShaderSource = ShaderLibrary.Alpha,
+                        Inputs = new float[][] { aAlpha, bAlpha },
+                        WidthRequest = 50,
+                        HeightRequest = 50,
+                        JobID = "OverlayComputer"
+                    };
+                    ComputerHelper.AddGLViewHandler?.Invoke(accelerator);
+                    var handler = accelerator.Handler as NativeGLSurfaceViewHandler;
+                    if (handler?.PlatformView is not GLComputeView glView)
+                        throw new InvalidOperationException("Accelerator is not ready or not attached.");
 
-                await glView.WaitUntilReadyAsync();
-                // Force update inputs on platform view
-                //NativeGLSurfceViewHandler.MapInputs(handler, accelerator);
+                    // Add timeout to WaitUntilReadyAsync to prevent infinite wait
+                    var readyTask = glView.WaitUntilReadyAsync();
+                    if (await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromSeconds(30))) != readyTask)
+                        throw new TimeoutException("GLComputeView.WaitUntilReadyAsync timed out after 30 seconds.");
+                    await readyTask; // Propagate any exception
 
-                var alphaResult = await glView.RunComputeAsync();
+                    var alphaResult = await glView.RunComputeAsync();
 
-                // 2. Compute Color
-                accelerator.ShaderSource = ShaderLibrary.ShaderColorSrc;
-                accelerator.Inputs = new float[][] { aAlpha, A, bAlpha, B };
-                NativeGLSurfaceViewHandler.MapInputs(handler, accelerator);
+                    // 2. Compute Color
+                    accelerator.ShaderSource = ShaderLibrary.ShaderColorSrc;
+                    accelerator.Inputs = new float[][] { aAlpha, A, bAlpha, B };
+                    NativeGLSurfaceViewHandler.MapInputs(handler, accelerator);
 
-                var colorResult = await glView.RunComputeAsync();
+                    var colorResult = await glView.RunComputeAsync();
 
-                return new float[][] { colorResult, alphaResult };
-            }).Result;
+                    return new float[][] { colorResult, alphaResult };
+                });
 
-            if (result is null)
-                throw new InvalidOperationException($"OverlayComputer Compute failed: accelerator returned null result.");
+                // Use Task.Wait with timeout instead of .Result to detect deadlocks
+                if (!mainThreadTask.Wait(TimeSpan.FromSeconds(60)))
+                {
+                    throw new TimeoutException($"OverlayComputer.Compute timed out after 60 seconds - likely deadlock due to main thread congestion. Consider reducing MaxThreads on Android.");
+                }
 
-            return result;
+                var result = mainThreadTask.Result;
+
+                if (result is null)
+                    throw new InvalidOperationException($"OverlayComputer Compute failed: accelerator returned null result.");
+
+                return result;
+            }
+
         }
 
-        
 
-        
+
+
     }
 
     public class RemoveColorComputer : IComputer
     {
+        public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
+        public string SupportedEffectOrMixture => "RemoveColor";
 
-        public float[][] Compute(float[][] args)
+        public object[] Compute(object[] args)
         {
 
             // args: [aR, aG, aB, sourceA, [toRemoveR], [toRemoveG], [toRemoveB], [range]]
-            var aR = args[0];
-            var aG = args[1];
-            var aB = args[2];
-            var sourceA = args[3];
+            var aR = args[0] as float[];
+            var aG = args[1] as float[];
+            var aB = args[2] as float[];
+            var sourceA = args[3] as float[];
 
-            var toRemoveR = (ushort)args[4][0];
-            var toRemoveG = (ushort)args[5][0];
-            var toRemoveB = (ushort)args[6][0];
-            var range = (ushort)args[7][0];
+            var toRemoveR = (ushort)args[4];
+            var toRemoveG = (ushort)args[5];
+            var toRemoveB = (ushort)args[6];
+            var range = (ushort)args[7];
 
             int lowR = Math.Max(0, toRemoveR - range);
             int highR = Math.Min(65535, toRemoveR + range);
@@ -198,30 +219,45 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     }
                 }
                 """;
-
-            float[] result = MainThread.InvokeOnMainThreadAsync(async () =>
+            using (ShaderLibrary.locker.EnterScope())
             {
-                NativeGLSurfaceView accelerator = new NativeGLSurfaceView
+                var mainThreadTask = MainThread.InvokeOnMainThreadAsync(async () =>
                 {
-                    ShaderSource = shader,
-                    Inputs = new float[][] { aR, aG, aB, sourceA },
-                    WidthRequest = 50,
-                    HeightRequest = 50,
-                    JobID = "RemoveColorComputer"
-                };
-                ComputerHelper.AddGLViewHandler?.Invoke(accelerator);
-                var handler = accelerator.Handler as NativeGLSurfaceViewHandler;
-                if (handler?.PlatformView is not GLComputeView glView)
-                    throw new InvalidOperationException("Accelerator is not ready or not attached.");
+                    NativeGLSurfaceView accelerator = new NativeGLSurfaceView
+                    {
+                        ShaderSource = shader,
+                        Inputs = new float[][] { aR, aG, aB, sourceA },
+                        WidthRequest = 50,
+                        HeightRequest = 50,
+                        JobID = "RemoveColorComputer"
+                    };
+                    ComputerHelper.AddGLViewHandler?.Invoke(accelerator);
+                    var handler = accelerator.Handler as NativeGLSurfaceViewHandler;
+                    if (handler?.PlatformView is not GLComputeView glView)
+                        throw new InvalidOperationException("Accelerator is not ready or not attached.");
 
-                await glView.WaitUntilReadyAsync();
-                return await glView.RunComputeAsync();
-            }).Result;
+                    // Add timeout to WaitUntilReadyAsync to prevent infinite wait
+                    var readyTask = glView.WaitUntilReadyAsync();
+                    if (await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromSeconds(30))) != readyTask)
+                        throw new TimeoutException("GLComputeView.WaitUntilReadyAsync timed out after 30 seconds.");
+                    await readyTask; // Propagate any exception
 
-            if (result is null)
-                throw new InvalidOperationException($"RemoveColorComputer Compute failed: accelerator returned null result.");
+                    return await glView.RunComputeAsync();
+                });
 
-            return [result];
+                // Use Task.Wait with timeout instead of .Result to detect deadlocks
+                if (!mainThreadTask.Wait(TimeSpan.FromSeconds(60)))
+                {
+                    throw new TimeoutException($"RemoveColorComputer.Compute timed out after 60 seconds - likely deadlock due to main thread congestion. Consider reducing MaxThreads on Android.");
+                }
+
+                float[] result = mainThreadTask.Result;
+
+                if (result is null)
+                    throw new InvalidOperationException($"RemoveColorComputer Compute failed: accelerator returned null result.");
+
+                return [result];
+            }
         }
     }
 

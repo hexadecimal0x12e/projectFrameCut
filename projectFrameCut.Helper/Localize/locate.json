@@ -1,0 +1,447 @@
+{
+  "DefaultLocate": "zh-CN",
+  "AdditionalUsing": "projectFrameCut.Helper",
+  "NameSpaceOfLocalizerInstance": "",
+  "ClassNameSpaceOfLocalizerInstance": "SimpleLocalizerBaseGeneratedHelper",
+  "NameOfLocalizerInstance": "Localized",
+  "NameOfBaseInterface": "ISimpleLocalizerBase",
+  "EnableDynamicGenerate": false,
+  "EnableBaseGenerate": true,
+  "Values": {
+    "zh-CN": [
+      {
+        "Id": "AppLoading",
+        "Value": "\u52A0\u8F7D\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Feedback",
+        "Value": "\u53CD\u9988",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_OpenLog",
+        "Value": "\u6253\u5F00\u65E5\u5FD7\u6587\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Restart",
+        "Value": "\u91CD\u542F\u5E94\u7528\u7A0B\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Title",
+        "Value": "{HelperProgram.AppTitle} \u5D29\u6E83\u62A5\u544A",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_Copyright",
+        "Value": "\u7248\u6743\u6240\u6709 hexadecimal0x12e 2025-{DateTime.Now.Year}\r",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_License",
+        "Value": "\u6B64\u7248\u672C\u7684 {HelperProgram.AppTitle} \u53EA\u53EF\u7528\u4E8E\u975E\u5546\u7528\u573A\u666F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_Version",
+        "Value": "\u7248\u672C {HelperProgram.AppVersion}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      }
+    ],
+    "en-US": [
+      {
+        "Id": "AppLoading",
+        "Value": "Loading...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Feedback",
+        "Value": "Feedback",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_OpenLog",
+        "Value": "Open log file",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Restart",
+        "Value": "Restart Application",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Title",
+        "Value": "{HelperProgram.AppTitle} Crash Report",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_Copyright",
+        "Value": "Copyright hexadecimal0x12e 2025-{DateTime.Now.Year}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_License",
+        "Value": "This version of {HelperProgram.AppTitle} is for non-commercial use only.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_Version",
+        "Value": "Version {HelperProgram.AppVersion}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      }
+    ],
+    "zh-TW": [
+      {
+        "Id": "AppLoading",
+        "Value": "\u8F09\u5165\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Feedback",
+        "Value": "\u56DE\u994B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_OpenLog",
+        "Value": "\u958B\u555F\u65E5\u8A8C\u6A94\u6848",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Restart",
+        "Value": "\u91CD\u65B0\u555F\u52D5\u61C9\u7528\u7A0B\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Title",
+        "Value": "{HelperProgram.AppTitle} \u5D29\u6F70\u5831\u544A",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_Copyright",
+        "Value": "\u7248\u6B0A\u6240\u6709 hexadecimal0x12e 2025-{DateTime.Now.Year}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_License",
+        "Value": "\u6B64\u7248\u672C\u7684 {HelperProgram.AppTitle} \u50C5\u53EF\u7528\u65BC\u975E\u5546\u696D\u7528\u9014\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_Version",
+        "Value": "\u7248\u672C {HelperProgram.AppVersion}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      }
+    ],
+    "ja-JP": [
+      {
+        "Id": "AppLoading",
+        "Value": "\u8AAD\u307F\u8FBC\u307F\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Feedback",
+        "Value": "\u30D5\u30A3\u30FC\u30C9\u30D0\u30C3\u30AF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_OpenLog",
+        "Value": "\u30ED\u30B0\u30D5\u30A1\u30A4\u30EB\u3092\u958B\u304F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Restart",
+        "Value": "\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u3092\u518D\u8D77\u52D5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Title",
+        "Value": "{HelperProgram.AppTitle} \u30AF\u30E9\u30C3\u30B7\u30E5\u30EC\u30DD\u30FC\u30C8",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_Copyright",
+        "Value": "\u8457\u4F5C\u6A29 hexadecimal0x12e 2025-{DateTime.Now.Year}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_License",
+        "Value": "\u3053\u306E\u30D0\u30FC\u30B8\u30E7\u30F3\u306E {HelperProgram.AppTitle} \u306F\u975E\u5546\u7528\u76EE\u7684\u3067\u306E\u307F\u3054\u5229\u7528\u3044\u305F\u3060\u3051\u307E\u3059\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_Version",
+        "Value": "\u30D0\u30FC\u30B8\u30E7\u30F3 {HelperProgram.AppVersion}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      }
+    ],
+    "ko-KR": [
+      {
+        "Id": "AppLoading",
+        "Value": "\uB85C\uB529 \uC911...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Feedback",
+        "Value": "\uD53C\uB4DC\uBC31",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_OpenLog",
+        "Value": "\uB85C\uADF8 \uD30C\uC77C \uC5F4\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Restart",
+        "Value": "\uC560\uD50C\uB9AC\uCF00\uC774\uC158 \uB2E4\uC2DC \uC2DC\uC791",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Title",
+        "Value": "{HelperProgram.AppTitle} \uCDA9\uB3CC \uBCF4\uACE0\uC11C",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_Copyright",
+        "Value": "\u00A9 hexadecimal0x12e 2025-{DateTime.Now.Year}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_License",
+        "Value": "\uC774 \uBC84\uC804\uC758 {HelperProgram.AppTitle}\uC740(\uB294) \uBE44\uC0C1\uC5C5\uC801 \uC6A9\uB3C4\uB85C\uB9CC \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_Version",
+        "Value": "\uBC84\uC804 {HelperProgram.AppVersion}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      }
+    ],
+    "fr-FR": [
+      {
+        "Id": "AppLoading",
+        "Value": "Chargement...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Feedback",
+        "Value": "Retour d\u0027information",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_OpenLog",
+        "Value": "Ouvrir le fichier journal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Restart",
+        "Value": "Red\u00E9marrer l\u0027application",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CrashForm_Title",
+        "Value": "{HelperProgram.AppTitle} - Rapport de plantage",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Titre de la fen\u00EAtre de rapport de plantage de l\u0027application. Le nom de l\u0027application est ins\u00E9r\u00E9 via le param\u00E8tre.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_Copyright",
+        "Value": "\u00A9 hexadecimal0x12e 2025-{DateTime.Now.Year}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_License",
+        "Value": "Cette version de {HelperProgram.AppTitle} est uniquement destin\u00E9e \u00E0 des fins non commerciales.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_Version",
+        "Value": "Version {HelperProgram.AppVersion}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      }
+    ]
+  }
+}

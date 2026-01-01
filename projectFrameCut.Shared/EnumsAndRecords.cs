@@ -12,7 +12,36 @@ namespace projectFrameCut.Shared
         Add,
         Minus,
         Multiply,
-        RemoveColor
+        RemoveColor,
+        ExtendMixture,
+    }
+
+    public enum ClipMode
+    {
+        VideoClip,
+        PhotoClip,
+        SolidColorClip,
+        TextClip,
+        ExtendClip,
+        AudioClip,
+        SubtitleClip,
+        Special
+    }
+
+    public enum AssetType
+    {
+        Video,
+        Audio,
+        Image,
+        Font,
+        Other
+    }
+
+    public enum TrackMode
+    {
+        NormalTrack,
+        ExtendTrack,
+        SpecialTrack
     }
 
     public enum EffectType
@@ -22,6 +51,7 @@ namespace projectFrameCut.Shared
         RemoveColor,
         ReplaceAlpha,
         ColorCorrection,
+        ExtendEffect,
     }
 
     public record struct AcceleratorInfo(uint index, string name, string Type);

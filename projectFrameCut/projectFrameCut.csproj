@@ -1,5 +1,4 @@
-﻿
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<TargetFrameworks>net10.0-android</TargetFrameworks>
@@ -31,7 +30,7 @@
 
 		<!-- Versions -->
 		<ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
-		<ApplicationVersion>2</ApplicationVersion>
+		<ApplicationVersion>3</ApplicationVersion>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">13.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">13.1</SupportedOSPlatformVersion>
@@ -45,8 +44,8 @@
 		<NeutralLanguage>zh-CN</NeutralLanguage>
 		<AndroidSigningKeyStore>0x12e.keystore</AndroidSigningKeyStore>
 
-		<AssemblyVersion>1.2.0.0</AssemblyVersion>
-		<FileVersion>1.2.0.0</FileVersion>
+		<AssemblyVersion>1.3.0.0</AssemblyVersion>
+		<FileVersion>1.3.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>codename 'projectFrameCut'</Product>
 		<Description>projectFrameCut beta</Description>
@@ -93,8 +92,8 @@
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*.png" />
 		<MauiImage Include="Resources\Images\*.jpg" />
-		<MauiImage Include="Resources\Images\*.svg" Resize="false" />
-		
+		<MauiImage Include="Resources\Images\*.svg" Resize="True" />
+
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
 
@@ -104,7 +103,7 @@
 
 
 	<ItemGroup>
-	  <AndroidResource Remove="Platforms\Android\Resources\values\styles.xml" />
+	  <None Remove="Platforms\Android\Resources\values\styles.xml" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -113,6 +112,7 @@
 		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.10" />
 		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.10" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
+		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="7.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -127,6 +127,7 @@
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<ProjectReference Include="..\projectFrameCut.Render.WindowsRender\projectFrameCut.Render.WindowsRender.csproj" />
+		<ProjectReference Include="..\projectFrameCut.Helper\projectFrameCut.Helper.csproj" />
 		<PackageReference Include="System.Management" Version="10.0.0" />
 		<MauiAsset Include="..\..\playground\FFmpeg\windows\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Update="AppShell_Windows.xaml.cs">
@@ -146,7 +147,7 @@
 
 	<ItemGroup>
 		<MauiXaml Update="AssetsLibraryPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="HomePage.xaml">
 			<Generator>MSBuild:Compile</Generator>
@@ -157,31 +158,13 @@
 		<MauiXaml Update="RenderPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
-		<MauiXaml Update="RPCTestPage.xaml">
+		<MauiXaml Update="Setting\SettingPages\AboutSettingPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
-		<MauiXaml Update="Setting\SettingPages\AboutSettingPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-		<MauiXaml Update="Setting\SettingPages\AboutSettingPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-		<MauiXaml Update="Setting\SettingPages\AssetSettingPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
 		<MauiXaml Update="Setting\SettingPages\DebugSettingPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
-		<MauiXaml Update="Setting\SettingPages\EditSettingPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-		<MauiXaml Update="Setting\SettingPages\GeneralSettingPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-		<MauiXaml Update="Setting\SettingPages\MiscSettingPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
-		<MauiXaml Update="Setting\SettingPages\RenderSettingPage.xaml">
+		<MauiXaml Update="Setting\SettingPages\SafeZoneSettingPage.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="TestPage.xaml">
@@ -190,27 +173,20 @@
 		<MauiXaml Update="Views\OverlayView.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
-		<MauiXaml Update="DebuggingMainPage.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</MauiXaml>
 	</ItemGroup>
 
 
 
 	<ItemGroup>
-		
-		<Compile Update="DraftPage.xaml.cs">
-			<DependentUpon>DraftPage.xaml</DependentUpon>
+		<Compile Update="InteractableEditor\InteractableEditor.xaml.cs">
+			<DependentUpon>DraftStuff\InteractableEditor\InteractableEditor.xaml</DependentUpon>
 		</Compile>
-		
+
 		<Compile Update="Setting\SettingPages\AboutSettingPage.xaml.cs">
-		  <DependentUpon>AboutSettingPage.xaml</DependentUpon>
+			<DependentUpon>AboutSettingPage.xaml</DependentUpon>
 		</Compile>
 		<Compile Update="TestPage.xaml.cs">
 			<DependentUpon>TestPage.xaml</DependentUpon>
-		</Compile>
-		<Compile Update="DebuggingMainPage.xaml.cs">
-			<DependentUpon>DebuggingMainPage.xaml</DependentUpon>
 		</Compile>
 	</ItemGroup>
 
@@ -230,10 +206,7 @@
 		<None Update="DebuggingMainPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</None>
-		<None Update="DraftPageNew.xaml">
-			<Generator>MSBuild:Compile</Generator>
-		</None>
-		<None Update="DraftPageOld.xaml">
+		<None Update="DraftPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</None>
 		<None Update="LandingPage.xaml">
@@ -250,7 +223,7 @@
 		</None>
 	</ItemGroup>
 
-	
+
 	<!-- Platform-specific: exclude Android AppShell from Windows builds and exclude Windows AppShell from Android builds -->
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<MauiXaml Remove="AppShell_Android.xaml" />
@@ -262,6 +235,10 @@
 		<MauiXaml Remove="AppShell_Windows.xaml" />
 		<None Remove="AppShell_Windows.xaml" />
 		<Compile Remove="AppShell_Windows.xaml.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <MauiImage Include="Resources\Raw\Images\unknown_music.png" />
 	</ItemGroup>
 
 </Project>

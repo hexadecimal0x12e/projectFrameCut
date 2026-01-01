@@ -1,8 +1,7 @@
 ﻿using ILGPU;
 using ILGPU.Runtime;
 using ILGPU.Runtime.OpenCL;
-using projectFrameCut.Render.RenderCLI;
-using projectFrameCut.Shared;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -14,12 +13,14 @@ namespace projectFrameCut.Render.WindowsRender
 {
     public class OverlayComputer : IComputer
     {
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
+        public string SupportedEffectOrMixture => "Overlay";
 
         [SetsRequiredMembers]
-        public OverlayComputer(Accelerator[] accel, bool sync)
+        public OverlayComputer(Accelerator[] accel, bool? sync)
         {
             this.accelerators = accel;
-            Sync = sync;
+            Sync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
         }
 
         public required Accelerator[] accelerators { get; init; }
@@ -27,7 +28,7 @@ namespace projectFrameCut.Render.WindowsRender
 
         private int accelIdx = 0;
 
-        public float[][] Compute(float[][] args)
+        public object[] Compute(object[] args)
         {
             Accelerator accelerator;
             if (accelerators.Length > 1)
@@ -40,10 +41,10 @@ namespace projectFrameCut.Render.WindowsRender
                 accelerator = accelerators[0];
             }
 
-            var A = args[0];
-            var B = args[1];
-            var aAlpha = args[2];
-            var bAlpha = args[3];
+            var A = args[0] as float[] ?? throw new InvalidDataException("Invalid argument for A");
+            var B = args[1] as float[] ?? throw new InvalidDataException("Invalid argument for B");
+            var aAlpha = args[2] as float[] ?? Enumerable.Repeat(1f, A.Length).ToArray();
+            var bAlpha = args[3] as float[] ?? Enumerable.Repeat(1f, A.Length).ToArray();
             var output = new float[A.Length];
 
             using var a = accelerator.Allocate1D(A);
@@ -89,7 +90,7 @@ namespace projectFrameCut.Render.WindowsRender
 
             if (Sync)
             {
-                lock (Program.globalLocker!)
+                using (ILGPUComputerHelper.locker.EnterScope())
                 {
                     krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
                     accelerator.Synchronize();
@@ -113,13 +114,14 @@ namespace projectFrameCut.Render.WindowsRender
 
     public class RemoveColorComputer : IComputer
     {
-
+        public string FromPlugin => "projectFrameCut.Render.WindowsRender.WindowsComputers";
+        public string SupportedEffectOrMixture => "RemoveColor";
 
         [SetsRequiredMembers]
-        public RemoveColorComputer(Accelerator[] accel, bool sync)
+        public RemoveColorComputer(Accelerator[] accel, bool? sync)
         {
             this.accelerators = accel;
-            ForceSync = sync;
+            ForceSync = sync ?? accel.Any(a => a.AcceleratorType == AcceleratorType.OpenCL);
         }
 
         public required Accelerator[] accelerators { get; init; }
@@ -127,7 +129,7 @@ namespace projectFrameCut.Render.WindowsRender
 
         private int accelIdx = 0;
 
-        public float[][] Compute(float[][] args)
+        public object[] Compute(object[] args)
         {
             Accelerator accelerator;
             if (accelerators.Length > 1)
@@ -144,10 +146,10 @@ namespace projectFrameCut.Render.WindowsRender
             var Nullable_aG = args[1];
             var Nullable_aB = args[2];
             var Nullable_sourceA = args[3];
-            var toRemoveR = (ushort)args[4][0];
-            var toRemoveG = (ushort)args[5][0];
-            var toRemoveB = (ushort)args[6][0];
-            var range = (ushort)args[7][0];
+            var toRemoveR = (ushort)args[4];
+            var toRemoveG = (ushort)args[5];
+            var toRemoveB = (ushort)args[6];
+            var range = (ushort)args[7];
 
             float[] aR, aG, aB, sourceA;
 
@@ -296,7 +298,7 @@ namespace projectFrameCut.Render.WindowsRender
         {
             if (ForceSync)
             {
-                lock (Program.globalLocker)
+                using (ILGPUComputerHelper.locker.EnterScope())
                 {
                     action();
                 }
@@ -311,23 +313,7 @@ namespace projectFrameCut.Render.WindowsRender
 
     public static class ILGPUComputerHelper
     {
-        public static void RegisterComputerGetter(Accelerator[] accels, bool sync)
-        {
-            AcceleratedComputerBridge.RequireAComputer = new((name) =>
-            {
-                switch (name)
-                {
-                    case "Overlay":
-                        return new OverlayComputer(accels, sync);
-                    case "RemoveColor":
-                        return new RemoveColorComputer(accels, sync);
-                    default:
-                        Log($"Computer {name} not found.", "Error");
-                        return null;
-
-                }
-            });
-        }
+        public static Lock locker = new();
 
         public static Device? PickOneAccel(string accelType, int acceleratorId, List<Device> devices)
         {

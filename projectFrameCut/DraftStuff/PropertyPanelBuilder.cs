@@ -22,10 +22,16 @@ namespace projectFrameCut.PropertyPanel
     [System.Diagnostics.DebuggerNonUserCode()]
     public class PropertyPanelBuilder
     {
-
-        //private VerticalStackLayout layout;
+        /// <summary>
+        /// Set the default width of the <see cref="WidthOfContent"/>.
+        /// </summary>
+        public static double DefaultWidthOfContent = 5;
 
         private List<View> children = new();
+
+        /// <summary>
+        /// Represents a collection of components added to the property panel, identified by their unique string IDs.
+        /// </summary>
         public Dictionary<string, View> Components { get; private init; } = new();
 
         /// <summary>
@@ -36,7 +42,10 @@ namespace projectFrameCut.PropertyPanel
         /// <summary>
         /// Get or set the default ratio of length of the content area (the second column) by their labels (the first column).
         /// </summary>
-        public double WidthOfContent { get; set; } = 5;
+        /// <remarks>
+        /// Use null for default value, which is equals to <see cref="DefaultWidthOfContent"/>.
+        /// </remarks>
+        public double? WidthOfContent { get; set; } = null;
 
         /// <summary>
         /// Gets or sets the default padding applied to the control's outer grid,
@@ -62,17 +71,12 @@ namespace projectFrameCut.PropertyPanel
         public PropertyPanelBuilder()
         {
             childBuilder = new PropertyPanelChildrenBuilder(this);
-            //layout = new VerticalStackLayout
-            //{
-            //    Spacing = 10,
-            //    Padding = new Thickness(10)
-            //};
         }
 
         /// <summary>
         /// Adds a <seealso cref="Label"/> to the property panel.
         /// </summary>
-        public PropertyPanelBuilder AddText(string content, string Id = "",double fontSize = 14, FontAttributes fontAttributes = FontAttributes.None)
+        public PropertyPanelBuilder AddText(string content, string Id = "", double fontSize = 14, FontAttributes fontAttributes = FontAttributes.None)
         {
             var label = new Label
             {
@@ -80,16 +84,23 @@ namespace projectFrameCut.PropertyPanel
                 FontSize = fontSize,
                 FontAttributes = fontAttributes
             };
-            if(!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, label);
+            if (!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, label);
             children.Add(label);
             return this;
         }
 
         public PropertyPanelBuilder AddText(PropertyPanelItemLabel label, string Id = "")
         {
-            var l = label.LabelConfigurer();
+            var l = label.LabelConfigure();
             if (!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, l);
             children.Add(l);
+            return this;
+        }
+        public PropertyPanelBuilder AddText(Label label, string Id = "", Action<Label>? LabelSetter = null)
+        {
+            if (!string.IsNullOrWhiteSpace(Id)) Components.Add(Id, label);
+            LabelSetter?.Invoke(label);
+            children.Add(label);
             return this;
         }
 
@@ -107,7 +118,7 @@ namespace projectFrameCut.PropertyPanel
                 HorizontalOptions = LayoutOptions.Fill,
                 BindingContext = this
             };
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
 
             Properties[Id] = defaultValue;
             switch (mode)
@@ -132,7 +143,7 @@ namespace projectFrameCut.PropertyPanel
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent , GridUnitType.Star) }
                 },
                 RowDefinitions = new RowDefinitionCollection
                 {
@@ -162,7 +173,7 @@ namespace projectFrameCut.PropertyPanel
                 HorizontalOptions = LayoutOptions.End,
                 BindingContext = this
             };
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
             Properties[Id] = defaultValue;
             checkbox.CheckedChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, e.Value);
             CheckboxSetter?.Invoke(checkbox);
@@ -171,7 +182,7 @@ namespace projectFrameCut.PropertyPanel
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
                 },
                 RowDefinitions = new RowDefinitionCollection
                 {
@@ -182,7 +193,7 @@ namespace projectFrameCut.PropertyPanel
             grid.Children.Add(label);
             grid.Children.Add(checkbox);
             Grid.SetColumn(checkbox, 1);
-            children.Add(grid); 
+            children.Add(grid);
             Components.Add(Id, checkbox);
             return this;
         }
@@ -200,16 +211,20 @@ namespace projectFrameCut.PropertyPanel
                 BindingContext = this,
 
             };
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
             Properties[Id] = defaultValue;
-            swtch.Toggled += (s, e) => pppcea.CreateAndInvoke(this, Id, e.Value);
+            swtch.Toggled += async (s, e) =>
+            {
+                await Task.Delay(350); //let animation go
+                pppcea.CreateAndInvoke(this, Id, e.Value);
+            };
             SwitchSetter?.Invoke(swtch);
             var grid = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
                 },
                 RowDefinitions = new RowDefinitionCollection
                 {
@@ -239,16 +254,30 @@ namespace projectFrameCut.PropertyPanel
             picker.ItemsSource = values;
             picker.SelectedIndex = Array.IndexOf(values, defaultOne);
 
-            var label = title.LabelConfigurer();
-            Properties[Id] = defaultOne;
-            picker.SelectedIndexChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, picker.SelectedItem as string);
+            var label = title.LabelConfigure();
+            Properties[Id] = defaultOne!;
+#if !iDevices
+            picker.SelectedIndexChanged += (s, e) =>
+            {
+                var selected = picker.SelectedItem as string;
+                if (selected is null) return;
+                pppcea.CreateAndInvoke(this, Id, selected);
+            };
+#else //avoid picker disappears before selection done
+            picker.Closed += (s, e) =>
+            {
+                var selected = picker.SelectedItem as string;
+                if (selected is null) return;
+                pppcea.CreateAndInvoke(this, Id, selected);
+            };
+#endif
             PickerSetter?.Invoke(picker);
             var grid = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
                 },
                 RowDefinitions = new RowDefinitionCollection
                 {
@@ -259,7 +288,7 @@ namespace projectFrameCut.PropertyPanel
             grid.Children.Add(label);
             grid.Children.Add(picker);
             Grid.SetColumn(picker, 1);
-            children.Add(grid); 
+            children.Add(grid);
             Components.Add(Id, picker);
             return this;
         }
@@ -269,20 +298,28 @@ namespace projectFrameCut.PropertyPanel
         /// </summary>
         /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
         /// <param name="defaultValue">The default value to assign to the property identified by <paramref name="Id"/>.</param>
-        public PropertyPanelBuilder AddSlider(string Id, PropertyPanelItemLabel title, double min, double max, double defaultValue, Action<Slider>? SliderSetter = null)
+        public PropertyPanelBuilder AddSlider(string Id, PropertyPanelItemLabel title, double min, double max, double defaultValue, Action<Slider>? SliderSetter = null, SliderUpdateEventCallMode eventCallMode = SliderUpdateEventCallMode.OnMouseUp)
         {
             var slider = new Slider
             {
                 Minimum = min,
                 Maximum = max,
                 Value = defaultValue,
-                HorizontalOptions = LayoutOptions.FillAndExpand,
+                HorizontalOptions = LayoutOptions.Fill,
                 BindingContext = this
             };
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
 
             Properties[Id] = defaultValue;
-            slider.ValueChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, e.NewValue);
+            if (eventCallMode == SliderUpdateEventCallMode.OnValueChanged)
+            {
+                slider.ValueChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, e.NewValue);
+            }
+            else
+            {
+                slider.DragCompleted += (s, e) => pppcea.CreateAndInvoke(this, Id, slider.Value);
+            }
+
             SliderSetter?.Invoke(slider);
 
             var grid = new Grid
@@ -290,7 +327,7 @@ namespace projectFrameCut.PropertyPanel
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
                 },
                 RowDefinitions = new RowDefinitionCollection
                 {
@@ -341,24 +378,138 @@ namespace projectFrameCut.PropertyPanel
             Properties[Id] = null!;
             ButtonSetter?.Invoke(button);
             button.Clicked += (s, e) => pppcea.CreateAndInvoke(this, Id, null!);
-            //var grid = new Grid
-            //{
-            //    ColumnDefinitions = new ColumnDefinitionCollection
-            //    {
-            //        new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-            //        new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
-            //    },
-            //    RowDefinitions = new RowDefinitionCollection
-            //    {
-            //        new RowDefinition { Height = GridLength.Auto }
-            //    },
-            //    Padding = DefaultPadding
-            //};
-            //grid.Children.Add(label);
-            //grid.Children.Add(button);
-            //Grid.SetColumn(button, 1);
-            children.Add(button); 
+            children.Add(button);
             Components.Add(Id, button);
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a simple <seealso cref="Button"/> which not use <see cref="PropertyPanelBuilder"/>'s event processing system.
+        /// </summary>
+        /// <remarks>
+        /// Please note that <see cref="PropertyChanged"/> will NEVER be triggered, instead, you should handle <paramref name="OnClick"/> to do your own logic.
+        /// </remarks>
+        public PropertyPanelBuilder AddButton(string buttonText, EventHandler OnClick, Action<Button>? ButtonSetter = null)
+        {
+            var Id = Guid.NewGuid().ToString();
+            var button = new Button
+            {
+                Text = buttonText,
+                HorizontalOptions = LayoutOptions.Fill
+            };
+            Properties[Id] = null!;
+            ButtonSetter?.Invoke(button);
+            button.Clicked += OnClick;
+            children.Add(button);
+            Components.Add(Id, button);
+            return this;
+        }
+
+        /// <summary>
+        /// Adds a card-like option row: left icon + right (title + description), similar to the screenshot.
+        /// </summary>
+        /// <remarks>
+        /// - By default this view is tappable and will trigger <see cref="PropertyChanged"/> with <paramref name="tappedValue"/>.
+        /// - Use the setter callbacks to style borders/spacing to match your theme.
+        /// </remarks>
+        /// <param name="Id">The unique identifier for the property associated with this card. Cannot be null.</param>
+        /// <param name="icon">Icon image source shown on the left.</param>
+        /// <param name="title">Main title (first line).</param>
+        /// <param name="description">Secondary description (second line).</param>
+        /// <param name="defaultValue">Initial value stored in <see cref="Properties"/> for <paramref name="Id"/>.</param>
+        /// <param name="tappedValue">Value sent when tapped. If null, will fall back to <paramref name="defaultValue"/>; if still null, uses new object().</param>
+        /// <param name="invokeOnTap">Whether tapping triggers <see cref="PropertyChanged"/> via the unified event mechanism.</param>
+        public PropertyPanelBuilder AddIconTitleDescriptionCard(
+            string Id,
+            ImageSource icon,
+            string title,
+            string description,
+            object? defaultValue = null,
+            object? tappedValue = null,
+            bool invokeOnTap = true,
+            Action<Border>? CardSetter = null,
+            Action<Border>? IconContainerSetter = null,
+            Action<Image>? IconSetter = null,
+            Action<Label>? TitleSetter = null,
+            Action<Label>? DescriptionSetter = null)
+        {
+            var iconImage = new Image
+            {
+                Source = icon,
+                Aspect = Aspect.AspectFit,
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center
+            };
+            IconSetter?.Invoke(iconImage);
+
+            var iconContainer = new Border
+            {
+                Content = iconImage,
+                Padding = new Thickness(8),
+                HorizontalOptions = LayoutOptions.Start,
+                VerticalOptions = LayoutOptions.Center
+            };
+            IconContainerSetter?.Invoke(iconContainer);
+
+            var titleLabel = new Label
+            {
+                Text = title,
+                FontAttributes = FontAttributes.Bold,
+                VerticalOptions = LayoutOptions.Center
+            };
+            TitleSetter?.Invoke(titleLabel);
+
+            var descriptionLabel = new Label
+            {
+                Text = description,
+                FontSize = 12,
+                VerticalOptions = LayoutOptions.Center
+            };
+            DescriptionSetter?.Invoke(descriptionLabel);
+
+            var textStack = new VerticalStackLayout
+            {
+                Spacing = 2,
+                VerticalOptions = LayoutOptions.Center,
+                Children = { titleLabel, descriptionLabel }
+            };
+
+            var grid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitionCollection
+                {
+                    new ColumnDefinition { Width = GridLength.Auto },
+                    new ColumnDefinition { Width = GridLength.Star }
+                },
+                ColumnSpacing = 12,
+                RowDefinitions = new RowDefinitionCollection
+                {
+                    new RowDefinition { Height = GridLength.Auto }
+                }
+            };
+            grid.Children.Add(iconContainer);
+            grid.Children.Add(textStack);
+            Grid.SetColumn(textStack, 1);
+
+            var card = new Border
+            {
+                Content = grid,
+                Padding = new Thickness(12),
+                Margin = DefaultPadding
+            };
+            CardSetter?.Invoke(card);
+
+            Properties[Id] = defaultValue!;
+            var effectiveTappedValue = tappedValue ?? defaultValue ?? new object();
+            if (invokeOnTap)
+            {
+                var tap = new TapGestureRecognizer();
+                tap.Tapped += (s, e) => pppcea.CreateAndInvoke(this, Id, effectiveTappedValue);
+                card.GestureRecognizers.Add(tap);
+            }
+
+            children.Add(card);
+            Components.Add(Id, card);
             return this;
         }
 
@@ -366,7 +517,7 @@ namespace projectFrameCut.PropertyPanel
         {
             var cb = new PropertyPanelChildrenBuilder(this);
             childrenMaker(cb);
-            if(!string.IsNullOrWhiteSpace(id)) Components.Add(id, cb.ToHorizentalLayout());
+            if (!string.IsNullOrWhiteSpace(id)) Components.Add(id, cb.ToHorizentalLayout());
             children.Add(cb.ToVerticalLayout());
             return this;
         }
@@ -398,14 +549,14 @@ namespace projectFrameCut.PropertyPanel
         /// </summary>
         public PropertyPanelBuilder AddCustomChild(PropertyPanelItemLabel title, View child, string id = "")
         {
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
 
             var grid = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
                 },
                 RowDefinitions = new RowDefinitionCollection
                 {
@@ -416,8 +567,8 @@ namespace projectFrameCut.PropertyPanel
             grid.Children.Add(label);
             grid.Children.Add(child);
             Grid.SetColumn(child, 1);
-            children.Add(grid); 
-            if(!string.IsNullOrWhiteSpace(id)) Components.Add(id, child);
+            children.Add(grid);
+            if (!string.IsNullOrWhiteSpace(id)) Components.Add(id, child);
             return this;
         }
 
@@ -477,13 +628,13 @@ namespace projectFrameCut.PropertyPanel
         {
             var child = maker((o) => pppcea.CreateAndInvoke(this, Id, o));
             Properties[Id] = defaultValue;
-            var label = title.LabelConfigurer();
+            var label = title.LabelConfigure();
             var grid = new Grid
             {
                 ColumnDefinitions = new ColumnDefinitionCollection
                 {
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent, GridUnitType.Star) }
+                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
                 },
                 RowDefinitions = new RowDefinitionCollection
                 {
@@ -514,7 +665,7 @@ namespace projectFrameCut.PropertyPanel
             {
                 AddCustomChild(item);
             }
-            
+
             another.PropertyChanged += (_, e) => PropertyChanged?.Invoke(another, e);
             return this;
 
@@ -569,6 +720,16 @@ namespace projectFrameCut.PropertyPanel
             return layout;
         }
 
+        public ScrollView BuildWithScrollView(Action<ScrollView>? Configurer = null)
+        {
+            var scrollView = new ScrollView
+            {
+                Content = Build(),
+            };
+            Configurer?.Invoke(scrollView);
+            return scrollView;
+        }
+
         internal void _InvokeInternal(pppcea e)
         {
             PropertyChanged?.Invoke(this, e);
@@ -606,7 +767,7 @@ namespace projectFrameCut.PropertyPanel
 
         public PropertyPanelChildrenBuilder AddText(PropertyPanelItemLabel label, GridLength? width = null)
         {
-            addChild(label.LabelConfigurer(), width);
+            addChild(label.LabelConfigure(), width);
             return this;
         }
 
@@ -744,6 +905,102 @@ namespace projectFrameCut.PropertyPanel
             return this;
         }
 
+        /// <summary>
+        /// Adds a card-like option row (icon + title/description) as a child in this line builder.
+        /// </summary>
+        public PropertyPanelChildrenBuilder AddIconTitleDescriptionCard(
+            string Id,
+            ImageSource icon,
+            string title,
+            string description,
+            object? defaultValue = null,
+            object? tappedValue = null,
+            bool invokeOnTap = true,
+            GridLength? width = null,
+            Action<Border>? CardSetter = null,
+            Action<Border>? IconContainerSetter = null,
+            Action<Image>? IconSetter = null,
+            Action<Label>? TitleSetter = null,
+            Action<Label>? DescriptionSetter = null)
+        {
+            var iconImage = new Image
+            {
+                Source = icon,
+                Aspect = Aspect.AspectFit,
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center
+            };
+            IconSetter?.Invoke(iconImage);
+
+            var iconContainer = new Border
+            {
+                Content = iconImage,
+                Padding = new Thickness(8),
+                HorizontalOptions = LayoutOptions.Start,
+                VerticalOptions = LayoutOptions.Center
+            };
+            IconContainerSetter?.Invoke(iconContainer);
+
+            var titleLabel = new Label
+            {
+                Text = title,
+                FontAttributes = FontAttributes.Bold,
+                VerticalOptions = LayoutOptions.Center
+            };
+            TitleSetter?.Invoke(titleLabel);
+
+            var descriptionLabel = new Label
+            {
+                Text = description,
+                FontSize = 12,
+                VerticalOptions = LayoutOptions.Center
+            };
+            DescriptionSetter?.Invoke(descriptionLabel);
+
+            var textStack = new VerticalStackLayout
+            {
+                Spacing = 2,
+                VerticalOptions = LayoutOptions.Center,
+                Children = { titleLabel, descriptionLabel }
+            };
+
+            var grid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitionCollection
+                {
+                    new ColumnDefinition { Width = GridLength.Auto },
+                    new ColumnDefinition { Width = GridLength.Star }
+                },
+                ColumnSpacing = 12,
+                RowDefinitions = new RowDefinitionCollection
+                {
+                    new RowDefinition { Height = GridLength.Auto }
+                }
+            };
+            grid.Children.Add(iconContainer);
+            grid.Children.Add(textStack);
+            Grid.SetColumn(textStack, 1);
+
+            var card = new Border
+            {
+                Content = grid,
+                Padding = new Thickness(12)
+            };
+            CardSetter?.Invoke(card);
+
+            parent.Properties[Id] = defaultValue!;
+            var effectiveTappedValue = tappedValue ?? defaultValue ?? new object();
+            if (invokeOnTap)
+            {
+                var tap = new TapGestureRecognizer();
+                tap.Tapped += (s, e) => pppcea.CreateAndInvoke(parent, Id, effectiveTappedValue);
+                card.GestureRecognizers.Add(tap);
+            }
+
+            addChild(card, width);
+            return this;
+        }
+
         public PropertyPanelChildrenBuilder AddChild(View v, GridLength? width = null)
         {
             addChild(v, width);
@@ -831,16 +1088,27 @@ namespace projectFrameCut.PropertyPanel
         OnUnfocusedAndUnchanged
     }
 
-    public class SingleLineLabel(string text, int fontsize = 14, FontAttributes fontAttributes = FontAttributes.None) : PropertyPanelItemLabel
+    public enum SliderUpdateEventCallMode
     {
-        public override View LabelConfigurer() => new Label { Text = text, FontSize = fontsize, FontAttributes = fontAttributes, VerticalOptions = LayoutOptions.Center };
+        OnValueChanged,
+        OnMouseUp
+    }
+
+    public class SingleLineLabel(string text, int fontsize = 14, FontAttributes fontAttributes = FontAttributes.None, Color? TextColor = null) : PropertyPanelItemLabel
+    {
+        public override View LabelConfigure()
+        {
+            var l = new Label { Text = text, FontSize = fontsize, FontAttributes = fontAttributes, VerticalOptions = LayoutOptions.Center };
+            if (TextColor is not null) l.TextColor = TextColor;
+            return l;
+        }
 
         public static implicit operator SingleLineLabel(string text) => new SingleLineLabel(text);
     }
 
     public class TitleAndDescriptionLineLabel(string title, string description, int titleFontSize = 20, int contentFontSize = 12) : PropertyPanelItemLabel
     {
-        public override View LabelConfigurer() => new VerticalStackLayout
+        public override View LabelConfigure() => new VerticalStackLayout
         {
             Children =
             {
@@ -856,7 +1124,7 @@ namespace projectFrameCut.PropertyPanel
 
         public PropertyPanelItemLabel() { }
         public PropertyPanelItemLabel(View v) => _view = v;
-        public virtual View LabelConfigurer() => _view ?? throw new NullReferenceException("Trying to set a null label.");
+        public virtual View LabelConfigure() => _view ?? throw new NullReferenceException("Trying to set a null label.");
 
         public static implicit operator PropertyPanelItemLabel(string text) => new SingleLineLabel(text);
 

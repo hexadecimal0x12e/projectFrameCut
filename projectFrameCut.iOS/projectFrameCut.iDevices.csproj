@@ -30,7 +30,7 @@
 		<!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
 		<WindowsPackageType>None</WindowsPackageType>
 
-			<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">17.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">17.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
 	</PropertyGroup>
 
@@ -44,7 +44,7 @@
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
 		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
-		
+
 		<!-- Custom Fonts -->
 		<MauiFont Include="..\projectFrameCut\Resources\Fonts\*" />
 
@@ -75,7 +75,9 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.10" />
-				<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
+		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
+		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="7.0.0" />
+
 
 	</ItemGroup>
 
@@ -86,12 +88,15 @@
 			<DependentUpon>%(Filename).xaml</DependentUpon>
 		</Compile>
 
+		<Compile Include="..\projectFrameCut\Asset\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut\Controls\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Localize\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\ViewModels\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\DraftStuff\**\*.cs" Exclude="..\projectFrameCut\DraftStuff\InteractableEditor\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Converters\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut\Services\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Setting\Setting*\**\*.cs" Exclude="..\projectFrameCut\Setting\SettingPages\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
-		
+
 		<Compile Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'" Include="..\projectFrameCut\Platforms\iOS\**\*.cs" Exclude="..\projectFrameCut\Platforms\iOS\AppDelegate.cs;..\projectFrameCut\Platforms\iOS\Program.cs" Link="Platforms\iOS\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'" Include="..\projectFrameCut\Platforms\MacCatalyst\**\*.cs" Exclude="..\projectFrameCut\Platforms\MacCatalyst\AppDelegate.cs;..\projectFrameCut\Platforms\MacCatalyst\Program.cs" Link="Platforms\MacCatalyst\%(RecursiveDir)%(Filename)%(Extension)" />
 
@@ -107,14 +112,17 @@
 		<Using Include="LocalizedResources.SimpleLocalizerBaseGeneratedHelper">
 			<Static>True</Static>
 		</Using>
+		<Using Include="projectFrameCut.Setting.SettingManager">
+			<Static>False</Static>
+		</Using>
 	</ItemGroup>
 	<ItemGroup>
-	  <MauiXaml Update="Resources\Styles\Colors.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
-	  <MauiXaml Update="Resources\Styles\Styles.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
+		<MauiXaml Update="Resources\Styles\Colors.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Resources\Styles\Styles.xaml">
+			<Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
 	</ItemGroup>
 
 

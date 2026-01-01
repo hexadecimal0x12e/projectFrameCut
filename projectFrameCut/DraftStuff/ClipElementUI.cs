@@ -1,18 +1,19 @@
 ﻿using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.Render;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Path = System.IO.Path;
 
-#if iDevices
-// using projectFrameCut.Platforms.iOS;
-#endif
 
 namespace projectFrameCut.DraftStuff
 {
+    [DebuggerDisplay("{displayName}, {ClipType}")]
     public class ClipElementUI
     {
         public required string Id { get; set; }
@@ -46,14 +47,39 @@ namespace projectFrameCut.DraftStuff
         public float SecondPerFrameRatio { get; set; } = 1f;
 
         public ClipMode ClipType { get; set; } = ClipMode.Special;
+        public string FromPlugin { get; set; } = string.Empty;
+        public string TypeName { get; set; } = string.Empty;
         public string? sourcePath { get; set; } = null;
 
-        public Dictionary<string, projectFrameCut.Shared.IEffect>? Effects { get; set; } = new();
+        public string? ClipColor { get; set; } = null;
+
+        public Dictionary<string, IEffect>? Effects { get; set; } = new();
         public Dictionary<string, object> ExtraData { get; set; } = new();
 
         public void ApplySpeedRatio()
         {
             Clip.WidthRequest = origLength * SecondPerFrameRatio;
+        }
+
+        public void ApplyClipColor()
+        {
+            if (!string.IsNullOrWhiteSpace(ClipColor))
+            {
+                try
+                {
+                    var color = Color.FromArgb(ClipColor);
+                    Clip.Background = new SolidColorBrush(color);
+                }
+                catch
+                {
+                    // Invalid color string, use default
+                    Clip.Background = DetermineAssetColor(ClipType);
+                }
+            }
+            else
+            {
+                Clip.Background = DetermineAssetColor(ClipType);
+            }
         }
 
 
@@ -68,15 +94,15 @@ namespace projectFrameCut.DraftStuff
         private static double _defaultClipHeight = 62;
 
         public static ClipElementUI CreateClip(
-    double startX,
-    double width,
-    int trackIndex,
-    string? id = null,
-    string? labelText = null,
-    Brush? background = null,
-    Border? prototype = null,
-    uint relativeStart = 0,
-    uint maxFrames = 0)
+        double startX,
+        double width,
+        int trackIndex,
+        string? id = null,
+        string? labelText = null,
+        Brush? background = null,
+        Border? prototype = null,
+        uint relativeStart = 0,
+        uint maxFrames = 0)
         {
 
             string cid = id ?? Guid.NewGuid().ToString();
@@ -149,12 +175,12 @@ namespace projectFrameCut.DraftStuff
             var cont = new HorizontalStackLayout
             {
                 Children =
-            {
-                new Label
                 {
-                    Text = string.IsNullOrWhiteSpace(labelText) ? $"Clip {cid[^4..]}" : labelText
-                }
-            },
+                    new Label
+                    {
+                        Text = string.IsNullOrWhiteSpace(labelText) ? $"Clip {cid[^4..]}" : labelText
+                    }
+                },
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Center,
             };
@@ -166,25 +192,65 @@ namespace projectFrameCut.DraftStuff
             element.Clip.Content = new Grid
             {
                 Children =
-            {
-                element.LeftHandle,
-                cont,
-                element.RightHandle
-            },
-                ColumnDefinitions =
-            {
-                new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) },
-                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) }
-            }
+                {
+                    element.LeftHandle,
+                    cont,
+                    element.RightHandle
+                },
+                    ColumnDefinitions =
+                {
+                    new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) },
+                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                    new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) }
+                }
             };
 
             element.Clip.BindingContext = element;
             element.LeftHandle.BindingContext = element;
             element.RightHandle.BindingContext = element;
 
-
             return element;
+        }
+
+        public static ClipMode DetermineClipMode(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return ClipMode.Special;
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            // Common video extensions
+            string[] video = [".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v"];
+            string[] image = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"];
+            string[] audio = [".mp3", ".wav", ".aac", ".flac", ".m4a", ".ogg"];
+            string[] subtitle = [".srt", ".vtt", ".ass", ".ssa"];
+
+            if (video.Contains(ext)) return ClipMode.VideoClip;
+            if (image.Contains(ext)) return ClipMode.PhotoClip;
+            if (audio.Contains(ext)) return ClipMode.AudioClip;
+            if (subtitle.Contains(ext)) return ClipMode.SubtitleClip;
+
+            return ClipMode.Special; // fallback
+        }
+
+        public static Brush DetermineAssetColor(ClipMode? mode) 
+        {
+            return mode switch
+            {
+                ClipMode.VideoClip => new SolidColorBrush(Colors.CornflowerBlue),
+                ClipMode.PhotoClip => new SolidColorBrush(Colors.MediumSeaGreen),
+                ClipMode.AudioClip => new SolidColorBrush(Colors.Goldenrod),
+                ClipMode.SubtitleClip => new SolidColorBrush(Colors.SlateGray),
+                ClipMode.SolidColorClip => new SolidColorBrush(Colors.OrangeRed),
+                _ => new SolidColorBrush(Colors.Gray),
+            };
+        }
+        public static Brush DetermineAssetColor(AssetType type, ClipMode? mode = null) 
+        {
+            return type switch
+            {
+                AssetType.Video => new SolidColorBrush(Colors.CornflowerBlue),
+                AssetType.Image => new SolidColorBrush(Colors.MediumSeaGreen),
+                AssetType.Audio => new SolidColorBrush(Colors.Goldenrod),
+                _ => DetermineAssetColor(mode)
+            };
         }
 
     }
@@ -215,17 +281,4 @@ namespace projectFrameCut.DraftStuff
     }
 
 
-    [JsonSerializable(typeof(Dictionary<string, projectFrameCut.Shared.IEffect>))]
-    [JsonSerializable(typeof(Dictionary<string, object>))]
-    [JsonSerializable(typeof(ClipMovingStatus))]
-    [JsonSerializable(typeof(ClipMode))]
-    [JsonSourceGenerationOptions(WriteIndented = true, PropertyNameCaseInsensitive = true)]
-    public partial class ClipElementUIAotJsonSerializerContext : JsonSerializerContext
-    {
-    }
-
-    public partial class GlobalJSONSerializerContexts
-    {
-        public static JsonSerializerOptions GlobalClipJSONContext = new JsonSerializerOptions { TypeInfoResolver = ClipElementUIAotJsonSerializerContext.Default };
-    }
 }

@@ -1,4 +1,5 @@
 ﻿using Android.App;
+using Android.Content;
 using Android.Runtime;
 
 namespace projectFrameCut.Platforms.Android
@@ -6,9 +7,13 @@ namespace projectFrameCut.Platforms.Android
     [Application]
     public class MainApplication : MauiApplication
     {
+        public static Context MainContext;
+
         public MainApplication(IntPtr handle, JniHandleOwnership ownership)
             : base(handle, ownership)
         {
+            System.Threading.Thread.CurrentThread.Name = "App Main thread";
+            MainContext = this;
             string? loggingDir = null;
             var extFilesDir = GetExternalFilesDir(null);
             if (extFilesDir != null)

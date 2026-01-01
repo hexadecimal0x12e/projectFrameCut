@@ -38,5 +38,23 @@
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>bluetooth-central</string>
+		<string>audio</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>For transferring assets between devices, or connect to a Central Asset Server.</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>zh-Hans</string>
+		<string>zh-Hant</string>
+		<string>en</string>
+		<string>ja</string>
+		<string>kr</string>
+		<string>fr</string>
+	</array>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>zh-Hans</string>
 </dict>
 </plist>

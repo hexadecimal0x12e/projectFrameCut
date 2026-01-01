@@ -1,6 +1,23 @@
 ﻿#pragma warning disable CS8974 //log a exception will cause this
+using System;
+using System.Diagnostics;
+using FFmpeg.AutoGen;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using Exception = System.Exception;
+using System.Text;
+using System.Text.Json;
+using System.Globalization;
+using CommunityToolkit.Maui;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Services;
+using Thread = System.Threading.Thread;
+using projectFrameCut.Render.Plugin;
 using Microsoft.Extensions.Logging;
 using projectFrameCut.Shared;
+using projectFrameCut.Asset;
+
+
 
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
@@ -12,21 +29,9 @@ using Java.Lang;
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
-
+using projectFrameCut.Render.WindowsRender;
 #endif
-using System;
-using System.Diagnostics;
-using FFmpeg.AutoGen;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using FFmpeg.AutoGen.Native;
-using Exception = System.Exception;
-using System.Text;
-using System.Text.Json;
-using System.Globalization;
-using Microsoft.Maui.Controls.PlatformConfiguration;
-using System.Runtime.Versioning;
-using CommunityToolkit.Maui;
+
 
 namespace projectFrameCut
 {
@@ -41,14 +46,29 @@ namespace projectFrameCut
         private static readonly string[] FoldersNeedInUserdata =
             [
             "My Drafts",
-            "My Assets"
-            ];
+            "My Assets",
+#if WINDOWS
+            "My Assets\\.database",
+            "My Assets\\.thumbnails"
+#else
+            "My Assets/.database",
+            "My Assets/.thumbnails"
+#endif
+        ];
+
+        public static string[] CmdlineArgs = Array.Empty<string>();
 
 
         public static MauiApp CreateMauiApp()
         {
-            System.Threading.Thread.CurrentThread.Name = "App Main thread";
-
+            if (CmdlineArgs is null || CmdlineArgs.Length == 0)
+            {
+                try
+                {
+                    CmdlineArgs = Environment.GetCommandLineArgs();
+                }
+                catch { } //safe to ignore it
+            }
             string loggingDir = "";
             try
             {
@@ -111,10 +131,10 @@ namespace projectFrameCut
 
             Log($"projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} \r\n" +
                 $"                  on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture},\r\n" +
-                $"                  os version {Environment.OSVersion},\r\n" +
+                $"                  os version {Environment.OSVersion}/{DeviceInfo.Version},\r\n" +
                 $"                  clr version {Environment.Version},\r\n" +
                 $"                  cmdline: {Environment.CommandLine}");
-            Log("Copyright (c) hexadecimal0x12e 2025, and thanks to other open-source code's authors. This project is licensed under GNU GPL V2.");
+            Log("Copyright (c) hexadecimal0x12e 2025, and thanks to other open-source code's authors.");
             Log($"BasicDataPath:{BasicDataPath}, DataPath:{DataPath}");
             try
             {
@@ -138,7 +158,8 @@ namespace projectFrameCut
                             {
                                 json = File.ReadAllText(Path.Combine(BasicDataPath, "settings_b.json"));
                                 SettingsManager.Settings = new(JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? []);
-                            }catch(Exception ex4)
+                            }
+                            catch (Exception ex4)
                             {
                                 throw new AggregateException($"Failed to load settings from all slots.\r\n\r\n{ex2.GetType().Name} ({ex2.Message})", [ex2, ex3, ex4]);
                             }
@@ -178,7 +199,22 @@ namespace projectFrameCut
                 SettingsManager.Settings = new();
 
             }
-
+#if WINDOWS
+            try
+            {
+                if (SettingsManager.IsBoolSettingTrue("DedicatedLogWindow") && !projectFrameCut.WinUI.Program.LogWindowShowing)
+                {
+                    Thread logThread = new Thread(Helper.HelperProgram.LogMain);
+                    logThread.Name = "LogWindow thread";
+                    logThread.Priority = ThreadPriority.Highest;
+                    logThread.IsBackground = false;
+                    logThread.Start();
+                    projectFrameCut.WinUI.Program.LogWindowShowing = true;
+                    Log($"Logger window started.");
+                }
+            }
+            catch { }
+#endif
             try
             {
                 if (File.Exists(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt")))
@@ -198,6 +234,22 @@ namespace projectFrameCut
                 {
                     Directory.CreateDirectory(Path.Combine(DataPath, item));
                 }
+
+                if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "@WARNING.txt")))
+                {
+                    File.WriteAllText(Path.Combine(DataPath, "My Assets", "@WARNING.txt"),
+                        """
+                        WARNING: Do not modify or delete any files in this folder manually, or your assets may be corrupted!
+                        """);
+                }
+                if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "database.json")))
+                {
+                    AssetDatabase.Initialize("{}");
+                }
+                else
+                {
+                    AssetDatabase.Initialize(File.ReadAllText(Path.Combine(DataPath, "My Assets", ".database", "database.json")));
+                }
             }
             catch (Exception ex)
             {
@@ -212,13 +264,32 @@ namespace projectFrameCut
             try
             {
                 var builder = MauiApp.CreateBuilder();
-                builder.UseMauiApp<App>().UseMauiCommunityToolkit();
-#if DEBUG
-                builder.Logging.SetMinimumLevel(LogLevel.Trace);
-#else
-                builder.Logging.SetMinimumLevel(LogLevel.Information);
+#pragma warning disable CA1416  //let VS shut up here
+                builder.UseMauiApp<App>()
+                       .UseMauiCommunityToolkit(options =>
+                       {
+                           options.SetShouldEnableSnackbarOnWindows(true);
+                       })
+#if ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER
+                       .UseMauiCommunityToolkitMediaElement();
+#pragma warning restore CA1416
+
 #endif
-                builder.Logging.AddProvider(new MyLoggerProvider());
+                builder.Services.AddSingleton<IScreenReaderService, ScreenReaderService>();
+                LogLevel logLevel = LogLevel.Information;
+                if (Debugger.IsAttached || SettingsManager.IsBoolSettingTrue("LogDiagnostics"))
+                {
+                    if (File.Exists(Path.Combine(BasicDataPath, "trace.logging")))
+                    {
+                        logLevel = LogLevel.Trace;
+                    }
+                    else
+                    {
+                        logLevel = LogLevel.Debug;
+                    }
+                }
+                builder.Logging.SetMinimumLevel(logLevel);
+                builder.Logging.AddProvider(new MyLoggerProvider(logLevel));
 #if WINDOWS
                 builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
                 try
@@ -312,7 +383,7 @@ namespace projectFrameCut
 #else
                     CultureInfo culture = projectFrameCut.Platforms.Android.DeviceLocaleHelper.GetDeviceCultureInfo();
 #endif
-                    
+
                     Log($"OS default current culture: {culture.Name}, locate defined in settings:{locate} ");
                     if (locate == "default")
                     {
@@ -359,23 +430,30 @@ namespace projectFrameCut
                                     {
                                         culture = CultureInfo.CreateSpecificCulture(locate);
                                     }
-                                    break;  
+                                    break;
                                 }
 
                         }
-                        
+
                     }
                     catch (Exception ex)
                     {
                         Log(ex, "init culture");
                     }
 
-                    Localized = SimpleLocalizer.Init(locate);    
+                    Localized = SimpleLocalizer.Init(locate);
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResuorces = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+                    PluginManager.CurrentLocale = Localized._LocaleId_;
+                    PluginManager.ExtenedLocalizationGetter = new((k) =>
+                    {
+                        var r = Localized.DynamicLookup(k, "!!!NULL!!!");
+                        return r == "!!!NULL!!!" ? null : r;
+                    });
 
                     try
                     {
-                        ConfigFontFromCulture(builder, culture);
+                        if(!SettingsManager.IsSettingExists("UseSystemFont")) ConfigFontFromCulture(builder, culture);
                     }
                     catch
                     {
@@ -386,19 +464,20 @@ namespace projectFrameCut
                         });
                     }
 
-                    if (!SettingsManager.IsSettingExists("OverrideCulture") || SettingsManager.GetSetting("OverrideCulture", "default") == "default") //resolve IME not work when locate isn't them
-                    {
-                        System.Threading.Thread.CurrentThread.CurrentCulture = culture;
-                        System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
-                    }
-                    else
+                    if (SettingsManager.IsSettingExists("OverrideCulture") && SettingsManager.GetSetting("OverrideCulture", "default") != "default") //resolve IME not work when locate isn't them
                     {
                         culture = CultureInfo.CreateSpecificCulture(SettingsManager.GetSetting("OverrideCulture"));
-                        System.Threading.Thread.CurrentThread.CurrentCulture = culture;
-                        System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+                    }
+                    if (locate != "default")
+                    {
+                        Thread.CurrentThread.CurrentCulture = culture;
+                        Thread.CurrentThread.CurrentUICulture = culture;
+                        CultureInfo.DefaultThreadCurrentCulture = culture;
+                        CultureInfo.DefaultThreadCurrentUICulture = culture;
                     }
 
-                    Log($"Culture:{System.Threading.Thread.CurrentThread.CurrentCulture}, locate:{Localized._LocaleId_}, {Localized.WelcomeMessage}");
+
+                    Log($"Culture:{Thread.CurrentThread.CurrentCulture}, locate:{Localized._LocaleId_}, {Localized.WelcomeMessage}");
                 }
                 catch (Exception ex)
                 {
@@ -406,12 +485,64 @@ namespace projectFrameCut
                     SimpleLocalizer.IsFallbackMatched = true;
                     Localized = ISimpleLocalizerBase.GetMapping().First().Value;
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResuorces = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+                    PluginManager.CurrentLocale = "en-US";
+                    PluginManager.ExtenedLocalizationGetter = new((k) => ISimpleLocalizerBase.GetMapping().First().Value.DynamicLookup(k));
                     builder.ConfigureFonts(fonts =>
                     {
                         fonts.AddFont("HarmonyOS_Sans_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_Bold.ttf", "Font_Semibold");
                     });
                 }
+
+                try
+                {
+                    List<IPluginBase> plugins = [new InternalPluginBase()];
+#if ANDROID
+                    plugins.Add(new OpenGLPlugin());
+#elif WINDOWS
+                    plugins.Add(new ILGPUPlugin());
+#elif iDevices
+
+#endif
+                    try
+                    {
+                        if (Environment.GetCommandLineArgs().Contains("--forceLoadPlugins") || (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine")))
+                        {
+                            plugins.AddRange(PluginService.LoadUserPlugins());
+                        }
+                        else
+                        {
+                            if (AdminHelper.IsRunningAsAdministrator()) Log("Running as administrator, skip load user plugins for security reason.", "warn");
+                            else Log("User disabled the plugin engine.");
+                            PluginService.FailedLoadPlugin.Add("<No plugin ID available>", AdminHelper.IsRunningAsAdministrator() ? Localized.PluginEngine_DisabledBecauseAdmin : Localized.PluginEngine_DisabledBecauseUserDisabled);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, "load user plugins", CreateMauiApp);
+                    }
+
+                    PluginManager.Init(plugins);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Load plugins", CreateMauiApp);
+                    try
+                    {
+                        PluginManager.Init([new InternalPluginBase()]);
+                    }
+                    catch (Exception ex1)
+                    {
+                        Log(ex1, "try load internal plugin", CreateMauiApp);
+#if ANDROID
+                        Android.Util.Log.Wtf("projectFrameCut", $"FATAL: The pluginBase cannot be loaded. projectFrameCut may not work at all.\r\n(a {ex.GetType().Name} exception happends, {ex.Message})");
+#elif WINDOWS
+                        _ = MessageBox(new nint(0), $"FATAL: The pluginBase cannot be loaded. projectFrameCut may not work at all.\r\n(a {ex.GetType().Name} exception happens, {ex.Message})", "projectFrameCut", 0U);
+#endif
+                    }
+                }
+
 
                 Log("Everything ready!");
                 var app = builder.Build();
@@ -433,6 +564,7 @@ namespace projectFrameCut
 
         private static object locker = new();
 
+        [DebuggerNonUserCode()]
         private static void MyLoggerExtensions_OnLog(string msg, string level)
         {
             lock (locker) LogWriter.WriteLine($"[{DateTime.Now:T} @ {level}] {msg}");
@@ -512,18 +644,26 @@ namespace projectFrameCut
                     });
                     break;
                 case 932: //Japanese
+#if !ANDROID
                     builder.ConfigureFonts(fonts =>
                     {
-                        fonts.AddFont("NotoSansJP-Regular.ttf", "Font_Regular");
-                        fonts.AddFont("NotoSansJP-Bold.ttf", "Font_Semibold");
+                        fonts.AddFont("HarmonyOS_Sans_SC_Regular.ttf", "Font_Regular");
+                        fonts.AddFont("HarmonyOS_Sans_SC_Bold.ttf", "Font_Semibold");
                     });
+#else
+                    //use system ones
+#endif
                     break;
                 case 949: //Korean
+#if !ANDROID
                     builder.ConfigureFonts(fonts =>
                     {
                         fonts.AddFont("NotoSansKR-Regular.ttf", "Font_Regular");
                         fonts.AddFont("NotoSansKR-Bold.ttf", "Font_Semibold");
                     });
+#else
+                    //use system ones
+#endif
                     break;
                 case 1256: //Arabic
                     builder.ConfigureFonts(fonts =>

@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<Platforms>AnyCPU;x64</Platforms>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+		<FileVersion>1.0.0.0</FileVersion>
+		<Authors>hexadecimal0x12e</Authors>
+		<Product>codename 'projectFrameCut'</Product>
+		<Description>projectFrameCut render/3rd plugins shared library</Description>
+		<Copyright>Copyright (c) hexadecimal0x12e 2025</Copyright>
+		<PackageProjectUrl>hexadecimal0x12e.com</PackageProjectUrl>
+		<Title>projectFrameCut render/3rd plugins shared library</Title>
+		<PackageReadmeFile>readme.md</PackageReadmeFile>
+		<NeutralLanguage>zh-CN</NeutralLanguage>
+		
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="readme.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>
