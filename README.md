@@ -5,6 +5,9 @@
 一个强大，易上手且完全自由的视频剪辑软件
 
 > [!WARNING]
+> **请注意**，由于主程序的许可的原因，projectFrameCut**只自带了LGPL的FFmpeg库**，这意味着默认情况下，你不能解码一些类型的视频（比如`h264`或者`h265`等）格式
+如果你需要，可以考虑安装编解码扩展包。
+> 
 > **projectFrameCut仍在开发**，目前并不能代替任何的视频剪辑软件（还缺一堆功能）。**请不要用于任何的生产用途**，并且我们不会由于projectFrameCut出现了异常导致你的工作流程被打断**做任何的担保**，这也是许可证规定的一部分（不提供任何担保）
 > 
 > 本人很忙，接下来的开发过程会很慢。如果你有很好的想法，建议你写个[Issue](https://github.com/hexadecimal0x12e/projectFrameCut/issues/new)。
@@ -29,7 +32,7 @@
 
 - [x] Android - 硬件加速渲染
 
-- [x] (部分，实验性) MacOS/iOS - 硬件加速渲染
+- [ ] MacOS/iOS - 硬件加速渲染
 
 - [x] 音频处理
 
@@ -60,7 +63,7 @@ projectFrameCut性能的差异不会随着CPU或者GPU的变化而差异很大�
 
 ### 如何编译
 
-项目基于.NET 10和MAUI开发，请先确保你的电脑里安装了Visual Studio或者VS Code，**确认你安装了.NET 9和.NET 10 的SDK和MAUI的组件**，
+项目基于.NET 10和MAUI开发，请先确保你的电脑里安装了Visual Studio或者VS Code，**确认你安装了.NET 10 的SDK和MAUI的组件**，
 
 1. 你需要准备一个适用于Windows的**8.x** FFmpeg库(他们太大了，Git存储库里塞不下)，放在项目文件夹以外的地方。
    按照下列结构放置文件
@@ -140,8 +143,12 @@ c:\path\to\your\folder\Android
 ### 关于本地化
 目前，除了中文的本地化资源以外，所有的本地化字符串都是由AI生成的。如果你发现了问题，请提交Issue。
 
+### 插件
+projectFrameCut支持插件。详见[这里](https://github.com/hexadecimal0x12e/projectFrameCut.PluginTemplate)
 
 ### 许可和第三方库致谢
+projectFrameCut的主程序使用了Apache License，共享库（projectFrameCut.Shared和projectFrameCut.Render.RenderAPIBase）使用了MIT License。
+
 详见[license.md](license.md)
 
 
