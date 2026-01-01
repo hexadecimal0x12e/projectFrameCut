@@ -98,7 +98,7 @@ namespace projectFrameCut.Render.Rendering
             if (index > Duration)
             {
                 Log($"[VideoBuilder] WARN: Frame #{index} is out of duration {Duration}, ignored.", "warn");
-                if (DisposeFrameAfterEachWrite) frame.Dispose();
+                if (DisposeFrameAfterEachWrite && !frame.Flag.HasFlag(IPicture.PictureFlag.NoDisposeAfterWrite)) frame.Dispose();
                 return;
             }
             if (!FramePendedToWrite.TryAdd(index, false))
@@ -110,7 +110,7 @@ namespace projectFrameCut.Render.Rendering
                 else
                 {
                     Log($"[VideoBuilder] WARN: Frame #{index} has already been added, ignored.", "warn");
-                    if (DisposeFrameAfterEachWrite) frame.Dispose();
+                    if (DisposeFrameAfterEachWrite && !frame.Flag.HasFlag(IPicture.PictureFlag.NoDisposeAfterWrite)) frame.Dispose();
                     return;
                 }
             }
@@ -171,7 +171,7 @@ namespace projectFrameCut.Render.Rendering
                         FramePendedToWrite[index] = true;
                         index++;
 
-                        if (DisposeFrameAfterEachWrite) f.Dispose();
+                        if (DisposeFrameAfterEachWrite && !f.Flag.HasFlag(IPicture.PictureFlag.NoDisposeAfterWrite)) f.Dispose();
                         if (DoGCAfterEachWrite) GC.Collect();
                         Log($"[VideoBuilder] Frame #{index} wrote.");
                     }

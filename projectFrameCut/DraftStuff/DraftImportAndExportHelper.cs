@@ -85,6 +85,7 @@ namespace projectFrameCut.DraftStuff
                                     RelativeStartFrame = elem.relativeStartFrame,
                                     Duration = durationFrames,
                                     SecondPerFrameRatio = elem.SecondPerFrameRatio,
+                                    FilePath = elem.sourcePath,
                                     MetaData = elem.ExtraData
                                 };
                                 soundtracks.Add(dto);
@@ -131,12 +132,22 @@ namespace projectFrameCut.DraftStuff
                 }
             }
 
-            long max = 0;
+            long max = 0, audMax = 0;
             foreach (var clip in clips)
             {
                 if (clip is ClipDraftDTO dto)
                 {
-                    max = Math.Max(dto.StartFrame + dto.Duration, max);
+                    if(dto.ClipType == ClipMode.AudioClip)
+                    {
+                        if (wrapSoundtrackAsClip)
+                        {
+                            audMax = Math.Max(dto.StartFrame + dto.Duration, audMax);
+                        }
+                    }
+                    else
+                    {
+                        max = Math.Max(dto.StartFrame + dto.Duration, max);
+                    }
                 }
 
 
@@ -147,9 +158,7 @@ namespace projectFrameCut.DraftStuff
                 throw new OverflowException($"Project duration overflow, total frames exceed {uint.MaxValue}.");
             }
 
-
-
-            return new DraftStructureJSON
+            var d = new DraftStructureJSON
             {
                 targetFrameRate = page.ProjectInfo.targetFrameRate,
                 Clips = clips.Cast<object>().ToArray(),
@@ -157,6 +166,8 @@ namespace projectFrameCut.DraftStuff
                 Duration = (uint)max,
                 SavedAt = DateTime.Now
             };
+            if (wrapSoundtrackAsClip) d.AudioDuration = (uint)audMax;
+            return d;
         }
 
         public static IClip[] JSONToIClips(DraftStructureJSON json)
@@ -168,6 +179,21 @@ namespace projectFrameCut.DraftStuff
             foreach (var clip in elements.Cast<JsonElement>())
             {
                 var clipInstance = PluginManager.CreateClip(clip);
+                if (string.IsNullOrEmpty(clipInstance.FilePath) && clip.TryGetProperty("FilePath", out var fp) && clipInstance.NeedFilePath)
+                {
+                    try
+                    {
+                        clipInstance.FilePath = fp.GetString();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        //safe to ignore
+                    }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+                }
                 clipInstance.ReInit();
                 clipsList.Add(clipInstance);
 
@@ -236,7 +262,7 @@ namespace projectFrameCut.DraftStuff
                 element.relativeStartFrame = dto.RelativeStartFrame;
                 element.maxFrameCount = maxFrames;
                 element.isInfiniteLength = dto.IsInfiniteLength;
-                element.sourcePath = dto.FilePath;
+                element.sourcePath = dto.FilePath ?? (dto.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
                 element.ClipType = dto.ClipType;
                 element.ExtraData = dto.MetaData ?? new();
                 element.sourceSecondPerFrame = dto.FrameTime;
@@ -306,7 +332,7 @@ namespace projectFrameCut.DraftStuff
                 element.relativeStartFrame = dto.RelativeStartFrame;
                 element.maxFrameCount = dto.Duration;
                 element.isInfiniteLength = false;
-                element.sourcePath = dto.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null;
+                element.sourcePath = dto.FilePath ?? (dto.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
                 element.ClipType = ClipMode.AudioClip;
                 element.ExtraData = dto.MetaData ?? new();
                 element.sourceSecondPerFrame = 1f / proj.targetFrameRate;

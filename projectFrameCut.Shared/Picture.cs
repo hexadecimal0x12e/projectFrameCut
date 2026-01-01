@@ -56,6 +56,10 @@ namespace projectFrameCut.Shared
         /// </summary>
         public string? filePath { get; init; } //诊断用
         /// <summary>
+        /// Determine some flag for the picture.
+        /// </summary>
+        public PictureFlag Flag { get; set; }
+        /// <summary>
         /// Records each step of the image processed.
         /// </summary>
         /// <remarks>
@@ -66,6 +70,13 @@ namespace projectFrameCut.Shared
         /// Indicates whether this picture has an alpha channel.
         /// </summary>
         public bool hasAlphaChannel { get; set; }
+        /// <summary>
+        /// Get whether this picture has been disposed.
+        /// </summary>
+        /// <remarks>
+        /// if <see cref="Disposed"/> is null, this picture'll never be disposed.
+        /// </remarks>
+        public bool? Disposed { get; set; }
 
         /// <summary>
         /// Resize the picture. 
@@ -102,6 +113,14 @@ namespace projectFrameCut.Shared
             Alpha = 3
         }
 
+        [Flags]
+        public enum PictureFlag
+        {
+            None = 0,
+            IsGenerated = 1 << 0,
+            NoDisposeAfterWrite = 1 << 1,
+        }
+
         public readonly record struct PicturePixelMode(int Value)
         {
             public static implicit operator int(PicturePixelMode bpp) => bpp.Value;
@@ -124,6 +143,9 @@ namespace projectFrameCut.Shared
         }
 
     }
+
+
+
     /// <summary>
     /// Represents a picture with pixel data of type T and a float alpha channel.
     /// </summary>
@@ -224,7 +246,9 @@ namespace projectFrameCut.Shared
 
         public uint? frameIndex { get; init; } //诊断用
         public string? filePath { get; init; } //诊断用
+        public PictureFlag Flag { get; set; }
         public string? ProcessStack { get; set; }
+        public bool? Disposed { get; set; } = false;
 
         public bool hasAlphaChannel { get; set; } = false;
 
@@ -260,7 +284,7 @@ namespace projectFrameCut.Shared
                     hasAlphaChannel = false;
                 }
             }
-            
+
 
             ProcessStack = $"Created from another, {Width}*{Height}, data {(copyData ? "copied" : "uncopied")},\r\n'{picture.ProcessStack}'\r\n";
         }
@@ -598,6 +622,7 @@ namespace projectFrameCut.Shared
 
         protected virtual void Dispose(bool disposing)
         {
+            if (disposedValue || Disposed is null) return;
             lock (this)
             {
                 if (!disposedValue)
@@ -612,6 +637,7 @@ namespace projectFrameCut.Shared
 
                     disposedValue = true;
                 }
+                Disposed = disposedValue;
             }
         }
 
@@ -711,7 +737,9 @@ namespace projectFrameCut.Shared
 
         public uint? frameIndex { get; init; } //诊断用
         public string? filePath { get; init; } //诊断用
+        public PictureFlag Flag { get; set; }
         public string? ProcessStack { get; set; }
+        public bool? Disposed { get; set; } = false;
 
         public bool hasAlphaChannel { get; set; } = false;
 
@@ -1072,6 +1100,7 @@ namespace projectFrameCut.Shared
 
         protected virtual void Dispose(bool disposing)
         {
+            if (disposedValue || Disposed is null) return;
             lock (this)
             {
                 if (!disposedValue)
@@ -1086,6 +1115,8 @@ namespace projectFrameCut.Shared
 
                     disposedValue = true;
                 }
+                Disposed = disposedValue;
+
             }
         }
 
@@ -1173,6 +1204,7 @@ namespace projectFrameCut.Shared
         public static IPicture DeepCopy(this IPicture source)
         {
             if (source is null) throw new ArgumentNullException(nameof(source));
+            if (source.Disposed is not null && source.Disposed.Value) throw new ObjectDisposedException(nameof(source));
             lock (source)
             {
                 int width = source.Width;
@@ -1393,7 +1425,7 @@ namespace projectFrameCut.Shared
             if (Debugger.IsAttached || MyLoggerExtensions.LoggingDiagnosticInfo)
             {
                 if (image is Picture16bpp p1) p1.LogPicInfo();
-                else if(image is Picture8bpp p2) p2.LogPicInfo();
+                else if (image is Picture8bpp p2) p2.LogPicInfo();
                 else Logger.LogDiagnostic("Unknown picture type, cannot get info.");
             }
             ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(path));

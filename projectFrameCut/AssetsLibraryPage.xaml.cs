@@ -192,7 +192,7 @@ public partial class AssetsLibraryPage : ContentPage
     {
         try
         {
-            if((currentAsset.AssetType is AssetType.Font) || (currentAsset.AssetType is AssetType.Other))
+            if(OperatingSystem.IsAndroid() || (currentAsset.AssetType is AssetType.Font) || (currentAsset.AssetType is AssetType.Other))
             {
                 if (!string.IsNullOrWhiteSpace(currentAsset.Path) && File.Exists(currentAsset.Path))
                 {

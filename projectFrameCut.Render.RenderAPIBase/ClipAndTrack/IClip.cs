@@ -38,8 +38,8 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <summary>
         /// Represent which sound track's id is binded to this clip.
         /// </summary>
-        public string BindedSoundTrack { get; init;  }
-        
+        public string BindedSoundTrack { get; init; }
+
         /// <summary>
         /// Indicate which layer this clip is in. Higher index means upper layer.
         /// </summary>
@@ -88,6 +88,8 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// Get the path of the source file for this clip. May be null for some kind of clips.
         /// </summary>
         public string? FilePath { get; set; }
+
+        public bool NeedFilePath { get; }
 
         /// <summary>
         /// Get the frame index relative to the source clip for the specified target frame in the draft.

@@ -18,7 +18,7 @@ namespace projectFrameCut.LivePreview
         public uint TotalDuration;
         public string TempPath;
         public string? ProxyRoot;
-        public event Action<double>? OnProgressChanged;
+        public event Action<double, TimeSpan>? OnProgressChanged;
 
         public string RenderFrame(uint frameIndex, int targetWidth, int targetHeight)
         {

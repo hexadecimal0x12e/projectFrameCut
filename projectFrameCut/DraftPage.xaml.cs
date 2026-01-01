@@ -3318,7 +3318,7 @@ public partial class DraftPage : ContentPage
     private async Task<string> RenderSomeFrames(int startPoint, CancellationToken ct)
     {
         Stopwatch cd = Stopwatch.StartNew();
-        void progChanged(double p)
+        void progChanged(double p, TimeSpan _)
         {
             if (cd.ElapsedMilliseconds < 500) return;
             cd.Restart();
@@ -3847,7 +3847,8 @@ public partial class DraftPage : ContentPage
     private async void OnExportedClick(object sender, EventArgs e)
     {
         await Save(true);
-        var page = new RenderPage(WorkingPath, ProjectDuration, ProjectInfo);
+        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this,true);
+        var page = new RenderPage(WorkingPath, ProjectDuration, ProjectInfo, draft);
         await Dispatcher.DispatchAsync(async () =>
         {
             Shell.SetTabBarIsVisible(page, false);

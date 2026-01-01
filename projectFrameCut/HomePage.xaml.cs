@@ -905,7 +905,12 @@ public partial class HomePage : ContentPage
             await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n({ex.Message})", Localized._OK);
             return;
         }
-        var page = new RenderPage(vmItem._projectPath, draft.Duration, project);
+        if(draft is null || project is null)
+        {
+            await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
+            return;
+        }
+        var page = new RenderPage(vmItem._projectPath, draft.Duration, project, draft);
         await Dispatcher.DispatchAsync(async () =>
         {
             Shell.SetTabBarIsVisible(page, false);

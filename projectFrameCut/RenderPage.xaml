@@ -75,11 +75,13 @@
                     <Entry Placeholder="BitDepth" HeightRequest="25" WidthRequest="90" Margin="8,0,8,0"
                        Keyboard="Text"
                        Text="{Binding BitDepth, Mode=TwoWay}" />
-                </HorizontalStackLayout>4
+                </HorizontalStackLayout>
 
                 <Label x:Name="MaxParallelThreadsCountLabel"  Margin="0,8,0,0" Text="RenderPage_MaxParallelThreadsCount" />
                 <Slider x:Name="MaxParallelThreadsCount" Minimum="1" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
                 <Button Margin="0,8,0,8"  x:Name="StartRender" Text="{l:Localized Key=RenderPage_StartRender}" Clicked="StartRender_Clicked" />
+                <Editor x:Name="DraftJSONViewer" IsReadOnly="True" HeightRequest="250"></Editor>
+
             </VerticalStackLayout>
 
             <VerticalStackLayout x:Name="PreviewLayout" IsVisible="False" Grid.Column="1" Padding="32,0">

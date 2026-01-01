@@ -27,7 +27,9 @@ namespace projectFrameCut.Render.Rendering
         public bool LogStatToLogger = false;
         public bool Use16Bit { get; set; } = true;
 
-        public event Action<double>? OnProgressChanged;
+        public event Action<double, TimeSpan>? OnProgressChanged;
+        private Stopwatch _renderTotalStopwatch = new();
+
         public ConcurrentBag<TimeSpan> EachElapsed = new(), EachElapsedForPreparing = new();
         public bool running { get; private set; } = false;
 
@@ -60,18 +62,12 @@ namespace projectFrameCut.Render.Rendering
         {
             ArgumentNullException.ThrowIfNull(builder, nameof(builder));
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
+            _renderTotalStopwatch.Restart();
             
-            // On Android, limit max threads to avoid overwhelming the main thread (OpenGL compute runs on main thread)
-            // and to prevent thread starvation due to Android's thread limits
-#if ANDROID
-            if (MaxThreads > 4)
-            {
-                Log($"[Render] Android detected: limiting MaxThreads from {MaxThreads} to 4 to prevent main-thread bottleneck.", "warn");
-                MaxThreads = 4;
-            }
-#endif
             
-            BlankFrame = Use16Bit ? Picture.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+            BlankFrame = Use16Bit ? Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
+            BlankFrame.Flag = IPicture.PictureFlag.NoDisposeAfterWrite;
+            BlankFrame.Disposed = null;
             ConcurrentQueue<Exception> exceptions = new();
 
             running = true;
@@ -97,9 +93,9 @@ namespace projectFrameCut.Render.Rendering
                             working = Volatile.Read(ref ThreadWorking);
 
                             Log($"[STAT] " +
-                                $"Overall finished {finished / d:p2}, and {TotalEnqueued /d:p2} is reasy to render. " +
+                                $"Overall finished {finished / d:p2}, and {TotalEnqueued /d:p2} is ready to render. " +
                                 $"Memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB. \r\n" +
-                                $"(Total {TotalEnqueued}/{d} prepared and {finished}/{d} finished, " +
+                                $"       (Total {TotalEnqueued}/{d} prepared and {finished}/{d} finished, " +
                                 $"pending to render: {Volatile.Read(ref TotalEnqueued) - finished}, " +
                                 $"total write frames: {wrote} wrote and {builder.FramePendedToWrite.Count() - wrote} pended, " +
                                 $"slots {Math.Max(0, MaxThreads - working)}/{MaxThreads}, threads {Threads.Count(t => t.IsAlive)}/{Threads.Count}, " +
@@ -216,7 +212,7 @@ namespace projectFrameCut.Render.Rendering
                                     {
                                         builder.Append(targetFrame, BlankFrame);
                                         Interlocked.Increment(ref Finished);
-                                        OnProgressChanged?.Invoke((double)Volatile.Read(ref Finished) / Duration);
+                                        InvokeProgress();
                                         Log($"[Render] Filled failed frame {targetFrame} with blank to avoid writer stall.", "warn");
                                     }
                                 }
@@ -405,7 +401,7 @@ namespace projectFrameCut.Render.Rendering
                 Log($"[Render] Frame {targetFrame} is empty.");
                 builder!.Append(targetFrame, BlankFrame);
                 Interlocked.Increment(ref Finished);
-                OnProgressChanged?.Invoke((double)Volatile.Read(ref Finished) / Duration);
+                InvokeProgress();
                 EachElapsed.Add(sw.Elapsed);
                 return;
             }
@@ -509,7 +505,7 @@ namespace projectFrameCut.Render.Rendering
         ok:
             builder!.Append(targetFrame, result);
             Interlocked.Increment(ref Finished);
-            OnProgressChanged?.Invoke((double)Volatile.Read(ref Finished) / Duration);
+            InvokeProgress();
             sw.Stop();
             Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}");
             EachElapsed.Add(sw.Elapsed);
@@ -517,6 +513,20 @@ namespace projectFrameCut.Render.Rendering
 
 
 
+        }
+
+        private void InvokeProgress()
+        {
+            double prog = (double)Volatile.Read(ref Finished) / Duration;
+            TimeSpan elapsed = _renderTotalStopwatch.Elapsed;
+            TimeSpan etr = TimeSpan.Zero;
+            if (prog > 0.005)
+            {
+                double totalEst = elapsed.TotalSeconds / prog;
+                double remaining = totalEst - elapsed.TotalSeconds;
+                if (remaining > 0) etr = TimeSpan.FromSeconds(remaining);
+            }
+            OnProgressChanged?.Invoke(prog, etr);
         }
 
         private void ReleaseResources()
@@ -611,7 +621,7 @@ namespace projectFrameCut.Render.Rendering
                     builder!.Append(blankIdx, BlankFrame);
                     EachElapsed.Add(TimeSpan.Zero);
                     Interlocked.Increment(ref Finished);
-                    OnProgressChanged?.Invoke((double)Volatile.Read(ref Finished) / Duration);
+                    InvokeProgress();
                     Log($"[Render] Wrote blank frame {blankIdx} before starting frame {frameIndex}.");
                 }
             }

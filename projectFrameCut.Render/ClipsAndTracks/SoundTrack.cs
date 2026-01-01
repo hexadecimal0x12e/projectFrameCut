@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+﻿using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
@@ -45,8 +46,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
         public string? FilePath { get; set; }
+        public bool NeedFilePath => true;
 
         public ISoundTrack SoundTrack { get; set; }
+        public TrackMode TrackType => TrackMode.NormalTrack;
 
         public void Dispose()
         {
@@ -61,6 +64,22 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit()
         {
+            SoundTrack = TrackType switch
+            {
+                TrackMode.NormalTrack => new NormalSoundTrack
+                {
+                    Id = BindedSoundTrack ?? Guid.NewGuid().ToString(),
+                    Name = Name,
+                    LayerIndex = LayerIndex,
+                    StartFrame = StartFrame,
+                    RelativeStartFrame = RelativeStartFrame,
+                    Duration = Duration,
+                    Ratio = SecondPerFrameRatio,
+                    Volume = 1.0f,
+                    AudioSource = FilePath is not null ? PluginManager.CreateAudioSource(FilePath) : null
+                },
+                _ => throw new NotSupportedException($"Unsupported track type {TrackType}."),
+            };
         }
     }
 }

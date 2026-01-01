@@ -30,6 +30,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
+        public bool NeedFilePath => true;
 
         [System.Text.Json.Serialization.JsonIgnore]
         public IVideoSource? Decoder { get; set; } = null;
@@ -73,6 +74,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public float SecondPerFrameRatio { get; init; }
         public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
         public string? FilePath { get; set; } = string.Empty;
+        public bool NeedFilePath => true;
+
 
         [System.Text.Json.Serialization.JsonIgnore]
         public Picture? source { get; set; } = null;
@@ -127,6 +130,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
+        public bool NeedFilePath => false;
 
         public string BindedSoundTrack { get; init; } = "";
 
@@ -180,6 +184,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
+        public bool NeedFilePath => false;
 
         public string BindedSoundTrack { get; init; } = "";
 

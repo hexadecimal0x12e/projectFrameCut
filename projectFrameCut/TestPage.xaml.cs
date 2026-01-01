@@ -20,6 +20,8 @@ using SixLabors.ImageSharp;
 using projectFrameCut.Services;
 using projectFrameCut.Render.Plugin;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
+using projectFrameCut.Render.EncodeAndDecode;
+
 
 
 
@@ -793,6 +795,12 @@ public partial class TestPage : ContentPage
         b.AddCommand("Command 1", () => dialog("You clicked 1")).AddSeparator().AddCommand("Command 2", () => dialog("You clicked 2")).AddCommand("Command 1", () => dialog("You clicked 3"));
         b.TryShow(ContextMenuTestBtn);
 #endif
+    }
+
+    private void MuxVideoTestBtn_Clicked(object sender, EventArgs e)
+    {
+        VideoAudioMuxer.MuxFromFiles(@"D:\code\playground\projectFrameCut\RenderCache\A Short Project 1_20260101_164404.mp4", @"D:\code\playground\projectFrameCut\RenderCache\A Short Project 1_20260101_164404.wav", @"D:\code\playground\projectFrameCut\output1.mp4", true);
+
     }
 
     private void TestPlaceButton_Clicked(object sender, EventArgs e)

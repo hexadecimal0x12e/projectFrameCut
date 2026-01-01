@@ -89,6 +89,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// </summary>
         public uint Duration { get; set; } = 0;
         /// <summary>
+        /// Get the total duration of the audios in frames.
+        /// </summary>
+        public uint AudioDuration { get; set; } = 0;
+        /// <summary>
         /// Get when this draft was last saved.
         /// </summary>
         public DateTime SavedAt { get; set; } = DateTime.MinValue;
@@ -128,6 +132,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string TypeName { get; set; } = string.Empty;
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
+        public string? FilePath { get; set; }
         public uint LayerIndex { get; set; }
         public uint StartFrame { get; set; }
         public uint RelativeStartFrame { get; init; }

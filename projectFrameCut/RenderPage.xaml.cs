@@ -19,6 +19,12 @@ using projectFrameCut.Render.Plugin;
 using SixLabors.ImageSharp;
 using projectFrameCut.Services;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Render.EncodeAndDecode;
+using JsonElement = System.Text.Json.JsonElement;
+
+
+
+
 
 
 
@@ -30,6 +36,8 @@ using projectFrameCut.DraftStuff;
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL;
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
+using projectFrameCut.Platforms.Android;
+
 #endif
 
 #if WINDOWS
@@ -42,6 +50,7 @@ public partial class RenderPage : ContentPage
 {
     public string _workingPath;
     ProjectJSONStructure _project;
+    DraftStructureJSON _draft;
     uint _duration;
 
     public bool running;
@@ -76,12 +85,13 @@ public partial class RenderPage : ContentPage
         InitializeLogTimer();
     }
 
-    public RenderPage(string path, uint projectDuration, ProjectJSONStructure projectInfo)
+    public RenderPage(string path, uint projectDuration, ProjectJSONStructure projectInfo, DraftStructureJSON draft)
     {
         InitializeComponent();
         _workingPath = path;
         _duration = projectDuration;
         _project = projectInfo;
+        _draft = draft;
         Title = Localized.RenderPage_ExportTitle(projectInfo.projectName);
 
         var vm = new RenderPageViewModel();
@@ -97,6 +107,7 @@ public partial class RenderPage : ContentPage
         MaxParallelThreadsCount.Value = Environment.ProcessorCount * 2;
         MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)MaxParallelThreadsCount.Value);
         CancelRender.IsEnabled = false;
+        DraftJSONViewer.Text = JsonSerializer.Serialize(_draft, DraftPage.DraftJSONOption);
         InitializeLogTimer();
 
 #if ANDROID
@@ -137,17 +148,6 @@ public partial class RenderPage : ContentPage
                 await Dispatcher.DispatchAsync(() =>
                 {
                     LoggingBox.Text = _logBuffer.ToString();
-
-                    //                    // 自动滚动到底部
-                    //                    if (LoggingBox.Handler?.PlatformView != null)
-                    //                    {
-                    //#if WINDOWS
-                    //                        if (LoggingBox.Handler.PlatformView is Microsoft.UI.Xaml.Controls.TextBox textBox)
-                    //                        {
-                    //                            textBox.Select(textBox.Text.Length, 0);
-                    //                        }
-                    //#endif
-                    //                    }
                 });
             }
         }
@@ -171,6 +171,14 @@ public partial class RenderPage : ContentPage
         }
     }
     #region rendering
+    [DebuggerNonUserCode]
+    void _WriteToLogBox(string s, string l)
+    {
+        if (!s.StartsWith("[Render]") && !s.StartsWith("[Preparer]"))
+        {
+            _logQueue.Enqueue($"[{l}] {s}");
+        }
+    }
 
     private async void StartRender_Clicked(object sender, EventArgs e)
     {
@@ -188,6 +196,9 @@ public partial class RenderPage : ContentPage
         _logQueue.Clear();
         LoggingBox.Text = string.Empty;
         _logUpdateTimer?.Start();
+
+
+        MyLoggerExtensions.OnLog += _WriteToLogBox;
 
         if (BindingContext is RenderPageViewModel vm)
         {
@@ -212,79 +223,124 @@ public partial class RenderPage : ContentPage
                 "ffv1" => ".mkv",
                 _ => ".mp4"
             };
-            string outputPath = Path.Combine(outputDir,$"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.mp4");
 
-#if WINDOWS
-            string resultPath = await FileSystemService.PickASavePath($"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", outputDir);
-#elif ANDROID
-        Directory.CreateDirectory("/sdcard/Movies/projectFrameCut");
-        string resultPath = Path.Combine("/sdcard/Movies/projectFrameCut", $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
-#else
-        string resultPath = Path.Combine(outputDir, $"{_project.projectName}_export_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
-#endif
+
 
             running = true;
             DeviceDisplay.Current.KeepScreenOn = true;
             Log("Output options:\r\n" + vm.BuildSummary());
+            string vidOutputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+            string audOutputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
+            string compOutputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.composed{ext}");
+#if WINDOWS
+            var resultPath = await FileSystemService.PickASavePath($"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", outputDir);
+#else
+            string resultPath = compOutputPath;
+#endif
+            if (_cts.IsCancellationRequested) return;
 
-            await DoCompute(vm, outputPath);
+            try
+            {
+                await ComposeAudio(vm, audOutputPath);
+
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "compose audio", this);
+                await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+                if (Debugger.IsAttached) throw;
+                return;
+            }
+            if (_cts.IsCancellationRequested) return;
+
+            try
+            {
+                await DoCompute(vm, vidOutputPath);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "render frames", this);
+                await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+                if (Debugger.IsAttached) throw;
+                return;
+            }
+
+
+
+
+            if (_cts.IsCancellationRequested) return;
+
+            await Task.Run(async () =>
+            {
+                try
+                {
+                    VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, compOutputPath, true);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "compose media", this);
+                    if (Debugger.IsAttached) throw;
+                    await Dispatcher.DispatchAsync(async () =>
+                    {
+                        await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+                    });
+                    return;
+                }
+
+            });
 
 
             _logUpdateTimer?.Stop();
             await FlushLogQueue();
+            MyLoggerExtensions.OnLog -= _WriteToLogBox;
             await TotalProgress.ProgressTo(1, 50, Easing.Linear);
-#if WINDOWS
-
-            //todo: compose audio and attrs (like bitrate) into final video
-            Dispatcher.Dispatch(() =>
-            {
-                SubProgLabel.Text = Localized.RenderPage_SubProg_FinalEncoding;
-            });
-
-            ffmpeg.totalFrames = _duration;
-
-            ffmpeg.OnProgressChanged += (p) =>
-            {
-                totalProg = p + lastProg;
-
-                Dispatcher.Dispatch(async () =>
-                {
-                    await SubProgress.ProgressTo(p, 250, Easing.Linear);
-                    await TotalProgress.ProgressTo(totalProg / 3d, 5, Easing.Linear);
-
-                });
-            };
-
-            ffmpeg.OnLog += _logQueue.Enqueue;
-
-            var ffArgs = $"-i \"{outputPath}\" " +
-                //$"-i \"{audio}\" " +
-                $"-c:v h264_qsv " +
-                $"-pix_fmt yuv420p " +
-                $"\"{resultPath}\" " +
-                $"-b:v 4096M -maxrate 4096M -bufsize 1024M" +
-                /*     //vbr
-
-                      -b:v {avg}M //cbr
-
-                      -crf {num} //crf
-                 */
-                $" -y";
-            Log($"FFmpeg args: {ffArgs}");
-
-            var ffRet = await ffmpeg.Run(ffArgs);
-
-            Log($"FFmpeg process exited with code {ffRet}.");
-#endif
 
             await DisplayAlertAsync(Localized._Info, Localized.RenderPage_Done, Localized._OK);
             running = false;
             CancelRender.IsEnabled = false;
+
+
+#if ANDROID
+            var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, MediaStoreSaver.MediaType.Video);
+            if(!string.IsNullOrWhiteSpace(path) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+            {
+                try
+                {
+                    File.Delete(resultPath);
+                }
+                catch { }
+            }
+#else
+            await Task.Run(() => File.Move(compOutputPath, resultPath));
+#endif
+
+
             DeviceDisplay.Current.KeepScreenOn = false;
         }
     }
 
     double totalProg = 0, lastProg = 0;
+    string _currentSubProgText = "";
+    void SetSubProg(string s)
+    {
+        lastProg = totalProg;
+        string label;
+        try
+        {
+            label = Localized.DynamicLookup($"RenderPage_SubProg_{s}");
+        }
+        catch (Exception)
+        {
+            label = $"RenderPage_SubProg_{s}";
+        }
+        _currentSubProgText = label;
+        Dispatcher.Dispatch(() =>
+        {
+            SubProgLabel.Text = label;
+            TotalProgress.ProgressTo(totalProg / 3d, 5, Easing.Linear);
+
+        });
+    }
 
     async Task DoCompute(RenderPageViewModel vm, string outputPath)
     {
@@ -313,35 +369,7 @@ public partial class RenderPage : ContentPage
             };
 
 
-            void SetSubProg(string s)
-            {
-                lastProg = totalProg;
-                string label;
-                try
-                {
-                    label = Localized.DynamicLookup($"RenderPage_SubProg_{s}");
-                }
-                catch (Exception)
-                {
-                    label = $"RenderPage_SubProg_{s}";
-                }
-                Dispatcher.Dispatch(() =>
-                {
-                    SubProgLabel.Text = label;
-                    TotalProgress.ProgressTo(totalProg / 3d, 5, Easing.Linear);
 
-                });
-            }
-
-            void _WriteToLogBox(string s, string l)
-            {
-                if (!s.StartsWith("[Render]") && !s.StartsWith("[Preparer]"))
-                {
-                    _logQueue.Enqueue($"[{l}] {s}");
-                }
-            }
-
-            MyLoggerExtensions.OnLog += _WriteToLogBox;
 
             var outTempFile = outputPath + ext;
             Directory.CreateDirectory(Path.GetDirectoryName(outTempFile) ?? throw new NullReferenceException());
@@ -381,8 +409,7 @@ public partial class RenderPage : ContentPage
             if (!projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
 
 #endif
-            var draftSrc = JsonSerializer.Deserialize<DraftStructureJSON>
-                                                     (File.ReadAllText(Path.Combine(_workingPath, "timeline.json"))) ?? throw new NullReferenceException();
+            var draftSrc = _draft ?? throw new NullReferenceException();
 
             Log($"Draft loaded: duration {draftSrc.Duration}, saved on {draftSrc.SavedAt}, {draftSrc.Clips.Length} clips.");
 
@@ -392,20 +419,9 @@ public partial class RenderPage : ContentPage
                 return;
             }
 
-            var duration = draftSrc.Duration;
+            var duration = Math.Max(draftSrc.Duration, draftSrc.AudioDuration);
 
-            var frameRange = Enumerable.Range(0, (int)duration).Select(i => (uint)i).ToArray();
-
-            List<JsonElement> clipsJson = draftSrc.Clips.Select(c => (JsonElement)c).ToList();
-
-            var clipsList = new List<IClip>();
-
-            foreach (var clip in clipsJson)
-            {
-                clipsList.Add(PluginManager.CreateClip(clip));
-            }
-
-            var clips = clipsList.ToArray();
+            var clips = DraftImportAndExportHelper.JSONToIClips(draftSrc).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
 
             if (clips == null || clips.Length == 0)
             {
@@ -414,12 +430,6 @@ public partial class RenderPage : ContentPage
             }
 
             SetSubProg("PrepareDraft");
-
-            Log("Initializing all clips...");
-            foreach (IClip clip in clips)
-            {
-                clip.ReInit();
-            }
 
             int width = int.Parse(vm.Width);
             int height = int.Parse(vm.Height);
@@ -441,14 +451,18 @@ public partial class RenderPage : ContentPage
                 MaxThreads = parallelThreadCount,
                 LogState = false,
                 LogStatToLogger = true,
-                GCOption =(int.TryParse(SettingsManager.GetSetting("render_GCOption","0"), out var value) ? value : 0 ) ,
+                GCOption = (int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var value) ? value : 0)
             };
 
-            renderer.OnProgressChanged += (p) =>
+            renderer.OnProgressChanged += (p, etr) =>
             {
                 totalProg = p + lastProg;
                 Dispatcher.Dispatch(async () =>
                 {
+                    if (etr.TotalSeconds > 0)
+                    {
+                        SubProgLabel.Text = $"{_currentSubProgText} ({(etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss"))})";
+                    }
                     await SubProgress.ProgressTo(p, 250, Easing.Linear);
                     await TotalProgress.ProgressTo(totalProg / 3d, 5, Easing.Linear);
                 });
@@ -509,10 +523,9 @@ public partial class RenderPage : ContentPage
             GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
             GCSettings.LargeObjectHeapCompactionMode = origMode;
 #else
-            GC.Collect(); 
+            GC.Collect();
             GC.WaitForPendingFinalizers();
 #endif
-            MyLoggerExtensions.OnLog -= _WriteToLogBox;
 
             Log($"All done! Total elapsed {sw1}.");
 
@@ -527,10 +540,50 @@ public partial class RenderPage : ContentPage
 
     }
 
+    async Task ComposeAudio(RenderPageViewModel vm, string outputPath)
+    {
+        var draftSrc = _draft ?? throw new NullReferenceException();
+
+        Log($"Draft loaded: audio duration {draftSrc.AudioDuration}, saved on {draftSrc.SavedAt}, {draftSrc.Clips.Length} clips.");
+
+        if (draftSrc.Duration <= 1)
+        {
+            await DisplayAlertAsync(Localized._Info, "Draft invalid", Localized._OK);
+            return;
+        }
+
+        var clips = DraftImportAndExportHelper.JSONToIClips(draftSrc).Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip).ToArray();
+
+        if (clips == null || clips.Length == 0)
+        {
+            Log("No sound clips in the whole draft. returning...");
+            return;
+        }
+
+        Log($"Found {clips.Length} audio clips.");
+
+        Log("Initializing all clips...");
+        foreach (IClip clip in clips)
+        {
+            clip.ReInit();
+        }
+
+        var buf = AudioComposer.Compose(clips, null, (int)_project.targetFrameRate, 48000, 2);
+        AudioWriter writer = new(outputPath, 48000, 2);
+        writer.Append(buf);
+        writer.Finish();
+        writer.Dispose();
+        foreach (var item in clips)
+        {
+            item?.Dispose();
+        }
+        return;
+
+    }
 
 
 
-    #endregion
+#endregion
 
 
     private void MaxParallelThreadsCount_ValueChanged(object sender, ValueChangedEventArgs e)
@@ -559,9 +612,10 @@ public partial class RenderPage : ContentPage
             _cts.Cancel();
             _logUpdateTimer?.Stop();
             await FlushLogQueue();
-
             RenderOptionPanel.IsVisible = true;
             CancelRender.IsEnabled = false;
+            MyLoggerExtensions.OnLog -= _WriteToLogBox;
+
             //MoreOptions.IsEnabled = true;
             PreviewLayout.IsVisible = false;
             running = false;
@@ -581,10 +635,8 @@ public class RenderPageViewModel : INotifyPropertyChanged
         Localized.RenderPage_CustomOption
     ];
 
-    public string[] ExportOptions_Framerate { get; } = [
-        "24", "30", "45", "60", "90", "120",
-        Localized.RenderPage_CustomOption
-    ];
+    public string[] ExportOptions_Framerate { get; } = 
+        ["23.97", "24", "29.97", "30", "44.96", "45", "59.94", "60", "89.91", "90", "119.88", "120", Localized.RenderPage_CustomOption];
 
     public string[] ExportOptions_Encoding { get; } = [
         "h264", "h265/hevc", "av1",

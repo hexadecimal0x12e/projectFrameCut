@@ -103,8 +103,8 @@
                         <Label Grid.Row="2" Grid.Column="0" Text="{l:Localized Key=AssetPage_Info_CreatedAt}" FontAttributes="Bold" />
                         <Label Grid.Row="2" Grid.Column="1" Text="{Binding SelectedAsset.CreatedAt}" />
 
-                        <Label Grid.Row="3" Grid.Column="0" Text="{l:Localized Key=AssetPage_Info_Path}" FontAttributes="Bold" />
-                        <Label Grid.Row="3" Grid.Column="1" Text="{Binding SelectedAsset.Path}" LineBreakMode="MiddleTruncation" />
+                        <Label Grid.Row="3" Grid.Column="0" Text="{l:Localized Key=AssetPage_Info_Path}" FontAttributes="Bold" IsVisible="{OnIdiom Phone=False,Default=True}" />
+                        <Label Grid.Row="3" Grid.Column="1" Text="{Binding SelectedAsset.Path}" LineBreakMode="MiddleTruncation" IsVisible="{OnIdiom Phone=False,Default=True}"  />
                     </Grid>
                 </VerticalStackLayout>
                 <VerticalStackLayout HorizontalOptions="End" IsVisible="{OnIdiom Desktop=True, Default=False}">

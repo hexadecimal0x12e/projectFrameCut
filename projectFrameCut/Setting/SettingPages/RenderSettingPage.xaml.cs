@@ -120,7 +120,7 @@ public partial class RenderSettingPage : ContentPage
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_DefaultExportOpts, SettingLocalizedResources.Render_DefaultExportOpts_Subtitle), null);
 
         var resolutions = new[] { "1280x720", "1920x1080", "2560x1440", "3840x2160", "7680x4320" };
-        var framerates = new[] { "24", "30", "45", "60", "90", "120" };
+        var framerates = new[] { "23.97", "24", "29.97", "30", "44.96", "45", "59.94", "60", "89.91", "90", "119.88", "120" };
         var encodings = new[] { "h264", "h265/hevc", "av1" };
         var bitdepths = new[] { "8bit", "10bit", "12bit" };
 
