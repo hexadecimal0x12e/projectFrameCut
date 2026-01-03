@@ -12,6 +12,9 @@ namespace projectFrameCut.WinUI
     {
         public static bool LogWindowShowing = false;
 
+        public static string? BasicDataPathOverride { get; private set; } = null;
+        public static string? UserDataPathOverride { get; private set; } = null;
+
         [STAThread] //avoid failed to initialize COM library error, cause a lot of issue like IME not work at all...
         public static void Main(string[] args)
         {
@@ -43,6 +46,16 @@ namespace projectFrameCut.WinUI
                     {
                         Console.WriteLine($"[{level}] {msg}");
                     };
+                }
+                if (args.Any(c => c.StartsWith("--basicUserData")))
+                {
+                    var userDataPath = args.First(c => c.StartsWith("--basicUserData")).Split('=',2)[1];
+                    BasicDataPathOverride = userDataPath;
+                }
+                if (args.Any(c => c.StartsWith("--userData")))
+                {
+                    var userDataPath = args.First(c => c.StartsWith("--userData")).Split('=',2)[1];
+                    UserDataPathOverride = userDataPath;
                 }
             }
             catch

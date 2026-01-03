@@ -31,7 +31,19 @@ namespace projectFrameCut.Render.WindowsRender
 
         string? IPluginBase.PublishingUrl => null;
 
-        public Dictionary<string, Dictionary<string, string>> LocalizationProvider => new();
+        public Dictionary<string, Dictionary<string, string>> LocalizationProvider => new Dictionary<string, Dictionary<string, string>>
+        {
+            {
+                "en-US", new()
+            },
+            {
+                "option",
+                new Dictionary<string, string>
+                {
+                    {"_IsInternalPlugin","true" }
+                }
+            }
+        };
 
         Dictionary<string, Func<IComputer>> IPluginBase.ComputerProvider =>
             new Dictionary<string, Func<IComputer>>

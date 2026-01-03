@@ -27,7 +27,19 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 
         string? IPluginBase.PublishingUrl => null;
 
-        public Dictionary<string, Dictionary<string, string>> LocalizationProvider => new();
+        public Dictionary<string, Dictionary<string, string>> LocalizationProvider => new Dictionary<string, Dictionary<string, string>>
+        {
+            {
+                "en-US", new()
+            },
+            {
+                "option",
+                new Dictionary<string, string>
+                {
+                    {"_IsInternalPlugin","true" }
+                }
+            }
+        };
 
         Dictionary<string, Func<IEffect>> IPluginBase.EffectProvider => new Dictionary<string, Func<IEffect>> { };
         public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>>
@@ -42,8 +54,8 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 
         Dictionary<string, Func<IMixture>> IPluginBase.MixtureProvider => new Dictionary<string, Func<IMixture>> { };
 
-        Dictionary<string, Func< IComputer>> IPluginBase.ComputerProvider => 
-            new Dictionary<string, Func< IComputer>> 
+        Dictionary<string, Func<IComputer>> IPluginBase.ComputerProvider =>
+            new Dictionary<string, Func<IComputer>>
             {
                 {"OverlayComputer", new(() => new OverlayComputer()) },
                 {"RemoveColorComputer", new(() => new RemoveColorComputer()) }

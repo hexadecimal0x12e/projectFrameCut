@@ -43,7 +43,16 @@ public class InternalPluginBase : IPluginBase
                 {"_PluginBase_Name_", "projectFrameCut 内部基础插件" },
                 {"_PluginBase_Description_", "作为 projectFrameCut 的一部分，提供 projectFrameCut 的基本功能" }
             }
+        },
+        {
+            "option",
+            new Dictionary<string, string>
+            {
+                {"_IsFFmpegLibraryProvider","false" },
+                {"_IsInternalPlugin","true" }
+            }
         }
+
     };
 
     public Dictionary<string, Func<IEffect>> EffectProvider => new Dictionary<string, Func<IEffect>>
@@ -104,7 +113,7 @@ public class InternalPluginBase : IPluginBase
         {"AudioDecoder", (s) => new AudioDecoder(s) }
     };
 
-    public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>> 
+    public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>>
     {
         {"VideoWriter", new((c) => {if(VideoWriter.DetectCodec(c)) return new VideoWriter(); throw new NotSupportedException($"Codec {c} not found."); }) }
     };

@@ -1478,6 +1478,24 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "HomePage_FFmpegFailedLoadWarn",
+        "Value": "FFmpeg\u521D\u59CB\u5316\u5931\u8D25\uFF0C\u56E0\u4E3A{reason}\u3002\u4F60\u5C06\u65E0\u6CD5\u6E32\u67D3\u4F60\u7684\u89C6\u9891\u3002\u8981\u4E86\u89E3\u66F4\u591A\uFF0C\u8BF7\u67E5\u770B\u65E5\u5FD7\u6216\u8005\u6587\u6863\u6765\u83B7\u53D6\u5E2E\u52A9\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "HomePage_GoDraft_DraftBroken",
         "Value": "\u4F60\u7684\u8349\u7A3F\u4F3C\u4E4E\u635F\u574F\u4E86\uFF0C\u6211\u4EEC\u53EF\u4EE5\u5C1D\u8BD5\u7528\u6700\u540E\u4E00\u6B21\u4FDD\u5B58\u7684\u69FD\u4F4D\u6765\u5C1D\u8BD5\u6062\u590D\u3002\u9009\u62E9\u201C\u786E\u8BA4\u201D\u6765\u5C1D\u8BD5\u81EA\u52A8\u6062\u590D\uFF0C\u6216\u8005\u9009\u62E9\u201C\u53D6\u6D88\u201D\u6765\u53D6\u6D88\u6253\u5F00\u6D41\u7A0B\u3002",
         "Mode": "ConstString",
@@ -1898,6 +1916,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "HomePage_SettingInitFailWarn",
+        "Value": "\u8BBE\u7F6E\u521D\u59CB\u5316\u5931\u8D25\u3002\u4F60\u53EF\u4EE5\u5C1D\u8BD5\u91CD\u542F\u7A0B\u5E8F\uFF0C\u6216\u8005\u5C1D\u8BD5\u624B\u52A8\u4FEE\u8865\u0027settings.json\u0027\u6587\u4EF6\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "HomePage_SourceNotFound",
         "Value": "\u6211\u4EEC\u627E\u4E0D\u5230\u4EE5\u4E0B\u7247\u6BB5\u7684\u6E90\uFF0C\u8BF7\u68C0\u67E5\u4ED6\u4EEC\u3002",
         "Mode": "ConstString",
@@ -1936,6 +1962,24 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_UserdataPathNotFoundWarn",
+        "Value": "\u4F60\u7684\u7528\u6237\u6570\u636E\u76EE\u5F55 ({path}) \u4E0D\u5B58\u5728\uFF0C\u7CFB\u7EDF\u5DF2\u7ECF\u4E3A\u4F60\u4E34\u65F6\u6062\u590D\u4E86\u9ED8\u8BA4\u503C\u3002\u5982\u679C\u4F60\u624B\u52A8\u79FB\u52A8\u4E86\u6570\u636E\u76EE\u5F55\uFF0C\u4F60\u53EF\u4EE5\u5728\u8BBE\u7F6E\u9875\u9762\u91CD\u65B0\u8BBE\u7F6E\u5B83\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
         "HasValidationErrors": false
       },
       {
@@ -2098,7 +2142,7 @@
       },
       {
         "Id": "PluginEngine_DisabledBecauseUserDisabled",
-        "Value": "\u7528\u6237\u63D2\u4EF6\u529F\u80FD\u5DF2\u88AB\u7981\u7528\u3002\u8981\u4E86\u89E3\u66F4\u591A\uFF0C\u8BF7\u67E5\u770B\u6587\u6863\u3002",
+        "Value": "\u7528\u6237\u63D2\u4EF6\u529F\u80FD\u5DF2\u88AB\u7981\u7528\u3002\u8F6C\u5230\u9AD8\u7EA7\u8BBE\u7F6E\u9875\u9762\u4E86\u89E3\u66F4\u591A\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4415,7 +4459,7 @@
       },
       {
         "Id": "PluginEngine_DisabledBecauseUserDisabled",
-        "Value": "User plugin functionality has been disabled. For more information, please refer to the documentation.",
+        "Value": "User plugin functionality has been disabled. Go to the Advanced Settings page to learn more.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4905,6 +4949,53 @@
       {
         "Id": "AssetPage_InputNewName",
         "Value": "Enter a new name",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_FFmpegFailedLoadWarn",
+        "Value": "FFmpeg initialization failed due to {reason}. You will not be able to render your videos. For more information, please check the logs or documentation for help.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_UserdataPathNotFoundWarn",
+        "Value": "Your user data directory ({path}) does not exist. The system has temporarily restored the default value for you. If you manually moved the data directory, you can reset it in the settings page.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_SettingInitFailWarn",
+        "Value": "Settings initialization failed. You can try restarting the application, or attempt to manually repair the \u0027settings.json\u0027 file.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6976,7 +7067,7 @@
       },
       {
         "Id": "PluginEngine_DisabledBecauseUserDisabled",
-        "Value": "\u4F7F\u7528\u8005\u5916\u639B\u529F\u80FD\u5DF2\u88AB\u505C\u7528\u3002\u6B32\u4E86\u89E3\u66F4\u591A\uFF0C\u8ACB\u67E5\u770B\u6587\u4EF6\u3002",
+        "Value": "\u4F7F\u7528\u8005\u5916\u639B\u529F\u80FD\u5DF2\u88AB\u505C\u7528\u3002\u524D\u5F80\u9032\u968E\u8A2D\u5B9A\u9801\u9762\u4E86\u89E3\u66F4\u591A\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7466,6 +7557,53 @@
       {
         "Id": "AssetPage_InputNewName",
         "Value": "\u8F38\u5165\u65B0\u7684\u540D\u7A31",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_FFmpegFailedLoadWarn",
+        "Value": "FFmpeg\u521D\u59CB\u5316\u5931\u6557\uFF0C\u539F\u56E0\u70BA{reason}\u3002\u4F60\u5C07\u7121\u6CD5\u6E32\u67D3\u4F60\u7684\u5F71\u7247\u3002\u5982\u9700\u4E86\u89E3\u66F4\u591A\uFF0C\u8ACB\u67E5\u770B\u65E5\u8A8C\u6216\u6587\u4EF6\u4EE5\u53D6\u5F97\u5E6B\u52A9\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_UserdataPathNotFoundWarn",
+        "Value": "\u4F60\u7684\u4F7F\u7528\u8005\u8CC7\u6599\u76EE\u9304 ({path}) \u4E0D\u5B58\u5728\uFF0C\u7CFB\u7D71\u5DF2\u70BA\u4F60\u66AB\u6642\u6062\u5FA9\u4E86\u9810\u8A2D\u503C\u3002\u5982\u679C\u4F60\u624B\u52D5\u79FB\u52D5\u4E86\u8CC7\u6599\u76EE\u9304\uFF0C\u53EF\u4EE5\u5728\u8A2D\u5B9A\u9801\u9762\u91CD\u65B0\u8A2D\u5B9A\u5B83\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_SettingInitFailWarn",
+        "Value": "\u8A2D\u5B9A\u521D\u59CB\u5316\u5931\u6557\u3002\u4F60\u53EF\u4EE5\u5617\u8A66\u91CD\u555F\u7A0B\u5F0F\uFF0C\u6216\u8005\u5617\u8A66\u624B\u52D5\u4FEE\u5FA9\u0027settings.json\u0027\u6A94\u6848\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9543,7 +9681,7 @@
       },
       {
         "Id": "PluginEngine_DisabledBecauseUserDisabled",
-        "Value": "\u30E6\u30FC\u30B6\u30FC\u30D7\u30E9\u30B0\u30A4\u30F3\u6A5F\u80FD\u306F\u7121\u52B9\u5316\u3055\u308C\u3066\u3044\u307E\u3059\u3002\u8A73\u7D30\u306B\u3064\u3044\u3066\u306F\u3001\u30C9\u30AD\u30E5\u30E1\u30F3\u30C8\u3092\u3054\u89A7\u304F\u3060\u3055\u3044\u3002",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u30D7\u30E9\u30B0\u30A4\u30F3\u6A5F\u80FD\u306F\u7121\u52B9\u306B\u306A\u3063\u3066\u3044\u307E\u3059\u3002\u8A73\u7D30\u306B\u3064\u3044\u3066\u306F\u3001\u8A73\u7D30\u8A2D\u5B9A\u30DA\u30FC\u30B8\u306B\u79FB\u52D5\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10033,6 +10171,53 @@
       {
         "Id": "AssetPage_InputNewName",
         "Value": "\u65B0\u3057\u3044\u540D\u524D\u3092\u5165\u529B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_FFmpegFailedLoadWarn",
+        "Value": "FFmpeg\u306E\u521D\u671F\u5316\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002\u7406\u7531: {reason}\u3002\u52D5\u753B\u306E\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u304C\u3067\u304D\u306A\u304F\u306A\u308A\u307E\u3059\u3002\u8A73\u7D30\u306B\u3064\u3044\u3066\u306F\u3001\u30ED\u30B0\u307E\u305F\u306F\u30C9\u30AD\u30E5\u30E1\u30F3\u30C8\u3092\u53C2\u7167\u3057\u3066\u30D8\u30EB\u30D7\u3092\u5165\u624B\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_UserdataPathNotFoundWarn",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA ({path}) \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002\u30B7\u30B9\u30C6\u30E0\u304C\u4E00\u6642\u7684\u306B\u30C7\u30D5\u30A9\u30EB\u30C8\u5024\u3092\u5FA9\u5143\u3057\u307E\u3057\u305F\u3002\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u3092\u624B\u52D5\u3067\u79FB\u52D5\u3057\u305F\u5834\u5408\u306F\u3001\u8A2D\u5B9A\u30DA\u30FC\u30B8\u3067\u518D\u8A2D\u5B9A\u3067\u304D\u307E\u3059\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_SettingInitFailWarn",
+        "Value": "\u8A2D\u5B9A\u306E\u521D\u671F\u5316\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002\u30D7\u30ED\u30B0\u30E9\u30E0\u3092\u518D\u8D77\u52D5\u3059\u308B\u304B\u3001\u0027settings.json\u0027\u30D5\u30A1\u30A4\u30EB\u3092\u624B\u52D5\u3067\u4FEE\u6B63\u3057\u3066\u307F\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12110,7 +12295,7 @@
       },
       {
         "Id": "PluginEngine_DisabledBecauseUserDisabled",
-        "Value": "\uC0AC\uC6A9\uC790 \uD50C\uB7EC\uADF8\uC778 \uAE30\uB2A5\uC774 \uBE44\uD65C\uC131\uD654\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC790\uC138\uD55C \uB0B4\uC6A9\uC740 \uBB38\uC11C\uB97C \uCC38\uC870\uD558\uC138\uC694.",
+        "Value": "\uC0AC\uC6A9\uC790 \uD50C\uB7EC\uADF8\uC778 \uAE30\uB2A5\uC774 \uBE44\uD65C\uC131\uD654\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uACE0\uAE09 \uC124\uC815 \uD398\uC774\uC9C0\uB85C \uC774\uB3D9\uD558\uC5EC \uC790\uC138\uD788 \uC54C\uC544\uBCF4\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12600,6 +12785,53 @@
       {
         "Id": "AssetPage_InputNewName",
         "Value": "\uC0C8 \uC774\uB984 \uC785\uB825",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_FFmpegFailedLoadWarn",
+        "Value": "FFmpeg \uCD08\uAE30\uD654\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uC774\uC720: {reason}. \uBE44\uB514\uC624\uB97C \uB80C\uB354\uB9C1\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC790\uC138\uD55C \uB0B4\uC6A9\uC740 \uB85C\uADF8\uB97C \uD655\uC778\uD558\uAC70\uB098 \uB3C4\uC6C0\uB9D0 \uBB38\uC11C\uB97C \uCC38\uC870\uD558\uC138\uC694.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_UserdataPathNotFoundWarn",
+        "Value": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uB514\uB809\uD1A0\uB9AC({path})\uAC00 \uC874\uC7AC\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC2DC\uC2A4\uD15C\uC774 \uAE30\uBCF8\uAC12\uC73C\uB85C \uC784\uC2DC \uBCF5\uC6D0\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uB370\uC774\uD130 \uB514\uB809\uD1A0\uB9AC\uB97C \uC9C1\uC811 \uC774\uB3D9\uD55C \uACBD\uC6B0 \uC124\uC815 \uD398\uC774\uC9C0\uC5D0\uC11C \uB2E4\uC2DC \uC9C0\uC815\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_SettingInitFailWarn",
+        "Value": "\uC124\uC815 \uCD08\uAE30\uD654\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uD504\uB85C\uADF8\uB7A8\uC744 \uB2E4\uC2DC \uC2DC\uC791\uD558\uAC70\uB098 \u0027settings.json\u0027 \uD30C\uC77C\uC744 \uC218\uB3D9\uC73C\uB85C \uC218\uC815\uD574 \uBCF4\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -14672,7 +14904,7 @@
       },
       {
         "Id": "PluginEngine_DisabledBecauseUserDisabled",
-        "Value": "La fonctionnalit\u00E9 de plugin a \u00E9t\u00E9 d\u00E9sactiv\u00E9e par l\u0027utilisateur. Pour en savoir plus, consultez la documentation.",
+        "Value": "La fonctionnalit\u00E9 de plugin utilisateur a \u00E9t\u00E9 d\u00E9sactiv\u00E9e. Rendez-vous sur la page des param\u00E8tres avanc\u00E9s pour en savoir plus.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15162,6 +15394,53 @@
       {
         "Id": "AssetPage_InputNewName",
         "Value": "Entrez un nouveau nom",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_FFmpegFailedLoadWarn",
+        "Value": "L\u0027initialisation de FFmpeg a \u00E9chou\u00E9 en raison de {reason}. Vous ne pourrez pas afficher vos vid\u00E9os. Pour plus d\u0027informations, consultez les journaux ou la documentation pour obtenir de l\u0027aide.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_UserdataPathNotFoundWarn",
+        "Value": "Votre r\u00E9pertoire de donn\u00E9es utilisateur ({path}) n\u0027existe pas. Le syst\u00E8me a temporairement r\u00E9tabli la valeur par d\u00E9faut. Si vous avez d\u00E9plac\u00E9 manuellement le r\u00E9pertoire de donn\u00E9es, vous pouvez le reconfigurer dans la page des param\u00E8tres.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_SettingInitFailWarn",
+        "Value": "L\u0027initialisation des param\u00E8tres a \u00E9chou\u00E9. Vous pouvez essayer de red\u00E9marrer l\u0027application ou de r\u00E9parer manuellement le fichier \u0027settings.json\u0027.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17239,7 +17518,7 @@
       },
       {
         "Id": "PluginEngine_DisabledBecauseUserDisabled",
-        "Value": "\u63D2\u4EF6\u4E4B\u80FD\uFF0C\u5DF2\u4E3A\u7528\u6237\u6240\u7981\u3002\u6B32\u77E5\u8BE6\u60C5\uFF0C\u8BF7\u9605\u6587\u6863\u3002",
+        "Value": "\u7528\u6237\u63D2\u4EF6\u529F\u80FD\u5DF2\u7981\u7528\u3002\u6B32\u77E5\u8BE6\u60C5\uFF0C\u8BF7\u79FB\u6B65\u9AD8\u7EA7\u8BBE\u7F6E\u4E4B\u9875\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17729,6 +18008,53 @@
       {
         "Id": "AssetPage_InputNewName",
         "Value": "\u8F93\u5165\u65B0\u540D\u5B57",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_FFmpegFailedLoadWarn",
+        "Value": "FFmpeg\u521D\u542F\u672A\u6210\uFF0C\u76D6\u56E0{reason}\u3002\u6C5D\u89C6\u9891\u4E0D\u53EF\u6E32\u67D3\u3002\u6B32\u77E5\u8BE6\uFF0C\u8BF7\u9605\u65E5\u5FD7\u6216\u6587\u6863\u4EE5\u83B7\u52A9\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "reason"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "reason",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_UserdataPathNotFoundWarn",
+        "Value": "\u6C5D\u4E4B\u7528\u6237\u6570\u636E\u76EE\u5F55 ({path}) \u672A\u5B58\uFF0C\u7CFB\u7EDF\u5DF2\u4E3A\u6C5D\u6682\u590D\u9ED8\u8BA4\u4E4B\u503C\u3002\u82E5\u6C5D\u624B\u52A8\u8FC1\u79FB\u6570\u636E\u76EE\u5F55\uFF0C\u53EF\u4E8E\u8BBE\u7F6E\u4E4B\u9875\u91CD\u7F6E\u4E4B\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "path"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "path",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u529B\u6C42\u7B80\u6D01\u5178\u96C5\u3002\u0027\u76EE\u5F55\u0027\u3001\u0027\u9ED8\u8BA4\u503C\u0027\u3001\u0027\u8BBE\u7F6E\u9875\u9762\u0027\u7B49\u672F\u8BED\u5747\u4F5C\u6587\u8A00\u5316\u5904\u7406\uFF0C\u0027{path}\u0027\u53C2\u6570\u4F4D\u7F6E\u4FDD\u6301\u4E0D\u53D8\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_SettingInitFailWarn",
+        "Value": "\u8BBE\u7F6E\u521D\u542F\u5931\u5229\u3002\u53EF\u8BD5\u91CD\u542F\u7A0B\u5F0F\uFF0C\u6216\u624B\u4FEE\u0027settings.json\u0027\u6587\u4E66\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

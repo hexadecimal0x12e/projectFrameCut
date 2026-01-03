@@ -750,6 +750,12 @@ public partial class HomePage : ContentPage
             SimpleLocalizer.IsFallbackMatched = false;
         }
 
+        if (SettingsManager.IsBoolSettingTrue("_SettingFailLoad"))
+        {
+            await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_SettingInitFailWarn}\r\n({SettingsManager.GetSetting("_SettingFailLoadMsg", "unknown")})", Localized._OK);
+
+        }
+
         if (!SettingsManager.IsBoolSettingTrue("AIGeneratedTranslatePromptReaded") && Localized._LocaleId_ != "zh-CN")
         {
             await DisplayAlertAsync(Localized._Info, Localized.HomePage_AIGeneratdTranslationPrompt, Localized._OK);
@@ -760,6 +766,25 @@ public partial class HomePage : ContentPage
         {
             await DisplayAlertAsync(Localized._Warn, Localized.HomePage_AdminWarn(), Localized._OK);
         }
+
+        if (!string.IsNullOrWhiteSpace(MauiProgram.ffmpegFailMessage))
+        {
+            await DisplayAlertAsync(Localized._Warn, Localized.HomePage_FFmpegFailedLoadWarn(MauiProgram.ffmpegFailMessage), Localized._OK);
+        }
+
+        try
+        {
+            if (File.Exists(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt")) && !Directory.Exists(File.ReadAllText(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt"))))
+            {   
+                await DisplayAlertAsync(Localized._Warn, Localized.HomePage_UserdataPathNotFoundWarn(File.ReadAllText(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt"))), Localized._OK);
+
+            }
+        }
+        catch { }
+
+
+
+
     }
 
     private async void MenuOpen_Clicked(object? sender, EventArgs e)

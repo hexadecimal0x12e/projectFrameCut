@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "projectFrameCut.Render.RenderCLI": {
-      "commandName": "Project",
-      "commandLineArgs": "rpc_backend  -pipe=pjfc_rpc_debug123 -output_options=1280,720,42,AV_PIX_FMT_NONE,nope \"-tempFolder=D:\\code\\playground\\projectFrameCut\\My Drafts\\test 1.pjfc\\thumbs\" -accessToken=11 -port=23456 -UseCheckerboardBackgroundForNoContent=true  -FFmpegLibraryPath=D:\\code\\playground\\FFmpeg\\windows\\FFmpeg\\8.x_internal -Use16bpp=false -pluginConnectionPipe=pjfc_plugin_debug123"
-    }
-  }
-}

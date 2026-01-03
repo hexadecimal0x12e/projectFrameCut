@@ -30,6 +30,7 @@ public partial class MiscSettingPage : ContentPage
             .AddButton("makeDiagReport", SettingLocalizedResources.Misc_MakeDiagReport, null)
             .AddButton("openSettingsButton", SettingLocalizedResources.Misc_OpenSettingsJson, null!)
             .AddSwitch("LogDiagnostics", SettingLocalizedResources.Misc_LogDiagnostics, bool.TryParse(GetSetting("LogDiagnostics", "false"), out var logDiagnostics) ? logDiagnostics : false, null)
+            .AddSwitch("DisablePluginEngine", SettingLocalizedResources.Advanced_DisablePluginEngine, IsBoolSettingTrue("DisablePluginEngine"))
             .AddSeparator()
             .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Misc_Reset, 20, default))
             .AddButton("reset_ClearPluginSign", SettingLocalizedResources.Misc_ForgetPluginSign,
@@ -67,7 +68,7 @@ public partial class MiscSettingPage : ContentPage
                             SettingLocalizedResources.Misc_ForgetPluginSign_Hint,
                             Localized._Confirm,
                             Localized._Cancel,
-                            "projectFrameCut.ExamplePlugin",
+                            "nobody.ExamplePlugin",
                             -1,
                             Keyboard.Default,
                             "").ContinueWith(async (t) =>
@@ -98,7 +99,7 @@ public partial class MiscSettingPage : ContentPage
                             SettingLocalizedResources.Misc_ClearSafeStor_Warn,
                             Localized._Confirm,
                             Localized._Cancel,
-                            "yes",
+                            "no",
                             -1,
                             Keyboard.Default,
                             "").ContinueWith(async (t) =>
@@ -125,9 +126,9 @@ public partial class MiscSettingPage : ContentPage
                                 SettingLocalizedResources.Misc_ResetSettings_Warn,
                                 Localized._Confirm,
                                 Localized._Cancel,
-                                "yes",
+                                "no",
                                 -1,
-                                Keyboard.Email,
+                                null,
                                 "").ContinueWith(async (t) =>
                                 {
                                     if (string.IsNullOrWhiteSpace(t.Result))
@@ -160,6 +161,7 @@ public partial class MiscSettingPage : ContentPage
                     await FileSystemService.OpenFileAsync(jsonPath);
                     goto done;
                 case "DeveloperMode":
+                case "DisablePluginEngine":
                     needReboot = true;
                     break;
                 case "LogDiagnostics":
