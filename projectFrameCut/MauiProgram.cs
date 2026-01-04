@@ -544,19 +544,12 @@ namespace projectFrameCut
 
                 try
                 {
-                    string platform =
-#if ANDROID
-                        "android";
-#elif WINDOWS
-                        "windows";
-#else
-                        "unknown";
-#endif
                     string? nativeLibDirOverride = null;
                     try
                     {
                         if (SettingsManager.IsBoolSettingTrue("PluginProvidedFFmpeg_Enable"))
                         {
+#if WINDOWS
                             var pluginId = SettingsManager.GetSetting("PluginProvidedFFmpeg_PluginID", "");
                             if (!PluginManager.LoadedPlugins.TryGetValue(pluginId, out var value))
                             {
@@ -564,7 +557,7 @@ namespace projectFrameCut
                             }
                             else
                             {
-                                var ffmpegPath = Path.Combine(BasicDataPath, "Plugins", value.PluginID, "FFmpeg", platform);
+                                var ffmpegPath = Path.Combine(BasicDataPath, "Plugins", value.PluginID, "FFmpeg", "windows");
                                 if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
                                 {
                                     Log($"Using FFmpeg libraries provided by plugin {pluginId}, path:{ffmpegPath}");
@@ -575,17 +568,19 @@ namespace projectFrameCut
                                     Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} provided invalid path:{ffmpegPath}");
                                 }
                             }
-
+#elif ANDROID
+                            nativeLibDirOverride = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+#endif
                         }
                     }
                     catch { }
 #if ANDROID
-                    ffmpeg.RootPath = nativeLibDirOverride ?? Android.App.Application.Context.ApplicationInfo?.NativeLibraryDir;
+                    FFmpegRoot = nativeLibDirOverride ?? Android.App.Application.Context.ApplicationInfo?.NativeLibraryDir;
                     JavaSystem.LoadLibrary("c");
 #elif WINDOWS
-                    ffmpeg.RootPath = nativeLibDirOverride ?? Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
+                    FFmpegRoot = nativeLibDirOverride ?? Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
 #endif
-                    FFmpegRoot = ffmpeg.RootPath;
+                    ffmpeg.RootPath = FFmpegRoot;
                     Log($"FFmpeg library root path: {ffmpeg.RootPath}");
                     FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
                     FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize();

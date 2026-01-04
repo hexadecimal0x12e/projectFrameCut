@@ -62,6 +62,10 @@ public partial class RenderPage : ContentPage
     private System.Timers.Timer? _logUpdateTimer;
     private readonly SemaphoreSlim _logSemaphore = new SemaphoreSlim(1, 1);
 
+    private System.Timers.Timer? _screenSaverTimer;
+    private System.Timers.Timer? _moveHintTimer;
+    private const int ScreenSaverTimeout = 15000;
+
 #if WINDOWS
     Platforms.Windows.RenderHelper render = new projectFrameCut.Platforms.Windows.RenderHelper();
     Platforms.Windows.ffmpegHelper ffmpeg = new projectFrameCut.Platforms.Windows.ffmpegHelper();
@@ -83,6 +87,9 @@ public partial class RenderPage : ContentPage
         catch { }
         BindingContext = vmDefault;
         InitializeLogTimer();
+        InitializeScreenSaverTimer();
+        ScreenSaverOverlay.InputTransparent = true;
+        ScreenSaverOverlay.CascadeInputTransparent = true;
     }
 
     public RenderPage(string path, uint projectDuration, ProjectJSONStructure projectInfo, DraftStructureJSON draft)
@@ -93,7 +100,8 @@ public partial class RenderPage : ContentPage
         _project = projectInfo;
         _draft = draft;
         Title = Localized.RenderPage_ExportTitle(projectInfo.projectName);
-
+        ScreenSaverOverlay.InputTransparent = true;
+        ScreenSaverOverlay.CascadeInputTransparent = true;
         var vm = new RenderPageViewModel();
         try
         {
@@ -109,6 +117,7 @@ public partial class RenderPage : ContentPage
         CancelRender.IsEnabled = false;
         DraftJSONViewer.Text = JsonSerializer.Serialize(_draft, DraftPage.DraftJSONOption);
         InitializeLogTimer();
+        InitializeScreenSaverTimer();
 
 #if ANDROID
         MaxParallelThreadsCount.Maximum = Environment.ProcessorCount;
@@ -123,6 +132,71 @@ public partial class RenderPage : ContentPage
         _logUpdateTimer = new System.Timers.Timer(800);
         _logUpdateTimer.Elapsed += async (s, e) => await FlushLogQueue();
         _logUpdateTimer.AutoReset = true;
+    }
+
+    private void InitializeScreenSaverTimer()
+    {
+        _screenSaverTimer = new System.Timers.Timer(ScreenSaverTimeout);
+        _screenSaverTimer.Elapsed += (s, e) => Dispatcher.Dispatch(() =>
+        {
+            ScreenSaverOverlay.IsVisible = true;
+            ScreenSaverOverlay.InputTransparent = false;
+            ScreenSaverOverlay.CascadeInputTransparent = false;
+            StartMovingHint();
+        });
+        _screenSaverTimer.AutoReset = false;
+
+        _moveHintTimer = new System.Timers.Timer(10000);
+        _moveHintTimer.Elapsed += (s, e) => Dispatcher.Dispatch(MoveHintLabel);
+        _moveHintTimer.AutoReset = true;
+    }
+
+    private void StopScreenSaverTimer()
+    {
+        _screenSaverTimer?.Stop();
+        ScreenSaverOverlay.IsVisible = false;
+        ScreenSaverOverlay.InputTransparent = true;
+        ScreenSaverOverlay.CascadeInputTransparent = true;
+        StopMovingHint();
+    }
+
+    private void StartMovingHint()
+    {
+        MoveHintLabel();
+        _moveHintTimer?.Start();
+    }
+
+    private void StopMovingHint()
+    {
+        _moveHintTimer?.Stop();
+        HintLabel.TranslationX = 0;
+        HintLabel.TranslationY = 0;
+    }
+
+    private void MoveHintLabel()
+    {
+        if (ScreenSaverOverlay.Width <= 0 || ScreenSaverOverlay.Height <= 0) return;
+
+        double rangeX = (ScreenSaverOverlay.Width - HintLabel.Width) / 2;
+        double rangeY = (ScreenSaverOverlay.Height - HintLabel.Height) / 2;
+
+        if (rangeX < 0) rangeX = 0;
+        if (rangeY < 0) rangeY = 0;
+
+        var rnd = Random.Shared;
+        HintLabel.TranslationX = (rnd.NextDouble() * 2 - 1) * rangeX;
+        HintLabel.TranslationY = (rnd.NextDouble() * 2 - 1) * rangeY;
+    }
+
+    private void ScreenSaverOverlay_Tapped(object sender, EventArgs e)
+    {
+        ScreenSaverOverlay.IsVisible = false;
+        StopMovingHint();
+        if (running)
+        {
+            _screenSaverTimer?.Stop();
+            _screenSaverTimer?.Start();
+        }
     }
 
     private async Task FlushLogQueue()
@@ -160,6 +234,7 @@ public partial class RenderPage : ContentPage
 
     protected override bool OnBackButtonPressed()
     {
+        StopScreenSaverTimer();
         return running;
     }
 
@@ -182,96 +257,115 @@ public partial class RenderPage : ContentPage
 
     private async void StartRender_Clicked(object sender, EventArgs e)
     {
-        var outputDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
-
-        RenderOptionPanel.IsVisible = false;
-        PreviewLayout.IsVisible = true;
-        ProgressBox.IsVisible = true;
-        CancelRender.IsEnabled = true;
-        //MoreOptions.IsEnabled = false;
-        await SubProgress.ProgressTo(0, 250, Easing.Linear);
-        await TotalProgress.ProgressTo(0, 250, Easing.Linear);
-
-        _logBuffer.Clear();
-        _logQueue.Clear();
-        LoggingBox.Text = string.Empty;
-        _logUpdateTimer?.Start();
-
-
-        MyLoggerExtensions.OnLog += _WriteToLogBox;
-
-        if (BindingContext is RenderPageViewModel vm)
+        Shell.SetNavBarIsVisible(this, false);
+        try
         {
-            var fmt = vm.BitDepth switch
-            {
-                "8bit" => "AV_PIX_FMT_YUV420P",
-                "10bit" => "AV_PIX_FMT_YUV420P10LE",
-                "12bit" => "AV_PIX_FMT_YUV444P12LE",
-                _ => "AV_PIX_FMT_GBRP16LE"
-            };
-            var enc = vm.BitDepth switch
-            {
-                "8bit" => "libx264",
-                "10bit" => "libx265",
-                "12bit" => "libx265",
-                _ => "ffv1"
-            };
-            var ext = enc switch
-            {
-                "libx264" => ".mp4",
-                "libx265" => ".mov",
-                "ffv1" => ".mkv",
-                _ => ".mp4"
-            };
+            var outputDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
 
+            RenderOptionPanel.IsVisible = false;
+            PreviewLayout.IsVisible = true;
+            ProgressBox.IsVisible = true;
+            CancelRender.IsEnabled = true;
+            //MoreOptions.IsEnabled = false;
+            await SubProgress.ProgressTo(0, 250, Easing.Linear);
+            await TotalProgress.ProgressTo(0, 250, Easing.Linear);
 
-
-            running = true;
-            DeviceDisplay.Current.KeepScreenOn = true;
-            Log("Output options:\r\n" + vm.BuildSummary());
-            string vidOutputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
-            string audOutputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
-            string compOutputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.composed{ext}");
-#if WINDOWS
-            var resultPath = await FileSystemService.PickASavePath($"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", outputDir);
+            _logBuffer.Clear();
+            _logQueue.Clear();
+            LoggingBox.Text = string.Empty;
+            _logUpdateTimer?.Start();
+            if (!SettingsManager.IsSettingExists("render_EnableScreenSaver"))
+            {
+#if ANDROID || IOS //oled screen, avoid burn-in
+                SettingsManager.WriteSetting("render_EnableScreenSaver", "true");
 #else
-            string resultPath = compOutputPath;
+                SettingsManager.WriteSetting("render_EnableScreenSaver", "false");
 #endif
-            if (_cts.IsCancellationRequested) return;
-
-            try
-            {
-                await ComposeAudio(vm, audOutputPath);
-
             }
-            catch (Exception ex)
+            if (SettingsManager.IsBoolSettingTrue("render_EnableScreenSaver"))
             {
-                Log(ex, "compose audio", this);
-                await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
-                if (Debugger.IsAttached) throw;
-                return;
-            }
-            if (_cts.IsCancellationRequested) return;
-
-            try
-            {
-                await DoCompute(vm, vidOutputPath);
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "render frames", this);
-                await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
-                if (Debugger.IsAttached) throw;
-                return;
+                _screenSaverTimer?.Stop();
+                _screenSaverTimer?.Start();
+                StopMovingHint();
             }
 
-            if (_cts.IsCancellationRequested) return;
 
-            double targetFps = double.Parse(vm.Framerate);
-            if (Math.Abs(targetFps - Math.Round(targetFps)) > 0.001)
+
+            MyLoggerExtensions.OnLog += _WriteToLogBox;
+
+            if (BindingContext is RenderPageViewModel vm)
             {
-                Log($"Resampling video from {(int)Math.Round(targetFps)} to {targetFps}...");
-                SetSubProg("Resample");
+                var fmt = vm.BitDepth switch
+                {
+                    "8bit" => "AV_PIX_FMT_YUV420P",
+                    "10bit" => "AV_PIX_FMT_YUV420P10LE",
+                    "12bit" => "AV_PIX_FMT_YUV444P12LE",
+                    _ => "AV_PIX_FMT_GBRP16LE"
+                };
+                var enc = vm.BitDepth switch
+                {
+                    "8bit" => "libx264",
+                    "10bit" => "libx265",
+                    "12bit" => "libx265",
+                    _ => "ffv1"
+                };
+                var ext = enc switch
+                {
+                    "libx264" => ".mp4",
+                    "libx265" => ".mov",
+                    "ffv1" => ".mkv",
+                    _ => ".mp4"
+                };
+
+
+
+                running = true;
+                DeviceDisplay.Current.KeepScreenOn = true;
+                Log("Output options:\r\n" + vm.BuildSummary());
+                string vidOutputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+                string audOutputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
+                string compOutputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.composed{ext}");
+#if WINDOWS
+                var resultPath = await FileSystemService.PickASavePath($"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", outputDir);
+#else
+                string resultPath = compOutputPath;
+#endif
+                if (_cts.IsCancellationRequested) return;
+
+                try
+                {
+                    await ComposeAudio(vm, audOutputPath);
+
+                }
+                catch (Exception ex)
+                {
+
+                    Log(ex, "compose audio", this);
+                    await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+                    if (Debugger.IsAttached) throw;
+                    return;
+                }
+                if (_cts.IsCancellationRequested) return;
+
+                try
+                {
+                    await DoCompute(vm, vidOutputPath);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "render frames", this);
+                    await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+                    if (Debugger.IsAttached) throw;
+                    return;
+                }
+
+                if (_cts.IsCancellationRequested) return;
+
+                double targetFps = double.Parse(vm.Framerate);
+                if (Math.Abs(targetFps - Math.Round(targetFps)) > 0.001)
+                {
+                    Log($"Resampling video from {(int)Math.Round(targetFps)} to {targetFps}...");
+                    SetSubProg("Resample");
 #if WINDOWS
                 var tempVid = vidOutputPath + ".temp" + ext;
                 if (File.Exists(vidOutputPath))
@@ -284,51 +378,55 @@ public partial class RenderPage : ContentPage
                     File.Delete(tempVid);
                 }
 #endif
-            }
-
-
-            if (_cts.IsCancellationRequested) return;
-
-            await Task.Run(async () =>
-            {
-                try
-                {
-                    VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, compOutputPath, true);
                 }
-                catch (Exception ex)
+
+
+                if (_cts.IsCancellationRequested) return;
+
+                await Task.Run(async () =>
                 {
-                    Log(ex, "compose media", this);
-                    if (Debugger.IsAttached) throw;
-                    await Dispatcher.DispatchAsync(async () =>
+                    try
                     {
-                        await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
-                    });
-                    return;
-                }
+                        VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, compOutputPath, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, "compose media", this);
+                        if (Debugger.IsAttached) throw;
+                        await Dispatcher.DispatchAsync(async () =>
+                        {
+                            await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+                        });
+                        return;
+                    }
 
-            });
+                });
 
 
-            _logUpdateTimer?.Stop();
-            await FlushLogQueue();
-            MyLoggerExtensions.OnLog -= _WriteToLogBox;
-            await TotalProgress.ProgressTo(1, 50, Easing.Linear);
+                _logUpdateTimer?.Stop();
+                _screenSaverTimer?.Stop();
+                ScreenSaverOverlay.IsVisible = false;
+                StopMovingHint();
+                StopScreenSaverTimer();
+                await FlushLogQueue();
+                MyLoggerExtensions.OnLog -= _WriteToLogBox;
+                await TotalProgress.ProgressTo(1, 50, Easing.Linear);
 
-            await DisplayAlertAsync(Localized._Info, Localized.RenderPage_Done, Localized._OK);
-            running = false;
-            CancelRender.IsEnabled = false;
+                await DisplayAlertAsync(Localized._Info, Localized.RenderPage_Done, Localized._OK);
+                running = false;
+                CancelRender.IsEnabled = false;
 
 
 #if ANDROID
-            var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, MediaStoreSaver.MediaType.Video);
-            if(!string.IsNullOrWhiteSpace(path) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
-            {
-                try
+                var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, MediaStoreSaver.MediaType.Video);
+                if (!string.IsNullOrWhiteSpace(path) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
                 {
-                    File.Delete(resultPath);
+                    try
+                    {
+                        File.Delete(resultPath);
+                    }
+                    catch { }
                 }
-                catch { }
-            }
 #else
             await Task.Run(() => File.Move(compOutputPath, resultPath));
 #if WINDOWS
@@ -337,7 +435,21 @@ public partial class RenderPage : ContentPage
 #endif
 
 
-            DeviceDisplay.Current.KeepScreenOn = false;
+                DeviceDisplay.Current.KeepScreenOn = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "render", this);
+            await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+            if (Debugger.IsAttached) throw;
+            return;
+        }
+        finally
+        {
+            StopScreenSaverTimer();
+            Shell.SetNavBarIsVisible(this, true);
+
         }
     }
 
@@ -481,12 +593,19 @@ public partial class RenderPage : ContentPage
                 totalProg = p + lastProg;
                 Dispatcher.Dispatch(async () =>
                 {
+                    string timeStr = "";
                     if (etr.TotalSeconds > 0)
                     {
-                        SubProgLabel.Text = $"{_currentSubProgText} ({(etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss"))})";
+                        timeStr = (etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss"));
+                        SubProgLabel.Text = $"{_currentSubProgText} ({timeStr})";
                     }
                     await SubProgress.ProgressTo(p, 250, Easing.Linear);
                     await TotalProgress.ProgressTo(totalProg / 3d, 5, Easing.Linear);
+
+                    if (ScreenSaverOverlay.IsVisible)
+                    {
+                        HintLabel.Text = $"{Localized.RenderPage_ClickToShowUI}{Environment.NewLine}{Localized.RenderPage_Stat(totalProg / 3d, timeStr)}";
+                    }
                 });
             };
 
@@ -633,6 +752,9 @@ public partial class RenderPage : ContentPage
         {
             _cts.Cancel();
             _logUpdateTimer?.Stop();
+            _screenSaverTimer?.Stop();
+            ScreenSaverOverlay.IsVisible = false;
+            StopMovingHint();
             await FlushLogQueue();
             RenderOptionPanel.IsVisible = true;
             CancelRender.IsEnabled = false;
@@ -657,7 +779,7 @@ public class RenderPageViewModel : INotifyPropertyChanged
         Localized.RenderPage_CustomOption
     ];
 
-    public string[] ExportOptions_Framerate { get; } = 
+    public string[] ExportOptions_Framerate { get; } =
         ["23.97", "24", "29.97", "30", "44.96", "45", "59.94", "60", "89.91", "90", "119.88", "120", Localized.RenderPage_CustomOption];
 
     public string[] ExportOptions_Encoding { get; } = [

@@ -6,6 +6,7 @@ using System.Diagnostics;
 namespace projectFrameCut.Setting.SettingPages;
 
 using static SettingManager.SettingsManager;
+using IPicture = Shared.IPicture;
 
 public partial class MiscSettingPage : ContentPage
 {
@@ -26,11 +27,12 @@ public partial class MiscSettingPage : ContentPage
             .AddEntry("UserName", SettingLocalizedResources.Misc_UserDisplayName, GetSetting("UserName", Environment.UserName), Environment.UserName)
             .AddCustomChild(SettingLocalizedResources.Misc_UserID, new Label { Text = GetSetting("UserID") })
             .AddSeparator()
-            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Misc_DiagOptions, SettingLocalizedResources.Misc_DiagOptions_Subtitle, 20, 12))
+            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Misc_DiagOptions, SettingLocalizedResources.Misc_DiagOptions_Desc(), 20, 12))
             .AddButton("makeDiagReport", SettingLocalizedResources.Misc_MakeDiagReport, null)
             .AddButton("openSettingsButton", SettingLocalizedResources.Misc_OpenSettingsJson, null!)
             .AddSwitch("LogDiagnostics", SettingLocalizedResources.Misc_LogDiagnostics, bool.TryParse(GetSetting("LogDiagnostics", "false"), out var logDiagnostics) ? logDiagnostics : false, null)
             .AddSwitch("DisablePluginEngine", SettingLocalizedResources.Advanced_DisablePluginEngine, IsBoolSettingTrue("DisablePluginEngine"))
+            .AddSwitch("render_SaveCheckpoint", SettingLocalizedResources.Render_SaveCheckpoint, IsBoolSettingTrue("render_SaveCheckpoint"), null)
             .AddSeparator()
             .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Misc_Reset, 20, default))
             .AddButton("reset_ClearPluginSign", SettingLocalizedResources.Misc_ForgetPluginSign,
@@ -160,6 +162,19 @@ public partial class MiscSettingPage : ContentPage
                     var jsonPath = Path.Combine(MauiProgram.BasicDataPath, "settings.json");
                     await FileSystemService.OpenFileAsync(jsonPath);
                     goto done;
+                case "render_SaveCheckpoint":
+                    if(args.Value is bool b && b)
+                    {
+                        WriteSetting("render_SaveCheckpoint", "true");
+                        Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
+                        IPicture.DiagImagePath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
+                    }
+                    else
+                    {
+                        WriteSetting("render_SaveCheckpoint", "false");
+                        IPicture.DiagImagePath = null;
+                    }
+                    break;
                 case "DeveloperMode":
                 case "DisablePluginEngine":
                     needReboot = true;

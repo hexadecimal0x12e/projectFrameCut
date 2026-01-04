@@ -57,12 +57,20 @@ public partial class GeneralSettingPage : ContentPage
             { "dark", SettingLocalizedResources.GeneralUI_DefaultTheme_Dark },
             { "light",SettingLocalizedResources.GeneralUI_DefaultTheme_Bright }
         };
+        if (!SettingsManager.IsSettingExists("render_EnableScreenSaver"))
+        {
+#if ANDROID || IOS //oled screen, avoid burn-in
+            WriteSetting("render_EnableScreenSaver", "true");
+#else
+            WriteSetting("render_EnableScreenSaver", "false");
+#endif
+        }
         var currentLocate = GetSetting("locate", "default");
         rootPPB = new();
         rootPPB
             .AddPicker("locate", SettingLocalizedResources.General_Language, locates, currentLocate != "default" ? Localized._LocateDisplayName : $"{Localized._Default} / Default", null)
 #if WINDOWS
-            .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts[GetSetting("OverrideCulture", "default")], null)
+            //.AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts[GetSetting("OverrideCulture", "default")], null)
 #endif
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralUI_Title, SettingLocalizedResources.GeneralUI_Subtitle))
@@ -70,6 +78,7 @@ public partial class GeneralSettingPage : ContentPage
             .AddPicker("ui_defaultTheme", SettingLocalizedResources.GeneralUI_DefaultTheme, themeOpts.Values.ToArray(), themeOpts[GetSetting("ui_defaultTheme", "default")])
 #endif
             .AddSlider("ui_defaultWidthOfContent", SettingLocalizedResources.GeneralUI_DefaultWidthOfContent, 1, 10, PropertyPanelBuilder.DefaultWidthOfContent)
+            .AddSwitch("render_EnableScreenSaver", SettingLocalizedResources.Render_EnableScreenSaver, IsBoolSettingTrue("render_EnableScreenSaver"), null)
             .AddButton("setUISafeZone", SettingLocalizedResources.GeneralUI_SetupSafeZone)
             .AddSeparator()
             .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralCodec_Title, SettingLocalizedResources.GeneralCodec_SubTitle, 20, 12))
@@ -79,8 +88,8 @@ public partial class GeneralSettingPage : ContentPage
             .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.General_UserData, SettingLocalizedResources.General_UserData_Subtitle, 20, 12))
 #if WINDOWS
             .AddButton("userDataSelectButton", SettingLocalizedResources.General_UserData_SelectPath)
-            .AddButton("openUserDataButton", SettingLocalizedResources.General_UserData_Open(MauiProgram.DataPath))
 #endif
+            .AddButton("openUserDataButton", SettingLocalizedResources.General_UserData_Open(MauiProgram.DataPath))
             .AddButton("manageUsedDataButton", SettingLocalizedResources.General_UserData_ManagePageOpen, null)
 
             .ListenToChanges(SettingInvoker);
@@ -288,6 +297,11 @@ public partial class GeneralSettingPage : ContentPage
                     goto done;
                 case "openUserDataButton":
                     await FileSystemService.OpenFolderAsync(MauiProgram.DataPath);
+#if ANDROID
+                    await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.General_UserData_Open_Android(projectFrameCut.Platforms.Android.MainApplication.MainContext?.PackageName ?? "com.hexadecimal0x12e.projectframecut"), Localized._OK);
+#elif iDevices
+                    await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.General_UserData_Open_iDevices(DeviceInfo.Idiom switch { var t when t == DeviceIdiom.Phone => "iPhone", var t when t == DeviceIdiom.Tablet => "iPad",  _ => "Devices"}), Localized._OK);
+#endif
                     goto done;
                 case "setUISafeZone":
                     var page = new SafeZoneSettingPage();
@@ -340,12 +354,40 @@ public partial class GeneralSettingPage : ContentPage
                     if (id == "disable")
                     {
                         WriteSetting("PluginProvidedFFmpeg_Enable", false.ToString());
+#if ANDROID
+                        try
+                        {
+                            var internalLibPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+                            Directory.Delete(internalLibPath, true);
+                        }
+                        catch { }
+#endif
                         WriteSetting("PluginProvidedFFmpeg_PluginID", "disable");
+
                     }
                     else
                     {
                         WriteSetting("PluginProvidedFFmpeg_Enable", true.ToString());
+#if ANDROID
+                        try
+                        {
+                            var internalLibPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+                            Log($"Copying plugin FFmpeg libs to internal storage: {internalLibPath}");
+                            if (Directory.Exists(internalLibPath)) Directory.Delete(internalLibPath, true);
+                            Directory.CreateDirectory(internalLibPath);
+                            var ffmpegPath = Path.Combine(MauiProgram.BasicDataPath, "Plugins", id, "FFmpeg", "android");
+                            foreach (var file in Directory.GetFiles(ffmpegPath, "*.so*"))
+                            {
+                                File.Copy(file, Path.Combine(internalLibPath, Path.GetFileName(file)), true);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, "copy ffmpeg libs to internal", this);
+                        }
+#endif
                         WriteSetting("PluginProvidedFFmpeg_PluginID", id);
+
                     }
                     needReboot = true;
                     goto done;

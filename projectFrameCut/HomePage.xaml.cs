@@ -17,6 +17,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using IPicture = projectFrameCut.Shared.IPicture;
 
 
 
@@ -60,13 +61,13 @@ public partial class HomePage : ContentPage
                 projectFrameCut.Helper.HelperProgram.CloseSplash();
             }
             await projectFrameCut.WinUI.App.BringToForeground();
-            await ShowManyAlertsAsync();
 
 #endif
 #if !ANDROID
             ProjectsCollection.SelectionChanged += CollectionView_SelectionChanged;
 #endif
             if (HasAlreadyLaunchedFromFile) return;
+            await ShowManyAlertsAsync();
             HasAlreadyLaunchedFromFile = true;
             try
             {
@@ -537,9 +538,9 @@ public partial class HomePage : ContentPage
                             result = (int)r;
                         }
 #else
-                        string[] opts = [Localized.HomePage_SourceNotFound_RemoveThem,Localized.HomePage_SourceNotFound_Continue ];
+                        string[] opts = [Localized.HomePage_SourceNotFound_RemoveThem, Localized.HomePage_SourceNotFound_Continue];
 
-                        var select = await DisplayActionSheetAsync( $"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}", null, Localized._Cancel, opts);
+                        var select = await DisplayActionSheetAsync($"{Localized.HomePage_SourceNotFound}\r\n{notFoundStr}", null, Localized._Cancel, opts);
                         if (select == Localized.HomePage_SourceNotFound_RemoveThem) result = 2;
                         else if (select == Localized.HomePage_SourceNotFound_Continue) result = 1;
                         else result = 0;
@@ -734,6 +735,13 @@ public partial class HomePage : ContentPage
 
     private async Task ShowManyAlertsAsync()
     {
+        if (!SettingsManager.IsBoolSettingTrue("EULAagreed"))
+        {
+            var agree = await DisplayAlertAsync(Localized._Info, Localized.HomePage_AgreeEULA(), Localized._OK, Localized.HomePage_AgreeEULA_Disagree);
+            if (!agree) Environment.Exit(0);
+            SettingsManager.WriteSetting("EULAagreed", true.ToString());
+        }
+
         if (SimpleLocalizer.IsFallbackMatched)
         {
             List<string> localeDispName = new();
@@ -775,14 +783,37 @@ public partial class HomePage : ContentPage
         try
         {
             if (File.Exists(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt")) && !Directory.Exists(File.ReadAllText(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt"))))
-            {   
+            {
                 await DisplayAlertAsync(Localized._Warn, Localized.HomePage_UserdataPathNotFoundWarn(File.ReadAllText(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt"))), Localized._OK);
 
             }
         }
         catch { }
 
+        if(!SettingsManager.IsSettingExists("UserName") || string.IsNullOrWhiteSpace(SettingsManager.GetSetting("UserName", "")))
+        {
+            try
+            {
+                var rnd = new RandomNameGenerator(Localized.RandomNameGenerator_Adjectives.Replace("£¬", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), Localized.RandomNameGenerator_Nouns.Replace("£¬", ",").Split(',').Select(c => c.TrimStart(' ').TrimEnd(' ').Trim()), (a, b) => Localized.RandomNameGenerator_Contacter(a, b));
+                SettingsManager.WriteSetting("UserName", rnd.Generate());
+            }
+            catch
+            {
+                SettingsManager.WriteSetting("UserName", OperatingSystem.IsWindows() ? Environment.UserName : "default user");
 
+            }
+        }
+
+
+        if (SettingsManager.IsBoolSettingTrue("render_SaveCheckpoint"))
+        {
+            Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
+            IPicture.DiagImagePath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
+        }
+        else
+        {
+            IPicture.DiagImagePath = null;
+        }
 
 
     }
@@ -1079,7 +1110,7 @@ public partial class HomePage : ContentPage
                 case 1: //OpenReadonly 
                     await GoDraft(vmItem, isReadonly: true);
                     break;
-                case 2:
+                case 2: //Render
                     await GoRender(vmItem);
                     break;
                 case 3: //Export

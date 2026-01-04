@@ -207,58 +207,13 @@ public partial class DiagnosticSettingPage : ContentPage
 #if WINDOWS
         IsPackaged = MauiProgram.IsPackaged();
 #endif
-        string GetAttributeData(IEnumerable<CustomAttributeData> attributes)
-        {
-            StringBuilder builder = new();
-            foreach (CustomAttributeData cad in attributes)
-            {
-                builder.AppendLine($"   {cad}");
-                builder.AppendLine($"      Constructor: '{cad.Constructor}'");
-
-                builder.AppendLine("      Constructor arguments:");
-                foreach (CustomAttributeTypedArgument cata
-                    in cad.ConstructorArguments)
-                {
-                    ShowValueOrArray(cata);
-                }
-
-                builder.AppendLine("      Named arguments:");
-                foreach (CustomAttributeNamedArgument cana
-                    in cad.NamedArguments)
-                {
-                    builder.AppendLine($"         MemberInfo: '{cana.MemberInfo}'");
-                    ShowValueOrArray(cana.TypedValue);
-                }
-            }
-
-            return builder.ToString();
-        }
-
-        string ShowValueOrArray(CustomAttributeTypedArgument cata)
-        {
-            StringBuilder builder = new StringBuilder();
-            if (cata.Value.GetType() == typeof(ReadOnlyCollection<CustomAttributeTypedArgument>))
-            {
-                builder.AppendLine($"         Array of '{cata.ArgumentType}':");
-
-                foreach (CustomAttributeTypedArgument cataElement in
-                    (ReadOnlyCollection<CustomAttributeTypedArgument>)cata.Value)
-                {
-                    builder.AppendLine($"             Type: '{cataElement.ArgumentType}'  Value: '{cataElement.Value}'");
-                }
-            }
-            else
-            {
-                builder.AppendLine($"         Type: '{cata.ArgumentType}'  Value: '{cata.Value}'");
-            }
-            return builder.ToString();
-        }
+       
 
         List<string> ModulesInfo = new();
         var asb = Assembly.GetExecutingAssembly();
         foreach (var item in asb.GetModules())
         {
-            ModulesInfo.Add($"{item.Assembly.FullName}: \r\nin '{item.FullyQualifiedName}',uuid: {item.ModuleVersionId}\r\nAttributes:\r\n{GetAttributeData(item.CustomAttributes)}\r\n\r\n");
+            ModulesInfo.Add($"{item.Assembly.FullName}: \r\nin '{item.FullyQualifiedName}',uuid: {item.ModuleVersionId}r\n");
         }
         string internalFFmpegVersion = "unknown", internalFFmpegCfg = "unknown";
         List<FFmpegHelper.CodecUtils.CodecInfo> codecs = new();
@@ -288,6 +243,7 @@ public partial class DiagnosticSettingPage : ContentPage
             {string.Join("\r\n  -", ModulesInfo)}
 
             Internal FFmpeg:
+            - lib location: {MauiProgram.FFmpegRoot}
             - version: {internalFFmpegVersion}
             - config: {internalFFmpegCfg}
             - Codecs: 

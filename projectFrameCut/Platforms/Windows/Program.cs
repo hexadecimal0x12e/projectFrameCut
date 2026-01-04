@@ -64,11 +64,10 @@ namespace projectFrameCut.WinUI
             }
             try
             {
-                projectFrameCut.Helper.HelperProgram.AppVersion = AppInfo.Version.ToString();
+                projectFrameCut.Helper.HelperProgram.AppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
             }
             catch
             {
-                projectFrameCut.Helper.HelperProgram.AppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
             }
             try
             {
