@@ -5,8 +5,11 @@
 一个强大，易上手且完全自由的视频剪辑软件
 
 > [!WARNING]
-> **请注意**，由于主程序的许可的原因，projectFrameCut**只自带了LGPL的FFmpeg库**，这意味着默认情况下，你不能解码一些类型的视频（比如`h264`或者`h265`等）格式
-如果你需要，可以考虑安装编解码扩展包。
+> **请注意**，由于主程序的许可的原因，projectFrameCut**只自带了LGPL的FFmpeg库**，这意味着默认情况下，你不能解码一些类型的视频（比如`h264`或者`h265`等）格式。
+> 
+> 如果你需要，可以考虑安装[编解码扩展包](https://github.com/hexadecimal0x12e/projectFrameCut.CodecExtendPack)。
+> 
+> ---
 > 
 > **projectFrameCut仍在开发**，目前并不能代替任何的视频剪辑软件（还缺一堆功能）。**请不要用于任何的生产用途**，并且我们不会由于projectFrameCut出现了异常导致你的工作流程被打断**做任何的担保**，这也是许可证规定的一部分（不提供任何担保）
 > 
@@ -144,11 +147,11 @@ c:\path\to\your\folder\Android
 目前，除了中文的本地化资源以外，所有的本地化字符串都是由AI生成的。如果你发现了问题，请提交Issue。
 
 ### 插件
-projectFrameCut支持插件。详见[这里](https://github.com/hexadecimal0x12e/projectFrameCut.PluginTemplate)
+你可以使用插件来自定义projectFrameCut。要开发插件，如果你感兴趣[这里有教程](https://github.com/hexadecimal0x12e/projectFrameCut.PluginTemplate)
 
 ### 许可和第三方库致谢
 projectFrameCut的主程序使用了Apache License，共享库（projectFrameCut.Shared和projectFrameCut.Render.RenderAPIBase）使用了MIT License。
 
-详见[license.md](license.md)
+更多详情，请见[license.md](license.md)
 
 
