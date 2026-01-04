@@ -1,5 +1,7 @@
 using Microsoft.Maui.Storage;
 using projectFrameCut.PropertyPanel;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.Services;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -17,12 +19,21 @@ public partial class GeneralSettingPage : ContentPage
     public PropertyPanel.PropertyPanelBuilder rootPPB;
     private string[] locates;
     private Dictionary<string, string> overrideOpts, themeOpts;
-    private Dictionary<string, string> locateDisplayNameMapping = new();
+    private Dictionary<string, string> locateDisplayNameMapping = new(), FFmpegProviderDisplayNameMapping = new();
     public GeneralSettingPage()
     {
         Title = Localized.MainSettingsPage_Tab_General;
         locates = new List<string>([$"{Localized._Default} / Default"]).Concat(ISimpleLocalizerBase.GetMapping().Select(l => l.Value._LocateDisplayName)).ToArray();
         locateDisplayNameMapping = new(ISimpleLocalizerBase.GetMapping().ToDictionary(k => k.Value._LocateDisplayName, v => v.Key).Append(new KeyValuePair<string, string>("OS Default", "default")));
+        FFmpegProviderDisplayNameMapping =
+            new Dictionary<string, string>
+            { {SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable" } }
+            .Concat(
+                PluginManager.LoadedPlugins
+                .Where(c => c.Value.LocalizationProvider.TryGetValue("option", out var optsKVP) && optsKVP.TryGetValue("_IsFFmpegLibraryProvider", out var value) && bool.TryParse(value, out var result) && result)
+                .Select(p => new KeyValuePair<string, string>(p.Value.Name, p.Key))
+            )
+            .ToDictionary(c => c.Key, c => c.Value);
         BuildPPB();
     }
 
@@ -46,24 +57,39 @@ public partial class GeneralSettingPage : ContentPage
             { "dark", SettingLocalizedResources.GeneralUI_DefaultTheme_Dark },
             { "light",SettingLocalizedResources.GeneralUI_DefaultTheme_Bright }
         };
+        if (!SettingsManager.IsSettingExists("render_EnableScreenSaver"))
+        {
+#if ANDROID || IOS //oled screen, avoid burn-in
+            WriteSetting("render_EnableScreenSaver", "true");
+#else
+            WriteSetting("render_EnableScreenSaver", "false");
+#endif
+        }
         var currentLocate = GetSetting("locate", "default");
         rootPPB = new();
         rootPPB
             .AddPicker("locate", SettingLocalizedResources.General_Language, locates, currentLocate != "default" ? Localized._LocateDisplayName : $"{Localized._Default} / Default", null)
 #if WINDOWS
-            .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts[GetSetting("OverrideCulture", "default")], null)
+            //.AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts[GetSetting("OverrideCulture", "default")], null)
 #endif
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralUI_Title, SettingLocalizedResources.GeneralUI_Subtitle))
+#if !WINDOWS
             .AddPicker("ui_defaultTheme", SettingLocalizedResources.GeneralUI_DefaultTheme, themeOpts.Values.ToArray(), themeOpts[GetSetting("ui_defaultTheme", "default")])
+#endif
             .AddSlider("ui_defaultWidthOfContent", SettingLocalizedResources.GeneralUI_DefaultWidthOfContent, 1, 10, PropertyPanelBuilder.DefaultWidthOfContent)
-            .AddButton("setUISafeZone",SettingLocalizedResources.GeneralUI_SetupSafeZone)
+            .AddSwitch("render_EnableScreenSaver", SettingLocalizedResources.Render_EnableScreenSaver, IsBoolSettingTrue("render_EnableScreenSaver"), null)
+            .AddButton("setUISafeZone", SettingLocalizedResources.GeneralUI_SetupSafeZone)
+            .AddSeparator()
+            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralCodec_Title, SettingLocalizedResources.GeneralCodec_SubTitle, 20, 12))
+            .AddPicker("codec_FFmpegProvider", SettingLocalizedResources.GeneralCodec_SelectProvider, FFmpegProviderDisplayNameMapping.Keys.ToArray(), FFmpegProviderDisplayNameMapping.FirstOrDefault(c => c.Value == GetSetting("PluginProvidedFFmpeg_PluginID", "disable"), new(SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable")).Key)
+            .AddSwitch("codec_PreferredHWAccel", SettingLocalizedResources.GeneralCodec_PreferredHWAccel, IsBoolSettingTrue("codec_PreferredHWAccel"))
             .AddSeparator()
             .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.General_UserData, SettingLocalizedResources.General_UserData_Subtitle, 20, 12))
 #if WINDOWS
             .AddButton("userDataSelectButton", SettingLocalizedResources.General_UserData_SelectPath)
-            .AddButton("openUserDataButton", SettingLocalizedResources.General_UserData_Open(MauiProgram.DataPath))
 #endif
+            .AddButton("openUserDataButton", SettingLocalizedResources.General_UserData_Open(MauiProgram.DataPath))
             .AddButton("manageUsedDataButton", SettingLocalizedResources.General_UserData_ManagePageOpen, null)
 
             .ListenToChanges(SettingInvoker);
@@ -129,11 +155,129 @@ public partial class GeneralSettingPage : ContentPage
                                     Localized._Cancel);
                                 if (conf2)
                                 {
+                                    var cont = Content;
+                                    var files = Directory.GetFiles(MauiProgram.DataPath, "*", SearchOption.AllDirectories);
+                                    uint finished = 0;
+                                    int duplicated = 0;
+                                    Stopwatch cd = Stopwatch.StartNew();
+                                    var procLabel = new Label
+                                    {
+                                        Text = Localized._Processing,
+                                        FontSize = 20,
+                                        HorizontalOptions = LayoutOptions.Center,
+                                        VerticalOptions = LayoutOptions.Center,
+                                    };
+                                    var mover = Task.Run(async () =>
+                                    {
+                                        try
+                                        {
+                                            foreach (var f in files)
+                                            {
+                                                var destFile = Path.Combine(fullPath, Path.GetRelativePath(MauiProgram.DataPath, f));
+                                                LogDiagnostic($"Clone {f} to {destFile}...");
+                                                try
+                                                {
+                                                    Directory.CreateDirectory(Path.GetDirectoryName(destFile));
+                                                    if (!File.Exists(destFile))
+                                                    {
+                                                        File.Copy(f, destFile);
+                                                        await Task.Delay(1);
+                                                        File.Delete(f);
+                                                    }
+                                                    else duplicated++;
+                                                    finished++;
+                                                    if (cd.Elapsed.Seconds > 2)
+                                                    {
+                                                        await Dispatcher.DispatchAsync(() =>
+                                                        {
+                                                            procLabel.Text = Localized._ProcessingWithProg(finished / files.Length);
+                                                        });
+                                                        cd.Restart();
+                                                    }
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    var skip = await Dispatcher.DispatchAsync(async () =>
+                                                    {
+                                                        var cont = await DisplayAlertAsync(Localized._Warn,
+                                                            SettingLocalizedResources.General_UserData_SelectFolder_MigrateError(Path.GetFileName(f), ex),
+                                                            SettingLocalizedResources.General_UserData_SelectFolder_MigrateError_Skip,
+                                                            Localized._Cancel);
+                                                        return cont;
+                                                    });
+                                                    if (!skip)
+                                                    {
+                                                        await Dispatcher.DispatchAsync(async () =>
+                                                        {
+                                                            Content = cont;
+                                                        });
+                                                        return;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        catch { }
+                                    });
+                                    await Dispatcher.DispatchAsync(async () =>
+                                    {
 
+                                        Content = new VerticalStackLayout
+                                        {
+                                            Children =
+                                            {
+                                                new ActivityIndicator
+                                                {
+                                                    IsRunning = true,
+                                                    VerticalOptions = LayoutOptions.Center,
+                                                    HorizontalOptions = LayoutOptions.Center
+                                                },
+                                                procLabel,
+                                                new Label
+                                                {
+                                                    Text = SettingLocalizedResources.Diag_MakingReport_Sub,
+                                                    FontSize = 28,
+                                                    TextColor = Colors.OrangeRed,
+                                                    HorizontalOptions = LayoutOptions.Center,
+                                                    VerticalOptions = LayoutOptions.Center
+                                                }
+
+                                            },
+                                            HorizontalOptions = LayoutOptions.Center,
+                                            VerticalOptions = LayoutOptions.Center
+                                        };
+
+                                    });
+                                    await mover;
+
+                                    Dispatcher.Dispatch(() => Content = cont);
+                                    if (duplicated > 0)
+                                    {
+                                        await DisplayAlertAsync(Localized._Info,
+                                            SettingLocalizedResources.General_UserData_SelectFolder_FinishedWithConflict(duplicated),
+                                            Localized._OK);
+                                    }
+                                    else
+                                    {
+                                        var del = await DisplayAlertAsync(Localized._Info,
+                                            SettingLocalizedResources.General_UserData_SelectFolder_FinishedNoConflict(),
+                                            Localized._OK,
+                                            Localized._Cancel);
+                                        if (del)
+                                        {
+                                            await Task.Run(() =>
+                                            {
+                                                try
+                                                {
+                                                    Directory.Delete(MauiProgram.DataPath, true);
+                                                }
+                                                catch { }
+                                            });
+                                        }
+                                    }
                                 }
+                                needReboot = true;
                                 File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "OverrideUserDataPath.txt"), fullPath);
 
-                                needReboot = true;
                             }
                             else
                             {
@@ -152,12 +296,11 @@ public partial class GeneralSettingPage : ContentPage
                     //todo: manage userdata
                     goto done;
                 case "openUserDataButton":
-#if WINDOWS
-                    Process.Start(new ProcessStartInfo { FileName = MauiProgram.DataPath, UseShellExecute = true });
-#elif ANDROID
-
+                    await FileSystemService.OpenFolderAsync(MauiProgram.DataPath);
+#if ANDROID
+                    await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.General_UserData_Open_Android(projectFrameCut.Platforms.Android.MainApplication.MainContext?.PackageName ?? "com.hexadecimal0x12e.projectframecut"), Localized._OK);
 #elif iDevices
-
+                    await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.General_UserData_Open_iDevices(DeviceInfo.Idiom switch { var t when t == DeviceIdiom.Phone => "iPhone", var t when t == DeviceIdiom.Tablet => "iPad",  _ => "Devices"}), Localized._OK);
 #endif
                     goto done;
                 case "setUISafeZone":
@@ -197,7 +340,7 @@ public partial class GeneralSettingPage : ContentPage
                         PropertyPanelBuilder.DefaultWidthOfContent = d;
                     break;
                 case "ui_defaultTheme":
-                    var key = themeOpts.FirstOrDefault(c => c.Value == args.Value as string,new KeyValuePair<string, string>("default", "default")).Key;
+                    var key = themeOpts.FirstOrDefault(c => c.Value == args.Value as string, new KeyValuePair<string, string>("default", "default")).Key;
                     WriteSetting("ui_defaultTheme", key);
                     Application.Current?.UserAppTheme = key switch
                     {
@@ -205,9 +348,53 @@ public partial class GeneralSettingPage : ContentPage
                         "light" => AppTheme.Light,
                         _ => AppTheme.Unspecified
                     };
+                    goto done;
+                case "codec_FFmpegProvider":
+                    var id = FFmpegProviderDisplayNameMapping.TryGetValue(args.Value as string, out var pvdid) ? pvdid : "disable";
+                    if (id == "disable")
+                    {
+                        WriteSetting("PluginProvidedFFmpeg_Enable", false.ToString());
+#if ANDROID
+                        try
+                        {
+                            var internalLibPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+                            Directory.Delete(internalLibPath, true);
+                        }
+                        catch { }
+#endif
+                        WriteSetting("PluginProvidedFFmpeg_PluginID", "disable");
+
+                    }
+                    else
+                    {
+                        WriteSetting("PluginProvidedFFmpeg_Enable", true.ToString());
+#if ANDROID
+                        try
+                        {
+                            var internalLibPath = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+                            Log($"Copying plugin FFmpeg libs to internal storage: {internalLibPath}");
+                            if (Directory.Exists(internalLibPath)) Directory.Delete(internalLibPath, true);
+                            Directory.CreateDirectory(internalLibPath);
+                            var ffmpegPath = Path.Combine(MauiProgram.BasicDataPath, "Plugins", id, "FFmpeg", "android");
+                            foreach (var file in Directory.GetFiles(ffmpegPath, "*.so*"))
+                            {
+                                File.Copy(file, Path.Combine(internalLibPath, Path.GetFileName(file)), true);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, "copy ffmpeg libs to internal", this);
+                        }
+#endif
+                        WriteSetting("PluginProvidedFFmpeg_PluginID", id);
+
+                    }
                     needReboot = true;
                     goto done;
 
+                case "codec_PreferredHWAccel":
+                    needReboot = true;
+                    break;
             }
 
             if (args.Value != null)

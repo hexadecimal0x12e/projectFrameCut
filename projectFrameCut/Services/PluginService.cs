@@ -167,7 +167,15 @@ namespace projectFrameCut.Services
                     return;
                 }
                 Assembly plugin = Assembly.Load(decBytes);
-                pluginInstance = CreateIPluginFromAsb(plugin, pluginRoot);
+                try
+                {
+                    pluginInstance = CreateIPluginFromAsb(plugin, pluginRoot);
+                }
+                catch(Exception ex)
+                {
+                    failReason = ex.Message;
+                    return;
+                }
                 if (pluginInstance is null)
                 {
                     return;
@@ -177,7 +185,7 @@ namespace projectFrameCut.Services
 
             if (pluginInstance is null)
             {
-                await currentPage.DisplayAlertAsync(Localized._Error, $"Failed to add the plugin.\r\n({failReason})", Localized._OK);
+                await currentPage.DisplayAlertAsync(Localized._Error, SettingsManager.SettingLocalizedResources.Plugin_FailLoad_FailedBeacuse(failReason), Localized._OK);
                 return;
             }
             else
@@ -378,6 +386,10 @@ namespace projectFrameCut.Services
         {
             var module = asb.GetModule(asb.GetName().Name + ".dll");
             var types = module?.GetTypes();
+            if(!types?.Any(a => a.Name == "PluginLoader") ?? false)
+            {
+                throw new EntryPointNotFoundException($"No suitable PluginLoader class found. Do you forget to add it?");
+            }
             var ldr = types?.First(a => a.Name == "PluginLoader");
             if (ldr is null)
             {
@@ -449,7 +461,6 @@ namespace projectFrameCut.Services
 
         public static void RemovePlugin(string pluginID)
         {
-            if (pluginID.StartsWith("projectFrameCut")) throw new InvalidOperationException(SettingsManager.SettingLocalizedResources?.Plugin_CannotRemoveInternalPlugin ?? "Cannot remove a internal plugin.");
             var items = JsonSerializer.Deserialize<List<PluginItem>>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "plugins.json"))) ?? new();
             items.RemoveAll(c => c.Id == pluginID);
             File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "Plugins.json"), JsonSerializer.Serialize(items));

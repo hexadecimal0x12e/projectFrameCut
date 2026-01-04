@@ -117,18 +117,18 @@ public partial class PluginSettingPage : ContentPage
         }
         ppb.AddText(new SingleLineLabel(Localized.HomePage_ProjectContextMenu(name), 20, FontAttributes.None))
             .AddButton($"ViewProvided,{id}", SettingLocalizedResources.Plugin_ViewWhatProvided(plugin.Name));
-        if (!plugin.PluginID.StartsWith("projectFrameCut"))
+        if (plugin.LocalizationProvider.TryGetValue("option", out var optKVP) && optKVP.TryGetValue("_IsInternalPlugin", out var isInternal) && bool.TryParse(isInternal, out var result) && result)
         {
-            ppb
-               .AddButton($"DisablePlugin,{id}", SettingLocalizedResources.Plugin_Disable(plugin.Name))
-               .AddButton($"GotoHomepage,{id}", SettingLocalizedResources.Plugin_GotoHomepage(plugin.Name))
-               //.AddButton($"UpdatePlugin,{id}", SettingLocalizedResources.Plugin_UpdatePlugin(plugin.Name)) //todo
-               .AddButton($"OpenDataDir,{id}", SettingLocalizedResources.Plugin_OpenDataDir)
-               .AddButton($"RemovePlugin,{id}", SettingLocalizedResources.Plugin_Remove);
+            ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_CannotRemoveInternalPlugin, 14, default, Colors.Grey));
         }
         else
         {
-            ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_CannotRemoveInternalPlugin, 14, default, Colors.Grey));
+            ppb
+              .AddButton($"DisablePlugin,{id}", SettingLocalizedResources.Plugin_Disable(plugin.Name))
+              .AddButton($"GotoHomepage,{id}", SettingLocalizedResources.Plugin_GotoHomepage(plugin.Name))
+              //.AddButton($"UpdatePlugin,{id}", SettingLocalizedResources.Plugin_UpdatePlugin(plugin.Name)) //todo
+              .AddButton($"OpenDataDir,{id}", SettingLocalizedResources.Plugin_OpenDataDir)
+              .AddButton($"RemovePlugin,{id}", SettingLocalizedResources.Plugin_Remove);
         }
 
 

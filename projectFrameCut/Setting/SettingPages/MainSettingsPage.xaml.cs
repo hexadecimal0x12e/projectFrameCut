@@ -137,8 +137,9 @@ Clear-Host;Write-Output "projectFrameCut is now rebooting, please wait for a whi
         private async void TapGestureRecognizer_Tapped(object sender, TappedEventArgs e)
         {
             count++;
-            if(count == 20)
+            if(count >= 20)
             {
+                count = 0;
                 await NavigateAsync(new AdvancedSettingPage());
 
             }

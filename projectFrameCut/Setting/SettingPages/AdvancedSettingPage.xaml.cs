@@ -1,5 +1,10 @@
-using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.PropertyPanel;
+using projectFrameCut.Services;
+using projectFrameCut.Setting.SettingManager;
+using projectFrameCut.Shared;
+using System.Reflection;
+using System.Security.Cryptography;
+using System.Text.Json;
 using System.Threading.Tasks;
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
 
@@ -93,7 +98,10 @@ public partial class AdvancedSettingPage : ContentPage
         .AddSwitch("LogUIMessageToLogger", SettingLocalizedResources.Advanced_LogUIMessageToLogger, SettingsManager.IsBoolSettingTrue("LogUIMessageToLogger"))
         .AddSwitch("UseSystemFont", SettingLocalizedResources.Advanced_UseSystemFont, SettingsManager.IsBoolSettingTrue("UseSystemFont"))
         .AddSeparator()
-        .AddButton(SettingLocalizedResources.Advanced_ResetUserID, async (s,e) =>
+        .AddText(SettingLocalizedResources.Advanced_ExportPlugin)
+        .AddPicker("exportPlugin", SettingLocalizedResources.Advanced_ExportPlugin_Select, projectFrameCut.Render.Plugin.PluginManager.LoadedPlugins.Select(c => c.Key).ToArray(), "")
+        .AddSeparator()
+        .AddButton(SettingLocalizedResources.Advanced_ResetUserID, async (s, e) =>
         {
             if (!await DisplayAlertAsync(Title, "Are you sure?", Localized._OK, Localized._Cancel)) return;
             SettingsManager.Settings.TryRemove("UserID", out _);
@@ -101,8 +109,90 @@ public partial class AdvancedSettingPage : ContentPage
         })
         .ListenToChanges(async (e) =>
         {
-            SettingsManager.WriteSetting(e.Id, e.Value?.ToString());
-            await MainSettingsPage.RebootApp(this);
+            if (e.Id == "exportPlugin")
+            {
+                var pluginID = e.Value?.ToString();
+                if (!string.IsNullOrEmpty(pluginID))
+                {
+                    var failReason = "";
+                    try
+                    {
+                        var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
+                        if (Directory.Exists(pluginRoot))
+                        {
+                            var pluginPem = await SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}");
+                            if (string.IsNullOrEmpty(pluginPem))
+                            {
+                                throw new FileNotFoundException("Plugin PEM not found in secure storage", pluginID);
+                            }
+
+                            if (!File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.enc")) || !File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.sig")) || !File.Exists(Path.Combine(pluginRoot, "hashtable.json.enc")))
+                            {
+                                string? localizedPluginBrokenReason = null;
+                                try
+                                {
+                                    localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing;
+                                }
+                                catch { }
+                                failReason = localizedPluginBrokenReason ?? "Some of the plugin files are missing. Try reinstall it.";
+                            }
+
+                            var pemHash = HashServices.ComputeStringHash(pluginPem ?? string.Empty, SHA512.Create());
+                            var pluginEnc = File.ReadAllBytes(Path.Combine(pluginRoot, pluginID + ".dll.enc"));
+                            var htbEnc = File.ReadAllBytes(Path.Combine(pluginRoot, "hashtable.json.enc"));
+                            var decBytes = FileCryptoService.DecryptToFileWithPassword(pemHash, pluginEnc);
+                            var savePath = Path.Combine(FileSystem.CacheDirectory, $"{pluginID}.dll");
+                            await File.WriteAllBytesAsync(savePath, decBytes, default);
+                            await Share.RequestAsync(new ShareFileRequest()
+                            {
+                                File = new ShareFile(savePath),
+                                Title = $"assembly for {pluginID}",
+                            });
+                            return;
+                        }
+                        else
+                        {
+                            string? localizedPluginBrokenReason = null;
+                            try
+                            {
+                                localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing_DirectoryNotFound;
+                            }
+                            catch { }
+                            failReason = localizedPluginBrokenReason ?? "Plugin file not found.";
+                        }
+                    }
+                    catch (ReflectionTypeLoadException)
+                    {
+                        string? localizedFailReason = null;
+                        try
+                        {
+                            localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
+                        }
+                        catch { }
+                        failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
+                    }
+
+                    catch (Exception ex)
+                    {
+                        string? localizedPluginBrokenReason = null;
+                        try
+                        {
+                            localizedPluginBrokenReason = Localized._ExceptionTemplate(ex);
+                        }
+                        catch { }
+                        failReason = localizedPluginBrokenReason ?? $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
+                    }
+                    await DisplayAlertAsync(Localized._Error, $"failed\r\n({failReason ?? "unknown"})", Localized._OK);
+                }
+                return;
+            }
+            else
+            {
+                SettingsManager.WriteSetting(e.Id, e.Value?.ToString());
+                await MainSettingsPage.RebootApp(this);
+            }
+
+
 
 
         });

@@ -43,6 +43,8 @@ namespace projectFrameCut
 
         public static string BasicDataPath { get; private set; }
 
+        public static string FFmpegRoot { get; private set; }
+
         private static readonly string[] FoldersNeedInUserdata =
             [
             "My Drafts",
@@ -99,6 +101,18 @@ namespace projectFrameCut
                 {
                     loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging"); //%localappdata%\hexadecimal0x12e\hexadecimal0x12e.projectFrameCut\Data
                     DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
+                }
+                if (Program.UserDataPathOverride != null || Program.BasicDataPathOverride != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(Program.BasicDataPathOverride))
+                    {
+                        BasicDataPath = Program.BasicDataPathOverride;
+                    }
+                    if (!string.IsNullOrWhiteSpace(Program.UserDataPathOverride))
+                    {
+                        DataPath = Program.UserDataPathOverride;
+                    }
+                    loggingDir = System.IO.Path.Combine(BasicDataPath, "logging");
                 }
 #endif
                 Directory.CreateDirectory(loggingDir);
@@ -194,9 +208,12 @@ namespace projectFrameCut
 #if ANDROID
                 Android.Util.Log.Wtf("projectFrameCut", $"Failed to init the settings because of a {ex.GetType().Name} exception:{ex.Message}");
 #elif WINDOWS
-                _ = MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot init the settings because of a {ex.GetType().Name} exception:{ex.Message}\r\nYour settings will be reset temporarily.\r\nTry fix the setting.json manually, or submit a issue with a screenshot of this dialogue.", "projectFrameCut", 0U);
+                //_ = MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot init the settings because of a {ex.GetType().Name} exception:{ex.Message}\r\nYour settings will be reset temporarily.\r\nTry fix the setting.json manually, or submit a issue with a screenshot of this dialogue.", "projectFrameCut", 0U);
 #endif
                 SettingsManager.Settings = new();
+                SettingsManager.WriteSetting("_SettingFailLoad", "True");
+                SettingsManager.WriteSetting("_SettingFailLoadMsg", $"An unhandled {ex.GetType().Name} exception: {ex.Message}");
+
 
             }
 #if WINDOWS
@@ -222,12 +239,17 @@ namespace projectFrameCut
                     var newPath = File.ReadAllText(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt"));
                     if (!Directory.Exists(newPath))
                     {
+                        Log($"User defined UserData path '{newPath}' is not exist, ignore the override.");
 #if WINDOWS
-                        _ = MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot setup the UserData because of the path your defined is not exist now.\r\nYou may found your drafts disappeared.\r\nTry reset the data directory path later.", "projectFrameCut", 0U);
+                        //_ = MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot setup the UserData because of the path your defined is not exist now.\r\nYou may found your drafts disappeared.\r\nTry reset the data directory path later.", "projectFrameCut", 0U);
 #endif
                     }
-                    DataPath = newPath;
-                    Log($"User override Data path to:{DataPath}");
+                    else
+                    {
+                        DataPath = newPath;
+                        Log($"User override Data path to:{DataPath}");
+                    }
+
                 }
 
                 foreach (var item in FoldersNeedInUserdata)
@@ -275,7 +297,6 @@ namespace projectFrameCut
 #pragma warning restore CA1416
 
 #endif
-                builder.Services.AddSingleton<IScreenReaderService, ScreenReaderService>();
                 LogLevel logLevel = LogLevel.Information;
                 if (Debugger.IsAttached || SettingsManager.IsBoolSettingTrue("LogDiagnostics"))
                 {
@@ -290,6 +311,7 @@ namespace projectFrameCut
                 }
                 builder.Logging.SetMinimumLevel(logLevel);
                 builder.Logging.AddProvider(new MyLoggerProvider(logLevel));
+                builder.Services.AddSingleton<IScreenReaderService, ScreenReaderService>();
 #if WINDOWS
                 builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
                 try
@@ -351,29 +373,6 @@ namespace projectFrameCut
                 }
                 catch { } //this is not very important so just let it go
 #endif
-                try
-                {
-#if ANDROID
-                    var nativeLibDir = Android.App.Application.Context.ApplicationInfo.NativeLibraryDir;
-                    Log($"Native library dir: {nativeLibDir}");
-                    ffmpeg.RootPath = nativeLibDir;
-                    JavaSystem.LoadLibrary("c");
-#elif WINDOWS
-                    ffmpeg.RootPath = Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
-#endif
-                    FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
-                    FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize();
-                    Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, "query ffmpeg version", CreateMauiApp);
-#if ANDROID
-                    Android.Util.Log.Wtf("projectFrameCut", $"ffmpeg may not work because of a {ex.GetType().Name} exception:{ex.Message}");
-#elif WINDOWS
-                    _ = MessageBox(new nint(0), $"WARN: projectFrameCut cannot init the ffmpeg to make sure it work because of a {ex.GetType().Name} exception:{ex.Message}\r\nYou can't do any render so far.", "projectFrameCut", 0U);
-#endif
-                }
 
                 try
                 {
@@ -453,7 +452,7 @@ namespace projectFrameCut
 
                     try
                     {
-                        if(!SettingsManager.IsSettingExists("UseSystemFont")) ConfigFontFromCulture(builder, culture);
+                        if (!SettingsManager.IsSettingExists("UseSystemFont")) ConfigFontFromCulture(builder, culture);
                     }
                     catch
                     {
@@ -543,6 +542,61 @@ namespace projectFrameCut
                     }
                 }
 
+                try
+                {
+                    string? nativeLibDirOverride = null;
+                    try
+                    {
+                        if (SettingsManager.IsBoolSettingTrue("PluginProvidedFFmpeg_Enable"))
+                        {
+#if WINDOWS
+                            var pluginId = SettingsManager.GetSetting("PluginProvidedFFmpeg_PluginID", "");
+                            if (!PluginManager.LoadedPlugins.TryGetValue(pluginId, out var value))
+                            {
+                                Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} is not loaded.");
+                            }
+                            else
+                            {
+                                var ffmpegPath = Path.Combine(BasicDataPath, "Plugins", value.PluginID, "FFmpeg", "windows");
+                                if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
+                                {
+                                    Log($"Using FFmpeg libraries provided by plugin {pluginId}, path:{ffmpegPath}");
+                                    nativeLibDirOverride = ffmpegPath;
+                                }
+                                else
+                                {
+                                    Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} provided invalid path:{ffmpegPath}");
+                                }
+                            }
+#elif ANDROID
+                            nativeLibDirOverride = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+#endif
+                        }
+                    }
+                    catch { }
+#if ANDROID
+                    FFmpegRoot = nativeLibDirOverride ?? Android.App.Application.Context.ApplicationInfo?.NativeLibraryDir;
+                    JavaSystem.LoadLibrary("c");
+#elif WINDOWS
+                    FFmpegRoot = nativeLibDirOverride ?? Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
+#endif
+                    ffmpeg.RootPath = FFmpegRoot;
+                    Log($"FFmpeg library root path: {ffmpeg.RootPath}");
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+                    FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize();
+                    Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "query ffmpeg version", CreateMauiApp);
+#if ANDROID
+                    Android.Util.Log.Wtf("projectFrameCut", $"ffmpeg may not work because of a {ex.GetType().Name} exception:{ex.Message}");
+#elif WINDOWS
+                    //_ = MessageBox(new nint(0), $"WARN: projectFrameCut cannot init the ffmpeg to make sure it work because of a {ex.GetType().Name} exception:{ex.Message}\r\nYou can't do any render so far.", "projectFrameCut", 0U);
+#endif
+                    ffmpegFailMessage = ex.Message;
+                }
+
 
                 Log("Everything ready!");
                 var app = builder.Build();
@@ -561,6 +615,8 @@ namespace projectFrameCut
                 throw;
             }
         }
+
+        public static string? ffmpegFailMessage = null;
 
         private static object locker = new();
 

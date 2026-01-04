@@ -117,5 +117,23 @@
             <Editor Grid.Row="6" x:Name="LoggingBox" Margin="0,16,0,0" IsReadOnly="True"></Editor>
             <VerticalStackLayout Grid.Row="7" x:Name="ComputeView" />
         </Grid>
+
+        <Grid x:Name="ScreenSaverOverlay" 
+              Grid.Row="0"
+              Grid.RowSpan="2" 
+              BackgroundColor="Black" 
+              IsVisible="False"
+              ZIndex="999">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Tapped="ScreenSaverOverlay_Tapped"/>
+            </Grid.GestureRecognizers>
+            <Label x:Name="HintLabel"
+                   Text="{l:Localized Key=RenderPage_ClickToShowUI}" 
+                   TextColor="Gray" 
+                   HorizontalOptions="Center" 
+                   VerticalOptions="Center" 
+                   HorizontalTextAlignment="Center"
+                   FontSize="Large"/>
+        </Grid>
     </Grid>
 </ContentPage>

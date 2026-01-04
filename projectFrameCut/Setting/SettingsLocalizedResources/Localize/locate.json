@@ -50,6 +50,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Advanced_ExportPlugin",
+        "Value": "\u5BFC\u51FA\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ExportPlugin_Select",
+        "Value": "\u9009\u62E9\u4E00\u4E2A\u63D2\u4EF6\u6765\u5BFC\u51FA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Advanced_KeyBox_Hint",
         "Value": "\u8F93\u5165\u8BBE\u7F6E\u7684\u952E\uFF0C\u7136\u540E\u4F1A\u81EA\u52A8\u586B\u5145\u503C",
         "Mode": "ConstString",
@@ -507,6 +523,42 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "General_UserData_Open_Android",
+        "Value": "\u5982\u679C\u6CA1\u6709\u4EFB\u4F55\u7A0B\u5E8F\u88AB\u6253\u5F00\uFF0C\u4F60\u53EF\u4EE5\u6253\u5F00\u8BBE\u5907\u4E0A\u7684\u6587\u4EF6\u7BA1\u7406\u5668 \uFF0C\u8F6C\u5230 \u5185\u90E8\u5B58\u50A8-\u003EAndroid-\u003Edata-\u003E{pfm}\uFF0C\u5373\u53EF\u627E\u5230\u7528\u6237\u6570\u636E\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "pfm"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "pfm",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open_iDevices",
+        "Value": "\u6253\u5F00\u8BBE\u5907\u4E0A\u7684\u201C\u6587\u4EF6\u201D\u5E94\u7528\u7A0B\u5E8F\uFF0C\u8F6C\u5230 \u0027\u6211\u7684{idiom}\u0027-\u003E{Localized.AppBrand}\uFF0C\u5373\u53EF\u627E\u5230\u7528\u6237\u6570\u636E\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "idiom"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "idiom",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "General_UserData_Path",
         "Value": "\u7528\u6237\u6570\u636E\u76EE\u5F55",
         "Mode": "ConstString",
@@ -550,7 +602,67 @@
       },
       {
         "Id": "General_UserData_SelectFolder_ConfirmReset",
-        "Value": "\u786E\u8BA4\u8981\u628A\u7528\u6237\u6570\u636E\u6062\u590D\u4E3A\u9ED8\u8BA4\u503C\u5417\uFF1F",
+        "Value": "\u786E\u8BA4\u8981\u628A\u7528\u6237\u6570\u636E\u76EE\u5F55\u6062\u590D\u4E3A\u9ED8\u8BA4\u503C\u5417\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_FinishedNoConflict",
+        "Value": "\u6210\u529F\u7684\u5B8C\u6210\u4E86\u8FC1\u79FB\u64CD\u4F5C\uFF0C\u6E90\u6587\u4EF6\u5939\u53EF\u4EE5\u5B89\u5168\u7684\u88AB\u5220\u9664\u4E86\u3002\r\u70B9\u51FB{Localized._OK}\u6765\u5220\u9664\u5B83\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_FinishedWithConflict",
+        "Value": "\u8FC1\u79FB\u64CD\u4F5C\u5DF2\u5B8C\u6210\uFF0C\u4F46\u662F\u6709{n}\u4E2A\u6587\u4EF6\u91CD\u590D\u4E86\u3002\u4ED6\u4EEC\u8FD8\u5728\u539F\u5148\u7684\u6587\u4EF6\u5939\uFF0C\u4F60\u9700\u8981\u81EA\u884C\u5904\u7406\u4ED6\u4EEC\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_MigrateError",
+        "Value": "\u79FB\u52A8\u6587\u4EF6{name}\u7684\u65F6\u5019\u53D1\u751F\u4E86{Localized._ExceptionTemplate(ex)}\uFF0C\u662F\u5426\u7EE7\u7EED\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_MigrateError_Skip",
+        "Value": "\u8DF3\u8FC7",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -567,6 +679,46 @@
       {
         "Id": "General_UserData_Subtitle",
         "Value": "\u914D\u7F6E\u4F60\u7684\u6570\u636E\u548C\u8D44\u6E90\u6587\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_PreferredHWAccel",
+        "Value": "\u5C3D\u53EF\u80FD\u7684\u4F7F\u7528\u786C\u4EF6\u52A0\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SelectProvider",
+        "Value": "\u9009\u62E9 FFmpeg \u5E93\u63D0\u4F9B\u8005",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SelectProvider_Internal",
+        "Value": "\u5185\u90E8 FFmpeg \u5E93",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SubTitle",
+        "Value": "\u914D\u7F6E\u7528\u4E8E\u89C6\u9891\u7F16\u7801\u548C\u89E3\u7801\u7684\u9009\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_Title",
+        "Value": "\u7F16\u89E3\u7801\u5668",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -598,7 +750,7 @@
       },
       {
         "Id": "GeneralUI_DefaultTheme_OSDefault",
-        "Value": "\u7CFB\u7EDF\u9ED8\u8BA4",
+        "Value": "\u8DDF\u968F\u7CFB\u7EDF",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -647,7 +799,7 @@
       },
       {
         "Id": "Misc_ClearSafeStor_Warn",
-        "Value": "\u8BF7\u6CE8\u610F\uFF0C\u4E00\u65E6\u4F60\u6E05\u9664\u4E86\u5B89\u5168\u5B58\u50A8\uFF0C\u4F60\u5C06\u4F1A\u4E0D\u80FD\u767B\u5F55\u5230\u914D\u7F6E\u4E86\u767D\u540D\u5355\u6A21\u5F0F\u7684\u7D20\u6750\u670D\u52A1\u5668\uFF1B\u5E76\u4E14\u6240\u6709\u7684\u63D2\u4EF6\u8BC1\u4E66\u90FD\u4F1A\u88AB\u5220\u9664\uFF0C\u5E76\u4E14\u9700\u8981\u91CD\u65B0\u5B89\u88C5\u3002\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F\u8F93\u5165\u0022yes\u0022\u6765\u786E\u8BA4\u3002",
+        "Value": "\u8BF7\u6CE8\u610F\uFF0C\u4E00\u65E6\u4F60\u6E05\u9664\u4E86\u5B89\u5168\u5B58\u50A8\uFF0C\u4F60\u5C06\u4F1A\u4E0D\u80FD\u767B\u5F55\u5230\u914D\u7F6E\u4E86\u767D\u540D\u5355\u6A21\u5F0F\u7684\u4E2D\u592E\u7D20\u6750\u670D\u52A1\u5668\uFF1B\u5E76\u4E14\u6240\u6709\u7684\u63D2\u4EF6\u8BC1\u4E66\u90FD\u4F1A\u88AB\u5220\u9664\uFF0C\u5E76\u4E14\u9700\u8981\u91CD\u65B0\u5B89\u88C5\u3002\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F\u8F93\u5165\u0022yes\u0022\u6765\u786E\u8BA4\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -656,8 +808,16 @@
       },
       {
         "Id": "Misc_DiagOptions",
-        "Value": "\u8BCA\u65AD\uFF0C\u5F00\u53D1\u548C\u8C03\u8BD5",
+        "Value": "\u8BCA\u65AD",
         "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions_Desc",
+        "Value": "\u5E2E\u52A9\u89E3\u51B3 {Localized.AppBrand} \u7684\u95EE\u9898\u7684\u5B9E\u7528\u5DE5\u5177",
+        "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
@@ -746,7 +906,7 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn",
-        "Value": "\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\u3002\u6240\u6709\u7684\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u3001\u63D2\u4EF6\u548C\u65E5\u5FD7\u5C06\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\u4F60\u7684\u8349\u7A3F\u548C\u7D20\u6750\u4E0D\u4F1A\u88AB\u79FB\u9664\uFF0C\u4F46\u662F\u7528\u6237\u5B58\u50A8\u76EE\u5F55\u4F1A\u88AB\u91CD\u7F6E\u4E3A\u9ED8\u8BA4\u503C\u3002\r\u6B64\u64CD\u4F5C\u65E0\u6CD5\u88AB\u64A4\u9500\uFF0C\u6240\u6709\u7684\u5E94\u7528\u6570\u636E\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\uFF01\r\u5728\u91CD\u7F6E\u4E4B\u540E\uFF0C\u5E94\u7528\u7A0B\u5E8F\u4F1A\u81EA\u52A8\u9000\u51FA\u3002\u4F60\u9700\u8981\u4ECE\u5934\u5F00\u59CB\u914D\u7F6E\u3002\r\r\u4F60\u786E\u8BA4\u5417\uFF1F\u8F93\u5165\u0022yes\u0022\u6765\u786E\u8BA4\u3002\r",
+        "Value": "\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\u3002\u6240\u6709\u7684\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u3001\u63D2\u4EF6\u548C\u65E5\u5FD7\u5C06\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\u4F60\u7684\u8349\u7A3F\u548C\u7D20\u6750\u4E0D\u4F1A\u88AB\u79FB\u9664\uFF0C\u4F46\u662F\u7528\u6237\u5B58\u50A8\u76EE\u5F55\u4F1A\u88AB\u91CD\u7F6E\u4E3A\u9ED8\u8BA4\u503C\u3002\r\u4F60\u7684\u7528\u6237ID\u4E5F\u4F1A\u88AB\u4E00\u5E76\u91CD\u7F6E\uFF0C\u8FD9\u4F1A\u5BFC\u81F4\u4E2D\u592E\u7D20\u6750\u670D\u52A1\u5668\u4E2D\u7684\u4F60\u4E0D\u5728\u6709\u6548\u3002\r\u5728\u91CD\u7F6E\u4E4B\u540E\uFF0C\u5E94\u7528\u7A0B\u5E8F\u4F1A\u81EA\u52A8\u9000\u51FA\u3002\u4F60\u9700\u8981\u4ECE\u5934\u5F00\u59CB\u914D\u7F6E\u3002\r\r\u6B64\u64CD\u4F5C\u65E0\u6CD5\u88AB\u64A4\u9500\uFF0C\u6240\u6709\u7684\u5E94\u7528\u6570\u636E\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\u4F60\u786E\u8BA4\u5417\uFF1F\u8F93\u5165\u0022yes\u0022\u6765\u786E\u8BA4\u3002\r",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -755,7 +915,7 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn2",
-        "Value": "\u8B66\u544A\uFF1A\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\u3002\r\u6240\u6709\u7684\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u3001\u63D2\u4EF6\u548C\u65E5\u5FD7\u5C06\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\u4F60\u7684\u8349\u7A3F\u548C\u7D20\u6750\u4E0D\u4F1A\u88AB\u79FB\u9664\uFF0C\u4F46\u662F\u7528\u6237\u5B58\u50A8\u76EE\u5F55\u4F1A\u88AB\u91CD\u7F6E\u4E3A\u9ED8\u8BA4\u503C\u3002",
+        "Value": "\u8B66\u544A\uFF1A\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\u3002\r\u6240\u6709\u7684\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u3001\u63D2\u4EF6\u548C\u65E5\u5FD7\u5C06\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\u4F60\u7684\u8349\u7A3F\u548C\u7D20\u6750\u4E0D\u4F1A\u88AB\u79FB\u9664\uFF0C\u4F46\u662F\u7528\u6237\u5B58\u50A8\u76EE\u5F55\u4F1A\u88AB\u91CD\u7F6E\u4E3A\u9ED8\u8BA4\u503C\u3002\r\u4F60\u7684\u7528\u6237ID\u4E5F\u4F1A\u88AB\u91CD\u7F6E\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1234,6 +1394,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Render_EnableScreenSaver",
+        "Value": "\u542F\u7528\u6E32\u67D3\u754C\u9762\u7684\u5C4F\u5E55\u4FDD\u62A4\u7A0B\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Render_GCOption",
         "Value": "\u540E\u7AEF .NET CLR \u5783\u573E\u56DE\u6536\u9009\u9879",
         "Mode": "ConstString",
@@ -1269,6 +1437,14 @@
       {
         "Id": "Render_LoadingAccels",
         "Value": "\u83B7\u53D6\u53EF\u7528\u7684\u52A0\u901F\u5668\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SaveCheckpoint",
+        "Value": "\u4FDD\u5B58\u6E32\u67D3\u8FC7\u7A0B\u7684\u4E2D\u95F4\u6570\u636E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1620,7 +1796,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_ConfirmReset",
-        "Value": "Are you sure you want to reset user data to default values?",
+        "Value": "Are you sure you want to reset the user data directory to its default value?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1639,15 +1815,6 @@
       {
         "Id": "General_UserData_Subtitle",
         "Value": "Configure your data and resource files",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions",
-        "Value": "Diagnostics, Development and Debugging",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2005,11 +2172,11 @@
       },
       {
         "Id": "Misc_ClearSafeStor_Warn",
-        "Value": "Please note that once you clear the safe storage, you will not be able to log into asset servers configured with whitelist mode; and all plugin certificates will be deleted and need to be reinstalled. Are you sure you want to continue? Enter \u0022yes\u0022 to confirm.",
+        "Value": "Please note that once you clear the safe storage, you will not be able to log into central material servers configured in whitelist mode; and all plugin certificates will be deleted and need to be reinstalled. Do you confirm you want to proceed? Type \u0022yes\u0022 to confirm.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Do not translate \u0022yes\u0022 as it is a user input.",
         "HasValidationErrors": false
       },
       {
@@ -2023,11 +2190,11 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn",
-        "Value": "\rThis operation cannot be undone. All settings, securely stored content, plugins, and logs will be permanently lost.\rYour drafts and assets will not be removed, but the user storage directory will be reset to its default value.\rThis operation is irreversible. All application data will be permanently lost!\rAfter resetting, the application will automatically exit. You will need to configure everything from scratch.\r\rAre you sure? Type \u0022yes\u0022 to confirm.\r",
+        "Value": "\rThis operation cannot be undone. All settings, securely stored content, plugins, and logs will be permanently lost.\rYour drafts and materials will not be removed, but the user storage directory will be reset to its default value.\rYour user ID will also be reset, which will cause you to no longer be valid in the central material server.\rAfter the reset, the application will automatically exit. You will need to configure it from scratch.\r\rThis operation cannot be undone, and all application data will be permanently lost.\rAre you sure? Enter \u0022yes\u0022 to confirm.\r",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Warning message for resetting all settings. The word \u0027yes\u0027 is kept as is because the user must type it to confirm.",
         "HasValidationErrors": false
       },
       {
@@ -2191,7 +2358,7 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn2",
-        "Value": "Warning: This operation cannot be undone.\r\nAll settings, secure storage contents, plugins, and logs will be permanently lost.\r\nYour drafts and assets will not be removed, but the user storage directory will be reset to its default value.",
+        "Value": "Warning: This operation cannot be undone.\rAll settings, securely stored content, plugins, and logs will be permanently lost.\rYour drafts and assets will not be removed, but the user storage directory will be reset to its default value.\rYour user ID will also be reset.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2347,7 +2514,7 @@
       },
       {
         "Id": "GeneralUI_DefaultTheme_OSDefault",
-        "Value": "System Default",
+        "Value": "Use system setting",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2732,6 +2899,207 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_Title",
+        "Value": "Codec",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SelectProvider",
+        "Value": "Select FFmpeg library provider",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SelectProvider_Internal",
+        "Value": "Internal FFmpeg Library",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SubTitle",
+        "Value": "Configure options for video encoding and decoding",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_PreferredHWAccel",
+        "Value": "Prefer hardware acceleration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_MigrateError",
+        "Value": "An error occurred while moving the file {name}: {Localized._ExceptionTemplate(ex)}. Do you want to continue?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "Prompt when file migration fails, asking user whether to continue",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_MigrateError_Skip",
+        "Value": "Skip",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_FinishedWithConflict",
+        "Value": "The migration operation is complete, but {n} file(s) were duplicates. They remain in the original folder, and you need to handle them manually.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_FinishedNoConflict",
+        "Value": "The migration operation finished successfully. The source folder can now be safely deleted.\rClick {Localized._OK} to delete it.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ExportPlugin_Select",
+        "Value": "Select a plugin to export",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ExportPlugin",
+        "Value": "Export Plugin",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions_Desc",
+        "Value": "Practical tools to help resolve issues with {Localized.AppBrand}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open_Android",
+        "Value": "If no app is open, open the file manager on your device and go to Internal Storage -\u003E Android -\u003E data -\u003E {pfm} to find the user data.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "pfm"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "pfm",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open_iDevices",
+        "Value": "Open the \u0022Files\u0022 app on the device, go to \u0027My {idiom}\u0027 -\u003E {Localized.AppBrand} to find user data.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "idiom"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "idiom",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions",
+        "Value": "Diagnostics",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SaveCheckpoint",
+        "Value": "Save intermediate data of the rendering process",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableScreenSaver",
+        "Value": "Enable screen saver for the rendering interface",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -3047,7 +3415,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_ConfirmReset",
-        "Value": "\u78BA\u8A8D\u8981\u628A\u7528\u6236\u8CC7\u6599\u6062\u5FA9\u70BA\u9810\u8A2D\u503C\u55CE\uFF1F",
+        "Value": "\u78BA\u8A8D\u8981\u5C07\u4F7F\u7528\u8005\u8CC7\u6599\u76EE\u9304\u6062\u5FA9\u70BA\u9810\u8A2D\u503C\u55CE\uFF1F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3066,15 +3434,6 @@
       {
         "Id": "General_UserData_Subtitle",
         "Value": "\u914D\u7F6E\u4F60\u7684\u6578\u64DA\u548C\u8CC7\u6E90\u6587\u4EF6",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions",
-        "Value": "\u8A3A\u65B7\u3001\u958B\u767C\u548C\u9664\u932F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3431,7 +3790,7 @@
       },
       {
         "Id": "Misc_ClearSafeStor_Warn",
-        "Value": "\u8ACB\u6CE8\u610F\uFF0C\u4E00\u65E6\u4F60\u6E05\u9664\u4E86\u5B89\u5168\u5132\u5B58\uFF0C\u4F60\u5C07\u4E0D\u80FD\u767B\u5165\u5230\u8A2D\u5B9A\u4E86\u767D\u540D\u55AE\u6A21\u5F0F\u7684\u7D20\u6750\u4F3A\u670D\u5668\uFF1B\u4E26\u4E14\u6240\u6709\u7684\u63D2\u4EF6\u6191\u8B49\u90FD\u6703\u88AB\u522A\u9664\uFF0C\u4E26\u4E14\u9700\u8981\u91CD\u65B0\u5B89\u88DD\u3002\u4F60\u78BA\u8A8D\u8981\u7E7C\u7E8C\u55CE\uFF1F\u8F38\u5165\u201Cyes\u201D\u4F86\u78BA\u8A8D\u3002",
+        "Value": "\u8ACB\u6CE8\u610F\uFF0C\u4E00\u65E6\u4F60\u6E05\u9664\u4E86\u5B89\u5168\u5132\u5B58\uFF0C\u4F60\u5C07\u7121\u6CD5\u767B\u5165\u5DF2\u8A2D\u5B9A\u767D\u540D\u55AE\u6A21\u5F0F\u7684\u4E2D\u592E\u7D20\u6750\u4F3A\u670D\u5668\uFF1B\u4E26\u4E14\u6240\u6709\u7684\u63D2\u4EF6\u8B49\u66F8\u90FD\u6703\u88AB\u522A\u9664\uFF0C\u4E14\u9700\u8981\u91CD\u65B0\u5B89\u88DD\u3002\u4F60\u78BA\u8A8D\u8981\u7E7C\u7E8C\u55CE\uFF1F\u8F38\u5165 \u0022yes\u0022 \u4F86\u78BA\u8A8D\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3449,11 +3808,11 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn",
-        "Value": "\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u92B7\u3002\u6240\u6709\u7684\u8A2D\u5B9A\u3001\u5B89\u5168\u5132\u5B58\u5167\u5BB9\u3001\u63D2\u4EF6\u548C\u65E5\u8A8C\u5C07\u6703\u6C38\u4E45\u5730\u6D88\u5931\u3002\r\u4F60\u7684\u8349\u7A3F\u548C\u7D20\u6750\u4E0D\u6703\u88AB\u79FB\u9664\uFF0C\u4F46\u662F\u4F7F\u7528\u8005\u5132\u5B58\u76EE\u9304\u6703\u88AB\u91CD\u8A2D\u70BA\u9810\u8A2D\u503C\u3002\r\u6B64\u64CD\u4F5C\u7121\u6CD5\u88AB\u64A4\u92B7\uFF0C\u6240\u6709\u7684\u61C9\u7528\u7A0B\u5F0F\u8CC7\u6599\u6703\u6C38\u4E45\u5730\u6D88\u5931\uFF01\r\u5728\u91CD\u8A2D\u4E4B\u5F8C\uFF0C\u61C9\u7528\u7A0B\u5F0F\u6703\u81EA\u52D5\u9000\u51FA\u3002\u4F60\u9700\u8981\u5F9E\u982D\u958B\u59CB\u914D\u7F6E\u3002\r\r\u4F60\u78BA\u8A8D\u55CE\uFF1F\u8F38\u5165\u0022yes\u0022\u4F86\u78BA\u8A8D\u3002\r",
+        "Value": "\r\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\u3002\u6240\u6709\u7684\u8A2D\u5B9A\u3001\u5B89\u5168\u5132\u5B58\u5167\u5BB9\u3001\u63D2\u4EF6\u548C\u65E5\u8A8C\u5C07\u6703\u6C38\u4E45\u6D88\u5931\u3002\r\u4F60\u7684\u8349\u7A3F\u548C\u7D20\u6750\u4E0D\u6703\u88AB\u79FB\u9664\uFF0C\u4F46\u662F\u4F7F\u7528\u8005\u5132\u5B58\u76EE\u9304\u6703\u88AB\u91CD\u8A2D\u70BA\u9810\u8A2D\u503C\u3002\r\u4F60\u7684\u4F7F\u7528\u8005ID\u4E5F\u6703\u4E00\u4F75\u91CD\u8A2D\uFF0C\u9019\u6703\u5C0E\u81F4\u4E2D\u592E\u7D20\u6750\u4F3A\u670D\u5668\u4E2D\u7684\u4F60\u4E0D\u518D\u6709\u6548\u3002\r\u5728\u91CD\u8A2D\u4E4B\u5F8C\uFF0C\u61C9\u7528\u7A0B\u5F0F\u6703\u81EA\u52D5\u9000\u51FA\u3002\u4F60\u9700\u8981\u5F9E\u982D\u958B\u59CB\u914D\u7F6E\u3002\r\r\u6B64\u64CD\u4F5C\u7121\u6CD5\u88AB\u64A4\u92B7\uFF0C\u6240\u6709\u7684\u61C9\u7528\u8CC7\u6599\u6703\u6C38\u4E45\u5730\u6D88\u5931\u3002\r\u4F60\u78BA\u8A8D\u55CE\uFF1F\u8F38\u5165\u201Cyes\u201D\u4F86\u78BA\u8A8D\u3002\r",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u5DF2\u5C07\u7C21\u9AD4\u4E2D\u6587\u8F49\u63DB\u70BA\u7E41\u9AD4\u4E2D\u6587\uFF0C\u4E26\u4FDD\u6301\u539F\u6587\u683C\u5F0F\u8207\u8853\u8A9E\u4E00\u81F4\u6027\u3002\u6CE8\u610F\uFF1A\u0027yes\u0027 \u70BA\u4F7F\u7528\u8005\u8F38\u5165\u6307\u4EE4\uFF0C\u4F9D\u8981\u6C42\u4E0D\u4E88\u7FFB\u8B6F\u3002",
         "HasValidationErrors": false
       },
       {
@@ -3617,7 +3976,7 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn2",
-        "Value": "\u8B66\u544A\uFF1A\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\u3002\r\u6240\u6709\u8A2D\u5B9A\u3001\u5B89\u5168\u5132\u5B58\u5167\u5BB9\u3001\u5916\u639B\u7A0B\u5F0F\u548C\u8A18\u9304\u5C07\u6703\u6C38\u4E45\u6D88\u5931\u3002\r\u4F60\u7684\u8349\u7A3F\u548C\u7D20\u6750\u4E0D\u6703\u88AB\u79FB\u9664\uFF0C\u4F46\u662F\u4F7F\u7528\u8005\u5132\u5B58\u76EE\u9304\u6703\u88AB\u91CD\u8A2D\u70BA\u9810\u8A2D\u503C\u3002",
+        "Value": "\u8B66\u544A\uFF1A\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\u3002\r\u6240\u6709\u8A2D\u5B9A\u3001\u5B89\u5168\u5132\u5B58\u5167\u5BB9\u3001\u63D2\u4EF6\u548C\u65E5\u8A8C\u5C07\u6703\u6C38\u4E45\u6D88\u5931\u3002\r\u4F60\u7684\u8349\u7A3F\u548C\u7D20\u6750\u4E0D\u6703\u88AB\u79FB\u9664\uFF0C\u4F46\u662F\u4F7F\u7528\u8005\u5132\u5B58\u76EE\u9304\u6703\u88AB\u91CD\u8A2D\u70BA\u9810\u8A2D\u503C\u3002\r\u4F60\u7684\u4F7F\u7528\u8005ID\u4E5F\u6703\u88AB\u91CD\u8A2D\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3773,7 +4132,7 @@
       },
       {
         "Id": "GeneralUI_DefaultTheme_OSDefault",
-        "Value": "\u7CFB\u7D71\u9810\u8A2D",
+        "Value": "\u8DDF\u96A8\u7CFB\u7D71",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4159,6 +4518,207 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_Title",
+        "Value": "\u7DE8\u89E3\u78BC\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SelectProvider",
+        "Value": "\u9078\u64C7 FFmpeg \u5EAB\u63D0\u4F9B\u8005",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SelectProvider_Internal",
+        "Value": "\u5167\u90E8 FFmpeg \u51FD\u5F0F\u5EAB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SubTitle",
+        "Value": "\u914D\u7F6E\u7528\u65BC\u5F71\u7247\u7DE8\u78BC\u8207\u89E3\u78BC\u7684\u9078\u9805",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_PreferredHWAccel",
+        "Value": "\u76E1\u53EF\u80FD\u5730\u4F7F\u7528\u786C\u9AD4\u52A0\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_MigrateError",
+        "Value": "\u79FB\u52D5\u6A94\u6848{name}\u6642\u767C\u751F\u4E86{Localized._ExceptionTemplate(ex)}\uFF0C\u662F\u5426\u7E7C\u7E8C\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_MigrateError_Skip",
+        "Value": "\u8DF3\u904E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_FinishedWithConflict",
+        "Value": "\u9077\u79FB\u64CD\u4F5C\u5DF2\u5B8C\u6210\uFF0C\u4F46\u662F\u6709{n}\u500B\u6A94\u6848\u91CD\u8907\u4E86\u3002\u5B83\u5011\u4ECD\u5728\u539F\u5148\u7684\u8CC7\u6599\u593E\uFF0C\u4F60\u9700\u8981\u81EA\u884C\u8655\u7406\u5B83\u5011\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_FinishedNoConflict",
+        "Value": "\u5DF2\u6210\u529F\u5B8C\u6210\u9077\u79FB\u64CD\u4F5C\uFF0C\u6E90\u8CC7\u6599\u593E\u73FE\u5728\u53EF\u4EE5\u5B89\u5168\u522A\u9664\u3002\r\u9EDE\u64CA{Localized._OK}\u4F86\u522A\u9664\u5B83\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ExportPlugin_Select",
+        "Value": "\u9078\u64C7\u4E00\u500B\u5916\u639B\u7A0B\u5F0F\u4F86\u532F\u51FA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ExportPlugin",
+        "Value": "\u532F\u51FA\u5916\u639B\u7A0B\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions_Desc",
+        "Value": "\u5354\u52A9\u89E3\u6C7A {Localized.AppBrand} \u554F\u984C\u7684\u5BE6\u7528\u5DE5\u5177",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open_Android",
+        "Value": "\u5982\u679C\u6C92\u6709\u4EFB\u4F55\u7A0B\u5F0F\u88AB\u958B\u555F\uFF0C\u4F60\u53EF\u4EE5\u958B\u555F\u88DD\u7F6E\u4E0A\u7684\u6A94\u6848\u7BA1\u7406\u54E1\uFF0C\u8F49\u5230 \u5167\u90E8\u5132\u5B58-\u003EAndroid-\u003Edata-\u003E{pfm}\uFF0C\u5373\u53EF\u627E\u5230\u4F7F\u7528\u8005\u8CC7\u6599\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "pfm"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "pfm",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open_iDevices",
+        "Value": "\u6253\u958B\u88DD\u7F6E\u4E0A\u7684\u300C\u6A94\u6848\u300D\u61C9\u7528\u7A0B\u5F0F\uFF0C\u8F49\u5230\u300C\u6211\u7684{idiom}\u300D-\u003E{Localized.AppBrand}\uFF0C\u5373\u53EF\u627E\u5230\u7528\u6236\u8CC7\u6599\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "idiom"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "idiom",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions",
+        "Value": "\u8A3A\u65B7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SaveCheckpoint",
+        "Value": "\u5132\u5B58\u6E32\u67D3\u904E\u7A0B\u7684\u4E2D\u9593\u8CC7\u6599",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableScreenSaver",
+        "Value": "\u555F\u7528\u6E32\u67D3\u4ECB\u9762\u7684\u87A2\u5E55\u4FDD\u8B77\u7A0B\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "ja-JP": [
@@ -4474,11 +5034,11 @@
       },
       {
         "Id": "General_UserData_SelectFolder_ConfirmReset",
-        "Value": "\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u3092\u30C7\u30D5\u30A9\u30EB\u30C8\u5024\u306B\u5FA9\u5143\u3057\u307E\u3059\u304B\uFF1F",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u3092\u30C7\u30D5\u30A9\u30EB\u30C8\u5024\u306B\u30EA\u30BB\u30C3\u30C8\u3057\u3066\u3082\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Confirm resetting user data to default values",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -4497,15 +5057,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "Configure your data and resource files",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions",
-        "Value": "\u8A3A\u65AD\u30FB\u958B\u767A\u30FB\u30C7\u30D0\u30C3\u30B0",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -4859,11 +5410,11 @@
       },
       {
         "Id": "Misc_ClearSafeStor_Warn",
-        "Value": "\u3054\u6CE8\u610F\u304F\u3060\u3055\u3044\u3002\u30BB\u30AD\u30E5\u30A2\u30B9\u30C8\u30EC\u30FC\u30B8\u3092\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3001\u30DB\u30EF\u30A4\u30C8\u30EA\u30B9\u30C8\u30E2\u30FC\u30C9\u304C\u8A2D\u5B9A\u3055\u308C\u3066\u3044\u308B\u30A2\u30BB\u30C3\u30C8\u30B5\u30FC\u30D0\u30FC\u306B\u30ED\u30B0\u30A4\u30F3\u3067\u304D\u306A\u304F\u306A\u308A\u307E\u3059\u3002\u307E\u305F\u3001\u3059\u3079\u3066\u306E\u30D7\u30E9\u30B0\u30A4\u30F3\u8A3C\u660E\u66F8\u304C\u524A\u9664\u3055\u308C\u3001\u518D\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u304C\u5FC5\u8981\u306B\u306A\u308A\u307E\u3059\u3002\u7D9A\u884C\u3057\u3066\u3082\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F\u78BA\u8A8D\u3059\u308B\u306B\u306F\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Value": "\u3054\u6CE8\u610F\u304F\u3060\u3055\u3044\u3002\u4E00\u5EA6\u30BB\u30FC\u30D5\u30B9\u30C8\u30EC\u30FC\u30B8\u3092\u30AF\u30EA\u30A2\u3059\u308B\u3068\u3001\u30DB\u30EF\u30A4\u30C8\u30EA\u30B9\u30C8\u30E2\u30FC\u30C9\u304C\u8A2D\u5B9A\u3055\u308C\u3066\u3044\u308B\u4E2D\u592E\u7D20\u6750\u30B5\u30FC\u30D0\u30FC\u306B\u30ED\u30B0\u30A4\u30F3\u3067\u304D\u306A\u304F\u306A\u308A\u307E\u3059\u3002\u307E\u305F\u3001\u3059\u3079\u3066\u306E\u30D7\u30E9\u30B0\u30A4\u30F3\u8A3C\u660E\u66F8\u304C\u524A\u9664\u3055\u308C\u3001\u518D\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u304C\u5FC5\u8981\u306B\u306A\u308A\u307E\u3059\u3002\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F\u78BA\u8A8D\u3059\u308B\u306B\u306F\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u300Cyes\u300D\u306F\u7FFB\u8A33\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002\u30E6\u30FC\u30B6\u30FC\u304C\u5165\u529B\u3059\u308B\u3082\u306E\u3067\u3059",
         "HasValidationErrors": false
       },
       {
@@ -4877,11 +5428,11 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn",
-        "Value": "\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002\u3059\u3079\u3066\u306E\u8A2D\u5B9A\u3001\u5B89\u5168\u306B\u4FDD\u5B58\u3055\u308C\u305F\u5185\u5BB9\u3001\u30D7\u30E9\u30B0\u30A4\u30F3\u3001\u30ED\u30B0\u306F\u6C38\u4E45\u306B\u6D88\u53BB\u3055\u308C\u307E\u3059\u3002\n\u3042\u306A\u305F\u306E\u4E0B\u66F8\u304D\u3084\u7D20\u6750\u306F\u524A\u9664\u3055\u308C\u307E\u305B\u3093\u304C\u3001\u30E6\u30FC\u30B6\u30FC\u4FDD\u5B58\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u306F\u30C7\u30D5\u30A9\u30EB\u30C8\u5024\u306B\u30EA\u30BB\u30C3\u30C8\u3055\u308C\u307E\u3059\u3002\n\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u305A\u3001\u3059\u3079\u3066\u306E\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u30C7\u30FC\u30BF\u306F\u6C38\u4E45\u306B\u5931\u308F\u308C\u307E\u3059\uFF01\n\u30EA\u30BB\u30C3\u30C8\u5F8C\u3001\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u306F\u81EA\u52D5\u7684\u306B\u7D42\u4E86\u3057\u307E\u3059\u3002\u6700\u521D\u304B\u3089\u8A2D\u5B9A\u3092\u3084\u308A\u76F4\u3059\u5FC5\u8981\u304C\u3042\u308A\u307E\u3059\u3002\n\n\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F\u78BA\u8A8D\u3059\u308B\u306B\u306F\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Value": "\r\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002\u3059\u3079\u3066\u306E\u8A2D\u5B9A\u3001\u5B89\u5168\u306B\u4FDD\u5B58\u3055\u308C\u305F\u30B3\u30F3\u30C6\u30F3\u30C4\u3001\u30D7\u30E9\u30B0\u30A4\u30F3\u3001\u304A\u3088\u3073\u30ED\u30B0\u306F\u6C38\u4E45\u306B\u5931\u308F\u308C\u307E\u3059\u3002\r\u3042\u306A\u305F\u306E\u4E0B\u66F8\u304D\u3084\u7D20\u6750\u306F\u524A\u9664\u3055\u308C\u307E\u305B\u3093\u304C\u3001\u30E6\u30FC\u30B6\u30FC\u30B9\u30C8\u30EC\u30FC\u30B8\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u306F\u30C7\u30D5\u30A9\u30EB\u30C8\u5024\u306B\u30EA\u30BB\u30C3\u30C8\u3055\u308C\u307E\u3059\u3002\r\u3042\u306A\u305F\u306E\u30E6\u30FC\u30B6\u30FCID\u3082\u4E00\u7DD2\u306B\u30EA\u30BB\u30C3\u30C8\u3055\u308C\u3001\u3053\u308C\u306B\u3088\u308A\u4E2D\u592E\u7D20\u6750\u30B5\u30FC\u30D0\u30FC\u3067\u306E\u6709\u52B9\u6027\u304C\u5931\u308F\u308C\u307E\u3059\u3002\r\u30EA\u30BB\u30C3\u30C8\u5F8C\u3001\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u306F\u81EA\u52D5\u7684\u306B\u7D42\u4E86\u3057\u307E\u3059\u3002\u6700\u521D\u304B\u3089\u8A2D\u5B9A\u3092\u3084\u308A\u76F4\u3059\u5FC5\u8981\u304C\u3042\u308A\u307E\u3059\u3002\r\r\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u305A\u3001\u3059\u3079\u3066\u306E\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u30C7\u30FC\u30BF\u306F\u6C38\u4E45\u306B\u5931\u308F\u308C\u307E\u3059\u3002\r\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F\u78BA\u8A8D\u3059\u308B\u306B\u306F\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002\r",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u300Cyes\u300D\u306F\u7FFB\u8A33\u305B\u305A\u3001\u30E6\u30FC\u30B6\u30FC\u304C\u5165\u529B\u3059\u308B\u6587\u5B57\u5217\u3068\u3057\u3066\u4FDD\u6301\u3002\u8B66\u544A\u30E1\u30C3\u30BB\u30FC\u30B8\u306E\u4F53\u88C1\u3092\u6574\u3048\u3001\u65E5\u672C\u8A9E\u3068\u3057\u3066\u81EA\u7136\u306A\u8868\u73FE\u306B\u8ABF\u6574\u3002",
+        "Comment": "\u300Cyes\u300D\u306F\u7FFB\u8A33\u3057\u306A\u3044\uFF08\u30E6\u30FC\u30B6\u30FC\u5165\u529B\u7528\uFF09\u3002\u8B66\u544A\u30E1\u30C3\u30BB\u30FC\u30B8\u5168\u4F53\u3092\u81EA\u7136\u306A\u65E5\u672C\u8A9E\u306B\u8ABF\u6574\u3057\u3001\u91CD\u8981\u306A\u6CE8\u610F\u70B9\uFF08\u64CD\u4F5C\u306E\u4E0D\u53EF\u9006\u6027\u3001\u30C7\u30FC\u30BF\u640D\u5931\u3001\u30E6\u30FC\u30B6\u30FCID\u30EA\u30BB\u30C3\u30C8\u306E\u5F71\u97FF\uFF09\u3092\u660E\u78BA\u306B\u4F1D\u3048\u308B\u3002",
         "HasValidationErrors": false
       },
       {
@@ -5045,7 +5596,7 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn2",
-        "Value": "\r\u8B66\u544A\uFF1A\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002\r\u3059\u3079\u3066\u306E\u8A2D\u5B9A\u3001\u30BB\u30AD\u30E5\u30A2\u30B9\u30C8\u30EC\u30FC\u30B8\u306E\u5185\u5BB9\u3001\u30D7\u30E9\u30B0\u30A4\u30F3\u3001\u304A\u3088\u3073\u30ED\u30B0\u306F\u6C38\u4E45\u306B\u6D88\u53BB\u3055\u308C\u307E\u3059\u3002\r\u3042\u306A\u305F\u306E\u4E0B\u66F8\u304D\u3068\u7D20\u6750\u306F\u524A\u9664\u3055\u308C\u307E\u305B\u3093\u304C\u3001\u30E6\u30FC\u30B6\u30FC\u30B9\u30C8\u30EC\u30FC\u30B8\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u306F\u30C7\u30D5\u30A9\u30EB\u30C8\u5024\u306B\u30EA\u30BB\u30C3\u30C8\u3055\u308C\u307E\u3059\u3002\r",
+        "Value": "\u8B66\u544A\uFF1A\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002\r\u3059\u3079\u3066\u306E\u8A2D\u5B9A\u3001\u5B89\u5168\u306B\u4FDD\u5B58\u3055\u308C\u305F\u5185\u5BB9\u3001\u30D7\u30E9\u30B0\u30A4\u30F3\u3001\u30ED\u30B0\u306F\u6C38\u4E45\u306B\u6D88\u53BB\u3055\u308C\u307E\u3059\u3002\r\u3042\u306A\u305F\u306E\u4E0B\u66F8\u304D\u3084\u7D20\u6750\u306F\u524A\u9664\u3055\u308C\u307E\u305B\u3093\u304C\u3001\u30E6\u30FC\u30B6\u30FC\u4FDD\u5B58\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u306F\u30C7\u30D5\u30A9\u30EB\u30C8\u5024\u306B\u30EA\u30BB\u30C3\u30C8\u3055\u308C\u307E\u3059\u3002\r\u3042\u306A\u305F\u306E\u30E6\u30FC\u30B6\u30FCID\u3082\u30EA\u30BB\u30C3\u30C8\u3055\u308C\u307E\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5201,7 +5752,7 @@
       },
       {
         "Id": "GeneralUI_DefaultTheme_OSDefault",
-        "Value": "\u30B7\u30B9\u30C6\u30E0\u30C7\u30D5\u30A9\u30EB\u30C8",
+        "Value": "\u30B7\u30B9\u30C6\u30E0\u306B\u5F93\u3046",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5587,6 +6138,207 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_Title",
+        "Value": "\u30B3\u30FC\u30C7\u30C3\u30AF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SelectProvider",
+        "Value": "FFmpeg \u30E9\u30A4\u30D6\u30E9\u30EA\u30D7\u30ED\u30D0\u30A4\u30C0\u30FC\u3092\u9078\u629E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SelectProvider_Internal",
+        "Value": "\u5185\u90E8 FFmpeg \u30E9\u30A4\u30D6\u30E9\u30EA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SubTitle",
+        "Value": "\u30D3\u30C7\u30AA\u306E\u30A8\u30F3\u30B3\u30FC\u30C9\u3068\u30C7\u30B3\u30FC\u30C9\u306B\u4F7F\u7528\u3059\u308B\u30AA\u30D7\u30B7\u30E7\u30F3\u3092\u69CB\u6210\u3057\u307E\u3059",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_PreferredHWAccel",
+        "Value": "\u53EF\u80FD\u306A\u9650\u308A\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u3092\u4F7F\u7528\u3059\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_MigrateError",
+        "Value": "\u30D5\u30A1\u30A4\u30EB{name}\u3092\u79FB\u52D5\u3059\u308B\u969B\u306B\u3001{Localized._ExceptionTemplate(ex)}\u304C\u767A\u751F\u3057\u307E\u3057\u305F\u3002\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_MigrateError_Skip",
+        "Value": "\u30B9\u30AD\u30C3\u30D7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_FinishedWithConflict",
+        "Value": "\u79FB\u884C\u64CD\u4F5C\u306F\u5B8C\u4E86\u3057\u307E\u3057\u305F\u304C\u3001{n}\u500B\u306E\u30D5\u30A1\u30A4\u30EB\u304C\u91CD\u8907\u3057\u3066\u3044\u307E\u3059\u3002\u305D\u308C\u3089\u306E\u30D5\u30A1\u30A4\u30EB\u306F\u5143\u306E\u30D5\u30A9\u30EB\u30C0\u306B\u6B8B\u3063\u3066\u3044\u307E\u3059\u306E\u3067\u3001\u3054\u81EA\u8EAB\u3067\u5BFE\u5FDC\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_FinishedNoConflict",
+        "Value": "\u79FB\u884C\u64CD\u4F5C\u304C\u6B63\u5E38\u306B\u5B8C\u4E86\u3057\u307E\u3057\u305F\u3002\r\u5143\u306E\u30D5\u30A9\u30EB\u30C0\u306F\u5B89\u5168\u306B\u524A\u9664\u3067\u304D\u307E\u3059\u3002\r{Localized._OK}\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u524A\u9664\u3057\u307E\u3059\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ExportPlugin_Select",
+        "Value": "\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8\u3059\u308B\u30D7\u30E9\u30B0\u30A4\u30F3\u3092\u9078\u629E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ExportPlugin",
+        "Value": "\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8\u30D7\u30E9\u30B0\u30A4\u30F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions_Desc",
+        "Value": "{Localized.AppBrand}\u306E\u554F\u984C\u3092\u89E3\u6C7A\u3059\u308B\u305F\u3081\u306E\u5B9F\u7528\u7684\u306A\u30C4\u30FC\u30EB",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open_Android",
+        "Value": "\u30A2\u30D7\u30EA\u304C\u8D77\u52D5\u3057\u3066\u3044\u306A\u3044\u5834\u5408\u3001\u30C7\u30D0\u30A4\u30B9\u306E\u30D5\u30A1\u30A4\u30EB\u30DE\u30CD\u30FC\u30B8\u30E3\u30FC\u3092\u958B\u304D\u3001\u5185\u90E8\u30B9\u30C8\u30EC\u30FC\u30B8\u2192Android\u2192data\u2192{pfm}\u306B\u79FB\u52D5\u3059\u308B\u3068\u3001\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u3092\u898B\u3064\u3051\u308B\u3053\u3068\u304C\u3067\u304D\u307E\u3059\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "pfm"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "pfm",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open_iDevices",
+        "Value": "\u30C7\u30D0\u30A4\u30B9\u4E0A\u306E\u300C\u30D5\u30A1\u30A4\u30EB\u300D\u30A2\u30D7\u30EA\u3092\u958B\u304D\u3001\u0027\u30DE\u30A4{idiom}\u0027 -\u003E {Localized.AppBrand} \u306B\u79FB\u52D5\u3059\u308B\u3068\u3001\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u3092\u898B\u3064\u3051\u308B\u3053\u3068\u304C\u3067\u304D\u307E\u3059\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "idiom"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "idiom",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions",
+        "Value": "\u8A3A\u65AD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SaveCheckpoint",
+        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30D7\u30ED\u30BB\u30B9\u306E\u4E2D\u9593\u30C7\u30FC\u30BF\u3092\u4FDD\u5B58",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableScreenSaver",
+        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u306E\u30B9\u30AF\u30EA\u30FC\u30F3\u30BB\u30FC\u30D0\u30FC\u3092\u6709\u52B9\u306B\u3059\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -5902,7 +6654,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_ConfirmReset",
-        "Value": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130\uB97C \uAE30\uBCF8\uAC12\uC73C\uB85C \uBCF5\uC6D0\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Value": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uB514\uB809\uD1A0\uB9AC\uB97C \uAE30\uBCF8\uAC12\uC73C\uB85C \uBCF5\uC6D0\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5925,15 +6677,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130\uC640 \uB9AC\uC18C\uC2A4 \uD30C\uC77C\uC744 \uC124\uC815\uD558\uB294 \uB0B4\uC6A9",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions",
-        "Value": "\uC9C4\uB2E8, \uAC1C\uBC1C \uBC0F \uB514\uBC84\uAE45",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -6287,7 +7030,7 @@
       },
       {
         "Id": "Misc_ClearSafeStor_Warn",
-        "Value": "\uC8FC\uC758\uD574 \uC8FC\uC138\uC694, \uC548\uC804 \uC800\uC7A5\uC18C\uB97C \uC0AD\uC81C\uD558\uBA74 \uD654\uC774\uD2B8\uB9AC\uC2A4\uD2B8 \uBAA8\uB4DC\uB85C \uC124\uC815\uB41C \uC18C\uC7AC \uC11C\uBC84\uC5D0 \uB85C\uADF8\uC778\uD560 \uC218 \uC5C6\uAC8C \uB429\uB2C8\uB2E4. \uB610\uD55C \uBAA8\uB4E0 \uD50C\uB7EC\uADF8\uC778 \uC778\uC99D\uC11C\uAC00 \uC0AD\uC81C\uB418\uC5B4 \uC7AC\uC124\uCE58\uD574\uC57C \uD569\uB2C8\uB2E4. \uACC4\uC18D \uC9C4\uD589\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C? \uD655\uC778\uD558\uB824\uBA74 \u0022yes\u0022\uB97C \uC785\uB825\uD558\uC138\uC694.",
+        "Value": "\uC8FC\uC758\uD558\uC138\uC694, \uC548\uC804 \uC800\uC7A5\uC18C\uB97C \uC0AD\uC81C\uD558\uBA74 \uD654\uC774\uD2B8\uB9AC\uC2A4\uD2B8 \uBAA8\uB4DC\uAC00 \uC124\uC815\uB41C \uC911\uC559 \uC18C\uC7AC \uC11C\uBC84\uC5D0 \uB85C\uADF8\uC778\uD560 \uC218 \uC5C6\uAC8C \uB429\uB2C8\uB2E4. \uB610\uD55C \uBAA8\uB4E0 \uD50C\uB7EC\uADF8\uC778 \uC778\uC99D\uC11C\uAC00 \uC0AD\uC81C\uB418\uACE0 \uC7AC\uC124\uCE58\uAC00 \uD544\uC694\uD569\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C? \uD655\uC778\uD558\uB824\uBA74 \u0022yes\u0022\uB97C \uC785\uB825\uD558\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6305,11 +7048,11 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn",
-        "Value": "\r\n\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uBAA8\uB4E0 \uC124\uC815, \uC548\uC804 \uC800\uC7A5 \uB0B4\uC6A9, \uD50C\uB7EC\uADF8\uC778 \uBC0F \uB85C\uADF8\uAC00 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AC\uB77C\uC9D1\uB2C8\uB2E4.\r\n\uB2F9\uC2E0\uC758 \uC2A4\uCF00\uCE58\uC640 \uC18C\uC7AC\uB294 \uC81C\uAC70\uB418\uC9C0 \uC54A\uC9C0\uB9CC, \uC0AC\uC6A9\uC790 \uC800\uC7A5 \uB514\uB809\uD1A0\uB9AC\uB294 \uAE30\uBCF8\uAC12\uC73C\uB85C \uC7AC\uC124\uC815\uB429\uB2C8\uB2E4.\r\n\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC73C\uBA70, \uBAA8\uB4E0 \uC560\uD50C\uB9AC\uCF00\uC774\uC158 \uB370\uC774\uD130\uAC00 \uC601\uAD6C\uC801\uC73C\uB85C \uC190\uC2E4\uB429\uB2C8\uB2E4!\r\n\uC7AC\uC124\uC815 \uD6C4, \uC560\uD50C\uB9AC\uCF00\uC774\uC158\uC774 \uC790\uB3D9\uC73C\uB85C \uC885\uB8CC\uB429\uB2C8\uB2E4. \uCC98\uC74C\uBD80\uD130 \uB2E4\uC2DC \uAD6C\uC131\uD574\uC57C \uD569\uB2C8\uB2E4.\r\n\r\n\uD655\uC2E4\uD569\uB2C8\uAE4C? \uD655\uC778\uD558\uB824\uBA74 \u0022yes\u0022\uB97C \uC785\uB825\uD558\uC138\uC694.\r\n",
+        "Value": "\r\n\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uBAA8\uB4E0 \uC124\uC815, \uC548\uC804 \uC800\uC7A5 \uB0B4\uC6A9, \uD50C\uB7EC\uADF8\uC778 \uBC0F \uB85C\uADF8\uAC00 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AC\uB77C\uC9D1\uB2C8\uB2E4.\r\n\uB2F9\uC2E0\uC758 \uCD08\uC548 \uBC0F \uC18C\uC7AC\uB294 \uC81C\uAC70\uB418\uC9C0 \uC54A\uC9C0\uB9CC, \uC0AC\uC6A9\uC790 \uC800\uC7A5 \uB514\uB809\uD1A0\uB9AC\uB294 \uAE30\uBCF8\uAC12\uC73C\uB85C \uC7AC\uC124\uC815\uB429\uB2C8\uB2E4.\r\n\uB2F9\uC2E0\uC758 \uC0AC\uC6A9\uC790 ID\uB3C4 \uD568\uAED8 \uC7AC\uC124\uC815\uB418\uC5B4 \uC911\uC559 \uC18C\uC7AC \uC11C\uBC84\uC5D0\uC11C \uB354 \uC774\uC0C1 \uC720\uD6A8\uD558\uC9C0 \uC54A\uAC8C \uB429\uB2C8\uB2E4.\r\n\uC7AC\uC124\uC815 \uD6C4, \uC560\uD50C\uB9AC\uCF00\uC774\uC158\uC774 \uC790\uB3D9\uC73C\uB85C \uC885\uB8CC\uB429\uB2C8\uB2E4. \uCC98\uC74C\uBD80\uD130 \uB2E4\uC2DC \uAD6C\uC131\uD574\uC57C \uD569\uB2C8\uB2E4.\r\n\r\n\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC73C\uBA70, \uBAA8\uB4E0 \uC560\uD50C\uB9AC\uCF00\uC774\uC158 \uB370\uC774\uD130\uAC00 \uC601\uAD6C\uC801\uC73C\uB85C \uC190\uC2E4\uB429\uB2C8\uB2E4.\r\n\uD655\uC2E4\uD569\uB2C8\uAE4C? \uD655\uC778\uD558\uB824\uBA74 \u0022yes\u0022\uB97C \uC785\uB825\uD558\uC138\uC694.\r\n",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\uC8FC\uC758: \u0027yes\u0027\uB294 \uBC88\uC5ED\uD558\uC9C0 \uC54A\uC74C. \uC0AC\uC6A9\uC790\uAC00 \uC785\uB825\uD574\uC57C \uD558\uB294 \uB0B4\uC6A9\uC785\uB2C8\uB2E4.",
         "HasValidationErrors": false
       },
       {
@@ -6473,7 +7216,7 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn2",
-        "Value": "\uACBD\uACE0: \uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.\r\uBAA8\uB4E0 \uC124\uC815, \uC548\uC804 \uC800\uC7A5 \uB0B4\uC6A9, \uD50C\uB7EC\uADF8\uC778 \uBC0F \uB85C\uADF8\uAC00 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AC\uB77C\uC9D1\uB2C8\uB2E4.\r\uB2F9\uC2E0\uC758 \uCD08\uC548\uACFC \uC18C\uC7AC\uB294 \uC81C\uAC70\uB418\uC9C0 \uC54A\uC9C0\uB9CC, \uC0AC\uC6A9\uC790 \uC800\uC7A5 \uB514\uB809\uD1A0\uB9AC\uB294 \uAE30\uBCF8\uAC12\uC73C\uB85C \uC7AC\uC124\uC815\uB429\uB2C8\uB2E4.",
+        "Value": "\uACBD\uACE0: \uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.\r\uBAA8\uB4E0 \uC124\uC815, \uC548\uC804 \uC800\uC7A5 \uB0B4\uC6A9, \uD50C\uB7EC\uADF8\uC778 \uBC0F \uB85C\uADF8\uAC00 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AC\uB77C\uC9D1\uB2C8\uB2E4.\r\uB2F9\uC2E0\uC758 \uCD08\uC548\uACFC \uC18C\uC7AC\uB294 \uC81C\uAC70\uB418\uC9C0 \uC54A\uC9C0\uB9CC, \uC0AC\uC6A9\uC790 \uC800\uC7A5 \uB514\uB809\uD1A0\uB9AC\uB294 \uAE30\uBCF8\uAC12\uC73C\uB85C \uC7AC\uC124\uC815\uB429\uB2C8\uB2E4.\r\uB2F9\uC2E0\uC758 \uC0AC\uC6A9\uC790 ID\uB3C4 \uC7AC\uC124\uC815\uB429\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6629,7 +7372,7 @@
       },
       {
         "Id": "GeneralUI_DefaultTheme_OSDefault",
-        "Value": "\uC2DC\uC2A4\uD15C \uAE30\uBCF8\uAC12",
+        "Value": "\uC2DC\uC2A4\uD15C \uB530\uB77C\uD558\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7015,6 +7758,207 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_Title",
+        "Value": "\uCF54\uB371",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SelectProvider",
+        "Value": "FFmpeg \uB77C\uC774\uBE0C\uB7EC\uB9AC \uC81C\uACF5\uC790 \uC120\uD0DD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SelectProvider_Internal",
+        "Value": "\uB0B4\uBD80 FFmpeg \uB77C\uC774\uBE0C\uB7EC\uB9AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SubTitle",
+        "Value": "\uBE44\uB514\uC624 \uC778\uCF54\uB529 \uBC0F \uB514\uCF54\uB529 \uC635\uC158 \uAD6C\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_PreferredHWAccel",
+        "Value": "\uAC00\uB2A5\uD55C \uACBD\uC6B0 \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D \uC0AC\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_MigrateError",
+        "Value": "\uD30C\uC77C {name}\uC744(\uB97C) \uC774\uB3D9\uD560 \uB54C {Localized._ExceptionTemplate(ex)}\uC774(\uAC00) \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_MigrateError_Skip",
+        "Value": "\uAC74\uB108\uB6F0\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_FinishedWithConflict",
+        "Value": "\uC774\uC804 \uC791\uC5C5\uC774 \uC644\uB8CC\uB418\uC5C8\uC9C0\uB9CC, {n}\uAC1C\uC758 \uD30C\uC77C\uC774 \uC911\uBCF5\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC774 \uD30C\uC77C\uB4E4\uC740 \uC6D0\uB798 \uD3F4\uB354\uC5D0 \uADF8\uB300\uB85C \uC788\uC73C\uBA70, \uC9C1\uC811 \uCC98\uB9AC\uD574\uC57C \uD569\uB2C8\uB2E4.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_FinishedNoConflict",
+        "Value": "\uC774\uB3D9 \uC791\uC5C5\uC774 \uC131\uACF5\uC801\uC73C\uB85C \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC6D0\uBCF8 \uD3F4\uB354\uB97C \uC548\uC804\uD558\uAC8C \uC0AD\uC81C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r\n{Localized._OK}\uB97C \uD074\uB9AD\uD558\uC5EC \uC0AD\uC81C\uD558\uC138\uC694.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\uB9C8\uC774\uADF8\uB808\uC774\uC158 \uC791\uC5C5 \uC644\uB8CC \uD6C4 \uC6D0\uBCF8 \uD3F4\uB354 \uC0AD\uC81C\uB97C \uC548\uB0B4\uD558\uB294 \uBA54\uC2DC\uC9C0",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ExportPlugin_Select",
+        "Value": "\uB0B4\uBCF4\uB0BC \uD50C\uB7EC\uADF8\uC778\uC744 \uC120\uD0DD\uD558\uC138\uC694",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ExportPlugin",
+        "Value": "\uD50C\uB7EC\uADF8\uC778 \uB0B4\uBCF4\uB0B4\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions_Desc",
+        "Value": "{Localized.AppBrand}\uC758 \uBB38\uC81C\uB97C \uD574\uACB0\uD558\uB294 \uB370 \uB3C4\uC6C0\uC774 \uB418\uB294 \uC2E4\uC6A9\uC801\uC778 \uB3C4\uAD6C",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open_Android",
+        "Value": "\uC5F4\uB824 \uC788\uB294 \uD504\uB85C\uADF8\uB7A8\uC774 \uC5C6\uB2E4\uBA74, \uAE30\uAE30\uC758 \uD30C\uC77C \uAD00\uB9AC\uC790\uB97C \uC5F4\uACE0 \uB0B4\uBD80 \uC800\uC7A5\uC18C-\u003EAndroid-\u003Edata-\u003E{pfm}\uC73C\uB85C \uC774\uB3D9\uD558\uC5EC \uC0AC\uC6A9\uC790 \uB370\uC774\uD130\uB97C \uCC3E\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "pfm"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "pfm",
+            "Value": ""
+          }
+        ],
+        "Comment": "Android \uAE30\uAE30\uC5D0\uC11C \uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uB514\uB809\uD1A0\uB9AC\uB97C \uCC3E\uB294 \uBC29\uBC95\uC5D0 \uB300\uD55C \uC548\uB0B4\uBB38\uC785\uB2C8\uB2E4. \u0027pfm\u0027\uC740 \uD2B9\uC815 \uC560\uD50C\uB9AC\uCF00\uC774\uC158 \uD328\uD0A4\uC9C0 \uC774\uB984\uC744 \uB098\uD0C0\uB0B4\uB294 \uBCC0\uC218\uC785\uB2C8\uB2E4.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open_iDevices",
+        "Value": "\uAE30\uAE30\uC5D0\uC11C \u0027\uD30C\uC77C\u0027 \uC571\uC744 \uC5F4\uACE0, \u0027\uB0B4 {idiom}\u0027-\u003E{Localized.AppBrand}\uB85C \uC774\uB3D9\uD558\uBA74 \uC0AC\uC6A9\uC790 \uB370\uC774\uD130\uB97C \uCC3E\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "idiom"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "idiom",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions",
+        "Value": "\uC9C4\uB2E8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SaveCheckpoint",
+        "Value": "\uB80C\uB354\uB9C1 \uACFC\uC815\uC758 \uC911\uAC04 \uB370\uC774\uD130 \uC800\uC7A5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableScreenSaver",
+        "Value": "\uB80C\uB354\uB9C1 \uC778\uD130\uD398\uC774\uC2A4\uC758 \uD654\uBA74 \uBCF4\uD638\uAE30 \uD65C\uC131\uD654",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -7330,11 +8274,11 @@
       },
       {
         "Id": "General_UserData_SelectFolder_ConfirmReset",
-        "Value": "Confirmer la r\u00E9initialisation des donn\u00E9es utilisateur aux valeurs par d\u00E9faut ?",
+        "Value": "Confirmez-vous la r\u00E9initialisation du r\u00E9pertoire des donn\u00E9es utilisateur aux valeurs par d\u00E9faut ?",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Confirmation prompt for resetting user data to default values",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -7349,15 +8293,6 @@
       {
         "Id": "General_UserData_Subtitle",
         "Value": "Configurer vos donn\u00E9es et fichiers de ressources",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions",
-        "Value": "Diagnostic, d\u00E9veloppement et d\u00E9bogage",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7715,11 +8650,11 @@
       },
       {
         "Id": "Misc_ClearSafeStor_Warn",
-        "Value": "Attention : une fois que vous aurez effac\u00E9 le stockage s\u00E9curis\u00E9, vous ne pourrez plus vous connecter aux serveurs de ressources configur\u00E9s en mode liste blanche ; et tous les certificats des extensions seront supprim\u00E9s et devront \u00EAtre r\u00E9install\u00E9s. Voulez-vous vraiment continuer ? Tapez \u0022yes\u0022 pour confirmer.",
+        "Value": "Veuillez noter qu\u0027une fois que vous avez effac\u00E9 le stockage s\u00E9curis\u00E9, vous ne pourrez plus vous connecter aux serveurs de ressources centrales configur\u00E9s en mode liste blanche ; tous les certificats des extensions seront supprim\u00E9s et devront \u00EAtre r\u00E9install\u00E9s. Confirmez-vous vouloir continuer ? Tapez \u0022yes\u0022 pour confirmer.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u8B66\u544A\u4FE1\u606F\uFF1A\u6E05\u9664\u5B89\u5168\u5B58\u50A8\u7684\u540E\u679C\u3002\u6CE8\u610F\u4FDD\u7559\u201Cyes\u201D\u4E0D\u7FFB\u8BD1\u3002",
         "HasValidationErrors": false
       },
       {
@@ -7733,11 +8668,11 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn",
-        "Value": "\rCette action est irr\u00E9versible. Tous les param\u00E8tres, le contenu du coffre-fort, les extensions et les journaux seront d\u00E9finitivement supprim\u00E9s.\rVos brouillons et ressources ne seront pas supprim\u00E9s, mais le r\u00E9pertoire de stockage utilisateur sera r\u00E9initialis\u00E9 \u00E0 sa valeur par d\u00E9faut.\rCette op\u00E9ration ne peut pas \u00EAtre annul\u00E9e, toutes les donn\u00E9es de l\u0027application seront d\u00E9finitivement perdues !\rApr\u00E8s la r\u00E9initialisation, l\u0027application se fermera automatiquement. Vous devrez tout reconfigurer depuis le d\u00E9but.\r\r\u00CAtes-vous s\u00FBr ? Tapez \u0022yes\u0022 pour confirmer.\r",
+        "Value": "\rCette op\u00E9ration est irr\u00E9versible. Tous les param\u00E8tres, le contenu stock\u00E9 en s\u00E9curit\u00E9, les extensions et les journaux seront d\u00E9finitivement supprim\u00E9s.\rVos brouillons et ressources ne seront pas supprim\u00E9s, mais votre r\u00E9pertoire de stockage utilisateur sera r\u00E9initialis\u00E9 aux valeurs par d\u00E9faut.\rVotre identifiant utilisateur sera \u00E9galement r\u00E9initialis\u00E9, ce qui vous rendra invalide sur le serveur central de ressources.\rApr\u00E8s la r\u00E9initialisation, l\u0027application se fermera automatiquement. Vous devrez tout reconfigurer depuis le d\u00E9but.\r\rCette action ne peut pas \u00EAtre annul\u00E9e, toutes les donn\u00E9es de l\u0027application seront d\u00E9finitivement perdues.\r\u00CAtes-vous s\u00FBr ? Tapez \u0022yes\u0022 pour confirmer.\r",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Ne pas traduire \u0022yes\u0022 - c\u0027est ce que l\u0027utilisateur doit saisir",
         "HasValidationErrors": false
       },
       {
@@ -7901,7 +8836,7 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn2",
-        "Value": "\rAvertissement : Cette action est irr\u00E9versible.\rTous les param\u00E8tres, le contenu du coffre-fort, les extensions et les journaux seront d\u00E9finitivement supprim\u00E9s.\rVos brouillons et ressources ne seront pas supprim\u00E9s, mais le r\u00E9pertoire de stockage utilisateur sera r\u00E9initialis\u00E9 \u00E0 sa valeur par d\u00E9faut.\r",
+        "Value": "Avertissement : Cette action est irr\u00E9versible.\r\nTous les param\u00E8tres, le contenu du coffre-fort, les extensions et les journaux seront d\u00E9finitivement supprim\u00E9s.\r\nVos brouillons et ressources ne seront pas supprim\u00E9s, mais votre r\u00E9pertoire utilisateur sera r\u00E9initialis\u00E9 aux valeurs par d\u00E9faut.\r\nVotre ID utilisateur sera \u00E9galement r\u00E9initialis\u00E9.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8057,7 +8992,7 @@
       },
       {
         "Id": "GeneralUI_DefaultTheme_OSDefault",
-        "Value": "Par d\u00E9faut du syst\u00E8me",
+        "Value": "Suivre le syst\u00E8me",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8443,6 +9378,207 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_Title",
+        "Value": "Codec",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SelectProvider",
+        "Value": "S\u00E9lectionner le fournisseur de biblioth\u00E8que FFmpeg",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SelectProvider_Internal",
+        "Value": "Biblioth\u00E8que FFmpeg interne",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SubTitle",
+        "Value": "Options de configuration pour le codage et le d\u00E9codage vid\u00E9o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_PreferredHWAccel",
+        "Value": "Utiliser l\u0027acc\u00E9l\u00E9ration mat\u00E9rielle si possible",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_MigrateError",
+        "Value": "Une erreur s\u0027est produite lors du d\u00E9placement du fichier {name} : {Localized._ExceptionTemplate(ex)}. Voulez-vous continuer ?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_MigrateError_Skip",
+        "Value": "Ignorer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_FinishedWithConflict",
+        "Value": "La migration est termin\u00E9e, mais {n} fichier(s) sont en conflit (doublons). Ils sont rest\u00E9s dans le dossier d\u0027origine. Vous devez les g\u00E9rer manuellement.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Traduction de l\u0027alerte indiquant que la migration est termin\u00E9e avec des fichiers en double laiss\u00E9s dans le dossier source, n\u00E9cessitant une action manuelle de l\u0027utilisateur.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_FinishedNoConflict",
+        "Value": "La migration a \u00E9t\u00E9 effectu\u00E9e avec succ\u00E8s. Le dossier source peut maintenant \u00EAtre supprim\u00E9 en toute s\u00E9curit\u00E9.\r\nCliquez sur {Localized._OK} pour le supprimer.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ExportPlugin_Select",
+        "Value": "S\u00E9lectionnez un plugin pour l\u0027exportation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ExportPlugin",
+        "Value": "Exporter le plugin",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions_Desc",
+        "Value": "Outil pratique pour aider \u00E0 r\u00E9soudre les probl\u00E8mes de {Localized.AppBrand}",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open_Android",
+        "Value": "Si aucune application n\u0027est ouverte, vous pouvez ouvrir le gestionnaire de fichiers de l\u0027appareil, acc\u00E9der \u00E0 Stockage interne -\u003E Android -\u003E data -\u003E {pfm}, et vous trouverez les donn\u00E9es utilisateur.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "pfm"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "pfm",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open_iDevices",
+        "Value": "Ouvrez l\u0027application \u00AB Fichiers \u00BB sur votre appareil, acc\u00E9dez \u00E0 \u00AB Mon {idiom} \u00BB -\u003E {Localized.AppBrand} pour trouver les donn\u00E9es utilisateur.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "idiom"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "idiom",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions",
+        "Value": "Diagnostic",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SaveCheckpoint",
+        "Value": "Enregistrer les donn\u00E9es interm\u00E9diaires du processus de rendu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableScreenSaver",
+        "Value": "Activer l\u0027\u00E9conomiseur d\u0027\u00E9cran de l\u0027interface de rendu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -8758,11 +9894,11 @@
       },
       {
         "Id": "General_UserData_SelectFolder_ConfirmReset",
-        "Value": "\u786E\u8BA4\u6B32\u590D\u7528\u6237\u6570\u636E\u4E3A\u9ED8\u8BA4\u503C\u4E4E\uFF1F",
+        "Value": "\u786E\u8BA4\u8981\u5C06\u7528\u6237\u6570\u636E\u76EE\u5F55\u91CD\u7F6E\u4E3A\u9ED8\u8BA4\u503C\u5417\uFF1F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Confirm whether to restore user data to default values",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -8781,15 +9917,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u914D\u7F6E\u7528\u6237\u6570\u636E\u53CA\u8D44\u6E90\u6587\u4EF6\u4E4B\u6587\u8A00\u8868\u8FF0",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Misc_DiagOptions",
-        "Value": "\u8BCA\u5BDF\u3001\u5F00\u7269\u3001\u8C03\u6821",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Diagnostic, development and debugging options in classical Chinese style",
         "HasValidationErrors": false
       },
       {
@@ -9143,11 +10270,11 @@
       },
       {
         "Id": "Misc_ClearSafeStor_Warn",
-        "Value": "\u8C28\u544A\uFF1A\u82E5\u6E05\u5B89\u5168\u5B58\u50A8\uFF0C\u5219\u4E0D\u5F97\u767B\u767D\u540D\u5355\u6A21\u5F0F\u4E4B\u7D20\u6750\u670D\u52A1\u5668\uFF1B\u4E14\u8BF8\u63D2\u4EF6\u8BC1\u4E66\u5C3D\u5220\uFF0C\u987B\u91CD\u88C5\u4E4B\u3002\u5C14\u786E\u6B32\u7EED\u4E4E\uFF1F\u8BF7\u8F93\u5165\u2018yes\u2019\u4EE5\u786E\u3002",
+        "Value": "\u8BF7\u6CE8\u610F\uFF0C\u4E00\u65E6\u6E05\u9664\u5B89\u5168\u5B58\u50A8\uFF0C\u4F60\u5C06\u65E0\u6CD5\u767B\u5F55\u81F3\u914D\u7F6E\u4E86\u767D\u540D\u5355\u6A21\u5F0F\u7684\u4E2D\u592E\u7D20\u6750\u670D\u52A1\u5668\uFF1B\u4E14\u6240\u6709\u63D2\u4EF6\u8BC1\u4E66\u5747\u5C06\u88AB\u5220\u9664\uFF0C\u5E76\u9700\u91CD\u65B0\u5B89\u88C5\u3002\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F\u8F93\u5165\u201Cyes\u201D\u4EE5\u786E\u8BA4\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u7559\u2018yes\u2019\u539F\u8BCD\u672A\u8BD1\uFF0C\u56E0\u7528\u6237\u9700\u8F93\u5165\u6B64\u8BCD",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -9161,7 +10288,7 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn",
-        "Value": "\r\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\u3002\u6240\u6709\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u3001\u63D2\u4EF6\u4E0E\u65E5\u5FD7\u5747\u5C06\u6C38\u4E45\u6D88\u5931\u3002\r\u4F60\u7684\u8349\u7A3F\u4E0E\u7D20\u6750\u4E0D\u4F1A\u88AB\u79FB\u9664\uFF0C\u4F46\u7528\u6237\u5B58\u50A8\u76EE\u5F55\u4F1A\u88AB\u91CD\u7F6E\u4E3A\u9ED8\u8BA4\u503C\u3002\r\u6B64\u64CD\u4F5C\u65E0\u6CD5\u88AB\u64A4\u9500\uFF0C\u6240\u6709\u5E94\u7528\u6570\u636E\u4F1A\u6C38\u4E45\u6D88\u5931\uFF01\r\u91CD\u7F6E\u4E4B\u540E\uFF0C\u5E94\u7528\u7A0B\u5E8F\u4F1A\u81EA\u52A8\u9000\u51FA\u3002\u4F60\u9700\u8981\u4ECE\u5934\u5F00\u59CB\u914D\u7F6E\u3002\r\r\u4F60\u786E\u8BA4\u5417\uFF1F\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u3002\r",
+        "Value": "\r\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u3002\u6240\u6709\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u4E4B\u7269\u3001\u63D2\u4EF6\u53CA\u65E5\u5FD7\u5C06\u6C38\u901D\u3002\r\u6C5D\u4E4B\u8349\u7A3F\u4E0E\u7D20\u6750\u4E0D\u79FB\uFF0C\u7136\u7528\u6237\u5B58\u50A8\u76EE\u5F55\u5C06\u590D\u4E3A\u9ED8\u8BA4\u3002\r\u6C5D\u4E4B\u7528\u6237ID\u4EA6\u5C06\u91CD\u7F6E\uFF0C\u81F4\u4F7F\u4E2D\u592E\u7D20\u6750\u670D\u52A1\u5668\u4E2D\u6C5D\u6548\u65E0\u6548\u3002\r\u91CD\u7F6E\u4E4B\u540E\uFF0C\u5E94\u7528\u7A0B\u5E8F\u81EA\u9000\u3002\u6C5D\u9700\u4ECE\u5934\u914D\u7F6E\u3002\r\r\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\uFF0C\u6240\u6709\u5E94\u7528\u6570\u636E\u6C38\u901D\u3002\r\u6C5D\u786E\u8BA4\u4E4E\uFF1F\u8F93\u5165\u0022yes\u0022\u4EE5\u786E\u8BA4\u3002\r",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9329,11 +10456,11 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn2",
-        "Value": "\u8B66\u544A\uFF1A\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\u3002\r\u6240\u6709\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u3001\u63D2\u4EF6\u4E0E\u65E5\u5FD7\u5C06\u6C38\u4E45\u6D88\u5931\u3002\r\u6C5D\u4E4B\u8349\u7A3F\u4E0E\u7D20\u6750\u4E0D\u4F1A\u88AB\u79FB\u9664\uFF0C\u7136\u7528\u6237\u5B58\u50A8\u76EE\u5F55\u5C06\u91CD\u7F6E\u4E3A\u9ED8\u8BA4\u503C\u3002",
+        "Value": "\u8B66\uFF1A\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u3002\r\u6240\u6709\u8BBE\u7F6E\u3001\u5B89\u50A8\u4E4B\u7269\u3001\u63D2\u4EF6\u5E76\u65E5\u5FD7\uFF0C\u7686\u5C06\u6C38\u901D\u3002\r\u6C5D\u4E4B\u7A3F\u672C\u4E0E\u7D20\u6750\u4E0D\u9664\uFF0C\u7136\u7528\u6237\u50A8\u5F55\u5C06\u590D\u4E3A\u9ED8\u8BA4\u3002\r\u6C5D\u4E4B\u7528\u6237\u6807\u8BC6\u4EA6\u5C06\u91CD\u7F6E\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u5C06\u73B0\u4EE3\u4E2D\u6587\u8B66\u544A\u4FE1\u606F\u7FFB\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u4FDD\u6301\u539F\u610F\u5E76\u7B26\u5408\u6587\u8A00\u6587\u7B80\u6D01\u98CE\u683C",
         "HasValidationErrors": false
       },
       {
@@ -9485,7 +10612,7 @@
       },
       {
         "Id": "GeneralUI_DefaultTheme_OSDefault",
-        "Value": "\u7CFB\u7EDF\u9ED8\u5B9A",
+        "Value": "\u4F9D\u7CFB\u7EDF\u5236",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9866,6 +10993,207 @@
       {
         "Id": "Advanced_UseSystemFont",
         "Value": "\u7528\u7CFB\u7EDF\u9884\u8BBE\u5B57\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_Title",
+        "Value": "\u7F16\u89E3\u4E4B\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SelectProvider",
+        "Value": "\u9009\u62E9 FFmpeg \u5E93\u63D0\u4F9B\u8005",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SelectProvider_Internal",
+        "Value": "\u5185\u7F6EFFmpeg\u5E93",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_SubTitle",
+        "Value": "\u89C6\u9891\u7F16\u89E3\u7801\u9009\u9879\u4E4B\u8BBE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "GeneralCodec_PreferredHWAccel",
+        "Value": "\u52A1\u7528\u786C\u4F53\u589E\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_MigrateError",
+        "Value": "\u79FB\u6587{name}\u65F6\uFF0C\u906D{Localized._ExceptionTemplate(ex)}\uFF0C\u7EED\u4E4E\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "Exception",
+            "Value": "ex"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "ex",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF1A\u79FB\u52A8\u6587\u4EF6\u65F6\u9047\u5230\u9519\u8BEF\uFF0C\u8BE2\u95EE\u662F\u5426\u7EE7\u7EED",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_MigrateError_Skip",
+        "Value": "\u8DF3\u8FC7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_FinishedWithConflict",
+        "Value": "\u8FC1\u79FB\u4E8B\u6BD5\uFF0C\u7136\u6709{n}\u6587\u4EF6\u76F8\u590D\u3002\u5F7C\u4ECD\u5904\u539F\u5323\uFF0C\u9700\u541B\u81EA\u5904\u4E4B\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_SelectFolder_FinishedNoConflict",
+        "Value": "\u8FC1\u79FB\u64CD\u4F5C\u5DF2\u6BD5\uFF0C\u6E90\u6587\u4EF6\u5939\u53EF\u5B89\u5168\u5220\u4E4B\u3002\u70B9\u51FB{Localized._OK}\u4EE5\u9664\u4E4B\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ExportPlugin_Select",
+        "Value": "\u9009\u62E9\u4E00\u4E2A\u63D2\u4EF6\u6765\u5BFC\u51FA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ExportPlugin",
+        "Value": "\u5BFC\u51FA\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions_Desc",
+        "Value": "\u89E3 {Localized.AppBrand} \u7591\u96BE\u4E4B\u5B9E\u7528\u5177",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open_Android",
+        "Value": "\u82E5\u65E0\u7A0B\u5F0F\u542F\uFF0C\u53EF\u542F\u8BBE\u5907\u4E4B\u6863\u518C\u53F8\uFF0C\u8F6C\u81F3\u5185\u50A8-\u003EAndroid-\u003Edata-\u003E{pfm}\uFF0C\u4E43\u5F97\u89C1\u7528\u6237\u6570\u636E\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "pfm"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "pfm",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6307\u5BFC\u7528\u6237\u5BFB\u627E\u7528\u6237\u6570\u636E\u76EE\u5F55\u4E4B\u64CD\u4F5C\u6B65\u9AA4",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_UserData_Open_iDevices",
+        "Value": "\u542F\u8BBE\u5907\u4E4B\u2018\u6587\u4EF6\u2019\u5E94\u7528\uFF0C\u5F80\u2018\u543E\u4E4B{idiom}\u2019-\u003E{Localized.AppBrand}\uFF0C\u4E43\u5F97\u7528\u6237\u6570\u636E\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "idiom"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "idiom",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6307\u5BFC\u7528\u6237\u4E8E\u8BBE\u5907\u4E2D\u5BFB\u7528\u6237\u6570\u636E\u4E4B\u6B65\u9AA4\uFF0C\u6587\u8A00\u8BD1\u4E4B\uFF0C\u529B\u6C42\u7B80\u96C5\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Misc_DiagOptions",
+        "Value": "\u8BCA\u5BDF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_SaveCheckpoint",
+        "Value": "\u5B58\u6E32\u67D3\u4E2D\u9053\u4E4B\u6570",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableScreenSaver",
+        "Value": "\u542F\u6E32\u67D3\u754C\u9762\u4E4B\u5C4F\u4FDD\u7A0B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

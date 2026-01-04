@@ -55,6 +55,8 @@ using projectFrameCut.MetalAccelerater;
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
 using projectFrameCut.Render.AndroidOpenGL;
 using Microsoft.Maui.Platform;
+using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Core;
 
 #endif
 
@@ -3165,6 +3167,10 @@ public partial class DraftPage : ContentPage
     bool playbackDone = false;
     private async void PlayPauseButton_Clicked(object sender, EventArgs e)
     {
+#if ANDROID
+        await Toast.Make(new PlatformNotSupportedException().Message, ToastDuration.Long).Show();
+        return;
+#endif
         isPlaying = !isPlaying;
         if (isPlaying)
         {
@@ -3352,7 +3358,7 @@ public partial class DraftPage : ContentPage
             }
         }
         await Save();
-        PlayheadLine.HeightRequest = TracksAndClipsLayout.Height - AddTrackButton.Height - 10;
+        PlayheadLine.HeightRequest = SubTrackContentGrid.Height - AddTrackButton.Height - 10;
         var d = DraftImportAndExportHelper.ExportFromDraftPage(this);
         SetStateBusy();
         SetStatusText(Localized.DraftPage_ApplyingChanges);

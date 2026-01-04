@@ -346,6 +346,10 @@ namespace projectFrameCut.PropertyPanel
         /// <summary>
         /// Adds a separate line (based on <seealso cref="BoxView"/>) to the property panel.
         /// </summary>
+        public PropertyPanelBuilder AddSeparator() => AddSeparator(null, "");
+        /// <summary>
+        /// Adds a separate line (based on <seealso cref="BoxView"/>) to the property panel.
+        /// </summary>
         public PropertyPanelBuilder AddSeparator(Action<BoxView>? BoxViewSetter = null, string id = "")
         {
             var boxView = new BoxView
