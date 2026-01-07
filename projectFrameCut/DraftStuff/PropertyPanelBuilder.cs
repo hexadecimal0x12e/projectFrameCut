@@ -175,7 +175,11 @@ namespace projectFrameCut.PropertyPanel
             };
             var label = title.LabelConfigure();
             Properties[Id] = defaultValue;
-            checkbox.CheckedChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, e.Value);
+            checkbox.CheckedChanged += async (s, e) =>
+            {
+                await Task.Delay(350); //let animation go
+                pppcea.CreateAndInvoke(this, Id, e.Value);
+            };
             CheckboxSetter?.Invoke(checkbox);
             var grid = new Grid
             {
@@ -693,6 +697,54 @@ namespace projectFrameCut.PropertyPanel
             return this;
         }
 
+        /// <summary>
+        /// Appends child items conditionally.
+        /// </summary>
+        /// <param name="condition"></param>
+        /// <param name="appender"></param>
+        /// <returns></returns>
+        public PropertyPanelBuilder AppendWhen(bool condition, Action<PropertyPanelBuilder> appender)
+        {
+            if (condition)
+            {
+                appender(this);
+            }
+            return this;
+        }
+        /// <summary>
+        /// Appends child items conditionally.
+        /// </summary>
+        /// <param name="condition"></param>
+        /// <param name="appender"></param>
+        /// <returns></returns>
+        public PropertyPanelBuilder AppendWhen(bool condition, Action<PropertyPanelBuilder> onTrue, Action<PropertyPanelBuilder> onFalse)
+        {
+            if (condition)
+            {
+                onTrue(this);
+            }
+            else
+            {
+                onFalse(this);
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Append each item in the source collection.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="source"></param>
+        /// <param name="appender"></param>
+        /// <returns></returns>
+        public PropertyPanelBuilder Foreach<T>(IEnumerable<T> source, Action<PropertyPanelBuilder, T> appender)
+        {
+            foreach (var item in source)
+            {
+                appender(this, item);
+            }
+            return this;
+        }
 
         /// <summary>
         /// Get the final <seealso cref="VerticalStackLayout"/> of the panel created by this builder.

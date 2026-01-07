@@ -18,7 +18,9 @@ namespace projectFrameCut.Render.Plugin;
 
 public class InternalPluginBase : IPluginBase
 {
-    public string PluginID => "projectFrameCut.Render.Plugins.InternalPluginBase";
+    public const string InternalPluginBaseID = "projectFrameCut.Render.Plugins.InternalPluginBase";
+
+    public string PluginID => InternalPluginBaseID;
 
     public int PluginAPIVersion => 1;
 

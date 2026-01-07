@@ -197,7 +197,7 @@ namespace projectFrameCut.DraftStuff
                     cont,
                     element.RightHandle
                 },
-                    ColumnDefinitions =
+                ColumnDefinitions =
                 {
                     new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) },
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
@@ -208,6 +208,11 @@ namespace projectFrameCut.DraftStuff
             element.Clip.BindingContext = element;
             element.LeftHandle.BindingContext = element;
             element.RightHandle.BindingContext = element;
+
+            if (!string.IsNullOrWhiteSpace(element.displayName))
+            {
+                ToolTipProperties.SetText(element.Clip, element.displayName);
+            }
 
             return element;
         }
@@ -230,7 +235,7 @@ namespace projectFrameCut.DraftStuff
             return ClipMode.Special; // fallback
         }
 
-        public static Brush DetermineAssetColor(ClipMode? mode) 
+        public static Brush DetermineAssetColor(ClipMode? mode)
         {
             return mode switch
             {
@@ -242,7 +247,7 @@ namespace projectFrameCut.DraftStuff
                 _ => new SolidColorBrush(Colors.Gray),
             };
         }
-        public static Brush DetermineAssetColor(AssetType type, ClipMode? mode = null) 
+        public static Brush DetermineAssetColor(AssetType type, ClipMode? mode = null)
         {
             return type switch
             {

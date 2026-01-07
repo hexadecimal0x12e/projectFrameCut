@@ -20,6 +20,14 @@ namespace projectFrameCut.LivePreview
         public string? ProxyRoot;
         public event Action<double, TimeSpan>? OnProgressChanged;
 
+        public bool IsFrameRendered(uint frameIndex)
+        {
+            if (Clips == null) return false;
+            var frameHash = Timeline.GetFrameHash(Clips, frameIndex);
+            var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{frameHash}.png");
+            return Path.Exists(destPath);
+        }
+
         public string RenderFrame(uint frameIndex, int targetWidth, int targetHeight)
         {
             ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");

@@ -57,6 +57,7 @@ using projectFrameCut.Render.AndroidOpenGL;
 using Microsoft.Maui.Platform;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
+using Android.Content.Res;
 
 #endif
 
@@ -95,6 +96,7 @@ public partial class DraftPage : ContentPage
     DropGestureRecognizer fileDropGesture = new();
 
     int trackCount = 0;
+    double _startPreviewHeight = 0;
     double tracksZoomOffest = 1d;
 
     string popupShowingDirection = "none";
@@ -156,6 +158,8 @@ public partial class DraftPage : ContentPage
     public ICommand ClosePopupCommand { get; private set; }
     public ICommand PlayPauseCommand { get; private set; }
     public ICommand CleanRenderCacheCommand { get; private set; }
+    public ICommand PlayheadMoveRightCommand { get; private set; }
+    public ICommand PlayheadMoveLeftCommand { get; private set; }
     #endregion
 
     #region options
@@ -179,6 +183,9 @@ public partial class DraftPage : ContentPage
     public int DefaultPreviewWidth { get; set; } = 1280;
     public int DefaultPreviewHeight { get; set; } = 720;
     public string ProxyOption { get; set; }
+    public double PreviewAreaHeight { get; set; } = 250;
+    public bool AutoSavePreviewAreaHeight { get; set; } = true;
+
 
     #endregion
 
@@ -200,6 +207,8 @@ public partial class DraftPage : ContentPage
         ClosePopupCommand = new Command(async () => await HidePopup());
         PlayPauseCommand = new Command(async () => PlayPauseButton_Clicked(this, EventArgs.Empty));
         CleanRenderCacheCommand = new Command(async () => await CleanRenderCache());
+        PlayheadMoveLeftCommand = new Command(async () => await MovePlayhead(-10));
+        PlayheadMoveRightCommand = new Command(async () => await MovePlayhead(10));
         InitializeComponent();
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
         ClipEditorHost.Content = ClipEditor;
@@ -233,6 +242,8 @@ public partial class DraftPage : ContentPage
         ClosePopupCommand = new Command(async () => await HidePopup());
         PlayPauseCommand = new Command(async () => PlayPauseButton_Clicked(this, EventArgs.Empty));
         CleanRenderCacheCommand = new Command(async () => await CleanRenderCache());
+        PlayheadMoveLeftCommand = new Command(async () => await MovePlayhead(-10));
+        PlayheadMoveRightCommand = new Command(async () => await MovePlayhead(10));
         InitializeComponent();
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
         ClipEditorHost.Content = ClipEditor;
@@ -340,12 +351,33 @@ public partial class DraftPage : ContentPage
 
     private async void DraftPage_Loaded(object? sender, EventArgs e)
     {
+        if (UpperContent.Children[0] is Grid previewGrid && PreviewAreaHeight > 100)
+        {
+            if (AutoSavePreviewAreaHeight)
+            {
+                var heightString = SettingsManager.GetSetting("Edit_UpperContentHeight", "250");
+                var height = double.TryParse(heightString, out var h1) ? h1 : 250;
+                previewGrid.HeightRequest = height;
+                ClipEditor?.HeightRequest = height - 10;
+            }
+            else
+            {
+                previewGrid.HeightRequest = PreviewAreaHeight;
+                ClipEditor?.HeightRequest = PreviewAreaHeight - 10;
+            }
+        }
+
         PlayheadLine.TranslationX = TrackHeadLayout.Width;
         if (AlwaysShowToolbarBtns || !OperatingSystem.IsWindows()) AddToolbarBtns();
         if (Width < Height) RightMenuBar.IsVisible = false;
 
         //PlayheadLine.TranslationY = UpperContent.Height - RulerLayout.Height;
         RulerLayout.GestureRecognizers.Add(rulerTapGesture);
+        // Added by Copilot to support resizing UpperContent
+        PanGestureRecognizer rulerPanGesture = new();
+        rulerPanGesture.PanUpdated += RulerPanUpdated;
+        RulerLayout.GestureRecognizers.Add(rulerPanGesture);
+
         PlayheadLine.HeightRequest = Tracks.Count * ClipHeight;
         Window.SizeChanged += Window_SizeChanged;
         var bgTap = new TapGestureRecognizer();
@@ -416,6 +448,7 @@ public partial class DraftPage : ContentPage
 #endif
 
         if (!Tracks.Any()) AddATrack(0);
+        UpdatePlayheadHeight();
     }
 
     #endregion
@@ -705,6 +738,7 @@ public partial class DraftPage : ContentPage
             TrackHeadLayout.Children.Remove(head);
             TrackContentLayout.Children.Remove(content);
             Tracks.TryRemove(currentTrack, out _);
+            UpdatePlayheadHeight();
         };
 
         optsBtn.Clicked += (s, e) =>
@@ -718,6 +752,7 @@ public partial class DraftPage : ContentPage
         TrackHeadLayout.Children.Insert(TrackHeadLayout.Count, head);
         TrackContentLayout.Children.Add(content);
         trackCount++;
+        UpdatePlayheadHeight();
     }
 
     public void AddASubTrack(int trackId)
@@ -817,6 +852,7 @@ public partial class DraftPage : ContentPage
             SubTrackHeadLayout.Children.Remove(head);
             SubTrackContentLayout.Children.Remove(content);
             Tracks.TryRemove(currentTrack, out _);
+            UpdatePlayheadHeight();
         };
 
         optsBtn.Clicked += (s, e) =>
@@ -826,6 +862,7 @@ public partial class DraftPage : ContentPage
 
         SubTrackHeadLayout.Children.Add(head);
         SubTrackContentLayout.Children.Add(content);
+        UpdatePlayheadHeight();
     }
 
     private async void AddClip_Clicked(object sender, EventArgs e)
@@ -2416,6 +2453,34 @@ public partial class DraftPage : ContentPage
     }
 
 
+    private void RulerPanUpdated(object? sender, PanUpdatedEventArgs e)
+    {
+        if (UpperContent.Children[0] is not Grid previewGrid) return;
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                _startPreviewHeight = previewGrid.Height;
+                break;
+            case GestureStatus.Running:
+                var h = _startPreviewHeight + (Denoise ? Ydenoiser.Process(e.TotalY) : e.TotalY);
+                if (h < 100) h = 100;
+
+                var pageHeight = Height > 0 ? Height : WindowSize.Height;
+                if (pageHeight > 220 && h > pageHeight - 100) h = pageHeight - 100;
+
+                previewGrid.HeightRequest = h;
+                if (ClipEditor is not null) ClipEditor.HeightRequest = h - 10;
+                PreviewAreaHeight = h;
+                break;  
+            case GestureStatus.Completed:
+                if (AutoSavePreviewAreaHeight)
+                {
+                    SettingsManager.WriteSetting("Edit_UpperContentHeight", PreviewAreaHeight.ToString());
+                }
+                break;
+        }
+    }
+
     #endregion
 
     #region drag and drop
@@ -2479,9 +2544,9 @@ public partial class DraftPage : ContentPage
             MainUpperContent.Children.Add(new VerticalStackLayout
             {
                 Children =
-            {
-                content
-            },
+                {
+                    content
+                },
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Center
             });
@@ -2541,12 +2606,9 @@ public partial class DraftPage : ContentPage
 
     private async Task ShowClipPopup(Border clipBorder, ClipElementUI clip)
     {
-#if ANDROID
         OverlayLayer.IsVisible = true;
-#endif
-#if iDevices
         OverlayLayer.InputTransparent = false;
-#endif
+
         var existing = OverlayLayer.Children.FirstOrDefault(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle");
         if (existing != null)
         {
@@ -2758,10 +2820,10 @@ public partial class DraftPage : ContentPage
         OverlayLayer.GestureRecognizers?.Remove(fileDropGesture);
         OverlayLayer.InputTransparent = true;
         await Task.WhenAll(HideClipPopup(), HideFullscreenPopup());
-#if ANDROID || iDevices
+
         OverlayLayer.IsVisible = false;
         OverlayLayer.InputTransparent = true;
-#endif
+
     }
 
     private async Task HideClipPopup()
@@ -2795,10 +2857,10 @@ public partial class DraftPage : ContentPage
     private async Task ShowAFullscreenPopupInBottom(double height, View content)
     {
         popupShowingDirection = "bottom";
-#if ANDROID || iDevices
+
         OverlayLayer.IsVisible = true;
         OverlayLayer.InputTransparent = false;
-#endif
+
         var size = WindowSize;
 
         Popup = new Border
@@ -2834,10 +2896,10 @@ public partial class DraftPage : ContentPage
     private async Task ShowAFullscreenPopupInRight(double width, View content)
     {
         popupShowingDirection = "right";
-#if ANDROID || iDevices
+
         OverlayLayer.IsVisible = true;
         OverlayLayer.InputTransparent = false;
-#endif
+
         var size = WindowSize;
 
         Popup = new Border
@@ -2873,12 +2935,15 @@ public partial class DraftPage : ContentPage
     private async Task ShowACenteredPopup(double desiredHeight, double desiredWidth, View content)
     {
         popupShowingDirection = "dialog";
-#if ANDROID || iDevices
+
         OverlayLayer.IsVisible = true;
         OverlayLayer.InputTransparent = false;
-#endif
 
-        var size = WindowSize;
+
+        var size = new Size(OverlayLayer.Width, OverlayLayer.Height);
+        if (size.Width <= 0 || size.Height <= 0) size = new Size(this.Width, this.Height);
+        if (size.Width <= 0 || size.Height <= 0) size = WindowSize;
+
         if (double.IsNaN(size.Width) || size.Width <= 0) size.Width = this.Width;
         if (double.IsNaN(size.Height) || size.Height <= 0) size.Height = this.Height;
         if (double.IsNaN(size.Width) || size.Width <= 0) size.Width = 1000;
@@ -3126,8 +3191,10 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region live preview
+    SemaphoreSlim renderingLock = new(1, 1);
     private async Task RenderOneFrame(uint duration, int? width = null, int? height = null)
     {
+        await renderingLock.WaitAsync();
         _currentFrame = duration;
         SetStateBusy();
         SetStatusText(Localized.DraftPage_RenderOneFrame((int)duration, TimeSpan.FromSeconds(duration * SecondsPerFrame)));
@@ -3160,9 +3227,14 @@ public partial class DraftPage : ContentPage
             SetStateFail(Localized._ExceptionTemplate(ex));
             await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(duration, ex), Localized._OK);
         }
+        finally
+        {
+            renderingLock.Release();
+        }
     }
 
     CancellationTokenSource? _playbackCts;
+    CancellationTokenSource? _movePlayheadDebounceCts;
     bool isPlaying = false;
     bool playbackDone = false;
     private async void PlayPauseButton_Clicked(object sender, EventArgs e)
@@ -3170,7 +3242,7 @@ public partial class DraftPage : ContentPage
 #if ANDROID
         await Toast.Make(new PlatformNotSupportedException().Message, ToastDuration.Long).Show();
         return;
-#endif
+#else
         isPlaying = !isPlaying;
         if (isPlaying)
         {
@@ -3201,6 +3273,7 @@ public partial class DraftPage : ContentPage
             await PauseLivePreview();
             SetStateOK();
         }
+#endif
 
     }
     MediaElement LivePreviewPlayer = new();
@@ -3328,7 +3401,7 @@ public partial class DraftPage : ContentPage
         {
             if (cd.ElapsedMilliseconds < 500) return;
             cd.Restart();
-            SetStateBusy(Localized._ProcessingWithProg(p));
+            SetStatusText(Localized._ProcessingWithProg(p));
         }
         previewer.OnProgressChanged += progChanged;
         var path = await previewer.RenderSomeFrames((int)_currentFrame, LiveVideoPreviewBufferLength, (int)(previewWidth / LivePreviewResolutionFactor), (int)(previewHeight / LivePreviewResolutionFactor), (int)ProjectInfo.targetFrameRate, ct);
@@ -3358,7 +3431,7 @@ public partial class DraftPage : ContentPage
             }
         }
         await Save();
-        PlayheadLine.HeightRequest = SubTrackContentGrid.Height - AddTrackButton.Height - 10;
+        UpdatePlayheadHeight();
         var d = DraftImportAndExportHelper.ExportFromDraftPage(this);
         SetStateBusy();
         SetStatusText(Localized.DraftPage_ApplyingChanges);
@@ -3453,6 +3526,61 @@ public partial class DraftPage : ContentPage
         UpdatePlayheadPosition(e.ScrollX);
     }
 
+    private async Task MovePlayhead(int deltaFrames)
+    {
+        var targetFrame = _currentFrame + deltaFrames;
+        if (targetFrame < 0) targetFrame = 0;
+        _currentFrame = targetFrame;
+
+        UpdatePlayheadPosition();
+
+        var timeX = FrameToPixel((uint)_currentFrame);
+
+        // Auto Scroll
+        var scrollX = TimelineScrollView.ScrollX;
+        var viewportWidth = TimelineScrollView.Width;
+
+        if (viewportWidth > 0)
+        {
+            double margin = 50;
+
+            if (timeX < scrollX + margin)
+            {
+                await TimelineScrollView.ScrollToAsync(Math.Max(0, timeX - margin), 0, true);
+                // After scrolling, the playhead position (overlay) needs update? 
+                // The ScrollView.Scrolled event usually handles this, but calling it manually ensures sync.
+                UpdatePlayheadPosition();
+            }
+            else if (timeX > scrollX + viewportWidth - margin)
+            {
+                await TimelineScrollView.ScrollToAsync(timeX - viewportWidth + margin, 0, true);
+                UpdatePlayheadPosition();
+            }
+        }
+
+        // Render Logic
+        _movePlayheadDebounceCts?.Cancel();
+
+        if (previewer.IsFrameRendered((uint)_currentFrame))
+        {
+            await RenderOneFrame((uint)_currentFrame);
+        }
+        else
+        {
+            _movePlayheadDebounceCts = new CancellationTokenSource();
+            var token = _movePlayheadDebounceCts.Token;
+            try
+            {
+                await Task.Delay(200, token);
+                if (!token.IsCancellationRequested)
+                {
+                    await RenderOneFrame((uint)_currentFrame);
+                }
+            }
+            catch (TaskCanceledException) { }
+        }
+    }
+
     private void UpdatePlayheadPosition() => UpdatePlayheadPosition(TimelineScrollView.ScrollX);
 
     private void UpdatePlayheadPosition(double scrollX)
@@ -3460,6 +3588,11 @@ public partial class DraftPage : ContentPage
         double timeX = FrameToPixel((uint)_currentFrame);
         double screenX = timeX + TrackHeadLayout.Width - scrollX;
         PlayheadLine.TranslationX = screenX;
+    }
+
+    private void UpdatePlayheadHeight()
+    {
+        PlayheadLine.HeightRequest = (TrackContentLayout.Children.Count + SubTrackContentLayout.Children.Count) * ClipHeight;
     }
 
     private void UpdateTimelineWidth()
@@ -3823,7 +3956,7 @@ public partial class DraftPage : ContentPage
                     string[] type = ["right", "bottom","center","dialog"];
                     var select = await DisplayActionSheetAsync("info", "select", null, type);
                     await ShowAPopup(content: BuildPropertyPanel(_selected), border: _selected?.Clip, clip:_selected, mode: select);
-                }) 
+                })
             },
             {
                 "Debug_ComposeAudio", new Command(() =>
@@ -3853,7 +3986,7 @@ public partial class DraftPage : ContentPage
     private async void OnExportedClick(object sender, EventArgs e)
     {
         await Save(true);
-        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this,true);
+        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, true);
         var page = new RenderPage(WorkingPath, ProjectDuration, ProjectInfo, draft);
         await Dispatcher.DispatchAsync(async () =>
         {
@@ -3870,13 +4003,7 @@ public partial class DraftPage : ContentPage
 
     private async void SettingsClick(object sender, EventArgs e)
     {
-        await Navigation.PushAsync(new ContentPage
-        {
-            Content = new ScrollView
-            {
-                Content = BuildPropertyPanel(_selected ?? new())
-            }
-        });
+        await ShowAPopup(new DraftSettingPage(this).Content, mode: "dialog");
     }
 
     private async void ResolutionPicker_SelectedIndexChanged(object sender, EventArgs e)
@@ -4072,12 +4199,20 @@ public partial class DraftPage : ContentPage
         WindowSize = new(w, h);
         LogDiagnostic($"Window size changed: {w:F0} x {h:F0} (DIP)");
         UpdateTimelineWidth();
+        UpdatePlayheadPosition();
         if (IsSyncCooldown()) return;
         SetSyncCooldown();
         if (popupShowingDirection != "none")
         {
-            await HidePopup();
-            await ShowAPopup(Popup.Content);
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                try
+                {
+                    await HidePopup();
+                    await ShowAPopup(Popup.Content);
+                }
+                catch { }
+            });
         }
 
     }

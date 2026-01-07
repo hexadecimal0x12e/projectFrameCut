@@ -98,7 +98,9 @@ public partial class AdvancedSettingPage : ContentPage
         .AddSwitch("LogUIMessageToLogger", SettingLocalizedResources.Advanced_LogUIMessageToLogger, SettingsManager.IsBoolSettingTrue("LogUIMessageToLogger"))
         .AddSwitch("UseSystemFont", SettingLocalizedResources.Advanced_UseSystemFont, SettingsManager.IsBoolSettingTrue("UseSystemFont"))
         .AddSeparator()
-        .AddText(SettingLocalizedResources.Advanced_ExportPlugin)
+        .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
+        .AddSeparator()
+        .AddText(SettingLocalizedResources.Advanced_ExportPlugin,fontSize: 20)
         .AddPicker("exportPlugin", SettingLocalizedResources.Advanced_ExportPlugin_Select, projectFrameCut.Render.Plugin.PluginManager.LoadedPlugins.Select(c => c.Key).ToArray(), "")
         .AddSeparator()
         .AddButton(SettingLocalizedResources.Advanced_ResetUserID, async (s, e) =>

@@ -161,7 +161,6 @@ namespace projectFrameCut.Render.Rendering
                 {
                     if (Cache.Count == 0)
                     {
-                        Thread.Sleep(100);
                         continue;
                     }
 
@@ -175,10 +174,7 @@ namespace projectFrameCut.Render.Rendering
                         if (DoGCAfterEachWrite) GC.Collect();
                         Log($"[VideoBuilder] Frame #{index} wrote.");
                     }
-                    else
-                    {
-                        Thread.Sleep(200);
-                    }
+
                 }
                 while (running);
                 Thread.Sleep(50);

@@ -596,6 +596,8 @@ public partial class HomePage : ContentPage
                 page.DefaultPreviewWidth = int.TryParse(resolution.Split('x', 2)[0], out var w) ? w : 1280;
                 page.DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720;
                 page.ProxyOption = SettingsManager.GetSetting("Edit_ProxyOption", "none");
+                page.AutoSavePreviewAreaHeight = SettingsManager.IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave");
+                page.PreviewAreaHeight = double.TryParse(SettingsManager.GetSetting("Edit_UpperContentHeight", "250"), out var upperHeight) ? upperHeight : 250d;
 #if WINDOWS
                 Context context = Context.CreateDefault();
                 var devices = context.Devices.ToList();
@@ -790,7 +792,7 @@ public partial class HomePage : ContentPage
         }
         catch { }
 
-        if(!SettingsManager.IsSettingExists("UserName") || string.IsNullOrWhiteSpace(SettingsManager.GetSetting("UserName", "")))
+        if (!SettingsManager.IsSettingExists("UserName") || string.IsNullOrWhiteSpace(SettingsManager.GetSetting("UserName", "")))
         {
             try
             {

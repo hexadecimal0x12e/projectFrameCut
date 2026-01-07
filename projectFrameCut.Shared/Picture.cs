@@ -484,6 +484,7 @@ namespace projectFrameCut.Shared
         //[DebuggerNonUserCode()]
         public Picture16bpp Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
         {
+            if (targetWidth == Width && targetHeight == Height) return this;
             lock (this)
             {
                 if (targetWidth <= 0 || targetHeight <= 0) throw new ArgumentException("targetWidth and targetHeight must be positive");
@@ -499,9 +500,8 @@ namespace projectFrameCut.Shared
                     double s = Math.Min(sx, sy);
                     destW = Math.Max(1, (int)Math.Round(Width * s));
                     destH = Math.Max(1, (int)Math.Round(Height * s));
+                    if (destW == Width && destH == Height) return this;
                 }
-
-                if (destW == Width && destH == Height) return this;
 
                 var result = new Picture(destW, destH);
                 int dstPixels = checked(destW * destH);
@@ -963,6 +963,7 @@ namespace projectFrameCut.Shared
         [DebuggerNonUserCode()]
         public Picture8bpp Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
         {
+            if (targetWidth == Width && targetHeight == Height) return this;
             lock (this)
             {
                 if (targetWidth <= 0 || targetHeight <= 0) throw new ArgumentException("targetWidth and targetHeight must be positive");
@@ -978,9 +979,9 @@ namespace projectFrameCut.Shared
                     double s = Math.Min(sx, sy);
                     destW = Math.Max(1, (int)Math.Round(Width * s));
                     destH = Math.Max(1, (int)Math.Round(Height * s));
+                    if (destW == Width && destH == Height) return this;
                 }
 
-                if (destW == Width && destH == Height) return this;
 
                 var result = new Picture8bpp(destW, destH);
                 int dstPixels = checked(destW * destH);

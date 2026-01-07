@@ -83,6 +83,18 @@ namespace projectFrameCut.Render.Plugin
             return fallback;
         }
 
+        public static string GetLocalizationItemInSpecificPlugin(this IPluginBase src, string key, string fallback)
+        {
+            var localizedString = src.ReadLocalizationItem(key, CurrentLocale);
+            if (!string.IsNullOrEmpty(localizedString))
+            {
+                return localizedString;
+            }
+            return fallback;
+        }
+
+
+
         public static IClip CreateClip(JsonElement source)
         {
             var type = source.GetProperty("FromPlugin").GetString();

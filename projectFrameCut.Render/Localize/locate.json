@@ -52,6 +52,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "_PluginBase_Description_",
+        "Value": "\u4F5C\u4E3A projectFrameCut \u7684\u4E00\u90E8\u5206\uFF0C\u63D0\u4F9B projectFrameCut \u7684\u57FA\u672C\u529F\u80FD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_PluginBase_Name_",
+        "Value": "projectFrameCut \u57FA\u7840\u7EC4\u4EF6\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "_StartX",
         "Value": "\u8D77\u59CB X \u8F74\u5750\u6807",
         "Mode": "ConstString",
@@ -116,16 +132,170 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "_PluginBase_Name_",
-        "Value": "projectFrameCut \u57FA\u7840\u7EC4\u4EF6\u63D2\u4EF6",
+        "Id": "General_LocationX",
+        "Value": "X \u8F74\u5750\u6807",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
       },
       {
-        "Id": "_PluginBase_Description_",
-        "Value": "\u4F5C\u4E3A projectFrameCut \u7684\u4E00\u90E8\u5206\uFF0C\u63D0\u4F9B projectFrameCut \u7684\u57FA\u672C\u529F\u80FD",
+        "Id": "General_LocationY",
+        "Value": "Y \u8F74\u5750\u6807",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Effect",
+        "Value": "\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationAndSize",
+        "Value": "\u4F4D\u7F6E\u548C\u5927\u5C0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_SpeedRatio",
+        "Value": "\u901F\u5EA6\u548C\u53D8\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_DisplayColor",
+        "Value": "\u663E\u793A\u989C\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_Add_Title",
+        "Value": "\u6DFB\u52A0\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_GeneralEffect",
+        "Value": "\u6807\u51C6\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_ContinuousEffect",
+        "Value": "\u8FDE\u7EED\u6027\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_VariableArgumentEffect",
+        "Value": "\u52A8\u6001\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_RemoveColor",
+        "Value": "\u79FB\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Place",
+        "Value": "\u653E\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Crop",
+        "Value": "\u88C1\u5207",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Resize",
+        "Value": "\u7F29\u653E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_ZoomIn",
+        "Value": "\u62C9\u8FD1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Jitter",
+        "Value": "\u6296\u52A8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_FromPlugin",
+        "Value": "{prev}\uFF0C\u6765\u81EA\u63D2\u4EF6\u300C{name}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "prev"
+          },
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "prev",
+            "Value": ""
+          },
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_RenderOrder",
+        "Value": "\u6548\u679C\u6E32\u67D3\u987A\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_RenderOrder_Hint",
+        "Value": "\u4F60\u77E5\u9053\u5417\uFF1F\u4F60\u53EF\u4EE5\u4F7F\u7528\u62D6\u52A8\u6765\u6539\u53D8\u987A\u5E8F\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

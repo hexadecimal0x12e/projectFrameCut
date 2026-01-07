@@ -421,6 +421,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Edit_ShowAllEffects",
+        "Value": "\u5728\u5C5E\u6027\u9762\u677F\u91CC\u663E\u793A\u6240\u6709\u7684Effect\uFF08\u5305\u62EC\u5185\u90E8Effect\u548C\u4E2D\u95F4Effect\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "General_Language",
         "Value": "\u8BED\u8A00/Language",
         "Mode": "ConstString",
@@ -1477,6 +1485,46 @@
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
         "Value": "\u9009\u62E9\u7528\u4E8E\u7F16\u8F91\u65F6\u786C\u4EF6\u52A0\u901F\u7684GPU",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "\u9884\u89C8/\u5C5E\u6027\u533A\u57DF\u7684\u9AD8\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "\u81EA\u52A8\u4FDD\u5B58\u9884\u89C8/\u5C5E\u6027\u533A\u57DF\u7684\u9AD8\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "\u7BA1\u7406\u9884\u89C8\u7684\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MiscOption",
+        "Value": "\u6742\u9879",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3100,6 +3148,60 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ShowAllEffects",
+        "Value": "Unset localization item:Edit_ShowAllEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "Unset localization item:Edit_UpperContentHeight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "Unset localization item:Edit_UpperContentHeight_AutoSave()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "Unset localization item:Edit_PreviewOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "Unset localization item:Edit_PreviewOption_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MiscOption",
+        "Value": "Unset localization item:Edit_MiscOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -4718,6 +4820,60 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ShowAllEffects",
+        "Value": "Unset localization item:Edit_ShowAllEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "Unset localization item:Edit_UpperContentHeight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "Unset localization item:Edit_UpperContentHeight_AutoSave()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "Unset localization item:Edit_PreviewOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "Unset localization item:Edit_PreviewOption_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MiscOption",
+        "Value": "Unset localization item:Edit_MiscOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -6339,6 +6495,60 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ShowAllEffects",
+        "Value": "Unset localization item:Edit_ShowAllEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "Unset localization item:Edit_UpperContentHeight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "Unset localization item:Edit_UpperContentHeight_AutoSave()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "Unset localization item:Edit_PreviewOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "Unset localization item:Edit_PreviewOption_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MiscOption",
+        "Value": "Unset localization item:Edit_MiscOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -7958,6 +8168,60 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ShowAllEffects",
+        "Value": "Unset localization item:Edit_ShowAllEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "Unset localization item:Edit_UpperContentHeight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "Unset localization item:Edit_UpperContentHeight_AutoSave()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "Unset localization item:Edit_PreviewOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "Unset localization item:Edit_PreviewOption_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MiscOption",
+        "Value": "Unset localization item:Edit_MiscOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -9579,6 +9843,60 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ShowAllEffects",
+        "Value": "Unset localization item:Edit_ShowAllEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "Unset localization item:Edit_UpperContentHeight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "Unset localization item:Edit_UpperContentHeight_AutoSave()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "Unset localization item:Edit_PreviewOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "Unset localization item:Edit_PreviewOption_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MiscOption",
+        "Value": "Unset localization item:Edit_MiscOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -11198,6 +11516,60 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ShowAllEffects",
+        "Value": "Unset localization item:Edit_ShowAllEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "Unset localization item:Edit_UpperContentHeight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "Unset localization item:Edit_UpperContentHeight_AutoSave()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "Unset localization item:Edit_PreviewOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "Unset localization item:Edit_PreviewOption_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MiscOption",
+        "Value": "Unset localization item:Edit_MiscOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]

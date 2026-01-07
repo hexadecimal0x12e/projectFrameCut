@@ -572,7 +572,7 @@ public partial class RenderPage : ContentPage
             VideoBuilder builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt)
             {
                 EnablePreview = true,
-                DoGCAfterEachWrite = true,
+                DoGCAfterEachWrite = (int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var value1) ? value1 : 0) > 0,
                 DisposeFrameAfterEachWrite = true,
                 Duration = duration
             };
@@ -586,6 +586,35 @@ public partial class RenderPage : ContentPage
                 LogState = false,
                 LogStatToLogger = true,
                 GCOption = (int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var value) ? value : 0)
+            };
+
+            var memInfo = GC.GetGCMemoryInfo();
+            if (memInfo.TotalAvailableMemoryBytes > 0)
+            {
+                renderer.MemoryThresholdBytes = (long)(memInfo.TotalAvailableMemoryBytes * 0.8);
+            }
+
+            Log($"Available memory for rendering: {memInfo.TotalAvailableMemoryBytes / 1024 / 1024} MB, set memory threshold to {renderer.MemoryThresholdBytes / 1024 / 1024} MB.");
+
+            renderer.OnLowMemory += async (r) =>
+            {
+                await Dispatcher.DispatchAsync(async () =>
+                {
+                    r.ClearCaches();
+                    bool resume = await DisplayAlert("Memory Low",
+                        $"System memory is running low (Usage > {r.MemoryThresholdBytes / 1024 / 1024} MB). Rendering paused and resources cleaned. Do you want to continue?",
+                        "Continue", "Stop");
+
+                    if (resume)
+                    {
+                        r.IsPaused = false;
+                    }
+                    else
+                    {
+                        _cts.Cancel();
+                        r.IsPaused = false;
+                    }
+                });
             };
 
             renderer.OnProgressChanged += (p, etr) =>
