@@ -93,6 +93,7 @@ public partial class AssetsLibraryPage : ContentPage
 
     public async Task AddAsset(string path)
     {
+       
         await AssetDatabase.Add(path, this);
         if (BindingContext is AssetViewModel vm)
         {

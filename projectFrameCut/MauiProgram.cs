@@ -493,10 +493,20 @@ namespace projectFrameCut
                         fonts.AddFont("HarmonyOS_Sans_Bold.ttf", "Font_Semibold");
                     });
                 }
+                try
+                {
+                    MessagingServices.Init();
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "init messaging service", CreateMauiApp);
+                }
 
                 try
                 {
-                    List<IPluginBase> plugins = [new InternalPluginBase()];
+                    var internalBase = new InternalPluginBase();
+                    internalBase.MessagingQueue = MessagingServices.MessagingService;
+                    List<IPluginBase> plugins = new() { internalBase };
 #if ANDROID
                     plugins.Add(new OpenGLPlugin());
 #elif WINDOWS
@@ -529,7 +539,12 @@ namespace projectFrameCut
                     Log(ex, "Load plugins", CreateMauiApp);
                     try
                     {
-                        PluginManager.Init([new InternalPluginBase()]);
+                        if (!PluginManager.Inited)
+                        {
+                            PluginManager.Init([new InternalPluginBase()]);
+                            PluginService.FailedLoadPlugin.Add("<No plugin ID available>", $"Plugin engine fail to init. ({ex})");
+
+                        }
                     }
                     catch (Exception ex1)
                     {

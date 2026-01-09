@@ -2,25 +2,22 @@ using FFmpeg.AutoGen;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Threading;
+using System.Text.RegularExpressions;
+using static projectFrameCut.Shared.Logger;
 
 namespace projectFrameCut.Render.EncodeAndDecode
 {
-    public sealed unsafe class DecoderContextHW : IVideoSource
+    public sealed unsafe partial class HttpDecoderContext : IVideoSource
     {
-        private readonly string _path;
+        private readonly string _url;
         private AVFormatContext* _fmt = null;
         private AVCodecContext* _codec = null;
-        private AVBufferRef* _hwDeviceCtx = null;
         private long _totalFrames;
         private SwsContext* _sws = null;
         private AVPacket* _pkt = null;
         private AVFrame* _frm = null;
-        private AVFrame* _swFrame = null;
         private AVFrame* _rgb = null;
         private byte* _rgbBuffer = null;
         private bool _eof = false;
@@ -31,8 +28,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private double _fps = 0.0;
         private int _currentFrameNumber = 0;
         private bool flushSent = false;
-        private AVPixelFormat _lastPixelFormat = AVPixelFormat.AV_PIX_FMT_NONE;
-        private AVHWDeviceType _hwDeviceType = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
 
         public bool Disposed { get; private set; }
         public bool Initialized { get; private set; } = false;
@@ -46,24 +41,27 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public int Height => _height;
 
         public uint Index { get; set; } = 0;
-        public string[] PreferredExtension => [".mp4", ".mov"];
+        public string[] PreferredExtension => []; //no extension to avoid auto-matching
 
         public int? ResultBitPerPixel => 8;
 
         public bool EnableLock { get; set; } = false;
         private Lock locker = new();
 
-        public DecoderContextHW(string path)
+        public HttpDecoderContext(string url)
         {
-            _path = path;
-            Initialize();
+            if (!string.IsNullOrWhiteSpace(url) && ProtocolUrlRegex().IsMatch(url))
+            {
+                _url = url.Split(',', 2)[1];
+                Initialize();
+            }
         }
 
-        public IVideoSource CreateNew(string newSource) => new DecoderContextHW(newSource);
+        public IVideoSource CreateNew(string newSource) => new HttpDecoderContext(newSource);
 
         public void Initialize()
         {
-            if (_path is null || Initialized) return;
+            if (_url is null || Initialized) return;
 
             try
             {
@@ -72,15 +70,16 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 fixed (AVFormatContext** fmtPtr = &_fmt)
                 {
-                    var averr = ffmpeg.avformat_open_input(fmtPtr, _path, null, null);
+                    // Open input from URL
+                    var averr = ffmpeg.avformat_open_input(fmtPtr, _url, null, null);
                     if (averr != 0)
                     {
-                        FFmpegHelper.DetectWhyCannotOpenVideo(_path, averr);
+                        FFmpegHelper.DetectWhyCannotOpenVideo(_url, averr);
                     }
                 }
 
                 if (ffmpeg.avformat_find_stream_info(_fmt, null) != 0)
-                    throw new InvalidDataException($"File '{_path}' seems don't like a multimedia file. Try install the encoder extension. If you continuously encountering this issue, try install ffmpeg toolkit on your computer, then run this command and observe whether there is any error message:\r\nffprobe {Path.GetFullPath(_path)}");
+                    throw new InvalidDataException($"Failed to retrieve stream info from '{_url}'.");
 
                 for (int i = 0; i < _fmt->nb_streams; i++)
                 {
@@ -92,7 +91,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 }
 
                 if (_videoStreamIndex < 0)
-                    throw new InvalidDataException($"File '{_path}' seems don't like a video file. Try install the encoder extension. If you continuously encountering this issue, try encode your video again to another format.");
+                    throw new InvalidDataException($"No video stream found in '{_url}'.");
 
                 AVCodecParameters* par = _fmt->streams[_videoStreamIndex]->codecpar;
                 AVCodec* codec = ffmpeg.avcodec_find_decoder(par->codec_id);
@@ -100,32 +99,17 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     throw new NotSupportedException("No suitable decoder found.");
 
                 _codec = ffmpeg.avcodec_alloc_context3(codec);
-                if (_codec == null) throw new InvalidOperationException("Failed to alloc a context for the Renderer.");
+                if (_codec == null) throw new InvalidOperationException("Failed to alloc codec context.");
 
                 ffmpeg.avcodec_parameters_to_context(_codec, par);
-
-                // Hardware Acceleration Init
-                _hwDeviceType = GetBestHWDeviceType();
-                if (_hwDeviceType != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
-                {
-                    AVBufferRef* hwDeviceCtx = null;
-                    if (ffmpeg.av_hwdevice_ctx_create(&hwDeviceCtx, _hwDeviceType, null, null, 0) >= 0)
-                    {
-                        _hwDeviceCtx = hwDeviceCtx;
-                        _codec->hw_device_ctx = ffmpeg.av_buffer_ref(_hwDeviceCtx);
-                    }
-                }
-
                 if (ffmpeg.avcodec_open2(_codec, codec, null) < 0)
                     throw new NotSupportedException("Failed to open decoder.");
 
                 _pkt = ffmpeg.av_packet_alloc();
                 _frm = ffmpeg.av_frame_alloc();
-                _swFrame = ffmpeg.av_frame_alloc();
                 _rgb = ffmpeg.av_frame_alloc();
-
-                if (_pkt == null || _frm == null || _rgb == null || _swFrame == null)
-                    throw new OutOfMemoryException($"Failed to allocate enough memory space.");
+                if (_pkt == null || _frm == null || _rgb == null)
+                    throw new OutOfMemoryException($"Failed to allocate memory for processing '{_url}'.");
 
                 _width = _codec->width;
                 _height = _codec->height;
@@ -137,6 +121,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     fr = _fmt->streams[_videoStreamIndex]->r_frame_rate;
 
                 _fps = fr.den != 0 ? ffmpeg.av_q2d(fr) : 0.0;
+
+                if (_width <= 0 || _height <= 0)
+                    throw new InvalidDataException($"Invalid video dimensions from '{_url}'.");
 
                 long nbFrames = (long)_fmt->streams[_videoStreamIndex]->nb_frames;
                 if (nbFrames <= 0)
@@ -156,11 +143,19 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 }
                 _totalFrames = nbFrames > 0 ? nbFrames : -1;
 
+                _sws = ffmpeg.sws_getContext(
+                    _width, _height, _codec->pix_fmt,
+                    _width, _height, AVPixelFormat.AV_PIX_FMT_BGR24,
+                    4, null, null, null); // 4 = SWS_BICUBIC
+
+                if (_sws == null)
+                    throw new InvalidOperationException("Failed to alloc sws context.");
+
                 int bufferSize = ffmpeg.av_image_get_buffer_size(AVPixelFormat.AV_PIX_FMT_BGR24, _width, _height, 1);
-                if (bufferSize <= 0) throw new OutOfMemoryException($"Failed to allocate enough memory space.");
+                if (bufferSize <= 0) throw new OutOfMemoryException("Failed to calculate buffer size.");
 
                 _rgbBuffer = (byte*)ffmpeg.av_malloc((ulong)bufferSize);
-                if (_rgbBuffer == null) throw new OutOfMemoryException($"Failed to allocate enough memory space.");
+                if (_rgbBuffer == null) throw new OutOfMemoryException("Failed to allocate RGB buffer.");
 
                 byte_ptrArray4 tmpData = default;
                 int_array4 tmpLinesize = default;
@@ -187,9 +182,12 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 _currentFrameNumber = 0;
                 _eof = false;
+
+                Log($"[HttpDecoderContext] Successfully initialized decoder for {_url}");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Log(ex, "Init HttpDecoderContext", this);
                 Dispose();
                 throw;
             }
@@ -199,35 +197,26 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
-        private AVHWDeviceType GetBestHWDeviceType()
-        {
-            var available = new List<AVHWDeviceType>();
-            var type = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
-            while ((type = ffmpeg.av_hwdevice_iterate_types(type)) != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
-            {
-                available.Add(type);
-            }
-
-            if (available.Contains(AVHWDeviceType.AV_HWDEVICE_TYPE_D3D11VA)) return AVHWDeviceType.AV_HWDEVICE_TYPE_D3D11VA;
-            if (available.Contains(AVHWDeviceType.AV_HWDEVICE_TYPE_DXVA2)) return AVHWDeviceType.AV_HWDEVICE_TYPE_DXVA2;
-            if (available.Contains(AVHWDeviceType.AV_HWDEVICE_TYPE_CUDA)) return AVHWDeviceType.AV_HWDEVICE_TYPE_CUDA;
-            if (available.Contains(AVHWDeviceType.AV_HWDEVICE_TYPE_VAAPI)) return AVHWDeviceType.AV_HWDEVICE_TYPE_VAAPI;
-            if (available.Contains(AVHWDeviceType.AV_HWDEVICE_TYPE_QSV)) return AVHWDeviceType.AV_HWDEVICE_TYPE_QSV;
-            
-            return available.Count > 0 ? available[0] : AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
-        }
-
         [DebuggerNonUserCode()]
-        public IPicture GetFrame(uint targetFrame, bool hasAlpha)
+        public IPicture GetFrame(uint targetFrame, bool hasAlpha = false)
         {
             if (EnableLock) locker.Enter();
+
             if (targetFrame < _currentFrameNumber)
             {
-                ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
-                ffmpeg.avcodec_flush_buffers(_codec);
-                _currentFrameNumber = 0;
-                _eof = false;
-                flushSent = false;
+                // Try seeking for HTTP stream; might fail depending on protocol/server
+                if (ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD) >= 0)
+                {
+                    ffmpeg.avcodec_flush_buffers(_codec);
+                    _currentFrameNumber = 0;
+                    _eof = false;
+                    flushSent = false;
+                }
+                else
+                {
+                    // Seeking failed, maybe try to reopen or just warn
+                    Log($"[HttpDecoderContext] Seek backward failed for {_url}. Continuing (might fail).", "warn");
+                }
             }
 
             while (true)
@@ -266,82 +255,56 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         }
                         continue;
                     }
-                    else if (ret == ffmpeg.AVERROR(ffmpeg.EAGAIN) || ret == ffmpeg.AVERROR_EOF)
+                    else if (ret == ffmpeg.AVERROR(ffmpeg.EAGAIN))
                     {
+                        break; // Need more input
+                    }
+                    else if (ret == ffmpeg.AVERROR_EOF)
+                    {
+                        if (_totalFrames < _currentFrameNumber)
+                        {
+                            goto not_found; 
+                        }
                         break;
                     }
-                    else if (_totalFrames < _currentFrameNumber)
+                    else
                     {
-                        goto not_found;
+                         // Error
+                         break;
                     }
-                    break;
                 }
 
                 if (_eof && flushSent)
-                    break;
+                {
+                    // If we reached EOF and flushed everything, and still didn't find the frame
+                    // Check if we are close enough to consider it done or fail
+                     goto not_found;
+                }
             }
 
         not_found:
             if (EnableLock) locker.Exit();
-            if (Math.Abs(targetFrame - TotalFrames) < 5)
+            if (Math.Abs(targetFrame - TotalFrames) < 5 && TotalFrames > 0)
             {
+                Log($"[HttpDecoderContext] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
                 return GetFrame(targetFrame - 1, hasAlpha);
             }
             double fps = _fps > 0 ? _fps : 1.0;
             double seconds = targetFrame / fps;
-            throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_path}'.");
+            throw new OverflowException($"Frame #{targetFrame} (timespan {TimeSpan.FromSeconds(seconds)}) not exist in video '{_url}'.");
 
         found:
             Index++;
-            AVFrame* srcFrame = _frm;
-
-            // Handle HW frame transfer
-            if (IsHWFormat((AVPixelFormat)_frm->format))
-            {
-                ffmpeg.av_frame_unref(_swFrame);
-                if (ffmpeg.av_hwframe_transfer_data(_swFrame, _frm, 0) >= 0)
-                {
-                    srcFrame = _swFrame;
-                }
-            }
-
-            // Initialize or re-initialize SWS context if format changed
-            if (_sws == null || _lastPixelFormat != (AVPixelFormat)srcFrame->format)
-            {
-                _lastPixelFormat = (AVPixelFormat)srcFrame->format;
-                if (_sws != null) ffmpeg.sws_freeContext(_sws);
-                
-                _sws = ffmpeg.sws_getContext(
-                    _width, _height, _lastPixelFormat,
-                    _width, _height, AVPixelFormat.AV_PIX_FMT_BGR24,
-                    4, null, null, null);
-            }
-
-            if (_sws != null)
-            {
-                ffmpeg.sws_scale(
-                    _sws,
-                    srcFrame->data,
-                    srcFrame->linesize,
-                    0,
-                    _height,
-                    _rgb->data,
-                    _rgb->linesize);
-            }
-
+            ffmpeg.sws_scale(
+                                _sws,
+                                _frm->data,
+                                _frm->linesize,
+                                0,
+                                _height,
+                                _rgb->data,
+                                _rgb->linesize);
             if (EnableLock) locker.Exit();
-            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame);
-        }
-
-        private bool IsHWFormat(AVPixelFormat fmt)
-        {
-            return fmt == AVPixelFormat.AV_PIX_FMT_D3D11 ||
-                   fmt == AVPixelFormat.AV_PIX_FMT_DXVA2_VLD ||
-                   fmt == AVPixelFormat.AV_PIX_FMT_CUDA ||
-                   fmt == AVPixelFormat.AV_PIX_FMT_VAAPI ||
-                   fmt == AVPixelFormat.AV_PIX_FMT_QSV ||
-                   fmt == AVPixelFormat.AV_PIX_FMT_VIDEOTOOLBOX ||
-                   fmt == AVPixelFormat.AV_PIX_FMT_MEDIACODEC;
+            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _url, targetFrame);
         }
 
         private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
@@ -353,7 +316,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 g = new byte[size],
                 b = new byte[size],
             };
-            result.ProcessStack = $"From video '{filePath}', frame #{frameIdx} (HW)";
+            result.ProcessStack = $"From video '{filePath}', frame #{frameIdx}";
             int idx, baseIndex, offset, x, y;
             byte* srcRow;
             for (y = 0; y < height; y++)
@@ -380,23 +343,19 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
             if (_rgbBuffer != null) { ffmpeg.av_free(_rgbBuffer); _rgbBuffer = null; }
             if (_rgb != null) { AVFrame* tmp = _rgb; _rgb = null; ffmpeg.av_frame_free(&tmp); }
-            if (_swFrame != null) { AVFrame* tmp = _swFrame; _swFrame = null; ffmpeg.av_frame_free(&tmp); }
             if (_frm != null) { AVFrame* tmp = _frm; _frm = null; ffmpeg.av_frame_free(&tmp); }
             if (_pkt != null) { AVPacket* tmp = _pkt; _pkt = null; ffmpeg.av_packet_free(&tmp); }
             if (_sws != null) { ffmpeg.sws_freeContext(_sws); _sws = null; }
-            if (_codec != null) { 
-                if (_hwDeviceCtx != null) {
-                    ffmpeg.av_buffer_unref(&_codec->hw_device_ctx);
-                }
-                AVCodecContext* tmp = _codec; _codec = null; ffmpeg.avcodec_free_context(&tmp); 
-            }
-            if (_hwDeviceCtx != null) { AVBufferRef* tmp = _hwDeviceCtx; _hwDeviceCtx = null; ffmpeg.av_buffer_unref(&tmp); }
+            if (_codec != null) { AVCodecContext* tmp = _codec; _codec = null; ffmpeg.avcodec_free_context(&tmp); }
             if (_fmt != null) { AVFormatContext* tmp = _fmt; _fmt = null; ffmpeg.avformat_close_input(&tmp); }
         }
 
-        ~DecoderContextHW()
+        ~HttpDecoderContext()
         {
             Dispose();
         }
+
+        [GeneratedRegex("#HttpDecoderContext+,[a-zA-Z][a-zA-Z0-9+.-]*://\\S+")]
+        private static partial Regex ProtocolUrlRegex();
     }
 }

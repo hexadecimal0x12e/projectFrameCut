@@ -93,7 +93,10 @@ namespace projectFrameCut.Render.Rendering
         {
             if (frame == null) throw new ArgumentNullException(nameof(frame));
             if (frame.Width != Width || frame.Height != Height)
-                throw new ArgumentException($"The result ({frame.filePath})'s size {frame.Width}*{frame.Height} is different from original size ({Width}*{Height}). Please check the source.");
+                throw new ArgumentException($"The result ({frame.filePath})'s size {frame.Width}*{frame.Height} is different from original size ({Width}*{Height}). Please check the source.")
+                {
+                    Data = { { "PictureObject", frame }, { "ProcessStack", frame.ProcessStack } }
+                };
 
             if (index > Duration)
             {

@@ -14,7 +14,6 @@ using System.Numerics;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using static projectFrameCut.Shared.IPicture;
-using static System.Net.Mime.MediaTypeNames;
 using Image = SixLabors.ImageSharp.Image;
 
 namespace projectFrameCut.Shared
@@ -77,6 +76,12 @@ namespace projectFrameCut.Shared
         /// if <see cref="Disposed"/> is null, this picture'll never be disposed.
         /// </remarks>
         public bool? Disposed { get; set; }
+
+        /// <summary>
+        /// Represents the internal SixLabors.ImageSharp.Image representation of this picture, if available.
+        /// </summary>
+        [JsonIgnore()]
+        public Image? SixLaborsImage { get; set; }
 
         /// <summary>
         /// Resize the picture. 
@@ -253,7 +258,8 @@ namespace projectFrameCut.Shared
         public bool hasAlphaChannel { get; set; } = false;
 
         public PicturePixelMode bitPerPixel => 16;
-
+        [JsonIgnore()]
+        public Image? SixLaborsImage { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the Picture class by copying the properties of an existing Picture.
@@ -369,6 +375,7 @@ namespace projectFrameCut.Shared
             Width = source.Width;
             Height = source.Height;
             Pixels = checked(Width * Height);
+            SixLaborsImage = source;
             r = new ushort[Pixels];
             g = new ushort[Pixels];
             b = new ushort[Pixels];
@@ -649,11 +656,11 @@ namespace projectFrameCut.Shared
 
         public IPicture ToBitPerPixel(PicturePixelMode bitPerPixel)
         {
-            if (bitPerPixel == 16)
+            if (bitPerPixel == PicturePixelMode.UShortPicture)
             {
                 return this;
             }
-            else if (bitPerPixel == 8)
+            else if (bitPerPixel == PicturePixelMode.BytePicture)
             {
                 var pic = new Picture8bpp(Width, Height)
                 {
@@ -744,6 +751,8 @@ namespace projectFrameCut.Shared
         public bool hasAlphaChannel { get; set; } = false;
 
         public PicturePixelMode bitPerPixel => 8;
+        [JsonIgnore()]
+        public Image? SixLaborsImage { get; set; }
 
 
         /// <summary>
@@ -848,6 +857,7 @@ namespace projectFrameCut.Shared
             Width = source.Width;
             Height = source.Height;
             Pixels = checked(Width * Height);
+            SixLaborsImage = source;
             r = new byte[Pixels];
             g = new byte[Pixels];
             b = new byte[Pixels];
@@ -1129,11 +1139,11 @@ namespace projectFrameCut.Shared
 
         public IPicture ToBitPerPixel(PicturePixelMode bitPerPixel)
         {
-            if (bitPerPixel == 8)
+            if (bitPerPixel == PicturePixelMode.BytePicture)
             {
                 return this;
             }
-            else if (bitPerPixel == 16)
+            else if (bitPerPixel == PicturePixelMode.UShortPicture)
             {
                 var pic = new Picture(Width, Height)
                 {
@@ -1435,8 +1445,9 @@ namespace projectFrameCut.Shared
         }
 
         //[DebuggerStepThrough()]
-        public static Image SaveToSixLaborsImage(this IPicture image, int resultPPB = 16, bool? saveAlpha = null)
+        public static Image SaveToSixLaborsImage(this IPicture image, int resultPPB = 16, bool? saveAlpha = null, bool force = false)
         {
+            if (image.SixLaborsImage is not null && !force) return image.SixLaborsImage;
             lock (image)
             {
                 IEnumerable<float> aa = image.hasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
@@ -1483,6 +1494,7 @@ namespace projectFrameCut.Shared
                 {
                     throw new NotSupportedException("Only 8bpp and 16bpp images are supported.");
                 }
+                image.SixLaborsImage = result;
                 return result;
             }
         }

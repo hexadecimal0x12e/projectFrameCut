@@ -70,7 +70,7 @@ namespace projectFrameCut.DraftStuff
             // Update mutable properties (Enabled and Index), preserve original if not provided
             newEffect.Enabled = enabled ?? effect.Enabled;
             newEffect.Index = index ?? effect.Index;
-            
+
             // Preserve Name which might be lost during recreation
             newEffect.Name = effect.Name;
 
@@ -263,6 +263,20 @@ namespace projectFrameCut.DraftStuff
 
             ppb.PropertyChanged += async (s, e) =>
             {
+                if (e.Id == "clipColor")
+                {
+                    if (e.Value == null || string.IsNullOrWhiteSpace(e.Value?.ToString()))
+                    {
+                        clip.ClipColor = null; // Reset to default
+                    }
+                    else
+                    {
+                        clip.ClipColor = e.Value?.ToString();
+                    }
+                    clip.ApplyClipColor();
+                    handler?.Invoke(s, e);
+                    return;
+                }
                 if (e.Id.StartsWith("place") || e.Id.StartsWith("resize"))
                 {
                     if (clip.Effects == null) clip.Effects = new Dictionary<string, IEffect>();
@@ -378,7 +392,7 @@ namespace projectFrameCut.DraftStuff
                     var effect = effectKvp.Value;
                     ppb.AddText(new TitleAndDescriptionLineLabel(effect.Name, localizedEffectDisplayName[effect.TypeName]));
                     ppb.AddCheckbox($"Effect|{effectKey}|Enabled", PPLocalizedResuorces._Enabled, effect.Enabled);
-                    ppb.AddEntry($"Effect|{effectKey}|Index", PPLocalizedResuorces.EffectProp_Index, effect.Index.ToString(), "-1");
+                    if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects")) ppb.AddEntry($"Effect|{effectKey}|Index", PPLocalizedResuorces.EffectProp_Index, effect.Index.ToString(), "-1");
                     foreach (var paramName in effect.ParametersNeeded)
                     {
                         if (!effect.ParametersType.TryGetValue(paramName, out var paramType)) continue;
@@ -424,20 +438,6 @@ namespace projectFrameCut.DraftStuff
 
             ppb.PropertyChanged += async (s, e) =>
             {
-                if (e.Id == "clipColor")
-                {
-                    if (e.Value == null || string.IsNullOrWhiteSpace(e.Value?.ToString()))
-                    {
-                        clip.ClipColor = null; // Reset to default
-                    }
-                    else
-                    {
-                        clip.ClipColor = e.Value?.ToString();
-                    }
-                    clip.ApplyClipColor();
-                    handler?.Invoke(s, e);
-                    return;
-                }
                 if (e.Id.StartsWith("Effect|"))
                 {
                     var parts = e.Id.Split('|');
@@ -530,6 +530,17 @@ namespace projectFrameCut.DraftStuff
                         {
                             string newKey = typeName;
                             if (clip.Effects == null) clip.Effects = new Dictionary<string, IEffect>();
+
+                            int maxIndex = 0;
+                            if (clip.Effects.Count > 0)
+                            {
+                                foreach (var item in clip.Effects.Values)
+                                {
+                                    if (item.Index >= maxIndex) maxIndex = item.Index + 1;
+                                }
+                            }
+                            newEffect.Index = maxIndex;
+
                             clip.Effects[newKey] = newEffect;
                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                             return;
@@ -551,7 +562,7 @@ namespace projectFrameCut.DraftStuff
 
             if (clip.Effects != null)
             {
-                foreach (var effectKvp in clip.Effects.Where(c => SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects") || !c.Value.Name.StartsWith("__Internal")).OrderBy(c => c.Value.Index))
+                foreach (var effectKvp in clip.Effects.Where(c => SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects") || c.Value.Name is null || !(c.Value.Name is not null && c.Value.Name.StartsWith("__Internal"))).OrderBy(c => c.Value.Index))
                 {
                     orderContainer.Children.Add(BuildEffectOrderItem(effectKvp.Key, effectKvp.Value, clip, localizedEffectDisplayName, handler));
                 }
@@ -576,7 +587,7 @@ namespace projectFrameCut.DraftStuff
                     new ColumnDefinition { Width = GridLength.Star }
                 },
                 Padding = new Thickness(5),
-                BackgroundColor = Colors.Transparent 
+                BackgroundColor = Colors.Transparent
             };
 
             var dragHandle = new Label
@@ -594,7 +605,7 @@ namespace projectFrameCut.DraftStuff
                 VerticalOptions = LayoutOptions.Center,
                 FontSize = 16
             };
-            
+
             // Add Index for clarity
             var indexLabel = new Label
             {
@@ -604,7 +615,7 @@ namespace projectFrameCut.DraftStuff
                 TextColor = Colors.Gray,
                 Margin = new Thickness(10, 0, 0, 0)
             };
-            
+
             var textStack = new HorizontalStackLayout
             {
                 Children = { nameLabel, indexLabel },
@@ -668,7 +679,15 @@ namespace projectFrameCut.DraftStuff
         {
             PropertyPanelBuilder ppb = new();
             ppb.AddEntry("speedRatio", Localized.PropertyPanel_General_SpeedRatio, clip.SecondPerFrameRatio.ToString(), "1");
-
+            ppb.AddButton("applyButton", Localized._Apply);
+            ppb.ListenToChanges(e =>
+            {
+                if(e.Id == "speedRatio")
+                {
+                    clip.SecondPerFrameRatio = float.TryParse(e.Value as string, out var result) ? result : 1;
+                    clip.ApplySpeedRatio();
+                }
+            });
             var panel = ppb.Build();
             return panel;
         }

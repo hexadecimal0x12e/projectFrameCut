@@ -18,6 +18,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using IPicture = projectFrameCut.Shared.IPicture;
+using projectFrameCut.Asset;
+
 
 
 
@@ -502,9 +504,11 @@ public partial class HomePage : ContentPage
                 Dictionary<string, string> notfounds = new();
                 foreach (var item in dict)
                 {
-                    if (!string.IsNullOrWhiteSpace(item.Value.sourcePath) && !item.Value.sourcePath.StartsWith('#') && !File.Exists(item.Value.sourcePath))
+                    if (!string.IsNullOrWhiteSpace(item.Value.sourcePath) && !File.Exists(item.Value.sourcePath))
                     {
-                        notfounds.Add(item.Value.displayName, item.Value.sourcePath);
+                        if (item.Value.sourcePath.StartsWith('#')) break;
+                        if (item.Value.sourcePath.StartsWith('$') && AssetDatabase.Assets.ContainsKey(item.Value.sourcePath.Substring(1))) break;
+                        notfounds.Add(item.Value.displayName, item.Value.sourcePath.StartsWith('$') ? $"Asset@{item.Value.sourcePath.Substring(1)}" : item.Value.sourcePath);
                     }
                 }
                 foreach (var item in assetDict)

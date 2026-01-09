@@ -1,7 +1,9 @@
 ﻿using projectFrameCut.Render;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
+using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing;
+using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
@@ -39,7 +41,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
 
         List<string> IEffect.ParametersNeeded => ParametersNeeded;
         Dictionary<string, string> IEffect.ParametersType => ParametersType;
-        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public string NeedComputer => "RemoveColorComputer";
 
 
@@ -200,7 +202,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
         List<string> IEffect.ParametersNeeded => ParametersNeeded;
         Dictionary<string, string> IEffect.ParametersType => ParametersType;
         public string? NeedComputer => null;
-        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -255,94 +257,32 @@ namespace projectFrameCut.Render.VideoMakeEngine
                 startY = (int)Math.Round((double)startY * targetHeight / RelativeHeight);
             }
 
-            if (source is IPicture<ushort> p16)
+            var srcImg = source.SaveToSixLaborsImage();
+
+            Image resultImg;
+            if (source.bitPerPixel == 16)
             {
-                Picture result = new Picture(targetWidth, targetHeight)
-                {
-                    r = new ushort[targetWidth * targetHeight],
-                    g = new ushort[targetWidth * targetHeight],
-                    b = new ushort[targetWidth * targetHeight],
-                    a = new float[targetWidth * targetHeight],
-                    hasAlphaChannel = true
-                };
-
-                bool sourceHasAlpha = p16.a != null && source.hasAlphaChannel;
-                int targetIndex = 0, sourceIndex = 0;
-                for (int y = 0; y < source.Height; y++)
-                {
-                    for (int x = 0; x < source.Width; x++)
-                    {
-                        if (!source.TryFromXYToArrayIndex(x, y, out sourceIndex))
-                        {
-                            continue;
-                        }
-
-                        if (!result.TryFromXYToArrayIndex(x + startX, y + startY, out targetIndex))
-                        {
-                            continue;
-                        }
-
-                        result.r[targetIndex] = p16.r[sourceIndex];
-                        result.g[targetIndex] = p16.g[sourceIndex];
-                        result.b[targetIndex] = p16.b[sourceIndex];
-
-                        float a = sourceHasAlpha ? p16.a![sourceIndex] : 1f;
-                        if (float.IsNaN(a) || float.IsInfinity(a)) a = 1f;
-                        if (a < 0f) a = 0f;
-                        if (a > 1f) a = 1f;
-                        result.a[targetIndex] = a;
-                    }
-                }
-
-                var srcStack = source.ProcessStack ?? string.Empty;
-                result.ProcessStack = $"{srcStack}\r\nPlace to ({startX},{startY}) with canvas size {targetWidth}*{targetHeight}\r\n";
-                return result;
+                var canvas = new Image<Rgba64>(targetWidth, targetHeight);
+                canvas.Mutate(x => x.DrawImage(srcImg, new Point(startX, startY), 1f));
+                resultImg = canvas;
             }
-            else if (source is IPicture<byte> p8)
+            else
             {
-                Picture8bpp result = new Picture8bpp(targetWidth, targetHeight)
-                {
-                    r = new byte[targetWidth * targetHeight],
-                    g = new byte[targetWidth * targetHeight],
-                    b = new byte[targetWidth * targetHeight],
-                    a = new float[targetWidth * targetHeight],
-                    hasAlphaChannel = true
-                };
-
-                bool sourceHasAlpha = p8.a != null && source.hasAlphaChannel;
-                int targetIndex = 0, sourceIndex = 0;
-                for (int y = 0; y < source.Height; y++)
-                {
-                    for (int x = 0; x < source.Width; x++)
-                    {
-                        if (!source.TryFromXYToArrayIndex(x, y, out sourceIndex))
-                        {
-                            continue;
-                        }
-
-                        if (!result.TryFromXYToArrayIndex(x + startX, y + startY, out targetIndex))
-                        {
-                            continue;
-                        }
-
-                        result.r[targetIndex] = p8.r[sourceIndex];
-                        result.g[targetIndex] = p8.g[sourceIndex];
-                        result.b[targetIndex] = p8.b[sourceIndex];
-
-                        float a = sourceHasAlpha ? p8.a![sourceIndex] : 1f;
-                        if (float.IsNaN(a) || float.IsInfinity(a)) a = 1f;
-                        if (a < 0f) a = 0f;
-                        if (a > 1f) a = 1f;
-                        result.a[targetIndex] = a;
-                    }
-                }
-
-                var srcStack = source.ProcessStack ?? string.Empty;
-                result.ProcessStack = $"{srcStack}\r\nPlace to ({startX},{startY}) with canvas size {targetWidth}*{targetHeight}\r\n";
-                return result;
+                var canvas = new Image<Rgba32>(targetWidth, targetHeight);
+                canvas.Mutate(x => x.DrawImage(srcImg, new Point(startX, startY), 1f));
+                resultImg = canvas;
             }
 
-            throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
+            IPicture result = (int)source.bitPerPixel switch
+            {
+                8 => new Picture8bpp(resultImg),
+                16 => new Picture16bpp(resultImg),
+                _ => throw new NotSupportedException($"Specific pixel-mode is not supported.")
+            };
+
+            var srcStack = source.ProcessStack ?? string.Empty;
+            result.ProcessStack = $"{srcStack}\r\nPlace to ({startX},{startY}) with canvas size {targetWidth}*{targetHeight}\r\n";
+            return result;
         }
 
     }
@@ -376,7 +316,7 @@ public class CropEffect : IEffect
     List<string> IEffect.ParametersNeeded => ParametersNeeded;
     Dictionary<string, string> IEffect.ParametersType => ParametersType;
     public string? NeedComputer => null;
-    public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+    public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
     public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -440,93 +380,19 @@ public class CropEffect : IEffect
             height = (int)Math.Round((double)height * targetHeight / RelativeHeight);
         }
 
-        if (source is IPicture<ushort> p16)
+        var rect = new Rectangle(startX, startY, width, height);
+        var resultImg = source.SaveToSixLaborsImage().Clone(x => x.Crop(rect));
+
+        IPicture result = (int)source.bitPerPixel switch
         {
-            Picture result = new Picture(width, height)
-            {
-                r = new ushort[width * height],
-                g = new ushort[width * height],
-                b = new ushort[width * height],
-                a = new float[width * height],
-                hasAlphaChannel = true
-            };
+            8 => new Picture8bpp(resultImg),
+            16 => new Picture16bpp(resultImg),
+            _ => throw new NotSupportedException($"Specific pixel-mode is not supported.")
+        };
 
-            bool sourceHasAlpha = p16.a != null && source.hasAlphaChannel;
-            int targetIndex = 0, sourceIndex = 0;
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    if (!source.TryFromXYToArrayIndex(x + startX, y + startY, out sourceIndex))
-                    {
-                        continue;
-                    }
-
-                    if (!result.TryFromXYToArrayIndex(x, y, out targetIndex))
-                    {
-                        continue;
-                    }
-
-                    result.r[targetIndex] = p16.r[sourceIndex];
-                    result.g[targetIndex] = p16.g[sourceIndex];
-                    result.b[targetIndex] = p16.b[sourceIndex];
-
-                    float a = sourceHasAlpha ? p16.a![sourceIndex] : 1f;
-                    if (float.IsNaN(a) || float.IsInfinity(a)) a = 1f;
-                    if (a < 0f) a = 0f;
-                    if (a > 1f) a = 1f;
-                    result.a[targetIndex] = a;
-                }
-            }
-
-            var srcStack = source.ProcessStack ?? string.Empty;
-            result.ProcessStack = $"{srcStack}\r\nCrop from ({startX},{startY}) with size {width}*{height}\r\n";
-            return result;
-        }
-        else if (source is IPicture<byte> p8)
-        {
-            Picture8bpp result = new Picture8bpp(width, height)
-            {
-                r = new byte[width * height],
-                g = new byte[width * height],
-                b = new byte[width * height],
-                a = new float[width * height],
-                hasAlphaChannel = true
-            };
-
-            bool sourceHasAlpha = p8.a != null && source.hasAlphaChannel;
-            int targetIndex = 0, sourceIndex = 0;
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    if (!source.TryFromXYToArrayIndex(x + startX, y + startY, out sourceIndex))
-                    {
-                        continue;
-                    }
-
-                    if (!result.TryFromXYToArrayIndex(x, y, out targetIndex))
-                    {
-                        continue;
-                    }
-
-                    result.r[targetIndex] = p8.r[sourceIndex];
-                    result.g[targetIndex] = p8.g[sourceIndex];
-                    result.b[targetIndex] = p8.b[sourceIndex];
-
-                    float a = sourceHasAlpha ? p8.a![sourceIndex] : 1f;
-                    if (float.IsNaN(a) || float.IsInfinity(a)) a = 1f;
-                    if (a < 0f) a = 0f;
-                    if (a > 1f) a = 1f;
-                    result.a[targetIndex] = a;
-                }
-            }
-
-            var srcStack = source.ProcessStack ?? string.Empty;
-            result.ProcessStack = $"{srcStack}\r\nCrop from ({startX},{startY}) with size {width}*{height}\r\n";
-            return result;
-        }
-        throw new NotSupportedException();
+        var srcStack = source.ProcessStack ?? string.Empty;
+        result.ProcessStack = $"{srcStack}\r\nCrop from ({startX},{startY}) with size {width}*{height}\r\n";
+        return result;
     }
 }
 
@@ -552,7 +418,7 @@ public class ResizeEffect : IEffect
 
     List<string> IEffect.ParametersNeeded => ParametersNeeded;
     Dictionary<string, string> IEffect.ParametersType => ParametersType;
-    public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+    public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
     public string? NeedComputer => null;
 
     public static List<string> ParametersNeeded { get; } = new List<string>

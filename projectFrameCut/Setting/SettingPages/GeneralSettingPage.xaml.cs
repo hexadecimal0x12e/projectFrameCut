@@ -391,10 +391,6 @@ public partial class GeneralSettingPage : ContentPage
                     }
                     needReboot = true;
                     goto done;
-
-                case "codec_PreferredHWAccel":
-                    needReboot = true;
-                    break;
             }
 
             if (args.Value != null)

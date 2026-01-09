@@ -84,6 +84,7 @@ public partial class PluginSettingPage : ContentPage
             {
                 await PluginService.AddAPlugin(item, this);
             }
+            BuildPPB();
         };
         scv.GestureRecognizers.Add(drop);
         Content = scv;
@@ -196,6 +197,7 @@ public partial class PluginSettingPage : ContentPage
                 if (result != null)
                 {
                     await PluginService.AddAPlugin(result.FullPath, this);
+                    BuildPPB();
                 }
                 return;
             }
@@ -231,10 +233,16 @@ public partial class PluginSettingPage : ContentPage
             if (flag == "EnablePlugin")
             {
                 PluginService.EnablePlugin(id);
-                if (await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.CommonStr_RebootRequired(), Localized._Confirm, Localized._Cancel))
+                var p = PluginService.CreateFromID(id, out var fail);
+                if (p != null)
                 {
-                    await MainSettingsPage.RebootApp(currentPage ?? this);
+                    PluginManager.LoadFrom(p);
                 }
+                else
+                {
+                    await DisplayAlertAsync(Localized._Error, fail, Localized._OK);
+                }
+                BuildPPB();
                 return;
             }
 
@@ -268,10 +276,8 @@ public partial class PluginSettingPage : ContentPage
                 case "DisablePlugin":
                     {
                         PluginService.DisablePlugin(plugin.PluginID);
-                        if (await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.CommonStr_RebootRequired(), Localized._Confirm, Localized._Cancel))
-                        {
-                            await MainSettingsPage.RebootApp(currentPage ?? this);
-                        }
+                        PluginManager.UnloadPlugin(plugin.PluginID);
+                        BuildPPB();
                         break;
                     }
                 case "GotoHomepage":
@@ -285,8 +291,8 @@ public partial class PluginSettingPage : ContentPage
                         if (await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Plugin_SureRemove(plugin.Name), Localized._Confirm, Localized._Cancel))
                         {
                             PluginService.RemovePlugin(plugin.PluginID);
-                            await MainSettingsPage.RebootApp(currentPage ?? this);
-
+                            PluginManager.UnloadPlugin(plugin.PluginID);
+                            BuildPPB();
                         }
                         break;
                     }

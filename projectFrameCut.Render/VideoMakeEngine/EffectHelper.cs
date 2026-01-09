@@ -25,24 +25,14 @@ namespace projectFrameCut.Render.VideoMakeEngine
 
         public static IEffect CreateFromJSONStructure(EffectAndMixtureJSONStructure item)
         {
-            IEffect effect;
-            switch (item.TypeName)
+            IEffect effect = item.TypeName switch
             {
-                case "RemoveColor":
-                    effect = RemoveColorEffect.FromParametersDictionary(EffectArgsHelper.ConvertElementDictToObjectDict(item.Parameters!, RemoveColorEffect.ParametersType));
-                    break;
-                case "Place":
-                    effect = PlaceEffect.FromParametersDictionary(EffectArgsHelper.ConvertElementDictToObjectDict(item.Parameters!, PlaceEffect.ParametersType));
-                    break;
-                case "Crop":
-                    effect = CropEffect.FromParametersDictionary(EffectArgsHelper.ConvertElementDictToObjectDict(item.Parameters!, CropEffect.ParametersType));
-                    break;
-                case "Resize":
-                    effect = ResizeEffect.FromParametersDictionary(EffectArgsHelper.ConvertElementDictToObjectDict(item.Parameters!, ResizeEffect.ParametersType));
-                    break;
-                default:
-                    throw new NotImplementedException($"Effect type '{item.TypeName}' is not implemented.");
-            }
+                "RemoveColor" => RemoveColorEffect.FromParametersDictionary(EffectArgsHelper.ConvertElementDictToObjectDict(item.Parameters!, RemoveColorEffect.ParametersType)),
+                "Place" => PlaceEffect.FromParametersDictionary(EffectArgsHelper.ConvertElementDictToObjectDict(item.Parameters!, PlaceEffect.ParametersType)),
+                "Crop" => CropEffect.FromParametersDictionary(EffectArgsHelper.ConvertElementDictToObjectDict(item.Parameters!, CropEffect.ParametersType)),
+                "Resize" => ResizeEffect.FromParametersDictionary(EffectArgsHelper.ConvertElementDictToObjectDict(item.Parameters!, ResizeEffect.ParametersType)),
+                _ => throw new NotImplementedException($"Effect type '{item.TypeName}' is not implemented."),
+            };
             effect.Name = item.Name;
             effect.Index = item.Index;
             effect.Enabled = item.Enabled;

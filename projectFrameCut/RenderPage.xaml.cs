@@ -327,6 +327,7 @@ public partial class RenderPage : ContentPage
                 string compOutputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.composed{ext}");
 #if WINDOWS
                 var resultPath = await FileSystemService.PickASavePath($"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", outputDir);
+                if (string.IsNullOrWhiteSpace(resultPath)) goto done;
 #else
                 string resultPath = compOutputPath;
 #endif
@@ -367,16 +368,16 @@ public partial class RenderPage : ContentPage
                     Log($"Resampling video from {(int)Math.Round(targetFps)} to {targetFps}...");
                     SetSubProg("Resample");
 #if WINDOWS
-                var tempVid = vidOutputPath + ".temp" + ext;
-                if (File.Exists(vidOutputPath))
-                {
-                    File.Move(vidOutputPath, tempVid);
-                    string args = $"-i \"{tempVid}\" -r {targetFps} -c:v {enc} -crf 18 -preset fast \"{vidOutputPath}\"";
-                    if (enc == "ffv1") args = $"-i \"{tempVid}\" -r {targetFps} -c:v ffv1 \"{vidOutputPath}\"";
+                    var tempVid = vidOutputPath + ".temp" + ext;
+                    if (File.Exists(vidOutputPath))
+                    {
+                        File.Move(vidOutputPath, tempVid);
+                        string args = $"-i \"{tempVid}\" -r {targetFps} -c:v {enc} -crf 18 -preset fast \"{vidOutputPath}\"";
+                        if (enc == "ffv1") args = $"-i \"{tempVid}\" -r {targetFps} -c:v ffv1 \"{vidOutputPath}\"";
 
-                    await ffmpeg.Run(args);
-                    File.Delete(tempVid);
-                }
+                        await ffmpeg.Run(args);
+                        File.Delete(tempVid);
+                    }
 #endif
                 }
 
@@ -402,7 +403,7 @@ public partial class RenderPage : ContentPage
 
                 });
 
-
+            done:
                 _logUpdateTimer?.Stop();
                 _screenSaverTimer?.Stop();
                 ScreenSaverOverlay.IsVisible = false;
@@ -428,9 +429,9 @@ public partial class RenderPage : ContentPage
                     catch { }
                 }
 #else
-            await Task.Run(() => File.Move(compOutputPath, resultPath));
+                await Task.Run(() => File.Move(compOutputPath, resultPath));
 #if WINDOWS
-            await FileSystemService.ShowFileInFolderAsync(resultPath);
+                await FileSystemService.ShowFileInFolderAsync(resultPath);
 #endif
 #endif
 
@@ -753,7 +754,7 @@ public partial class RenderPage : ContentPage
 
 
 
-#endregion
+    #endregion
 
 
     private void MaxParallelThreadsCount_ValueChanged(object sender, ValueChangedEventArgs e)

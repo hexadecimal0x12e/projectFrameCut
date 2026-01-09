@@ -107,6 +107,12 @@ namespace projectFrameCut.WinUI
 
         public static void Crash(Exception ex)
         {
+#if DEBUG
+            if (Debugger.IsAttached)
+            {
+                throw ex;
+            }
+#endif
             try
             {
                 Log(ex, "Application crashed", "Application");
@@ -141,7 +147,12 @@ If you want to help the development of this application, please consider to subm
                     if (Localized is not null) header = Localized.AppCrashed;
                 }
                 catch { }
-
+                string appInfo = $"Application: {Assembly.GetExecutingAssembly().GetName().FullName}";
+                try
+                {
+                    appInfo = $"Application: {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} Packaged:{MauiProgram.IsPackaged()}";
+                }
+                catch { }
                 var content =
 $"""
 Exception type: {ex.GetType().Name}
@@ -157,7 +168,7 @@ Exception data:
 {string.Join("\r\n", ex.Data.Cast<System.Collections.DictionaryEntry>().Select(k => $"{k.Key} : {k.Value}"))}
 
 Environment:
-Application: {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} ({AppInfo.BuildString})
+{appInfo}
 OS version: {Environment.OSVersion}
 CLR Version:{Environment.Version}
 Command line: {Environment.CommandLine}

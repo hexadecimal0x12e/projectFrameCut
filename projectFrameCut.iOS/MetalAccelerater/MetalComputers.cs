@@ -25,20 +25,7 @@ namespace projectFrameCut.MetalAccelerater
 
         public static void RegisterComputerBridge()
         {
-            AcceleratedComputerBridge.RequireAComputer = new((name) =>
-            {
-                switch (name)
-                {
-                    case "Overlay":
-                        return new OverlayComputer();
-                    case "RemoveColor":
-                        return new RemoveColorComputer();
-                    default:
-                        Log($"Computer {name} not found.", "Error");
-                        return null;
-
-                }
-            });
+            //todo: plugin
         }
     }
 

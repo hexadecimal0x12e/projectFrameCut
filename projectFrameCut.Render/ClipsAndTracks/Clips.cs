@@ -36,7 +36,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IVideoSource? Decoder { get; set; } = null;
 
         public ClipMode ClipType => ClipMode.VideoClip;
-        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public string BindedSoundTrack { get; init; } = "";
 
@@ -81,7 +81,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public Picture? source { get; set; } = null;
 
         public ClipMode ClipType => ClipMode.PhotoClip;
-        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public string BindedSoundTrack { get; init; } = "";
 
@@ -126,7 +126,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.SolidColorClip;
-        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
@@ -180,7 +180,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.TextClip;
-        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }

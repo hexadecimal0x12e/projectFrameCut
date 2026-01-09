@@ -1,4 +1,5 @@
-﻿using projectFrameCut.DraftStuff;
+﻿using projectFrameCut.Asset;
+using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -137,7 +138,7 @@ namespace projectFrameCut.DraftStuff
             {
                 if (clip is ClipDraftDTO dto)
                 {
-                    if(dto.ClipType == ClipMode.AudioClip)
+                    if (dto.ClipType == ClipMode.AudioClip)
                     {
                         if (wrapSoundtrackAsClip)
                         {
@@ -179,7 +180,22 @@ namespace projectFrameCut.DraftStuff
             foreach (var clip in elements.Cast<JsonElement>())
             {
                 var clipInstance = PluginManager.CreateClip(clip);
-                if (string.IsNullOrEmpty(clipInstance.FilePath) && clip.TryGetProperty("FilePath", out var fp) && clipInstance.NeedFilePath)
+                if (clipInstance.FilePath?.StartsWith('$') ?? false)
+                {
+                    try
+                    {
+                        clipInstance.FilePath = AssetDatabase.Assets[clipInstance.FilePath.Substring(1)].Path;
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        //safe to ignore
+                    }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+                }
+                else if (string.IsNullOrEmpty(clipInstance.FilePath) && clip.TryGetProperty("FilePath", out var fp) && clipInstance.NeedFilePath)
                 {
                     try
                     {
@@ -272,10 +288,10 @@ namespace projectFrameCut.DraftStuff
                 element.FromPlugin = dto.FromPlugin;
                 element.Effects = dto.Effects?.ToDictionary(
                     e => string.IsNullOrWhiteSpace(e.Name) ? $"Effect-{Guid.NewGuid()}" : e.Name,
-                    e => PluginManager.CreateEffect(e,proj.RelativeWidth, proj.RelativeHeight)
+                    e => PluginManager.CreateEffect(e, proj.RelativeWidth, proj.RelativeHeight)
                 );
 
-                if(element.Effects is null ) 
+                if (element.Effects is null)
                 {
                     element.Effects = new Dictionary<string, IEffect>();
                 }
@@ -378,7 +394,7 @@ namespace projectFrameCut.DraftStuff
             return null;
         }
 
-       
+
 
     }
 }

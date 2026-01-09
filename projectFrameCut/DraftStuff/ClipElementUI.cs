@@ -268,6 +268,8 @@ namespace projectFrameCut.DraftStuff
         public string? SourceId { get; set; }
 
         public ClipUpdateReason? Reason { get; set; }
+
+        public bool NoSave { get; set; } = false;
     }
 
     public enum ClipUpdateReason

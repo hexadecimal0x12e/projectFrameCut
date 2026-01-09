@@ -71,46 +71,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     int averr = ffmpeg.avformat_open_input(fmtPtr, _path, null, null);
                     if (averr != 0)
                     {
-                        var fi = new FileInfo(_path);
-                        if (!fi.Exists)
-                        {
-                            throw new FileNotFoundException($"The video file '{_path}' doesn't exist.");
-                        }
-
-                        if (fi.Length == 0)
-                        {
-                            throw new ArgumentNullException($"The video file '{_path}' is empty.");
-                        }
-
-                        try
-                        {
-                            FileStream fs = new FileStream(_path, FileMode.Open);
-#pragma warning disable CA2022 // 避免使用 "Stream.Read" 进行不准确读取
-                            fs.Read(new byte[16]);
-#pragma warning restore CA2022 // 避免使用 "Stream.Read" 进行不准确读取
-                            throw new InvalidDataException($"File '{_path}' seems don't like a video file. Try install the encoder extension. If you continuously encountering this issue, try encode your video again to another format.");
-
-
-                        }
-                        catch (NotSupportedException)
-                        {
-                            var errstr = FFmpegHelper.GetErrorString(averr);
-                            throw new InvalidOperationException($"Cannot open the video file '{_path}' because of '{errstr}'");
-                        }
-                        catch (IOException ex)
-                        {
-                            throw new FileLoadException($"projectFrameCut can't read the video file '{_path}', it's maybe because of an error:'{ex.Message}'", ex);
-                        }
-                        catch (UnauthorizedAccessException ex)
-                        {
-                            throw new FileLoadException($"projectFrameCut can't read the video file '{_path}' because of no enough privileges. Try restart the projectFrameCut with administrator privileges, or modify", ex);
-                        }
-                        catch (Exception ex)
-                        {
-                            throw new NotSupportedException($"Failed to open the video file '{_path}', it's maybe because of an error:'{ex.Message}'. Try restart render, or reboot your computer. If you continuously encountering this issue, try install ffmpeg toolkit on your computer, then run this command and observe whether there is any error message:\r\nffprobe {Path.GetFullPath(_path)}");
-                        }
-
-
+                        FFmpegHelper.DetectWhyCannotOpenVideo(_path, averr);
                     }
                 }
 
@@ -290,7 +251,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                              _rgb->linesize
                              );
             if (EnableLock) locker.Exit();
-            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha,_path,targetFrame);
+            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame);
         }
 
 
@@ -379,7 +340,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public int Height => _height;
 
         public uint Index { get; set; } = 0;
-        public string[] PreferredExtension => [".mp4",".mov"];
+        public string[] PreferredExtension => [".mp4", ".mov"];
 
         public int? ResultBitPerPixel => 8;
 
@@ -407,46 +368,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 fixed (AVFormatContext** fmtPtr = &_fmt)
                 {
-                    if (ffmpeg.avformat_open_input(fmtPtr, _path, null, null) != 0)
+                    var averr = ffmpeg.avformat_open_input(fmtPtr, _path, null, null);
+                    if (averr != 0)
                     {
-                        var fi = new FileInfo(_path);
-                        if (!fi.Exists)
-                        {
-                            throw new FileNotFoundException($"The video file '{_path}' doesn't exist.");
-                        }
-
-                        if (fi.Length == 0)
-                        {
-                            throw new ArgumentNullException($"The video file '{_path}' is empty.");
-                        }
-
-                        try
-                        {
-                            FileStream fs = new FileStream(_path, FileMode.Open);
-#pragma warning disable CA2022 
-                            fs.Read(new byte[16]);
-#pragma warning restore CA2022
-                            throw new NotSupportedException($"File '{_path}' seems not like a video file. Try install the codec extension. \r\nIf you continuously encountering this issue, try install ffmpeg toolkit on your computer, then run this command and observe whether there is any error message:\r\nffprobe {Path.GetFullPath(_path)}");
-
-
-                        }
-                        catch (NotSupportedException)
-                        {
-                            throw;
-                        }
-                        catch (IOException ex)
-                        {
-                            throw new FileLoadException($"projectFrameCut can't read the video file '{_path}', it's maybe because of an error:'{ex.Message}'", ex);
-                        }
-                        catch (UnauthorizedAccessException ex)
-                        {
-                            throw new FileLoadException($"projectFrameCut can't read the video file '{_path}' because of no enough privileges. Try restart the projectFrameCut with administrator privileges, or modify", ex);
-                        }
-                        catch (Exception ex)
-                        {
-                            throw new NotSupportedException($"Failed to open the video file '{_path}', it's maybe because of an error:'{ex.Message}'. Try restart render, or reboot your computer. If you continuously encountering this issue, try install ffmpeg toolkit on your computer, then run this command and observe whether there is any error message:\r\nffprobe {Path.GetFullPath(_path)}");
-                        }
-
+                        FFmpegHelper.DetectWhyCannotOpenVideo(_path, averr);
 
                     }
                 }
@@ -584,7 +509,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         [DebuggerNonUserCode()]
         public IPicture GetFrame(uint targetFrame, bool hasAlpha)
         {
-            if(EnableLock) locker.Enter();
+            if (EnableLock) locker.Enter();
             if (targetFrame < _currentFrameNumber)
             {
                 ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
@@ -664,7 +589,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                                 _rgb->data,
                                 _rgb->linesize);
             if (EnableLock) locker.Exit();
-            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha,_path,targetFrame);
+            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame);
 
 
         }

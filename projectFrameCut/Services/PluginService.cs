@@ -1,4 +1,5 @@
 ﻿using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
 using System;
@@ -224,7 +225,7 @@ namespace projectFrameCut.Services
                         Version = pluginInstance.Version
                     });
                     File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "Plugins.json"), JsonSerializer.Serialize(items));
-                    await MainSettingsPage.RebootApp(currentPage);
+                    PluginManager.LoadFrom(pluginInstance);
                 }
             }
 
@@ -411,6 +412,7 @@ namespace projectFrameCut.Services
                     var failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
                     throw new FeatureNotSupportedException(failReason);
                 }
+                plugin.MessagingQueue = MessagingServices.MessagingService;
                 return plugin;
             }
             return null;
@@ -428,8 +430,7 @@ namespace projectFrameCut.Services
                 try
                 {
                     Log($"Loading userPlugin: {item.Id}");
-                    string fail = "";
-                    var p = CreateFromID(item.Id, out fail);
+                    var p = CreateFromID(item.Id, out string fail);
                     if (p is not null)
                         plugins.Add(p);
                     else

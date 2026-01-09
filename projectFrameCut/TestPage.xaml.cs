@@ -744,22 +744,18 @@ public partial class TestPage : ContentPage
 
     private async void TestFFmpegButton_Clicked(object sender, EventArgs e)
     {
-        string ver = "unknown";
-#if !iDevices
-        unsafe
+
+        var vidFile = await DisplayPromptAsync("info", "input src path");
+        if (string.IsNullOrWhiteSpace(vidFile)) vidFile = await FileSystemService.PickFileAsync();
+        var src = PluginManager.CreateVideoSource(vidFile);
+        var frame = src.GetFrame(42U, false);
+        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
-            ver = $"internal FFmpeg library: version {FFmpeg.AutoGen.ffmpeg.av_version_info()}, {FFmpeg.AutoGen.ffmpeg.avcodec_license()}\r\nconfiguration:{FFmpeg.AutoGen.ffmpeg.avcodec_configuration()}";
-        }
-#elif IOS || MACCATALYST
-#if IOS26_0_OR_GREATER || MACCATALYST26_0_OR_GREATER
-        var codecs = AVFoundation.AVUrlAsset.AudiovisualContentTypes;
-        ver = "AudiovisualContentTypes: "+ string.Concat(codecs,",");
-#else
-        var codecs = AVFoundation.AVUrlAsset.AudiovisualTypes;
-        ver = "AudiovisualTypes: "+ string.Concat(codecs,",");
-#endif
-#endif
-        await DisplayAlert("FFmpeg Version", ver, "OK");
+            MemoryStream ms = new();
+            frame.SaveToSixLaborsImage().SaveAsPng(ms);
+            ms.Position = 0;
+            return ms;
+        });
 
     }
 

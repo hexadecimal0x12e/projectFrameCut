@@ -17,7 +17,7 @@ namespace projectFrameCut.Render.Plugin
         public const int CurrentPluginAPIVersion = 1;
         private static Dictionary<string, IPluginBase> loadedPlugins = new();
         public static IReadOnlyDictionary<string, IPluginBase> LoadedPlugins => loadedPlugins;
-        private static bool Inited = false;
+        public static bool Inited { get; private set; } = false;
 
         public static Func<string, string?>? ExtenedLocalizationGetter = null;
         public static string CurrentLocale = "en-US";
@@ -41,15 +41,19 @@ namespace projectFrameCut.Render.Plugin
 
         public static void LoadFrom(IPluginBase pluginInstance)
         {
-#if !DEBUG
-            throw new InvalidOperationException("Loading plugins at runtime is not supported in release builds.");
-#endif
             ArgumentNullException.ThrowIfNull(pluginInstance, nameof(pluginInstance));
             try
             {
                 if (pluginInstance.PluginAPIVersion == CurrentPluginAPIVersion)
                 {
-                    loadedPlugins.Add(pluginInstance.PluginID, pluginInstance);
+                    if (loadedPlugins.ContainsKey(pluginInstance.PluginID))
+                    {
+                        loadedPlugins[pluginInstance.PluginID] = pluginInstance;
+                    }
+                    else
+                    {
+                        loadedPlugins.Add(pluginInstance.PluginID, pluginInstance);
+                    }
                 }
                 else
                 {
@@ -63,6 +67,15 @@ namespace projectFrameCut.Render.Plugin
 
             Logger.Log($"Plugin {pluginInstance.PluginID} loaded.");
 
+        }
+
+        public static void UnloadPlugin(string id)
+        {
+            if (loadedPlugins.ContainsKey(id))
+            {
+                loadedPlugins.Remove(id);
+                Logger.Log($"Plugin {id} unloaded.");
+            }
         }
 
         public static string GetLocalizationItem(string key, string fallback)
@@ -209,10 +222,19 @@ namespace projectFrameCut.Render.Plugin
 
         public static IVideoSource CreateVideoSource(string filePath)
         {
-            if(!File.Exists(filePath) && !filePath.StartsWith("#"))
+            if (filePath.StartsWith("#"))
+            {
+                var decoder = filePath.Substring(1).Split(',', 2)[0];
+                var supportedPlugin = LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(decoder));
+                if (supportedPlugin is null) throw new NotSupportedException($"No suitable video decoder '{decoder}' found for the given file '{filePath}'.");
+                return supportedPlugin.VideoSourceProvider[decoder](null!).CreateNew(filePath);
+
+            }
+            else if (!File.Exists(filePath) && !filePath.StartsWith("#"))
             {
                 throw new FileNotFoundException("The specified video file was not found.", filePath);
             }
+
             foreach (var plugin in LoadedPlugins.Values)
             {
                 try

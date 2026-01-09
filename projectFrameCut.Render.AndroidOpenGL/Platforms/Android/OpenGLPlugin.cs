@@ -2,6 +2,7 @@
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -74,6 +75,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
         public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString => new Dictionary<string, Dictionary<string, string>> { };
 
         public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>> { };
+        public IMessagingService MessagingQueue { get; set; }
 
         public IClip ClipCreator(JsonElement element)
         {

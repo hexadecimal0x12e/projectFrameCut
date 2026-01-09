@@ -94,11 +94,15 @@ public class InternalPluginBase : IPluginBase
         {"TextClip", new((i,n) => new TextClip{Id = i, Name = n}) }
     };
 
-    public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider => new Dictionary<string, Func<string, IVideoSource>>
-    {
-        {"DecoderContext8Bit", new((p) => new DecoderContext8Bit(p)) },
-        {"DecoderContext16Bit", new((p) => new DecoderContext16Bit(p)) }
-    };
+    public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider =>
+        ((MessagingQueue.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccel"]) is string hwaccel && bool.TryParse(hwaccel, out var result) && result)
+            ? new List<KeyValuePair<string, Func<string, IVideoSource>>>([new("DecoderContextHW", new((p) => new DecoderContextHW(p)))])
+            : new List<KeyValuePair<string, Func<string, IVideoSource>>>([]))
+        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext8Bit", new((p) => new DecoderContext8Bit(p))))
+        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext16Bit", new((p) => new DecoderContext16Bit(p))))
+        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("HttpDecoderContext", new((p) => new HttpDecoderContext(p))))
+        .ToDictionary();
+
 
 
     public Dictionary<string, string> Configuration { get => new(); set { } }
@@ -119,6 +123,8 @@ public class InternalPluginBase : IPluginBase
     {
         {"VideoWriter", new((c) => {if(VideoWriter.DetectCodec(c)) return new VideoWriter(); throw new NotSupportedException($"Codec {c} not found."); }) }
     };
+
+    public IMessagingService MessagingQueue { get; set; }
 
 
     //public IEffect EffectCreator(EffectAndMixtureJSONStructure stru) => EffectHelper.CreateFromJSONStructure(stru);
@@ -155,6 +161,7 @@ public class InternalPluginBase : IPluginBase
         var result = loc.DynamicLookup(key, "!!!NULL!!!");
         return result == "!!!NULL!!!" ? null : result;
     }
+
 
 
 

@@ -24,7 +24,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
         {
             return new OverlayMixture();
         }
-        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public string? ComputerId => "OverlayComputer";
 
         public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer computer)

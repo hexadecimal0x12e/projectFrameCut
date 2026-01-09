@@ -52,7 +52,7 @@ namespace projectFrameCut.Render.Rendering
         private SemaphoreSlim _threadLimiter = null!;
 
         // Thread-local computer cache to avoid contention
-        private ThreadLocal<Dictionary<string, IComputer>> _threadLocalComputerCache = 
+        private ThreadLocal<Dictionary<string, IComputer>> _threadLocalComputerCache =
             new ThreadLocal<Dictionary<string, IComputer>>(() => new Dictionary<string, IComputer>());
 
         ConcurrentQueue<uint> PreparedFrames = new(), BlankFrames = new();
@@ -83,6 +83,7 @@ namespace projectFrameCut.Render.Rendering
             BlankFrame = Use16Bit ? Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
             BlankFrame.Flag = IPicture.PictureFlag.NoDisposeAfterWrite;
             BlankFrame.Disposed = null;
+            GC.KeepAlive(BlankFrame);
             ConcurrentQueue<Exception> exceptions = new();
 
             running = true;
@@ -242,7 +243,7 @@ namespace projectFrameCut.Render.Rendering
                         }
 
                         Interlocked.Increment(ref ThreadWorking);
-                        
+
                         // Use ThreadPool instead of creating new threads
                         ThreadPool.QueueUserWorkItem(_ =>
                         {
@@ -320,7 +321,7 @@ namespace projectFrameCut.Render.Rendering
                 await Task.Delay(50, token);
                 waitCount++;
             }
-            
+
             ReleaseResources();
 
         }
@@ -380,6 +381,13 @@ namespace projectFrameCut.Render.Rendering
             Stopwatch sw = new();
             foreach (var idx in ClipNeedForFrame.Keys.OrderBy(x => x))
             {
+                // Throttling: Wait if too many frames are prepared but not yet rendered
+                while (Volatile.Read(ref TotalEnqueued) - Volatile.Read(ref Finished) > MaxThreads * 4 && !token.IsCancellationRequested)
+                {
+                    Log($"[Preparer] Waiting for more render slots... prepared but not rendered: {Volatile.Read(ref TotalEnqueued) - Volatile.Read(ref Finished)}");
+                    Thread.Sleep(500);
+                }
+
                 if (token.IsCancellationRequested) return;
                 sw.Restart();
 
@@ -509,6 +517,16 @@ namespace projectFrameCut.Render.Rendering
             }
 
             builder!.Append(targetFrame, result);
+            foreach (var clip in ClipsNeed)
+            {
+                if (FrameCache.TryGetValue(clip.Id, out var perClipCache))
+                {
+                    if (perClipCache.TryRemove(targetFrame, out var pic))
+                    {
+                        try { pic?.Dispose(); } catch { }
+                    }
+                }
+            }
             Interlocked.Increment(ref Finished);
             InvokeProgress();
             sw.Stop();
@@ -537,7 +555,7 @@ namespace projectFrameCut.Render.Rendering
         private IComputer? GetOrCreateComputer(string? computerType)
         {
             if (computerType is null) return null;
-            
+
             var cache = _threadLocalComputerCache.Value;
             if (cache != null && cache.TryGetValue(computerType, out var computer))
                 return computer;

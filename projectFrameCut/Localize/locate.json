@@ -2577,6 +2577,42 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_StartPrompt",
+        "Value": "\u6B63\u5728\u540E\u53F0\u51C6\u5907\u7D20\u6750\u300C{name}\u300D\uFF0C\u8FD9\u9700\u8981\u51E0\u5206\u949F\uFF0C\u8FC7\u7A0B\u4E2D\u4E0D\u5EFA\u8BAE\u9000\u51FA\u5E94\u7528\u7A0B\u5E8F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_FinishPrompt",
+        "Value": "\u7D20\u6750\u300C{name}\u300D\u5DF2\u51C6\u5907\u597D\u3002\u4F60\u73B0\u5728\u53EF\u4EE5\u5B89\u5168\u7684\u9000\u51FA\u5E94\u7528\u7A0B\u5E8F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
       }
     ],
     "en-US": [
@@ -5385,6 +5421,44 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_StartPrompt",
+        "Value": "Unset localization item:AssetPage_PostProcess_StartPrompt(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_FinishPrompt",
+        "Value": "Unset localization item:AssetPage_PostProcess_FinishPrompt(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -8190,6 +8264,44 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_StartPrompt",
+        "Value": "Unset localization item:AssetPage_PostProcess_StartPrompt(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_FinishPrompt",
+        "Value": "Unset localization item:AssetPage_PostProcess_FinishPrompt(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -11005,6 +11117,44 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_StartPrompt",
+        "Value": "Unset localization item:AssetPage_PostProcess_StartPrompt(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_FinishPrompt",
+        "Value": "Unset localization item:AssetPage_PostProcess_FinishPrompt(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -13818,6 +13968,44 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_StartPrompt",
+        "Value": "Unset localization item:AssetPage_PostProcess_StartPrompt(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_FinishPrompt",
+        "Value": "Unset localization item:AssetPage_PostProcess_FinishPrompt(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -16624,6 +16812,44 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_StartPrompt",
+        "Value": "Unset localization item:AssetPage_PostProcess_StartPrompt(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_FinishPrompt",
+        "Value": "Unset localization item:AssetPage_PostProcess_FinishPrompt(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -19437,6 +19663,44 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_StartPrompt",
+        "Value": "Unset localization item:AssetPage_PostProcess_StartPrompt(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_FinishPrompt",
+        "Value": "Unset localization item:AssetPage_PostProcess_FinishPrompt(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }

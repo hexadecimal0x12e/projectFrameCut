@@ -1,0 +1,7 @@
+﻿[*.cs]
+
+# IDE0057: 使用范围运算符
+dotnet_diagnostic.IDE0057.severity = silent
+
+# IDE0270: 使用 COALESCE 表达式
+dotnet_diagnostic.IDE0270.severity = silent

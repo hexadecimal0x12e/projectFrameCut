@@ -11,7 +11,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 {
     public class NormalSoundTrack : ISoundTrack
     {
-        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public TrackMode TrackType => TrackMode.NormalTrack;
 
@@ -28,7 +28,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
     public class SoundTrackToClipWrapper : IClip
     {
-        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public ClipMode ClipType => ClipMode.AudioClip;
 

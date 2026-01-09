@@ -193,8 +193,9 @@ namespace projectFrameCut
             MainNavView?.IsPaneVisible = true;
             Thread.Sleep(50);
             var appWindow = Current?.Windows[0]; 
-            appWindow?.Width = appWindow.Width - 1; //avoid the contents go inside navigation bar
-            appWindow?.Width = appWindow.Width + 1;
+            appWindow?.Width = appWindow.Width - 8; //avoid the contents go inside navigation bar
+            Thread.Sleep(50);
+            appWindow?.Width = appWindow.Width + 8;
 
         }
 

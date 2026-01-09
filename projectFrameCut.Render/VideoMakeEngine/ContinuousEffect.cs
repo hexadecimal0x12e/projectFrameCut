@@ -3,6 +3,9 @@ using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace projectFrameCut.Render.VideoMakeEngine
 {
@@ -12,7 +15,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
         public int Index { get; set; }
         public string Name { get; set; }
         public string? NeedComputer => null;
-        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "ZoomIn";
 
 
@@ -55,8 +58,6 @@ namespace projectFrameCut.Render.VideoMakeEngine
 
         public IPicture Render(IPicture source, uint index, IComputer? computer, int targetWidth, int targetHeight)
         {
-
-            // 计算本效果内的帧索引与进度，保证为 double 并限制在 [0,1]
             int localIndex = (int)index - StartPoint;
             double totalFrames = (double)(EndPoint - StartPoint);
             double progress = totalFrames <= 0 ? 0.0 : (double)localIndex / totalFrames;
@@ -70,14 +71,16 @@ namespace projectFrameCut.Render.VideoMakeEngine
 
             int startX = Math.Max(0, (source.Width - currentWidth) / 2);
             int startY = Math.Max(0, (source.Height - currentHeight) / 2);
-            LogDiagnostic($"Cropping the image from {startX},{startY} to size {currentWidth}*{currentHeight}...");
-            var cropped = Cropper.Crop(source, startX, startY, currentWidth, currentHeight, currentWidth, currentHeight);
-            // 修复：Resize 应该使用 targetWidth 与 targetHeight
-            LogDiagnostic($"Crop done, result:{cropped.GetDiagnosticsInfo()}");
-            var resized = cropped.Resize(targetHeight, targetHeight, false);
-            //var placer = new PlaceEffect();
-            //var placed = placer.Render(cropped, null, targetWidth, targetHeight);
-            return resized;
+            var rect = new Rectangle(startX, startY, currentWidth, currentHeight);
+            var resultImg = source.SaveToSixLaborsImage().Clone(x => x.Crop(rect).Resize(targetWidth, targetHeight));
+
+            IPicture result = (int)source.bitPerPixel switch
+            {
+                8 => new Picture8bpp(resultImg),
+                16 => new Picture16bpp(resultImg),
+                _ => throw new NotSupportedException($"Specific pixel-mode is not supported.")
+            };
+            return result;
         }
 
 
@@ -125,7 +128,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
 
         List<string> IContinuousEffect.ParametersNeeded => ParametersNeeded;
         Dictionary<string, string> IContinuousEffect.ParametersType => ParametersType;
-        public string FromPlugin => "projectFrameCut.Render.Plugins.InternalPluginBase";
+        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public string? NeedComputer => null;
 
         public int StartPoint { get; set; }

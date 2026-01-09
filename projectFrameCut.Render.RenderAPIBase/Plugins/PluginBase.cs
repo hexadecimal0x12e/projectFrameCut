@@ -2,6 +2,7 @@
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -371,13 +372,12 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         }
 
         /// <summary>
-        /// Called when a command is triggered.
+        /// Represents the messaging queue provided by the host application.
         /// </summary>
-        public virtual void OnCommandCalled(string command, IClip? sender)
-        {
-
-        }
+        public IMessagingService MessagingQueue { get; set; }
     }
+
+
 
 
     public class PluginMetadata
