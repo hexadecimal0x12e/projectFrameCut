@@ -75,15 +75,33 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <returns>the processed frame</returns>
         public IPicture Render(IPicture source, uint index, IComputer? computer, int targetWidth, int targetHeight);
 
+        /// <summary>
+        /// Get the processing step for this effect on the source picture to produce a process step with the target width and height.
+        /// </summary>
+        /// <remarks>
+        /// Throw a <see cref="NotImplementedException"/> if this is not supported.
+        /// </remarks>
+        /// <param name="source"></param>
+        /// <param name="targetWidth"></param>
+        /// <param name="targetHeight"></param>
+        /// <returns></returns>
+        public IPictureProcessStep GetStep(IPicture source, uint index, int targetWidth, int targetHeight);
+
+
         IPicture IEffect.Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
         {
             throw new InvalidOperationException($"Cast this {TypeName} to IContinuousEffect, and call IContinuousEffect.Render().");
         }
 
+        IPictureProcessStep IEffect.GetStep(IPicture source, int targetWidth, int targetHeight)
+        {
+            throw new InvalidOperationException($"Cast this {TypeName} to IContinuousEffect, and call IContinuousEffect.GetStep().");
+        }
+
         /// <summary>
         /// If you'd like to initialize the effect before use, override it.
         /// </summary>
-        public virtual void Initialize()
+        public new virtual void Initialize()
         {
         }
     }

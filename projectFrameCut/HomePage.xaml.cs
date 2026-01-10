@@ -19,6 +19,8 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using IPicture = projectFrameCut.Shared.IPicture;
 using projectFrameCut.Asset;
+using Microsoft.Maui.Platform;
+
 
 
 
@@ -686,6 +688,7 @@ public partial class HomePage : ContentPage
                         AppShell.instance.HideNavView();
                         Shell.SetTabBarIsVisible(page, false);
                         Shell.SetNavBarIsVisible(page, true);
+                        lastPage = page;
                         await Navigation.PushAsync(page);
                     }
                     catch (Exception ex)
@@ -711,9 +714,19 @@ public partial class HomePage : ContentPage
     UserActivitySession _previousSession;
 #endif
 
+    DraftPage? lastPage = null;
+
     protected override async void OnAppearing()
     {
         base.OnAppearing();
+        try
+        {
+            if (lastPage is not null && Window is not null)
+            {
+                Window?.SizeChanged -= lastPage.Window_SizeChanged;
+            }
+        }
+        catch { }
 #if WINDOWS
         await projectFrameCut.WinUI.App.BringToForeground();
 #endif
@@ -1157,6 +1170,18 @@ public partial class HomePage : ContentPage
     {
         var path = await FileSystemService.PickFileAsync();
         if (!string.IsNullOrWhiteSpace(path)) await ImportDraft(path);
+    }
+
+    private void ContentPage_Appearing(object sender, EventArgs e)
+    {
+        Dispatcher.DispatchAsync(async () =>
+        {
+            await Task.Delay(5000);
+            Window?.Width = Window.Width - 8; //avoid the contents go inside navigation bar
+            Thread.Sleep(50);
+            Window?.Width = Window.Width + 8;
+        });
+
     }
 }
 

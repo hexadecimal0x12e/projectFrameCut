@@ -15,6 +15,11 @@ namespace projectFrameCut.Shared
             if (input is null) return false;
             return input.Length > 0;
         }
+        public static bool ListAny<T>(this List<T>? input)
+        {
+            if (input is null) return false;
+            return input.Count > 0;
+        }
         /// <summary>
         /// Remove the values in <paramref name="input"/> where equals to any element in <paramref name="ToRemove"/> .
         /// </summary>

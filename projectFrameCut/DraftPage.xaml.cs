@@ -4219,7 +4219,7 @@ public partial class DraftPage : ContentPage
 
     }
 
-    private async void Window_SizeChanged(object? sender, EventArgs e)
+    public async void Window_SizeChanged(object? sender, EventArgs e)
     {
         double w = this.Window?.Width ?? 0;
         double h = this.Window?.Height ?? 0;
@@ -4261,7 +4261,7 @@ public partial class DraftPage : ContentPage
             });
             return false;
         }
-
+        if (!ignoreRunningTasks && Window is not null) Window?.SizeChanged -= Window_SizeChanged;
         return ignoreRunningTasks;
     }
 

@@ -51,9 +51,9 @@
 
 
 
-        public void ShowNavView()
+        public async void ShowNavView()
         {
-            App.ShowNavBar();
+            await App.ShowNavBar();
         }
 
         public void HideNavView()

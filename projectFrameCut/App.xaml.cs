@@ -51,6 +51,15 @@ namespace projectFrameCut
             {
                 // ignore if preferences fail
             }
+#if WINDOWS
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+            {
+#pragma warning disable CS0618
+                Program.Crash(e.ExceptionObject as Exception ?? new ExecutionEngineException($"projectFrameCut can't gather more information about this exception."));
+#pragma warning restore CS0618
+
+            };
+#endif
         }
 
 #if WINDOWS
@@ -188,15 +197,19 @@ namespace projectFrameCut
             MainNavView?.IsPaneVisible = false;
 
         }
-        public static void ShowNavBar()
+        public static async Task ShowNavBar()
         {
-            MainNavView?.IsPaneVisible = true;
-            Thread.Sleep(50);
-            var appWindow = Current?.Windows[0]; 
-            appWindow?.Width = appWindow.Width - 8; //avoid the contents go inside navigation bar
-            Thread.Sleep(50);
-            appWindow?.Width = appWindow.Width + 8;
+            if (MainNavView != null)
+                MainNavView.IsPaneVisible = true;
 
+            await Task.Delay(50);
+            var appWindow = Current?.Windows[0];
+            if (appWindow != null)
+            {
+                appWindow.Width = appWindow.Width - 8; //avoid the contents go inside navigation bar
+                await Task.Delay(50);
+                appWindow.Width = appWindow.Width + 8;
+            }
         }
 
 #endif

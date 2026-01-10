@@ -6,6 +6,7 @@ using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -62,6 +63,7 @@ namespace projectFrameCut.Render.Rendering
         volatile bool PreparerFinished = false;
         private int _width;
         private int _height;
+        private int _ppb;
 
         private IPicture BlankFrame = null!;
 
@@ -85,6 +87,8 @@ namespace projectFrameCut.Render.Rendering
             BlankFrame.Disposed = null;
             GC.KeepAlive(BlankFrame);
             ConcurrentQueue<Exception> exceptions = new();
+
+            _ppb = Use16Bit ? 16 : 8;
 
             running = true;
             if (LogStatToLogger)
@@ -237,14 +241,12 @@ namespace projectFrameCut.Render.Rendering
 
                         if (!_threadLimiter.Wait(0))
                         {
-                            // Put back if no slot available
                             PreparedFrames.Enqueue(targetFrame);
                             break;
                         }
 
                         Interlocked.Increment(ref ThreadWorking);
 
-                        // Use ThreadPool instead of creating new threads
                         ThreadPool.QueueUserWorkItem(_ =>
                         {
                             try
@@ -276,7 +278,11 @@ namespace projectFrameCut.Render.Rendering
                             finally
                             {
                                 Interlocked.Decrement(ref ThreadWorking);
-                                _threadLimiter.Release();
+                                try
+                                {
+                                    _threadLimiter.Release();
+                                }
+                                catch { }
                             }
                         }, null);
                     }
@@ -468,26 +474,31 @@ namespace projectFrameCut.Render.Rendering
                     continue;
                 }
 
-                if (clip.Effects.ArrayAny())
+                if (clip.Effects.ArrayAny() && EffectCache.TryGetValue(clip.Id, out var effects))
                 {
-                    if (EffectCache.TryGetValue(clip.Id, out var effects))
+                    List<IPictureProcessStep> steps = new();
+                    bool lastIsProcessStep = false;
+                    foreach (var item in effects)
                     {
-                        foreach (var item in effects)
+                        var computer = GetOrCreateComputer(item.NeedComputer);
+                        if (item.YieldProcessStep != lastIsProcessStep)
                         {
-                            if (item is IContinuousEffect c)
-                            {
-                                if (c.EndPoint == 0 && c.EndPoint == 0)
-                                {
-                                    c.StartPoint = (int)(clip.StartFrame);
-                                    c.EndPoint = (int)(c.StartPoint + clip.Duration * clip.SecondPerFrameRatio);
-                                }
-                                frame = c.Render(frame, targetFrame, GetOrCreateComputer(item.NeedComputer), _width, _height);
-                            }
-                            else
-                            {
-                                frame = item.Render(frame, GetOrCreateComputer(item.NeedComputer), _width, _height);
-                            }
+                            frame = PictureProcesser.Process(steps, frame, _ppb);
+                            steps.Clear();
                         }
+                        if (item is IContinuousEffect c)
+                        {
+                            ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c);
+                        }
+                        else
+                        {
+                            ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer);
+                        }
+                    }
+                    if (steps.ListAny())
+                    {
+                        frame = PictureProcesser.Process(steps, frame, _ppb);
+                        steps.Clear();
                     }
                 }
 
@@ -536,6 +547,63 @@ namespace projectFrameCut.Render.Rendering
 
 
 
+        }
+
+        private void ProcessEffect(ref IPicture frame, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, IEffect item, IComputer? computer)
+        {
+            if (item.YieldProcessStep)
+            {
+                lastIsProcessStep = true;
+                try
+                {
+                    var step = item.GetStep(frame, _width, _height);
+                    steps.Add(step);
+                    if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
+                }
+                catch (Exception ex)
+                {
+                    Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
+                    lastIsProcessStep = false;
+                    frame = item.Render(frame, computer, _width, _height);
+                }
+            }
+            else
+            {
+                frame = item.Render(frame, computer, _width, _height);
+            }
+        }
+
+        private void ProcessContinuousEffect(uint targetFrame, IClip clip, IComputer? computer, ref IPicture frame, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, IEffect item, IContinuousEffect c)
+        {
+            if (c.EndPoint == 0 && c.EndPoint == 0)
+            {
+                c.StartPoint = (int)(clip.StartFrame);
+                c.EndPoint = (int)(c.StartPoint + clip.Duration * clip.SecondPerFrameRatio);
+            }
+            if (c.YieldProcessStep)
+            {
+                lastIsProcessStep = true;
+                try
+                {
+                    var step = c.GetStep(frame, targetFrame, _width, _height);
+                    steps.Add(step);
+                    if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {c.Name}({c.TypeName}) : {step.GetProcessStack()}");
+
+                }
+                catch (Exception ex)
+                {
+                    Log($"[Render] WARN: Failed to get process steps for continuous effect {c.Name}: {ex}");
+                    lastIsProcessStep = false;
+                    frame = c.Render(frame, targetFrame, computer, _width, _height);
+                }
+
+
+
+            }
+            else
+            {
+                frame = c.Render(frame, targetFrame, computer, _width, _height);
+            }
         }
 
         private void InvokeProgress()

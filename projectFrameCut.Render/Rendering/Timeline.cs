@@ -74,7 +74,7 @@ namespace projectFrameCut.Render.Rendering
         }
 
 
-        public static IPicture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight)
+        public static IPicture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight, int targetPPB = 8)
         {
             try
             {
@@ -84,27 +84,33 @@ namespace projectFrameCut.Render.Rendering
                     // Don't resize the frame before applying effects!
                     // The ResizeEffect and PlaceEffect will handle sizing and positioning.
                     IPicture effected = srcFrame.Clip;
+                    List<IPictureProcessStep> steps = new();
+                    bool lastIsProcessStep = false;
                     foreach (var effect in srcFrame?.Effects?.OrderBy(e => e.Index)?.ToList() ?? new List<IEffect>())
                     {
+                        if (effect.YieldProcessStep != lastIsProcessStep)
+                        {
+                            if (steps.Count > 0)
+                            {
+                                effected = PictureProcesser.Process(steps, effected, targetPPB);
+                                steps.Clear();
+                            }
+                            lastIsProcessStep = effect.YieldProcessStep;
+                        }
+
                         if (effect is IContinuousEffect c)
                         {
-                            if (c.EndPoint == 0 && c.EndPoint == 0)
-                            {
-                                c.StartPoint = (int)(srcFrame.ParentClip.StartFrame);
-                                c.EndPoint = (int)(c.StartPoint + srcFrame.ParentClip.Duration * srcFrame.ParentClip.SecondPerFrameRatio);
-                            }
-                            effected = c.Render(
-                                       effected, frameIndex,
-                                       effect.NeedComputer is not null ? PluginManager.CreateComputer(effect.NeedComputer) : null,
-                                       targetWidth, targetHeight);
+                            ProcessContinuousEffect(frameIndex, srcFrame.ParentClip, PluginManager.CreateComputer(effect.NeedComputer), ref effected, steps, ref lastIsProcessStep, effect, c, targetWidth, targetHeight);
                         }
                         else
                         {
-                            effected = effect.Render(
-                                       effected,
-                                       effect.NeedComputer is not null ? PluginManager.CreateComputer(effect.NeedComputer) : null,
-                                       targetWidth, targetHeight);
+                            ProcessEffect(ref effected, steps, ref lastIsProcessStep, effect, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
+                    }
+                    if (steps.Count > 0)
+                    {
+                        effected = PictureProcesser.Process(steps, effected, targetPPB);
+                        steps.Clear();
                     }
                     var mix = GetMixer(srcFrame.MixtureMode);
 
@@ -157,6 +163,61 @@ namespace projectFrameCut.Render.Rendering
 
                 default:
                     throw new NotSupportedException($"Mixture mode {mixtureMode} is not supported.");
+            }
+        }
+
+        private static void ProcessEffect(ref IPicture frame, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, IEffect item, IComputer? computer, int width, int height)
+        {
+            if (item.YieldProcessStep)
+            {
+                lastIsProcessStep = true;
+                try
+                {
+                    var step = item.GetStep(frame, width, height);
+                    steps.Add(step);
+                    if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
+                }
+                catch (Exception ex)
+                {
+                    Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
+                    lastIsProcessStep = false;
+                    frame = item.Render(frame, computer, width, height);
+                }
+            }
+            else
+            {
+                frame = item.Render(frame, computer, width, height);
+            }
+        }
+
+        private static void ProcessContinuousEffect(uint targetFrame, IClip clip, IComputer? computer, ref IPicture frame, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, IEffect item, IContinuousEffect c, int width, int height)
+        {
+            if (c.EndPoint == 0 && c.EndPoint == 0)
+            {
+                c.StartPoint = (int)(clip.StartFrame);
+                c.EndPoint = (int)(c.StartPoint + clip.Duration * clip.SecondPerFrameRatio);
+            }
+            if (c.YieldProcessStep)
+            {
+                lastIsProcessStep = true;
+                try
+                {
+                    var step = c.GetStep(frame, targetFrame, width, height);
+                    steps.Add(step);
+                    if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {c.Name}({c.TypeName}) : {step.GetProcessStack()}");
+
+                }
+                catch (Exception ex)
+                {
+                    Log($"[Render] WARN: Failed to get process steps for continuous effect {c.Name}: {ex}");
+                    lastIsProcessStep = false;
+                    frame = c.Render(frame, targetFrame, computer, width, height);
+                }
+
+            }
+            else
+            {
+                frame = c.Render(frame, targetFrame, computer, width, height);
             }
         }
 

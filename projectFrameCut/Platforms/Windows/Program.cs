@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -21,6 +22,17 @@ namespace projectFrameCut.WinUI
             System.Threading.Thread.CurrentThread.Name = "App Main thread";
             try
             {
+                if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041, 0))
+                {
+                    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+                    static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
+
+                    _ = MessageBox(IntPtr.Zero,
+                        "Sorry, projectFrameCut requires Windows 10 version 2004 (build 19041) or higher to run. Please upgrade your Windows system.",
+                        "projectFrameCut",
+                        0x10);
+                    return;
+                }
                 if (args.Any(c => c.StartsWith("--overrideCulture")))
                 {
                     var overrideCulture = args.First(c => c.StartsWith("--overrideCulture")).Split('=')[1];
@@ -105,6 +117,7 @@ namespace projectFrameCut.WinUI
 
         }
 
+        [DoesNotReturn]
         public static void Crash(Exception ex)
         {
 #if DEBUG

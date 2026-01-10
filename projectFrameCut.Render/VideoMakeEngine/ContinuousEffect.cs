@@ -17,6 +17,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
         public string? NeedComputer => null;
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "ZoomIn";
+        public bool YieldProcessStep => true;
 
 
         public int RelativeWidth { get; set; }
@@ -105,6 +106,11 @@ namespace projectFrameCut.Render.VideoMakeEngine
             Cropper.RelativeHeight = RelativeHeight;
             Cropper.RelativeWidth = RelativeWidth;
         }
+
+        public IPictureProcessStep GetStep(IPicture source, uint index, int targetWidth, int targetHeight)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public class JitterEffect : IContinuousEffect
@@ -130,6 +136,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
         Dictionary<string, string> IContinuousEffect.ParametersType => ParametersType;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public string? NeedComputer => null;
+        public bool YieldProcessStep => true;
 
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
@@ -214,6 +221,20 @@ namespace projectFrameCut.Render.VideoMakeEngine
             }
 
             return placer.Place(source, offX, offY, targetWidth, targetHeight);
+        }
+
+        public IPictureProcessStep GetStep(IPicture source, uint index, int targetWidth, int targetHeight)
+        {
+            int offX = 0, offY = 0;
+            if (MaxOffsetX > 0)
+            {
+                offX = rnd.Next(-MaxOffsetX, MaxOffsetX + 1);
+            }
+            if (MaxOffsetY > 0)
+            {
+                offY = rnd.Next(-MaxOffsetY, MaxOffsetY + 1);
+            }
+            return new PlaceProcessStep(offX, offY, targetWidth, targetHeight);
         }
     }
 }

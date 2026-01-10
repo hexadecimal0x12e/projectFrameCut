@@ -121,7 +121,7 @@ namespace projectFrameCut.Services
                     return;
                 }
 
-                if(!File.Exists(Path.Combine(pluginRoot, metadata.PluginID + ".dll.enc")) ||
+                if (!File.Exists(Path.Combine(pluginRoot, metadata.PluginID + ".dll.enc")) ||
                    !File.Exists(Path.Combine(pluginRoot, metadata.PluginID + ".dll.sig")) ||
                    !File.Exists(Path.Combine(pluginRoot, "hashtable.json")))
                 {
@@ -172,7 +172,7 @@ namespace projectFrameCut.Services
                 {
                     pluginInstance = CreateIPluginFromAsb(plugin, pluginRoot);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     failReason = ex.Message;
                     return;
@@ -385,37 +385,46 @@ namespace projectFrameCut.Services
 
         public static IPluginBase? CreateIPluginFromAsb(Assembly asb, string workingPath)
         {
-            var module = asb.GetModule(asb.GetName().Name + ".dll");
-            var types = module?.GetTypes();
-            if(!types?.Any(a => a.Name == "PluginLoader") ?? false)
+            try
             {
-                throw new EntryPointNotFoundException($"No suitable PluginLoader class found. Do you forget to add it?");
-            }
-            var ldr = types?.First(a => a.Name == "PluginLoader");
-            if (ldr is null)
-            {
+                var module = asb.GetModule(asb.GetName().Name + ".dll");
+                var types = module?.GetTypes();
+                if (!types?.Any(a => a.Name == "PluginLoader") ?? false)
+                {
+                    throw new EntryPointNotFoundException($"No suitable PluginLoader class found. Do you forget to add it?");
+                }
+                var ldr = types?.First(a => a.Name == "PluginLoader");
+                if (ldr is null)
+                {
+                    return null;
+                }
+                var ldrMethod = ldr.GetMethod("CreateInstance");
+                var pluginObj = ldrMethod?.Invoke(null, [Localized._LocaleId_, workingPath]);
+                if (pluginObj is IPluginBase plugin)
+                {
+                    if (plugin.PluginAPIVersion != PluginAPIVersion)
+                    {
+                        Log($"Plugin {plugin.Name} has a mismatch PluginAPIVersion. Excepted {PluginAPIVersion}, got {plugin.PluginAPIVersion}.", "error");
+                        string? localizedFailReason = null;
+                        try
+                        {
+                            localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
+                        }
+                        catch { }
+                        var failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
+                        throw new FeatureNotSupportedException(failReason);
+                    }
+                    plugin.MessagingQueue = MessagingServices.MessagingService;
+                    return plugin;
+                }
                 return null;
             }
-            var ldrMethod = ldr.GetMethod("CreateInstance");
-            var pluginObj = ldrMethod?.Invoke(null, [Localized._LocaleId_, workingPath]);
-            if (pluginObj is IPluginBase plugin)
+            catch (Exception ex)
             {
-                if (plugin.PluginAPIVersion != PluginAPIVersion)
-                {
-                    Log($"Plugin {plugin.Name} has a mismatch PluginAPIVersion. Excepted {PluginAPIVersion}, got {plugin.PluginAPIVersion}.", "error");
-                    string? localizedFailReason = null;
-                    try
-                    {
-                        localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
-                    }
-                    catch { }
-                    var failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
-                    throw new FeatureNotSupportedException(failReason);
-                }
-                plugin.MessagingQueue = MessagingServices.MessagingService;
-                return plugin;
+                Log(ex, "Load userplugin",asb);
+                throw ex;
+
             }
-            return null;
         }
 
         public static Dictionary<string, string> FailedLoadPlugin = new();

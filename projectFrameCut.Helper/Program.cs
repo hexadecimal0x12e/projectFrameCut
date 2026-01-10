@@ -1,7 +1,15 @@
 using projectFrameCut.Shared;
 using projectFrameCut.SplashScreen;
+using System;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace projectFrameCut.Helper
 {
@@ -58,15 +66,22 @@ namespace projectFrameCut.Helper
         }
 
         [STAThread]
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
-            if(args.Contains("--wait"))
+            if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041, 0))
+            {
+                _ = MessageBox(IntPtr.Zero,
+                    "Sorry, projectFrameCut requires Windows 10 version 2004 (build 19041) or higher to run. Please upgrade your Windows system.",
+                    "projectFrameCut",
+                    0x10);
+                return;
+            }
+            if (args.Contains("--wait"))
             {
                 while (!Debugger.IsAttached)
                 {
                     Thread.Sleep(500);
                 }
-                return;
             }
             SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
 
@@ -76,20 +91,37 @@ namespace projectFrameCut.Helper
                 switch (mode)
                 {
                     case "crashForm":
-                        ApplicationConfiguration.Initialize();
+                        SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+                        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+                        Application.EnableVisualStyles();
+                        Application.SetCompatibleTextRenderingDefault(false); 
                         Application.Run(new CrashForm());
                         return;
                     case "uriCallback":
                         //todo
                         return;
+                    case "localSetup":
+                        await ProgramSetup.Setup(args);
+                        return;
                 }
             }
-            var proc = new ProcessStartInfo
+            if(File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.exe")))
             {
-                FileName = "projectFrameCut.exe",
-                Arguments = args.Length > 0 ? string.Join(" ", args.Select(a => $"\"{a}\"")) : "",
-            };  
-            Process.Start(proc);
+                var proc = new ProcessStartInfo
+                {
+                    FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.exe"),
+                    Arguments = args.Length > 0 ? string.Join(" ", args.Select(a => $"\"{a}\"")) : "",
+                };
+                Process.Start(proc);
+            }
+            else
+            {
+                MessageBox(IntPtr.Zero,
+                    "projectFrameCut installation is corrupted or incomplete. Please reinstall the application.",
+                    "projectFrameCut",
+                    0x10);
+            }
+
 
 
         }
@@ -118,5 +150,8 @@ namespace projectFrameCut.Helper
         {
             Application.Exit();
         }
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
     }
 }

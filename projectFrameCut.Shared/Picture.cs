@@ -62,7 +62,8 @@ namespace projectFrameCut.Shared
         /// Records each step of the image processed.
         /// </summary>
         /// <remarks>
-        /// If you're developing a Plugin that implements image processing, please append your processing step information to this property.
+        /// Please append your processing step information to this property if you're manipulating the picture manually.
+        /// If you're using <see cref="IPictureProcessStep"/>, override <see cref="IPictureProcessStep.GetProcessStack"/> to provide the information.
         /// </remarks>
         public string? ProcessStack { get; set; }
         /// <summary>
@@ -488,7 +489,7 @@ namespace projectFrameCut.Shared
         /// <param name="targetHeight">The target height.</param>
         /// <param name="preserveAspect">Whether to preserve aspect ratio.</param>
         /// <returns>A new Picture instance with the resized image data.</returns>
-        //[DebuggerNonUserCode()]
+        [DebuggerNonUserCode()]
         public Picture16bpp Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
         {
             if (targetWidth == Width && targetHeight == Height) return this;
@@ -1444,7 +1445,7 @@ namespace projectFrameCut.Shared
             image.SaveToSixLaborsImage(resultPPB, saveAlpha).Save(path, imageEncoder);
         }
 
-        //[DebuggerStepThrough()]
+        [DebuggerStepThrough()]
         public static Image SaveToSixLaborsImage(this IPicture image, int resultPPB = 16, bool? saveAlpha = null, bool force = false)
         {
             if (image.SixLaborsImage is not null && !force) return image.SixLaborsImage;
@@ -1631,6 +1632,16 @@ namespace projectFrameCut.Shared
                 }
             }
             return result;
+        }
+
+        public static IPicture ToPJFCPicture(this Image source, int targetPPB)
+        {
+            return targetPPB switch
+            {
+                8 => new Picture8bpp(source),
+                16 => new Picture16bpp(source),
+                _ => throw new ArgumentOutOfRangeException(nameof(targetPPB), "Only 8bpp and 16bpp are supported."),
+            };
         }
 
 
