@@ -24,13 +24,18 @@ namespace projectFrameCut.WinUI
             {
                 if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041, 0))
                 {
-                    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-                    static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
-
-                    _ = MessageBox(IntPtr.Zero,
-                        "Sorry, projectFrameCut requires Windows 10 version 2004 (build 19041) or higher to run. Please upgrade your Windows system.",
+                    var opt = MessageBox(IntPtr.Zero,
+                        "Sorry, projectFrameCut requires Windows 10 2004 / LTSC 2021 (build 19041) or higher to run.\r\nConsider upgrade your Windows system.",
                         "projectFrameCut",
-                        0x10);
+                        0x10 | 0x4);
+                    if(opt == 6)
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "https://www.microsoft.com/en-us/software-download/windows11",
+                            UseShellExecute = true
+                        });
+                    }
                     return;
                 }
                 if (args.Any(c => c.StartsWith("--overrideCulture")))
@@ -104,18 +109,18 @@ namespace projectFrameCut.WinUI
             }
             catch (Exception ex)
             {
-                [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-                static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
-
                 _ = MessageBox(IntPtr.Zero,
                     $"Oh no! projectFrameCut have to stop now because a unrecoverable {ex.GetType().Name} exception happens.\r\nFor more information, please see the crash report popped up later.\r\n\r\n({ex})",
                     "Fatal error",
-                    0);
+                    0x10);
                 Crash(ex);
             }
 
 
         }
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
 
         [DoesNotReturn]
         public static void Crash(Exception ex)

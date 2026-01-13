@@ -213,7 +213,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (available.Contains(AVHWDeviceType.AV_HWDEVICE_TYPE_CUDA)) return AVHWDeviceType.AV_HWDEVICE_TYPE_CUDA;
             if (available.Contains(AVHWDeviceType.AV_HWDEVICE_TYPE_VAAPI)) return AVHWDeviceType.AV_HWDEVICE_TYPE_VAAPI;
             if (available.Contains(AVHWDeviceType.AV_HWDEVICE_TYPE_QSV)) return AVHWDeviceType.AV_HWDEVICE_TYPE_QSV;
-            
+
             return available.Count > 0 ? available[0] : AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
         }
 
@@ -310,7 +310,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 _lastPixelFormat = (AVPixelFormat)srcFrame->format;
                 if (_sws != null) ffmpeg.sws_freeContext(_sws);
-                
+
                 _sws = ffmpeg.sws_getContext(
                     _width, _height, _lastPixelFormat,
                     _width, _height, AVPixelFormat.AV_PIX_FMT_BGR24,
@@ -353,7 +353,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 g = new byte[size],
                 b = new byte[size],
             };
-            result.ProcessStack = $"From video '{filePath}', frame #{frameIdx} (HW)";
+            result.ProcessStack = new List<PictureProcessStack>
+            {
+                new PictureProcessStack
+                {
+                    OperationDisplayName = $"From video '{filePath}', frame #{frameIdx}",
+                    Operator = typeof(DecoderContext16Bit),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                }
+            };
             int idx, baseIndex, offset, x, y;
             byte* srcRow;
             for (y = 0; y < height; y++)
@@ -384,11 +392,13 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (_frm != null) { AVFrame* tmp = _frm; _frm = null; ffmpeg.av_frame_free(&tmp); }
             if (_pkt != null) { AVPacket* tmp = _pkt; _pkt = null; ffmpeg.av_packet_free(&tmp); }
             if (_sws != null) { ffmpeg.sws_freeContext(_sws); _sws = null; }
-            if (_codec != null) { 
-                if (_hwDeviceCtx != null) {
+            if (_codec != null)
+            {
+                if (_hwDeviceCtx != null)
+                {
                     ffmpeg.av_buffer_unref(&_codec->hw_device_ctx);
                 }
-                AVCodecContext* tmp = _codec; _codec = null; ffmpeg.avcodec_free_context(&tmp); 
+                AVCodecContext* tmp = _codec; _codec = null; ffmpeg.avcodec_free_context(&tmp);
             }
             if (_hwDeviceCtx != null) { AVBufferRef* tmp = _hwDeviceCtx; _hwDeviceCtx = null; ffmpeg.av_buffer_unref(&tmp); }
             if (_fmt != null) { AVFormatContext* tmp = _fmt; _fmt = null; ffmpeg.avformat_close_input(&tmp); }

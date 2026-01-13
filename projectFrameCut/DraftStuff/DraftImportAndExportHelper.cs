@@ -38,7 +38,7 @@ namespace projectFrameCut.DraftStuff
                         if (elem.Id.StartsWith("ghost_") || elem.Id.StartsWith("shadow_")) continue;
 
                         double startPx = border.TranslationX;
-                        double widthPx = (border.Width > 0) ? border.Width : border.WidthRequest;
+                        double widthPx = (border.WidthRequest > 0) ? border.WidthRequest : ((border.Width > 0) ? border.Width : border.WidthRequest);
 
                         uint startFrame = (uint)Math.Round(page.PixelToFrame(startPx) / elem.SecondPerFrameRatio);
                         uint durationFrames = (uint)Math.Round(page.PixelToFrame(widthPx) / elem.SecondPerFrameRatio);

@@ -7,12 +7,14 @@
 
 
         <VerticalStackLayout>
-            <Button x:Name="OpenGLESStartButton" Text="compute by OpenGL ES (android only)" Clicked="OpenGLESStartButton_Clicked"/>
-            <Button x:Name="MetalRenderStartButton" Text="compute by Metal (ios only)" Clicked="MetalRenderStartButton_Clicked"/>
-            <Button x:Name="TestCrashButton" Text="Crash" Clicked="TestCrashButton_Clicked"/>
-            <Button x:Name="WinUIDiagTestBtn" Text="Test WinUI3 diag" Clicked="WinUIDiagTestBtn_Clicked"/>
-            <Button x:Name="ContextMenuTestBtn" Text="Test context button" Clicked="ContextMenuTestBtn_Clicked" />
-            <Button x:Name="MuxVideoTestBtn" Text="mixture aud and vid" Clicked="MuxVideoTestBtn_Clicked" />
+            <Border StrokeThickness="4">
+                <VerticalStackLayout>
+                    <Button x:Name="OpenGLESStartButton" Text="compute by OpenGL ES (android only)" Clicked="OpenGLESStartButton_Clicked"/>
+                    <Button x:Name="MetalRenderStartButton" Text="compute by Metal (ios only)" Clicked="MetalRenderStartButton_Clicked"/>
+                    <Button x:Name="BenchmarkButton" Text="Run benchmark" Clicked="BenchmarkButton_Clicked" />
+                </VerticalStackLayout>
+            </Border>
+
             <Border StrokeThickness="4">
                 <VerticalStackLayout>
                     <Button x:Name="TestFFmpegButton" Text="Test decode" Clicked="TestFFmpegButton_Clicked"/>
@@ -20,6 +22,14 @@
                     <Button x:Name="TestMixtureButton" Text="Test mixture" Clicked="TestMixtureButton_Clicked"/>
                     <Button x:Name="TestPlaceAndResizeButton" Text="Test place and resize" Clicked="TestPlaceAndResizeButton_Clicked"/>
                     <Image x:Name="PlaceResizeTestImage" />
+                </VerticalStackLayout>
+            </Border>
+            <Border StrokeThickness="4">
+                <VerticalStackLayout>
+                    <Button x:Name="TestCrashButton" Text="Crash" Clicked="TestCrashButton_Clicked"/>
+                    <Button x:Name="WinUIDiagTestBtn" Text="Test WinUI3 diag" Clicked="WinUIDiagTestBtn_Clicked"/>
+                    <Button x:Name="ContextMenuTestBtn" Text="Test context button" Clicked="ContextMenuTestBtn_Clicked" />
+                    <Button x:Name="MuxVideoTestBtn" Text="mixture aud and vid" Clicked="MuxVideoTestBtn_Clicked" />
                 </VerticalStackLayout>
             </Border>
             <Border StrokeThickness="4">

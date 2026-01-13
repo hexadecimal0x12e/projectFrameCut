@@ -70,10 +70,18 @@ namespace projectFrameCut.Helper
         {
             if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041, 0))
             {
-                _ = MessageBox(IntPtr.Zero,
-                    "Sorry, projectFrameCut requires Windows 10 version 2004 (build 19041) or higher to run. Please upgrade your Windows system.",
+                var opt = MessageBox(IntPtr.Zero,
+                    "Sorry, projectFrameCut requires Windows 10 2004 / LTSC 2021 (build 19041) or higher to run. Consider upgrade your Windows system.",
                     "projectFrameCut",
-                    0x10);
+                    0x10 | 0x4);
+                if (opt == 1)
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "https://www.microsoft.com/en-us/software-download/windows11",
+                        UseShellExecute = true
+                    });
+                }
                 return;
             }
             if (args.Contains("--wait"))
@@ -99,9 +107,6 @@ namespace projectFrameCut.Helper
                         return;
                     case "uriCallback":
                         //todo
-                        return;
-                    case "localSetup":
-                        await ProgramSetup.Setup(args);
                         return;
                 }
             }

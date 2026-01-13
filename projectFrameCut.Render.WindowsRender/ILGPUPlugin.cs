@@ -50,7 +50,8 @@ namespace projectFrameCut.Render.WindowsRender
             new Dictionary<string, Func<IComputer>>
             {
                 {"OverlayComputer", new(() => new OverlayComputer(accelerators,null)) },
-                {"RemoveColorComputer", new(() => new RemoveColorComputer(accelerators,null)) }
+                {"RemoveColorComputer", new(() => new RemoveColorComputer(accelerators,null)) },
+                {"ResizeComputer", new(() => new ResizeComputer(accelerators,null)) }
             };
 
 

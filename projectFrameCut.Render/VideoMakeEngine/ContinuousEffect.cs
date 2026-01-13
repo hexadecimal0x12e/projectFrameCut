@@ -109,8 +109,85 @@ namespace projectFrameCut.Render.VideoMakeEngine
 
         public IPictureProcessStep GetStep(IPicture source, uint index, int targetWidth, int targetHeight)
         {
-            throw new NotImplementedException();
+            int localIndex = (int)index - StartPoint;
+            double totalFrames = (double)(EndPoint - StartPoint);
+            double progress = totalFrames <= 0 ? 0.0 : (double)localIndex / totalFrames;
+            if (progress < 0.0) progress = 0.0;
+            if (progress > 1.0) progress = 1.0;
+
+            int currentWidth = (int)Math.Round(source.Width + (TargetX - source.Width) * progress);
+            int currentHeight = (int)Math.Round(source.Height + (TargetY - source.Height) * progress);
+            if (currentWidth < 1) currentWidth = 1;
+            if (currentHeight < 1) currentHeight = 1;
+
+            int startX = Math.Max(0, (source.Width - currentWidth) / 2);
+            int startY = Math.Max(0, (source.Height - currentHeight) / 2);
+            var rect = new Rectangle(startX, startY, currentWidth, currentHeight);
+
+            return new ZoomInProcessStep(rect, targetWidth, targetHeight);
         }
+    }
+
+    public class ZoomInProcessStep : IPictureProcessStep
+    {
+        private TimeSpan? _elapsed;
+        public string Name => "ZoomIn";
+        public Dictionary<string, object?> Properties { get; set; } = new();
+
+        public Rectangle CropRect { get; }
+        public int TargetWidth { get; }
+        public int TargetHeight { get; }
+
+        public ZoomInProcessStep(Rectangle cropRect, int targetWidth, int targetHeight)
+        {
+            CropRect = cropRect;
+            TargetWidth = targetWidth;
+            TargetHeight = targetHeight;
+            Properties = new Dictionary<string, object?>
+            {
+                { nameof(CropRect), CropRect },
+                { nameof(TargetWidth), TargetWidth },
+                { nameof(TargetHeight), TargetHeight }
+            };
+        }
+
+        public IPicture Process(IPicture source)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var resultImg = source.SaveToSixLaborsImage().Clone(x => x.Crop(CropRect).Resize(TargetWidth, TargetHeight));
+
+            IPicture result = (int)source.bitPerPixel switch
+            {
+                8 => new Picture8bpp(resultImg),
+                16 => new Picture16bpp(resultImg),
+                _ => throw new NotSupportedException($"Specific pixel-mode is not supported.")
+            };
+            sw.Stop();
+            _elapsed = sw.Elapsed;
+
+            result.ProcessStack = new List<PictureProcessStack>(source.ProcessStack) { GetProcessStack() };
+            return result;
+        }
+
+        public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()
+        {
+            return x => x.Crop(CropRect).Resize(TargetWidth, TargetHeight);
+        }
+
+        public PictureProcessStack GetProcessStack() => new PictureProcessStack
+        {
+            Elapsed = _elapsed,
+            OperationDisplayName = "ZoomIn",
+            Operator = typeof(ZoomInProcessStep),
+            ProcessingFuncStackTrace = new System.Diagnostics.StackTrace(true),
+            StepUsed = this,
+            Properties = new Dictionary<string, object>
+            {
+                { nameof(CropRect), CropRect },
+                { nameof(TargetWidth), TargetWidth },
+                { nameof(TargetHeight), TargetHeight }
+            }
+        };
     }
 
     public class JitterEffect : IContinuousEffect
@@ -237,4 +314,5 @@ namespace projectFrameCut.Render.VideoMakeEngine
             return new PlaceProcessStep(offX, offY, targetWidth, targetHeight);
         }
     }
+
 }

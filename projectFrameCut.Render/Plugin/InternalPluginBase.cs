@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Benchmark;
 
 namespace projectFrameCut.Render.Plugin;
 
@@ -121,10 +122,13 @@ public class InternalPluginBase : IPluginBase
 
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>>
     {
-        {"VideoWriter", new((c) => {if(VideoWriter.DetectCodec(c)) return new VideoWriter(); throw new NotSupportedException($"Codec {c} not found."); }) }
+        {"VideoWriter", new((_) => new VideoWriter()) },
+        {"BlackHoleWriter", new((_) => new BlackholeVideoWriter()) }
     };
 
     public IMessagingService MessagingQueue { get; set; }
+
+    public static IMessagingService PluginMessagingQueue { get; private set; }
 
 
     //public IEffect EffectCreator(EffectAndMixtureJSONStructure stru) => EffectHelper.CreateFromJSONStructure(stru);
@@ -162,8 +166,18 @@ public class InternalPluginBase : IPluginBase
         return result == "!!!NULL!!!" ? null : result;
     }
 
+    bool IPluginBase.OnLoaded(out string FailedReason)
+    {
+        FailedReason = "";
+        PluginMessagingQueue = MessagingQueue;
+        return true;
+    }
 
-
+    ProjectJSONStructure? IPluginBase.OnProjectLoad(ProjectJSONStructure project)
+    {
+        PluginMessagingQueue = MessagingQueue;
+        return null;
+    }
 
 }
 

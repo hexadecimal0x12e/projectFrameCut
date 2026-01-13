@@ -109,7 +109,7 @@ namespace projectFrameCut.Render.Rendering
 
                             if (token.IsCancellationRequested) return;
                             finished = Volatile.Read(ref Finished);
-                            wrote = builder.FramePendedToWrite.Count(k => k.Value);
+                            wrote = builder.WrittenFramesCount;
                             working = Volatile.Read(ref ThreadWorking);
 
                             Log($"[STAT] " +
@@ -117,7 +117,7 @@ namespace projectFrameCut.Render.Rendering
                                 $"Memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB. \r\n" +
                                 $"       (Total {TotalEnqueued}/{d} prepared and {finished}/{d} finished, " +
                                 $"pending to render: {Volatile.Read(ref TotalEnqueued) - finished}, " +
-                                $"total write frames: {wrote} wrote and {builder.FramePendedToWrite.Count() - wrote} pended, " +
+                                $"total write frames: {wrote} wrote and {builder.TotalFramesCount - wrote} pended, " +
                                 $"slots {Math.Max(0, MaxThreads - working)}/{MaxThreads}, active workers: {working}, " +
                                 $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}.)");
                             Thread.Sleep(10000);
@@ -257,22 +257,6 @@ namespace projectFrameCut.Render.Rendering
                             catch (Exception ex)
                             {
                                 Log($"Error rendering frame {targetFrame}: {ex}", "error");
-
-                                try
-                                {
-                                    if (builder != null && !builder.FramePendedToWrite.ContainsKey(targetFrame))
-                                    {
-                                        builder.Append(targetFrame, BlankFrame);
-                                        Interlocked.Increment(ref Finished);
-                                        InvokeProgress();
-                                        Log($"[Render] Filled failed frame {targetFrame} with blank to avoid writer stall.", "warn");
-                                    }
-                                }
-                                catch (Exception fillEx)
-                                {
-                                    Log($"[Render] Failed to fill blank for frame {targetFrame}: {fillEx}", "error");
-                                }
-
                                 exceptions.Enqueue(ex);
                             }
                             finally
@@ -373,7 +357,11 @@ namespace projectFrameCut.Render.Rendering
             {
                 var effectInstances = EffectHelper.GetEffectsInstances(item.Effects);
                 EffectCache.AddOrUpdate(item.Id, effectInstances, (_, _) => effectInstances);
-                Log($"[Preparer] Cached {effectInstances.Length} effects for clip {item.Id}");
+                foreach (var effect in effectInstances)
+                {
+                    if (effect.YieldProcessStep == true && effect.NeedComputer is not null) throw new InvalidDataException($"A effect can't both yield process step, and use a computer.");
+                }
+                Log($"[Preparer] Cached {effectInstances.Length} effects for clip {item.Id} ({string.Concat(", ",effectInstances.Select(c => $"{c.TypeName}:'{c.Name}'"))})");
             }
 
         }
@@ -425,9 +413,10 @@ namespace projectFrameCut.Render.Rendering
                 }
                 sw.Stop();
                 EachElapsedForPreparing.Add(sw.Elapsed);
-                Log($"[Preparer] Frame {idx} is ready to render, elapsed {sw.Elapsed}");
+                if (LogState) Log($"[Preparer] Frame {idx} is ready to render, elapsed {sw.Elapsed}");
 
             }
+            Log($"[Preparer] All frames are ready.");
 
             // mark preparer finished so main loop can complete when renders done
             PreparerFinished = true;
@@ -443,7 +432,7 @@ namespace projectFrameCut.Render.Rendering
             }
             Stopwatch sw = Stopwatch.StartNew();
             IPicture result = null!;
-
+            
             PreparedFlag.TryRemove(targetFrame, out _);
 
             if (!ClipNeedForFrame.Remove(targetFrame, out var ClipsNeed) || ClipsNeed.Length == 0)
@@ -498,7 +487,6 @@ namespace projectFrameCut.Render.Rendering
                     if (steps.ListAny())
                     {
                         frame = PictureProcesser.Process(steps, frame, _ppb);
-                        steps.Clear();
                     }
                 }
 
@@ -510,7 +498,9 @@ namespace projectFrameCut.Render.Rendering
                 {
                     if (MixtureCache.TryGetValue(clip.MixtureMode, out var mix))
                     {
-                        result = mix.Mix(result, frame, GetOrCreateComputer(mix.ComputerId)).Resize(_width, _height, false);
+                        var temp = mix.Mix(result, frame, GetOrCreateComputer(mix.ComputerId)).Resize(_width, _height, false);
+                        result.Dispose();
+                        result = temp;
                     }
                 }
             }
@@ -541,7 +531,7 @@ namespace projectFrameCut.Render.Rendering
             Interlocked.Increment(ref Finished);
             InvokeProgress();
             sw.Stop();
-            Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}");
+            if(LogState) Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}");
             EachElapsed.Add(sw.Elapsed);
             return;
 

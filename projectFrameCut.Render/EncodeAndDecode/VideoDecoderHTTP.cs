@@ -263,14 +263,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     {
                         if (_totalFrames < _currentFrameNumber)
                         {
-                            goto not_found; 
+                            goto not_found;
                         }
                         break;
                     }
                     else
                     {
-                         // Error
-                         break;
+                        // Error
+                        break;
                     }
                 }
 
@@ -278,7 +278,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 {
                     // If we reached EOF and flushed everything, and still didn't find the frame
                     // Check if we are close enough to consider it done or fail
-                     goto not_found;
+                    goto not_found;
                 }
             }
 
@@ -316,7 +316,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 g = new byte[size],
                 b = new byte[size],
             };
-            result.ProcessStack = $"From video '{filePath}', frame #{frameIdx}";
+            result.ProcessStack = new List<PictureProcessStack>
+            { 
+                new PictureProcessStack 
+                { 
+                    OperationDisplayName = $"From video '{filePath}', frame #{frameIdx}",
+                    Operator = typeof(DecoderContext16Bit), 
+                    ProcessingFuncStackTrace = new StackTrace(true) 
+                } 
+            };
             int idx, baseIndex, offset, x, y;
             byte* srcRow;
             for (y = 0; y < height; y++)

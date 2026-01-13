@@ -2,7 +2,10 @@
 using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Shared
 {
@@ -36,14 +39,31 @@ namespace projectFrameCut.Shared
         /// Get the process stack information of this step. This is used for generating <see cref="IPicture.ProcessStack"/>.
         /// </summary>
         /// <returns></returns>
-        public virtual string GetProcessStack() => $"Type:{Name}, Properties: {string.Join(", ", Properties.Select(c => $"{c.Key}:{c.Value}"))}";
+        public PictureProcessStack GetProcessStack();
 
     }
+
+    public class PictureProcessStack
+    {
+        public required string OperationDisplayName { get; set; }
+        public required Type? Operator { get; set; }
+        public required StackTrace? ProcessingFuncStackTrace { get; set; }
+        public IPictureProcessStep? StepUsed { get; set; }
+        public Dictionary<string, object>? Properties { get; set; }
+        public TimeSpan? Elapsed { get; set; }
+    }
+
+    public class OverlayedPictureProcessStack : PictureProcessStack
+    {
+        public required List<PictureProcessStack> TopSteps { get; set; }
+        public required List<PictureProcessStack> BaseSteps { get; set; }
+    }
+
     public static class PictureProcesser
     {
         public static IPicture Process(List<IPictureProcessStep> steps, IPicture source, int targetPPB)
         {
-            string procStack = "";
+            List<PictureProcessStack> procStack = new();
             var img = source.ToBitPerPixel(targetPPB).SaveToSixLaborsImage(targetPPB, true, false);
             List<Func<IImageProcessingContext, IImageProcessingContext>> processingContexts = new();
             foreach (var item in steps)
@@ -51,30 +71,38 @@ namespace projectFrameCut.Shared
                 var step = item.GetSixLaborsImageSharpProcess();
                 if (step is not null)
                 {
-                    processingContexts.Add(step);
+                    var stack = item.GetProcessStack();
+                    processingContexts.Add(ctx =>
+                    {
+                        var sw = Stopwatch.StartNew();
+                        var res = step(ctx);
+                        sw.Stop();
+                        stack.Elapsed = sw.Elapsed;
+                        return res;
+                    });
+                    procStack.Add(stack);
                 }
                 else
                 {
-                    Logger.LogDiagnostic($"Step {item.Name} doesn't have a IImageProcessingContext. Process the picture and convert it...");
+                    //Logger.LogDiagnostic($"Step {item.Name} doesn't have a IImageProcessingContext. Process the picture and convert it...");
                     img = ProcessSixLaborsProcessingContexts(img, processingContexts);
                     processingContexts.Clear();
                     img = item.Process(img.ToPJFCPicture(targetPPB)).SaveToSixLaborsImage(targetPPB, true, false);
+                    procStack.Add(item.GetProcessStack());
                 }
-                procStack += Environment.NewLine + item.GetProcessStack();
             }
-            if(processingContexts.ListAny())
+            if (processingContexts.ListAny())
             {
                 img = ProcessSixLaborsProcessingContexts(img, processingContexts);
             }
-            return img.ToPJFCPicture(targetPPB);
+            source.Dispose();
+            var result = img.ToPJFCPicture(targetPPB);
+            result.ProcessStack = source.ProcessStack.Concat(procStack).ToList();
+            return result;
         }
 
         private static Image ProcessSixLaborsProcessingContexts(Image img, List<Func<IImageProcessingContext, IImageProcessingContext>> processingContexts)
         {
-            if (img is null)
-            {
-                throw new ArgumentException("Source picture does not have SixLabors image data.");
-            }
             img.Mutate(ctx =>
             {
                 foreach (var process in processingContexts)

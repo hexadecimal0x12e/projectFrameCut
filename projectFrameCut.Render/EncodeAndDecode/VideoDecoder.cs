@@ -282,7 +282,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 }
             }
-            result.ProcessStack = $"From video '{filePath}', frame #{frameIdx}";
+            result.ProcessStack = new List<PictureProcessStack>
+            {
+                new PictureProcessStack
+                {
+                    OperationDisplayName = $"From video '{filePath}', frame #{frameIdx}",
+                    Operator = typeof(DecoderContext16Bit),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                }
+            };
             return result;
         }
 
@@ -604,7 +612,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 g = new byte[size],
                 b = new byte[size],
             };
-            result.ProcessStack = $"From video '{filePath}', frame #{frameIdx}";
+            result.ProcessStack = new List<PictureProcessStack>
+            {
+                new PictureProcessStack
+                {
+                    OperationDisplayName = $"From video '{filePath}', frame #{frameIdx}",
+                    Operator = typeof(DecoderContext16Bit),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                }
+            };
             int idx, baseIndex, offset, x, y;
             byte* srcRow;
             for (y = 0; y < height; y++)

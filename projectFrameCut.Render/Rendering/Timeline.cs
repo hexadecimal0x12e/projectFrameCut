@@ -143,7 +143,7 @@ namespace projectFrameCut.Render.Rendering
             {
                 Log(ex, $"Render frame {frameIndex}", "Timeline");
                 throw;
-                return new Picture(Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png")).Resize(targetHeight, targetHeight, true);
+                return new Picture(Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png")).Resize(targetWidth, targetHeight, true);
             }
 
         }

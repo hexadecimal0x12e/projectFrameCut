@@ -12,6 +12,7 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Plugin;
+using System.Text.Json;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
@@ -231,7 +232,21 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             return new Picture(canvas)
             {
-                ProcessStack = $"Created from text '{TextEntries.Aggregate("", (a, b) => $"{a},{b.text}")}'"
+                ProcessStack = new List<PictureProcessStack>
+                {
+                    new PictureProcessStack
+                    {
+                        OperationDisplayName = "TextClip Render",
+                        Operator = typeof(TextClip),
+                        ProcessingFuncStackTrace = new System.Diagnostics.StackTrace(true),
+                        StepUsed = null,
+                        Properties = new Dictionary<string, object>
+                        {
+                            { "TextEntries", JsonSerializer.Serialize(TextEntries, JsonSerializerOptions.Web) },
+                            { "FontPath", FontPath }
+                        }
+                    }
+                }
             };
         }
 

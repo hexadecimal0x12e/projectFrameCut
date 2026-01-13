@@ -4,6 +4,7 @@ using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Runtime.InteropServices;
 
 namespace projectFrameCut.Render.Rendering
@@ -15,6 +16,12 @@ namespace projectFrameCut.Render.Rendering
         uint index;
         bool running = true, stopped = false;
         ConcurrentDictionary<uint, IPicture> Cache = new();
+
+        private int _totalFramesCount = 0;
+        private int _writtenFramesCount = 0;
+
+        public int TotalFramesCount => _totalFramesCount;
+        public int WrittenFramesCount => _writtenFramesCount;
 
         /// <summary>
         /// When it's true, adding a frame with an existing index will throw an exception, 
@@ -117,6 +124,9 @@ namespace projectFrameCut.Render.Rendering
                     return;
                 }
             }
+
+            Interlocked.Increment(ref _totalFramesCount);
+
             if (!BlockWrite)
             {
                 Cache.AddOrUpdate(index, frame, (_, _) => throw new InvalidOperationException($"Frame #{index} has already been added."));               
@@ -171,6 +181,7 @@ namespace projectFrameCut.Render.Rendering
                     {
                         builder.Append(Cache.TryRemove(index, out var f) ? f : throw new KeyNotFoundException());
                         FramePendedToWrite[index] = true;
+                        Interlocked.Increment(ref _writtenFramesCount);
                         index++;
 
                         if (DisposeFrameAfterEachWrite && !f.Flag.HasFlag(IPicture.PictureFlag.NoDisposeAfterWrite)) f.Dispose();

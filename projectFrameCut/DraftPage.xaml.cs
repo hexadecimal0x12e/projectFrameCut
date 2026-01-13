@@ -30,7 +30,7 @@ using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Asset;
 using projectFrameCut.ViewModels;
 using projectFrameCut.Render.Rendering;
-using static System.Net.Mime.MediaTypeNames;
+using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
 
 
 
@@ -60,6 +60,7 @@ using Microsoft.Maui.Platform;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using Android.Content.Res;
+using static System.Net.Mime.MediaTypeNames;
 
 #endif
 
@@ -585,7 +586,7 @@ public partial class DraftPage : ContentPage
 
             var border = clip.Clip;
             double clipStartX = border.TranslationX;
-            double clipWidth = border.Width > 0 ? border.Width : border.WidthRequest;
+            double clipWidth = (border.WidthRequest > 0) ? border.WidthRequest : ((border.Width > 0) ? border.Width : border.WidthRequest);
             double clipEndX = clipStartX + clipWidth;
 
             if (playheadXInContent <= clipStartX + 1 || playheadXInContent >= clipEndX - 1)
@@ -1618,7 +1619,7 @@ public partial class DraftPage : ContentPage
 
             case GestureStatus.Completed:
                 HandleStartWidth.TryRemove(clip.Id, out _);
-                clip.lengthInFrame = PixelToFrame(clip.Clip.Width);
+                clip.lengthInFrame = PixelToFrame((clip.Clip.WidthRequest > 0) ? clip.Clip.WidthRequest : clip.Clip.Width);
                 double deltaPx = clip.Clip.TranslationX - clip.layoutX;
                 long deltaFrames = (long)Math.Round(deltaPx * FramePerPixel * clip.SecondPerFrameRatio * tracksZoomOffest);
                 long newRel = (long)clip.relativeStartFrame + deltaFrames;
@@ -1673,7 +1674,7 @@ public partial class DraftPage : ContentPage
             case GestureStatus.Completed:
                 HandleStartWidth.TryRemove(clip.Id, out _);
                 clip.Clip.BatchCommit();
-                clip.lengthInFrame = PixelToFrame(clip.Clip.Width);
+                clip.lengthInFrame = PixelToFrame((clip.Clip.WidthRequest > 0) ? clip.Clip.WidthRequest : clip.Clip.Width);
                 OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
                 {
                     SourceId = clip.Id,
@@ -3995,9 +3996,17 @@ public partial class DraftPage : ContentPage
                     w.Finish();
                     w.Dispose();
                 })
+            },
+            {
+                "Debug_DumpProcessStack", new Command(async () =>
+                {
+                    var f = previewer.GetFrame((uint)_currentFrame, previewWidth, previewHeight);
+                    var text = PictureExtensions.FormatProcessStackForLog(f.ProcessStack);
+                    await Microsoft.Maui.ApplicationModel.DataTransfer.Clipboard.Default.SetTextAsync(text);
+                })
             }
 #endif
-        };
+                };
 
         var localizedActionPair = actionsPair.ToDictionary(kv => Localized.DynamicLookup(kv.Key, kv.Key), kv => kv.Value);
 

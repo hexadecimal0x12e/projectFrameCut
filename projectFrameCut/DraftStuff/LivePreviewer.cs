@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using IPicture = projectFrameCut.Shared.IPicture;
 
 namespace projectFrameCut.LivePreview
 {
@@ -51,7 +52,12 @@ namespace projectFrameCut.LivePreview
             return destPath;
         }
 
-
+        public IPicture GetFrame(uint frameIndex, int targetWidth, int targetHeight)
+        {
+            var layers = Timeline.GetFramesInOneFrame(Clips, frameIndex, targetWidth, targetHeight, true);
+            var pic = Timeline.MixtureLayers(layers, frameIndex, targetWidth, targetHeight);
+            return pic;
+        }
 
         public void UpdateDraft(DraftStructureJSON json)
         {

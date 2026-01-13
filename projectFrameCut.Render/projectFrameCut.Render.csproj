@@ -8,15 +8,14 @@
     <Platforms>AnyCPU;x64</Platforms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
-		<AssemblyVersion>1.2.0.0</AssemblyVersion>
-		<FileVersion>1.2.0.0</FileVersion>
+		<AssemblyVersion>1.3.0.2</AssemblyVersion>
+		<FileVersion>1.3.0.2</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
-		<Product>codename 'projectFrameCut'</Product>
-		<Description>projectFrameCut core render library</Description>
+		<Product>projectFrameCut's core render library</Product>
+		<Description>projectFrameCut's core render library</Description>
 		<Copyright>Copyright (c) hexadecimal0x12e 2025</Copyright>
 		<PackageProjectUrl>hexadecimal0x12e.com</PackageProjectUrl>
-		<Title>codename 'projectFrameCut'</Title>
-
+		<Title>projectFrameCut's core render library</Title>
 	</PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

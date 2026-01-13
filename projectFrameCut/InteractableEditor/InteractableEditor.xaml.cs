@@ -481,15 +481,15 @@ namespace InteractableEditor
             {
                 if (_currentClip.Effects.TryGetValue(InternalResizeKey, out var r) && r is ResizeEffect resize)
                 {
-                    int newW = (int)Math.Round(w);
-                    int newH = (int)Math.Round(h);
+                    int newW = (int)Math.Round(w, MidpointRounding.AwayFromZero);
+                    int newH = (int)Math.Round(h, MidpointRounding.AwayFromZero);
 
                     int resizeRelW = relW;
                     int resizeRelH = relH;
                     if (resize.RelativeWidth > 0 && resize.RelativeHeight > 0)
                     {
-                        newW = (int)Math.Round(w * resize.RelativeWidth / _videoWidth);
-                        newH = (int)Math.Round(h * resize.RelativeHeight / _videoHeight);
+                        newW = (int)Math.Round(w * resize.RelativeWidth / _videoWidth, MidpointRounding.AwayFromZero);
+                        newH = (int)Math.Round(h * resize.RelativeHeight / _videoHeight, MidpointRounding.AwayFromZero);
                         resizeRelW = resize.RelativeWidth;
                         resizeRelH = resize.RelativeHeight;
                     }
@@ -510,8 +510,8 @@ namespace InteractableEditor
                 {
                     _currentClip.Effects[InternalResizeKey] = new ResizeEffect
                     {
-                        Width = (int)Math.Round(w),
-                        Height = (int)Math.Round(h),
+                        Width = (int)Math.Round(w, MidpointRounding.AwayFromZero),
+                        Height = (int)Math.Round(h, MidpointRounding.AwayFromZero),
                         PreserveAspectRatio = false,
                         Enabled = true,
                         Index = int.MinValue + 50,

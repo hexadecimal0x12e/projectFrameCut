@@ -11,6 +11,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Numerics;
+using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using static projectFrameCut.Shared.IPicture;
@@ -65,7 +67,7 @@ namespace projectFrameCut.Shared
         /// Please append your processing step information to this property if you're manipulating the picture manually.
         /// If you're using <see cref="IPictureProcessStep"/>, override <see cref="IPictureProcessStep.GetProcessStack"/> to provide the information.
         /// </remarks>
-        public string? ProcessStack { get; set; }
+        public List<PictureProcessStack> ProcessStack { get; set; }
         /// <summary>
         /// Indicates whether this picture has an alpha channel.
         /// </summary>
@@ -77,12 +79,6 @@ namespace projectFrameCut.Shared
         /// if <see cref="Disposed"/> is null, this picture'll never be disposed.
         /// </remarks>
         public bool? Disposed { get; set; }
-
-        /// <summary>
-        /// Represents the internal SixLabors.ImageSharp.Image representation of this picture, if available.
-        /// </summary>
-        [JsonIgnore()]
-        public Image? SixLaborsImage { get; set; }
 
         /// <summary>
         /// Resize the picture. 
@@ -253,15 +249,12 @@ namespace projectFrameCut.Shared
         public uint? frameIndex { get; init; } //诊断用
         public string? filePath { get; init; } //诊断用
         public PictureFlag Flag { get; set; }
-        public string? ProcessStack { get; set; }
+        public List<PictureProcessStack> ProcessStack { get; set; }
         public bool? Disposed { get; set; } = false;
 
         public bool hasAlphaChannel { get; set; } = false;
 
         public PicturePixelMode bitPerPixel => 16;
-        [JsonIgnore()]
-        public Image? SixLaborsImage { get; set; }
-
         /// <summary>
         /// Initializes a new instance of the Picture class by copying the properties of an existing Picture.
         /// </summary>
@@ -293,7 +286,17 @@ namespace projectFrameCut.Shared
             }
 
 
-            ProcessStack = $"Created from another, {Width}*{Height}, data {(copyData ? "copied" : "uncopied")},\r\n'{picture.ProcessStack}'\r\n";
+            ProcessStack = [new PictureProcessStack
+            {
+                OperationDisplayName = "Create from another",
+                Operator = this.GetType(),
+                ProcessingFuncStackTrace = new StackTrace(true),
+                Properties = new Dictionary<string, object>
+                {
+                    { "SourceProcessStack", picture?.ProcessStack!  },
+                    { "CopyData", copyData }
+                },
+            }];
         }
 
         /// <summary>
@@ -312,8 +315,12 @@ namespace projectFrameCut.Shared
             g = new ushort[Pixels];
             b = new ushort[Pixels];
             a = null;
-            ProcessStack = $"Created from scratch, {Width}*{Height}\r\n";
-
+            ProcessStack = [new PictureProcessStack
+            {
+                OperationDisplayName = "Create from scratch",
+                Operator = this.GetType(),
+                ProcessingFuncStackTrace = new StackTrace(true),
+            }];
         }
 
 
@@ -360,8 +367,19 @@ namespace projectFrameCut.Shared
 
             Pixels = checked(Width * Height);
             filePath = imagePath;
-            ProcessStack = $"Created from file '{imagePath}', {Width}*{Height}\r\n";
-
+            ProcessStack = new List<PictureProcessStack> 
+            {
+                new PictureProcessStack
+                {
+                    OperationDisplayName = "Create from file",
+                    Operator = this.GetType(),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                    Properties = new Dictionary<string, object>
+                    {
+                        { "FilePath", imagePath },
+                    },
+                }
+            };
         }
 
         /// <summary>
@@ -376,7 +394,6 @@ namespace projectFrameCut.Shared
             Width = source.Width;
             Height = source.Height;
             Pixels = checked(Width * Height);
-            SixLaborsImage = source;
             r = new ushort[Pixels];
             g = new ushort[Pixels];
             b = new ushort[Pixels];
@@ -433,7 +450,15 @@ namespace projectFrameCut.Shared
                     }
                 }
             }
-            ProcessStack = $"Created from SixLabors.ImageSharp.Image, {Width}*{Height}\r\n";
+            ProcessStack = new List<PictureProcessStack>
+            {
+                new PictureProcessStack
+                {
+                    OperationDisplayName = "Created from SixLabors.ImageSharp.Image",
+                    Operator = this.GetType(),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                }
+            };
 
         }
 
@@ -598,7 +623,20 @@ namespace projectFrameCut.Shared
                         }
                     }
                 }
-                result.ProcessStack = $"{ProcessStack}\r\nResize to {targetWidth}*{targetHeight}\r\n";
+                result.ProcessStack.Add(new PictureProcessStack
+                {
+                    OperationDisplayName = "Resize",
+                    Operator = this.GetType(),
+                    ProcessingFuncStackTrace = new(true),
+                    Properties = new Dictionary<string, object>
+                    {
+                        { "SourceWidth", Width },
+                        { "SourceHeight", Height },
+                        { "TargetWidth", targetWidth },
+                        { "TargetHeight", targetHeight },
+                        { "PreserveAspect", preserveAspect },
+                    },
+                });
 
                 return result;
             }
@@ -608,7 +646,24 @@ namespace projectFrameCut.Shared
         {
             var pic = new Picture(width, height)
             {
-                ProcessStack = $"SolidColor, {width}*{height}, rgba:{r},{g},{b},{(a is not null ? $"{a}" : "ff")}\r\n"
+                ProcessStack = new List<PictureProcessStack>
+                {
+                    new PictureProcessStack
+                    {
+                        OperationDisplayName = "GenerateSolidColor",
+                        Operator = typeof(Picture16bpp),
+                        ProcessingFuncStackTrace = new StackTrace(true),
+                        Properties = new Dictionary<string, object>
+                        {
+                            { "Width", width },
+                            { "Height", height },
+                            { "R", r },
+                            { "G", g },
+                            { "B", b },
+                            { "A", a ?? -1f },
+                        },
+                    }
+                }
             };
             pic.r = Enumerable.Repeat(r, pic.Pixels).ToArray();
             pic.g = Enumerable.Repeat(g, pic.Pixels).ToArray();
@@ -746,14 +801,13 @@ namespace projectFrameCut.Shared
         public uint? frameIndex { get; init; } //诊断用
         public string? filePath { get; init; } //诊断用
         public PictureFlag Flag { get; set; }
-        public string? ProcessStack { get; set; }
+        public List<PictureProcessStack> ProcessStack { get; set; }
         public bool? Disposed { get; set; } = false;
 
         public bool hasAlphaChannel { get; set; } = false;
 
         public PicturePixelMode bitPerPixel => 8;
-        [JsonIgnore()]
-        public Image? SixLaborsImage { get; set; }
+
 
 
         /// <summary>
@@ -787,8 +841,22 @@ namespace projectFrameCut.Shared
             }
 
 
-            ProcessStack = $"Created from another, {Width}*{Height}, data {(copyData ? "copied" : "uncopied")},\r\n'{picture.ProcessStack}'\r\n";
-        }
+            ProcessStack = new List<PictureProcessStack>
+            {
+                new PictureProcessStack
+                {
+                    OperationDisplayName = "Create from another",
+                    Operator = this.GetType(),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                    Properties = new Dictionary<string, object>
+                    {
+                        { "SourceProcessStack", picture?.ProcessStack! },
+                        { "CopyData", copyData }
+                    },
+                }
+            };
+            
+        }   
 
         /// <summary>
         /// Initializes a new instance of the Picture8bpp class with the specified width and height.
@@ -806,7 +874,20 @@ namespace projectFrameCut.Shared
             g = new byte[Pixels];
             b = new byte[Pixels];
             a = null;
-            ProcessStack = $"Created from scratch, {Width}*{Height}\r\n";
+            ProcessStack = new List<PictureProcessStack>
+            {
+                new PictureProcessStack
+                {
+                    OperationDisplayName = "Created from scratch",
+                    Operator = this.GetType(),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                    Properties = new Dictionary<string, object>
+                    {
+                        { "Width", Width },
+                        { "Height", Height }
+                    },
+                }
+            };
 
         }
 
@@ -848,17 +929,31 @@ namespace projectFrameCut.Shared
 
             Pixels = checked(Width * Height);
             filePath = imagePath;
-            ProcessStack = $"Created from file '{imagePath}', {Width}*{Height}\r\n";
+            ProcessStack = new List<PictureProcessStack>
+            {
+                new PictureProcessStack
+                {
+                    OperationDisplayName = $"Created from file '{imagePath}'",
+                    Operator = this.GetType(),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                    Properties = new Dictionary<string, object>
+                    {
+                        { "FilePath", imagePath },
+                        { "Width", Width },
+                        { "Height", Height }
+                    },
+                }
+            };
 
         }
 
+        [DebuggerNonUserCode()]
         public Picture8bpp(SixLabors.ImageSharp.Image source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             Width = source.Width;
             Height = source.Height;
             Pixels = checked(Width * Height);
-            SixLaborsImage = source;
             r = new byte[Pixels];
             g = new byte[Pixels];
             b = new byte[Pixels];
@@ -915,7 +1010,20 @@ namespace projectFrameCut.Shared
                     }
                 }
             }
-            ProcessStack = $"Created from SixLabors.ImageSharp.Image, {Width}*{Height}\r\n";
+            ProcessStack = new List<PictureProcessStack>
+            {
+                new PictureProcessStack
+                {
+                    OperationDisplayName = "Created from SixLabors.ImageSharp.Image",
+                    Operator = this.GetType(),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                    Properties = new Dictionary<string, object>
+                    {
+                        { "Width", Width },
+                        { "Height", Height }
+                    },
+                }
+            };
 
         }
 
@@ -1081,7 +1189,20 @@ namespace projectFrameCut.Shared
                         }
                     }
                 }
-                result.ProcessStack = $"{ProcessStack}\r\nResize to {targetWidth}*{targetHeight}\r\n";
+                result.ProcessStack.Add(new PictureProcessStack
+                {
+                    OperationDisplayName = "Resize",
+                    Operator = this.GetType(),
+                    ProcessingFuncStackTrace = new(true),
+                    Properties = new Dictionary<string, object>
+                    {
+                        { "SourceWidth", Width },
+                        { "SourceHeight", Height },
+                        { "TargetWidth", targetWidth },
+                        { "TargetHeight", targetHeight },
+                        { "PreserveAspect", preserveAspect },
+                    },
+                });
                 return result;
             }
         }
@@ -1090,7 +1211,24 @@ namespace projectFrameCut.Shared
         {
             var pic = new Picture8bpp(width, height)
             {
-                ProcessStack = $"SolidColor, {width}*{height}, rgba:{r},{g},{b},{(a is not null ? $"{a}" : "ff")}\r\n"
+                ProcessStack = new List<PictureProcessStack>
+                {
+                    new PictureProcessStack
+                    {
+                        OperationDisplayName = "Created solid color",
+                        Operator = typeof(Picture8bpp),
+                        ProcessingFuncStackTrace = new StackTrace(true),
+                        Properties = new Dictionary<string, object>
+                        {
+                            { "Width", width },
+                            { "Height", height },
+                            { "R", r },
+                            { "G", g },
+                            { "B", b },
+                            { "A", a ?? 1.0f }
+                        },
+                    }
+                }
             };
             pic.r = Enumerable.Repeat(r, pic.Pixels).ToArray();
             pic.g = Enumerable.Repeat(g, pic.Pixels).ToArray();
@@ -1235,7 +1373,12 @@ namespace projectFrameCut.Shared
                         {
                             frameIndex = s16.frameIndex,
                             filePath = s16.filePath,
-                            ProcessStack = s16.ProcessStack,
+                            ProcessStack = s16.ProcessStack.Append(new PictureProcessStack
+                            {
+                                OperationDisplayName = "Deep copied",
+                                Operator = typeof(PictureExtensions),
+                                ProcessingFuncStackTrace = new StackTrace(true),
+                            }).ToList(),
                             hasAlphaChannel = s16.hasAlphaChannel
                         };
 
@@ -1276,7 +1419,12 @@ namespace projectFrameCut.Shared
                         {
                             frameIndex = source.frameIndex,
                             filePath = source.filePath,
-                            ProcessStack = source.ProcessStack,
+                            ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+                            {
+                                OperationDisplayName = "Deep copied",
+                                Operator = typeof(PictureExtensions),
+                                ProcessingFuncStackTrace = new StackTrace(true),
+                            }).ToList(),
                             hasAlphaChannel = source.hasAlphaChannel
                         };
 
@@ -1313,7 +1461,12 @@ namespace projectFrameCut.Shared
                         {
                             frameIndex = s8.frameIndex,
                             filePath = s8.filePath,
-                            ProcessStack = s8.ProcessStack,
+                            ProcessStack = s8.ProcessStack.Append(new PictureProcessStack
+                            {
+                                OperationDisplayName = "Deep copied",
+                                Operator = typeof(PictureExtensions),
+                                ProcessingFuncStackTrace = new StackTrace(true),
+                            }).ToList(),
                             hasAlphaChannel = s8.hasAlphaChannel
                         };
 
@@ -1352,7 +1505,12 @@ namespace projectFrameCut.Shared
                         {
                             frameIndex = source.frameIndex,
                             filePath = source.filePath,
-                            ProcessStack = source.ProcessStack,
+                            ProcessStack = source.ProcessStack.Append(new PictureProcessStack
+                            {
+                                OperationDisplayName = "Deep copied",
+                                Operator = typeof(PictureExtensions),
+                                ProcessingFuncStackTrace = new StackTrace(true),
+                            }).ToList(),
                             hasAlphaChannel = source.hasAlphaChannel
                         };
 
@@ -1412,26 +1570,180 @@ namespace projectFrameCut.Shared
 
         }
 
+        static JsonSerializerOptions options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
+        };
+
+        public static string FormatProcessStackForLog(IEnumerable<PictureProcessStack>? processStack, int maxFramesPerStep = 12)
+        {
+            if (processStack == null) return "(null)";
+
+            // Materialize once to avoid multiple enumeration and to preserve ordering.
+            var steps = processStack as IList<PictureProcessStack> ?? processStack.ToList();
+            if (steps.Count == 0) return "(empty)";
+
+            var sb = new StringBuilder(capacity: 512);
+            sb.AppendLine($"Steps: {steps.Count}");
+
+            for (int i = 0; i < steps.Count; i++)
+            {
+                AppendProcessStep(sb, steps[i], i + 1, maxFramesPerStep, indent: "");
+            }
+            return sb.ToString();
+        }
+
+        private static void AppendProcessStep(StringBuilder sb, PictureProcessStack step, int index, int maxFramesPerStep, string indent)
+        {
+            if (step == null)
+            {
+                sb.Append(indent).Append('#').Append(index).AppendLine(" <null>");
+                return;
+            }
+
+            sb.Append(indent).Append('#').Append(index).Append(' ')
+                .Append(step.OperationDisplayName ?? "(no name)");
+
+            if (step.Operator != null)
+            {
+                sb.Append("  [Operator: ").Append(step.Operator.FullName).Append(']');
+            }
+            if(step.Elapsed != null)
+            {
+                sb.AppendLine();
+                sb.Append(indent).Append("  Elapsed: ").Append(step.Elapsed);
+
+            }
+            sb.AppendLine();
+
+            if (step.StepUsed != null)
+            {
+                sb.Append(indent).Append("  Step: ").Append(step.StepUsed.GetType().FullName);
+                if (!string.IsNullOrWhiteSpace(step.StepUsed.Name)) sb.Append(" (\"").Append(step.StepUsed.Name).Append("\")");
+                sb.AppendLine();
+            }
+
+            if (step.Properties != null && step.Properties.Count > 0)
+            {
+                sb.Append(indent).AppendLine("  Properties:");
+                foreach (var kv in step.Properties.OrderBy(k => k.Key, StringComparer.Ordinal))
+                {
+                    sb.Append(indent).Append("    - ").Append(kv.Key).Append(": ").AppendLine(FormatPropertyValueForLog(kv.Value));
+                }
+            }
+
+            // Special-case overlay stacks to keep them readable.
+            if (step is OverlayedPictureProcessStack overlay)
+            {
+                if (overlay.TopSteps != null && overlay.TopSteps.Count > 0)
+                {
+                    sb.Append(indent).AppendLine("  TopSteps:");
+                    for (int i = 0; i < overlay.TopSteps.Count; i++)
+                    {
+                        AppendProcessStep(sb, overlay.TopSteps[i], i + 1, maxFramesPerStep, indent + "    ");
+                    }
+                }
+                if (overlay.BaseSteps != null && overlay.BaseSteps.Count > 0)
+                {
+                    sb.Append(indent).AppendLine("  BaseSteps:");
+                    for (int i = 0; i < overlay.BaseSteps.Count; i++)
+                    {
+                        AppendProcessStep(sb, overlay.BaseSteps[i], i + 1, maxFramesPerStep, indent + "    ");
+                    }
+                }
+            }
+
+            AppendStackTraceForLog(sb, step.ProcessingFuncStackTrace, maxFramesPerStep, indent);
+        }
+
+        private static void AppendStackTraceForLog(StringBuilder sb, StackTrace? trace, int maxFrames, string indent)
+        {
+            if (trace == null) return;
+            var frames = trace.GetFrames();
+            if (frames == null || frames.Length == 0) return;
+
+            sb.Append(indent).AppendLine("  CallStack:");
+
+            int take = Math.Min(frames.Length, Math.Max(0, maxFrames));
+            for (int i = 0; i < take; i++)
+            {
+                var frame = frames[i];
+                var method = frame.GetMethod();
+                string methodName = method == null
+                    ? "(unknown)"
+                    : $"{method.DeclaringType?.FullName}.{method.Name}";
+
+                string? file = frame.GetFileName();
+                int line = frame.GetFileLineNumber();
+                if (!string.IsNullOrWhiteSpace(file) && line > 0)
+                {
+                    sb.Append(indent).Append("    ").Append(i + 1).Append(". ").Append(methodName)
+                        .Append(" (").Append(System.IO.Path.GetFileName(file)).Append(':').Append(line).Append(")")
+                        .AppendLine();
+                }
+                else
+                {
+                    sb.Append(indent).Append("    ").Append(i + 1).Append(". ").Append(methodName).AppendLine();
+                }
+            }
+
+            if (frames.Length > take)
+            {
+                sb.Append(indent).Append("    ... ").Append(frames.Length - take).AppendLine(" more");
+            }
+        }
+
+        private static string FormatPropertyValueForLog(object? value)
+        {
+            if (value == null) return "(null)";
+            if (value is string s) return s;
+            if (value is Type t) return t.FullName ?? t.Name;
+            if (value is StackTrace st) return st.ToString();
+            if (value is Exception ex) return ex.ToString();
+
+            // Avoid huge dumps for common collections; show count + a short preview.
+            if (value is System.Collections.ICollection coll && value is not Array)
+            {
+                return $"{value.GetType().Name} (Count={coll.Count})";
+            }
+
+            try
+            {
+                // Best-effort JSON for anonymous/complex objects.
+                if (value is not ValueType)
+                {
+                    return JsonSerializer.Serialize(value, options);
+                }
+            }
+            catch
+            {
+                // ignore and fall back to ToString
+            }
+
+            return value.ToString() ?? value.GetType().FullName ?? "(unknown)";
+        }
+
         public static void LogPicInfo(this IPicture<ushort> src)
         {
-            Logger.LogDiagnostic($"16BitPerPixel image, Size: {src.Width}*{src.Height}, avg R:{src.r.Average(Convert.ToDecimal)} G:{src.g.Average(Convert.ToDecimal)} B:{src.b.Average(Convert.ToDecimal)} A:{src.a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{src.ProcessStack}");
-
+            Logger.LogDiagnostic($"16BitPerPixel image, Size: {src.Width}*{src.Height}, avg R:{src.r.Average(Convert.ToDecimal)} G:{src.g.Average(Convert.ToDecimal)} B:{src.b.Average(Convert.ToDecimal)} A:{src.a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{FormatProcessStackForLog(src.ProcessStack)}");
         }
         public static void LogPicInfo(this IPicture<byte> src)
         {
-            Logger.LogDiagnostic($"8BitPerPixel image,Size: {src.Width}*{src.Height}, avg R:{src.r.Average(Convert.ToDecimal)} G:{src.g.Average(Convert.ToDecimal)} B:{src.b.Average(Convert.ToDecimal)} A:{src.a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{src.ProcessStack}");
+            Logger.LogDiagnostic($"8BitPerPixel image,Size: {src.Width}*{src.Height}, avg R:{src.r.Average(Convert.ToDecimal)} G:{src.g.Average(Convert.ToDecimal)} B:{src.b.Average(Convert.ToDecimal)} A:{src.a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{FormatProcessStackForLog(src.ProcessStack)}");
         }
 
         [DebuggerStepThrough()]
         public static void SaveAsPng16bpp(this IPicture image, string path, IImageEncoder? imageEncoder = null) //compatibility
             => SaveAsPng(image, path, 16, null, imageEncoder);
 
-        //[DebuggerStepThrough()]
+        [DebuggerStepThrough()]
         public static void SaveAsPng8bpp(this IPicture image, string path, IImageEncoder? imageEncoder = null)
             => SaveAsPng(image, path, 8, null, imageEncoder);
 
 
-        //[DebuggerStepThrough()]
+        [DebuggerStepThrough()]
         public static void SaveAsPng(this IPicture image, string path, int resultPPB = 16, bool? saveAlpha = null, IImageEncoder? imageEncoder = null)
         {
             if (Debugger.IsAttached || MyLoggerExtensions.LoggingDiagnosticInfo)
@@ -1448,10 +1760,9 @@ namespace projectFrameCut.Shared
         [DebuggerStepThrough()]
         public static Image SaveToSixLaborsImage(this IPicture image, int resultPPB = 16, bool? saveAlpha = null, bool force = false)
         {
-            if (image.SixLaborsImage is not null && !force) return image.SixLaborsImage;
             lock (image)
             {
-                IEnumerable<float> aa = image.hasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
+                IEnumerable<float>? aa = image.hasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
                 bool alpha = saveAlpha ?? image.hasAlphaChannel && aa is not null;
 
                 Image result;
@@ -1495,7 +1806,6 @@ namespace projectFrameCut.Shared
                 {
                     throw new NotSupportedException("Only 8bpp and 16bpp images are supported.");
                 }
-                image.SixLaborsImage = result;
                 return result;
             }
         }
@@ -1634,6 +1944,7 @@ namespace projectFrameCut.Shared
             return result;
         }
 
+        [DebuggerStepThrough()]
         public static IPicture ToPJFCPicture(this Image source, int targetPPB)
         {
             return targetPPB switch

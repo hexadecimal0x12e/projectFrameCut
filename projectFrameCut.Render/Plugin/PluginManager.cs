@@ -212,7 +212,10 @@ namespace projectFrameCut.Render.Plugin
             if (stru.RelativeHeight <= 0) stru.RelativeHeight = relativeHeight;
             if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
             {
-                return plugin.EffectCreator(stru);
+                var effect = plugin.EffectCreator(stru);
+                effect.Index = stru.Index;
+                effect.Enabled = stru.Enabled;
+                return effect;
             }
             else
             {
@@ -277,18 +280,19 @@ namespace projectFrameCut.Render.Plugin
             throw new NotSupportedException($"No suitable audio source found for the given file '{filePath}'.");
         }
 
-        public static IVideoWriter CreateVideoWriter(string filePath)
+        public static IVideoWriter CreateVideoWriter(string codec)
         {
+            // Fast-path: if the caller passed a writer type name (e.g. "BlackHoleWriter"),
+            // don't instantiate other writers just to probe SupportCodec().
             foreach (var plugin in LoadedPlugins.Values)
             {
                 try
                 {
                     foreach (var item in plugin.VideoWriterProvider)
                     {
-                        var instance = item.Value(filePath);
-                        if (instance.TryInitialize())
+                        if (string.Equals(item.Key, codec, StringComparison.OrdinalIgnoreCase))
                         {
-                            return instance;
+                            return item.Value(codec);
                         }
                     }
                 }
@@ -297,7 +301,39 @@ namespace projectFrameCut.Render.Plugin
                     // Ignore and try next plugin
                 }
             }
-            throw new NotSupportedException($"No suitable video writer found for the given file '{filePath}'.");
+
+            // Fallback: probe each writer implementation by asking whether it supports the codec.
+            // IMPORTANT: dispose non-selected instances to avoid leaking unmanaged resources.
+            foreach (var plugin in LoadedPlugins.Values)
+            {
+                foreach (var item in plugin.VideoWriterProvider)
+                {
+                    IVideoWriter? instance = null;
+                    var selected = false;
+                    try
+                    {
+                        instance = item.Value(codec);
+                        if (instance.SupportCodec(codec))
+                        {
+                            selected = true;
+                            return instance;
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore and try next plugin/writer
+                    }
+                    finally
+                    {
+                        if (!selected && instance is not null)
+                        {
+                            try { instance.Dispose(); } catch { }
+                        }
+                    }
+                }
+            }
+
+            throw new NotSupportedException($"No suitable video writer found for the codec '{codec}'.");
         }
 
         private static readonly ConcurrentDictionary<string, IComputer> ComputerCache = new();

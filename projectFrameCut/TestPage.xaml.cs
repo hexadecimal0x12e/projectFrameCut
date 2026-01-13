@@ -2,9 +2,15 @@ using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
-
 using projectFrameCut.DraftStuff;
 using projectFrameCut.PropertyPanel;
+using projectFrameCut.Render.Benchmark;
+using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.VideoMakeEngine;
+using projectFrameCut.Services;
+using projectFrameCut.Shared;
+using SixLabors.ImageSharp;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -14,22 +20,7 @@ using System.Runtime.Versioning;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Path = System.IO.Path;
-using projectFrameCut.Shared;
-using projectFrameCut.Render.VideoMakeEngine;
-using SixLabors.ImageSharp;
-using projectFrameCut.Services;
-using projectFrameCut.Render.Plugin;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
-using projectFrameCut.Render.EncodeAndDecode;
-
-
-
-
-
-
-
-
-
 
 #if ANDROID
 using projectFrameCut.Platforms.Android;
@@ -797,6 +788,57 @@ public partial class TestPage : ContentPage
     {
         VideoAudioMuxer.MuxFromFiles(@"D:\code\playground\projectFrameCut\RenderCache\A Short Project 1_20260101_164404.mp4", @"D:\code\playground\projectFrameCut\RenderCache\A Short Project 1_20260101_164404.wav", @"D:\code\playground\projectFrameCut\output1.mp4", true);
 
+    }
+
+    private async void BenchmarkButton_Clicked(object sender, EventArgs e)
+    {
+
+#if ANDROID
+            Render.AndroidOpenGL.ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
+#elif iDevices
+
+#elif WINDOWS
+        var context = ILGPU.Context.CreateDefault();
+        var devices = context.Devices.ToList();
+        if (SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel"))
+        {
+            var accels = SettingsManager.GetSetting("accel_MultiDeviceID", "all");
+            if (accels == "all")
+            {
+                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
+            }
+            else
+            {
+                var accelList = accels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                            .Select(s => int.TryParse(s, out var id) ? id : -1)
+                            .Where(id => id >= 0)
+                            .ToList();
+                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
+            }
+
+        }
+        else
+        {
+            var accelId = SettingsManager.GetSetting("accel_DeviceId", "");
+            if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
+        }
+
+        if (!projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
+
+#endif
+        await Benchmarker.Start((d, etr) => 
+        {
+            string timeStr = "";
+            if (etr.TotalSeconds > 0)
+            {
+                timeStr = (etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss"));
+            }
+            Dispatcher.Dispatch(async () =>
+            {
+                BenchmarkButton.Text = Localized.RenderPage_Stat(d, timeStr);
+
+            });
+        });
     }
 
     private void TestPlaceButton_Clicked(object sender, EventArgs e)
