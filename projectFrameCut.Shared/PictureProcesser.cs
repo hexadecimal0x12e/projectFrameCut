@@ -51,6 +51,7 @@ namespace projectFrameCut.Shared
         public IPictureProcessStep? StepUsed { get; set; }
         public Dictionary<string, object>? Properties { get; set; }
         public TimeSpan? Elapsed { get; set; }
+        public string? Tag { get; set; }
     }
 
     public class OverlayedPictureProcessStack : PictureProcessStack

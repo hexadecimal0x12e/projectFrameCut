@@ -1776,8 +1776,8 @@ namespace projectFrameCut.Shared
                     ArgumentNullException.ThrowIfNull(bb, nameof(IPicture<ushort>.b));
                     if (alpha)
                     {
-                        if (aa is null) aa = Enumerable.Repeat(1f, image.Pixels);
-                        result = _SaveToInternal16bppWithAlpha(image, rr, gg, bb, aa);
+                        var alphaArray = (aa as float[]) ?? Enumerable.Repeat(1f, image.Pixels).ToArray();
+                        result = _SaveToInternal16bppWithAlpha(image, rr, gg, bb, alphaArray);
                     }
                     else
                     {
@@ -1794,8 +1794,8 @@ namespace projectFrameCut.Shared
                     ArgumentNullException.ThrowIfNull(bb, nameof(IPicture<byte>.b));
                     if (alpha)
                     {
-                        if (aa is null) aa = Enumerable.Repeat(1f, image.Pixels);
-                        result = _SaveToInternal8bppWithAlpha(image, rr, gg, bb, aa);
+                        var alphaArray = (aa as float[]) ?? Enumerable.Repeat(1f, image.Pixels).ToArray();
+                        result = _SaveToInternal8bppWithAlpha(image, rr, gg, bb, alphaArray);
                     }
                     else
                     {
@@ -1815,35 +1815,19 @@ namespace projectFrameCut.Shared
             BitDepth = PngBitDepth.Bit16
         };
 
-        private static T readNextFromEnumerator<T>(IEnumerator<T> en)
-        {
-            if (en.MoveNext())
-            {
-                return en.Current;
-            }
-            else
-            {
-                if (Debugger.IsAttached) Debugger.Break();
-                throw new InvalidOperationException("The source enumerable is empty.");
-            }
-        }
         [DebuggerStepThrough()]
-        private static Image _SaveToInternal16bppWithAlpha(IPicture image, IEnumerable<ushort> rr, IEnumerable<ushort> gg, IEnumerable<ushort> bb, IEnumerable<float> aa)
+        private static Image _SaveToInternal16bppWithAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> aa)
         {
             var result = new Image<Rgba64>(image.Width, image.Height);
-            var r = rr.GetEnumerator();
-            var g = gg.GetEnumerator();
-            var b = bb.GetEnumerator();
-            var a = aa.GetEnumerator();
             int x = 0, y = 0;
             for (int i = 0; i < image.Pixels; i++)
             {
                 result[x, y] = new Rgba64
                 {
-                    R = readNextFromEnumerator(r),
-                    G = readNextFromEnumerator(g),
-                    B = readNextFromEnumerator(b),
-                    A = (ushort)(Math.Clamp(readNextFromEnumerator(a), 0f, 1f) * 65535f)
+                    R = rr[i],
+                    G = gg[i],
+                    B = bb[i],
+                    A = (ushort)(Math.Clamp(aa[i], 0f, 1f) * 65535f)
                 };
                 if (x == image.Width - 1)
                 {
@@ -1858,20 +1842,17 @@ namespace projectFrameCut.Shared
             return result;
         }
         [DebuggerStepThrough()]
-        private static Image _SaveToInternal16bppWithNoAlpha(IPicture image, IEnumerable<ushort> rr, IEnumerable<ushort> gg, IEnumerable<ushort> bb)
+        private static Image _SaveToInternal16bppWithNoAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb)
         {
             var result = new Image<Rgb48>(image.Width, image.Height);
-            var r = rr.GetEnumerator();
-            var g = gg.GetEnumerator();
-            var b = bb.GetEnumerator();
             int x = 0, y = 0;
             for (int i = 0; i < image.Pixels; i++)
             {
                 result[x, y] = new Rgb48
                 {
-                    R = readNextFromEnumerator(r),
-                    G = readNextFromEnumerator(g),
-                    B = readNextFromEnumerator(b),
+                    R = rr[i],
+                    G = gg[i],
+                    B = bb[i],
                 };
                 if (x == image.Width - 1)
                 {
@@ -1886,22 +1867,18 @@ namespace projectFrameCut.Shared
             return result;
         }
         [DebuggerStepThrough()]
-        private static Image _SaveToInternal8bppWithAlpha(IPicture image, IEnumerable<byte> rr, IEnumerable<byte> gg, IEnumerable<byte> bb, IEnumerable<float> aa)
+        private static Image _SaveToInternal8bppWithAlpha(IPicture image, byte[] rr, byte[] gg, byte[] bb, ReadOnlySpan<float> aa)
         {
             var result = new Image<Rgba32>(image.Width, image.Height);
-            var r = rr.GetEnumerator();
-            var g = gg.GetEnumerator();
-            var b = bb.GetEnumerator();
-            var a = aa.GetEnumerator();
             int x = 0, y = 0;
             for (int i = 0; i < image.Pixels; i++)
             {
                 result[x, y] = new Rgba32
                 {
-                    R = readNextFromEnumerator(r),
-                    G = readNextFromEnumerator(g),
-                    B = readNextFromEnumerator(b),
-                    A = (byte)(Math.Clamp(readNextFromEnumerator(a), 0f, 1f) * 255f)
+                    R = rr[i],
+                    G = gg[i],
+                    B = bb[i],
+                    A = (byte)(Math.Clamp(aa[i], 0f, 1f) * 255f)
                 };
                 if (x == image.Width - 1)
                 {
@@ -1916,20 +1893,17 @@ namespace projectFrameCut.Shared
             return result;
         }
         [DebuggerStepThrough()]
-        private static Image _SaveToInternal8bppWithNoAlpha(IPicture image, IEnumerable<byte> rr, IEnumerable<byte> gg, IEnumerable<byte> bb)
+        private static Image _SaveToInternal8bppWithNoAlpha(IPicture image, byte[] rr, byte[] gg, byte[] bb)
         {
             var result = new Image<Rgb24>(image.Width, image.Height);
-            var r = rr.GetEnumerator();
-            var g = gg.GetEnumerator();
-            var b = bb.GetEnumerator();
             int x = 0, y = 0;
             for (int i = 0; i < image.Pixels; i++)
             {
                 result[x, y] = new Rgb24
                 {
-                    R = readNextFromEnumerator(r),
-                    G = readNextFromEnumerator(g),
-                    B = readNextFromEnumerator(b),
+                    R = rr[i],
+                    G = gg[i],
+                    B = bb[i],
                 };
                 if (x == image.Width - 1)
                 {

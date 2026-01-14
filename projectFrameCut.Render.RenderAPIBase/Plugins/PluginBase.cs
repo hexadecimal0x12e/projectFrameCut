@@ -18,6 +18,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
     public interface IPluginBase
     {
         /// <summary>
+        /// Get the current plugin API version.
+        /// </summary>
+        public const int CurrentPluginAPIVersion = 1;
+
+        /// <summary>
         /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
         /// </summary>
         public string PluginID { get; }

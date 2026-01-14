@@ -26,6 +26,7 @@ namespace projectFrameCut.Render.Rendering
         public bool LogState = false;
         public int GCOption = 0;
         public bool LogStatToLogger = false;
+        public bool LogProcessStack = false;
         public bool Use16Bit { get; set; } = true;
 
         public bool IsPaused { get; set; } = false;
@@ -42,6 +43,12 @@ namespace projectFrameCut.Render.Rendering
         private Stopwatch _renderTotalStopwatch = new();
 
         public ConcurrentBag<TimeSpan> EachElapsed = new(), EachElapsedForPreparing = new();
+        public ConcurrentBag<List<PictureProcessStack>> ProcessStacks = new();
+
+        // Per-frame diagnostics (used for CSV reporting)
+        public ConcurrentDictionary<uint, TimeSpan> FramePrepareElapsed { get; } = new();
+        public ConcurrentDictionary<uint, TimeSpan> FrameRenderElapsed { get; } = new();
+        public ConcurrentDictionary<uint, List<PictureProcessStack>> FrameProcessStacks { get; } = new();
         public bool running { get; private set; } = false;
 
         ConcurrentDictionary<string, ConcurrentDictionary<uint, IPicture>> FrameCache = new();
@@ -113,9 +120,9 @@ namespace projectFrameCut.Render.Rendering
                             working = Volatile.Read(ref ThreadWorking);
 
                             Log($"[STAT] " +
-                                $"Overall finished {finished / d:p2}, and {TotalEnqueued / d:p2} is ready to render. " +
+                                $"Overall finished {finished / d:p2}, and {TotalEnqueued / d:p2} is ready to render. ETA: {GetEstimated(finished / d)}, " +
                                 $"Memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB. \r\n" +
-                                $"       (Total {TotalEnqueued}/{d} prepared and {finished}/{d} finished, " +
+                                $"       (Already elapsed {_renderTotalStopwatch.Elapsed}, Total {TotalEnqueued}/{d} prepared and {finished}/{d} finished, " +
                                 $"pending to render: {Volatile.Read(ref TotalEnqueued) - finished}, " +
                                 $"total write frames: {wrote} wrote and {builder.TotalFramesCount - wrote} pended, " +
                                 $"slots {Math.Max(0, MaxThreads - working)}/{MaxThreads}, active workers: {working}, " +
@@ -281,11 +288,6 @@ namespace projectFrameCut.Render.Rendering
                     await Task.Delay(10, token);
                 }
 
-                if (LogState)
-                {
-                    int f = Volatile.Read(ref Finished);
-                    Console.Error.WriteLine($"@@{f},{Duration}");
-                }
 
                 if (!exceptions.IsEmpty)
                 {
@@ -361,7 +363,7 @@ namespace projectFrameCut.Render.Rendering
                 {
                     if (effect.YieldProcessStep == true && effect.NeedComputer is not null) throw new InvalidDataException($"A effect can't both yield process step, and use a computer.");
                 }
-                Log($"[Preparer] Cached {effectInstances.Length} effects for clip {item.Id} ({string.Concat(", ",effectInstances.Select(c => $"{c.TypeName}:'{c.Name}'"))})");
+                Log($"[Preparer] Cached {effectInstances.Length} effects for clip {item.Id} ({string.Join(", ",effectInstances.Select(c => $"{c.TypeName}:'{c.Name}'"))})");
             }
 
         }
@@ -413,6 +415,7 @@ namespace projectFrameCut.Render.Rendering
                 }
                 sw.Stop();
                 EachElapsedForPreparing.Add(sw.Elapsed);
+                FramePrepareElapsed[idx] = sw.Elapsed;
                 if (LogState) Log($"[Preparer] Frame {idx} is ready to render, elapsed {sw.Elapsed}");
 
             }
@@ -443,6 +446,7 @@ namespace projectFrameCut.Render.Rendering
                 Interlocked.Increment(ref Finished);
                 InvokeProgress();
                 EachElapsed.Add(sw.Elapsed);
+                FrameRenderElapsed[targetFrame] = sw.Elapsed;
                 return;
             }
 
@@ -518,6 +522,11 @@ namespace projectFrameCut.Render.Rendering
             }
 
             builder!.Append(targetFrame, result);
+            if (LogProcessStack)
+            {
+                ProcessStacks.Add(result.ProcessStack);
+                FrameProcessStacks[targetFrame] = result.ProcessStack;
+            }
             foreach (var clip in ClipsNeed)
             {
                 if (FrameCache.TryGetValue(clip.Id, out var perClipCache))
@@ -533,6 +542,7 @@ namespace projectFrameCut.Render.Rendering
             sw.Stop();
             if(LogState) Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}");
             EachElapsed.Add(sw.Elapsed);
+            FrameRenderElapsed[targetFrame] = sw.Elapsed;
             return;
 
 
@@ -599,6 +609,11 @@ namespace projectFrameCut.Render.Rendering
         private void InvokeProgress()
         {
             double prog = (double)Volatile.Read(ref Finished) / Duration;
+            OnProgressChanged?.Invoke(prog, GetEstimated(prog));
+        }
+
+        private TimeSpan GetEstimated(double prog)
+        {
             TimeSpan elapsed = _renderTotalStopwatch.Elapsed;
             TimeSpan etr = TimeSpan.Zero;
             if (prog > 0.005)
@@ -607,7 +622,7 @@ namespace projectFrameCut.Render.Rendering
                 double remaining = totalEst - elapsed.TotalSeconds;
                 if (remaining > 0) etr = TimeSpan.FromSeconds(remaining);
             }
-            OnProgressChanged?.Invoke(prog, etr);
+            return etr;
         }
 
         private IComputer? GetOrCreateComputer(string? computerType)
@@ -713,6 +728,8 @@ namespace projectFrameCut.Render.Rendering
 
                     builder!.Append(blankIdx, BlankFrame);
                     EachElapsed.Add(TimeSpan.Zero);
+                    FramePrepareElapsed.TryAdd(blankIdx, TimeSpan.Zero);
+                    FrameRenderElapsed.TryAdd(blankIdx, TimeSpan.Zero);
                     Interlocked.Increment(ref Finished);
                     InvokeProgress();
                     Log($"[Render] Wrote blank frame {blankIdx} before starting frame {frameIndex}.");

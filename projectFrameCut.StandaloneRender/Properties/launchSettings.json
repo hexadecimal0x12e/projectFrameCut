@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "projectFrameCut.StandaloneRender": {
+      "commandName": "Project",
+      "commandLineArgs": "render \"-project=D:\\code\\playground\\projectFrameCut\\My Drafts\\abc (2).pjfc\" \"-output=D:\\code\\playground\\projectFrameCut\\test111111111.mp4\" -output_options=1270,720,60,AV_PIX_FMT_YUV420P,libx264 -target=video \"-assetDbFile=D:\\code\\playground\\projectFrameCut\\My Assets\\.database\\database.json\" -Use16bpp=false -maxParallelThreads=12 -multiAccelerator=true -acceleratorDeviceIds=all \"-diagReportPath=D:\\code\\playground\\projectFrameCut\\diag\" "
+    }
+  }
+}

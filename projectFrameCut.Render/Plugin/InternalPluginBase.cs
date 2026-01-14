@@ -96,7 +96,7 @@ public class InternalPluginBase : IPluginBase
     };
 
     public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider =>
-        ((MessagingQueue.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccel"]) is string hwaccel && bool.TryParse(hwaccel, out var result) && result)
+        (((MessagingQueue?.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccel"]) ?? "true") is string hwaccel && bool.TryParse(hwaccel, out var result) && result)
             ? new List<KeyValuePair<string, Func<string, IVideoSource>>>([new("DecoderContextHW", new((p) => new DecoderContextHW(p)))])
             : new List<KeyValuePair<string, Func<string, IVideoSource>>>([]))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext8Bit", new((p) => new DecoderContext8Bit(p))))

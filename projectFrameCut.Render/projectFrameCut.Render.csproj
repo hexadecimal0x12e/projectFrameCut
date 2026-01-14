@@ -11,11 +11,13 @@
 		<AssemblyVersion>1.3.0.2</AssemblyVersion>
 		<FileVersion>1.3.0.2</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
-		<Product>projectFrameCut's core render library</Product>
+		<Product>projectFrameCut</Product>
 		<Description>projectFrameCut's core render library</Description>
+		<AssemblyDescription>projectFrameCut's core render library</AssemblyDescription>
+		<AssemblyTitle>projectFrameCut's core render library</AssemblyTitle>
+		<Title>projectFrameCut's core render library</Title>
 		<Copyright>Copyright (c) hexadecimal0x12e 2025</Copyright>
 		<PackageProjectUrl>hexadecimal0x12e.com</PackageProjectUrl>
-		<Title>projectFrameCut's core render library</Title>
 	</PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

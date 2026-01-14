@@ -170,13 +170,8 @@ namespace projectFrameCut.Render.Rendering
             {
                 Log($"[VideoBuilder] Successfully started writer for {outputPath}");
 
-                do
+                while (running) 
                 {
-                    if (Cache.Count == 0)
-                    {
-                        continue;
-                    }
-
                     if (Cache.ContainsKey(index))
                     {
                         builder.Append(Cache.TryRemove(index, out var f) ? f : throw new KeyNotFoundException());
@@ -190,7 +185,6 @@ namespace projectFrameCut.Render.Rendering
                     }
 
                 }
-                while (running);
                 Thread.Sleep(50);
                 stopped = true;
             })
