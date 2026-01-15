@@ -50,6 +50,11 @@ namespace projectFrameCut.Render.Rendering
         /// </summary>
         public string? PreviewPath { get; set; } = null;
 
+        /// <summary>
+        /// Control whether output which frame has written.
+        /// </summary>
+        public bool LogStat { get; set; }
+
         public event EventHandler<IPicture>? OnPreviewGenerated;
         /// <summary>
         /// the minimum number of frames between generating preview images.
@@ -134,7 +139,7 @@ namespace projectFrameCut.Render.Rendering
             else
             {
                 builder.Append(frame);
-                Log($"[VideoBuilder] Frame #{index} added.");
+                if (LogStat) Log($"[VideoBuilder] Frame #{index} added.");
             }
 
             if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview)
@@ -181,7 +186,7 @@ namespace projectFrameCut.Render.Rendering
 
                         if (DisposeFrameAfterEachWrite && !f.Flag.HasFlag(IPicture.PictureFlag.NoDisposeAfterWrite)) f.Dispose();
                         if (DoGCAfterEachWrite) GC.Collect();
-                        Log($"[VideoBuilder] Frame #{index} wrote.");
+                        if (LogStat) Log($"[VideoBuilder] Frame #{index} wrote.");
                     }
 
                 }

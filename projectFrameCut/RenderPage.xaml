@@ -8,7 +8,7 @@
              x:DataType="vm:RenderPageViewModel"
              Title="RenderPage">
     <ContentPage.ToolbarItems>
-       <!-- <ToolbarItem Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/> -->
+        <!-- <ToolbarItem Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/> -->
 
     </ContentPage.ToolbarItems>
     <Grid>
@@ -85,7 +85,7 @@
             </VerticalStackLayout>
 
             <VerticalStackLayout x:Name="PreviewLayout" IsVisible="False" Grid.Column="1" Padding="32,0">
-                <Label  Text="{l:Localized Key=RenderPage_PreviewLabel}"  Margin="0,8,0,8"/>
+                <Label Text="{l:Localized Key=RenderPage_PreviewLabel}"  Margin="0,12,0,8"/>
                 <Border StrokeThickness="5"  Padding="4" HorizontalOptions="Center" VerticalOptions="Start">
                     <Image x:Name="PreviewImage" Aspect="AspectFit" HorizontalOptions="Center" VerticalOptions="Center" WidthRequest="400" HeightRequest="200" />
                 </Border>
@@ -99,8 +99,6 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="2"/>
             </Grid.RowDefinitions>
@@ -109,13 +107,11 @@
 
             <Label Grid.Row="1" x:Name="SubProgLabel" Text="{l:Localized Key=RenderPage_SubProg_None}" />
             <ProgressBar Grid.Row="2" x:Name="SubProgress" Margin="0,8,0,8" Progress="0" />
-            <Label Grid.Row="3" Text="{l:Localized Key=RenderPage_TotalProg}"  Margin="0,8,0,0"/>
 
-            <ProgressBar Grid.Row="4" x:Name="TotalProgress" Margin="0,8,0,8" Progress="0" />
-            <Label Grid.Row="5" Text="{l:Localized Key=RenderPage_LoggingLabel}"  Margin="0,8,0,0"/>
+            <Label Grid.Row="3" Text="{l:Localized Key=RenderPage_LoggingLabel}"  Margin="0,8,0,0"/>
 
-            <Editor Grid.Row="6" x:Name="LoggingBox" Margin="0,16,0,0" IsReadOnly="True"></Editor>
-            <VerticalStackLayout Grid.Row="7" x:Name="ComputeView" />
+            <Editor Grid.Row="4" x:Name="LoggingBox" Margin="0,16,0,0" IsReadOnly="True"></Editor>
+            <VerticalStackLayout Grid.Row="5" x:Name="ComputeView" />
         </Grid>
 
         <Grid x:Name="ScreenSaverOverlay" 

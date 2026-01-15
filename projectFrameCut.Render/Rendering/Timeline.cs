@@ -1,4 +1,6 @@
-﻿using projectFrameCut.Render.Plugin;
+﻿using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.Effect.ImageSharp;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -148,7 +150,7 @@ namespace projectFrameCut.Render.Rendering
 
         }
 
-        private static PlaceEffect Placer = new()
+        private static PlaceEffect_ImageSharp Placer = new()
         {
             StartX = 0,
             StartY = 0

@@ -6,6 +6,8 @@ using System.Text;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.Effect.ImageSharp;
 
 namespace projectFrameCut.Render.VideoMakeEngine
 {
@@ -17,6 +19,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
         public string? NeedComputer => null;
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "ZoomIn";
+        public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
         public bool YieldProcessStep => true;
 
 
@@ -28,8 +31,6 @@ namespace projectFrameCut.Render.VideoMakeEngine
 
         public int TargetX { get; init; }
         public int TargetY { get; init; }
-
-        public CropEffect Cropper { get; set; } = new();
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -103,8 +104,6 @@ namespace projectFrameCut.Render.VideoMakeEngine
 
         public void Initialize()
         {
-            Cropper.RelativeHeight = RelativeHeight;
-            Cropper.RelativeWidth = RelativeWidth;
         }
 
         public IPictureProcessStep GetStep(IPicture source, uint index, int targetWidth, int targetHeight)
@@ -197,6 +196,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
         public string Name { get; set; }
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
+        public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
 
         public int MaxOffsetX { get; init; }
         public int MaxOffsetY { get; init; }
@@ -219,7 +219,6 @@ namespace projectFrameCut.Render.VideoMakeEngine
         public int EndPoint { get; set; }
 
         public Random rnd;
-        public PlaceEffect placer;
 
         public List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -272,13 +271,6 @@ namespace projectFrameCut.Render.VideoMakeEngine
             {
                 rnd = new();
             }
-
-            placer = new PlaceEffect
-            {
-                RelativeWidth = this.RelativeWidth,
-                RelativeHeight = this.RelativeHeight,
-            };
-
         }
 
         /// <summary>
@@ -297,7 +289,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
                 offY = rnd.Next(-MaxOffsetY, MaxOffsetY + 1);
             }
 
-            return placer.Place(source, offX, offY, targetWidth, targetHeight);
+            return new PlaceProcessStep(offX, offY, targetWidth, targetHeight).Process(source);
         }
 
         public IPictureProcessStep GetStep(IPicture source, uint index, int targetWidth, int targetHeight)

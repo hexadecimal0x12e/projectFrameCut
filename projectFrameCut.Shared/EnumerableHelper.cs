@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using System.Diagnostics;
 
 namespace projectFrameCut.Shared
 {
@@ -20,6 +21,20 @@ namespace projectFrameCut.Shared
             if (input is null) return false;
             return input.Count > 0;
         }
+
+        [DebuggerNonUserCode()]
+        public static TKey? ReverseLookup<TKey, TValue>(this IDictionary<TKey, TValue> dict, TValue value, TKey? DefaultValue = default)
+        {
+            foreach (var kv in dict)
+            {
+                if (EqualityComparer<TValue>.Default.Equals(kv.Value, value))
+                {
+                    return kv.Key;
+                }
+            }
+            return DefaultValue;
+        }
+
         /// <summary>
         /// Remove the values in <paramref name="input"/> where equals to any element in <paramref name="ToRemove"/> .
         /// </summary>

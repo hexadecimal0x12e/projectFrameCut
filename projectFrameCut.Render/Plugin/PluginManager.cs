@@ -215,6 +215,15 @@ namespace projectFrameCut.Render.Plugin
                 var effect = plugin.EffectCreator(stru);
                 effect.Index = stru.Index;
                 effect.Enabled = stru.Enabled;
+                try
+                {
+                    effect.Initialize();
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Init effect {effect.Name}", effect);
+                    throw;
+                }
                 return effect;
             }
             else

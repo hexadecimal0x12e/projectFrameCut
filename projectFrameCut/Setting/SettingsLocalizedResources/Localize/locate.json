@@ -309,6 +309,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Edit_MiscOption",
+        "Value": "\u6742\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Edit_PreferredPopupMode",
         "Value": "\u9ED8\u8BA4\u5F39\u51FA\u6846\u6A21\u5F0F",
         "Mode": "ConstString",
@@ -351,6 +359,22 @@
       {
         "Id": "Edit_PreferredPopupMode_Window",
         "Value": "\u72EC\u7ACB\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "\u7BA1\u7406\u9884\u89C8\u7684\u914D\u7F6E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -423,6 +447,22 @@
       {
         "Id": "Edit_ShowAllEffects",
         "Value": "\u5728\u5C5E\u6027\u9762\u677F\u91CC\u663E\u793A\u6240\u6709\u7684Effect\uFF08\u5305\u62EC\u5185\u90E8Effect\u548C\u4E2D\u95F4Effect\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "\u9884\u89C8/\u5C5E\u6027\u533A\u57DF\u7684\u9AD8\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "\u81EA\u52A8\u4FDD\u5B58\u9884\u89C8/\u5C5E\u6027\u533A\u57DF\u7684\u9AD8\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1394,6 +1434,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Render_DumpDiagData",
+        "Value": "\u4FDD\u5B58\u6E32\u67D3\u65F6\u7684\u8BE6\u7EC6\u8BCA\u65AD\u62A5\u544A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Render_EnableMultiAccel",
         "Value": "\u542F\u7528\u591A\u52A0\u901F\u5668\uFF08\u4EC5\u9650\u6E32\u67D3\uFF09",
         "Mode": "ConstString",
@@ -1451,6 +1499,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Render_RenderEffectImplement",
+        "Value": "\u6548\u679C\u5B9E\u73B0\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement_Subtitle",
+        "Value": "\u914D\u7F6E\u6BCF\u4E00\u4E2A\u6548\u679C\u7684\u5177\u4F53\u5B9E\u73B0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Render_SaveCheckpoint",
         "Value": "\u4FDD\u5B58\u6E32\u67D3\u8FC7\u7A0B\u7684\u4E2D\u95F4\u6570\u636E",
         "Mode": "ConstString",
@@ -1491,40 +1555,73 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "Edit_UpperContentHeight",
-        "Value": "\u9884\u89C8/\u5C5E\u6027\u533A\u57DF\u7684\u9AD8\u5EA6",
+        "Id": "RenderEffectImplement_Custom",
+        "Value": "\u81EA\u5B9A\u4E49",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
       },
       {
-        "Id": "Edit_UpperContentHeight_AutoSave",
-        "Value": "\u81EA\u52A8\u4FDD\u5B58\u9884\u89C8/\u5C5E\u6027\u533A\u57DF\u7684\u9AD8\u5EA6",
+        "Id": "RenderEffectImplement_Description",
+        "Value": "\u5728\u8FD9\u91CC\u914D\u7F6E\u6BCF\u4E00\u4E2A\u6548\u679C\u7684\u9ED8\u8BA4\u5B9E\u73B0\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
       },
       {
-        "Id": "Edit_PreviewOption",
-        "Value": "\u9884\u89C8",
+        "Id": "RenderEffectImplement_Hint",
+        "Value": "\u5173\u4E8E\u6548\u679C\u5B9E\u73B0\u5668\uFF1A\r- \u0027IPicture CPU\u5B9E\u73B0\u0027 \u63D0\u4F9B\u6700\u5C0F\u7684\u5F00\u9500\uFF0C\u4F46\u662F\u5B83\u53EF\u80FD\u4E0D\u51C6\u786E\r- \u0027SixLabors.ImageSharp CPU\u5B9E\u73B0\u0027 \u63D0\u4F9B\u5F88\u9AD8\u7684\u51C6\u786E\u6027\uFF0C\u4F46\u662F\u53EF\u80FD\u4F1A\u9020\u6210\u5927\u91CF\u7684\u5F00\u9500\r- \u0027GPU \u786C\u4EF6\u52A0\u901F\u0027 \u63D0\u4F9B\u4E86\u8F83\u9AD8\u7684\u6027\u80FD\u548C\u76F8\u5BF9\u8F83\u5C0F\u7684\u5F00\u9500",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
       },
       {
-        "Id": "Edit_PreviewOption_Subtitle",
-        "Value": "\u7BA1\u7406\u9884\u89C8\u7684\u914D\u7F6E",
+        "Id": "RenderEffectImplement_HwAcceleration",
+        "Value": "GPU \u786C\u4EF6\u52A0\u901F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
       },
       {
-        "Id": "Edit_MiscOption",
-        "Value": "\u6742\u9879",
+        "Id": "RenderEffectImplement_ImageSharp",
+        "Value": "SixLabors.ImageSharp CPU\u5B9E\u73B0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u2018SixLabors.ImageSharp\u2019",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_IPicture",
+        "Value": "IPicture CPU\u5B9E\u73B0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotSpecified",
+        "Value": "\u9ED8\u8BA4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Title",
+        "Value": "\u914D\u7F6E\u6548\u679C\u5B9E\u73B0\u5668...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Unknown",
+        "Value": "\u672A\u77E5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3151,56 +3248,164 @@
       },
       {
         "Id": "Edit_ShowAllEffects",
-        "Value": "Unset localization item:Edit_ShowAllEffects()",
+        "Value": "Show all Effects (including internal and intermediate Effects) in the property panel",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UpperContentHeight",
-        "Value": "Unset localization item:Edit_UpperContentHeight()",
+        "Value": "Preview/Properties Area Height",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UpperContentHeight_AutoSave",
-        "Value": "Unset localization item:Edit_UpperContentHeight_AutoSave()",
+        "Value": "Auto-save the height of the preview/property area",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_PreviewOption",
-        "Value": "Unset localization item:Edit_PreviewOption()",
+        "Value": "Preview",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_PreviewOption_Subtitle",
-        "Value": "Unset localization item:Edit_PreviewOption_Subtitle()",
+        "Value": "Manage preview configurations",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "Unset localization item:Edit_MiscOption()",
+        "Value": "Miscellaneous Options",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Title",
+        "Value": "Configuring effect implementer...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Description",
+        "Value": "Configure the default implementation for each effect here.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotSpecified",
+        "Value": "Default",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Unknown",
+        "Value": "Unknown",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_HwAcceleration",
+        "Value": "GPU Hardware Acceleration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_IPicture",
+        "Value": "IPicture CPU Implementation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Custom",
+        "Value": "Custom",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_ImageSharp",
+        "Value": "SixLabors.ImageSharp CPU implementation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement",
+        "Value": "Effect Implementer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement_Subtitle",
+        "Value": "Configure the specific implementation for each effect.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Hint",
+        "Value": "About effect renderer implementations:\r- \u0027IPicture CPU Implementation\u0027 offers minimal overhead but may be less accurate\r- \u0027SixLabors.ImageSharp CPU Implementation\u0027 provides high accuracy but may incur significant overhead\r- \u0027GPU Hardware Acceleration\u0027 delivers higher performance with relatively lower overhead",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DumpDiagData",
+        "Value": "Save detailed diagnostic report during rendering",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -4824,56 +5029,164 @@
       },
       {
         "Id": "Edit_ShowAllEffects",
-        "Value": "Unset localization item:Edit_ShowAllEffects()",
+        "Value": "\u5728\u5C6C\u6027\u9762\u677F\u88E1\u986F\u793A\u6240\u6709\u7684\u6548\u679C\uFF08\u5305\u542B\u5167\u90E8\u6548\u679C\u548C\u4E2D\u9593\u6548\u679C\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UpperContentHeight",
-        "Value": "Unset localization item:Edit_UpperContentHeight()",
+        "Value": "\u9810\u89BD/\u5C6C\u6027\u5340\u57DF\u7684\u9AD8\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UpperContentHeight_AutoSave",
-        "Value": "Unset localization item:Edit_UpperContentHeight_AutoSave()",
+        "Value": "\u81EA\u52D5\u5132\u5B58\u9810\u89BD/\u5C6C\u6027\u5340\u57DF\u7684\u9AD8\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_PreviewOption",
-        "Value": "Unset localization item:Edit_PreviewOption()",
+        "Value": "\u9810\u89BD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_PreviewOption_Subtitle",
-        "Value": "Unset localization item:Edit_PreviewOption_Subtitle()",
+        "Value": "\u7BA1\u7406\u9810\u89BD\u7684\u914D\u7F6E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "Unset localization item:Edit_MiscOption()",
+        "Value": "\u96DC\u9805\u9078\u9805",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Title",
+        "Value": "\u914D\u7F6E\u6548\u679C\u5BE6\u4F5C\u5668...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Description",
+        "Value": "\u5728\u9019\u88E1\u914D\u7F6E\u6BCF\u500B\u6548\u679C\u7684\u9810\u8A2D\u5BE6\u4F5C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotSpecified",
+        "Value": "\u9810\u8A2D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Unknown",
+        "Value": "\u672A\u77E5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_HwAcceleration",
+        "Value": "GPU \u786C\u9AD4\u52A0\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_IPicture",
+        "Value": "IPicture CPU \u5BE6\u4F5C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Custom",
+        "Value": "\u81EA\u8A02",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_ImageSharp",
+        "Value": "SixLabors.ImageSharp CPU\u5BE6\u73FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement",
+        "Value": "\u6548\u679C\u5BE6\u73FE\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement_Subtitle",
+        "Value": "\u914D\u7F6E\u6BCF\u4E00\u500B\u6548\u679C\u7684\u5177\u9AD4\u5BE6\u73FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Hint",
+        "Value": "\u95DC\u65BC\u6548\u679C\u5BE6\u4F5C\u5668\uFF1A\r- \u0027IPicture CPU \u5BE6\u4F5C\u0027 \u63D0\u4F9B\u6700\u5C0F\u7684\u958B\u92B7\uFF0C\u4F46\u662F\u5B83\u53EF\u80FD\u4E0D\u6E96\u78BA\r- \u0027SixLabors.ImageSharp CPU \u5BE6\u4F5C\u0027 \u63D0\u4F9B\u5F88\u9AD8\u7684\u6E96\u78BA\u6027\uFF0C\u4F46\u662F\u53EF\u80FD\u6703\u9020\u6210\u5927\u91CF\u7684\u958B\u92B7\r- \u0027GPU \u786C\u9AD4\u52A0\u901F\u0027 \u63D0\u4F9B\u4E86\u8F03\u9AD8\u7684\u6548\u80FD\u548C\u76F8\u5C0D\u8F03\u5C0F\u7684\u958B\u92B7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DumpDiagData",
+        "Value": "\u5132\u5B58\u6E32\u67D3\u6642\u7684\u8A73\u7D30\u8A3A\u65B7\u5831\u544A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -6498,56 +6811,164 @@
       },
       {
         "Id": "Edit_ShowAllEffects",
-        "Value": "Unset localization item:Edit_ShowAllEffects()",
+        "Value": "\u30D7\u30ED\u30D1\u30C6\u30A3\u30D1\u30CD\u30EB\u306B\u3059\u3079\u3066\u306E\u30A8\u30D5\u30A7\u30AF\u30C8\uFF08\u5185\u90E8\u30A8\u30D5\u30A7\u30AF\u30C8\u3068\u4E2D\u9593\u30A8\u30D5\u30A7\u30AF\u30C8\u3092\u542B\u3080\uFF09\u3092\u8868\u793A\u3059\u308B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UpperContentHeight",
-        "Value": "Unset localization item:Edit_UpperContentHeight()",
+        "Value": "\u30D7\u30EC\u30D3\u30E5\u30FC/\u30D7\u30ED\u30D1\u30C6\u30A3\u9818\u57DF\u306E\u9AD8\u3055",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UpperContentHeight_AutoSave",
-        "Value": "Unset localization item:Edit_UpperContentHeight_AutoSave()",
+        "Value": "\u81EA\u52D5\u4FDD\u5B58\u30D7\u30EC\u30D3\u30E5\u30FC/\u30D7\u30ED\u30D1\u30C6\u30A3\u9818\u57DF\u306E\u9AD8\u3055",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_PreviewOption",
-        "Value": "Unset localization item:Edit_PreviewOption()",
+        "Value": "\u30D7\u30EC\u30D3\u30E5\u30FC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_PreviewOption_Subtitle",
-        "Value": "Unset localization item:Edit_PreviewOption_Subtitle()",
+        "Value": "\u30D7\u30EC\u30D3\u30E5\u30FC\u8A2D\u5B9A\u306E\u7BA1\u7406",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "Unset localization item:Edit_MiscOption()",
+        "Value": "\u96D1\u9805",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Title",
+        "Value": "\u30A8\u30D5\u30A7\u30AF\u30C8\u5B9F\u88C5\u5668\u3092\u8A2D\u5B9A\u4E2D...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Description",
+        "Value": "\u3053\u3053\u3067\u5404\u30A8\u30D5\u30A7\u30AF\u30C8\u306E\u30C7\u30D5\u30A9\u30EB\u30C8\u5B9F\u88C5\u3092\u8A2D\u5B9A\u3057\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotSpecified",
+        "Value": "\u30C7\u30D5\u30A9\u30EB\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Unknown",
+        "Value": "\u4E0D\u660E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_HwAcceleration",
+        "Value": "GPU\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_IPicture",
+        "Value": "IPicture CPU\u5B9F\u88C5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Custom",
+        "Value": "\u30AB\u30B9\u30BF\u30E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_ImageSharp",
+        "Value": "SixLabors.ImageSharp CPU\u5B9F\u88C5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u300CSixLabors.ImageSharp\u300D\u306F\u7FFB\u8A33\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement",
+        "Value": "\u30A8\u30D5\u30A7\u30AF\u30C8\u5B9F\u88C5\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement_Subtitle",
+        "Value": "\u5404\u30A8\u30D5\u30A7\u30AF\u30C8\u306E\u5177\u4F53\u7684\u306A\u5B9F\u88C5\u3092\u8A2D\u5B9A\u3057\u307E\u3059",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Hint",
+        "Value": "\u52B9\u679C\u5B9F\u88C5\u5668\u306B\u3064\u3044\u3066\uFF1A\r- \u0027IPicture CPU\u5B9F\u88C5\u0027 \u306F\u6700\u5C0F\u9650\u306E\u30AA\u30FC\u30D0\u30FC\u30D8\u30C3\u30C9\u3092\u63D0\u4F9B\u3057\u307E\u3059\u304C\u3001\u6B63\u78BA\u3067\u306A\u3044\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\r- \u0027SixLabors.ImageSharp CPU\u5B9F\u88C5\u0027 \u306F\u9AD8\u3044\u6B63\u78BA\u6027\u3092\u63D0\u4F9B\u3057\u307E\u3059\u304C\u3001\u5927\u304D\u306A\u30AA\u30FC\u30D0\u30FC\u30D8\u30C3\u30C9\u3092\u751F\u3058\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\r- \u0027GPU\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u0027 \u306F\u6BD4\u8F03\u7684\u9AD8\u3044\u30D1\u30D5\u30A9\u30FC\u30DE\u30F3\u30B9\u3068\u76F8\u5BFE\u7684\u306B\u5C0F\u3055\u3044\u30AA\u30FC\u30D0\u30FC\u30D8\u30C3\u30C9\u3092\u63D0\u4F9B\u3057\u307E\u3059",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DumpDiagData",
+        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u6642\u306E\u8A73\u7D30\u8A3A\u65AD\u30EC\u30DD\u30FC\u30C8\u3092\u4FDD\u5B58",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -8172,56 +8593,164 @@
       },
       {
         "Id": "Edit_ShowAllEffects",
-        "Value": "Unset localization item:Edit_ShowAllEffects()",
+        "Value": "\uC18D\uC131 \uD328\uB110\uC5D0\uC11C \uBAA8\uB4E0 \uC774\uD399\uD2B8(\uB0B4\uBD80 \uC774\uD399\uD2B8\uC640 \uC911\uAC04 \uC774\uD399\uD2B8 \uD3EC\uD568)\uB97C \uD45C\uC2DC\uD569\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UpperContentHeight",
-        "Value": "Unset localization item:Edit_UpperContentHeight()",
+        "Value": "\uBBF8\uB9AC \uBCF4\uAE30/\uC18D\uC131 \uC601\uC5ED \uB192\uC774",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UpperContentHeight_AutoSave",
-        "Value": "Unset localization item:Edit_UpperContentHeight_AutoSave()",
+        "Value": "\uC790\uB3D9 \uC800\uC7A5 \uBBF8\uB9AC\uBCF4\uAE30/\uC18D\uC131 \uC601\uC5ED \uB192\uC774",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_PreviewOption",
-        "Value": "Unset localization item:Edit_PreviewOption()",
+        "Value": "\uBBF8\uB9AC \uBCF4\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_PreviewOption_Subtitle",
-        "Value": "Unset localization item:Edit_PreviewOption_Subtitle()",
+        "Value": "\uBBF8\uB9AC\uBCF4\uAE30 \uC124\uC815 \uAD00\uB9AC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "Unset localization item:Edit_MiscOption()",
+        "Value": "\uAE30\uD0C0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Title",
+        "Value": "\uD6A8\uACFC \uAD6C\uD604\uAE30 \uAD6C\uC131 \uC911...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Description",
+        "Value": "\uC5EC\uAE30\uC5D0\uC11C \uAC01 \uD6A8\uACFC\uC758 \uAE30\uBCF8 \uAD6C\uD604\uC744 \uAD6C\uC131\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotSpecified",
+        "Value": "\uAE30\uBCF8\uAC12",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Unknown",
+        "Value": "\uC54C \uC218 \uC5C6\uC74C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_HwAcceleration",
+        "Value": "GPU \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_IPicture",
+        "Value": "IPicture CPU \uAD6C\uD604",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Custom",
+        "Value": "\uC0AC\uC6A9\uC790 \uC815\uC758",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_ImageSharp",
+        "Value": "SixLabors.ImageSharp CPU \uAD6C\uD604",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u0027SixLabors.ImageSharp\u0027\uB294 \uBC88\uC5ED\uD558\uC9C0 \uC54A\uC74C",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement",
+        "Value": "\uD6A8\uACFC \uAD6C\uD604\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement_Subtitle",
+        "Value": "\uAC01 \uD6A8\uACFC\uC758 \uAD6C\uCCB4\uC801\uC778 \uAD6C\uD604\uC744 \uAD6C\uC131\uD569\uB2C8\uB2E4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Hint",
+        "Value": "\uD6A8\uACFC \uAD6C\uD604\uAE30\uC5D0 \uAD00\uD558\uC5EC:\r- \u0027IPicture CPU \uAD6C\uD604\u0027\uC740 \uCD5C\uC18C\uD55C\uC758 \uC624\uBC84\uD5E4\uB4DC\uB97C \uC81C\uACF5\uD558\uC9C0\uB9CC \uC815\uD655\uD558\uC9C0 \uC54A\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r- \u0027SixLabors.ImageSharp CPU \uAD6C\uD604\u0027\uC740 \uB9E4\uC6B0 \uB192\uC740 \uC815\uD655\uC131\uC744 \uC81C\uACF5\uD558\uC9C0\uB9CC \uC0C1\uB2F9\uD55C \uC624\uBC84\uD5E4\uB4DC\uB97C \uC720\uBC1C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r- \u0027GPU \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D\u0027\uC740 \uC0C1\uB300\uC801\uC73C\uB85C \uB192\uC740 \uC131\uB2A5\uACFC \uBE44\uAD50\uC801 \uC801\uC740 \uC624\uBC84\uD5E4\uB4DC\uB97C \uC81C\uACF5\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DumpDiagData",
+        "Value": "\uB80C\uB354\uB9C1 \uC2DC\uC758 \uC0C1\uC138 \uC9C4\uB2E8 \uBCF4\uACE0\uC11C \uC800\uC7A5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -9846,56 +10375,164 @@
       },
       {
         "Id": "Edit_ShowAllEffects",
-        "Value": "Unset localization item:Edit_ShowAllEffects()",
+        "Value": "Afficher tous les Effets (y compris les Effets internes et interm\u00E9diaires) dans le panneau de propri\u00E9t\u00E9s",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UpperContentHeight",
-        "Value": "Unset localization item:Edit_UpperContentHeight()",
+        "Value": "Hauteur de la zone de pr\u00E9visualisation/propri\u00E9t\u00E9s",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UpperContentHeight_AutoSave",
-        "Value": "Unset localization item:Edit_UpperContentHeight_AutoSave()",
+        "Value": "Hauteur de la zone de pr\u00E9visualisation/propri\u00E9t\u00E9s en sauvegarde automatique",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_PreviewOption",
-        "Value": "Unset localization item:Edit_PreviewOption()",
+        "Value": "Aper\u00E7u",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_PreviewOption_Subtitle",
-        "Value": "Unset localization item:Edit_PreviewOption_Subtitle()",
+        "Value": "Configuration de la gestion de l\u0027aper\u00E7u",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "Unset localization item:Edit_MiscOption()",
+        "Value": "Options diverses",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Title",
+        "Value": "Configuration de l\u0027effecteur...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Description",
+        "Value": "Configurez ici l\u0027impl\u00E9mentation par d\u00E9faut de chaque effet.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotSpecified",
+        "Value": "Par d\u00E9faut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Unknown",
+        "Value": "Inconnu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_HwAcceleration",
+        "Value": "Acc\u00E9l\u00E9ration mat\u00E9rielle GPU",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_IPicture",
+        "Value": "Impl\u00E9mentation CPU IPicture",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Custom",
+        "Value": "Personnalis\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_ImageSharp",
+        "Value": "SixLabors.ImageSharp impl\u00E9mentation CPU",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement",
+        "Value": "Impl\u00E9menteur d\u0027effets",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement_Subtitle",
+        "Value": "Configurer l\u0027impl\u00E9mentation sp\u00E9cifique de chaque effet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Hint",
+        "Value": "\u00C0 propos des impl\u00E9mentations d\u0027effets de rendu :\r- \u0027Impl\u00E9mentation IPicture CPU\u0027 offre la plus petite surcharge, mais peut manquer de pr\u00E9cision\r- \u0027Impl\u00E9mentation SixLabors.ImageSharp CPU\u0027 offre une grande pr\u00E9cision, mais peut entra\u00EEner une surcharge importante\r- \u0027Acc\u00E9l\u00E9ration mat\u00E9rielle GPU\u0027 offre des performances \u00E9lev\u00E9es avec une surcharge relativement faible",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DumpDiagData",
+        "Value": "Enregistrer le rapport de diagnostic d\u00E9taill\u00E9 du rendu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -11520,56 +12157,164 @@
       },
       {
         "Id": "Edit_ShowAllEffects",
-        "Value": "Unset localization item:Edit_ShowAllEffects()",
+        "Value": "\u4E8E\u5C5E\u6027\u9762\u677F\u4E2D\uFF0C\u5C3D\u793A\u8BF8Effect\uFF08\u542B\u5185Effect\u4E0E\u4E2DEffect\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u5C06\u73B0\u4EE3\u8F6F\u4EF6\u672F\u8BED\u0027\u5C5E\u6027\u9762\u677F\u0027\u548C\u0027Effect\u0027\u4FDD\u7559\uFF0C\u4F7F\u7528\u6587\u8A00\u6587\u53E5\u5F0F\u7ED3\u6784\u3002\u0027\u5C3D\u793A\u8BF8\u0027\u8868\u793A\u663E\u793A\u6240\u6709\uFF0C\u0027\u542B\u0027\u8868\u793A\u5305\u62EC\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UpperContentHeight",
-        "Value": "Unset localization item:Edit_UpperContentHeight()",
+        "Value": "\u9884\u89C8\u4E0E\u5C5E\u6027\u533A\u4E4B\u9AD8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UpperContentHeight_AutoSave",
-        "Value": "Unset localization item:Edit_UpperContentHeight_AutoSave()",
+        "Value": "\u9884\u89C8\u4E0E\u5C5E\u6027\u4E4B\u57DF\uFF0C\u5176\u9AD8\u81EA\u52A8\u5B58\u7109\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u5C06\u2018\u81EA\u52A8\u4FDD\u5B58\u9884\u89C8/\u5C5E\u6027\u533A\u57DF\u7684\u9AD8\u5EA6\u2019\u610F\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u91C7\u7528\u2018\u4E4B\u2019\u3001\u2018\u5176\u2019\u3001\u2018\u7109\u2019\u7B49\u865A\u8BCD\uFF0C\u4F7F\u53E5\u5F0F\u51DD\u7EC3\u53E4\u96C5\uFF0C\u5E76\u7B26\u5408\u2018\u4E3B\u8BED\u002B\u4E4B\u002B\u5BBE\u8BED\uFF0C\u5176\u002B\u5C5E\u6027\u002B\u52A8\u8BCD\u002B\u7109\u2019\u7684\u6587\u8A00\u7ED3\u6784\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_PreviewOption",
-        "Value": "Unset localization item:Edit_PreviewOption()",
+        "Value": "\u9884\u89C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_PreviewOption_Subtitle",
-        "Value": "Unset localization item:Edit_PreviewOption_Subtitle()",
+        "Value": "\u9884\u89C2\u4E4B\u6CBB\u8BBE",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "Unset localization item:Edit_MiscOption()",
+        "Value": "\u8BF8\u9879",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Title",
+        "Value": "\u914D\u7F6E\u6548\u679C\u5B9E\u73B0\u5668...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Description",
+        "Value": "\u4E8E\u6B64\u7F6E\u8BF8\u6548\u4E4B\u5E38\u5F0F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotSpecified",
+        "Value": "\u9ED8\u8BA4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Unknown",
+        "Value": "\u672A\u8BE6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_HwAcceleration",
+        "Value": "GPU\u786C\u5668\u52A0\u75BE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_IPicture",
+        "Value": "IPicture CPU\u65BD\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Custom",
+        "Value": "\u81EA\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_ImageSharp",
+        "Value": "SixLabors.ImageSharp CPU\u4E4B\u5B9E\u4F5C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement",
+        "Value": "\u6548\u679C\u5B9E\u73B0\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement_Subtitle",
+        "Value": "\u8BBE\u6BCF\u6548\u4E4B\u5B9E\u6CD5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Hint",
+        "Value": "\u592B\u6548\u679C\u5B9E\u73B0\u4E4B\u6CD5\uFF1A\n- \u2018IPicture CPU \u4E4B\u6CD5\u2019 \u8017\u6700\u5FAE\uFF0C\u7136\u5176\u6216\u4E0D\u7CBE\u3002\n- \u2018SixLabors.ImageSharp CPU \u4E4B\u672F\u2019 \u7CBE\u751A\u9AD8\uFF0C\u7136\u5176\u6216\u81F4\u5DE8\u8017\u3002\n- \u2018GPU \u786C\u4F53\u8F85\u7B97\u2019 \u6548\u8F83\u9AD8\uFF0C\u800C\u8017\u76F8\u5BF9\u4E3A\u8F7B\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C06\u73B0\u4EE3\u6280\u672F\u672F\u8BED\u4E0E\u5BF9\u6BD4\u8BF4\u660E\u8F6C\u5316\u4E3A\u6587\u8A00\u6587\u8868\u8FF0\uFF0C\u4F7F\u7528\u2018\u592B\u2019\u5F00\u7BC7\u603B\u8D77\uFF0C\u2018\u7136\u2019\u8868\u8F6C\u6298\uFF0C\u2018\u800C\u2019\u8868\u8F7B\u5FAE\u5BF9\u6BD4\uFF0C\u529B\u6C42\u6587\u96C5\u7B80\u7EC3\u4E14\u8868\u610F\u6E05\u6670\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DumpDiagData",
+        "Value": "\u5B58\u6E32\u65F6\u8BE6\u8BCA\u4E4B\u5F55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]

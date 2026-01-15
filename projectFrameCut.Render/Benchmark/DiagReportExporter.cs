@@ -4,9 +4,9 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
-namespace projectFrameCut.StandaloneRender
+namespace projectFrameCut.Render.Benchmark
 {
-    internal static class DiagReportExporter
+    public static class DiagReportExporter
     {
         public static void ExportCsv(string diagReportPath, Renderer renderer)
         {

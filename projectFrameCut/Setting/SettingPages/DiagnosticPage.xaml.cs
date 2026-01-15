@@ -2,6 +2,8 @@ using FFmpeg.AutoGen;
 using Microsoft.Maui.Storage;
 using projectFrameCut.PropertyPanel;
 using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -62,7 +64,7 @@ public partial class DiagnosticSettingPage : ContentPage
             })
             .ListenToChanges(SettingInvoker);
         Content = rootPPB.BuildWithScrollView();
-        
+
     }
 
     private async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args)
@@ -85,7 +87,7 @@ public partial class DiagnosticSettingPage : ContentPage
 #elif iDevices
 
 #endif
-                    break;  
+                    break;
             }
         }
         catch (Exception ex)
@@ -207,14 +209,43 @@ public partial class DiagnosticSettingPage : ContentPage
 #if WINDOWS
         IsPackaged = MauiProgram.IsPackaged();
 #endif
-       
-
-        List<string> ModulesInfo = new();
-        var asb = Assembly.GetExecutingAssembly();
-        foreach (var item in asb.GetModules())
+        string GetAssemblyInfo()
         {
-            ModulesInfo.Add($"{item.Assembly.FullName}: \r\nin '{item.FullyQualifiedName}',uuid: {item.ModuleVersionId}r\n");
+            StringBuilder builder = new StringBuilder();
+            List<string> printedAsb = new();
+            foreach (var asb in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    if (printedAsb.Contains(asb.FullName))
+                    {
+                        continue;
+                    }
+                    printedAsb.Add(asb.FullName);
+                    var guid = asb.GetCustomAttribute<GuidAttribute>()?.Value ?? "unknown";
+                    string asbHash = "";
+                    try
+                    {
+                        asbHash = !asb.IsDynamic && Path.Exists(asb.Location) ? HashServices.ComputeFileHash(asb.Location) : "unknown";
+                    }
+                    catch { asbHash = "unknown"; }
+
+                    builder.AppendLine($"Assembly {asb.FullName}, {asb.GetName().Version} GUID:{guid} hash:{asbHash}");
+                }
+                catch
+                {
+                    builder.AppendLine($"{asb.FullName}, cannot get assembly info.");
+                }
+                finally
+                {
+                    builder.AppendLine();
+                }
+            }
+
+            return builder.ToString();
         }
+
+
         string internalFFmpegVersion = "unknown", internalFFmpegCfg = "unknown";
         List<FFmpegHelper.CodecUtils.CodecInfo> codecs = new();
         try
@@ -236,18 +267,15 @@ public partial class DiagnosticSettingPage : ContentPage
             {(OperatingSystem.IsWindows() ? $"- IsPackaged: {IsPackaged}" : "")}
             CmdLine:{string.Join(' ', MauiProgram.CmdlineArgs)}
 
-            Assembly: {asb.FullName}
-            - Runtime version: {asb.ImageRuntimeVersion}
-            - HostContext: {asb.HostContext}
-            - Modules:
-            {string.Join("\r\n  -", ModulesInfo)}
+            Assembly: 
+            {GetAssemblyInfo()}
 
             Internal FFmpeg:
             - lib location: {MauiProgram.FFmpegRoot}
             - version: {internalFFmpegVersion}
             - config: {internalFFmpegCfg}
             - Codecs: 
-            {string.Join("\r\n",codecs.Select(c => $"{c.Id}: {c.Name}, decoder:{c.IsDecoder}, encoder:{c.IsEncoder}"))}
+            {string.Join("\r\n", codecs.Select(c => $"{c.Id}: {c.Name}, decoder:{c.IsDecoder}, encoder:{c.IsEncoder}"))}
 
             """;
     }

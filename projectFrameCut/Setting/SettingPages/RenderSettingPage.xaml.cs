@@ -88,6 +88,9 @@ public partial class RenderSettingPage : ContentPage
         var multiAccel = bool.TryParse(GetSetting("accel_enableMultiAccel", "false"), out var result1) ? result1 : false;
         rootPPB = new();
         rootPPB
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderEffectImplement, SettingLocalizedResources.Render_RenderEffectImplement_Subtitle))
+            .AddButton(SettingLocalizedResources.RenderEffectImplement_Title, async (s,e) => await Navigation.PushAsync(new EffectImplementPickerPage()), null)
+            .AddSeparator()
             .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle, 20, 12))
 #if WINDOWS
             .AddSwitch("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, multiAccel, null)
@@ -137,6 +140,7 @@ public partial class RenderSettingPage : ContentPage
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AdvanceOpts, SettingLocalizedResources.Misc_DiagOptions_Subtitle, 20, 12))
                 .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.TryGetValue(int.Parse(GetSetting("render_GCOption", "0")), out var value) ? value : SettingLocalizedResources.Render_GCOption_LetCLRDoGC)
                 .AddSwitch("render_BlockWrite", SettingLocalizedResources.Render_BlockWrite, IsBoolSettingTrue("render_BlockWrite"), null);
+                
         }
         else
         {

@@ -13,6 +13,9 @@ using System.Text;
 using System.Text.Json;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Benchmark;
+using projectFrameCut.Render.Effect.HwAccel;
+using projectFrameCut.Render.Effect.ImageSharp;
+using projectFrameCut.Render.Effect;
 
 namespace projectFrameCut.Render.Plugin;
 
@@ -60,10 +63,18 @@ public class InternalPluginBase : IPluginBase
 
     public Dictionary<string, Func<IEffect>> EffectProvider => new Dictionary<string, Func<IEffect>>
     {
-        {"RemoveColor",  new(() => new RemoveColorEffect())},
-        {"Place",  new(() => new PlaceEffect())},
-        {"Crop", new(() => new CropEffect()) },
-        {"Resize",  new(() => new ResizeEffect())}
+        {"RemoveColor_HwAccel",  new(() => new RemoveColorEffect_HwAccel())},
+        {"PlaceEffect_ImageSharp",  new(() => new PlaceEffect_ImageSharp())},
+        {"CropEffect_ImageSharp",  new(() => new CropEffect_ImageSharp())},
+        {"ResizeEffect_ImageSharp",  new(() => new ResizeEffect_ImageSharp())},
+    };
+
+    public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
+    {
+        {"Place", new PlaceEffectFactory()},
+        {"Crop", new CropEffectFactory()},
+        {"Resize", new ResizeEffectFactory()},
+        {"RemoveColor", new RemoveColorEffectFactory()},
     };
 
     public Dictionary<string, Func<IMixture>> MixtureProvider => new Dictionary<string, Func<IMixture>>
@@ -80,6 +91,12 @@ public class InternalPluginBase : IPluginBase
     {
         {"ZoomIn", new(() => new ZoomInContinuousEffect())  },
         {"Jitter", new(() => new JitterEffect()) }
+    };
+
+    public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider => new Dictionary<string, IEffectFactory>
+    {
+        {"ZoomIn", new ZoomInContinuousEffectFactory()},
+        {"Jitter", new JitterContinuousEffectFactory()},
     };
 
     public Dictionary<string, Func<IEffect>> VariableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>

@@ -268,7 +268,6 @@ public partial class RenderPage : ContentPage
             CancelRender.IsEnabled = true;
             //MoreOptions.IsEnabled = false;
             await SubProgress.ProgressTo(0, 250, Easing.Linear);
-            await TotalProgress.ProgressTo(0, 250, Easing.Linear);
 
             _logBuffer.Clear();
             _logQueue.Clear();
@@ -411,7 +410,6 @@ public partial class RenderPage : ContentPage
                 StopScreenSaverTimer();
                 await FlushLogQueue();
                 MyLoggerExtensions.OnLog -= _WriteToLogBox;
-                await TotalProgress.ProgressTo(1, 50, Easing.Linear);
 
                 await DisplayAlertAsync(Localized._Info, Localized.RenderPage_Done, Localized._OK);
                 running = false;
@@ -472,7 +470,6 @@ public partial class RenderPage : ContentPage
         Dispatcher.Dispatch(() =>
         {
             SubProgLabel.Text = label;
-            TotalProgress.ProgressTo(totalProg / 3d, 5, Easing.Linear);
 
         });
     }
@@ -575,7 +572,8 @@ public partial class RenderPage : ContentPage
                 EnablePreview = true,
                 DoGCAfterEachWrite = (int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var value1) ? value1 : 0) > 0,
                 DisposeFrameAfterEachWrite = true,
-                Duration = duration
+                Duration = duration,
+                LogStat = false
             };
 
             Renderer renderer = new Renderer
@@ -586,36 +584,8 @@ public partial class RenderPage : ContentPage
                 MaxThreads = parallelThreadCount,
                 LogState = false,
                 LogStatToLogger = true,
+                LogProcessStack = SettingsManager.IsBoolSettingTrue("render_DumpDiagData"),
                 GCOption = (int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var value) ? value : 0)
-            };
-
-            var memInfo = GC.GetGCMemoryInfo();
-            if (memInfo.TotalAvailableMemoryBytes > 0)
-            {
-                renderer.MemoryThresholdBytes = (long)(memInfo.TotalAvailableMemoryBytes * 0.8);
-            }
-
-            Log($"Available memory for rendering: {memInfo.TotalAvailableMemoryBytes / 1024 / 1024} MB, set memory threshold to {renderer.MemoryThresholdBytes / 1024 / 1024} MB.");
-
-            renderer.OnLowMemory += async (r) =>
-            {
-                await Dispatcher.DispatchAsync(async () =>
-                {
-                    r.ClearCaches();
-                    bool resume = await DisplayAlert("Memory Low",
-                        $"System memory is running low (Usage > {r.MemoryThresholdBytes / 1024 / 1024} MB). Rendering paused and resources cleaned. Do you want to continue?",
-                        "Continue", "Stop");
-
-                    if (resume)
-                    {
-                        r.IsPaused = false;
-                    }
-                    else
-                    {
-                        _cts.Cancel();
-                        r.IsPaused = false;
-                    }
-                });
             };
 
             renderer.OnProgressChanged += (p, etr) =>
@@ -630,11 +600,10 @@ public partial class RenderPage : ContentPage
                         SubProgLabel.Text = $"{_currentSubProgText} ({timeStr})";
                     }
                     await SubProgress.ProgressTo(p, 250, Easing.Linear);
-                    await TotalProgress.ProgressTo(totalProg / 3d, 5, Easing.Linear);
 
                     if (ScreenSaverOverlay.IsVisible)
                     {
-                        HintLabel.Text = $"{Localized.RenderPage_ClickToShowUI}{Environment.NewLine}{Localized.RenderPage_Stat(totalProg / 3d, timeStr)}";
+                        HintLabel.Text = $"{Localized.RenderPage_ClickToShowUI}{Environment.NewLine}{Localized.RenderPage_Stat(p, timeStr)}";
                     }
                 });
             };
@@ -699,6 +668,11 @@ public partial class RenderPage : ContentPage
 #endif
 
             Log($"All done! Total elapsed {sw1}.");
+
+            if (SettingsManager.IsBoolSettingTrue("render_DumpDiagData"))
+            {
+                Render.Benchmark.DiagReportExporter.ExportCsv(MauiProgram.DataPath, renderer);
+            }
 
 
         }

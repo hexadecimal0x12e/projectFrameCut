@@ -1,4 +1,6 @@
-﻿using projectFrameCut.Render.Plugin;
+﻿using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.Effect.ImageSharp;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.VideoMakeEngine;
@@ -74,7 +76,7 @@ namespace projectFrameCut.Render.Rendering
 
         private IPicture BlankFrame = null!;
 
-        private PlaceEffect BlankPlace = new()
+        private PlaceEffect_ImageSharp BlankPlace = new()
         {
             StartX = 0,
             StartY = 0

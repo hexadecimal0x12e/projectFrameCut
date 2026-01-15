@@ -86,20 +86,36 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// </remarks>
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
 
-      
+
 
         /// <summary>
         /// Create an IEffect instance from the given JSON structure.
         /// </summary>
         public Dictionary<string, Func<IEffect>> EffectProvider { get; }
+
+        /// <summary>
+        /// Create an <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
+        /// Key is effect type name (e.g. "Resize").
+        /// </summary>
+        public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>();
         /// <summary>
         /// Create an IEffect instance from the given JSON structure.
         /// </summary>
         public Dictionary<string, Func<IEffect>> ContinuousEffectProvider { get; }
+
+        /// <summary>
+        /// Create a continuous <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
+        /// </summary>
+        public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider => new Dictionary<string, IEffectFactory>();
         /// <summary>
         /// Create an IEffect instance from the given JSON structure.
         /// </summary>
         public Dictionary<string, Func<IEffect>> VariableArgumentEffectProvider { get; }
+
+        /// <summary>
+        /// Create a variable-argument <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
+        /// </summary>
+        public Dictionary<string, IEffectFactory> VariableArgumentEffectFactoryProvider => new Dictionary<string, IEffectFactory>();
         /// <summary>
         /// Create an IMixture instance from the given JSON structure.
         /// </summary>
@@ -191,43 +207,92 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <exception cref="NotSupportedException"></exception>
         public virtual IEffect EffectCreator(EffectAndMixtureJSONStructure stru)
         {
-            if (EffectProvider.TryGetValue(stru.TypeName, out var creator))
+            static IEffect ApplyCommonProperties(IEffect effect, EffectAndMixtureJSONStructure s)
             {
-                var blankInstance = creator();
-                var instance = blankInstance.WithParameters(EffectArgsHelper.ConvertElementDictToObjectDict(stru.Parameters ?? new Dictionary<string, object>(), blankInstance.ParametersType) ?? new Dictionary<string, object>());
-                instance.Name = stru.Name;
-                instance.RelativeWidth = stru.RelativeWidth;
-                instance.RelativeHeight = stru.RelativeHeight;
-                instance.Enabled = stru.Enabled;
-                instance.Initialize();
-                return instance;
+                effect.Name = s.Name;
+                effect.RelativeWidth = s.RelativeWidth;
+                effect.RelativeHeight = s.RelativeHeight;
+                effect.Enabled = s.Enabled;
+                return effect;
             }
-            else if (ContinuousEffectProvider.TryGetValue(stru.TypeName, out var creator1))
+
+            static Dictionary<string, object> ConvertParams(Dictionary<string, object>? source, Dictionary<string, string> parameterTypes)
             {
-                var blankInstance = creator1();
-                var instance = blankInstance.WithParameters(EffectArgsHelper.ConvertElementDictToObjectDict(stru.Parameters ?? new Dictionary<string, object>(), blankInstance.ParametersType) ?? new Dictionary<string, object>());
-                instance.Name = stru.Name;
-                instance.RelativeWidth = stru.RelativeWidth;
-                instance.RelativeHeight = stru.RelativeHeight;
-                instance.Enabled = stru.Enabled;
-                instance.Initialize();
-                return instance;
+                source ??= new Dictionary<string, object>();
+                return EffectArgsHelper.ConvertElementDictToObjectDict(source, parameterTypes);
             }
-            else if (VariableArgumentEffectProvider.TryGetValue(stru.TypeName, out var creator2))
+
+            // Prefer factory-based creation.
+            if (stru.IsContinuousEffect)
             {
-                var blankInstance = creator2();
-                var instance = blankInstance.WithParameters(EffectArgsHelper.ConvertElementDictToObjectDict(stru.Parameters ?? new Dictionary<string, object>(), blankInstance.ParametersType) ?? new Dictionary<string, object>());
-                instance.Name = stru.Name;
-                instance.RelativeWidth = stru.RelativeWidth;
-                instance.RelativeHeight = stru.RelativeHeight;
-                instance.Enabled = stru.Enabled;
-                instance.Initialize();
-                return instance;
+                if (ContinuousEffectFactoryProvider.TryGetValue(stru.TypeName, out var cFactory))
+                {
+                    var effect = cFactory.BuildContinuousWithDefaultType(ConvertParams(stru.Parameters, cFactory.ParametersType));
+                    return ApplyCommonProperties(effect, stru);
+                }
             }
             else
             {
-                throw new NotSupportedException($"No suitable effect found for the given type '{stru.TypeName}'.");
+                if (EffectFactoryProvider.TryGetValue(stru.TypeName, out var factory))
+                {
+                    var effect = factory.BuildWithDefaultType(ConvertParams(stru.Parameters, factory.ParametersType));
+                    return ApplyCommonProperties(effect, stru);
+                }
             }
+
+            if (VariableArgumentEffectFactoryProvider.TryGetValue(stru.TypeName, out var vFactory))
+            {
+                var effect = vFactory.BuildWithDefaultType(ConvertParams(stru.Parameters, vFactory.ParametersType));
+                return ApplyCommonProperties(effect, stru);
+            }
+
+            // Backward compatibility: legacy creator-based creation.
+            if (!stru.IsContinuousEffect && EffectProvider.TryGetValue(stru.TypeName, out var creator))
+            {
+                var blankInstance = creator();
+                var instance = blankInstance.WithParameters(ConvertParams(stru.Parameters, blankInstance.ParametersType));
+                return ApplyCommonProperties(instance, stru);
+            }
+
+            if (stru.IsContinuousEffect && ContinuousEffectProvider.TryGetValue(stru.TypeName, out var creator1))
+            {
+                var blankInstance = creator1();
+                var instance = blankInstance.WithParameters(ConvertParams(stru.Parameters, blankInstance.ParametersType));
+                return ApplyCommonProperties(instance, stru);
+            }
+
+            if (VariableArgumentEffectProvider.TryGetValue(stru.TypeName, out var creator2))
+            {
+                var blankInstance = creator2();
+                var instance = blankInstance.WithParameters(ConvertParams(stru.Parameters, blankInstance.ParametersType));
+                return ApplyCommonProperties(instance, stru);
+            }
+
+            // Fallback search across other categories (in case IsContinuousEffect wasn't set correctly).
+            if (EffectFactoryProvider.TryGetValue(stru.TypeName, out var factoryFallback))
+            {
+                var effect = factoryFallback.BuildWithDefaultType(ConvertParams(stru.Parameters, factoryFallback.ParametersType));
+                return ApplyCommonProperties(effect, stru);
+            }
+            if (ContinuousEffectFactoryProvider.TryGetValue(stru.TypeName, out var cFactoryFallback))
+            {
+                var effect = cFactoryFallback.BuildContinuousWithDefaultType(ConvertParams(stru.Parameters, cFactoryFallback.ParametersType));
+                return ApplyCommonProperties(effect, stru);
+            }
+            if (EffectProvider.TryGetValue(stru.TypeName, out var creatorFallback))
+            {
+                var blankInstance = creatorFallback();
+                var instance = blankInstance.WithParameters(ConvertParams(stru.Parameters, blankInstance.ParametersType));
+                return ApplyCommonProperties(instance, stru);
+            }
+            if (ContinuousEffectProvider.TryGetValue(stru.TypeName, out var creatorFallback2))
+            {
+                var blankInstance = creatorFallback2();
+                var instance = blankInstance.WithParameters(ConvertParams(stru.Parameters, blankInstance.ParametersType));
+                return ApplyCommonProperties(instance, stru);
+            }
+
+            throw new NotSupportedException($"No suitable effect found for the given type '{stru.TypeName}'.");
         }
         /// <summary>
         /// Create a VideoSource instance from the file.
@@ -442,28 +507,33 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                     providedContent.AppendLine($"- {item.Key}");
                 }
             }
-            if (pluginBase.EffectProvider.Any())
+            var effectTypes = pluginBase.EffectFactoryProvider.Keys.Concat(pluginBase.EffectProvider.Keys).Distinct();
+            if (effectTypes.Any())
             {
                 providedContent.AppendLine("Effect:");
-                foreach (var item in pluginBase.EffectProvider)
+                foreach (var key in effectTypes)
                 {
-                    providedContent.AppendLine($"- {item.Key}");
+                    providedContent.AppendLine($"- {key}");
                 }
             }
-            if (pluginBase.ContinuousEffectProvider.Any())
+
+            var continuousEffectTypes = pluginBase.ContinuousEffectFactoryProvider.Keys.Concat(pluginBase.ContinuousEffectProvider.Keys).Distinct();
+            if (continuousEffectTypes.Any())
             {
                 providedContent.AppendLine("ContinuousEffect:");
-                foreach (var item in pluginBase.ContinuousEffectProvider)
+                foreach (var key in continuousEffectTypes)
                 {
-                    providedContent.AppendLine($"- {item.Key}");
+                    providedContent.AppendLine($"- {key}");
                 }
             }
-            if (pluginBase.VariableArgumentEffectProvider.Any())
+
+            var variableArgumentEffectTypes = pluginBase.VariableArgumentEffectFactoryProvider.Keys.Concat(pluginBase.VariableArgumentEffectProvider.Keys).Distinct();
+            if (variableArgumentEffectTypes.Any())
             {
                 providedContent.AppendLine("VariableArgumentEffect:");
-                foreach (var item in pluginBase.VariableArgumentEffectProvider)
+                foreach (var key in variableArgumentEffectTypes)
                 {
-                    providedContent.AppendLine($"- {item.Key}");
+                    providedContent.AppendLine($"- {key}");
                 }
             }
 

@@ -15,6 +15,9 @@ using projectFrameCut.Services;
 using GridLength = Microsoft.Maui.GridLength;
 using Thickness = Microsoft.Maui.Thickness;
 
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.Effect.ImageSharp;
+
 
 
 
@@ -80,7 +83,7 @@ namespace projectFrameCut.DraftStuff
             return newEffect;
         }
 
-        private Dictionary<string, string> GetLocalizedEffectNames()
+        public static Dictionary<string, string> GetLocalizedEffectNames()
         {
             string GetEffectDisplayName(KeyValuePair<string, Func<IEffect>> e)
             {
@@ -143,7 +146,7 @@ namespace projectFrameCut.DraftStuff
 
             if (clip.Effects != null)
             {
-                if (clip.Effects.TryGetValue("__Internal_Place__", out var e) && e is PlaceEffect p)
+                if (clip.Effects.TryGetValue("__Internal_Place__", out var e) && e is PlaceEffect_ImageSharp p)
                 {
                     valX = p.StartX;
                     valY = p.StartY;
@@ -153,7 +156,7 @@ namespace projectFrameCut.DraftStuff
                         valY = (int)(p.StartY * ((double)page.ProjectInfo.RelativeHeight / p.RelativeHeight));
                     }
                 }
-                if (clip.Effects.TryGetValue("__Internal_Resize__", out var e2) && e2 is ResizeEffect r)
+                if (clip.Effects.TryGetValue("__Internal_Resize__", out var e2) && e2 is ResizeEffect_ImageSharp r)
                 {
                     valW = r.Width;
                     valH = r.Height;
@@ -286,8 +289,8 @@ namespace projectFrameCut.DraftStuff
                         // Get current values (normalized to current project resolution) from UI or Effect
                         int currentX = 0, currentY = 0;
 
-                        PlaceEffect existingP = null;
-                        if (clip.Effects.TryGetValue("__Internal_Place__", out var eff) && eff is PlaceEffect pe)
+                        PlaceEffect_ImageSharp existingP = null;
+                        if (clip.Effects.TryGetValue("__Internal_Place__", out var eff) && eff is PlaceEffect_ImageSharp pe)
                         {
                             existingP = pe;
                             currentX = pe.StartX;
@@ -305,7 +308,7 @@ namespace projectFrameCut.DraftStuff
                         if (e.Id == "placeY" && int.TryParse(e.Value?.ToString(), out var vy)) currentY = vy;
                         else if (ppb.Properties.TryGetValue("placeY", out var uiY) && int.TryParse(uiY.ToString(), out var uiYInt)) currentY = uiYInt;
 
-                        var newP = new PlaceEffect
+                        var newP = new PlaceEffect_ImageSharp
                         {
                             StartX = currentX,
                             StartY = currentY,
@@ -320,9 +323,9 @@ namespace projectFrameCut.DraftStuff
                     else if (e.Id.StartsWith("resize"))
                     {
                         int currentW = page.ProjectInfo.RelativeWidth, currentH = page.ProjectInfo.RelativeHeight;
-                        ResizeEffect existingR = null;
+                        ResizeEffect_ImageSharp existingR = null;
 
-                        if (clip.Effects.TryGetValue("__Internal_Resize__", out var eff) && eff is ResizeEffect re)
+                        if (clip.Effects.TryGetValue("__Internal_Resize__", out var eff) && eff is ResizeEffect_ImageSharp re)
                         {
                             existingR = re;
                             currentW = re.Width;
@@ -340,7 +343,7 @@ namespace projectFrameCut.DraftStuff
                         if (e.Id == "resizeH" && int.TryParse(e.Value?.ToString(), out var vh)) currentH = vh;
                         else if (ppb.Properties.TryGetValue("resizeH", out var uiH) && int.TryParse(uiH.ToString(), out var uiHInt)) currentH = uiHInt;
 
-                        var newR = new ResizeEffect
+                        var newR = new ResizeEffect_ImageSharp
                         {
                             Width = currentW,
                             Height = currentH,
