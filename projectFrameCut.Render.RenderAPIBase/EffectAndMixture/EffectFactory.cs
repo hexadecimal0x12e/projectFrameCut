@@ -25,17 +25,53 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public Dictionary<string, string> ParametersType { get; }
 
+        /// <summary>
+        /// Build a effect with default implementation type.
+        /// </summary>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
         public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null);
-
+        /// <summary>
+        /// Build the specified effect implementation type.
+        /// </summary>
+        /// <param name="implementType"></param>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null);
 
+        /// <summary>
+        /// Get the supported implement types of this effect.
+        /// </summary>
         public EffectImplementType[] SupportsImplementTypes { get; }
+        /// <summary>
+        /// Gets the default effect implementation type supported by this instance.
+        /// </summary>
+        /// <remarks>The default implementation type is determined by the first entry in the
+        /// SupportsImplementTypes array. If no implementation types are supported, the value is
+        /// EffectImplementType.NotSpecified.</remarks>
+        public virtual EffectImplementType DefaultImplementType => SupportsImplementTypes.Length > 0 ? SupportsImplementTypes[0] : EffectImplementType.NotSpecified;
 
 
     }
 
     public static class EffectFactoryExtensions
     {
+        public static IEffectFactory GetFactory(this IEffect effect, Dictionary<string, IEffectFactory> factories)
+        {
+            ArgumentNullException.ThrowIfNull(effect);
+            ArgumentNullException.ThrowIfNull(factories);
+            if (!factories.TryGetValue(effect.TypeName, out var factory))
+            {
+                if(factories.First(f => f.Value.TypeName.Equals(effect.TypeName, StringComparison.Ordinal)).Value is IEffectFactory foundFactory)
+                {
+                    return foundFactory;
+                }
+                throw new InvalidOperationException($"No EffectFactory found for Effect TypeName '{effect.TypeName}'.");
+            }
+            return factory;
+        }
+
+
         /// <summary>
         /// Build an <see cref="IEffect"/> for the specified <see cref="EffectImplementType"/> and call <see cref="IEffect.Initialize"/> before returning it.
         /// </summary>

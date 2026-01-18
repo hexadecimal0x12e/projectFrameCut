@@ -182,7 +182,7 @@ namespace projectFrameCut.Render.Plugin
 
         }
 
-        public static IEffect CreateEffect(EffectAndMixtureJSONStructure stru)
+        public static IEffect CreateEffect(EffectAndMixtureJSONStructure stru, EffectImplementType type = EffectImplementType.NotSpecified)
         {
             if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
             {

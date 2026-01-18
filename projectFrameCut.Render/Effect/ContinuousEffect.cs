@@ -6,10 +6,9 @@ using System.Text;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Effect.ImageSharp;
 
-namespace projectFrameCut.Render.VideoMakeEngine
+namespace projectFrameCut.Render.Effect
 {
     public class ZoomInContinuousEffect : IContinuousEffect
     {
@@ -36,24 +35,6 @@ namespace projectFrameCut.Render.VideoMakeEngine
         {
             {"TargetX", TargetX},
             {"TargetY", TargetY},
-        };
-
-
-
-        public List<string> ParametersNeeded => s_ParametersNeeded;
-        public Dictionary<string, string> ParametersType => s_ParametersType;
-
-
-        public static List<string> s_ParametersNeeded { get; } = new List<string>
-        {
-            "TargetX",
-            "TargetY"
-        };
-
-        public static Dictionary<string, string> s_ParametersType { get; } = new Dictionary<string, string>
-        {
-            {"TargetX","int" },
-            {"TargetY","int" },
         };
 
 
@@ -209,8 +190,6 @@ namespace projectFrameCut.Render.VideoMakeEngine
             { "Seed", Seed },
         };
 
-        List<string> IContinuousEffect.ParametersNeeded => ParametersNeeded;
-        Dictionary<string, string> IContinuousEffect.ParametersType => ParametersType;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public string? NeedComputer => null;
         public bool YieldProcessStep => true;

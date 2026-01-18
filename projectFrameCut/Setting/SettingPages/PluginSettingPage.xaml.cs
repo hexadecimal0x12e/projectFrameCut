@@ -1,4 +1,5 @@
-using projectFrameCut.PropertyPanel;
+using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Services;
@@ -13,7 +14,7 @@ namespace projectFrameCut.Setting.SettingPages;
 
 public partial class PluginSettingPage : ContentPage
 {
-    public PropertyPanel.PropertyPanelBuilder rootPPB;
+    public PropertyPanelBuilder rootPPB;
     string AdvanceConfigPageViewing = "";
 
     public PluginSettingPage()
@@ -37,7 +38,7 @@ public partial class PluginSettingPage : ContentPage
         Title = Localized.MainSettingsPage_Tab_Plugin;
         rootPPB = new();
         rootPPB
-            .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Plugin_ManagePlugins, 20))
+            .AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_ManagePlugins, 20))
             .AddButton("addButton", SettingLocalizedResources.Plugin_AddOne);
 
         foreach (var item in PluginManager.LoadedPlugins)
@@ -47,8 +48,8 @@ public partial class PluginSettingPage : ContentPage
             var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", plugin.Description) ?? plugin.Description;
             rootPPB
                 .AddSeparator()
-                .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(name, desc, 20, 16))
-                .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Plugin_DetailInfo(plugin.Author, plugin.Version, plugin.PluginID), 12))
+                .AddText(new TitleAndDescriptionLineLabel(name, desc, 20, 16))
+                .AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailInfo(plugin.Author, plugin.Version, plugin.PluginID), 12))
                 .AddButton($"MoreOption,{item.Key}", SettingLocalizedResources.Plugin_MoreOption);
 
 
@@ -59,18 +60,18 @@ public partial class PluginSettingPage : ContentPage
         {
             rootPPB
                 .AddSeparator()
-                .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_FailLoad, SettingLocalizedResources.Plugin_FailLoad_Subtitle, 20, 12));
+                .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_FailLoad, SettingLocalizedResources.Plugin_FailLoad_Subtitle, 20, 12));
 
             foreach (var disabledPlugin in disabledPlugins)
             {
                 rootPPB
-                    .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(disabledPlugin.Id, SettingLocalizedResources.Plugin_FailLoad_Disabled, 20, 16))
+                    .AddText(new TitleAndDescriptionLineLabel(disabledPlugin.Id, SettingLocalizedResources.Plugin_FailLoad_Disabled, 20, 16))
                     .AddButton($"EnablePlugin,{disabledPlugin.Id}", SettingLocalizedResources.Plugin_Enable(disabledPlugin.Id));
             }
             foreach (var failedPlugin in PluginService.FailedLoadPlugin)
             {
                 rootPPB
-                    .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(failedPlugin.Key, SettingLocalizedResources.Plugin_FailLoad_FailedBeacuse(failedPlugin.Value), 20, 16))
+                    .AddText(new TitleAndDescriptionLineLabel(failedPlugin.Key, SettingLocalizedResources.Plugin_FailLoad_FailedBeacuse(failedPlugin.Value), 20, 16))
                     .AddButton($"RemoveFailedPlugin,{failedPlugin.Key}", SettingLocalizedResources.Plugin_Remove);
             }
         }
@@ -99,12 +100,26 @@ public partial class PluginSettingPage : ContentPage
         var name = plugin.ReadLocalizationItem("_PluginBase_Name_", plugin.Name) ?? plugin.Name;
         var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", plugin.Description) ?? plugin.Description;
         var ppb = new PropertyPanelBuilder()
-            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_DetailConfig(name), SettingLocalizedResources.Plugin_DetailConfig_Subtitle(name)));
-        if (!plugin.Configuration.Any())
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_DetailConfig(name), SettingLocalizedResources.Plugin_DetailConfig_Subtitle(name)));
+
+        if (plugin is IApplicationPluginBase appBase)
         {
-            ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailConfig_None(name), 16, FontAttributes.None, Colors.Gray));
+            try
+            {
+                var settingPage = appBase.SettingPageProvider(ref appBase);
+                if (settingPage is null)
+                {
+                    ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailConfig_None(name), 16, FontAttributes.None, Colors.Gray));
+                }
+                ppb.AddCustomChild(settingPage);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"Create setting page for {name}",this);
+                ppb.AddText(new SingleLineLabel($"Failed to create setting page: {Localized._ExceptionTemplate(ex)}", 16, FontAttributes.None, Colors.Red));
+            }
         }
-        else
+        else if (plugin.Configuration.Any())
         {
             foreach (var item in plugin.Configuration)
             {
@@ -116,9 +131,14 @@ public partial class PluginSettingPage : ContentPage
                     item.Value, item.Value);
             }
         }
+        else
+        {
+            ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailConfig_None(name), 16, FontAttributes.None, Colors.Gray));
+        }
+
         ppb.AddText(new SingleLineLabel(Localized.HomePage_ProjectContextMenu(name), 20, FontAttributes.None))
             .AddButton($"ViewProvided,{id}", SettingLocalizedResources.Plugin_ViewWhatProvided(plugin.Name));
-        if (plugin.LocalizationProvider.TryGetValue("option", out var optKVP) && optKVP.TryGetValue("_IsInternalPlugin", out var isInternal) && bool.TryParse(isInternal, out var result) && result)
+        if (plugin.Properties.TryGetValue("_IsInternalPlugin", out var isInternal) && bool.TryParse(isInternal, out var result) && result)
         {
             ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_CannotRemoveInternalPlugin, 14, default, Colors.Grey));
         }

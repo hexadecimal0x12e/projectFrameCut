@@ -16,6 +16,13 @@ using projectFrameCut.Render.Plugin;
 using Microsoft.Extensions.Logging;
 using projectFrameCut.Shared;
 using projectFrameCut.Asset;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using System.Collections.Concurrent;
+
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.VideoMakeEngine;
+
+
 
 
 
@@ -201,6 +208,32 @@ namespace projectFrameCut
                     SettingsManager.Settings.AddOrUpdate("UserID", Guid.NewGuid().ToString(), (_, v) => string.IsNullOrWhiteSpace(v) ? Guid.NewGuid().ToString() : v);
                     SettingsManager.ToggleSaveSignal();
                 }
+
+                try
+                {
+                    if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json")))
+                    {
+                        string json = File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json"));
+                        try
+                        {
+                            var dict = JsonSerializer.Deserialize<Dictionary<string, EffectImplementType>>(json);
+                            if (dict != null)
+                            {
+                                EffectHelper.DefaultImplementsType = dict;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, "read effectImplement", CreateMauiApp);
+                            EffectHelper.DefaultImplementsType = new();
+                        }
+                    }
+                    else
+                    {
+                        EffectHelper.DefaultImplementsType = new();
+                    }
+                }
+                catch { }
             }
             catch (Exception ex)
             {
@@ -257,7 +290,7 @@ namespace projectFrameCut
                     Directory.CreateDirectory(Path.Combine(DataPath, item));
                 }
 
-                if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "@WARNING.txt")))
+                if (!File.Exists(Path.Combine(DataPath, "My Assets",  "@WARNING.txt")))
                 {
                     File.WriteAllText(Path.Combine(DataPath, "My Assets", "@WARNING.txt"),
                         """
@@ -504,7 +537,7 @@ namespace projectFrameCut
 
                 try
                 {
-                    var internalBase = new InternalPluginBase();
+                    var internalBase = new InternalApplicationPluginBase();
                     internalBase.MessagingQueue = MessagingServices.MessagingService;
                     List<IPluginBase> plugins = new() { internalBase };
 #if ANDROID

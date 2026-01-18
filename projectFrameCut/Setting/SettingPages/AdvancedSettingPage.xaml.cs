@@ -1,4 +1,4 @@
-using projectFrameCut.PropertyPanel;
+using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;

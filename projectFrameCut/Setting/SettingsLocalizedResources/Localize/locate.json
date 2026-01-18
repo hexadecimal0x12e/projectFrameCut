@@ -1605,7 +1605,7 @@
       },
       {
         "Id": "RenderEffectImplement_NotSpecified",
-        "Value": "\u9ED8\u8BA4",
+        "Value": "\u81EA\u52A8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1613,7 +1613,7 @@
       },
       {
         "Id": "RenderEffectImplement_Title",
-        "Value": "\u914D\u7F6E\u6548\u679C\u5B9E\u73B0\u5668...",
+        "Value": "\u914D\u7F6E\u6548\u679C\u5B9E\u73B0\u5668",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

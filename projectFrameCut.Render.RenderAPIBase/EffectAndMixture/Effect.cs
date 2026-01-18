@@ -36,21 +36,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public Dictionary<string, object> Parameters { get; }
 
-        /// <summary>
-        /// Indicates which parameters are needed for this effect.
-        /// </summary>
-        /// <remarks>
-        /// Default implementation reads static <c>ParametersNeeded</c> from the concrete effect type.
-        /// </remarks>
-        public List<string> ParametersNeeded => EffectMetadataResolver.GetParametersNeeded(this);
 
-        /// <summary>
-        /// Indicates the type of each parameter.
-        /// </summary>
-        /// <remarks>
-        /// Default implementation reads static <c>ParametersType</c> from the concrete effect type.
-        /// </remarks>
-        public Dictionary<string, string> ParametersType => EffectMetadataResolver.GetParametersType(this);
         /// <summary>
         /// Get or set whether the effect is enabled.
         /// </summary>
@@ -116,60 +102,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public virtual void Initialize()
         {
         }
-    }
 
-    internal static class EffectMetadataResolver
-    {
-        private sealed record CacheEntry(List<string> ParametersNeeded, Dictionary<string, string> ParametersType);
-
-        private static readonly ConcurrentDictionary<Type, CacheEntry> s_cache = new();
-
-        public static List<string> GetParametersNeeded(IEffect effect)
-        {
-            ArgumentNullException.ThrowIfNull(effect);
-            var entry = s_cache.GetOrAdd(effect.GetType(), Resolve);
-            return new List<string>(entry.ParametersNeeded);
-        }
-
-        public static Dictionary<string, string> GetParametersType(IEffect effect)
-        {
-            ArgumentNullException.ThrowIfNull(effect);
-            var entry = s_cache.GetOrAdd(effect.GetType(), Resolve);
-            return new Dictionary<string, string>(entry.ParametersType);
-        }
-
-        private static CacheEntry Resolve(Type type)
-        {
-            var needed = ReadStaticList(type, "ParametersNeeded") ?? new List<string>();
-            var types = ReadStaticDictionary(type, "ParametersType") ?? new Dictionary<string, string>();
-            return new CacheEntry(needed, types);
-        }
-
-        private static List<string>? ReadStaticList(Type type, string memberName)
-        {
-            var prop = type.GetProperty(memberName, BindingFlags.Public | BindingFlags.Static);
-            if (prop?.GetValue(null) is List<string> list) return list;
-            if (prop?.GetValue(null) is IEnumerable<string> enumerable) return enumerable.ToList();
-
-            var field = type.GetField(memberName, BindingFlags.Public | BindingFlags.Static);
-            if (field?.GetValue(null) is List<string> list2) return list2;
-            if (field?.GetValue(null) is IEnumerable<string> enumerable2) return enumerable2.ToList();
-
-            return null;
-        }
-
-        private static Dictionary<string, string>? ReadStaticDictionary(Type type, string memberName)
-        {
-            var prop = type.GetProperty(memberName, BindingFlags.Public | BindingFlags.Static);
-            if (prop?.GetValue(null) is Dictionary<string, string> dict) return dict;
-            if (prop?.GetValue(null) is IDictionary<string, string> idict) return new Dictionary<string, string>(idict);
-
-            var field = type.GetField(memberName, BindingFlags.Public | BindingFlags.Static);
-            if (field?.GetValue(null) is Dictionary<string, string> dict2) return dict2;
-            if (field?.GetValue(null) is IDictionary<string, string> idict2) return new Dictionary<string, string>(idict2);
-
-            return null;
-        }
+        public virtual bool IsNormalEffect => true;
+        public virtual bool IsContinuousEffect => false;
+        public virtual bool IsBindableArgsEffect => false;
     }
 
     public enum EffectImplementType

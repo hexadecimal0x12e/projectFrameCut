@@ -1,4 +1,4 @@
-﻿using projectFrameCut.PropertyPanel;
+﻿
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.VideoMakeEngine;
 using System;
@@ -10,6 +10,8 @@ using projectFrameCut.Shared;
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
+
+using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 
 namespace projectFrameCut.Setting.SettingPages
 {
@@ -29,9 +31,9 @@ namespace projectFrameCut.Setting.SettingPages
 
         public EffectImplementPickerPage()
         {
-            if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "effectImplement.json")))
+            if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json")))
             {
-                string json = File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "effectImplement.json"));
+                string json = File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json"));
                 try
                 {
                     var dict = JsonSerializer.Deserialize<Dictionary<string, EffectImplementType>>(json);
@@ -61,7 +63,7 @@ namespace projectFrameCut.Setting.SettingPages
                 ppb.AddSeparator();
 
                 var effect = item.Value();
-                ppb.AddPicker(item.Key, ClipInfoBuilder.GetLocalizedEffectNames()[effect.TypeName], LocalizedImplementTypes.Where(c => c.Key != EffectImplementType.NotSpecified ? EffectHelper.EffectsFactoriesEnum[effect.TypeName].SupportsImplementTypes.Contains(c.Key) : true).Select(c => c.Value).ToArray(), LocalizedImplementTypes[effectImplementTypes.GetOrAdd(item.Key, EffectImplementType.NotSpecified)]);
+                ppb.AddPicker($"{effect.FromPlugin}.{effect.TypeName}", ClipInfoBuilder.GetLocalizedEffectNames()[effect.TypeName], LocalizedImplementTypes.Where(c => c.Key == EffectImplementType.NotSpecified || EffectHelper.EffectsFactoriesEnum[effect.TypeName].SupportsImplementTypes.Contains(c.Key)).Select(c => c.Value).ToArray(), LocalizedImplementTypes[effectImplementTypes.GetOrAdd($"{effect.FromPlugin}.{effect.TypeName}", EffectImplementType.NotSpecified)]);
             }
 
             ppb.ListenToChanges((args) =>
@@ -74,7 +76,7 @@ namespace projectFrameCut.Setting.SettingPages
                 try
                 {
                     var json = JsonSerializer.Serialize(effectImplementTypes);
-                    File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "effectImplement.json"), json);
+                    File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json"), json);
                 }
                 catch (Exception ex)
                 {

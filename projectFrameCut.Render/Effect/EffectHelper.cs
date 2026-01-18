@@ -20,6 +20,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
             return EffectCombinations[0]();
         }
 
+        public static Dictionary<string, EffectImplementType> DefaultImplementsType = new();
 
         public static IEffect[] GetEffectsInstances(EffectAndMixtureJSONStructure[]? Effects)
         {
@@ -30,7 +31,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
             List<IEffect> effects = new();
             foreach (var item in Effects)
             {
-                effects.Add(PluginManager.CreateEffect(item));
+                effects.Add(PluginManager.CreateEffect(item, DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified)));
             }
             return effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray();
         }
@@ -40,10 +41,10 @@ namespace projectFrameCut.Render.VideoMakeEngine
                 .SelectMany(p =>
                     p.EffectFactoryProvider.Select(kv => new KeyValuePair<string, Func<IEffect>>(kv.Key, () => kv.Value.BuildWithDefaultType()))
                         .Concat(p.ContinuousEffectFactoryProvider.Select(kv => new KeyValuePair<string, Func<IEffect>>(kv.Key, () => kv.Value.BuildWithDefaultType())))
-                        .Concat(p.VariableArgumentEffectFactoryProvider.Select(kv => new KeyValuePair<string, Func<IEffect>>(kv.Key, () => kv.Value.BuildWithDefaultType())))
+                        .Concat(p.BindableArgumentEffectFactoryProvider.Select(kv => new KeyValuePair<string, Func<IEffect>>(kv.Key, () => kv.Value.BuildWithDefaultType())))
                         .Concat(p.EffectProvider)
                         .Concat(p.ContinuousEffectProvider)
-                        .Concat(p.VariableArgumentEffectProvider))
+                        .Concat(p.BindableArgumentEffectProvider))
                 .DistinctBy(kv => kv.Value().TypeName)
                 .GroupBy(kv => kv.Key)
                 .ToDictionary(g => g.Key, g => g.First().Value);
@@ -52,7 +53,7 @@ namespace projectFrameCut.Render.VideoMakeEngine
                 PluginManager.LoadedPlugins.Values
                 .SelectMany(p => p.EffectFactoryProvider
                         .Concat(p.ContinuousEffectFactoryProvider)
-                        .Concat(p.VariableArgumentEffectFactoryProvider))
+                        .Concat(p.BindableArgumentEffectFactoryProvider))
                 .GroupBy(kv => kv.Key)
                 .ToDictionary(g => g.Key, g => g.First().Value);
 

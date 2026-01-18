@@ -54,7 +54,7 @@ namespace projectFrameCut.DraftStuff
                                 {
                                     Id = elem.Id,
                                     Name = name,
-                                    FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase",
+                                    FromPlugin = InternalPluginBase.InternalPluginBaseID,
                                     TypeName = nameof(SoundTrackToClipWrapper),
                                     ClipType = ClipMode.AudioClip,
                                     LayerIndex = (uint)trackKey,
@@ -78,7 +78,7 @@ namespace projectFrameCut.DraftStuff
                                 {
                                     Id = elem.Id,
                                     Name = name,
-                                    FromPlugin = string.IsNullOrEmpty(elem.FromPlugin) ? "projectFrameCut.Render.Plugins.InternalPluginBase" : elem.FromPlugin,
+                                    FromPlugin = string.IsNullOrEmpty(elem.FromPlugin) ? InternalPluginBase.InternalPluginBaseID : elem.FromPlugin,
                                     TypeName = string.IsNullOrEmpty(elem.TypeName) ? "NormalTrack" : elem.TypeName,
                                     TrackType = TrackMode.NormalTrack,
                                     LayerIndex = (uint)trackKey,
@@ -123,7 +123,9 @@ namespace projectFrameCut.DraftStuff
                                     Enabled = kv.Value.Enabled,
                                     RelativeHeight = kv.Value.RelativeHeight,
                                     RelativeWidth = kv.Value.RelativeWidth,
-                                    IsMixture = false
+                                    IsMixture = false,
+                                    IsContinuousEffect = kv.Value is IContinuousEffect,
+                                    IsVariableArgumentEffect = kv.Value is IBindableArgumentEffect
                                 }).ToArray()
                             };
 

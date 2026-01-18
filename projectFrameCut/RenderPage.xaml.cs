@@ -416,22 +416,29 @@ public partial class RenderPage : ContentPage
                 CancelRender.IsEnabled = false;
 
 
-#if ANDROID
-                var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, MediaStoreSaver.MediaType.Video);
-                if (!string.IsNullOrWhiteSpace(path) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+                try
                 {
-                    try
+#if ANDROID
+                    var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
+                    if (!string.IsNullOrWhiteSpace(path) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
                     {
-                        File.Delete(resultPath);
+                        try
+                        {
+                            File.Delete(resultPath);
+                        }
+                        catch { }
                     }
-                    catch { }
-                }
 #else
-                await Task.Run(() => File.Move(compOutputPath, resultPath));
+                    await Task.Run(() => File.Move(compOutputPath, resultPath));
 #if WINDOWS
-                await FileSystemService.ShowFileInFolderAsync(resultPath);
+                    await FileSystemService.ShowFileInFolderAsync(resultPath);
 #endif
 #endif
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "save media", this);
+                }
 
 
                 DeviceDisplay.Current.KeepScreenOn = false;

@@ -365,7 +365,7 @@ namespace projectFrameCut.Render.Rendering
                 {
                     if (effect.YieldProcessStep == true && effect.NeedComputer is not null) throw new InvalidDataException($"A effect can't both yield process step, and use a computer.");
                 }
-                Log($"[Preparer] Cached {effectInstances.Length} effects for clip {item.Id} ({string.Join(", ",effectInstances.Select(c => $"{c.TypeName}:'{c.Name}'"))})");
+                Log($"[Preparer] Cached {effectInstances.Length} effects for clip {item.Id} ({string.Join(", ", effectInstances.Select(c => $"{c.TypeName}:'{c.Name}'"))})");
             }
 
         }
@@ -437,7 +437,8 @@ namespace projectFrameCut.Render.Rendering
             }
             Stopwatch sw = Stopwatch.StartNew();
             IPicture result = null!;
-            
+            Dictionary<string, object> bindableEffectResultCache = new();
+
             PreparedFlag.TryRemove(targetFrame, out _);
 
             if (!ClipNeedForFrame.Remove(targetFrame, out var ClipsNeed) || ClipsNeed.Length == 0)
@@ -481,14 +482,38 @@ namespace projectFrameCut.Render.Rendering
                             frame = PictureProcesser.Process(steps, frame, _ppb);
                             steps.Clear();
                         }
-                        if (item is IContinuousEffect c)
+
+                        if (item.IsNormalEffect)
                         {
-                            ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c);
+                            ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer);
+
+                        }
+                        else if (item.IsContinuousEffect)
+                        {
+                            ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, item as IContinuousEffect);
+
+                        }
+                        else if (item.IsBindableArgsEffect)
+                        {
+                            ProcessBindableArgsEffect(ref result, ref bindableEffectResultCache, steps, ref lastIsProcessStep, item as IBindableArgumentEffect, computer);
                         }
                         else
                         {
-                            ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer);
+                            if (item is IContinuousEffect c)
+                            {
+                                ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c);
+                            }
+                            else if (item is IBindableArgumentEffect b)
+                            {
+                                ProcessBindableArgsEffect(ref result, ref bindableEffectResultCache, steps, ref lastIsProcessStep, b, computer);
+                            }
+                            else
+                            {
+                                ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer);
+                            }
                         }
+
+
                     }
                     if (steps.ListAny())
                     {
@@ -542,13 +567,10 @@ namespace projectFrameCut.Render.Rendering
             Interlocked.Increment(ref Finished);
             InvokeProgress();
             sw.Stop();
-            if(LogState) Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}");
+            if (LogState) Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}");
             EachElapsed.Add(sw.Elapsed);
             FrameRenderElapsed[targetFrame] = sw.Elapsed;
             return;
-
-
-
         }
 
         private void ProcessEffect(ref IPicture frame, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, IEffect item, IComputer? computer)
@@ -598,14 +620,56 @@ namespace projectFrameCut.Render.Rendering
                     lastIsProcessStep = false;
                     frame = c.Render(frame, targetFrame, computer, _width, _height);
                 }
-
-
-
             }
             else
             {
                 frame = c.Render(frame, targetFrame, computer, _width, _height);
             }
+        }
+
+        private void ProcessBindableArgsEffect(ref IPicture frame, ref Dictionary<string, object> resultCache, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, IBindableArgumentEffect item, IComputer? computer)
+        {
+            if (item.EffectRole == BindableArgumentEffectType.ValueProvider)
+            {
+                ArgumentNullException.ThrowIfNull(item.Id, "Id");
+                resultCache.Add(item.Id, item.GenerateValue(frame, computer, _width, _height));
+            }
+            else if (item.EffectRole == BindableArgumentEffectType.ValueProcessor)
+            {
+                ArgumentNullException.ThrowIfNull(item.BindedArgumentProviderID, "BindedArgumentProviderID");
+                resultCache[item.BindedArgumentProviderID] = item.ProcessValue(resultCache[item.BindedArgumentProviderID], computer, _width, _height);
+            }
+            else if (item.EffectRole == BindableArgumentEffectType.ResultGenerator)
+            {
+                ArgumentNullException.ThrowIfNull(item.BindedArgumentProviderID, "BindedArgumentProviderID");
+                if (item.YieldProcessStep)
+                {
+                    lastIsProcessStep = true;
+                    try
+                    {
+                        var step = item.GenerateResultStep(resultCache[item.BindedArgumentProviderID], _width, _height);
+                        steps.Add(step);
+                        if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
+                        lastIsProcessStep = false;
+                        frame = item.GenerateResult(resultCache[item.BindedArgumentProviderID], frame, computer, _width, _height);
+                    }
+                }
+                else
+                {
+                    frame = item.GenerateResult(resultCache[item.BindedArgumentProviderID], frame, computer, _width, _height);
+                }
+            }
+            else
+            {
+                throw new NotSupportedException($"Unsupported BindableArgumentEffectType {item.EffectRole} in IBindableArgumentEffect {item.Name}.");
+
+            }
+
+
         }
 
         private void InvokeProgress()

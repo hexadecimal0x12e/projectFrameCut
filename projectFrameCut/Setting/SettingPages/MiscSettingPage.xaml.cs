@@ -1,4 +1,4 @@
-using projectFrameCut.PropertyPanel;
+using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System.Diagnostics;
@@ -16,18 +16,18 @@ public partial class MiscSettingPage : ContentPage
         BuildPPB();
 
     }
-    public PropertyPanel.PropertyPanelBuilder rootPPB;
+    public PropertyPanelBuilder rootPPB;
 
     public void BuildPPB()
     {
         Content = new VerticalStackLayout();
         rootPPB = new();
         rootPPB
-            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Misc_UserInfo, SettingLocalizedResources.Misc_UserInfo_Subtitle, 20, 12))
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Misc_UserInfo, SettingLocalizedResources.Misc_UserInfo_Subtitle, 20, 12))
             .AddEntry("UserName", SettingLocalizedResources.Misc_UserDisplayName, GetSetting("UserName", Environment.UserName), Environment.UserName)
             .AddCustomChild(SettingLocalizedResources.Misc_UserID, new Label { Text = GetSetting("UserID") })
             .AddSeparator()
-            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Misc_DiagOptions, SettingLocalizedResources.Misc_DiagOptions_Desc(), 20, 12))
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Misc_DiagOptions, SettingLocalizedResources.Misc_DiagOptions_Desc(), 20, 12))
             .AddButton("makeDiagReport", SettingLocalizedResources.Misc_MakeDiagReport, null)
             .AddButton("openSettingsButton", SettingLocalizedResources.Misc_OpenSettingsJson, null!)
             .AddSwitch("LogDiagnostics", SettingLocalizedResources.Misc_LogDiagnostics, bool.TryParse(GetSetting("LogDiagnostics", "false"), out var logDiagnostics) ? logDiagnostics : false, null)
@@ -35,7 +35,7 @@ public partial class MiscSettingPage : ContentPage
             .AddSwitch("render_SaveCheckpoint", SettingLocalizedResources.Render_SaveCheckpoint, IsBoolSettingTrue("render_SaveCheckpoint"), null)
              .AddSwitch("render_DumpDiagData", SettingLocalizedResources.Render_DumpDiagData, IsBoolSettingTrue("render_DumpDiagData"), null)
             .AddSeparator()
-            .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Misc_Reset, 20, default))
+            .AddText(new SingleLineLabel(SettingLocalizedResources.Misc_Reset, 20, default))
             .AddButton("reset_ClearPluginSign", SettingLocalizedResources.Misc_ForgetPluginSign,
             (b) =>
             {
@@ -113,14 +113,14 @@ public partial class MiscSettingPage : ContentPage
                                 {
                                     SecureStorage.RemoveAll();
                                     needReboot = true;
-                                    
+
                                 }
                             });
                         break;
                     }
                 case "reset_Settings":
                     {
-                       var warn1 = await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Misc_ResetSettings_Warn2, Localized._Confirm, Localized._Cancel);
+                        var warn1 = await DisplayAlertAsync(Localized._Warn, SettingLocalizedResources.Misc_ResetSettings_Warn2, Localized._Confirm, Localized._Cancel);
                         if (warn1)
                         {
 
@@ -164,7 +164,7 @@ public partial class MiscSettingPage : ContentPage
                     await FileSystemService.OpenFileAsync(jsonPath);
                     goto done;
                 case "render_SaveCheckpoint":
-                    if(args.Value is bool b && b)
+                    if (args.Value is bool b && b)
                     {
                         WriteSetting("render_SaveCheckpoint", "true");
                         Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));

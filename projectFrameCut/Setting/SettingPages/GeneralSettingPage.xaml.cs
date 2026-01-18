@@ -1,5 +1,6 @@
 using Microsoft.Maui.Storage;
-using projectFrameCut.PropertyPanel;
+
+using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
 using System;
@@ -16,7 +17,7 @@ using static SettingManager.SettingsManager;
 
 public partial class GeneralSettingPage : ContentPage
 {
-    public PropertyPanel.PropertyPanelBuilder rootPPB;
+    public PropertyPanelBuilder rootPPB;
     private string[] locates;
     private Dictionary<string, string> overrideOpts, themeOpts;
     private Dictionary<string, string> locateDisplayNameMapping = new(), FFmpegProviderDisplayNameMapping = new();
@@ -30,7 +31,7 @@ public partial class GeneralSettingPage : ContentPage
             { {SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable" } }
             .Concat(
                 PluginManager.LoadedPlugins
-                .Where(c => c.Value.LocalizationProvider.TryGetValue("option", out var optsKVP) && optsKVP.TryGetValue("_IsFFmpegLibraryProvider", out var value) && bool.TryParse(value, out var result) && result)
+                .Where(c => c.Value.Properties.TryGetValue("_IsFFmpegLibraryProvider", out var value) && bool.TryParse(value, out var result) && result)
                 .Select(p => new KeyValuePair<string, string>(p.Value.Name, p.Key))
             )
             .ToDictionary(c => c.Key, c => c.Value);
@@ -81,11 +82,11 @@ public partial class GeneralSettingPage : ContentPage
             .AddSwitch("render_EnableScreenSaver", SettingLocalizedResources.Render_EnableScreenSaver, IsBoolSettingTrue("render_EnableScreenSaver"), null)
             .AddButton("setUISafeZone", SettingLocalizedResources.GeneralUI_SetupSafeZone)
             .AddSeparator()
-            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralCodec_Title, SettingLocalizedResources.GeneralCodec_SubTitle, 20, 12))
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralCodec_Title, SettingLocalizedResources.GeneralCodec_SubTitle, 20, 12))
             .AddPicker("codec_FFmpegProvider", SettingLocalizedResources.GeneralCodec_SelectProvider, FFmpegProviderDisplayNameMapping.Keys.ToArray(), FFmpegProviderDisplayNameMapping.FirstOrDefault(c => c.Value == GetSetting("PluginProvidedFFmpeg_PluginID", "disable"), new(SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable")).Key)
             .AddSwitch("codec_PreferredHWAccel", SettingLocalizedResources.GeneralCodec_PreferredHWAccel, IsBoolSettingTrue("codec_PreferredHWAccel"))
             .AddSeparator()
-            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.General_UserData, SettingLocalizedResources.General_UserData_Subtitle, 20, 12))
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.General_UserData, SettingLocalizedResources.General_UserData_Subtitle, 20, 12))
 #if WINDOWS
             .AddButton("userDataSelectButton", SettingLocalizedResources.General_UserData_SelectPath)
 #endif
@@ -284,11 +285,6 @@ public partial class GeneralSettingPage : ContentPage
                                 return;
                             }
                         }
-
-
-
-
-
                         break;
                     }
 #endif

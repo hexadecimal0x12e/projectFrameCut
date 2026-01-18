@@ -100,6 +100,7 @@
 		<Compile Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'" Include="..\projectFrameCut\Platforms\iOS\**\*.cs" Exclude="..\projectFrameCut\Platforms\iOS\AppDelegate.cs;..\projectFrameCut\Platforms\iOS\Program.cs" Link="Platforms\iOS\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'" Include="..\projectFrameCut\Platforms\MacCatalyst\**\*.cs" Exclude="..\projectFrameCut\Platforms\MacCatalyst\AppDelegate.cs;..\projectFrameCut\Platforms\MacCatalyst\Program.cs" Link="Platforms\MacCatalyst\%(RecursiveDir)%(Filename)%(Extension)" />
 
+		<ProjectReference Include="..\projectFrameCut.ApplicationAPIBase\projectFrameCut.ApplicationAPIBase.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Render\projectFrameCut.Render.csproj" />
 		<ProjectReference Include="..\projectFrameCut.Shared\projectFrameCut.Shared.csproj" />
 	</ItemGroup>

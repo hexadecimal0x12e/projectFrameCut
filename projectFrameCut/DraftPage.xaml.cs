@@ -21,7 +21,7 @@ using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Shared;
 using projectFrameCut.DraftStuff;
-using projectFrameCut.PropertyPanel;
+
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.LivePreview;
 using CommunityToolkit.Maui.Views;
@@ -31,6 +31,9 @@ using projectFrameCut.Asset;
 using projectFrameCut.ViewModels;
 using projectFrameCut.Render.Rendering;
 using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
+using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+
+
 
 
 

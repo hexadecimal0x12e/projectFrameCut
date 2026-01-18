@@ -2,7 +2,6 @@ using LocalizedResources;
 using Microsoft.Maui.Dispatching;
 using Microsoft.Maui.Graphics;
 using projectFrameCut.DraftStuff;
-using projectFrameCut.PropertyPanel;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
@@ -20,14 +19,7 @@ using System.Windows.Input;
 using IPicture = projectFrameCut.Shared.IPicture;
 using projectFrameCut.Asset;
 using Microsoft.Maui.Platform;
-
-
-
-
-
-
-
-
+using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 
 
 #if WINDOWS

@@ -1,6 +1,6 @@
 using FFmpeg.AutoGen;
 using Microsoft.Maui.Storage;
-using projectFrameCut.PropertyPanel;
+using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.Rendering;
@@ -18,7 +18,7 @@ namespace projectFrameCut.Setting.SettingPages;
 
 public partial class DiagnosticSettingPage : ContentPage
 {
-    public PropertyPanel.PropertyPanelBuilder rootPPB;
+    public PropertyPanelBuilder rootPPB;
     string OSInfo = "?", ApplicationInfo = "?", DeviceInfo = "?";
     bool infoGetted = false;
     public DiagnosticSettingPage()

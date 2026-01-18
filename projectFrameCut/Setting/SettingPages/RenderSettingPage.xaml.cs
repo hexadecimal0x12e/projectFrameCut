@@ -1,6 +1,9 @@
-
-using projectFrameCut.PropertyPanel;
+using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using projectFrameCut.DraftStuff;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Shared;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Text.Json;
@@ -12,10 +15,25 @@ using static SettingManager.SettingsManager;
 
 public partial class RenderSettingPage : ContentPage
 {
-    PropertyPanel.PropertyPanelBuilder rootPPB;
+    PropertyPanelBuilder rootPPB;
     AcceleratorInfo[] AcceleratorInfos = Array.Empty<AcceleratorInfo>();
     bool showMoreOpts = false;
     Dictionary<int, string> GCOptionMapping = new();
+    ConcurrentDictionary<string, EffectImplementType> effectImplementTypes = new();
+
+    Dictionary<EffectImplementType, string> LocalizedImplementTypes = new Dictionary<EffectImplementType, string>
+    {
+            { EffectImplementType.NotSpecified , SettingLocalizedResources.RenderEffectImplement_NotSpecified },
+            { EffectImplementType.ImageSharp , SettingLocalizedResources.RenderEffectImplement_ImageSharp },
+            { EffectImplementType.HwAcceleration , SettingLocalizedResources.RenderEffectImplement_HwAcceleration },
+            { EffectImplementType.IPicture , SettingLocalizedResources.RenderEffectImplement_IPicture},
+    };
+
+    string[] resolutions = new[] { "1280x720", "1920x1080", "2560x1440", "3840x2160", "7680x4320" };
+    string[] framerates = new[] { "23.97", "24", "29.97", "30", "44.96", "45", "59.94", "60", "89.91", "90", "119.88", "120" };
+    string[] encodings = new[] { "h264", "h265/hevc", "av1" };
+    string[] bitdepths = new[] { "8bit", "10bit", "12bit" };
+
     public RenderSettingPage()
     {
         Title = Localized.MainSettingsPage_Tab_Render;
@@ -47,6 +65,22 @@ public partial class RenderSettingPage : ContentPage
             {2, SettingLocalizedResources.Render_GCOption_DoLOHCompression }
 #endif
         };
+        if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json")))
+        {
+            string json = File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json"));
+            try
+            {
+                var dict = JsonSerializer.Deserialize<Dictionary<string, EffectImplementType>>(json);
+                if (dict != null)
+                {
+                    effectImplementTypes = new ConcurrentDictionary<string, EffectImplementType>(dict);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "read effectImplement", this);
+            }
+        }
     }
 
     protected override void OnAppearing()
@@ -75,31 +109,37 @@ public partial class RenderSettingPage : ContentPage
     private void BuildPPB()
     {
         Content = new VerticalStackLayout();
-#if WINDOWS
+        rootPPB = new();
+        rootPPB
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_DefaultExportOpts, SettingLocalizedResources.Render_DefaultExportOpts_Subtitle), null)
+            .AddPicker("render_DefaultResolution", Localized.RenderPage_SelectResolution, resolutions, GetSetting("render_DefaultResolution", "3840x2160"), null)
+            .AddPicker("render_DefaultFramerate", Localized.RenderPage_SelectFrameRate, framerates, GetSetting("render_DefaultFramerate", "30"), null)
+            .AddPicker("render_DefaultEncoding", Localized.RenderPage_SelectEncoding, encodings, GetSetting("render_DefaultEncoding", "h264"), null)
+            .AddPicker("render_DefaultBitDepth", Localized.RenderPage_SelectBitdepth, bitdepths, GetSetting("render_DefaultBitDepth", "8bit"), null)
+            .AddSeparator();
 
+        rootPPB
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderEffectImplement, SettingLocalizedResources.Render_RenderEffectImplement_Subtitle))
+            .AddButton(SettingLocalizedResources.RenderEffectImplement_Title, async (s, e) => await Navigation.PushAsync(new EffectImplementPickerPage()), null)
+            .AddSeparator();
+
+#if WINDOWS
         string[] accels = ["Unknown"];
         try
         {
             accels = AcceleratorInfos?.Select(a => $"#{a.index}: {a.name} ({a.Type})").ToArray() ?? ["Unknown"];
         }
         catch (Exception ex) { Log(ex); }
+        var multiAccel = IsBoolSettingTrue("accel_enableMultiAccel");
 
-#endif
-        var multiAccel = bool.TryParse(GetSetting("accel_enableMultiAccel", "false"), out var result1) ? result1 : false;
-        rootPPB = new();
         rootPPB
-            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_RenderEffectImplement, SettingLocalizedResources.Render_RenderEffectImplement_Subtitle))
-            .AddButton(SettingLocalizedResources.RenderEffectImplement_Title, async (s,e) => await Navigation.PushAsync(new EffectImplementPickerPage()), null)
-            .AddSeparator()
-            .AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle, 20, 12))
-#if WINDOWS
+            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle, 20, 12))
             .AddSwitch("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, multiAccel, null)
             .AddPicker("accel_DeviceId", multiAccel ? SettingLocalizedResources.Render_SelectAccel_WhenMultiAccelEnabled : SettingLocalizedResources.Render_SelectAccel, accels, int.TryParse(GetSetting("accel_DeviceId", ""), out var result) ? accels[result] : "", null);
 
         try
         {
-            var multiEnabled = bool.TryParse(GetSetting("accel_enableMultiAccel", "false"), out var me) ? me : false;
-            if (multiEnabled && AcceleratorInfos?.Length > 0)
+            if (multiAccel && AcceleratorInfos?.Length > 0)
             {
                 rootPPB
                     .AddSeparator()
@@ -115,23 +155,9 @@ public partial class RenderSettingPage : ContentPage
             }
         }
         catch (Exception ex) { Log(ex); }
-#else
-            .AddText(new PropertyPanel.SingleLineLabel(SettingLocalizedResources.Render_AccelOptsNotSupported, 14));
+
 #endif
-        rootPPB
-            .AddSeparator()
-            .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_DefaultExportOpts, SettingLocalizedResources.Render_DefaultExportOpts_Subtitle), null);
 
-        var resolutions = new[] { "1280x720", "1920x1080", "2560x1440", "3840x2160", "7680x4320" };
-        var framerates = new[] { "23.97", "24", "29.97", "30", "44.96", "45", "59.94", "60", "89.91", "90", "119.88", "120" };
-        var encodings = new[] { "h264", "h265/hevc", "av1" };
-        var bitdepths = new[] { "8bit", "10bit", "12bit" };
-
-        rootPPB
-            .AddPicker("render_DefaultResolution", Localized.RenderPage_SelectResolution, resolutions, GetSetting("render_DefaultResolution", "3840x2160"), null)
-            .AddPicker("render_DefaultFramerate", Localized.RenderPage_SelectFrameRate, framerates, GetSetting("render_DefaultFramerate", "30"), null)
-            .AddPicker("render_DefaultEncoding", Localized.RenderPage_SelectEncoding, encodings, GetSetting("render_DefaultEncoding", "h264"), null)
-            .AddPicker("render_DefaultBitDepth", Localized.RenderPage_SelectBitdepth, bitdepths, GetSetting("render_DefaultBitDepth", "8bit"), null);
 
         if (showMoreOpts)
         {
@@ -140,14 +166,14 @@ public partial class RenderSettingPage : ContentPage
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AdvanceOpts, SettingLocalizedResources.Misc_DiagOptions_Subtitle, 20, 12))
                 .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.TryGetValue(int.Parse(GetSetting("render_GCOption", "0")), out var value) ? value : SettingLocalizedResources.Render_GCOption_LetCLRDoGC)
                 .AddSwitch("render_BlockWrite", SettingLocalizedResources.Render_BlockWrite, IsBoolSettingTrue("render_BlockWrite"), null);
-                
+
         }
         else
         {
             rootPPB.AddSeparator().AddButton("showMoreOpts", SettingLocalizedResources.Render_AdvanceOpts_Show, null);
         }
 
-        Content = new ScrollView { Content = rootPPB.ListenToChanges(SettingInvoker).Build() };
+        Content = rootPPB.ListenToChanges(SettingInvoker).BuildWithScrollView();
     }
 #if WINDOWS
     public static AcceleratorInfo[] GetAccelInfo()
@@ -279,12 +305,34 @@ public partial class RenderSettingPage : ContentPage
                 case "render_GCOption":
                     {
                         var key = GCOptionMapping.FirstOrDefault(k => k.Value == args.Value as string, new(0, "letCLRDoCollection"));
-                        if(!OperatingSystem.IsWindows() && key.Key == 2)
+                        if (!OperatingSystem.IsWindows() && key.Key == 2)
                         {
                             await DisplayAlertAsync(Localized._Warn, "LOH is not supported on this platform.", Localized._OK);
                             return;
                         }
                         WriteSetting("render_GCOption", key.Key.ToString());
+                        return;
+                    }
+
+                case var _ when args.Id != null && args.Id.StartsWith("effectImplement,"):
+                    {
+                        var effectKey = args.Id.Substring("effectImplement,".Length);
+                        if (args.Value is string valStr)
+                        {
+                            var implementType = LocalizedImplementTypes.FirstOrDefault(k => k.Value == valStr, new(EffectImplementType.NotSpecified, "NotSpecified")).Key;
+                            effectImplementTypes[effectKey] = implementType;
+                            // persist to file
+                            try
+                            {
+                                var dict = effectImplementTypes.ToDictionary(c => c.Key, c => c.Value);
+                                var json = JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true });
+                                File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json"), json);
+                            }
+                            catch (Exception ex)
+                            {
+                                Log(ex, "write effectImplement");
+                            }
+                        }
                         return;
                     }
 

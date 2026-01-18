@@ -367,7 +367,7 @@ namespace projectFrameCut.Shared
 
             Pixels = checked(Width * Height);
             filePath = imagePath;
-            ProcessStack = new List<PictureProcessStack> 
+            ProcessStack = new List<PictureProcessStack>
             {
                 new PictureProcessStack
                 {
@@ -683,9 +683,9 @@ namespace projectFrameCut.Shared
 
         private bool disposedValue;
 
-        protected virtual void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing, bool force = false)
         {
-            if (disposedValue || Disposed is null) return;
+            if (!force && (disposedValue || Disposed is null)) return;
             lock (this)
             {
                 if (!disposedValue)
@@ -722,7 +722,8 @@ namespace projectFrameCut.Shared
                 {
                     frameIndex = this.frameIndex,
                     filePath = this.filePath,
-                    hasAlphaChannel = this.hasAlphaChannel
+                    hasAlphaChannel = this.hasAlphaChannel,
+                    ProcessStack = this.ProcessStack,
                 };
 
                 if (hasAlphaChannel && a != null)
@@ -741,6 +742,12 @@ namespace projectFrameCut.Shared
                     pic.g[i] = (byte)(g[i] / 257);
                     pic.b[i] = (byte)(b[i] / 257);
                 }
+                pic.ProcessStack.Add(new PictureProcessStack
+                {
+                    OperationDisplayName = "Convert to 8 bpp",
+                    Operator = this.GetType(),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                });
                 return pic;
             }
             else
@@ -776,7 +783,7 @@ namespace projectFrameCut.Shared
             };
         }
 
-        public string GetDiagnosticsInfo() => $"16BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{ProcessStack}";
+        public string GetDiagnosticsInfo() => $"16BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1}";
     }
 
     /// <summary>
@@ -855,8 +862,8 @@ namespace projectFrameCut.Shared
                     },
                 }
             };
-            
-        }   
+
+        }
 
         /// <summary>
         /// Initializes a new instance of the Picture8bpp class with the specified width and height.
@@ -1248,9 +1255,9 @@ namespace projectFrameCut.Shared
 
         private bool disposedValue;
 
-        protected virtual void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposing, bool force = false)
         {
-            if (disposedValue || Disposed is null) return;
+            if (!force && (disposedValue || Disposed is null)) return;
             lock (this)
             {
                 if (!disposedValue)
@@ -1288,7 +1295,8 @@ namespace projectFrameCut.Shared
                 {
                     frameIndex = this.frameIndex,
                     filePath = this.filePath,
-                    hasAlphaChannel = this.hasAlphaChannel
+                    hasAlphaChannel = this.hasAlphaChannel,
+                    ProcessStack = this.ProcessStack
                 };
 
                 if (hasAlphaChannel && a != null)
@@ -1307,6 +1315,12 @@ namespace projectFrameCut.Shared
                     pic.g[i] = (ushort)(g[i] * 257);
                     pic.b[i] = (ushort)(b[i] * 257);
                 }
+                pic.ProcessStack.Add(new PictureProcessStack
+                {
+                    OperationDisplayName = "Converted from 8bpp to 16bpp",
+                    Operator = this.GetType(),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                });
                 return pic;
             }
             else
@@ -1342,9 +1356,117 @@ namespace projectFrameCut.Shared
             };
         }
 
-        public string GetDiagnosticsInfo() => $"8BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{ProcessStack}";
+        public string GetDiagnosticsInfo() => $"8BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1}";
 
 
+    }
+
+    public class BitMaskPicture : INoAlphaPicture<bool>
+    {
+        [JsonIgnore()]
+        public bool[] r { get; set; } = Array.Empty<bool>();
+        [JsonIgnore()]
+        public bool[] g { get; set; } = Array.Empty<bool>();
+        [JsonIgnore()]
+        public bool[] b { get; set; } = Array.Empty<bool>();
+
+        public PicturePixelMode bitPerPixel => 1;
+
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public int Pixels { get; init; }
+        public uint? frameIndex { get; init; }
+        public string? filePath { get; init; }
+        public PictureFlag Flag { get; set; }
+        public List<PictureProcessStack> ProcessStack { get; set; }
+        public bool hasAlphaChannel { get; set; }
+        public bool? Disposed { get; set; }
+
+        public string GetDiagnosticsInfo() => $"BitMaskPicture image, Size: {Width}*{Height}, avg R:{r.Average(v => v ? 1 : 0)} G:{g.Average(v => v ? 1 : 0)} B:{b.Average(v => v ? 1 : 0)}";
+
+
+        public object? GetSpecificChannel(IPicture.ChannelId channelId)
+        {
+            return channelId switch
+            {
+                IPicture.ChannelId.Red => r,
+                IPicture.ChannelId.Green => g,
+                IPicture.ChannelId.Blue => b,
+                _ => throw new ArgumentOutOfRangeException(nameof(channelId), "Invalid channel ID."),
+            };
+        }
+
+        public IPicture<bool> Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IPicture<bool> SetAlpha(bool haveAlpha)
+        {
+            throw new NotSupportedException($"Setting alpha channel is not supported for BitMaskPicture.");
+        }
+
+        public IPicture ToBitPerPixel(PicturePixelMode bitPerPixel)
+        {
+            if (bitPerPixel.Value == 1) return this;
+            else return ToNormalPicture().ToBitPerPixel(bitPerPixel);
+        }
+
+        public Picture8bpp ToNormalPicture()
+        {
+            return new Picture8bpp(Width, Height)
+            {
+                r = r.Select(v => v ? (byte)255 : (byte)0).ToArray(),
+                g = g.Select(v => v ? (byte)255 : (byte)0).ToArray(),
+                b = b.Select(v => v ? (byte)255 : (byte)0).ToArray(),
+                a = null,
+                hasAlphaChannel = false,
+                Width = Width,
+                Height = Height,
+                Pixels = Pixels,
+                ProcessStack = ProcessStack.Append(new PictureProcessStack
+                {
+                    OperationDisplayName = "Converted from BitGrayscalePicture",
+                    Operator = this.GetType(),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                }).ToList()
+
+            };
+        }
+
+        IPicture IPicture.Resize(int targetWidth, int targetHeight, bool preserveAspect)
+        {
+            return Resize(targetWidth, targetHeight, preserveAspect);
+        }
+
+        private bool disposedValue;
+
+        protected virtual void Dispose(bool disposing, bool force = false)
+        {
+            if (!force && (disposedValue || Disposed is null)) return;
+            lock (this)
+            {
+                if (!disposedValue)
+                {
+                    if (disposing)
+                    {
+                        r = null!;
+                        g = null!;
+                        b = null!;
+                    }
+
+                    disposedValue = true;
+                }
+                Disposed = disposedValue;
+
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
     }
 
 
@@ -1543,33 +1665,6 @@ namespace projectFrameCut.Shared
             }
         }
 
-        public static bool UseSixLaborsImageSharpToResize = true;
-
-        public static Picture8bpp Resize(this Picture8bpp source, int targetWidth, int targetHeight, bool preserveAspect = true)
-        {
-            if (!UseSixLaborsImageSharpToResize) return source.Resize(targetWidth, targetHeight, preserveAspect);
-            var img = source.SaveToSixLaborsImage();
-            img.Mutate(i => i.Resize(new ResizeOptions
-            {
-                Size = new Size(targetWidth, targetHeight),
-                Mode = preserveAspect ? ResizeMode.Max : ResizeMode.Stretch
-            }));
-            return new Picture8bpp(img);
-
-        }
-        public static Picture16bpp Resize(this Picture16bpp source, int targetWidth, int targetHeight, bool preserveAspect = true)
-        {
-            if (!UseSixLaborsImageSharpToResize) return source.Resize(targetWidth, targetHeight, preserveAspect);
-            var img = source.SaveToSixLaborsImage();
-            img.Mutate(i => i.Resize(new ResizeOptions
-            {
-                Size = new Size(targetWidth, targetHeight),
-                Mode = preserveAspect ? ResizeMode.Max : ResizeMode.Stretch
-            }));
-            return new Picture16bpp(img);
-
-        }
-
         static JsonSerializerOptions options = new JsonSerializerOptions
         {
             WriteIndented = true,
@@ -1610,7 +1705,7 @@ namespace projectFrameCut.Shared
             {
                 sb.Append("  [Operator: ").Append(step.Operator.FullName).Append(']');
             }
-            if(step.Elapsed != null)
+            if (step.Elapsed != null)
             {
                 sb.AppendLine();
                 sb.Append(indent).Append("  Elapsed: ").Append(step.Elapsed);

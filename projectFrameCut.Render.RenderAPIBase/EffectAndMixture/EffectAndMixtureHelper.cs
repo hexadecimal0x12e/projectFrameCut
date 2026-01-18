@@ -26,8 +26,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
     public class EffectAndMixtureJSONStructure
     {
+        public string BelogsToGroupId { get; set; } = string.Empty;
         public bool IsMixture { get; set; } = false;
         public bool IsContinuousEffect { get; set; } = false;
+        public bool IsVariableArgumentEffect { get; set; } = false;
         public string FromPlugin { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string TypeName { get; set; } = string.Empty;

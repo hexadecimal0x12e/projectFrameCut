@@ -1,12 +1,11 @@
 namespace projectFrameCut.Setting.SettingPages;
-
-using projectFrameCut.PropertyPanel;
+using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 using System.Globalization;
 using static SettingManager.SettingsManager;
 
 public partial class EditSettingPage : ContentPage
 {
-    public PropertyPanel.PropertyPanelBuilder rootPPB;
+    public PropertyPanelBuilder rootPPB;
 
     public readonly Dictionary<string, string> ModeStringMapping = new Dictionary<string, string>
     {
@@ -37,7 +36,7 @@ public partial class EditSettingPage : ContentPage
         Title = Localized.MainSettingsPage_Tab_Edit;
 
         rootPPB = new();
-        rootPPB.AddText(new PropertyPanel.TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_EditorPreference, SettingLocalizedResources.Edit_EditorPreference_Subtitle, 20, 12))
+        rootPPB.AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_EditorPreference, SettingLocalizedResources.Edit_EditorPreference_Subtitle, 20, 12))
             .AddPicker("Edit_PreferredPopupMode",
                 SettingLocalizedResources.Edit_PreferredPopupMode, ModeStringMapping.Keys.ToArray(),
                 ModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreferredPopupMode", "right"), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_PreferredPopupMode_Right, "right")).Key)

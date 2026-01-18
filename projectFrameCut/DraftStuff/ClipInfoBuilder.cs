@@ -1,7 +1,7 @@
 ﻿using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Platform;
 using projectFrameCut.Controls;
-using projectFrameCut.PropertyPanel;
+
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.VideoMakeEngine;
@@ -17,6 +17,10 @@ using Thickness = Microsoft.Maui.Thickness;
 
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Effect.ImageSharp;
+
+
+
+using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 
 
 
@@ -393,12 +397,13 @@ namespace projectFrameCut.DraftStuff
                 {
                     var effectKey = effectKvp.Key;
                     var effect = effectKvp.Value;
+                    var factory = effect.GetFactory(EffectHelper.EffectsFactoriesEnum);
                     ppb.AddText(new TitleAndDescriptionLineLabel(effect.Name, localizedEffectDisplayName[effect.TypeName]));
                     ppb.AddCheckbox($"Effect|{effectKey}|Enabled", PPLocalizedResuorces._Enabled, effect.Enabled);
                     if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects")) ppb.AddEntry($"Effect|{effectKey}|Index", PPLocalizedResuorces.EffectProp_Index, effect.Index.ToString(), "-1");
-                    foreach (var paramName in effect.ParametersNeeded)
+                    foreach (var paramName in factory.ParametersNeeded)
                     {
-                        if (!effect.ParametersType.TryGetValue(paramName, out var paramType)) continue;
+                        if (!factory.ParametersType.TryGetValue(paramName, out var paramType)) continue;
 
                         var currentVal = effect.Parameters.ContainsKey(paramName) ? effect.Parameters[paramName] : null;
 
@@ -483,7 +488,7 @@ namespace projectFrameCut.DraftStuff
                                 return;
                             }
 
-                            if (effect.ParametersType.TryGetValue(paramName, out var paramType))
+                            if (effect.GetFactory(EffectHelper.EffectsFactoriesEnum).ParametersType.TryGetValue(paramName, out var paramType))
                             {
                                 try
                                 {

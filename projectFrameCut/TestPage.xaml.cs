@@ -3,7 +3,7 @@ using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
 using projectFrameCut.DraftStuff;
-using projectFrameCut.PropertyPanel;
+
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
@@ -23,6 +23,9 @@ using System.Threading.Tasks;
 using Path = System.IO.Path;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
 using projectFrameCut.Render.Effect.ImageSharp;
+using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+
+
 
 
 

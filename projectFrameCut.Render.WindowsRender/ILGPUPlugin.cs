@@ -32,18 +32,14 @@ namespace projectFrameCut.Render.WindowsRender
 
         string? IPluginBase.PublishingUrl => null;
 
+        public Dictionary<string, string> Properties = new Dictionary<string, string>
+        {
+            { "_IsInternalPlugin","true" }
+        };
+
         public Dictionary<string, Dictionary<string, string>> LocalizationProvider => new Dictionary<string, Dictionary<string, string>>
         {
-            {
-                "en-US", new()
-            },
-            {
-                "option",
-                new Dictionary<string, string>
-                {
-                    {"_IsInternalPlugin","true" }
-                }
-            }
+
         };
 
         Dictionary<string, Func<IComputer>> IPluginBase.ComputerProvider =>
@@ -57,7 +53,7 @@ namespace projectFrameCut.Render.WindowsRender
 
         Dictionary<string, Func<IEffect>> IPluginBase.EffectProvider => new Dictionary<string, Func<IEffect>> { };
         public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>> { };
-        public Dictionary<string, Func<IEffect>> VariableArgumentEffectProvider => new Dictionary<string, Func<IEffect>> { };
+        public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider => new Dictionary<string, Func<IEffect>> { };
         Dictionary<string, Func<IMixture>> IPluginBase.MixtureProvider => new Dictionary<string, Func<IMixture>> { };
         Dictionary<string, Func<string, string, IClip>> IPluginBase.ClipProvider => new Dictionary<string, Func<string, string, IClip>> { };
         Dictionary<string, Func<string, IVideoSource>> IPluginBase.VideoSourceProvider => new Dictionary<string, Func<string, IVideoSource>> { };
@@ -66,7 +62,10 @@ namespace projectFrameCut.Render.WindowsRender
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new Dictionary<string, Func<string, string, ISoundTrack>> { };
         public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider => new Dictionary<string, Func<string, IAudioSource>> { };
         public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>> { };
+        public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider => new Dictionary<string, IEffectFactory> { };
+        public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider => new Dictionary<string, IEffectFactory> { };
         public IMessagingService MessagingQueue { get; set; }
+
 
         public IClip ClipCreator(JsonElement element)
         {

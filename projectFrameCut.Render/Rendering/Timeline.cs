@@ -81,6 +81,7 @@ namespace projectFrameCut.Render.Rendering
             try
             {
                 IPicture result = Picture.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0);
+                Dictionary<string, object> bindableEffectResultCache = new();
                 foreach (var srcFrame in frames)
                 {
                     // Don't resize the frame before applying effects!
@@ -103,6 +104,10 @@ namespace projectFrameCut.Render.Rendering
                         if (effect is IContinuousEffect c)
                         {
                             ProcessContinuousEffect(frameIndex, srcFrame.ParentClip, PluginManager.CreateComputer(effect.NeedComputer), ref effected, steps, ref lastIsProcessStep, effect, c, targetWidth, targetHeight);
+                        }
+                        else if (effect is IBindableArgumentEffect b)
+                        {
+                            ProcessBindableArgsEffect(ref effected, ref bindableEffectResultCache, steps, ref lastIsProcessStep, b, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
                         else
                         {
@@ -217,10 +222,51 @@ namespace projectFrameCut.Render.Rendering
                 }
 
             }
+        }
+         
+
+        private static void ProcessBindableArgsEffect(ref IPicture frame, ref Dictionary<string, object> resultCache, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, IBindableArgumentEffect item, IComputer? computer, int width, int height)
+        {
+            if (item.EffectRole == BindableArgumentEffectType.ValueProvider)
+            {
+                ArgumentNullException.ThrowIfNull(item.Id, "Id");
+                resultCache.Add(item.Id, item.GenerateValue(frame, computer, width, height));
+            }
+            else if (item.EffectRole == BindableArgumentEffectType.ValueProcessor)
+            {
+                ArgumentNullException.ThrowIfNull(item.BindedArgumentProviderID, "BindedArgumentProviderID");
+                resultCache[item.BindedArgumentProviderID] = item.ProcessValue(resultCache[item.BindedArgumentProviderID], computer, width, height);
+            }
+            else if (item.EffectRole == BindableArgumentEffectType.ResultGenerator)
+            {
+                ArgumentNullException.ThrowIfNull(item.BindedArgumentProviderID, "BindedArgumentProviderID");
+                if (item.YieldProcessStep)
+                {
+                    lastIsProcessStep = true;
+                    try
+                    {
+                        var step = item.GenerateResultStep(resultCache[item.BindedArgumentProviderID], width, height);
+                        steps.Add(step);
+                        if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
+                        lastIsProcessStep = false;
+                        frame = item.GenerateResult(resultCache[item.BindedArgumentProviderID], frame, computer, width, height);
+                    }
+                }
+                else
+                {
+                    frame = item.GenerateResult(resultCache[item.BindedArgumentProviderID], frame, computer, width, height);
+                }
+            }
             else
             {
-                frame = c.Render(frame, targetFrame, computer, width, height);
+                throw new NotSupportedException($"Unsupported BindableArgumentEffectType {item.EffectRole} in IBindableArgumentEffect {item.Name}.");
             }
+
+
         }
 
         public static List<OverlapInfo> FindOverlaps(IEnumerable<ClipDraftDTO>? clips, uint allowedOverlapFrames = 5)
