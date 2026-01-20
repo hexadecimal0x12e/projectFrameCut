@@ -15,14 +15,13 @@ using System.Text.Json.Serialization;
 namespace projectFrameCut.ApplicationAPIBase.Plugins
 {
     /// <summary>
-    /// The base interface for all application-level plugins.
+    /// The base interface for all application-level plugins. Application-level plugins is an MAUI Class library, so that it can create UI.
     /// </summary>
     /// <remarks>
-    /// Application plugins is an MAUI Class library, so that it can create UI.
+    /// A good way to make an application plugin is to create a normal .NET class library and implement all interface from <see cref="IPluginBase"/>, then create a new .NET MAUI class library project that reference the previous class library, and implement <see cref="IApplicationPluginBase"/> interface, and create other things like setting page in the MAUI class library.
     /// </remarks>
     public interface IApplicationPluginBase : IPluginBase
     {
-        public sealed new bool IsApplicationPlugin => true;
 
         public Dictionary<string,Func<IEffectBundle>> EffectBundleProvider { get; }
 

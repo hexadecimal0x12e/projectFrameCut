@@ -14,7 +14,7 @@ namespace projectFrameCut.Render.Plugin
 {
     public static class PluginManager
     {
-        public const int CurrentPluginAPIVersion = 1;
+        public const int CurrentPluginAPIVersion = IPluginBase.CurrentPluginAPIVersion;
         private static Dictionary<string, IPluginBase> loadedPlugins = new();
         public static IReadOnlyDictionary<string, IPluginBase> LoadedPlugins => loadedPlugins;
         public static bool Inited { get; private set; } = false;
@@ -36,8 +36,47 @@ namespace projectFrameCut.Render.Plugin
 
 #endif
             }
+
+            if(GlobalPluginGetter.PluginGetter is null)
+            {
+                GlobalPluginGetter.PluginGetter = (id) =>
+                {
+                    if (loadedPlugins.TryGetValue(id, out IPluginBase? value))
+                    {
+                        return value;
+                    }
+                    return null;
+                };
+            }
         }
 
+        public static void Unload(string id)
+        {
+            if (loadedPlugins.TryGetValue(id, out IPluginBase? value))
+            {
+                try
+                {
+                    value.OnClosing();
+                }
+                catch { }
+                loadedPlugins.Remove(id);
+                Logger.Log($"Plugin {id} unloaded.");
+            }
+        }
+
+        public static void ForceUnloadAll()
+        {
+            foreach (var item in loadedPlugins)
+            {
+                try
+                {
+                    item.Value.OnClosing();
+                }
+                catch { }
+            }
+            loadedPlugins.Clear();
+            Inited = false;
+        }
 
         public static void LoadFrom(IPluginBase pluginInstance)
         {
@@ -57,7 +96,7 @@ namespace projectFrameCut.Render.Plugin
                 }
                 else
                 {
-                    Logger.Log($"Plugin {pluginInstance.Name} has incompatible API version {pluginInstance.PluginAPIVersion}, expected {CurrentPluginAPIVersion}.", "warning");
+                   throw new InvalidProgramException($"Plugin {pluginInstance.Name} has incompatible API version {pluginInstance.PluginAPIVersion}, expected {CurrentPluginAPIVersion}.");
                 }
             }
             catch (Exception ex)
@@ -71,8 +110,9 @@ namespace projectFrameCut.Render.Plugin
 
         public static void UnloadPlugin(string id)
         {
-            if (loadedPlugins.ContainsKey(id))
+            if (loadedPlugins.TryGetValue(id, out IPluginBase? value))
             {
+                value.OnClosing();
                 loadedPlugins.Remove(id);
                 Logger.Log($"Plugin {id} unloaded.");
             }
@@ -238,7 +278,7 @@ namespace projectFrameCut.Render.Plugin
             {
                 var decoder = filePath.Substring(1).Split(',', 2)[0];
                 var supportedPlugin = LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(decoder));
-                if (supportedPlugin is null) throw new NotSupportedException($"No suitable video decoder '{decoder}' found for the given file '{filePath}'.");
+                if (supportedPlugin is null) throw new NotSupportedException($"The specificed video decoder '{decoder}' was not found for the file '{filePath}'.");
                 return supportedPlugin.VideoSourceProvider[decoder](null!).CreateNew(filePath);
 
             }
@@ -291,8 +331,6 @@ namespace projectFrameCut.Render.Plugin
 
         public static IVideoWriter CreateVideoWriter(string codec)
         {
-            // Fast-path: if the caller passed a writer type name (e.g. "BlackHoleWriter"),
-            // don't instantiate other writers just to probe SupportCodec().
             foreach (var plugin in LoadedPlugins.Values)
             {
                 try
@@ -362,7 +400,6 @@ namespace projectFrameCut.Render.Plugin
                     {
                         if (forceCreate)
                         {
-                            // Caller explicitly requests a new instance (often for thread-safety).
                             return computer;
                         }
 

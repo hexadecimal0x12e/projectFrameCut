@@ -31,6 +31,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// </summary>
         public int PluginAPIVersion { get; }
         /// <summary>
+        /// Get the minor version of plugin. Default to 0.
+        /// </summary>
+        public virtual int PluginAPIMinorVersion => 0;
+        /// <summary>
         /// The plugin's name.
         /// </summary>
         /// <remarks>
@@ -40,6 +44,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Plugin's author.
         /// </summary>
+        /// <remarks>
+        /// for this field, it's localized key is '_PluginBase_Author_'.
+        /// </remarks>
         public string Author { get; }
         /// <summary>
         /// Description of the plugin.
@@ -62,12 +69,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public string? PublishingUrl { get; }
 
         /// <summary>
-        /// Get whether this extension is an Application-level plugin.
+        /// Get the properties of the plugin.
         /// </summary>
         /// <remarks>
-        /// DO NOT override this property. Please use IApplicationPluginBase to implement application-level plugins.
+        /// Default implementation returns an empty dictionary, override it to provide actual properties.
         /// </remarks>
-        public virtual bool IsApplicationPlugin => false;
+        public virtual IReadOnlyDictionary<string, string> Properties => blankProperties;
+
+        private static Dictionary<string, string> blankProperties = new();
 
         /// <summary>
         /// Represents the localization strings provided by the plugin.
@@ -97,17 +106,21 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
 
 
         /// <summary>
-        /// Create an IEffect instance from the given JSON structure.
+        /// Create an blank IEffect instance from the given id.
         /// </summary>
+        /// <remarks>
+        /// Although we have <see cref="IEffectFactory"/>, but you STILL need to register ONE implementation of IEffect here for each effect type.
+        /// </remarks>
         public Dictionary<string, Func<IEffect>> EffectProvider { get; }
 
         /// <summary>
         /// Create an <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
         /// Key is effect type name (e.g. "Resize").
         /// </summary>
-        public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>();
+        /// 
+        public Dictionary<string, IEffectFactory> EffectFactoryProvider { get; }
         /// <summary>
-        /// Create an IEffect instance from the given JSON structure.
+        /// Create an blank IEffect instance from the given id.
         /// </summary>
         public Dictionary<string, Func<IEffect>> ContinuousEffectProvider { get; }
 
@@ -115,8 +128,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Create a continuous <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
         /// </summary>
         public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider { get; }
+
         /// <summary>
-        /// Create an IEffect instance from the given JSON structure.
+        /// Create an blank IEffect instance from the given id.
         /// </summary>
         public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider { get; }
 
@@ -124,10 +138,12 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Create a variable-argument <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
         /// </summary>
         public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider { get; }
+
         /// <summary>
         /// Create an IMixture instance from the given JSON structure.
         /// </summary>
         public Dictionary<string, Func<IMixture>> MixtureProvider { get; }
+
         /// <summary>
         /// Create an IComputer instance from the given JSON structure.
         /// </summary>
@@ -140,6 +156,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// When the argument is null or empty when creating a IVideoSource, the provider should return an instance that can be used to check for preferred extensions.
         /// </remarks>
         public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider { get; }
+
         /// <summary>
         /// Create an IAudioSource instance from the given file path.
         /// </summary>
@@ -147,6 +164,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// When the argument is null or empty when creating a IAudioSource, the provider should return an instance that can be used to check for preferred extensions.
         /// </remarks>
         public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; }
+
         /// <summary>
         /// Create an IVideoWriter instance from the given file path.
         /// </summary>
@@ -157,7 +175,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Get or set the configuration of the plugin.
         /// </summary>
         /// <remarks>
-        /// The default implementation is the default value of this plugin.
+        /// The default implementation is the default settings value of this plugin.
         /// </remarks>
         public Dictionary<string, string> Configuration { get; set; }
 
@@ -165,17 +183,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Represents the display strings for each configuration key.
         /// </summary>
         /// <remarks>
-        /// Each key represents the locate code (like 'en-US'), and it's values represents the mapping of the setting strings. 
+        /// Same as <see cref="LocalizationProvider"/>,
+        /// each key represents the locate code (like 'en-US'), and it's values represents the mapping of the setting strings. 
         /// For each locate's mapping, the key is the setting key, and the value is the display name.
         /// </remarks>
         public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString { get; }
-
-        /// <summary>
-        /// Get the fixed properties of the plugin.
-        /// </summary>
-        public IReadOnlyDictionary<string, string> Properties => blankProperties;
-
-        private static Dictionary<string, string> blankProperties = new();
 
         /// <summary>
         /// Read a localization item from the provider.
@@ -384,16 +396,18 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 throw new NotSupportedException($"No suitable computer found for the given type '{computerType}'.");
             }
         }
+
         /// <summary>
         /// Invoked when the plugin is loaded. Return true if loaded successfully, false otherwise.
         /// </summary>
-        /// <param name="FailedReason">The reason for failure if loading was unsuccessful.</param>
+        /// <param name="FailedReason">The reason for failure if loading was unsuccessful. Will be displayed in UI</param>
         /// <returns>whether the plugin was loaded successfully</returns>
         public virtual bool OnLoaded(out string FailedReason)
         {
             FailedReason = string.Empty;
             return true;
         }
+
         /// <summary>
         /// Called when a project is loaded.
         /// </summary>
@@ -423,12 +437,54 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         }
 
         /// <summary>
+        /// Called when the application is closing, or this plugin is being unloaded.
+        /// </summary>
+        public virtual void OnClosing()
+        {
+
+        }
+
+        /// <summary>
         /// Represents the messaging queue provided by the host application.
         /// </summary>
         public IMessagingService MessagingQueue { get; set; }
     }
 
+    public static class GlobalPluginGetter
+    {
+        /// <summary>
+        /// The global getter.
+        /// </summary>
+        /// <remarks>
+        /// Don't set this property directly, it will cause a exception.
+        /// </remarks>
+        public static Func<string, IPluginBase?>? PluginGetter
+        {
+            get => getter;
+            set
+            {
+                if(PluginGetter is not null)
+                {
+                    throw new InvalidOperationException("PluginGetter is already initialized.");
+                }
+                getter = value;
+            }
+        }
 
+        static Func<string, IPluginBase?>? getter = null;
+
+        /// <summary>
+        /// Get the specific plugin by its ID.
+        /// </summary>
+        public static IPluginBase GetPlugin(string pluginID)
+        {
+            if(PluginGetter is null) throw new InvalidOperationException("PluginGetter is not initialized.");
+            return PluginGetter(pluginID) ?? throw new KeyNotFoundException($"Plugin with ID '{pluginID}' maybe not found.");
+        }
+
+    }
+
+#pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
 
     public class PluginMetadata
     {
@@ -544,5 +600,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
             return providedContent.ToString();
         }
     }
+#pragma warning restore CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
 
 }

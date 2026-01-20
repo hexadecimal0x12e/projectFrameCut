@@ -32,9 +32,9 @@ namespace projectFrameCut.Render.WindowsRender
 
         string? IPluginBase.PublishingUrl => null;
 
-        public Dictionary<string, string> Properties = new Dictionary<string, string>
+        public IReadOnlyDictionary<string, string> Properties => new Dictionary<string, string>
         {
-            { "_IsInternalPlugin","true" }
+            { "IsInternalPlugin","true" }
         };
 
         public Dictionary<string, Dictionary<string, string>> LocalizationProvider => new Dictionary<string, Dictionary<string, string>>
@@ -52,6 +52,7 @@ namespace projectFrameCut.Render.WindowsRender
 
 
         Dictionary<string, Func<IEffect>> IPluginBase.EffectProvider => new Dictionary<string, Func<IEffect>> { };
+        public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory> { };
         public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>> { };
         public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider => new Dictionary<string, Func<IEffect>> { };
         Dictionary<string, Func<IMixture>> IPluginBase.MixtureProvider => new Dictionary<string, Func<IMixture>> { };

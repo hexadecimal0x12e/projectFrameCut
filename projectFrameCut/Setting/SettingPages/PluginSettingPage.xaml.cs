@@ -46,10 +46,11 @@ public partial class PluginSettingPage : ContentPage
             var plugin = item.Value;
             var name = plugin.ReadLocalizationItem("_PluginBase_Name_", plugin.Name) ?? plugin.Name;
             var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", plugin.Description) ?? plugin.Description;
+            var author = plugin.ReadLocalizationItem("_PluginBase_Author_", plugin.Author) ?? plugin.Author;
             rootPPB
                 .AddSeparator()
-                .AddText(new TitleAndDescriptionLineLabel(name, desc, 20, 16))
-                .AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailInfo(plugin.Author, plugin.Version, plugin.PluginID), 12))
+                .AddText(new TitleAndDescriptionLineLabel(name, desc))
+                .AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_DetailInfo(author, plugin.Version, plugin.PluginID), 12))
                 .AddButton($"MoreOption,{item.Key}", SettingLocalizedResources.Plugin_MoreOption);
 
 
@@ -60,21 +61,65 @@ public partial class PluginSettingPage : ContentPage
         {
             rootPPB
                 .AddSeparator()
-                .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_FailLoad, SettingLocalizedResources.Plugin_FailLoad_Subtitle, 20, 12));
+                .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_FailLoad, SettingLocalizedResources.Plugin_FailLoad_Subtitle));
 
             foreach (var disabledPlugin in disabledPlugins)
             {
                 rootPPB
-                    .AddText(new TitleAndDescriptionLineLabel(disabledPlugin.Id, SettingLocalizedResources.Plugin_FailLoad_Disabled, 20, 16))
+                    .AddText(new TitleAndDescriptionLineLabel(disabledPlugin.Id, SettingLocalizedResources.Plugin_FailLoad_Disabled))
                     .AddButton($"EnablePlugin,{disabledPlugin.Id}", SettingLocalizedResources.Plugin_Enable(disabledPlugin.Id));
             }
             foreach (var failedPlugin in PluginService.FailedLoadPlugin)
             {
                 rootPPB
-                    .AddText(new TitleAndDescriptionLineLabel(failedPlugin.Key, SettingLocalizedResources.Plugin_FailLoad_FailedBeacuse(failedPlugin.Value), 20, 16))
+                    .AddText(new TitleAndDescriptionLineLabel(failedPlugin.Key, SettingLocalizedResources.Plugin_FailLoad_FailedBeacuse(failedPlugin.Value)))
                     .AddButton($"RemoveFailedPlugin,{failedPlugin.Key}", SettingLocalizedResources.Plugin_Remove);
             }
         }
+
+
+        rootPPB.AddSeparator().AddButton(SettingLocalizedResources.Plugin_ReloadAllButton, async (s, e) =>
+        {
+            Dictionary<string, string> pems = new();
+            foreach (var item in PluginManager.LoadedPlugins)
+            {
+                var k = await SecureStorage.Default.GetAsync($"plugin_pem_{item.Key}");
+                if (!string.IsNullOrEmpty(k)) pems[item.Key] = k;
+            }
+            try
+            {
+                PluginManager.ForceUnloadAll();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"unload all");
+            }
+            try
+            {
+                var internalBase = new InternalApplicationPluginBase();
+                internalBase.MessagingQueue = MessagingServices.MessagingService;
+                List<IPluginBase> plugins =
+                [
+                    internalBase,
+#if ANDROID
+                    new Render.AndroidOpenGL.Platforms.Android.OpenGLPlugin(),
+#elif WINDOWS
+                    new projectFrameCut.Render.WindowsRender.ILGPUPlugin(),
+#elif iDevices
+
+#endif
+                    ..PluginService.LoadUserPlugins((i) => pems.TryGetValue(i, out var p) ? p : throw new KeyNotFoundException()),
+                ];
+
+
+                PluginManager.Init(plugins);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Load plugins", this);
+            }
+
+        });
 
         var scv = rootPPB.AddSeparator().ListenToChanges((e) => SettingInvoker(e, this)).BuildWithScrollView();
         DropGestureRecognizer drop = new();
@@ -115,7 +160,7 @@ public partial class PluginSettingPage : ContentPage
             }
             catch (Exception ex)
             {
-                Log(ex, $"Create setting page for {name}",this);
+                Log(ex, $"Create setting page for {name}", this);
                 ppb.AddText(new SingleLineLabel($"Failed to create setting page: {Localized._ExceptionTemplate(ex)}", 16, FontAttributes.None, Colors.Red));
             }
         }
@@ -138,7 +183,7 @@ public partial class PluginSettingPage : ContentPage
 
         ppb.AddText(new SingleLineLabel(Localized.HomePage_ProjectContextMenu(name), 20, FontAttributes.None))
             .AddButton($"ViewProvided,{id}", SettingLocalizedResources.Plugin_ViewWhatProvided(plugin.Name));
-        if (plugin.Properties.TryGetValue("_IsInternalPlugin", out var isInternal) && bool.TryParse(isInternal, out var result) && result)
+        if (plugin.Properties.TryGetValue("IsInternalPlugin", out var isInternal) && bool.TryParse(isInternal, out var result) && result)
         {
             ppb.AddText(new SingleLineLabel(SettingLocalizedResources.Plugin_CannotRemoveInternalPlugin, 14, default, Colors.Grey));
         }
@@ -195,10 +240,11 @@ public partial class PluginSettingPage : ContentPage
         }
     }
 
-    private async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args, Page currentPage = null)
+    private async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args, Page? currentPage = null)
     {
         try
         {
+            currentPage ??= this;
             if (args.Id == "addButton")
             {
                 var result = await FilePicker.Default.PickAsync(new PickOptions
@@ -290,7 +336,7 @@ public partial class PluginSettingPage : ContentPage
 
                 case "OpenDataDir":
                     {
-                        FileSystemService.OpenFolderAsync(Path.Combine(MauiProgram.BasicDataPath, "Plugins", plugin.PluginID));
+                        await FileSystemService.OpenFolderAsync(Path.Combine(MauiProgram.BasicDataPath, "Plugins", plugin.PluginID));
                         break;
                     }
                 case "DisablePlugin":
@@ -312,7 +358,8 @@ public partial class PluginSettingPage : ContentPage
                         {
                             PluginService.RemovePlugin(plugin.PluginID);
                             PluginManager.UnloadPlugin(plugin.PluginID);
-                            BuildPPB();
+                            await MainSettingsPage.RebootApp(currentPage);
+                            //BuildPPB();
                         }
                         break;
                     }

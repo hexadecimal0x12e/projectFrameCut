@@ -20,13 +20,16 @@ using projectFrameCut.Render.Effect;
 namespace projectFrameCut.Render.Plugin;
 
 
+/// <summary>
+/// This is the base plugin contains almost all fundamental components required by projectFrameCut.
+/// </summary>
 public class InternalPluginBase : IPluginBase
 {
     public const string InternalPluginBaseID = "projectFrameCut.Render.Plugins.InternalPluginBase";
 
     public string PluginID => InternalPluginBaseID;
 
-    public int PluginAPIVersion => 1;
+    public int PluginAPIVersion => IPluginBase.CurrentPluginAPIVersion;
 
     public string Name => "Internal fundamental plugin";
 
@@ -40,22 +43,14 @@ public class InternalPluginBase : IPluginBase
 
     public string? PublishingUrl => null;
 
-    public Dictionary<string, string> Properties = new Dictionary<string, string>
+    public IReadOnlyDictionary<string, string> Properties => new Dictionary<string, string>
     {
-        {"_IsFFmpegLibraryProvider","false" },
-        {"_IsInternalPlugin","true" }
+        { "IsFFmpegLibraryProvider","false" },
+        { "IsInternalPlugin","true" }
     };
 
     public Dictionary<string, Dictionary<string, string>> LocalizationProvider => new Dictionary<string, Dictionary<string, string>>
     {
-        //{
-        //    "zh-CN",
-        //    new Dictionary<string, string>
-        //    {
-        //        {"_PluginBase_Name_", "projectFrameCut 内部基础插件" },
-        //        {"_PluginBase_Description_", "作为 projectFrameCut 的一部分，提供 projectFrameCut 的基本功能" }
-        //    }
-        //}
 
     };
 

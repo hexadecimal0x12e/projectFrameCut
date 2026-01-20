@@ -13,7 +13,7 @@ namespace projectFrameCut
 
         public View? SettingPageProvider(ref IApplicationPluginBase instance)
         {
-            return new Label { Text = "No settings available for this plugin." };
+            return null;
         }
     }
 }

@@ -67,7 +67,6 @@ public partial class RenderPage : ContentPage
     private const int ScreenSaverTimeout = 15000;
 
 #if WINDOWS
-    Platforms.Windows.RenderHelper render = new projectFrameCut.Platforms.Windows.RenderHelper();
     Platforms.Windows.ffmpegHelper ffmpeg = new projectFrameCut.Platforms.Windows.ffmpegHelper();
 #endif
 
