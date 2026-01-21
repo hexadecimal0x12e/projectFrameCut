@@ -4,7 +4,7 @@
   "NameSpaceOfLocalizerInstance": "",
   "ClassNameSpaceOfLocalizerInstance": "SimpleLocalizerBaseGeneratedHelper",
   "NameOfLocalizerInstance": "Localized",
-  "NameOfBaseInterface": "ISimpleLocalizerBase",
+  "NameOfBaseInterface": "ISimpleLocalizerBase_Helper",
   "EnableDynamicGenerate": false,
   "EnableBaseGenerate": true,
   "Values": {
@@ -59,7 +59,7 @@
       },
       {
         "Id": "SplashForm_License",
-        "Value": "\u6B64\u7248\u672C\u7684 {HelperProgram.AppTitle} \u53EA\u53EF\u7528\u4E8E\u975E\u5546\u7528\u573A\u666F\u3002",
+        "Value": " ",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],

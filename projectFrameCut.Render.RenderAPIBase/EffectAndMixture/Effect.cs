@@ -106,6 +106,14 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public virtual bool IsNormalEffect => true;
         public virtual bool IsContinuousEffect => false;
         public virtual bool IsBindableArgsEffect => false;
+
+        /// <summary>
+        /// Get the binded EffectGroup's ID
+        /// </summary>
+        /// <remarks>
+        /// DO NOT set this property manually. EffectGroup will do this.
+        /// </remarks>
+        public string? BindedEffectGroupID { get; set; }
     }
 
     public enum EffectImplementType

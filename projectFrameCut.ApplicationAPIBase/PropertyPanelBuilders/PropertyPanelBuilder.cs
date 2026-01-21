@@ -3,6 +3,7 @@ using Microsoft.Maui.Controls;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -70,8 +71,12 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
 
         public PropertyPanelBuilder()
         {
+            instanceID = Guid.NewGuid();
             childBuilder = new PropertyPanelChildrenBuilder(this);
         }
+
+        private Guid instanceID;
+        private bool vaild = true;
 
         /// <summary>
         /// Adds a <seealso cref="Label"/> to the property panel.
@@ -109,7 +114,7 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
         /// </summary>
         /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
         /// <param name="defaultValue">The default value to assign to the property identified by <paramref name="Id"/>.</param>
-        public PropertyPanelBuilder AddEntry(string Id, PropertyPanelItemLabel title, string defaultValue, string placeholder, Action<Entry>? EntrySeter = null, EntryUpdateEventCallMode mode = EntryUpdateEventCallMode.OnUnfocusedAndUnchanged)
+        public PropertyPanelBuilder AddEntry(string Id, PropertyPanelItemLabel title, string defaultValue, string placeholder, Action<Entry>? EntrySeter = null, EntryUpdateEventCallMode? mode = EntryUpdateEventCallMode.OnUnfocusedAndValueChanged)
         {
             var entry = new Entry
             {
@@ -121,12 +126,15 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
             var label = title.LabelConfigure();
 
             Properties[Id] = defaultValue;
-            switch (mode)
+            switch (mode ?? EntryUpdateEventCallMode.OnUnfocusedAndValueChanged)
             {
                 case EntryUpdateEventCallMode.OnAnyTextChange:
                     entry.TextChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, e.NewTextValue);
                     break;
-                case EntryUpdateEventCallMode.OnUnfocusedAndUnchanged:
+                case EntryUpdateEventCallMode.OnUnfocused:
+                    entry.Unfocused += (s, e) => pppcea.CreateAndInvoke(this, Id, entry.Text);
+                    break;
+                case EntryUpdateEventCallMode.OnUnfocusedAndValueChanged:
                     entry.Unfocused += (s, e) =>
                     {
                         if (entry.Text != Properties[Id] as string)
@@ -302,7 +310,7 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
         /// </summary>
         /// <param name="Id">The unique identifier for the property associated with the custom child view. Cannot be null.</param>
         /// <param name="defaultValue">The default value to assign to the property identified by <paramref name="Id"/>.</param>
-        public PropertyPanelBuilder AddSlider(string Id, PropertyPanelItemLabel title, double min, double max, double defaultValue, Action<Slider>? SliderSetter = null, SliderUpdateEventCallMode eventCallMode = SliderUpdateEventCallMode.OnMouseUp)
+        public PropertyPanelBuilder AddSlider(string Id, PropertyPanelItemLabel title, double min, double max, double defaultValue, Action<Slider>? SliderSetter = null, SliderUpdateEventCallMode? eventCallMode = SliderUpdateEventCallMode.OnMouseUp)
         {
             var slider = new Slider
             {
@@ -315,13 +323,19 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
             var label = title.LabelConfigure();
 
             Properties[Id] = defaultValue;
-            if (eventCallMode == SliderUpdateEventCallMode.OnValueChanged)
+            switch (eventCallMode ?? SliderUpdateEventCallMode.OnMouseUp)
             {
-                slider.ValueChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, e.NewValue);
-            }
-            else
-            {
-                slider.DragCompleted += (s, e) => pppcea.CreateAndInvoke(this, Id, slider.Value);
+                case SliderUpdateEventCallMode.OnValueChanged:
+                    {
+                        slider.ValueChanged += (s, e) => pppcea.CreateAndInvoke(this, Id, e.NewValue);
+                        break;
+                    }
+
+                default:
+                    {
+                        slider.DragCompleted += (s, e) => pppcea.CreateAndInvoke(this, Id, slider.Value);
+                        break;
+                    }
             }
 
             SliderSetter?.Invoke(slider);
@@ -543,7 +557,7 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
         /// <remarks>
         /// If you'd like to add a Child that modify the <see cref="Properties"/>, 
         /// please use <seealso cref="AddCustomChild(Func{Action{object}, View}, string, object)"/>, 
-        /// which provides a eazy-use to modify <see cref="Properties"/> call <see cref="PropertyChanged"/> safely.
+        /// which provides a easy-use to modify <see cref="Properties"/> call <see cref="PropertyChanged"/> safely.
         /// </remarks>
         /// <param name="child">The view to add as a child to the property panel.</param>
         public PropertyPanelBuilder AddCustomChild(View child)
@@ -673,11 +687,35 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
             {
                 AddCustomChild(item);
             }
-
+            another.vaild = false;
             another.PropertyChanged += (_, e) => PropertyChanged?.Invoke(another, e);
             return this;
 
         }
+        /// <summary>
+        /// Imports all property panel items from another builder to the current builder. 
+        /// The items from <paramref name="another"/> are appended to the end of the current
+        /// builder's collection. 
+        /// </summary>
+        /// <remarks>
+        /// The method will modify the source builder because of one View can't appearing in 2 containers.
+        /// This method also clone the source's <see cref="PropertyChanged"/> event but overrides the sender object to <paramref name="anotherSender"/>.
+        /// </remarks>
+        /// <param name="another">The builder whose property panel items will be added to this builder. Cannot be null.</param>
+        /// <param name="anotherSender">The sender object to be used when invoking the <see cref="PropertyChanged"/> event from the <paramref name="another"/> builder.</param>
+        public PropertyPanelBuilder AddFromAnother(PropertyPanelBuilder another, object? anotherSender)
+        {
+            foreach (var item in another.children)
+            {
+                AddCustomChild(item);
+            }
+            another.vaild = false;
+            another.PropertyChanged += (_, e) => PropertyChanged?.Invoke(anotherSender, e);
+            return this;
+
+        }
+
+
 
         /// <summary>
         /// Listens to property changes on the property panel. Same as subscribing to <see cref="PropertyChanged"/> event.
@@ -751,6 +789,7 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
         /// </summary>
         public Layout Build()
         {
+            if(!vaild) throw new InvalidOperationException($"This PropertyPanel is no longer valid because it has been merged into another PropertyPanelBuilder instance.");
             var layout = new VerticalStackLayout
             {
                 Spacing = 10,
@@ -769,6 +808,7 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
         /// <param name="layout">The source layout you'd like to use.</param>
         public Layout Build(Layout layout)
         {
+            if (!vaild) throw new InvalidOperationException($"This PropertyPanel is no longer valid because it has been merged into another PropertyPanelBuilder instance.");
             foreach (var item in children)
             {
                 layout.Children.Add(item);
@@ -790,9 +830,17 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
         {
             PropertyChanged?.Invoke(this, e);
         }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is PropertyPanelBuilder ppb) return ppb.instanceID == instanceID;
+            return false;
+        }
+
+        public override int GetHashCode() => instanceID.GetHashCode();
     }
 
-    
+
     public class PropertyPanelPropertyChangedEventArgs(string id, object? newVal, object? oldVal) : EventArgs
     {
         /// <summary>
@@ -828,10 +876,25 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
 
     }
 
+    public class PropertyPanelBuilderComparer : IEqualityComparer<PropertyPanelBuilder>
+    {
+        public bool Equals(PropertyPanelBuilder? x, PropertyPanelBuilder? y)
+        {
+            if (x is null && y is null) return true;
+            if (x is null || y is null) return false;
+            return x.Equals(y);
+        }
+        public int GetHashCode([DisallowNull] PropertyPanelBuilder obj)
+        {
+            return obj.GetHashCode();
+        }
+    }
+
     public enum EntryUpdateEventCallMode
     {
         OnAnyTextChange,
-        OnUnfocusedAndUnchanged
+        OnUnfocused,
+        OnUnfocusedAndValueChanged
     }
 
     public enum SliderUpdateEventCallMode
@@ -840,7 +903,7 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
         OnMouseUp
     }
 
-    
+
 
 
 

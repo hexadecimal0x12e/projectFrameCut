@@ -19,6 +19,7 @@ namespace projectFrameCut.Render.Effect.ProjectFrameCutPicture
         public int Height { get; init; }
         public int Width { get; init; }
         public bool PreserveAspectRatio { get; init; } = true;
+        public string? BindedEffectGroupID { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {

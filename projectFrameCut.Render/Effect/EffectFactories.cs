@@ -261,13 +261,16 @@ namespace projectFrameCut.Render.Effect
 
         public string TypeName => "ZoomIn";
 
-        public List<string> ParametersNeeded { get; } = new List<string>
+        public List<string> ParametersNeeded => s_ParametersNeeded;
+        public static List<string> s_ParametersNeeded { get; } = new List<string>
         {
             "TargetX",
             "TargetY",
         };
 
-        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        public Dictionary<string, string> ParametersType => s_ParametersType;
+
+        public static Dictionary<string, string> s_ParametersType { get; } = new Dictionary<string, string>
         {
             {"TargetX", "int"},
             {"TargetY", "int"},

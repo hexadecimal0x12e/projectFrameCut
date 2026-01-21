@@ -40,6 +40,7 @@ namespace projectFrameCut.Render.Effect.HwAccel
         public string NeedComputer => "RemoveColorComputer";
         public bool YieldProcessStep => false;
         public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
+        public string? BindedEffectGroupID { get; set; }
 
 
         public static List<string> ParametersNeeded { get; } = new List<string>
@@ -256,6 +257,7 @@ namespace projectFrameCut.Render.Effect.HwAccel
         public int Height { get; init; }
         public int Width { get; init; }
         public bool PreserveAspectRatio { get; init; } = true;
+        public string? BindedEffectGroupID { get; set; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {

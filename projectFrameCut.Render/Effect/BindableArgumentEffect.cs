@@ -142,7 +142,7 @@ namespace projectFrameCut.Render.Effect
 
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
-
+        public string? BindedEffectGroupID { get; set; }
     }
 
     public class MaskApplier : IBindableArgumentEffect
@@ -240,6 +240,7 @@ namespace projectFrameCut.Render.Effect
 
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
+        public string? BindedEffectGroupID { get; set; }
 
 
     }

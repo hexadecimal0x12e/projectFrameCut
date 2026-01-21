@@ -20,6 +20,7 @@ namespace projectFrameCut.Render.Effect
         public string TypeName => "ZoomIn";
         public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
         public bool YieldProcessStep => true;
+        public string? BindedEffectGroupID { get; set; }
 
 
         public int RelativeWidth { get; set; }
@@ -284,6 +285,9 @@ namespace projectFrameCut.Render.Effect
             }
             return new PlaceProcessStep(offX, offY, targetWidth, targetHeight);
         }
+
+        public string? BindedEffectGroupID { get; set; }
+
     }
 
 }

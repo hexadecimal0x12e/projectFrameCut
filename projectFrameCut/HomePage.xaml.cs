@@ -149,7 +149,7 @@ public partial class HomePage : ContentPage
                     {
                         WinUI.App.Instance?.RequestedTheme = SettingsManager.GetSetting("ui_defaultTheme", "default") switch
                         {
-                            "dark" => Microsoft.UI.Xaml.ApplicationTheme.Light,
+                            "dark" => Microsoft.UI.Xaml.ApplicationTheme.Dark,
                             _ => Microsoft.UI.Xaml.ApplicationTheme.Light,
                         };
                     }).GetAwaiter().GetResult();

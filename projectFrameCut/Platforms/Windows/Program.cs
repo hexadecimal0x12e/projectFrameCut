@@ -16,6 +16,8 @@ namespace projectFrameCut.WinUI
         public static string? BasicDataPathOverride { get; private set; } = null;
         public static string? UserDataPathOverride { get; private set; } = null;
 
+        private const string AppVersionStage = "alpha";
+
         [STAThread] //avoid failed to initialize COM library error, cause a lot of issue like IME not work at all...
         public static void Main(string[] args)
         {
@@ -81,7 +83,7 @@ namespace projectFrameCut.WinUI
             }
             try
             {
-                projectFrameCut.Helper.HelperProgram.AppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
+                projectFrameCut.Helper.HelperProgram.AppVersion = $"{AppVersionStage} {Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}";
             }
             catch
             {

@@ -26,7 +26,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
     public class EffectAndMixtureJSONStructure
     {
-        public string BelogsToGroupId { get; set; } = string.Empty;
+        public string BindedEffectGroupID { get; set; } = string.Empty;
         public bool IsMixture { get; set; } = false;
         public bool IsContinuousEffect { get; set; } = false;
         public bool IsVariableArgumentEffect { get; set; } = false;
@@ -38,6 +38,15 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
         public Dictionary<string, object>? Parameters { get; set; }
+    }
+
+    public class EffectBundleJSONStructure
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string BundleTypeName { get; set; } = string.Empty;
+        public Dictionary<string, object> Parameters { get; set; } = new();
+        public bool Enabled { get; set; } = true;
+        public string Name { get; set; } = string.Empty;
     }
 
     public static class EffectArgsHelper

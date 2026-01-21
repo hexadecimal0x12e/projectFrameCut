@@ -120,7 +120,10 @@ namespace projectFrameCut.Render.Rendering
             {
                 if (StrictMode)
                 {
-                    throw new InvalidOperationException($"Frame #{index} has already been added.");
+                    throw new InvalidOperationException($"Frame #{index} has already been added.")
+                    {
+                        Data = { { "PictureObject", frame }, { "ProcessStack", frame.ProcessStack } }
+                    };
                 }
                 else
                 {
@@ -134,7 +137,12 @@ namespace projectFrameCut.Render.Rendering
 
             if (!BlockWrite)
             {
-                Cache.AddOrUpdate(index, frame, (_, _) => throw new InvalidOperationException($"Frame #{index} has already been added."));               
+                Cache.AddOrUpdate(index, frame, 
+                    (_, _) => throw new InvalidOperationException($"Frame #{index} has already been added.")
+                    {
+                        Data = { { "PictureObject", frame }, { "ProcessStack", frame.ProcessStack } }
+                    }
+                    );               
             }
             else
             {
@@ -212,8 +220,6 @@ namespace projectFrameCut.Render.Rendering
 
             while (Cache.Count > 0 || missingFrames.Count > 0)
             {
-                Console.Error.WriteLine($"@@{currentIndex},{totalFrames}");
-
                 if (Cache.ContainsKey(currentIndex))
                 {
                     builder.Append(Cache.TryRemove(currentIndex, out var f) ? f : throw new KeyNotFoundException());

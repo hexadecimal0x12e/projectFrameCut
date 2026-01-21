@@ -242,6 +242,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 effect.RelativeWidth = s.RelativeWidth;
                 effect.RelativeHeight = s.RelativeHeight;
                 effect.Enabled = s.Enabled;
+                effect.BindedEffectGroupID = s.BindedEffectGroupID;
                 return effect;
             }
 
@@ -447,10 +448,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Represents the messaging queue provided by the host application.
         /// </summary>
+        [Obsolete("Use GlobalPluginHelper.MessagingService instead.", false)]
         public IMessagingService MessagingQueue { get; set; }
     }
 
-    public static class GlobalPluginGetter
+    public static class GlobalPluginHelper
     {
         /// <summary>
         /// The global getter.
@@ -460,18 +462,29 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// </remarks>
         public static Func<string, IPluginBase?>? PluginGetter
         {
-            get => getter;
+            get;
             set
             {
                 if(PluginGetter is not null)
                 {
                     throw new InvalidOperationException("PluginGetter is already initialized.");
                 }
-                getter = value;
+                field = value;
             }
-        }
+        } = null;
 
-        static Func<string, IPluginBase?>? getter = null;
+        public static IMessagingService? MessagingService
+        {
+            get;
+            set
+            {
+                if (MessagingService is not null)
+                {
+                    throw new InvalidOperationException("MessagingService is already initialized.");
+                }
+                field = value;
+            }
+        } = null;
 
         /// <summary>
         /// Get the specific plugin by its ID.

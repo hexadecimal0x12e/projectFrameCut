@@ -119,6 +119,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public long? SourceDuration { get; set; } // in frames, null for infinite length source
         public bool IsInfiniteLength { get; set; }
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
+        public EffectBundleJSONStructure[]? EffectBundles { get; set; }
 
         [JsonExtensionData]
         public Dictionary<string, object>? MetaData { get; set; }

@@ -572,11 +572,12 @@ public partial class RenderPage : ContentPage
             int width = int.Parse(vm.Width);
             int height = int.Parse(vm.Height);
             int fps = (int)Math.Round(double.Parse(vm.Framerate));
+            var gcOption = int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var value1) ? value1 : 0;
 
             VideoBuilder builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt)
             {
                 EnablePreview = true,
-                DoGCAfterEachWrite = (int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var value1) ? value1 : 0) > 0,
+                DoGCAfterEachWrite = gcOption > 0,
                 DisposeFrameAfterEachWrite = true,
                 Duration = duration,
                 LogStat = false
@@ -591,7 +592,7 @@ public partial class RenderPage : ContentPage
                 LogState = false,
                 LogStatToLogger = true,
                 LogProcessStack = SettingsManager.IsBoolSettingTrue("render_DumpDiagData"),
-                GCOption = (int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var value) ? value : 0)
+                GCOption = gcOption
             };
 
             renderer.OnProgressChanged += (p, etr) =>
@@ -677,7 +678,7 @@ public partial class RenderPage : ContentPage
 
             if (SettingsManager.IsBoolSettingTrue("render_DumpDiagData"))
             {
-                Render.Benchmark.DiagReportExporter.ExportCsv(MauiProgram.DataPath, renderer);
+                Render.Benchmark.DiagReportExporter.ExportCsv(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"), renderer);
             }
 
 

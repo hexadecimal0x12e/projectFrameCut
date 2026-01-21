@@ -6,6 +6,7 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -125,7 +126,16 @@ namespace projectFrameCut.DraftStuff
                                     RelativeWidth = kv.Value.RelativeWidth,
                                     IsMixture = false,
                                     IsContinuousEffect = kv.Value is IContinuousEffect,
-                                    IsVariableArgumentEffect = kv.Value is IBindableArgumentEffect
+                                    IsVariableArgumentEffect = kv.Value is IBindableArgumentEffect,
+                                    BindedEffectGroupID = kv.Value.BindedEffectGroupID,
+                                }).ToArray(),
+                                EffectBundles = elem.EffectBundles?.Select(b => new EffectBundleJSONStructure
+                                {
+                                    Id = b.Id,
+                                    BundleTypeName = b.BundleTypeName,
+                                    Parameters = b.Parameters,
+                                    Enabled = b.Enabled,
+                                    Name = b.Name
                                 }).ToArray()
                             };
 
@@ -292,6 +302,18 @@ namespace projectFrameCut.DraftStuff
                     e => string.IsNullOrWhiteSpace(e.Name) ? $"Effect-{Guid.NewGuid()}" : e.Name,
                     e => PluginManager.CreateEffect(e, proj.RelativeWidth, proj.RelativeHeight)
                 );
+
+                if (dto.EffectBundles != null)
+                {
+                    element.EffectBundles = dto.EffectBundles.Select(b => new EffectBundleData
+                    {
+                        Id = b.Id,
+                        BundleTypeName = b.BundleTypeName,
+                        Parameters = b.Parameters,
+                        Enabled = b.Enabled,
+                        Name = b.Name
+                    }).ToList();
+                }
 
                 if (element.Effects is null)
                 {

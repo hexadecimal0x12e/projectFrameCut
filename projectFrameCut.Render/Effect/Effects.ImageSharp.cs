@@ -101,6 +101,9 @@ namespace projectFrameCut.Render.Effect.ImageSharp
 
             return new PlaceProcessStep(startX, startY, targetWidth, targetHeight);
         }
+
+        public string? BindedEffectGroupID { get; set; }
+
     }
 
     public class CropEffect_ImageSharp : IEffect
@@ -207,6 +210,9 @@ namespace projectFrameCut.Render.Effect.ImageSharp
 
             return new CropProcessStep(startX, startY, width, height);
         }
+
+        public string? BindedEffectGroupID { get; set; }
+
     }
 
     public class ResizeEffect_ImageSharp : IEffect
@@ -307,6 +313,9 @@ namespace projectFrameCut.Render.Effect.ImageSharp
                 _origWidth = source.Width
             };
         }
+
+        public string? BindedEffectGroupID { get; set; }
+
     }
 
     public class ResizeProcessStep : IPictureProcessStep

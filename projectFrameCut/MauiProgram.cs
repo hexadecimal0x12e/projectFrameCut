@@ -17,20 +17,15 @@ using Microsoft.Extensions.Logging;
 using projectFrameCut.Shared;
 using projectFrameCut.Asset;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using System.Collections.Concurrent;
-
-using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.ApplicationPluginBase;
 using projectFrameCut.Render.VideoMakeEngine;
-
-
-
+using LocalizedResources;
 
 
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
-using projectFrameCut.Platforms.Android;
 using Java.Lang;
-
+    
 #endif
 
 #if WINDOWS
@@ -475,7 +470,7 @@ namespace projectFrameCut
 
                     Localized = SimpleLocalizer.Init(locate);
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
-                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResuorces = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
                     PluginManager.CurrentLocale = Localized._LocaleId_;
                     PluginManager.ExtenedLocalizationGetter = new((k) =>
                     {
@@ -517,7 +512,7 @@ namespace projectFrameCut
                     SimpleLocalizer.IsFallbackMatched = true;
                     Localized = ISimpleLocalizerBase.GetMapping().First().Value;
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().First().Value;
-                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResuorces = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+                    LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
                     PluginManager.CurrentLocale = "en-US";
                     PluginManager.ExtenedLocalizationGetter = new((k) => ISimpleLocalizerBase.GetMapping().First().Value.DynamicLookup(k));
                     builder.ConfigureFonts(fonts =>
@@ -537,6 +532,7 @@ namespace projectFrameCut
 
                 try
                 {
+                    PluginManager.InitGlobalGetter();
                     var internalBase = new InternalApplicationPluginBase();
                     internalBase.MessagingQueue = MessagingServices.MessagingService;
                     List<IPluginBase> plugins = new() { internalBase };

@@ -8,10 +8,8 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
 {
     public interface IEffectBundle
     {
-        /// <summary>
-        /// The display name for the EffectGroup in neutral language.
-        /// </summary>
-        public string DefaultNeutralLanguageDisplayName { get; }
+        public string TypeName { get; }
+
         /// <summary>
         /// The id of the EffectGroup.
         /// </summary>
@@ -21,9 +19,9 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         public string Id { get; set; }
 
         /// <summary>
-        /// Get or set the display name for the EffectGroup.
+        /// Get or set the name for the EffectGroup.
         /// </summary>
-        public string DisplayName { get; set; }
+        public string Name { get; set; }
 
         /// <summary>
         /// The arguments of the EffectGroup.
@@ -50,7 +48,9 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         /// <remarks>
         /// To maintenance a uniform UI style, you'll need to use <see cref="PropertyPanelBuilder"/>.
         /// </remarks>
-        public PropertyPanelBuilder CreateUI(ref IEffectBundle group);
+        public PropertyPanelBuilder CreateUI();
+
+        public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args);
 
         /// <summary>
         /// Check and modify the effects created by Create() if needed.
@@ -58,5 +58,23 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         /// <param name="source"></param>
         /// <returns></returns>
         public IEffect[] Maintenance(IEffect[] source);
+
+        public EffectBundleItem GetEffectBundleItem(string? locate = null);
+    }
+
+    public class EffectBundleItem
+    {
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public ImageSource Thumbnail { get; set; }
+    }
+
+    public class EffectBundleData
+    {
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string BundleTypeName { get; set; }
+        public Dictionary<string, object> Parameters { get; set; } = new();
+        public bool Enabled { get; set; } = true;
+        public string Name { get; set; }
     }
 }

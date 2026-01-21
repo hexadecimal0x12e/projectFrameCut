@@ -22,6 +22,24 @@ namespace projectFrameCut.Render.Plugin
         public static Func<string, string?>? ExtenedLocalizationGetter = null;
         public static string CurrentLocale = "en-US";
 
+        public static void InitGlobalGetter()
+        {
+            if (GlobalPluginHelper.PluginGetter is null)
+            {
+                //LogDiagnostic($"Initing Global getter, {Environment.StackTrace}");
+                GlobalPluginHelper.PluginGetter = (id) =>
+                {
+                    if (loadedPlugins.TryGetValue(id, out IPluginBase? value))
+                    {
+                        return value;
+                    }
+                    return null;
+                };
+                return;
+            }
+            throw new InvalidOperationException("GlobalPluginHelper has already been initialized.");
+        }
+
         public static void Init(IEnumerable<IPluginBase> plugins)
         {
             if (Inited) throw new InvalidOperationException("PluginManager has already been initialized.");
@@ -37,17 +55,7 @@ namespace projectFrameCut.Render.Plugin
 #endif
             }
 
-            if(GlobalPluginGetter.PluginGetter is null)
-            {
-                GlobalPluginGetter.PluginGetter = (id) =>
-                {
-                    if (loadedPlugins.TryGetValue(id, out IPluginBase? value))
-                    {
-                        return value;
-                    }
-                    return null;
-                };
-            }
+            
         }
 
         public static void Unload(string id)
@@ -255,6 +263,7 @@ namespace projectFrameCut.Render.Plugin
                 var effect = plugin.EffectCreator(stru);
                 effect.Index = stru.Index;
                 effect.Enabled = stru.Enabled;
+                effect.BindedEffectGroupID = stru.BindedEffectGroupID;
                 try
                 {
                     effect.Initialize();

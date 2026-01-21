@@ -1,5 +1,6 @@
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using projectFrameCut.ApplicationPluginBase;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Services;
@@ -44,9 +45,9 @@ public partial class PluginSettingPage : ContentPage
         foreach (var item in PluginManager.LoadedPlugins)
         {
             var plugin = item.Value;
-            var name = plugin.ReadLocalizationItem("_PluginBase_Name_", plugin.Name) ?? plugin.Name;
-            var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", plugin.Description) ?? plugin.Description;
-            var author = plugin.ReadLocalizationItem("_PluginBase_Author_", plugin.Author) ?? plugin.Author;
+            var name = plugin.ReadLocalizationItem("_PluginBase_Name_", Localized._LocaleId_) ?? plugin.Name;
+            var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", Localized._LocaleId_) ?? plugin.Description;
+            var author = plugin.ReadLocalizationItem("_PluginBase_Author_", Localized._LocaleId_) ?? plugin.Author;
             rootPPB
                 .AddSeparator()
                 .AddText(new TitleAndDescriptionLineLabel(name, desc))
@@ -113,6 +114,8 @@ public partial class PluginSettingPage : ContentPage
 
 
                 PluginManager.Init(plugins);
+                await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.Advanced_Success, Localized._OK);
+
             }
             catch (Exception ex)
             {
@@ -121,7 +124,7 @@ public partial class PluginSettingPage : ContentPage
 
         });
 
-        var scv = rootPPB.AddSeparator().ListenToChanges((e) => SettingInvoker(e, this)).BuildWithScrollView();
+        var scv = rootPPB.AddSeparator().ListenToChanges((e) => SettingInvoker(e, this)).Build();
         DropGestureRecognizer drop = new();
         drop.AllowDrop = true;
         drop.Drop += async (s, e) =>
@@ -133,7 +136,7 @@ public partial class PluginSettingPage : ContentPage
             BuildPPB();
         };
         scv.GestureRecognizers.Add(drop);
-        Content = scv;
+        Content = new ScrollView { Content = scv };
 
 
     }
@@ -142,8 +145,8 @@ public partial class PluginSettingPage : ContentPage
     {
         var plugin = PluginManager.LoadedPlugins[id];
         var page = new ContentPage { };
-        var name = plugin.ReadLocalizationItem("_PluginBase_Name_", plugin.Name) ?? plugin.Name;
-        var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", plugin.Description) ?? plugin.Description;
+        var name = plugin.ReadLocalizationItem("_PluginBase_Name_", Localized._LocaleId_) ?? plugin.Name;
+        var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", Localized._LocaleId_) ?? plugin.Description;
         var ppb = new PropertyPanelBuilder()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Plugin_DetailConfig(name), SettingLocalizedResources.Plugin_DetailConfig_Subtitle(name)));
 
@@ -373,7 +376,6 @@ public partial class PluginSettingPage : ContentPage
 
             }
 
-            //BuildPPB(); //No any plan to implement dynamic update plugins
         }
         catch (Exception ex)
         {

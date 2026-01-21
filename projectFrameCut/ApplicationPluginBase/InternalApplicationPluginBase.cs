@@ -5,11 +5,14 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace projectFrameCut
+namespace projectFrameCut.ApplicationPluginBase
 {
     internal class InternalApplicationPluginBase : InternalPluginBase, IApplicationPluginBase
     {
-        public Dictionary<string, Func<IEffectBundle>> EffectBundleProvider => new Dictionary<string, Func<IEffectBundle>> { };
+        public Dictionary<string, Func<IEffectBundle>> EffectBundleProvider => new Dictionary<string, Func<IEffectBundle>> 
+        {
+            {"ZoomIn", () =>new Effect.ZoominEffectBundle() }
+        };
 
         public View? SettingPageProvider(ref IApplicationPluginBase instance)
         {
