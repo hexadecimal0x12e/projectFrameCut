@@ -1,5 +1,6 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
@@ -9,21 +10,11 @@ using System.Text.Json;
 
 namespace projectFrameCut.ApplicationPluginBase.Effect
 {
-    public class ZoominEffectBundle : IEffectBundle
+    public class JitterEffectBundle : IEffectBundle
     {
-        public string Id { get; set; }
-
-        public string Name { get; set; }
+        public string TypeName => "Jitter";
 
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
-
-        public Dictionary<string, object> Parameters { get; set; }
-
-        public List<string> ParametersNeeded => Render.Effect.ZoomInContinuousEffectFactory.s_ParametersNeeded;
-
-        public Dictionary<string, string> ParametersType => Render.Effect.ZoomInContinuousEffectFactory.s_ParametersType;
-
-        public string TypeName => "ZoomIn";
 
         public bool IsNormalEffect => false;
 
@@ -31,11 +22,18 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public bool IsBindableEffect => false;
 
+        public string Id { get; set; }
+        public string Name { get; set; }
         public int Index { get; set; }
+        public Dictionary<string, object> Parameters { get; set; }
+
+        public List<string> ParametersNeeded => JitterEffect.s_ParametersNeeded;
+
+        public Dictionary<string, string> ParametersType => JitterEffect.s_ParametersType;
 
         public IEffectFactory[] Create()
         {
-            return [new Render.Effect.ZoomInContinuousEffectFactory()];
+            return [new JitterContinuousEffectFactory()];
         }
 
         public PropertyPanelBuilder CreateUI()
@@ -77,12 +75,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return new EffectBundleDisplayItem
             {
-                Name = LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.DisplayName_Effect_ZoomIn,
-                Description = "111",
-                Thumbnail = null!
+                Name = LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.DisplayName_Effect_Jitter,
+                Description = "jitter",
+
             };
         }
-
 
     }
 }

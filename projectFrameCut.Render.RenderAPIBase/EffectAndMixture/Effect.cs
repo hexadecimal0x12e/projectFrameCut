@@ -22,6 +22,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Define the type name of the effect. 
         /// </summary>
+        /// <remarks>
+        /// it SHOULD equals to <see cref="IEffectBundle.TypeName"/>, <see cref="IEffectFactory.TypeName"/> and so on.
+        /// </remarks>
         public string TypeName { get; }
         /// <summary>
         /// Get how this effect is implemented.
@@ -103,9 +106,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         {
         }
 
-        public virtual bool IsNormalEffect => true;
-        public virtual bool IsContinuousEffect => false;
-        public virtual bool IsBindableArgsEffect => false;
+        public bool IsNormalEffect => true;
+        public bool IsContinuousEffect => false;
+        public bool IsBindableArgsEffect => false;
 
         /// <summary>
         /// Get the binded EffectGroup's ID

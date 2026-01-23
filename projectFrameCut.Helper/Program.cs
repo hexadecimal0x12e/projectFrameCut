@@ -15,16 +15,12 @@ namespace projectFrameCut.Helper
 {
     public static class HelperProgram
     {
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
-        /// 
         static SplashForm splash;
         static LogForm log;
         [STAThread]
         public static void SplashMain()
         {
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
@@ -38,7 +34,7 @@ namespace projectFrameCut.Helper
         [STAThread]
         public static void CrashMain()
         {
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
 
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
@@ -52,7 +48,7 @@ namespace projectFrameCut.Helper
         [STAThread]
         public static void LogMain()
         {
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
 
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
 
@@ -71,8 +67,8 @@ namespace projectFrameCut.Helper
             if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041, 0))
             {
                 var opt = MessageBox(IntPtr.Zero,
-                    "Sorry, projectFrameCut requires Windows 10 2004 / LTSC 2021 (build 19041) or higher to run. Consider upgrade your Windows system.",
-                    "projectFrameCut",
+                    SimpleLocalizerBaseGeneratedHelper.Localized.UnsupportedOSPrompt(),
+                    AppTitle,
                     0x10 | 0x4);
                 if (opt == 1)
                 {
@@ -91,7 +87,7 @@ namespace projectFrameCut.Helper
                     Thread.Sleep(500);
                 }
             }
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
 
             if (args.Length > 1)
             {
@@ -99,10 +95,10 @@ namespace projectFrameCut.Helper
                 switch (mode)
                 {
                     case "crashForm":
-                        SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+                        SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
                         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
                         Application.EnableVisualStyles();
-                        Application.SetCompatibleTextRenderingDefault(false); 
+                        Application.SetCompatibleTextRenderingDefault(false);
                         Application.Run(new CrashForm());
                         return;
                     case "uriCallback":
@@ -110,7 +106,7 @@ namespace projectFrameCut.Helper
                         return;
                 }
             }
-            if(File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.exe")))
+            if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.exe")))
             {
                 var proc = new ProcessStartInfo
                 {
@@ -121,10 +117,11 @@ namespace projectFrameCut.Helper
             }
             else
             {
-                MessageBox(IntPtr.Zero,
-                    "projectFrameCut installation is corrupted or incomplete. Please reinstall the application.",
-                    "projectFrameCut",
-                    0x10);
+                _ = MessageBox(IntPtr.Zero,
+                     SimpleLocalizerBaseGeneratedHelper.Localized.CorruptedInstallPrompt(),
+                     AppTitle,
+                     0x10);
+                return;
             }
 
 

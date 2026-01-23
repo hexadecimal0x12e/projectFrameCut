@@ -1,6 +1,5 @@
 ﻿
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Render.VideoMakeEngine;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -12,6 +11,8 @@ using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
 
 using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Services;
 
 namespace projectFrameCut.Setting.SettingPages
 {
@@ -63,7 +64,7 @@ namespace projectFrameCut.Setting.SettingPages
                 ppb.AddSeparator();
 
                 var effect = item.Value();
-                ppb.AddPicker($"{effect.FromPlugin}.{effect.TypeName}", ClipInfoBuilder.GetLocalizedEffectNames()[effect.TypeName], LocalizedImplementTypes.Where(c => c.Key == EffectImplementType.NotSpecified || EffectHelper.EffectsFactoriesEnum[effect.TypeName].SupportsImplementTypes.Contains(c.Key)).Select(c => c.Value).ToArray(), LocalizedImplementTypes[effectImplementTypes.GetOrAdd($"{effect.FromPlugin}.{effect.TypeName}", EffectImplementType.NotSpecified)]);
+                ppb.AddPicker($"{effect.FromPlugin}.{effect.TypeName}", EffectServices.GetLocalizedEffectNames()[effect.TypeName], LocalizedImplementTypes.Where(c => c.Key == EffectImplementType.NotSpecified || EffectHelper.EffectsFactoriesEnum[effect.TypeName].SupportsImplementTypes.Contains(c.Key)).Select(c => c.Value).ToArray(), LocalizedImplementTypes[effectImplementTypes.GetOrAdd($"{effect.FromPlugin}.{effect.TypeName}", EffectImplementType.NotSpecified)]);
             }
 
             ppb.ListenToChanges((args) =>

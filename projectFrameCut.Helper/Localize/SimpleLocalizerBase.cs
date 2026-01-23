@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 
-public static class SimpleLocalizer
+public static class SimpleLocalizer_Helper
 {
     /// <summary>
     /// Initialize the Localizer

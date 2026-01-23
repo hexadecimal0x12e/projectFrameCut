@@ -65,9 +65,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public bool IsValueValid(object value);
 
-        public new bool IsNormalEffect => false;
-        public new bool IsContinuousEffect => false;
-        public new bool IsBindableArgsEffect => true;
+        bool IEffect.IsNormalEffect => false;
+        bool IEffect.IsContinuousEffect => false;
+        bool IEffect.IsBindableArgsEffect => true;
 
 
         IPicture IEffect.Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
@@ -84,13 +84,13 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     public interface IMultipleInputBindableArgumentEffectProcesser : IBindableArgumentEffect
     {
         public sealed new BindableArgumentEffectType EffectRole => BindableArgumentEffectType.MultipleInputValueProcessor;
-        public sealed new string? BindedArgumentProviderID 
-        { 
-            get => throw new NotSupportedException("The BindedArgumentProviderID property is not supported in IMultipleInputBindableArgumentEffectProcesser. Use BindedArgumentProviderIDs instead."); 
-            set 
-            { 
-                throw new NotSupportedException("The BindedArgumentProviderID property is not supported in IMultipleInputBindableArgumentEffectProcesser. Use BindedArgumentProviderIDs instead."); 
-            } 
+        public sealed new string? BindedArgumentProviderID
+        {
+            get => throw new NotSupportedException("The BindedArgumentProviderID property is not supported in IMultipleInputBindableArgumentEffectProcesser. Use BindedArgumentProviderIDs instead.");
+            set
+            {
+                throw new NotSupportedException("The BindedArgumentProviderID property is not supported in IMultipleInputBindableArgumentEffectProcesser. Use BindedArgumentProviderIDs instead.");
+            }
         }
 
         public string[] BindedArgumentProviderIDs { get; set; }

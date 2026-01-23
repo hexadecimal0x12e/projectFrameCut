@@ -73,6 +73,7 @@ namespace projectFrameCut.Shared
                 if (step is not null)
                 {
                     var stack = item.GetProcessStack();
+                    if(IPicture.DiagImagePath is not null) Logger.LogDiagnostic(PictureExtensions.FormatProcessStackForLog(procStack.Concat([stack])));
                     processingContexts.Add(ctx =>
                     {
                         var sw = Stopwatch.StartNew();

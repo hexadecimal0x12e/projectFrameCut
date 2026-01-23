@@ -425,6 +425,42 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "AssetPage_PostProcess_FinishPrompt",
+        "Value": "\u7D20\u6750\u300C{name}\u300D\u5DF2\u51C6\u5907\u597D\u3002\u4F60\u73B0\u5728\u53EF\u4EE5\u5B89\u5168\u7684\u9000\u51FA\u5E94\u7528\u7A0B\u5E8F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_PostProcess_StartPrompt",
+        "Value": "\u6B63\u5728\u540E\u53F0\u51C6\u5907\u7D20\u6750\u300C{name}\u300D\uFF0C\u8FD9\u9700\u8981\u51E0\u5206\u949F\uFF0C\u8FC7\u7A0B\u4E2D\u4E0D\u5EFA\u8BAE\u9000\u51FA\u5E94\u7528\u7A0B\u5E8F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "AssetPage_Search",
         "Value": "\u641C\u7D22\u4F60\u7684\u7D20\u6750",
         "Mode": "ConstString",
@@ -1413,6 +1449,54 @@
       {
         "Id": "DraftPage_WaitForUser",
         "Value": "\u7B49\u5F85\u64CD\u4F5C\u5B8C\u6210...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_UserDefinedProperties",
+        "Value": "\u81EA\u5B9A\u4E49\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add",
+        "Value": "\u6DFB\u52A0\u4E00\u4E2A\u81EA\u5B9A\u4E49\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey",
+        "Value": "\u8F93\u5165\u5C5E\u6027\u7684\u952E\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove",
+        "Value": "\u628A\u8FD9\u91CC\u7559\u7A7A\u5E76\u4E14\u70B9\u51FB\u4FDD\u5B58\u4E4B\u540E\uFF0C\u8FD9\u4E2A\u8BBE\u7F6E\u5C06\u4F1A\u88AB\u79FB\u9664",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Subtitle",
+        "Value": "\u4E00\u4E9B\u63D2\u4EF6\u6216\u8005\u6548\u679C\u53EF\u80FD\u4F7F\u7528\u8FD9\u91CC\u7684\u503C\u6765\u914D\u7F6E\u4ED6\u4EEC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftSettingPage_General_RelativeResultion",
+        "Value": "\u76EE\u6807\u5206\u8FA8\u7387",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2528,90 +2612,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftSettingPage_General_RelativeResultion",
-        "Value": "\u76EE\u6807\u5206\u8FA8\u7387",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftSettingPage_Advanced_UserDefinedProperties",
-        "Value": "\u81EA\u5B9A\u4E49\u914D\u7F6E",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Subtitle",
-        "Value": "\u4E00\u4E9B\u63D2\u4EF6\u6216\u8005\u6548\u679C\u53EF\u80FD\u4F7F\u7528\u8FD9\u91CC\u7684\u503C\u6765\u914D\u7F6E\u4ED6\u4EEC",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add",
-        "Value": "\u6DFB\u52A0\u4E00\u4E2A\u81EA\u5B9A\u4E49\u914D\u7F6E",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove",
-        "Value": "\u628A\u8FD9\u91CC\u7559\u7A7A\u5E76\u4E14\u70B9\u51FB\u4FDD\u5B58\u4E4B\u540E\uFF0C\u8FD9\u4E2A\u8BBE\u7F6E\u5C06\u4F1A\u88AB\u79FB\u9664",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey",
-        "Value": "\u8F93\u5165\u5C5E\u6027\u7684\u952E\uFF1A",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "AssetPage_PostProcess_StartPrompt",
-        "Value": "\u6B63\u5728\u540E\u53F0\u51C6\u5907\u7D20\u6750\u300C{name}\u300D\uFF0C\u8FD9\u9700\u8981\u51E0\u5206\u949F\uFF0C\u8FC7\u7A0B\u4E2D\u4E0D\u5EFA\u8BAE\u9000\u51FA\u5E94\u7528\u7A0B\u5E8F\u3002",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "name",
-            "Value": ""
-          }
-        ],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "AssetPage_PostProcess_FinishPrompt",
-        "Value": "\u7D20\u6750\u300C{name}\u300D\u5DF2\u51C6\u5907\u597D\u3002\u4F60\u73B0\u5728\u53EF\u4EE5\u5B89\u5168\u7684\u9000\u51FA\u5E94\u7528\u7A0B\u5E8F",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "name",
-            "Value": ""
-          }
-        ],
         "HasValidationErrors": false
       }
     ],
@@ -4770,7 +4770,7 @@
       },
       {
         "Id": "DraftPage_PrevResultion_Custom_InputWidth",
-        "Value": "Input preview length",
+        "Value": "Input/Output Length",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4779,7 +4779,7 @@
       },
       {
         "Id": "DraftPage_PrevResultion_Custom_InputHeight",
-        "Value": "Input preview width",
+        "Value": "Input/Output Width",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5306,34 +5306,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Edit_PlayheadMoveLeft",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_PlayheadMoveLeft()",
+        "Value": "Step Back",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Moves the playhead one step to the left (earlier in the timeline).",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_PlayheadMoveRight",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_PlayheadMoveRight()",
+        "Value": "Fast Forward",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Goto",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Goto()",
+        "Value": "Go to",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Title",
-        "Value": "Unset localization item:DraftSettingPage_Title(string name)",
+        "Value": "Settings for \u0022{name}\u0022",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -5347,84 +5347,84 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_General_TargetFramerate",
-        "Value": "Unset localization item:DraftSettingPage_General_TargetFramerate()",
+        "Value": "Target Frame Rate",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Project_Option",
-        "Value": "Unset localization item:DraftPage_MenuBar_Project_Option()",
+        "Value": "Project Settings",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_General_RelativeResultion",
-        "Value": "Unset localization item:DraftSettingPage_General_RelativeResultion()",
+        "Value": "Target Resolution",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties()",
+        "Value": "Custom Configuration",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Subtitle",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Subtitle()",
+        "Value": "Some plugins or effects may use the values here to configure themselves.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Add()",
+        "Value": "Add a custom configuration",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove()",
+        "Value": "Leave this blank and click Save to remove this setting.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey()",
+        "Value": "Enter the property key:",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_PostProcess_StartPrompt",
-        "Value": "Unset localization item:AssetPage_PostProcess_StartPrompt(string name)",
+        "Value": "Preparing asset \u0027{name}\u0027 in the background. This may take a few minutes. It is not recommended to exit the application during this process.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -5438,12 +5438,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_PostProcess_FinishPrompt",
-        "Value": "Unset localization item:AssetPage_PostProcess_FinishPrompt(string name)",
+        "Value": "The asset \u0027{name}\u0027 is ready. You can now safely exit the application.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -5457,7 +5457,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -7615,7 +7615,7 @@
       },
       {
         "Id": "DraftPage_PrevResultion_Custom_InputWidth",
-        "Value": "\u8F38\u5165\u9810\u89BD\u7684\u9577\u5EA6",
+        "Value": "\u8F38\u5165\u8F38\u51FA\u7684\u9577\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7624,7 +7624,7 @@
       },
       {
         "Id": "DraftPage_PrevResultion_Custom_InputHeight",
-        "Value": "\u8F38\u5165\u9810\u89BD\u7684\u5BEC\u5EA6",
+        "Value": "\u8F38\u5165\u8F38\u51FA\u7684\u5BEC\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8151,34 +8151,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Edit_PlayheadMoveLeft",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_PlayheadMoveLeft()",
+        "Value": "\u5FEB\u9000",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_PlayheadMoveRight",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_PlayheadMoveRight()",
+        "Value": "\u5FEB\u9032",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Goto",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Goto()",
+        "Value": "\u8F49\u5230",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Title",
-        "Value": "Unset localization item:DraftSettingPage_Title(string name)",
+        "Value": "\u300C{name}\u300D\u7684\u8A2D\u5B9A",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -8192,84 +8192,84 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_General_TargetFramerate",
-        "Value": "Unset localization item:DraftSettingPage_General_TargetFramerate()",
+        "Value": "\u76EE\u6A19\u5E40\u7387",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Project_Option",
-        "Value": "Unset localization item:DraftPage_MenuBar_Project_Option()",
+        "Value": "\u5C08\u6848\u8A2D\u5B9A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_General_RelativeResultion",
-        "Value": "Unset localization item:DraftSettingPage_General_RelativeResultion()",
+        "Value": "\u76EE\u6A19\u89E3\u6790\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties()",
+        "Value": "\u81EA\u8A02\u914D\u7F6E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Subtitle",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Subtitle()",
+        "Value": "\u67D0\u4E9B\u5916\u639B\u6216\u6548\u679C\u53EF\u80FD\u6703\u4F7F\u7528\u9019\u88E1\u7684\u503C\u4F86\u8A2D\u5B9A\u5B83\u5011\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Add()",
+        "Value": "\u65B0\u589E\u4E00\u500B\u81EA\u8A02\u8A2D\u5B9A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove()",
+        "Value": "\u5C07\u6B64\u8655\u7559\u7A7A\u4E26\u9EDE\u64CA\u5132\u5B58\u5F8C\uFF0C\u6B64\u8A2D\u5B9A\u5C07\u6703\u88AB\u79FB\u9664\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey()",
+        "Value": "\u8F38\u5165\u5C6C\u6027\u7684\u9375\uFF1A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_PostProcess_StartPrompt",
-        "Value": "Unset localization item:AssetPage_PostProcess_StartPrompt(string name)",
+        "Value": "\u6B63\u5728\u5F8C\u53F0\u6E96\u5099\u7D20\u6750\u300C{name}\u300D\uFF0C\u9019\u9700\u8981\u5E7E\u5206\u9418\uFF0C\u904E\u7A0B\u4E2D\u4E0D\u5EFA\u8B70\u9000\u51FA\u61C9\u7528\u7A0B\u5F0F\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -8283,12 +8283,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_PostProcess_FinishPrompt",
-        "Value": "Unset localization item:AssetPage_PostProcess_FinishPrompt(string name)",
+        "Value": "\u7D20\u6750\u300C{name}\u300D\u5DF2\u6E96\u5099\u5B8C\u6210\u3002\u4F60\u73FE\u5728\u53EF\u4EE5\u5B89\u5168\u5730\u95DC\u9589\u61C9\u7528\u7A0B\u5F0F",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -8302,7 +8302,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -10466,7 +10466,7 @@
       },
       {
         "Id": "DraftPage_PrevResultion_Custom_InputWidth",
-        "Value": "\u30D7\u30EC\u30D3\u30E5\u30FC\u306E\u9577\u3055\u3092\u5165\u529B",
+        "Value": "\u5165\u51FA\u529B\u306E\u9577\u3055",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10475,7 +10475,7 @@
       },
       {
         "Id": "DraftPage_PrevResultion_Custom_InputHeight",
-        "Value": "\u30D7\u30EC\u30D3\u30E5\u30FC\u306E\u5E45\u3092\u5165\u529B",
+        "Value": "\u5165\u51FA\u529B\u306E\u5E45",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11002,34 +11002,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Edit_PlayheadMoveLeft",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_PlayheadMoveLeft()",
+        "Value": "\u65E9\u623B\u3057",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_PlayheadMoveRight",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_PlayheadMoveRight()",
+        "Value": "\u65E9\u9001\u308A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Goto",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Goto()",
+        "Value": "\u30B8\u30E3\u30F3\u30D7",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Title",
-        "Value": "Unset localization item:DraftSettingPage_Title(string name)",
+        "Value": "\u300C{name}\u300D\u306E\u8A2D\u5B9A",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -11043,84 +11043,84 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_General_TargetFramerate",
-        "Value": "Unset localization item:DraftSettingPage_General_TargetFramerate()",
+        "Value": "\u76EE\u6A19\u30D5\u30EC\u30FC\u30E0\u30EC\u30FC\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Project_Option",
-        "Value": "Unset localization item:DraftPage_MenuBar_Project_Option()",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u8A2D\u5B9A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_General_RelativeResultion",
-        "Value": "Unset localization item:DraftSettingPage_General_RelativeResultion()",
+        "Value": "\u76EE\u6A19\u89E3\u50CF\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties()",
+        "Value": "\u30AB\u30B9\u30BF\u30E0\u8A2D\u5B9A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Subtitle",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Subtitle()",
+        "Value": "\u4E00\u90E8\u306E\u30D7\u30E9\u30B0\u30A4\u30F3\u3084\u30A8\u30D5\u30A7\u30AF\u30C8\u306F\u3001\u3053\u3053\u3067\u8A2D\u5B9A\u3055\u308C\u305F\u5024\u3092\u4F7F\u7528\u3057\u3066\u81EA\u8EAB\u3092\u69CB\u6210\u3059\u308B\u5834\u5408\u304C\u3042\u308A\u307E\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Add()",
+        "Value": "\u30AB\u30B9\u30BF\u30E0\u8A2D\u5B9A\u3092\u8FFD\u52A0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove()",
+        "Value": "\u3053\u3053\u3092\u7A7A\u767D\u306B\u3057\u3066\u4FDD\u5B58\u3092\u30AF\u30EA\u30C3\u30AF\u3059\u308B\u3068\u3001\u3053\u306E\u8A2D\u5B9A\u304C\u524A\u9664\u3055\u308C\u307E\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey()",
+        "Value": "\u30D7\u30ED\u30D1\u30C6\u30A3\u306E\u30AD\u30FC\u3092\u5165\u529B\uFF1A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_PostProcess_StartPrompt",
-        "Value": "Unset localization item:AssetPage_PostProcess_StartPrompt(string name)",
+        "Value": "\u7D20\u6750\u300C{name}\u300D\u306E\u30D0\u30C3\u30AF\u30B0\u30E9\u30A6\u30F3\u30C9\u51E6\u7406\u3092\u6E96\u5099\u4E2D\u3067\u3059\u3002\u6570\u5206\u304B\u304B\u308A\u307E\u3059\u3002\u51E6\u7406\u4E2D\u306F\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u3092\u7D42\u4E86\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -11134,12 +11134,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u540E\u53F0\u5904\u7406\u7D20\u6750\u65F6\u7684\u7B49\u5F85\u63D0\u793A\u3002\u7FFB\u8BD1\u65F6\u4F7F\u7528\u4E86\u300C\u30D0\u30C3\u30AF\u30B0\u30E9\u30A6\u30F3\u30C9\u51E6\u7406\u300D\uFF08\u540E\u53F0\u5904\u7406\uFF09\u548C\u300C\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u3092\u7D42\u4E86\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u300D\uFF08\u8BF7\u4E0D\u8981\u9000\u51FA\u5E94\u7528\u7A0B\u5E8F\uFF09\u7B49\u6807\u51C6\u8868\u8FF0\uFF0C\u4F7F\u63D0\u793A\u6E05\u6670\u4E14\u793C\u8C8C\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_PostProcess_FinishPrompt",
-        "Value": "Unset localization item:AssetPage_PostProcess_FinishPrompt(string name)",
+        "Value": "\u7D20\u6750\u300C{name}\u300D\u306E\u6E96\u5099\u304C\u5B8C\u4E86\u3057\u307E\u3057\u305F\u3002\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u3092\u5B89\u5168\u306B\u7D42\u4E86\u3067\u304D\u307E\u3059\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -11153,7 +11153,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -13317,7 +13317,7 @@
       },
       {
         "Id": "DraftPage_PrevResultion_Custom_InputWidth",
-        "Value": "\uBBF8\uB9AC\uBCF4\uAE30 \uAE38\uC774 \uC785\uB825",
+        "Value": "\uC785\uCD9C\uB825 \uAE38\uC774",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13326,7 +13326,7 @@
       },
       {
         "Id": "DraftPage_PrevResultion_Custom_InputHeight",
-        "Value": "\uBBF8\uB9AC\uBCF4\uAE30 \uB108\uBE44 \uC785\uB825",
+        "Value": "\uC785\uB825 \uBC0F \uCD9C\uB825\uC758 \uB108\uBE44",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13853,34 +13853,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Edit_PlayheadMoveLeft",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_PlayheadMoveLeft()",
+        "Value": "\uBE68\uB9AC \uB4A4\uB85C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_PlayheadMoveRight",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_PlayheadMoveRight()",
+        "Value": "\uBE68\uB9AC\uAC10\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Goto",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Goto()",
+        "Value": "\uC774\uB3D9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Title",
-        "Value": "Unset localization item:DraftSettingPage_Title(string name)",
+        "Value": "\u300C{name}\u300D\uC758 \uC124\uC815",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -13894,84 +13894,84 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_General_TargetFramerate",
-        "Value": "Unset localization item:DraftSettingPage_General_TargetFramerate()",
+        "Value": "\uBAA9\uD45C \uD504\uB808\uC784\uB960",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Project_Option",
-        "Value": "Unset localization item:DraftPage_MenuBar_Project_Option()",
+        "Value": "\uD504\uB85C\uC81D\uD2B8 \uC124\uC815",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_General_RelativeResultion",
-        "Value": "Unset localization item:DraftSettingPage_General_RelativeResultion()",
+        "Value": "\uBAA9\uD45C \uD574\uC0C1\uB3C4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties()",
+        "Value": "\uC0AC\uC6A9\uC790 \uC815\uC758 \uAD6C\uC131",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Subtitle",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Subtitle()",
+        "Value": "\uC77C\uBD80 \uD50C\uB7EC\uADF8\uC778 \uB610\uB294 \uD6A8\uACFC\uB294 \uC5EC\uAE30\uC758 \uAC12\uC744 \uC0AC\uC6A9\uD558\uC5EC \uC790\uC2E0\uC744 \uAD6C\uC131\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Add()",
+        "Value": "\uC0AC\uC6A9\uC790 \uC815\uC758 \uAD6C\uC131 \uCD94\uAC00",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove()",
+        "Value": "\uC5EC\uAE30\uB97C \uBE44\uC6B0\uACE0 \uC800\uC7A5\uC744 \uD074\uB9AD\uD558\uBA74 \uC774 \uC124\uC815\uC774 \uC81C\uAC70\uB429\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey()",
+        "Value": "\uC18D\uC131 \uD0A4 \uC785\uB825:",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_PostProcess_StartPrompt",
-        "Value": "Unset localization item:AssetPage_PostProcess_StartPrompt(string name)",
+        "Value": "\uBC31\uADF8\uB77C\uC6B4\uB4DC\uC5D0\uC11C \uC790\uC0B0 \u0027{name}\u0027\uC744(\uB97C) \uC900\uBE44 \uC911\uC785\uB2C8\uB2E4. \uBA87 \uBD84 \uC815\uB3C4 \uC18C\uC694\uB420 \uC218 \uC788\uC73C\uBA70, \uC774 \uACFC\uC815\uC5D0\uC11C\uB294 \uC560\uD50C\uB9AC\uCF00\uC774\uC158\uC744 \uC885\uB8CC\uD558\uC9C0 \uC54A\uB294 \uAC83\uC774 \uC88B\uC2B5\uB2C8\uB2E4.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -13985,12 +13985,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_PostProcess_FinishPrompt",
-        "Value": "Unset localization item:AssetPage_PostProcess_FinishPrompt(string name)",
+        "Value": "\uC18C\uC7AC \u0027{name}\u0027\uC774(\uAC00) \uC900\uBE44\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC774\uC81C \uC560\uD50C\uB9AC\uCF00\uC774\uC158\uC744 \uC548\uC804\uD558\uAC8C \uC885\uB8CC\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -14004,7 +14004,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -16163,7 +16163,7 @@
       },
       {
         "Id": "DraftPage_PrevResultion_Custom_InputWidth",
-        "Value": "Longueur de l\u0027entr\u00E9e de l\u0027aper\u00E7u",
+        "Value": "Longueur d\u0027entr\u00E9e/sortie",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16172,7 +16172,7 @@
       },
       {
         "Id": "DraftPage_PrevResultion_Custom_InputHeight",
-        "Value": "Largeur de l\u0027aper\u00E7u de saisie",
+        "Value": "Largeur de l\u0027entr\u00E9e/sortie",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16699,34 +16699,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Edit_PlayheadMoveLeft",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_PlayheadMoveLeft()",
+        "Value": "Reculer",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_PlayheadMoveRight",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_PlayheadMoveRight()",
+        "Value": "Avancer",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Goto",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Goto()",
+        "Value": "Aller \u00E0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Title",
-        "Value": "Unset localization item:DraftSettingPage_Title(string name)",
+        "Value": "Param\u00E8tres de \u00AB\u00A0{name}\u00A0\u00BB",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -16740,84 +16740,84 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_General_TargetFramerate",
-        "Value": "Unset localization item:DraftSettingPage_General_TargetFramerate()",
+        "Value": "Fr\u00E9quence d\u0027images cible",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Project_Option",
-        "Value": "Unset localization item:DraftPage_MenuBar_Project_Option()",
+        "Value": "Param\u00E8tres du projet",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_General_RelativeResultion",
-        "Value": "Unset localization item:DraftSettingPage_General_RelativeResultion()",
+        "Value": "R\u00E9solution cible",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties()",
+        "Value": "Configuration personnalis\u00E9e",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Subtitle",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Subtitle()",
+        "Value": "Certains plugins ou effets peuvent utiliser les valeurs d\u00E9finies ici pour leur configuration.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Add()",
+        "Value": "Ajouter une configuration personnalis\u00E9e",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove()",
+        "Value": "Laissez ce champ vide et cliquez sur Enregistrer pour supprimer ce param\u00E8tre.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey()",
+        "Value": "Cl\u00E9 de la propri\u00E9t\u00E9 :",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_PostProcess_StartPrompt",
-        "Value": "Unset localization item:AssetPage_PostProcess_StartPrompt(string name)",
+        "Value": "Pr\u00E9paration en arri\u00E8re-plan du mat\u00E9riel \u00AB {name} \u00BB. Cela peut prendre quelques minutes. Il est d\u00E9conseill\u00E9 de quitter l\u0027application pendant ce processus.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -16831,12 +16831,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_PostProcess_FinishPrompt",
-        "Value": "Unset localization item:AssetPage_PostProcess_FinishPrompt(string name)",
+        "Value": "Le mat\u00E9riau \u00AB {name} \u00BB est pr\u00EAt. Vous pouvez maintenant quitter l\u0027application en toute s\u00E9curit\u00E9.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -16850,7 +16850,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -19014,20 +19014,20 @@
       },
       {
         "Id": "DraftPage_PrevResultion_Custom_InputWidth",
-        "Value": "\u8F93\u5165\u9884\u89C8\u4E4B\u957F\u5EA6",
+        "Value": "\u8F93\u5165\u8F93\u51FA\u4E4B\u957F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u6587\u8A00\u6587\u8868\u8FBE\uFF0C\u610F\u4E3A\u201C\u8F93\u5165\u9884\u89C8\u7684\u957F\u5EA6\u201D",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_PrevResultion_Custom_InputHeight",
-        "Value": "\u8F93\u5165\u9884\u89C8\u4E4B\u5E7F",
+        "Value": "\u8F93\u5165\u8F93\u51FA\u4E4B\u5BBD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u0027\u5E7F\u0027\u8868\u793A\u5BBD\u5EA6\uFF0C\u4FDD\u6301\u539F\u672F\u8BED\u7ED3\u6784\u3002",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -19550,34 +19550,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Edit_PlayheadMoveLeft",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_PlayheadMoveLeft()",
+        "Value": "\u75BE\u9000",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_PlayheadMoveRight",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_PlayheadMoveRight()",
+        "Value": "\u901F\u8FDB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Goto",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Goto()",
+        "Value": "\u8F6C\u81F3",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Title",
-        "Value": "Unset localization item:DraftSettingPage_Title(string name)",
+        "Value": "{name}\u4E4B\u8BBE",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -19591,84 +19591,84 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_General_TargetFramerate",
-        "Value": "Unset localization item:DraftSettingPage_General_TargetFramerate()",
+        "Value": "\u76EE\u6807\u5E27\u7387",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Project_Option",
-        "Value": "Unset localization item:DraftPage_MenuBar_Project_Option()",
+        "Value": "\u5DE5\u52A1\u4E4B\u7F6E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_General_RelativeResultion",
-        "Value": "Unset localization item:DraftSettingPage_General_RelativeResultion()",
+        "Value": "\u9E44\u7684\u6790\u50CF\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties()",
+        "Value": "\u81EA\u5B9A\u4E49\u914D\u7F6E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Subtitle",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Subtitle()",
+        "Value": "\u6216\u6709\u63D2\u4EF6\u3001\u6548\u9A8C\u8005\uFF0C\u6216\u501F\u6B64\u503C\u4EE5\u81EA\u914D\u7F6E\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Add()",
+        "Value": "\u6DFB\u4E00\u81EA\u5B9A\u914D\u7F6E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove()",
+        "Value": "\u6B64\u5904\u7559\u7A7A\uFF0C\u4FDD\u5B58\u540E\uFF0C\u8BBE\u7F6E\u5373\u9664\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u610F\u4E3A\u7559\u7A7A\u8BE5\u5B57\u6BB5\u5E76\u4FDD\u5B58\u540E\uFF0C\u6B64\u8BBE\u7F6E\u5C06\u88AB\u79FB\u9664\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey",
-        "Value": "Unset localization item:DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey()",
+        "Value": "\u8F93\u5165\u5C5E\u6027\u7684\u952E\uFF1A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_PostProcess_StartPrompt",
-        "Value": "Unset localization item:AssetPage_PostProcess_StartPrompt(string name)",
+        "Value": "\u6B63\u5728\u540E\u53F0\u51C6\u5907\u7D20\u6750\u201C{name}\u201D\uFF0C\u6B64\u8FC7\u7A0B\u9700\u8981\u6570\u5206\u949F\uFF0C\u671F\u95F4\u4E0D\u5EFA\u8BAE\u9000\u51FA\u5E94\u7528\u7A0B\u5E8F\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -19682,12 +19682,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_PostProcess_FinishPrompt",
-        "Value": "Unset localization item:AssetPage_PostProcess_FinishPrompt(string name)",
+        "Value": "\u7D20\u6750\u300E{name}\u300F\u65E2\u5907\u3002\u541B\u4ECA\u53EF\u5B89\u9000\u77E3\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -19701,7 +19701,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]

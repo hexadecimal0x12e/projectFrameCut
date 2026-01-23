@@ -31,7 +31,7 @@ public partial class GeneralSettingPage : ContentPage
             { {SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable" } }
             .Concat(
                 PluginManager.LoadedPlugins
-                .Where(c => c.Value.Properties.TryGetValue("_IsFFmpegLibraryProvider", out var value) && bool.TryParse(value, out var result) && result)
+                .Where(c => c.Value.Properties.TryGetValue("IsFFmpegLibraryProvider", out var value) && bool.TryParse(value, out var result) && result)
                 .Select(p => new KeyValuePair<string, string>(p.Value.Name, p.Key))
             )
             .ToDictionary(c => c.Key, c => c.Value);

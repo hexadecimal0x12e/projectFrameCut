@@ -1300,6 +1300,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Plugin_ReloadAllButton",
+        "Value": "\u91CD\u65B0\u52A0\u8F7D\u6240\u6709\u7684\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Plugin_Remove",
         "Value": "\u5378\u8F7D\u6269\u5C55",
         "Mode": "ConstString",
@@ -1622,14 +1630,6 @@
       {
         "Id": "RenderEffectImplement_Unknown",
         "Value": "\u672A\u77E5",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Plugin_ReloadAllButton",
-        "Value": "\u91CD\u65B0\u52A0\u8F7D\u6240\u6709\u7684\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3310,7 +3310,7 @@
       },
       {
         "Id": "RenderEffectImplement_Title",
-        "Value": "Configuring effect implementer...",
+        "Value": "Configure Effect Implementer",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3328,7 +3328,7 @@
       },
       {
         "Id": "RenderEffectImplement_NotSpecified",
-        "Value": "Default",
+        "Value": "Auto",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3418,11 +3418,11 @@
       },
       {
         "Id": "Plugin_ReloadAllButton",
-        "Value": "Unset localization item:Plugin_ReloadAllButton()",
+        "Value": "Reload All Plugins",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -5100,7 +5100,7 @@
       },
       {
         "Id": "RenderEffectImplement_Title",
-        "Value": "\u914D\u7F6E\u6548\u679C\u5BE6\u4F5C\u5668...",
+        "Value": "\u914D\u7F6E\u6548\u679C\u5BE6\u4F5C\u5668",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5118,7 +5118,7 @@
       },
       {
         "Id": "RenderEffectImplement_NotSpecified",
-        "Value": "\u9810\u8A2D",
+        "Value": "\u81EA\u52D5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5208,11 +5208,11 @@
       },
       {
         "Id": "Plugin_ReloadAllButton",
-        "Value": "Unset localization item:Plugin_ReloadAllButton()",
+        "Value": "\u91CD\u65B0\u8F09\u5165\u6240\u6709\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -6891,7 +6891,7 @@
       },
       {
         "Id": "RenderEffectImplement_Title",
-        "Value": "\u30A8\u30D5\u30A7\u30AF\u30C8\u5B9F\u88C5\u5668\u3092\u8A2D\u5B9A\u4E2D...",
+        "Value": "\u30A8\u30D5\u30A7\u30AF\u30C8\u5B9F\u88C5\u306E\u69CB\u6210",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6909,7 +6909,7 @@
       },
       {
         "Id": "RenderEffectImplement_NotSpecified",
-        "Value": "\u30C7\u30D5\u30A9\u30EB\u30C8",
+        "Value": "\u81EA\u52D5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6999,11 +6999,11 @@
       },
       {
         "Id": "Plugin_ReloadAllButton",
-        "Value": "Unset localization item:Plugin_ReloadAllButton()",
+        "Value": "\u3059\u3079\u3066\u306E\u30D7\u30E9\u30B0\u30A4\u30F3\u3092\u518D\u8AAD\u307F\u8FBC\u307F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -8682,7 +8682,7 @@
       },
       {
         "Id": "RenderEffectImplement_Title",
-        "Value": "\uD6A8\uACFC \uAD6C\uD604\uAE30 \uAD6C\uC131 \uC911...",
+        "Value": "\uB80C\uB354\uB9C1 \uD6A8\uACFC \uAD6C\uD604\uAE30 \uAD6C\uC131",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8700,7 +8700,7 @@
       },
       {
         "Id": "RenderEffectImplement_NotSpecified",
-        "Value": "\uAE30\uBCF8\uAC12",
+        "Value": "\uC790\uB3D9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8790,11 +8790,11 @@
       },
       {
         "Id": "Plugin_ReloadAllButton",
-        "Value": "Unset localization item:Plugin_ReloadAllButton()",
+        "Value": "\uBAA8\uB4E0 \uD50C\uB7EC\uADF8\uC778 \uB2E4\uC2DC \uB85C\uB4DC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -10473,7 +10473,7 @@
       },
       {
         "Id": "RenderEffectImplement_Title",
-        "Value": "Configuration de l\u0027effecteur...",
+        "Value": "Configurer l\u0027impl\u00E9menteur d\u0027effets",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10491,7 +10491,7 @@
       },
       {
         "Id": "RenderEffectImplement_NotSpecified",
-        "Value": "Par d\u00E9faut",
+        "Value": "Automatique",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10581,11 +10581,11 @@
       },
       {
         "Id": "Plugin_ReloadAllButton",
-        "Value": "Unset localization item:Plugin_ReloadAllButton()",
+        "Value": "Recharger tous les plugins",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -12264,7 +12264,7 @@
       },
       {
         "Id": "RenderEffectImplement_Title",
-        "Value": "\u914D\u7F6E\u6548\u679C\u5B9E\u73B0\u5668...",
+        "Value": "\u6548\u9A8C\u5668\u4E4B\u8BBE",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12282,7 +12282,7 @@
       },
       {
         "Id": "RenderEffectImplement_NotSpecified",
-        "Value": "\u9ED8\u8BA4",
+        "Value": "\u81EA\u52A8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12372,11 +12372,11 @@
       },
       {
         "Id": "Plugin_ReloadAllButton",
-        "Value": "Unset localization item:Plugin_ReloadAllButton()",
+        "Value": "\u91CD\u65B0\u52A0\u8F7D\u6240\u6709\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]

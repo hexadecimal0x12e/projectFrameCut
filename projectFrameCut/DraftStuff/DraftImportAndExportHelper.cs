@@ -35,6 +35,7 @@ namespace projectFrameCut.DraftStuff
                     if (child is Microsoft.Maui.Controls.Border border)
                     {
                         if (border.BindingContext is not ClipElementUI elem) continue;
+                        ClipInfoBuilder.RebuildAllEffects(elem);
 
                         if (elem.Id.StartsWith("ghost_") || elem.Id.StartsWith("shadow_")) continue;
 
@@ -129,14 +130,17 @@ namespace projectFrameCut.DraftStuff
                                     IsVariableArgumentEffect = kv.Value is IBindableArgumentEffect,
                                     BindedEffectGroupID = kv.Value.BindedEffectGroupID,
                                 }).ToArray(),
-                                EffectBundles = elem.EffectBundles?.Select(b => new EffectBundleJSONStructure
-                                {
-                                    Id = b.Id,
-                                    BundleTypeName = b.BundleTypeName,
-                                    Parameters = b.Parameters,
-                                    Enabled = b.Enabled,
-                                    Name = b.Name
-                                }).ToArray()
+                                EffectBundles = elem.EffectBundles?.Values
+                                    .OrderBy(b => b.Index)
+                                    .ThenBy(b => b.Id)
+                                    .Select(b => new EffectBundleJSONStructure
+                                    {
+                                        Id = b.Id,
+                                        BundleTypeName = b.BundleTypeName,
+                                        Parameters = b.Parameters,
+                                        Enabled = b.Enabled,
+                                        Name = b.Name
+                                    }).ToArray()
                             };
 
                             clips.Add(dto);
@@ -305,14 +309,22 @@ namespace projectFrameCut.DraftStuff
 
                 if (dto.EffectBundles != null)
                 {
-                    element.EffectBundles = dto.EffectBundles.Select(b => new EffectBundleData
+                    var dict = new Dictionary<string, EffectBundleData>();
+                    for (int i = 0; i < dto.EffectBundles.Length; i++)
                     {
-                        Id = b.Id,
-                        BundleTypeName = b.BundleTypeName,
-                        Parameters = b.Parameters,
-                        Enabled = b.Enabled,
-                        Name = b.Name
-                    }).ToList();
+                        var b = dto.EffectBundles[i];
+                        var id = string.IsNullOrWhiteSpace(b.Id) ? Guid.NewGuid().ToString() : b.Id;
+                        dict[id] = new EffectBundleData
+                        {
+                            Id = id,
+                            BundleTypeName = b.BundleTypeName,
+                            Parameters = b.Parameters ?? new Dictionary<string, object>(),
+                            Enabled = b.Enabled,
+                            Name = b.Name,
+                            Index = i
+                        };
+                    }
+                    element.EffectBundles = dict;
                 }
 
                 if (element.Effects is null)

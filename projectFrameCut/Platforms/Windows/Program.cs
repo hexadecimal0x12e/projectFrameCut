@@ -94,7 +94,7 @@ namespace projectFrameCut.WinUI
                 splash.Priority = ThreadPriority.Highest;
                 splash.IsBackground = false;
                 splash.Start();
-
+                Log("Initializing application...");
                 WinRT.ComWrappersSupport.InitializeComWrappers();
                 Microsoft.UI.Xaml.Application.Start((p) =>
                 {

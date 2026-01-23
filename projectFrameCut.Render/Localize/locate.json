@@ -301,6 +301,30 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_BindableArgsEffect",
+        "Value": "\u53EF\u7ED1\u5B9A\uFF08\u6682\u5B9A\uFF09\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_ClassicEffectPageWarn",
+        "Value": "\u8B66\u544A\uFF1A\u624B\u52A8\u914D\u7F6E\u8FD9\u4E9B\u6548\u679C\u53EF\u80FD\u4F1A\u5BFC\u81F4\u610F\u6599\u4EE5\u5916\u7684\u7ED3\u679C\u3002\u8BF7\u8C28\u614E\u4FEE\u6539\u4ED6\u4EEC\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Effect_Classic",
+        "Value": "\u6548\u679C\uFF08\u7ECF\u5178\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
       }
     ],
     "en-US": [
@@ -438,6 +462,222 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Crop",
+        "Value": "Crop",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Jitter",
+        "Value": "Jitter",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Place",
+        "Value": "Place",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_RemoveColor",
+        "Value": "Remove Color",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Resize",
+        "Value": "Resize",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_ZoomIn",
+        "Value": "Zoom In",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_Add_Title",
+        "Value": "Add Effect",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_ContinuousEffect",
+        "Value": "Continuous Effect",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_FromPlugin",
+        "Value": "{prev}, from plugin \u0027{name}\u0027.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "prev"
+          },
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "prev",
+            "Value": ""
+          },
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_GeneralEffect",
+        "Value": "Standard Effect",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_RenderOrder",
+        "Value": "Effect Render Order",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_RenderOrder_Hint",
+        "Value": "Did you know? You can change the order by dragging.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_VariableArgumentEffect",
+        "Value": "Dynamic Effect",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_DisplayColor",
+        "Value": "Display Color",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationAndSize",
+        "Value": "Location and Size",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationX",
+        "Value": "X-axis coordinate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationY",
+        "Value": "Y-axis coordinate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Effect",
+        "Value": "Effect",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_SpeedRatio",
+        "Value": "Speed \u0026 Rate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_BindableArgsEffect",
+        "Value": "Unset localization item:Effect_BindableArgsEffect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_ClassicEffectPageWarn",
+        "Value": "Unset localization item:EffectProp_ClassicEffectPageWarn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Effect_Classic",
+        "Value": "Unset localization item:Tabs_Effect_Classic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -577,6 +817,222 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Crop",
+        "Value": "\u88C1\u526A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Jitter",
+        "Value": "\u6296\u52D5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Place",
+        "Value": "\u653E\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_RemoveColor",
+        "Value": "\u79FB\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Resize",
+        "Value": "\u7E2E\u653E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_ZoomIn",
+        "Value": "\u62C9\u8FD1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_Add_Title",
+        "Value": "\u65B0\u589E\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_ContinuousEffect",
+        "Value": "\u9023\u7E8C\u6027\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_FromPlugin",
+        "Value": "{prev}\uFF0C\u4F86\u81EA\u63D2\u4EF6\u300C{name}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "prev"
+          },
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "prev",
+            "Value": ""
+          },
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_GeneralEffect",
+        "Value": "\u6A19\u6E96\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_RenderOrder",
+        "Value": "\u6548\u679C\u6E32\u67D3\u9806\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_RenderOrder_Hint",
+        "Value": "\u4F60\u77E5\u9053\u55CE\uFF1F\u4F60\u53EF\u4EE5\u4F7F\u7528\u62D6\u52D5\u4F86\u6539\u8B8A\u9806\u5E8F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_VariableArgumentEffect",
+        "Value": "\u52D5\u614B\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_DisplayColor",
+        "Value": "\u986F\u793A\u984F\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationAndSize",
+        "Value": "\u4F4D\u7F6E\u548C\u5927\u5C0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationX",
+        "Value": "X \u8EF8\u5EA7\u6A19",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationY",
+        "Value": "Y \u8EF8\u5EA7\u6A19",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Effect",
+        "Value": "\u6548\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_SpeedRatio",
+        "Value": "\u901F\u5EA6\u8207\u8B8A\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_BindableArgsEffect",
+        "Value": "Unset localization item:Effect_BindableArgsEffect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_ClassicEffectPageWarn",
+        "Value": "Unset localization item:EffectProp_ClassicEffectPageWarn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Effect_Classic",
+        "Value": "Unset localization item:Tabs_Effect_Classic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ja-JP": [
@@ -714,6 +1170,222 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Crop",
+        "Value": "\u30AF\u30ED\u30C3\u30D7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Jitter",
+        "Value": "\u63FA\u308C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Place",
+        "Value": "\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_RemoveColor",
+        "Value": "\u8272\u9664\u53BB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Resize",
+        "Value": "\u30B5\u30A4\u30BA\u5909\u66F4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_ZoomIn",
+        "Value": "\u30BA\u30FC\u30E0\u30A4\u30F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_Add_Title",
+        "Value": "\u52B9\u679C\u3092\u8FFD\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_ContinuousEffect",
+        "Value": "\u7D99\u7D9A\u52B9\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_FromPlugin",
+        "Value": "{prev}\u3001\u30D7\u30E9\u30B0\u30A4\u30F3\u300E{name}\u300F\u304B\u3089",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "prev"
+          },
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "prev",
+            "Value": ""
+          },
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_GeneralEffect",
+        "Value": "\u6A19\u6E96\u52B9\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_RenderOrder",
+        "Value": "\u30A8\u30D5\u30A7\u30AF\u30C8\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u9806\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_RenderOrder_Hint",
+        "Value": "\u3054\u5B58\u77E5\u3067\u3059\u304B\uFF1F\u30C9\u30E9\u30C3\u30B0\u3067\u9806\u5E8F\u3092\u5909\u66F4\u3067\u304D\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_VariableArgumentEffect",
+        "Value": "\u52D5\u7684\u52B9\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_DisplayColor",
+        "Value": "\u8272\u3092\u8868\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationAndSize",
+        "Value": "\u4F4D\u7F6E\u3068\u30B5\u30A4\u30BA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationX",
+        "Value": "X\u8EF8\u5EA7\u6A19",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationY",
+        "Value": "Y\u8EF8\u5EA7\u6A19",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Effect",
+        "Value": "\u52B9\u679C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_SpeedRatio",
+        "Value": "\u901F\u5EA6\u3068\u5909\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_BindableArgsEffect",
+        "Value": "Unset localization item:Effect_BindableArgsEffect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_ClassicEffectPageWarn",
+        "Value": "Unset localization item:EffectProp_ClassicEffectPageWarn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Effect_Classic",
+        "Value": "Unset localization item:Tabs_Effect_Classic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -853,6 +1525,222 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Crop",
+        "Value": "\uC790\uB974\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Jitter",
+        "Value": "\uD754\uB4E4\uB9BC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Place",
+        "Value": "\uBC30\uCE58",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_RemoveColor",
+        "Value": "\uD0C8\uC0C9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Resize",
+        "Value": "\uD06C\uAE30 \uC870\uC815",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_ZoomIn",
+        "Value": "\uC90C \uC778",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_Add_Title",
+        "Value": "\uD6A8\uACFC \uCD94\uAC00",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_ContinuousEffect",
+        "Value": "\uC9C0\uC18D \uD6A8\uACFC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_FromPlugin",
+        "Value": "{prev}, \uD50C\uB7EC\uADF8\uC778 \u0027{name}\u0027\uC5D0\uC11C",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "prev"
+          },
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "prev",
+            "Value": ""
+          },
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_GeneralEffect",
+        "Value": "\uD45C\uC900 \uD6A8\uACFC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_RenderOrder",
+        "Value": "\uD6A8\uACFC \uB80C\uB354\uB9C1 \uC21C\uC11C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_RenderOrder_Hint",
+        "Value": "\uC54C\uACE0 \uACC4\uC168\uB098\uC694? \uB4DC\uB798\uADF8\uD558\uC5EC \uC21C\uC11C\uB97C \uBCC0\uACBD\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_VariableArgumentEffect",
+        "Value": "\uB3D9\uC801 \uD6A8\uACFC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_DisplayColor",
+        "Value": "\uC0C9\uC0C1 \uD45C\uC2DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationAndSize",
+        "Value": "\uC704\uCE58 \uBC0F \uD06C\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationX",
+        "Value": "X\uCD95 \uC88C\uD45C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationY",
+        "Value": "Y \uC88C\uD45C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Effect",
+        "Value": "\uD6A8\uACFC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_SpeedRatio",
+        "Value": "\uC18D\uB3C4 \uBC0F \uBCC0\uC18D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_BindableArgsEffect",
+        "Value": "Unset localization item:Effect_BindableArgsEffect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_ClassicEffectPageWarn",
+        "Value": "Unset localization item:EffectProp_ClassicEffectPageWarn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Effect_Classic",
+        "Value": "Unset localization item:Tabs_Effect_Classic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -990,6 +1878,222 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Crop",
+        "Value": "Recadrer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Jitter",
+        "Value": "Tremblement",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Place",
+        "Value": "Placer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_RemoveColor",
+        "Value": "D\u00E9saturation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_Resize",
+        "Value": "Redimensionner",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DisplayName_Effect_ZoomIn",
+        "Value": "Zoom avant",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_Add_Title",
+        "Value": "Ajouter un effet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_ContinuousEffect",
+        "Value": "Effet continu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_FromPlugin",
+        "Value": "{prev}, provenant du plugin \u00AB\u202F{name}\u202F\u00BB",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "prev"
+          },
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "prev",
+            "Value": ""
+          },
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_GeneralEffect",
+        "Value": "Effet standard",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_RenderOrder",
+        "Value": "Ordre de rendu des effets",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_RenderOrder_Hint",
+        "Value": "Saviez-vous que vous pouvez modifier l\u0027ordre par glisser-d\u00E9poser ?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_VariableArgumentEffect",
+        "Value": "Effet dynamique",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_DisplayColor",
+        "Value": "Afficher la couleur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationAndSize",
+        "Value": "Position et taille",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationX",
+        "Value": "Coordonn\u00E9e X",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_LocationY",
+        "Value": "Coordonn\u00E9e Y",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Effect",
+        "Value": "Effet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_SpeedRatio",
+        "Value": "Vitesse et variation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Effect_BindableArgsEffect",
+        "Value": "Unset localization item:Effect_BindableArgsEffect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectProp_ClassicEffectPageWarn",
+        "Value": "Unset localization item:EffectProp_ClassicEffectPageWarn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Effect_Classic",
+        "Value": "Unset localization item:Tabs_Effect_Classic()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]

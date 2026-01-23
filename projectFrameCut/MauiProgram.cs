@@ -18,20 +18,22 @@ using projectFrameCut.Shared;
 using projectFrameCut.Asset;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.ApplicationPluginBase;
-using projectFrameCut.Render.VideoMakeEngine;
 using LocalizedResources;
+using projectFrameCut.Render.Effect;
+
 
 
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
 using Java.Lang;
-    
+
 #endif
 
 #if WINDOWS
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
+using projectFrameCut.Render.Effect;
 #endif
 
 

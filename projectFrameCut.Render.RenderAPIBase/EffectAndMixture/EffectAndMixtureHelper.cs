@@ -63,32 +63,39 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             var result = new Dictionary<string, object>();
             foreach (var kvp in elements)
             {
-                object value = null;
-                JsonElement source = (JsonElement)kvp.Value;
-                switch (ParametersType[kvp.Key])
+                if (kvp.Value is not JsonElement)
                 {
-                    case "ushort":
-                        value = source.GetUInt16();
-                        break;
-                    case "int":
-                        value = source.GetInt32();
-                        break;
-                    case "float":
-                        value = source.GetSingle();
-                        break;
-                    case "double":
-                        value = source.GetDouble();
-                        break;
-                    case "string":
-                        value = source.GetString()!;
-                        break;
-                    case "bool":
-                        value = source.GetBoolean();
-                        break;
-                    default:
-                        throw new NotImplementedException($"Parameter type '{ParametersType[kvp.Key]}' is not implemented.");
+                    result.Add(kvp.Key, kvp.Value);
                 }
-                result.Add(kvp.Key, value);
+                else
+                {
+                    object value = null;
+                    JsonElement source = (JsonElement)kvp.Value;
+                    switch (ParametersType[kvp.Key])
+                    {
+                        case "ushort":
+                            value = source.GetUInt16();
+                            break;
+                        case "int":
+                            value = source.GetInt32();
+                            break;
+                        case "float":
+                            value = source.GetSingle();
+                            break;
+                        case "double":
+                            value = source.GetDouble();
+                            break;
+                        case "string":
+                            value = source.GetString()!;
+                            break;
+                        case "bool":
+                            value = source.GetBoolean();
+                            break;
+                        default:
+                            throw new NotImplementedException($"Parameter type '{ParametersType[kvp.Key]}' is not implemented.");
+                    }
+                    result.Add(kvp.Key, value);
+                }
             }
             return result;
         }

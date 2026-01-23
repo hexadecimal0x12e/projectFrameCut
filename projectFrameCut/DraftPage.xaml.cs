@@ -3249,7 +3249,11 @@ public partial class DraftPage : ContentPage
         {
             Log(ex, "Render one frame", this);
             SetStateFail(Localized._ExceptionTemplate(ex));
+#if DEBUG
+            if (await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(duration, ex), "Throw", Localized._OK)) throw;
+#else
             await DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(duration, ex), Localized._OK);
+#endif
         }
         finally
         {
@@ -3281,7 +3285,7 @@ public partial class DraftPage : ContentPage
                     playbackDone = true;
                     try
                     {
-                        if (_lastPlaybackPath is not null && File.Exists(_lastPlaybackPath ?? ""))
+                        if (_lastPlaybackPath is not null && File.Exists(_lastPlaybackPath))
                             File.Delete(_lastPlaybackPath);
                     }
                     catch { }
@@ -3410,12 +3414,12 @@ public partial class DraftPage : ContentPage
             catch { }
             LivePreviewPlayer.IsVisible = false;
             PreviewOverlayImage.IsVisible = true;
+            PlayPauseButton.Text = "\u25b6\ufe0f";
         });
 
 
         _nextPlaybackPath = null;
         _isPreRendering = false;
-        PlayPauseButton.Text = "\u25b6\ufe0f";
     }
 
     private async Task<string> RenderSomeFrames(int startPoint, CancellationToken ct)
@@ -3801,7 +3805,7 @@ public partial class DraftPage : ContentPage
                 RegisterClip(item, true);
             }
             CurrentSaveSlotIndex = slotIndex;
-            DraftChanged(this, new() { NoSave = true});
+            DraftChanged(this, new() { NoSave = true });
             SetStateOK(Localized.DraftPage_RedoAndUndo_Success(draftJson.SavedAt));
 
         }

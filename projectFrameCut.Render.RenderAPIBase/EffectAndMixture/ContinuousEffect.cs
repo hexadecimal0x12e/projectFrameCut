@@ -59,9 +59,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         {
         }
 
-        public new bool IsNormalEffect => false;
-        public new bool IsContinuousEffect => true;
-        public new bool IsBindableArgsEffect => false;
+        bool IEffect.IsNormalEffect => false;
+        bool IEffect.IsContinuousEffect => true;
+        bool IEffect.IsBindableArgsEffect => false;
     }
 
 }

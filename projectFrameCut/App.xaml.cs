@@ -34,6 +34,17 @@ namespace projectFrameCut
                     "light" => AppTheme.Light,
                     _ => AppTheme.Unspecified
                 };
+#if WINDOWS
+                if (SettingsManager.GetSetting("ui_defaultTheme", "default") != "default")
+                {
+                    (projectFrameCut.WinUI.App.Current as Microsoft.UI.Xaml.Application)?.RequestedTheme = SettingsManager.GetSetting("ui_defaultTheme", "default") switch
+                    {
+                        "dark" => Microsoft.UI.Xaml.ApplicationTheme.Dark,
+                        "light" => Microsoft.UI.Xaml.ApplicationTheme.Light,
+                        _ => Microsoft.UI.Xaml.ApplicationTheme.Light
+                    };
+                }
+#endif
             }
             catch { }
 
@@ -131,7 +142,7 @@ namespace projectFrameCut
 
                 assetItem = new NavigationViewItem { Content = Localized.AppShell_AssetsTab, Tag = "Assets", Height = 36, Padding = new(4) };
                 assetItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.SlideShow };
-            
+
 
                 nav.MenuItems.Add(homeItem);
                 nav.MenuItems.Add(assetItem);
@@ -184,7 +195,7 @@ namespace projectFrameCut
                         {
                             Log(ex, $"Navigate to {tag} failed", this);
                             await AppShell.instance.DisplayAlertAsync(Localized._Info, Localized.AppShell_NavFailed(ex, tag), Localized._OK);
-                            
+
                         }
                     });
                 };

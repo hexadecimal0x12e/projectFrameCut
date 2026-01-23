@@ -858,7 +858,7 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
         public object? OriginValue { get; set; } = oldVal;
 
         /// <summary>
-        /// Creates and invokes a <see cref="PropertyPanelBuilder.PropertyChanged"/> event on the specified <see cref="PropertyPanelBuilder"/> instance.
+        /// Manually invokes the <see cref="PropertyPanelBuilder.PropertyChanged"/> event on the specified <see cref="PropertyPanelBuilder"/> instance.
         /// </summary>
         /// <remarks>
         /// It's not recommended to call this method directly. 

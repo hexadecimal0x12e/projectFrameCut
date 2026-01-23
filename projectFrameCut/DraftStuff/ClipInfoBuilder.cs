@@ -1,10 +1,10 @@
 ﻿using Microsoft.Maui.Controls.Shapes;
+using Microsoft.Maui.Layouts;
 using Microsoft.Maui.Platform;
 using projectFrameCut.Controls;
 
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Render.VideoMakeEngine;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -23,6 +23,13 @@ using projectFrameCut.ApplicationAPIBase.Plugins;
 
 
 using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using DataTemplate = Microsoft.Maui.Controls.DataTemplate;
+using GridUnitType = Microsoft.Maui.GridUnitType;
+using CommunityToolkit.Maui.Views;
+
+
+
+
 
 
 
@@ -69,53 +76,6 @@ namespace projectFrameCut.DraftStuff
             PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
         }
 
-        // Helper to recreate effect with updated parameters / flags (init-only properties)
-        // This method adapts to plugin-based IEffect by using the standard WithParameters interface
-        private IEffect ReCreateEffect(IEffect effect, Dictionary<string, object>? parameters = null, bool? enabled = null, int? index = null)
-        {
-            // Create a new effect with updated parameters using the standard IEffect interface
-            var newEffect = effect.WithParameters(parameters ?? effect.Parameters);
-
-            // Update mutable properties (Enabled and Index), preserve original if not provided
-            newEffect.Enabled = enabled ?? effect.Enabled;
-            newEffect.Index = index ?? effect.Index;
-
-            // Preserve Name which might be lost during recreation
-            newEffect.Name = effect.Name;
-
-            newEffect.RelativeWidth = page.ProjectInfo.RelativeWidth;
-            newEffect.RelativeHeight = page.ProjectInfo.RelativeHeight;
-
-            return newEffect;
-        }
-
-        public static Dictionary<string, string> GetLocalizedEffectNames()
-        {
-            string GetEffectDisplayName(KeyValuePair<string, Func<IEffect>> e)
-            {
-                var instance = e.Value();
-                var type = instance switch
-                {
-                    var t when t is IContinuousEffect => PPLocalizedResources.Effect_ContinuousEffect,
-                    var t when t is IEffect => PPLocalizedResources.Effect_GeneralEffect,
-                    _ => PPLocalizedResources.Effect_GeneralEffect,
-                };
-                if (instance.FromPlugin == InternalPluginBase.InternalPluginBaseID || SettingsManager.IsBoolSettingTrue("edit_AlwaysShowEffectsSource"))
-                {
-                    var dispName = PluginManager.GetLocalizationItem("DisplayName_Effect_" + e.Key, e.Key);
-                    return $"{dispName} ({type})";
-                }
-                else
-                {
-                    var plg = PluginManager.LoadedPlugins.TryGetValue(instance.FromPlugin, out var value) ? value : null;
-                    var dispName = plg?.GetLocalizationItemInSpecificPlugin("_PluginBase_Name_", plg.Name) ?? e.Key;
-                    return $"{plg.GetLocalizationItemInSpecificPlugin("DisplayName_Effect_" + e.Key, e.Key)} ({PPLocalizedResources.Effect_FromPlugin(type, dispName)})";
-                }
-
-            }
-
-            return EffectHelper.EffectsEnum.ToDictionary(c => c.Key, GetEffectDisplayName);
-        }
 
         public View Build(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
@@ -135,7 +95,7 @@ namespace projectFrameCut.DraftStuff
             {
                 t.TabItems.Add(new TabbedViewItem
                 {
-                    Header = PPLocalizedResources.Tabs_Effect + " (classic)",
+                    Header = PPLocalizedResources.Tabs_Effect_Classic,
                     Content = BuildClassicEffectTab(clip, handler)
                 });
             }
@@ -394,45 +354,32 @@ namespace projectFrameCut.DraftStuff
             return ppb.BuildWithScrollView();
         }
 
-        private static Dictionary<string, Func<IEffectBundle>> GetAvailableEffectBundles()
+        public static void RebuildAllEffects(ClipElementUI clip)
         {
-            var bundles = new Dictionary<string, Func<IEffectBundle>>();
-            if (!PluginManager.Inited) return bundles;
-
-            foreach (var plugin in PluginManager.LoadedPlugins.Values)
-            {
-                if (plugin is IApplicationPluginBase appPlugin)
-                {
-                    foreach (var kvp in appPlugin.EffectBundleProvider)
-                    {
-                        if (!bundles.ContainsKey(kvp.Key))
-                        {
-                            bundles.Add(kvp.Key, kvp.Value);
-                        }
-                    }
-                }
-            }
-            return bundles;
-        }
-
-        private void RebuildAllEffects(ClipElementUI clip)
-        {
-            var newEffects = new Dictionary<string, IEffect>();
-            int globalIndex = 0;
-            var factories = GetAvailableEffectBundles();
+            var newEffects = clip.Effects ?? new();
+            int globalIndex = clip.Effects?.Select(e => e.Value)?.OrderBy(e => e.Index).LastOrDefault(e => !e.Name.StartsWith("__Internal"))?.Index + 1 ?? 0;
+            var factories = EffectServices.GetAvailableEffectBundles();
 
             if (clip.EffectBundles != null)
             {
-                foreach (var bundleData in clip.EffectBundles)
+                foreach (var bundleKvp in clip.EffectBundles.OrderBy(kvp => kvp.Value.Index).ThenBy(kvp => kvp.Key))
                 {
+                    var bundleId = bundleKvp.Key;
+                    var bundleData = bundleKvp.Value;
+
+                    if (string.IsNullOrWhiteSpace(bundleData.Id) || bundleData.Id != bundleId)
+                    {
+                        bundleData.Id = bundleId;
+                    }
+
                     if (factories.TryGetValue(bundleData.BundleTypeName, out var factory))
                     {
                         try
                         {
                             var instance = factory();
                             instance.Parameters = bundleData.Parameters;
-                            instance.Id = bundleData.Id;
-                            // instance.Name might be set by factory or default. bundleData.Name stores user override or display name?
+                            instance.Id = bundleId;
+
                             if (!string.IsNullOrEmpty(bundleData.Name))
                             {
                                 instance.Name = bundleData.Name;
@@ -443,12 +390,15 @@ namespace projectFrameCut.DraftStuff
                             }
 
 
-                            var effects = instance.Create();
+                            var effectFactories = instance.Create();
+                            var effects = effectFactories.Select(f => f.Build(EffectHelper.DefaultImplementsType.GetValueOrDefault(f.TypeName, EffectImplementType.NotSpecified), EffectArgsHelper.ConvertElementDictToObjectDict(instance.Parameters, instance.ParametersType))).ToArray();
+
                             if (effects != null)
                             {
                                 for (int i = 0; i < effects.Length; i++)
                                 {
                                     var effect = effects[i];
+                                    effect.Name = $"EffectBundle {bundleData.BundleTypeName}({bundleData.Id}) - Subeffect #{i}";
                                     effect.Enabled = effect.Enabled && bundleData.Enabled;
                                     effect.Index = globalIndex++;
                                     effect.BindedEffectGroupID = bundleData.Id;
@@ -459,40 +409,53 @@ namespace projectFrameCut.DraftStuff
                         }
                         catch (Exception ex)
                         {
-                            Log(ex, $"Rebuild effects for bundle {bundleData.BundleTypeName}", this);
+                            Log(ex, $"Rebuild effects for bundle {bundleData.BundleTypeName}");
                         }
                     }
                 }
             }
-            clip.Effects = newEffects;
+            clip.Effects = newEffects
+                .Where(e => string.IsNullOrWhiteSpace(e.Value.BindedEffectGroupID)
+                            || (clip.EffectBundles?.ContainsKey(e.Value.BindedEffectGroupID) ?? false))
+                .ToDictionary();
         }
 
         public View BuildEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             PropertyPanelBuilder ppb = new();
-            var bundlesFactories = GetAvailableEffectBundles();
-            
+            var bundlesFactories = EffectServices.GetAvailableEffectBundles();
+
             if (clip.EffectBundles != null)
             {
-                foreach (var bundleData in clip.EffectBundles)
+                foreach (var bundleKvp in clip.EffectBundles.OrderBy(kvp => kvp.Value.Index).ThenBy(kvp => kvp.Key))
                 {
+                    var bundleId = bundleKvp.Key;
+                    var bundleData = bundleKvp.Value;
+
+                    // Keep key/id consistent
+                    if (string.IsNullOrWhiteSpace(bundleData.Id) || bundleData.Id != bundleId)
+                    {
+                        bundleData.Id = bundleId;
+                    }
+
                     if (bundlesFactories.TryGetValue(bundleData.BundleTypeName, out var factory))
                     {
                         try
                         {
                             var bundleUiInstance = factory();
                             bundleUiInstance.Parameters = bundleData.Parameters;
-                            bundleUiInstance.Id = bundleData.Id;
+                            bundleUiInstance.Id = bundleId;
                             if (!string.IsNullOrEmpty(bundleData.Name)) bundleUiInstance.Name = bundleData.Name;
 
                             var bundlePpb = bundleUiInstance.CreateUI();
 
                             ppb.AddText(new TitleAndDescriptionLineLabel(bundleUiInstance.Name ?? bundleData.BundleTypeName, bundleData.BundleTypeName));
-                            ppb.AddCheckbox($"Bundle|{bundleData.Id}|Enabled", PPLocalizedResources._Enabled, bundleData.Enabled);
+                            ppb.AddCheckbox($"Bundle|{bundleId}|Enabled", PPLocalizedResources._Enabled, bundleData.Enabled);
+                            ppb.AddEntry($"Bundle|{bundleId}|Index", PPLocalizedResources.EffectProp_Index, bundleData.Index.ToString(), "0");
 
                             ppb.AddFromAnother(bundlePpb, bundleUiInstance);
 
-                            ppb.AddButton($"Bundle|{bundleData.Id}|Remove", PPLocalizedResources.EffectProp_Remove);
+                            ppb.AddButton($"Bundle|{bundleId}|Remove", PPLocalizedResources.EffectProp_Remove);
                             ppb.AddSeparator();
                         }
                         catch (Exception ex)
@@ -503,27 +466,37 @@ namespace projectFrameCut.DraftStuff
                     else
                     {
                         ppb.AddText(new SingleLineLabel($"Missing bundle plugin: {bundleData.BundleTypeName}"));
-                        ppb.AddButton($"Bundle|{bundleData.Id}|Remove", PPLocalizedResources.EffectProp_Remove);
+                        ppb.AddButton($"Bundle|{bundleId}|Remove", PPLocalizedResources.EffectProp_Remove);
                     }
                 }
             }
 
             ppb.AddText(new SingleLineLabel(PPLocalizedResources.Effect_Add_Title, 20));
-            // Use keys as display names for now, ideally bundleUiInstance.Name but tricky without instantiating
-            var pickerItems = bundlesFactories.Keys.ToArray();
-            ppb.AddPicker("NewBundleType", PPLocalizedResources.Add_Effect_Select, pickerItems, pickerItems.FirstOrDefault());
-            ppb.AddButton("AddBundle", PPLocalizedResources.Add_Effect);
-
+            ppb.AddCustomChild(BuildAddEffectPanel(bundlesFactories, ppb, clip, handler));
+#if DEBUG
+            ppb.AddButton("Rebuild", (s, e) =>
+            {
+                RebuildAllEffects(clip);
+            });
+#endif
             ppb.PropertyChanged += (s, e) =>
             {
                 if (!ppb.Equals(s)) //from another
                 {
-                    if(s is IEffectBundle eb)
+                    if (s is IEffectBundle eb)
                     {
                         var data = eb.HandlePropertyPanelChange(e);
                         if (data != null)
                         {
-                            var bundle = clip.EffectBundles?.FirstOrDefault(x => x.Id == eb.Id);
+                            EffectBundleData? bundle = null;
+                            if (clip.EffectBundles != null)
+                            {
+                                if (!clip.EffectBundles.TryGetValue(eb.Id, out bundle))
+                                {
+                                    bundle = clip.EffectBundles.Values.FirstOrDefault(x => x.Id == eb.Id);
+                                }
+                            }
+
                             if (bundle != null)
                             {
                                 foreach (var kvp in data)
@@ -544,23 +517,29 @@ namespace projectFrameCut.DraftStuff
                         {
                             string bundleId = parts[1];
                             string action = parts[2];
+                            if (!clip.EffectBundles?.ContainsKey(bundleId) ?? false) return;
 
                             if (action == "Remove")
                             {
-                                var b = clip.EffectBundles?.FirstOrDefault(x => x.Id == bundleId);
-                                if (b != null)
-                                {
-                                    clip.EffectBundles.Remove(b);
-                                    RebuildAllEffects(clip);
-                                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
-                                }
+                                clip.EffectBundles?.Remove(bundleId);
+                                RebuildAllEffects(clip);
+                                handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                             }
                             else if (action == "Enabled")
                             {
-                                var b = clip.EffectBundles?.FirstOrDefault(x => x.Id == bundleId);
+                                var b = clip.EffectBundles?[bundleId];
                                 if (b != null && bool.TryParse(e.Value?.ToString(), out bool val))
                                 {
                                     b.Enabled = val;
+                                    RebuildAllEffects(clip);
+                                }
+                            }
+                            else if (action == "Index")
+                            {
+                                var b = clip.EffectBundles?[bundleId];
+                                if (b != null && int.TryParse(e.Value?.ToString(), out int indexVal))
+                                {
+                                    b.Index = indexVal;
                                     RebuildAllEffects(clip);
                                 }
                             }
@@ -581,8 +560,10 @@ namespace projectFrameCut.DraftStuff
                                     Enabled = true
                                 };
 
-                                if (clip.EffectBundles == null) clip.EffectBundles = new List<EffectBundleData>();
-                                clip.EffectBundles.Add(newData);
+                                if (clip.EffectBundles == null) clip.EffectBundles = new Dictionary<string, EffectBundleData>();
+                                var nextIndex = clip.EffectBundles.Count == 0 ? 0 : (clip.EffectBundles.Values.Max(x => x.Index) + 1);
+                                newData.Index = nextIndex;
+                                clip.EffectBundles[newData.Id] = newData;
 
                                 RebuildAllEffects(clip);
                                 handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
@@ -591,16 +572,253 @@ namespace projectFrameCut.DraftStuff
                     }
                 }
             };
-            
-            return ppb.Build();
+
+            ppb.AddSeparator();
+            ppb.AddText(new TitleAndDescriptionLineLabel(PPLocalizedResources.Effect_RenderOrder, PPLocalizedResources.Effect_RenderOrder_Hint));
+
+            var bundleOrderContainer = new VerticalStackLayout { Spacing = 2, Padding = 5 };
+
+            if (clip.EffectBundles != null)
+            {
+                foreach (var bundleData in clip.EffectBundles.Values.OrderBy(v => v.Index).ThenBy(v => v.Id))
+                {
+                    bundleOrderContainer.Children.Add(BuildBundleOrderItem(bundleData, clip, handler));
+                }
+            }
+
+            ppb.AddCustomChild(bundleOrderContainer);
+            var panel = ppb.Build();
+            return panel;
+        }
+
+        private sealed class EffectBundleCardItem
+        {
+            public required string BundleTypeName { get; init; }
+            public required string Title { get; init; }
+            public required string Description { get; init; }
+            public ImageSource? Thumbnail { get; init; }
+            public MediaSource? VideoThumbnail { get; init; }
+        }
+
+        private View BuildAddEffectPanel(
+            Dictionary<string, Func<IEffectBundle>> bundlesFactories,
+            PropertyPanelBuilder ppb,
+            ClipElementUI clip,
+            EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            if (bundlesFactories == null || bundlesFactories.Count == 0)
+            {
+                return new Border
+                {
+                    StrokeShape = new RoundRectangle { CornerRadius = 12 },
+                    Stroke = new SolidColorBrush(Colors.Gray.WithAlpha(0.25f)),
+                    Background = new SolidColorBrush(Colors.Transparent),
+                    Padding = 12,
+                    Content = new Label
+                    {
+                        Text = PPLocalizedResources.Add_Effect_Select,
+                        Opacity = 0.7,
+                        FontSize = 13
+                    }
+                };
+            }
+
+
+            void AddBundle(string bundleTypeName)
+            {
+                ppb.Properties["NewBundleType"] = bundleTypeName;
+                PropertyPanelPropertyChangedEventArgs.CreateAndInvoke(ppb, "AddBundle", bundleTypeName);
+            }
+
+            var cards = new List<EffectBundleCardItem>();
+            foreach (var kvp in bundlesFactories.OrderBy(k => k.Key))
+            {
+                var bundleTypeName = kvp.Key;
+                try
+                {
+                    var instance = kvp.Value();
+                    EffectBundleDisplayItem? display = null;
+                    try
+                    {
+                        display = instance.GetEffectBundleItem(Localized._LocaleId_);
+                    }
+                    catch
+                    {
+                        // ignore, fallback to Name/TypeName
+                    }
+
+                    cards.Add(new EffectBundleCardItem
+                    {
+                        BundleTypeName = bundleTypeName,
+                        Title = EffectServices.GetLocalizedEffectBundleNames(Environment.NewLine).GetValueOrDefault(bundleTypeName, bundleTypeName),
+                        Description = display?.Description ?? "",
+                        Thumbnail = display?.Thumbnail,
+                        VideoThumbnail = display?.VideoThumbnail,
+                    });
+                }
+                catch
+                {
+                    cards.Add(new EffectBundleCardItem
+                    {
+                        BundleTypeName = bundleTypeName,
+                        Title = bundleTypeName,
+                        Description = "",
+                        Thumbnail = null
+                    });
+                }
+            }
+
+            const double cardWidth = 210;
+            const double cardHeight = 135;
+            const double cardMargin = 6;
+
+            var flex = new FlexLayout
+            {
+                Wrap = FlexWrap.Wrap,
+                Direction = FlexDirection.Row,
+                JustifyContent = FlexJustify.Start,
+                AlignItems = FlexAlignItems.Start,
+                AlignContent = FlexAlignContent.Start
+            };
+
+            BindableLayout.SetItemsSource(flex, cards);
+            BindableLayout.SetItemTemplate(flex, new DataTemplate(() =>
+            {
+                var image = new Image
+                {
+                    HeightRequest = 64,
+                    WidthRequest = 64,
+                    Aspect = Aspect.AspectFill,
+                    HorizontalOptions = LayoutOptions.Start,
+                    VerticalOptions = LayoutOptions.Start
+                };
+                image.SetBinding(Image.SourceProperty, nameof(EffectBundleCardItem.Thumbnail));
+
+                var title = new Label
+                {
+                    FontSize = 14,
+                    FontAttributes = FontAttributes.Bold,
+                    LineBreakMode = LineBreakMode.TailTruncation
+                };
+                title.SetBinding(Label.TextProperty, nameof(EffectBundleCardItem.Title));
+
+                var desc = new Label
+                {
+                    FontSize = 12,
+                    Opacity = 0.75,
+                    LineBreakMode = LineBreakMode.TailTruncation,
+                    MaxLines = 2
+                };
+                desc.SetBinding(Label.TextProperty, nameof(EffectBundleCardItem.Description));
+
+                var textStack = new VerticalStackLayout
+                {
+                    Spacing = 2,
+                    Children = { title, desc }
+                };
+
+                var row = new VerticalStackLayout
+                {
+                    Spacing = 10
+                };
+                row.Children.Add(image);
+                row.Children.Add(textStack);
+
+                var border = new Border
+                {
+                    WidthRequest = cardWidth,
+                    HeightRequest = cardHeight,
+                    Margin = new Thickness(cardMargin),
+                    Padding = 10,
+                    StrokeShape = new RoundRectangle { CornerRadius = 12 },
+                    Stroke = new SolidColorBrush(Colors.Gray.WithAlpha(0.25f)),
+                    Background = new SolidColorBrush(Colors.Transparent),
+                    Content = row
+                };
+
+#if WINDOWS || MACCATALYST
+                var selectTap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Primary };
+                selectTap.Tapped += (_, __) =>
+                {
+                    if (border.BindingContext is EffectBundleCardItem item)
+                        ppb.Properties["NewBundleType"] = item.BundleTypeName;
+                };
+
+                var addTap = new TapGestureRecognizer { NumberOfTapsRequired = 2, Buttons = ButtonsMask.Primary };
+                addTap.Tapped += (_, __) =>
+                {
+                    if (border.BindingContext is EffectBundleCardItem item)
+                        AddBundle(item.BundleTypeName);
+                };
+
+                border.GestureRecognizers.Add(selectTap);
+                border.GestureRecognizers.Add(addTap);
+
+                var rightTap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Secondary };
+                rightTap.Tapped += async (_, __) =>
+                {
+                    if (border.BindingContext is not EffectBundleCardItem item) return;
+                    var verbs = new[] { PPLocalizedResources.Add_Effect, Localized.AssetPage_ShowPreview, Localized._Cancel };
+                    var action = await page.DisplayActionSheetAsync(item.Title, Localized._Cancel, null, verbs[0], verbs[1]);
+                    if (action == verbs[0])
+                    {
+                        AddBundle(item.BundleTypeName);
+                    }
+                    else if (action == verbs[1])
+                    {
+                        await page.DisplayAlertAsync(Localized._Info, item.Description, Localized._OK);
+                    }
+                };
+                border.GestureRecognizers.Add(rightTap);
+#elif ANDROID || IOS
+                var pointerGesture = new PointerGestureRecognizer();
+                DateTime pointerDownTime = DateTime.MinValue;
+                pointerGesture.PointerPressed += (_, __) => pointerDownTime = DateTime.Now;
+                pointerGesture.PointerReleased += async (_, __) =>
+                {
+                    if (border.BindingContext is not EffectBundleCardItem item) return;
+                    var duration = (DateTime.Now - pointerDownTime).TotalMilliseconds;
+                    if (duration >= 500)
+                    {
+                        var action = await page.DisplayActionSheetAsync(item.Title, Localized._Cancel, null, PPLocalizedResources.Add_Effect, Localized.AssetPage_ShowPreview);
+                        if (action == PPLocalizedResources.Add_Effect)
+                            AddBundle(item.BundleTypeName);
+                        else if (action == Localized.AssetPage_ShowPreview)
+                            await page.DisplayAlertAsync(Localized._Info, item.Description, Localized._OK);
+                    }
+                    else
+                    {
+                        AddBundle(item.BundleTypeName);
+                    }
+                };
+                border.GestureRecognizers.Add(pointerGesture);
+#endif
+
+                return border;
+            }));
+
+            return new VerticalStackLayout
+            {
+                Spacing = 6,
+                Children =
+                {
+                    new Label
+                    {
+                        Text = PPLocalizedResources.Add_Effect_Select,
+                        Opacity = 0.7,
+                        FontSize = 13
+                    },
+                    flex
+                }
+            };
         }
 
         public View BuildClassicEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
-            // Get current color or default
             PropertyPanelBuilder ppb = new();
+            ppb.AddText(new Label { Text = PPLocalizedResources.EffectProp_ClassicEffectPageWarn, TextColor = Colors.Yellow });
 
-            var localizedEffectDisplayName = GetLocalizedEffectNames();
+            var localizedEffectDisplayName = EffectServices.GetLocalizedEffectNames();
 
             if (clip.Effects != null)
             {
@@ -684,7 +902,7 @@ namespace projectFrameCut.DraftStuff
                             {
                                 if (bool.TryParse(strVal, out var enabledVal))
                                 {
-                                    clip.Effects[effectKey] = ReCreateEffect(effect, null, enabledVal, null);
+                                    clip.Effects[effectKey] = EffectServices.ReCreateEffect(effect, null, enabledVal, null, page: page);
                                 }
                                 handler?.Invoke(s, e);
                                 return;
@@ -693,7 +911,7 @@ namespace projectFrameCut.DraftStuff
                             {
                                 if (int.TryParse(strVal, out var indexVal))
                                 {
-                                    clip.Effects[effectKey] = ReCreateEffect(effect, null, null, indexVal);
+                                    clip.Effects[effectKey] = EffectServices.ReCreateEffect(effect, null, null, indexVal, page: page);
                                 }
                                 handler?.Invoke(s, e);
                                 return;
@@ -718,7 +936,7 @@ namespace projectFrameCut.DraftStuff
                                     {
                                         var newParams = new Dictionary<string, object>(effect.Parameters);
                                         newParams[paramName] = typedValue;
-                                        clip.Effects[effectKey] = ReCreateEffect(effect, newParams, null, null);
+                                        clip.Effects[effectKey] = EffectServices.ReCreateEffect(effect, newParams, null, null, page: page);
                                     }
                                 }
                                 catch { }
@@ -795,6 +1013,86 @@ namespace projectFrameCut.DraftStuff
 
 
 
+        private View BuildBundleOrderItem(EffectBundleData bundleData, ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            var container = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitionCollection
+                {
+                    new ColumnDefinition { Width = GridLength.Auto },
+                    new ColumnDefinition { Width = GridLength.Star }
+                },
+                Padding = new Thickness(5),
+                BackgroundColor = Colors.Transparent
+            };
+
+            var dragHandle = new Label
+            {
+                Text = "⣿", // drag grip
+                FontSize = 20,
+                VerticalOptions = LayoutOptions.Center,
+                HorizontalOptions = LayoutOptions.Center,
+                Margin = new Thickness(0, 0, 10, 0),
+            };
+
+            var nameLabel = new Label
+            {
+                Text = string.IsNullOrWhiteSpace(bundleData.Name) ? bundleData.BundleTypeName : bundleData.Name,
+                VerticalOptions = LayoutOptions.Center,
+                FontSize = 16
+            };
+
+            var textStack = new HorizontalStackLayout
+            {
+                Children = { nameLabel },
+                VerticalOptions = LayoutOptions.Center
+            };
+
+            var dragGesture = new DragGestureRecognizer { CanDrag = true };
+            dragGesture.DragStarting += (s, e) =>
+            {
+                e.Data.Properties.Add("BundleId", bundleData.Id);
+            };
+            dragHandle.GestureRecognizers.Add(dragGesture);
+
+            var dropGesture = new DropGestureRecognizer { AllowDrop = true };
+            dropGesture.Drop += (s, e) =>
+            {
+                if (clip.EffectBundles == null) return;
+
+                if (e.Data.Properties.TryGetValue("BundleId", out var sourceKeyObj) && sourceKeyObj is string sourceId)
+                {
+                    if (sourceId == bundleData.Id) return;
+
+                    // Dictionary has no inherent order: reorder by swapping Index values.
+                    if (clip.EffectBundles.TryGetValue(sourceId, out var sourceBundle) &&
+                        clip.EffectBundles.TryGetValue(bundleData.Id, out var targetBundle))
+                    {
+                        (sourceBundle.Index, targetBundle.Index) = (targetBundle.Index, sourceBundle.Index);
+                        RebuildAllEffects(clip);
+                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
+                    }
+                }
+            };
+            container.GestureRecognizers.Add(dropGesture);
+
+            container.Children.Add(dragHandle);
+            container.Children.Add(textStack);
+            Grid.SetColumn(textStack, 1);
+
+            var frame = new Border
+            {
+                Content = container,
+                Stroke = Colors.Gray,
+                StrokeThickness = 0.5,
+                Padding = 0,
+                Margin = new Thickness(0, 2)
+            };
+            frame.GestureRecognizers.Add(dropGesture);
+
+            return frame;
+        }
+
         private View BuildEffectOrderItem(string effectKey, IEffect effect, ClipElementUI clip, Dictionary<string, string> localizedEffectDisplayName, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             // Drag Drop Container
@@ -865,8 +1163,8 @@ namespace projectFrameCut.DraftStuff
                         int tIdx = targetEffect.Index;
                         int sIdx = sourceEffect.Index;
 
-                        clip.Effects[sourceKey] = ReCreateEffect(sourceEffect, null, null, tIdx);
-                        clip.Effects[effectKey] = ReCreateEffect(targetEffect, null, null, sIdx);
+                        clip.Effects[sourceKey] = EffectServices.ReCreateEffect(sourceEffect, null, null, tIdx, page: page);
+                        clip.Effects[effectKey] = EffectServices.ReCreateEffect(targetEffect, null, null, sIdx, page: page);
 
                         handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                     }
@@ -901,7 +1199,7 @@ namespace projectFrameCut.DraftStuff
             ppb.AddButton("applyButton", Localized._Apply);
             ppb.ListenToChanges(e =>
             {
-                if(e.Id == "speedRatio")
+                if (e.Id == "speedRatio")
                 {
                     clip.SecondPerFrameRatio = float.TryParse(e.Value as string, out var result) ? result : 1;
                     clip.ApplySpeedRatio();
@@ -910,6 +1208,5 @@ namespace projectFrameCut.DraftStuff
             var panel = ppb.Build();
             return panel;
         }
-
     }
 }

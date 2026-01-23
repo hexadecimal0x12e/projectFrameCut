@@ -1,4 +1,5 @@
-﻿using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+﻿using CommunityToolkit.Maui.Views;
+using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
 using System.Collections.Generic;
@@ -8,7 +9,19 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
 {
     public interface IEffectBundle
     {
+        /// <summary>
+        /// The TypeName of the EffectGroup.
+        /// </summary>
+        /// <remarks>
+        /// it SHOULD equals to <see cref="IEffect.TypeName"/>, <see cref="IEffectFactory.TypeName"/> and so on.
+        /// </remarks>
         public string TypeName { get; }
+
+        public string FromPlugin { get; }
+
+        public bool IsNormalEffect { get; }
+        public bool IsContinuousEffect { get; }
+        public bool IsBindableEffect { get; }
 
         /// <summary>
         /// The id of the EffectGroup.
@@ -24,9 +37,18 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         public string Name { get; set; }
 
         /// <summary>
+        /// The index of this EffectGroup's Index. 
+        /// </summary>
+        /// <remarks>
+        /// DO NOT set this property manually. It will be set by the user interface when the effect group is added to the effect stack.
+        /// </remarks>
+        public int Index { get; set; }
+
+        /// <summary>
         /// The arguments of the EffectGroup.
         /// </summary>
         public Dictionary<string, object> Parameters { get; set; }
+
         /// <summary>
         /// Indicates which parameters are needed for this effect.
         /// </summary>
@@ -39,8 +61,8 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         /// <summary>
         /// Create the specified effects.
         /// </summary>
-        /// <returns></returns>
-        public IEffect[] Create();
+        /// <returns>The final effect(s).</returns>
+        public IEffectFactory[] Create();
 
         /// <summary>
         /// Create the Effect property UI.
@@ -50,23 +72,35 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         /// </remarks>
         public PropertyPanelBuilder CreateUI();
 
-        public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args);
+        /// <summary>
+        /// Handle the change of the Effect property UI created via <see cref="CreateUI"/>.
+        /// </summary>
+        /// <remarks>
+        /// Default implementation will simply update the parameter with the new value. Override this method if you need custom handling.
+        /// </remarks>
+        /// <param name="args">The input arguments for the property panel change event.</param>
+        /// <returns>The updated parameters after handling the property panel change.</returns>
+        public virtual Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
+        {
+            Parameters[args.Id] = args.Value;
+            return Parameters;
+        }
 
         /// <summary>
-        /// Check and modify the effects created by Create() if needed.
+        /// Get the display information of this effect bundle.
         /// </summary>
-        /// <param name="source"></param>
+        /// <param name="locate"></param>
         /// <returns></returns>
-        public IEffect[] Maintenance(IEffect[] source);
+        public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null);
 
-        public EffectBundleItem GetEffectBundleItem(string? locate = null);
     }
 
-    public class EffectBundleItem
+    public class EffectBundleDisplayItem
     {
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public ImageSource Thumbnail { get; set; }
+        public required string Name { get; set; }
+        public required string Description { get; set; }
+        public ImageSource? Thumbnail { get; set; }
+        public MediaSource? VideoThumbnail { get; set; }
     }
 
     public class EffectBundleData
@@ -76,5 +110,6 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         public Dictionary<string, object> Parameters { get; set; } = new();
         public bool Enabled { get; set; } = true;
         public string Name { get; set; }
+        public int Index { get; set; }
     }
 }

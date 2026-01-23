@@ -348,7 +348,7 @@ namespace projectFrameCut.Render.Rendering
             Clip = pic;
             LayerIndex = parent.LayerIndex;
             MixtureMode = parent.MixtureMode;
-            Effects = projectFrameCut.Render.VideoMakeEngine.EffectHelper.GetEffectsInstances(parent.Effects);
+            Effects = EffectHelper.GetEffectsInstances(parent.Effects);
         }
     }
 }

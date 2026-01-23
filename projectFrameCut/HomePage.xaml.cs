@@ -630,23 +630,22 @@ public partial class HomePage : ContentPage
 #if WINDOWS //for recall/timeline
                     try
                     {
-                        var platformPage = this.Handler?.PlatformView as Microsoft.UI.Xaml.Controls.Page;
-                        await platformPage?.Dispatcher.RunAsync(default, async () =>
+                        await MainThread.InvokeOnMainThreadAsync(async () =>
                         {
-                            _previousSession?.Dispose();
-                            var activity = await UserActivityChannel.GetDefault().GetOrCreateUserActivityAsync($"projectFrameCut_draft_{project?.projectName ?? "Project"}");
-                            activity.ActivationUri = new Uri($"projectFrameCut://draft/{draftSourcePath.Replace('\\', '/')}");
-                            activity.VisualElements.DisplayText = $"projectFrameCut draft-'{project?.projectName ?? "Project"}'";
-                            await activity.SaveAsync();
-                            _previousSession = activity.CreateSession();
+                            try
+                            {
+                                _previousSession?.Dispose();
+                                var activity = await UserActivityChannel.GetDefault().GetOrCreateUserActivityAsync($"projectFrameCut_draft_{project?.projectName ?? "Project"}");
+                                activity.ActivationUri = new Uri($"projectFrameCut://draft/{draftSourcePath.Replace('\\', '/')}");
+                                activity.VisualElements.DisplayText = $"projectFrameCut draft-'{project?.projectName ?? "Project"}'";
+                                await activity.SaveAsync();
+                                _previousSession = activity.CreateSession();
+                            }
+                            catch { }
                         });
 
                     }
-                    catch (Exception ex)
-                    {
-
-                    }
-
+                    catch { }
 #endif
                 });
 

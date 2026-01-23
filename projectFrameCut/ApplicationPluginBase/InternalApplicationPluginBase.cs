@@ -9,9 +9,10 @@ namespace projectFrameCut.ApplicationPluginBase
 {
     internal class InternalApplicationPluginBase : InternalPluginBase, IApplicationPluginBase
     {
-        public Dictionary<string, Func<IEffectBundle>> EffectBundleProvider => new Dictionary<string, Func<IEffectBundle>> 
+        public Dictionary<string, Func<IEffectBundle>> EffectBundleProvider => new Dictionary<string, Func<IEffectBundle>>
         {
-            {"ZoomIn", () =>new Effect.ZoominEffectBundle() }
+            {"ZoomIn", () => new Effect.ZoominEffectBundle() },
+            {"Jitter", () => new Effect.JitterEffectBundle() }
         };
 
         public View? SettingPageProvider(ref IApplicationPluginBase instance)

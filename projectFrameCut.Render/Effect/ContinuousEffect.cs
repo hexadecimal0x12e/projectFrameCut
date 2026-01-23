@@ -53,6 +53,11 @@ namespace projectFrameCut.Render.Effect
             if (currentWidth < 1) currentWidth = 1;
             if (currentHeight < 1) currentHeight = 1;
 
+            // Crop requires the rectangle to be fully inside the source bounds.
+            // If TargetX/TargetY are larger than the source, the interpolation may exceed bounds.
+            if (currentWidth > source.Width) currentWidth = source.Width;
+            if (currentHeight > source.Height) currentHeight = source.Height;
+
             int startX = Math.Max(0, (source.Width - currentWidth) / 2);
             int startY = Math.Max(0, (source.Height - currentHeight) / 2);
             var rect = new Rectangle(startX, startY, currentWidth, currentHeight);
@@ -101,6 +106,10 @@ namespace projectFrameCut.Render.Effect
             if (currentWidth < 1) currentWidth = 1;
             if (currentHeight < 1) currentHeight = 1;
 
+            // Keep crop rect within bounds to avoid ImageSharp ArgumentException.
+            if (currentWidth > source.Width) currentWidth = source.Width;
+            if (currentHeight > source.Height) currentHeight = source.Height;
+
             int startX = Math.Max(0, (source.Width - currentWidth) / 2);
             int startY = Math.Max(0, (source.Height - currentHeight) / 2);
             var rect = new Rectangle(startX, startY, currentWidth, currentHeight);
@@ -135,7 +144,16 @@ namespace projectFrameCut.Render.Effect
         public IPicture Process(IPicture source)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            var resultImg = source.SaveToSixLaborsImage().Clone(x => x.Crop(CropRect).Resize(TargetWidth, TargetHeight));
+            var resultImg = source.SaveToSixLaborsImage().Clone(x =>
+            {
+                var originalSize = x.GetCurrentSize();
+                var safeCrop = Rectangle.Intersect(CropRect, new Rectangle(0, 0, originalSize.Width, originalSize.Height));
+                if (safeCrop.Width <= 0 || safeCrop.Height <= 0)
+                {
+                    safeCrop = new Rectangle(0, 0, Math.Min(originalSize.Width, 1), Math.Min(originalSize.Height, 1));
+                }
+                x.Crop(safeCrop).Resize(TargetWidth, TargetHeight);
+            });
 
             IPicture result = (int)source.bitPerPixel switch
             {
@@ -152,7 +170,16 @@ namespace projectFrameCut.Render.Effect
 
         public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()
         {
-            return x => x.Crop(CropRect).Resize(TargetWidth, TargetHeight);
+            return x =>
+            {
+                var originalSize = x.GetCurrentSize();
+                var safeCrop = Rectangle.Intersect(CropRect, new Rectangle(0, 0, originalSize.Width, originalSize.Height));
+                if (safeCrop.Width <= 0 || safeCrop.Height <= 0)
+                {
+                    safeCrop = new Rectangle(0, 0, Math.Min(originalSize.Width, 1), Math.Min(originalSize.Height, 1));
+                }
+                return x.Crop(safeCrop).Resize(TargetWidth, TargetHeight);
+            };
         }
 
         public PictureProcessStack GetProcessStack() => new PictureProcessStack
@@ -200,18 +227,21 @@ namespace projectFrameCut.Render.Effect
 
         public Random rnd;
 
-        public List<string> ParametersNeeded { get; } = new List<string>
+        public static List<string> s_ParametersNeeded { get; } = new List<string>
         {
             "MaxOffsetX",
             "MaxOffsetY",
         };
 
-        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        public static Dictionary<string, string> s_ParametersType { get; } = new Dictionary<string, string>
         {
             { "MaxOffsetX", "int" },
             { "MaxOffsetY", "int" },
             { "Seed", "int" },
         };
+
+        public Dictionary<string, string> ParametersType => s_ParametersType;
+        public List<string> ParametersNeeded => s_ParametersNeeded;
 
         public string TypeName => "Jitter";
 

@@ -7,12 +7,12 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using SixLabors.ImageSharp.Processing;
-using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Plugin;
 using System.Text.Json;
+using projectFrameCut.Render.Effect;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
