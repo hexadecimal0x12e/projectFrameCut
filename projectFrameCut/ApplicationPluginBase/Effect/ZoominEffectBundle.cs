@@ -1,5 +1,7 @@
-﻿using projectFrameCut.ApplicationAPIBase.Effect;
+﻿using Microsoft.Maui.Handlers;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
@@ -73,13 +75,19 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             return ppb;
         }
 
+        public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
+        {
+            Parameters[args.Id] = int.Parse(args.Value as string);
+            return Parameters;
+        }
+
         public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)
         {
             return new EffectBundleDisplayItem
             {
                 Name = LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.DisplayName_Effect_ZoomIn,
                 Description = "111",
-                Thumbnail = null!
+                Thumbnail = ImageHelper.LoadFromAsset("icon_add")
             };
         }
 

@@ -7,18 +7,277 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
+using Color = SixLabors.ImageSharp.Color;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class SubjectMattingMaskGenerator : IBindableArgumentEffect
+
+    #region Point Placer
+
+    public class PointPlacer : IBindableArgumentEffectContinuesResultGenerator
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "";
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
-        public BindableArgumentEffectType EffectRole { get; set; } = BindableArgumentEffectType.ValueProvider;
+        public string TypeName => "PointPlacer";
+        public string? BindedArgumentProviderID { get; set; }
+
+        public string? NeedComputer => null;
+        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+        public bool YieldProcessStep => true;
+        public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
+
+        public Dictionary<string, object> Parameters => new Dictionary<string, object>();
+
+        public static List<string> ParametersNeeded { get; } = new List<string>();
+        public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>();
+
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters) => new PointPlacer();
+
+        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
+
+        public int StartPoint { get; set; }
+        public int EndPoint { get; set; }
+
+        public IPicture GenerateResult(object source, uint index, IPicture frame, IComputer? computer, int targetWidth, int targetHeight)
+            {
+            if (source is not Func<double, System.Drawing.Point> func) throw new ArgumentException("Source is not a valid callback function.", nameof(source));
+            var prog = EffectHelper.GetContinuesEffectProgress(index, StartPoint, EndPoint);
+            var pt = func.Invoke(prog);
+            LogDiagnostic($"[PointPlacer,{Id}] Placing to {pt} in {prog}...");
+            var x = pt.X;
+            var y = pt.Y;
+
+            int startX = x, startY = y;
+            if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
+            {
+                startX = (int)Math.Round((double)startX * targetWidth / RelativeWidth);
+                startY = (int)Math.Round((double)startY * targetHeight / RelativeHeight);
+            }
+
+            var step = new ImageSharp.PlaceProcessStep(startX, startY, targetWidth, targetHeight);
+            return step.Process(frame);
+        }
+
+        public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight)
+        {
+            if (source is not Func<double, System.Drawing.Point> func) throw new ArgumentException("Source is not a valid callback function.", nameof(source));
+            var prog = EffectHelper.GetContinuesEffectProgress(index, StartPoint, EndPoint);
+            var pt = func.Invoke(prog);
+            LogDiagnostic($"[PointPlacer,{Id}] Placing to {pt} in {prog}...");
+            var x = pt.X;
+            var y = pt.Y;
+            int startX = x, startY = y;
+            if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
+            {
+                startX = (int)Math.Round((double)startX * targetWidth / RelativeWidth);
+                startY = (int)Math.Round((double)startY * targetHeight / RelativeHeight);
+            }
+
+            return new ImageSharp.PlaceProcessStep(startX, startY, targetWidth, targetHeight);
+        }
+
+
+        public bool IsValueValid(object value)
+        {
+            return value is Func<double, System.Drawing.Point>;
+        }
+
+        public void Initialize() { }
+
+        public int RelativeWidth { get; set; }
+        public int RelativeHeight { get; set; }
+        public string? BindedEffectGroupID { get; set; }
+
+    }
+
+    public class PointPlacerFactory : IBindableEffectFactory
+    {
+        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+        public string TypeName => "PointPlacer";
+        public List<string> ParametersNeeded => PointPlacer.ParametersNeeded;
+        public Dictionary<string, string> ParametersType => PointPlacer.ParametersType;
+
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp };
+
+
+        public string? ID { get; set; }
+        public string? BindedInputID { get; set; }
+        public string[]? BindedInputIDs { get; set; }
+
+        public IEffect BuildWithDefaultType(string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
+        {
+            return Build(SupportsImplementTypes[0], ID, BindedInputID, BindedInputIDs,  parameters);
+        }
+
+        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null,  Dictionary<string, object>? parameters = null)
+        {
+            if (implementType != EffectImplementType.NotSpecified && !SupportsImplementTypes.Contains(implementType))
+            {
+                throw new ArgumentException($"ImplementType {implementType} is not supported.", nameof(implementType));
+            }
+
+            var e = parameters != null ? PointPlacer.FromParametersDictionary(parameters) : new PointPlacer();
+
+            if (e is IBindableArgumentEffect be)
+            {
+                be.Id = Guid.NewGuid().ToString();
+
+                if (BindedInputID != null)
+                {
+                    be.BindedArgumentProviderID = BindedInputID;
+                }
+                else if (parameters != null)
+                {
+                    throw new InvalidDataException("Invaild source ID.");
+                }
+            }
+            return e;
+        }
+    }
+
+    public class StraightLineMovementValueProducer : IBindableArgumentEffectValueProvider
+    {
+        public bool Enabled { get; set; } = true;
+        public int Index { get; set; }
+        public string Name { get; set; } = "";
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+
+        public string? BindedArgumentProviderID { get; set; }
+
+        public int StartX { get; set; }
+        public int StartY { get; set; }
+        public int EndX { get; set; }
+        public int EndY { get; set; }
+
+        public string? NeedComputer => null;
+        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+        public bool YieldProcessStep => false;
+        public EffectImplementType ImplementType => EffectImplementType.NotSpecified;
+        public string TypeName => "StraightLineMovementValueProducer";
+
+        public Dictionary<string, object> Parameters => new Dictionary<string, object>
+        {
+            { "StartX", StartX },
+            { "StartY", StartY },
+            { "EndX", EndX },
+            { "EndY", EndY },
+        };
+
+        public static List<string> ParametersNeeded { get; } = StraightLineMovementValueProducerFactory.s_ParametersNeeded;
+        public static Dictionary<string, string> ParametersType { get; } = StraightLineMovementValueProducerFactory.s_ParametersType;
+
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
+        {
+            var effect = new StraightLineMovementValueProducer();
+            if (parameters.TryGetValue("StartX", out var startX)) effect.StartX = Convert.ToInt32(startX);
+            if (parameters.TryGetValue("StartY", out var startY)) effect.StartY = Convert.ToInt32(startY);
+            if (parameters.TryGetValue("EndX", out var endX)) effect.EndX = Convert.ToInt32(endX);
+            if (parameters.TryGetValue("EndY", out var endY)) effect.EndY = Convert.ToInt32(endY);
+            return effect;
+        }
+
+        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
+
+        public object GenerateValue(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        {
+            return new Func<double, System.Drawing.Point>((progress) =>
+            {
+                int x = (int)Math.Round(StartX + (EndX - StartX) * progress);
+                int y = (int)Math.Round(StartY + (EndY - StartY) * progress);
+                return new System.Drawing.Point(x, y);
+            });
+        }
+
+        public bool IsValueValid(object value) => value is Func<double, System.Drawing.Point>;
+
+        public void Initialize() { }
+
+        public bool GenerateOnce => true;
+
+        public int RelativeWidth { get; set; }
+        public int RelativeHeight { get; set; }
+        public string? BindedEffectGroupID { get; set; }
+
+    }
+
+    public class StraightLineMovementValueProducerFactory : IBindableEffectFactory
+    {
+        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+        public string TypeName => "StraightLineMovementValueProducer";
+        public static List<string> s_ParametersNeeded = new List<string>
+        {
+            "StartX",
+            "StartY",
+            "EndX",
+            "EndY",
+        };
+
+        public static Dictionary<string, string> s_ParametersType = new Dictionary<string, string>
+        {
+            {"StartX", "int" },
+            {"StartY", "int" },
+            {"EndX", "int" },
+            {"EndY", "int" },
+        };
+        public List<string> ParametersNeeded => s_ParametersNeeded;
+        public Dictionary<string, string> ParametersType => s_ParametersType;
+
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.NotSpecified };
+
+
+        public string? ID { get; set; }
+        public string? BindedInputID { get; set; }
+        public string[]? BindedInputIDs { get; set; }
+
+        public IEffect BuildWithDefaultType(string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
+        {
+            return Build(SupportsImplementTypes[0], ID, BindedInputID, BindedInputIDs,  parameters);
+        }
+
+        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null,  Dictionary<string, object>? parameters = null)
+        {
+            if (implementType != EffectImplementType.NotSpecified && !SupportsImplementTypes.Contains(implementType))
+            {
+                throw new ArgumentException($"ImplementType {implementType} is not supported.", nameof(implementType));
+            }
+
+            var e = parameters != null ? StraightLineMovementValueProducer.FromParametersDictionary(parameters) : new StraightLineMovementValueProducer();
+
+            if (e is IBindableArgumentEffect be)
+            {
+                if (ID != null)
+                {
+                    be.Id = ID;
+                }
+                else if (parameters != null)
+                {
+                    throw new InvalidDataException("Invaild source ID.");
+                }
+                be.BindedArgumentProviderID = null!;
+            }
+            return e;
+        }
+    }
+
+
+
+    
+
+    #endregion
+
+    #region subject match
+    public class SubjectMattingMaskGenerator : IBindableArgumentEffectValueProvider
+    {
+        public bool Enabled { get; set; } = true;
+        public int Index { get; set; }
+        public string Name { get; set; } = "";
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+
         public string? BindedArgumentProviderID { get; set; }
 
         // Parameters
@@ -128,31 +387,24 @@ namespace projectFrameCut.Render.Effect
             };
         }
 
-        public object ProcessValue(object source, IComputer? computer, int targetWidth, int targetHeight) => source;
-
-        public IPicture GenerateResult(object source, IPicture frame, IComputer? computer, int targetWidth, int targetHeight) 
-            => throw new NotSupportedException("This effect is a ValueProvider, not a ResultGenerator.");
-
-        public IPictureProcessStep GenerateResultStep(object source, int targetWidth, int targetHeight) 
-            => throw new NotSupportedException("This effect is a ValueProvider, not a ResultGenerator.");
-
         public bool IsValueValid(object value) => true;
 
         public void Initialize() { }
+
+        public bool GenerateOnce => false;
 
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
         public string? BindedEffectGroupID { get; set; }
     }
 
-    public class MaskApplier : IBindableArgumentEffect
+    public class MaskApplier : IBindableArgumentEffectNormalResultGenerator
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
         public string Name { get; set; } = "";
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
-        public BindableArgumentEffectType EffectRole { get; set; } = BindableArgumentEffectType.ResultGenerator;
         public string? BindedArgumentProviderID { get; set; }
 
         public string? NeedComputer => null;
@@ -170,10 +422,6 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
 
-        public object GenerateValue(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
-             => throw new NotSupportedException("This effect is a ResultGenerator, not a ValueProvider.");
-
-        public object ProcessValue(object source, IComputer? computer, int targetWidth, int targetHeight) => source;
 
         /// <summary>
         /// Applies the mask to the frame (ResultGenerator role).
@@ -245,6 +493,11 @@ namespace projectFrameCut.Render.Effect
 
     }
 
+    #endregion
+
+
+    #region subject match factory
+
     public class SubjectMattingMaskGeneratorFactory : IEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
@@ -302,4 +555,6 @@ namespace projectFrameCut.Render.Effect
             return new MaskApplier();
         }
     }
+
+    #endregion
 }

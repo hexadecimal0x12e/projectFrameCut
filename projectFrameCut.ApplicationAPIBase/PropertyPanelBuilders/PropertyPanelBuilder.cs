@@ -738,23 +738,18 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
         /// <summary>
         /// Appends child items conditionally.
         /// </summary>
-        /// <param name="condition"></param>
-        /// <param name="appender"></param>
-        /// <returns></returns>
-        public PropertyPanelBuilder AppendWhen(bool condition, Action<PropertyPanelBuilder> appender)
+        public PropertyPanelBuilder AppendWhen(bool condition, Action<PropertyPanelBuilder> onTrue)
         {
             if (condition)
             {
-                appender(this);
+                onTrue(this);
             }
             return this;
         }
+
         /// <summary>
         /// Appends child items conditionally.
         /// </summary>
-        /// <param name="condition"></param>
-        /// <param name="appender"></param>
-        /// <returns></returns>
         public PropertyPanelBuilder AppendWhen(bool condition, Action<PropertyPanelBuilder> onTrue, Action<PropertyPanelBuilder> onFalse)
         {
             if (condition)
@@ -769,12 +764,34 @@ namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
         }
 
         /// <summary>
+        /// Appends child items conditionally.
+        /// </summary>
+        public PropertyPanelBuilder AppendWhen(params (Func<bool> condition, Action<PropertyPanelBuilder> onTrue)[] conditions)
+        {
+            foreach (var (condition, onTrue) in conditions)
+            {
+                if (condition()) onTrue(this);
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Appends child items conditionally.
+        /// </summary>
+        public PropertyPanelBuilder AppendWhen(params (Func<bool> condition, Action<PropertyPanelBuilder> onTrue, Action<PropertyPanelBuilder> onFalse)[] conditions)
+        {
+            foreach (var (condition, onTrue, onFalse) in conditions)
+            {
+                if (condition()) onTrue(this);
+                else onFalse(this);
+            }
+            return this;
+        }
+
+        /// <summary>
         /// Append each item in the source collection.
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="source"></param>
-        /// <param name="appender"></param>
-        /// <returns></returns>
         public PropertyPanelBuilder Foreach<T>(IEnumerable<T> source, Action<PropertyPanelBuilder, T> appender)
         {
             foreach (var item in source)

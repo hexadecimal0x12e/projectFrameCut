@@ -11,19 +11,31 @@ namespace projectFrameCut.Shared
         /// <summary>
         /// Get whether the array have any value.
         /// </summary>
+        [DebuggerNonUserCode()]
         public static bool ArrayAny<T>(this T[]? input)
         {
             if (input is null) return false;
             return input.Length > 0;
         }
+
+        /// <summary>
+        /// Get whether the list have any value.
+        /// </summary>
+        [DebuggerNonUserCode()]
         public static bool ListAny<T>(this List<T>? input)
         {
             if (input is null) return false;
             return input.Count > 0;
         }
 
+        /// <summary>
+        /// Reverse looking up a dictionary.
+        /// </summary>
+        /// <remarks>
+        /// This method will return the first matching key found, whenever there are multiple keys with the same value.
+        /// </remarks>
         [DebuggerNonUserCode()]
-        public static TKey? ReverseLookup<TKey, TValue>(this IDictionary<TKey, TValue> dict, TValue value, TKey? DefaultValue = default)
+        public static TKey ReverseLookup<TKey, TValue>(this IDictionary<TKey, TValue> dict, TValue value, TKey DefaultValue) where TKey : notnull
         {
             foreach (var kv in dict)
             {
@@ -33,6 +45,26 @@ namespace projectFrameCut.Shared
                 }
             }
             return DefaultValue;
+
+        }
+
+        /// <summary>
+        /// Reverse looking up a dictionary.
+        /// </summary>
+        /// <remarks>
+        /// This method will return the first matching key found, whenever there are multiple keys with the same value.
+        /// </remarks>
+        [DebuggerNonUserCode()]
+        public static TKey ReverseLookup<TKey, TValue>(this IDictionary<TKey, TValue> dict, TValue value) where TKey : notnull
+        {
+            foreach (var kv in dict)
+            {
+                if (EqualityComparer<TValue>.Default.Equals(kv.Value, value))
+                {
+                    return kv.Key;
+                }
+            }
+            throw new KeyNotFoundException($"No item with value {value} found.");
         }
 
         /// <summary>

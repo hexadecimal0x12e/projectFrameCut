@@ -646,7 +646,7 @@ public partial class TestPage : ContentPage
             Text = "Custom Button",
             WidthRequest = 150
         })
-        .AddButton("testButton",  "Click me!")
+        .AddButton("testButton", "Click me!")
         .AddCustomChild("pick a date", (c) =>
         {
             var picker = new DatePicker
@@ -771,7 +771,7 @@ public partial class TestPage : ContentPage
         {
 
         };
-        var final = m.Mix(canvas, result, PluginManager.CreateComputer(m.ComputerId, false));   
+        var final = m.Mix(canvas, result, PluginManager.CreateComputer(m.ComputerId, false));
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
@@ -786,7 +786,22 @@ public partial class TestPage : ContentPage
         void dialog(string msg) => Dispatcher.Dispatch(async () => await DisplayAlertAsync("info", msg, "ok"));
 #if WINDOWS
         WindowsContextMenuBuilder b = new();
-        b.AddCommand("Command 1", () => dialog("You clicked 1")).AddSeparator().AddCommand("Command 2", () => dialog("You clicked 2")).AddCommand("Command 1", () => dialog("You clicked 3"));
+        b.AddCommand("Command 1", () => dialog("You clicked 1")).AddSeparator().AddCommand("Command 2", () => dialog("You clicked 2")).AddCommand("command 3", async () =>
+        {
+            await Task.Delay(500);
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                var window = Microsoft.Maui.Controls.Application.Current?.Windows[0];
+                if (window?.Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow)
+                {
+                    var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(nativeWindow);
+                    WinUI.App.SetForegroundWindow(hwnd);
+                    WinUI.App.SetFocus(hwnd);
+                    WinUI.App.FlashWindow(hwnd, true);
+                }
+                WinUI.App.MessageBeep(0x00000040);
+            });
+        });
         b.TryShow(ContextMenuTestBtn);
 #endif
     }
@@ -833,7 +848,7 @@ public partial class TestPage : ContentPage
         if (!projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
 
 #endif
-        await Benchmarker.Start((d, etr) => 
+        await Benchmarker.Start((d, etr) =>
         {
             string timeStr = "";
             if (etr.TotalSeconds > 0)
@@ -850,13 +865,13 @@ public partial class TestPage : ContentPage
 
     private void TestPlaceButton_Clicked(object sender, EventArgs e)
     {
-        Picture8bpp src = Picture8bpp.GenerateSolidColor(200,300,128,128,128,1);
+        Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
         PlaceEffect_ImageSharp p = new()
         {
             StartX = 50,
             StartY = 120
         };
-        var result = p.Render(src, null, 2560,1440);
+        var result = p.Render(src, null, 2560, 1440);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();

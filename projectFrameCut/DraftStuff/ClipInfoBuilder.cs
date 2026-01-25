@@ -26,6 +26,7 @@ using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 using DataTemplate = Microsoft.Maui.Controls.DataTemplate;
 using GridUnitType = Microsoft.Maui.GridUnitType;
 using CommunityToolkit.Maui.Views;
+using System.Diagnostics;
 
 
 
@@ -77,7 +78,7 @@ namespace projectFrameCut.DraftStuff
         }
 
 
-        public View Build(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        public async Task<View> Build(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             TabbedView t = new();
             t.Background = page.Background;
@@ -89,7 +90,7 @@ namespace projectFrameCut.DraftStuff
             t.TabItems.Add(new TabbedViewItem
             {
                 Header = PPLocalizedResources.Tabs_Effect,
-                Content = BuildEffectTab(clip, handler)
+                Content = await BuildEffectTab(clip, handler)
             });
             if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"))
             {
@@ -263,7 +264,7 @@ namespace projectFrameCut.DraftStuff
                         // Get current values (normalized to current project resolution) from UI or Effect
                         int currentX = 0, currentY = 0;
 
-                        PlaceEffect_ImageSharp existingP = null;
+                        PlaceEffect_ImageSharp? existingP = null;
                         if (clip.Effects.TryGetValue("__Internal_Place__", out var eff) && eff is PlaceEffect_ImageSharp pe)
                         {
                             existingP = pe;
@@ -297,7 +298,7 @@ namespace projectFrameCut.DraftStuff
                     else if (e.Id.StartsWith("resize"))
                     {
                         int currentW = page.ProjectInfo.RelativeWidth, currentH = page.ProjectInfo.RelativeHeight;
-                        ResizeEffect_ImageSharp existingR = null;
+                        ResizeEffect_ImageSharp? existingR = null;
 
                         if (clip.Effects.TryGetValue("__Internal_Resize__", out var eff) && eff is ResizeEffect_ImageSharp re)
                         {
@@ -349,6 +350,29 @@ namespace projectFrameCut.DraftStuff
                     handler?.Invoke(s, e);
                     return;
                 }
+
+                switch (e.Id)
+                {
+                    case "displayName":
+                        clip.displayName = e.Value?.ToString() ?? clip.displayName;
+                        break;
+                    case "speedRatio":
+                        {
+                            if (e.Value is double ratio || double.TryParse(e.Value as string, out ratio))
+                            {
+                                if (ratio != 0f)
+                                    clip.SecondPerFrameRatio = (float)ratio;
+                            }
+
+                            break;
+                        }
+                    default:
+                        {
+
+                            break;
+                        }
+                }
+
                 handler?.Invoke(s, e);
             };
             return ppb.BuildWithScrollView();
@@ -391,20 +415,71 @@ namespace projectFrameCut.DraftStuff
 
 
                             var effectFactories = instance.Create();
-                            var effects = effectFactories.Select(f => f.Build(EffectHelper.DefaultImplementsType.GetValueOrDefault(f.TypeName, EffectImplementType.NotSpecified), EffectArgsHelper.ConvertElementDictToObjectDict(instance.Parameters, instance.ParametersType))).ToArray();
+                            //var effects = effectFactories.Select(f => f.Build(, )).ToArray();
+                            List<IEffect> effects = new();
+                            foreach (var item in effectFactories)
+                            {
+                                var impType = EffectHelper.DefaultImplementsType.GetValueOrDefault(item.TypeName, EffectImplementType.NotSpecified);
+                                var param = EffectArgsHelper.ConvertElementDictToObjectDict(instance.Parameters, instance.ParametersType);
+                                if (item is IBindableEffectFactory be)
+                                {
+                                    effects.Add(be.Build(impType, be.ID, be.BindedInputID, be.BindedInputIDs, param));
+                                }
+                                else
+                                {
+                                    effects.Add(item.Build(impType, param));
+                                }
+                            }
 
                             if (effects != null)
                             {
-                                for (int i = 0; i < effects.Length; i++)
+                                // First pass: set up all bindable effects with IDs
+                                for (int i = 0; i < effects.Count; i++)
                                 {
                                     var effect = effects[i];
                                     effect.Name = $"EffectBundle {bundleData.BundleTypeName}({bundleData.Id}) - Subeffect #{i}";
                                     effect.Enabled = effect.Enabled && bundleData.Enabled;
                                     effect.Index = globalIndex++;
                                     effect.BindedEffectGroupID = bundleData.Id;
+                                    
+                                    //// For IBindableArgumentEffect, ensure they have proper IDs
+                                    //if (effect is IBindableArgumentEffect bindableEffect)
+                                    //{
+                                    //    // Generate ID if not set
+                                    //    if (string.IsNullOrEmpty(bindableEffect.Id))
+                                    //    {
+                                    //        bindableEffect.Id = $"{bundleData.Id}_bindable_{i}_{Guid.NewGuid().ToString().Substring(0, 8)}";
+                                    //    }
+                                    //}
+                                    
                                     string key = $"{bundleData.Id}_{i}";
                                     newEffects[key] = effect;
                                 }
+                                
+                                // Second pass: wire up bindings between effects
+                                // This allows effects to reference each other via their IDs
+                                //for (int i = 0; i < effects.Count; i++)
+                                //{
+                                //    var effect = effects[i];
+                                    
+                                //    // Check if factory specified binding information
+                                //    var effectFactory = effectFactories[i];
+                                //    if (effectFactory is IEffectFactory factoryWithBinding)
+                                //    {
+                                //        // If the factory has BindedInputID, use it to wire up the effect
+                                //        var bindedInputIdProp = factoryWithBinding.GetType().GetProperty("BindedInputID");
+                                //        if (bindedInputIdProp != null && effect is IBindableArgumentEffect bindableEffect)
+                                //        {
+                                //            var bindedInputId = bindedInputIdProp.GetValue(factoryWithBinding) as string;
+                                //            if (!string.IsNullOrEmpty(bindedInputId))
+                                //            {
+                                //                // Resolve the binding ID within this bundle's effects
+                                //                // The binding ID might reference another effect by index or by ID
+                                //                bindableEffect.BindedArgumentProviderID = bindedInputId;
+                                //            }
+                                //        }
+                                //    }
+                                //}
                             }
                         }
                         catch (Exception ex)
@@ -420,7 +495,7 @@ namespace projectFrameCut.DraftStuff
                 .ToDictionary();
         }
 
-        public View BuildEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        public async Task<View> BuildEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             PropertyPanelBuilder ppb = new();
             var bundlesFactories = EffectServices.GetAvailableEffectBundles();
@@ -460,7 +535,16 @@ namespace projectFrameCut.DraftStuff
                         }
                         catch (Exception ex)
                         {
-                            ppb.AddText(new SingleLineLabel($"Error loading bundle {bundleData.BundleTypeName}: {ex.Message}"));
+                            if (Debugger.IsAttached)
+                            {
+                                if (Microsoft.Maui.Controls.Application.Current?.Windows?.First()?.Page is Page page)
+                                {
+                                    if (await page.DisplayAlertAsync(Localized._Error, $"Error loading bundle {bundleData.BundleTypeName}: {ex.Message}", "Throw", Localized._OK)) throw;
+                                }
+                            }
+                            Log(ex, $"loading bundle {bundleData.BundleTypeName}", this);
+                            ppb.AddText(new Label { Text = $"Error loading bundle {bundleData.BundleTypeName}: {ex.Message}", TextColor = Colors.Yellow });
+                            ppb.AddSeparator();
                         }
                     }
                     else
@@ -473,12 +557,7 @@ namespace projectFrameCut.DraftStuff
 
             ppb.AddText(new SingleLineLabel(PPLocalizedResources.Effect_Add_Title, 20));
             ppb.AddCustomChild(BuildAddEffectPanel(bundlesFactories, ppb, clip, handler));
-#if DEBUG
-            ppb.AddButton("Rebuild", (s, e) =>
-            {
-                RebuildAllEffects(clip);
-            });
-#endif
+
             ppb.PropertyChanged += (s, e) =>
             {
                 if (!ppb.Equals(s)) //from another
@@ -491,21 +570,15 @@ namespace projectFrameCut.DraftStuff
                             EffectBundleData? bundle = null;
                             if (clip.EffectBundles != null)
                             {
-                                if (!clip.EffectBundles.TryGetValue(eb.Id, out bundle))
-                                {
-                                    bundle = clip.EffectBundles.Values.FirstOrDefault(x => x.Id == eb.Id);
-                                }
+                                if (!clip.EffectBundles.TryGetValue(eb.Id, out bundle)) throw new KeyNotFoundException($"Effect bundle with ID {eb.Id} not found in clip.");
                             }
 
                             if (bundle != null)
                             {
-                                foreach (var kvp in data)
-                                {
-                                    bundle.Parameters[kvp.Key] = kvp.Value;
-                                }
-                                RebuildAllEffects(clip);
+                                bundle.Parameters = data;
                             }
                         }
+                        RebuildAllEffects(clip);
                     }
                 }
                 else
@@ -587,8 +660,104 @@ namespace projectFrameCut.DraftStuff
             }
 
             ppb.AddCustomChild(bundleOrderContainer);
+#if DEBUG
+            ppb.AddSeparator();
+            ppb.AddButton("Rebuild", (s, e) =>
+            {
+                RebuildAllEffects(clip);
+            });
+#endif
             var panel = ppb.Build();
             return panel;
+        }
+
+        private static object AttemptTypeConversion(object value, string targetTypeStr)
+        {
+            if (value == null) return null;
+
+            if (value is JsonElement j)
+            {
+                if (j.ValueKind == JsonValueKind.True || j.ValueKind == JsonValueKind.False)
+                {
+                    return j.GetBoolean();
+                }
+                if (j.TryGetSByte(out var sb)) return sb;
+                if (j.TryGetByte(out var b)) return b;
+                if (j.TryGetInt16(out var i16)) return i16;
+                if (j.TryGetUInt16(out var u16)) return u16;
+                if (j.TryGetInt32(out var i32)) return i32;
+                if (j.TryGetUInt32(out var u32)) return u32;
+                if (j.TryGetInt64(out var i64)) return i64;
+                if (j.TryGetUInt64(out var u64)) return u64;
+                if (j.TryGetSingle(out var f)) return f;
+                if (j.TryGetDouble(out var d)) return d;
+                if (j.TryGetDecimal(out var dec)) return dec;
+                if (j.TryGetDateTimeOffset(out var dto)) return dto;
+                if (j.TryGetDateTime(out var dt)) return dt;
+                if (j.TryGetGuid(out var g)) return g;
+                if (j.TryGetBytesFromBase64(out var bytes)) return bytes;
+                return j.GetString();
+            }
+
+            Type? targetType = Type.GetType(targetTypeStr);
+            if (targetType == null)
+            {
+                switch (targetTypeStr.ToLowerInvariant())
+                {
+                    case "int":
+                    case "int32":
+                    case "system.int32":
+                        targetType = typeof(int);
+                        break;
+                    case "float":
+                    case "single":
+                    case "system.single":
+                        targetType = typeof(float);
+                        break;
+                    case "double":
+                    case "system.double":
+                        targetType = typeof(double);
+                        break;
+                    case "bool":
+                    case "boolean":
+                    case "system.boolean":
+                        targetType = typeof(bool);
+                        break;
+                    case "string":
+                    case "system.string":
+                        targetType = typeof(string);
+                        break;
+                    case "long":
+                    case "int64":
+                    case "system.int64":
+                        targetType = typeof(long);
+                        break;
+                }
+            }
+
+            if (targetType != null)
+            {
+                if (targetType.IsInstanceOfType(value)) return value;
+
+                try
+                {
+                    if (targetType.IsEnum)
+                    {
+                        if (value is string s)
+                        {
+                            return Enum.Parse(targetType, s);
+                        }
+                        return Enum.ToObject(targetType, value);
+                    }
+                    return Convert.ChangeType(value, targetType);
+                }
+                catch
+                {
+                    // Ignore conversion errors and return original
+                }
+            }
+
+            return value;
         }
 
         private sealed class EffectBundleCardItem
@@ -669,7 +838,7 @@ namespace projectFrameCut.DraftStuff
             }
 
             const double cardWidth = 210;
-            const double cardHeight = 135;
+            const double cardHeight = 160;
             const double cardMargin = 6;
 
             var flex = new FlexLayout
@@ -689,7 +858,7 @@ namespace projectFrameCut.DraftStuff
                     HeightRequest = 64,
                     WidthRequest = 64,
                     Aspect = Aspect.AspectFill,
-                    HorizontalOptions = LayoutOptions.Start,
+                    HorizontalOptions = LayoutOptions.Center,
                     VerticalOptions = LayoutOptions.Start
                 };
                 image.SetBinding(Image.SourceProperty, nameof(EffectBundleCardItem.Thumbnail));
@@ -742,6 +911,24 @@ namespace projectFrameCut.DraftStuff
                 {
                     if (border.BindingContext is EffectBundleCardItem item)
                         ppb.Properties["NewBundleType"] = item.BundleTypeName;
+                    foreach (var child in flex.Children)
+                    {
+                        if (child is Border b)
+                        {
+                            if (b == border)
+                            {
+                                b.Stroke = new SolidColorBrush(Colors.DodgerBlue);
+                                b.StrokeThickness = 2;
+                                b.Background = new SolidColorBrush(Colors.DodgerBlue.WithAlpha(0.1f));
+                            }
+                            else
+                            {
+                                b.Stroke = new SolidColorBrush(Colors.Gray.WithAlpha(0.25f));
+                                b.StrokeThickness = 1;
+                                b.Background = new SolidColorBrush(Colors.Transparent);
+                            }
+                        }
+                    }
                 };
 
                 var addTap = new TapGestureRecognizer { NumberOfTapsRequired = 2, Buttons = ButtonsMask.Primary };
@@ -827,7 +1014,7 @@ namespace projectFrameCut.DraftStuff
                     var effectKey = effectKvp.Key;
                     var effect = effectKvp.Value;
                     var factory = effect.GetFactory(EffectHelper.EffectsFactoriesEnum);
-                    ppb.AddText(new TitleAndDescriptionLineLabel(effect.Name, localizedEffectDisplayName[effect.TypeName]));
+                    ppb.AddText(new TitleAndDescriptionLineLabel(effect.Name, localizedEffectDisplayName.TryGetValue(effect.TypeName, out var disp) ? disp : effect.TypeName));
                     ppb.AddCheckbox($"Effect|{effectKey}|Enabled", PPLocalizedResources._Enabled, effect.Enabled);
                     if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects")) ppb.AddEntry($"Effect|{effectKey}|Index", PPLocalizedResources.EffectProp_Index, effect.Index.ToString(), "-1");
                     foreach (var paramName in factory.ParametersNeeded)
@@ -859,6 +1046,19 @@ namespace projectFrameCut.DraftStuff
                         {
                             string valStr = currentVal?.ToString() ?? "";
                             ppb.AddEntry(controlId, PluginManager.GetLocalizationItem($"_{paramName}", paramName), valStr, "");
+                        }
+                    }
+                    if(effect is IBindableArgumentEffect be)
+                    {
+                        ppb.AddSeparator();
+                        ppb.AddCustomChild("ID", new Label { Text = be.Id });
+                        if(be is not IBindableArgumentEffectMultipleValueProcesser)
+                        {
+                            ppb.AddCustomChild("Binded input ID", new Label { Text = be.BindedArgumentProviderID ?? "none" });
+                        }
+                        else if(be is IBindableArgumentEffectMultipleValueProcesser p)
+                        {
+                            ppb.AddCustomChild("Binded input IDs", new Label { Text = string.Join(Environment.NewLine,p.BindedArgumentProviderIDs) });
                         }
                     }
                     ppb.AddButton($"Effect|{effectKey}|Remove", PPLocalizedResources.EffectProp_Remove);

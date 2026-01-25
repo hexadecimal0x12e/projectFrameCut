@@ -318,6 +318,7 @@ namespace projectFrameCut.Render.Effect
         {
             "MaxOffsetX",
             "MaxOffsetY",
+            "Direction",
         };
 
         public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
@@ -325,6 +326,7 @@ namespace projectFrameCut.Render.Effect
             {"MaxOffsetX", "int"},
             {"MaxOffsetY", "int"},
             {"Seed", "int"},
+            {"Direction", "string"},
         };
 
         public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.ImageSharp];
@@ -350,12 +352,14 @@ namespace projectFrameCut.Render.Effect
             if (!parameters.ContainsKey("MaxOffsetX")) parameters["MaxOffsetX"] = 0;
             if (!parameters.ContainsKey("MaxOffsetY")) parameters["MaxOffsetY"] = 0;
             if (!parameters.ContainsKey("Seed")) parameters["Seed"] = 0;
+            if (!parameters.ContainsKey("Direction")) parameters["Direction"] = JitterEffect.Direction_Both;
 
             return new JitterEffect
             {
                 MaxOffsetX = Convert.ToInt32(parameters["MaxOffsetX"]),
                 MaxOffsetY = Convert.ToInt32(parameters["MaxOffsetY"]),
                 Seed = Convert.ToInt32(parameters["Seed"]),
+                Direction = parameters["Direction"].ToString() ?? JitterEffect.Direction_Both,
             };
         }
     }

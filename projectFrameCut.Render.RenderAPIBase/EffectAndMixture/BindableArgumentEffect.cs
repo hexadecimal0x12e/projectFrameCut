@@ -11,7 +11,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Get which role this effect plays in the variable argument effect chain.
         /// </summary>
-        public BindableArgumentEffectType EffectRole { get; set; }
+        public BindableArgumentEffectType EffectRole { get; }
 
         /// <summary>
         /// The ID of the argument provider this effect is bound to.
@@ -30,40 +30,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public string Id { get; set; }
 
         /// <summary>
-        /// Generates a new value based on the specified source picture, computer, and target dimensions.
+        /// Override if you want to check whether the provided value is valid for processing.
         /// </summary>
-        /// <remarks>
-        /// Throw a <see cref="NotImplementedException"/> if this is not supported.
-        /// </remarks>
-        /// <returns>An object representing the generated value with the specified dimensions. The exact type and contents depend
-        /// on the implementation.</returns>
-        public object GenerateValue(IPicture source, IComputer? computer, int targetWidth, int targetHeight);
-        /// <summary>
-        /// Process the provided value.
-        /// </summary>
-        /// <remarks>
-        /// Throw a <see cref="NotImplementedException"/> if this is not supported.
-        /// </remarks>
-        public object ProcessValue(object source, IComputer? computer, int targetWidth, int targetHeight);
-        /// <summary>
-        /// Produce the final result based on the provided source value.
-        /// </summary>
-        /// <remarks>
-        /// Throw a <see cref="NotImplementedException"/> if this is not supported.
-        /// </remarks>
-        public IPicture GenerateResult(object source, IPicture frame, IComputer? computer, int targetWidth, int targetHeight);
-        /// <summary>
-        /// Generate the final process step based on the provided source value.
-        /// </summary>
-        /// <remarks>
-        /// Throw a <see cref="NotImplementedException"/> if this is not supported.
-        /// </remarks>
-        public IPictureProcessStep GenerateResultStep(object source, int targetWidth, int targetHeight);
-
-        /// <summary>
-        /// Check whether the provided value is valid for processing.
-        /// </summary>
-        public bool IsValueValid(object value);
+        public virtual bool IsValueValid(object value) => true;
 
         bool IEffect.IsNormalEffect => false;
         bool IEffect.IsContinuousEffect => false;
@@ -81,56 +50,89 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         }
     }
 
-    public interface IMultipleInputBindableArgumentEffectProcesser : IBindableArgumentEffect
+    public interface IBindableArgumentEffectValueProvider : IBindableArgumentEffect
     {
-        public sealed new BindableArgumentEffectType EffectRole => BindableArgumentEffectType.MultipleInputValueProcessor;
-        public sealed new string? BindedArgumentProviderID
-        {
-            get => throw new NotSupportedException("The BindedArgumentProviderID property is not supported in IMultipleInputBindableArgumentEffectProcesser. Use BindedArgumentProviderIDs instead.");
-            set
-            {
-                throw new NotSupportedException("The BindedArgumentProviderID property is not supported in IMultipleInputBindableArgumentEffectProcesser. Use BindedArgumentProviderIDs instead.");
-            }
-        }
-
-        public string[] BindedArgumentProviderIDs { get; set; }
+        BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.ValueProvider;
         /// <summary>
-        /// Process the provided values.
+        /// Indicate whether this value provider generates a new value only once, or generates a new value for each request.
+        /// </summary>
+        public bool GenerateOnce { get; }
+        /// <summary>
+        /// Generates a new value based on the specified source picture, computer, and target dimensions.
+        /// </summary>
+        /// <returns>An object representing the generated value with the specified dimensions. The exact type and contents depend
+        /// on the implementation.</returns>
+        public object GenerateValue(IPicture source, IComputer? computer, int targetWidth, int targetHeight);
+    }
+
+    public interface IBindableArgumentEffectValueProcesser : IBindableArgumentEffect
+    {
+        BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.ValueProcessor;
+        /// <summary>
+        /// Process the provided value.
+        /// </summary>
+        public object ProcessValue(object source, IComputer? computer, int targetWidth, int targetHeight);
+    }
+    public interface IBindableArgumentEffectMultipleValueProcesser : IBindableArgumentEffect
+    {
+        BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.MultipleInputValueProcessor;
+
+        string? IBindableArgumentEffect.BindedArgumentProviderID { get => throw new NotSupportedException("Use BindedArgumentProviderIDs instead."); set => throw new NotSupportedException("Use BindedArgumentProviderIDs instead."); }
+
+        /// <summary>
+        /// Get the input argument provider IDs this processor is bound to.
+        /// </summary>
+        public string[] BindedArgumentProviderIDs { get; set; }
+
+        /// <summary>
+        /// Process the provided value.
+        /// </summary>
+        public object ProcessValues(object[] sources, IComputer? computer, int targetWidth, int targetHeight);
+    }
+
+    public interface IBindableArgumentEffectNormalResultGenerator : IBindableArgumentEffect
+    {
+        BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.ResultGenerator;
+
+        /// <summary>
+        /// Produce the final result based on the provided source value.
+        /// </summary>
+        public IPicture GenerateResult(object source, IPicture frame, IComputer? computer, int targetWidth, int targetHeight);
+        /// <summary>
+        /// Generate the final process step based on the provided source value.
+        /// </summary>
+        public IPictureProcessStep GenerateResultStep(object source, int targetWidth, int targetHeight);
+    }
+
+    public interface IBindableArgumentEffectContinuesResultGenerator : IBindableArgumentEffect
+    {
+        BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.ContinuousResultGenerator;
+        /// <summary>
+        /// The start point of the continuous range (inclusive).
         /// </summary>
         /// <remarks>
-        /// Throw a <see cref="NotImplementedException"/> if this is not supported.
+        /// similar to <see cref="IContinuousEffect.StartPoint"/>
         /// </remarks>
-        public object ProcessValues(object[] sources, IComputer? computer, int targetWidth, int targetHeight);
+        public int StartPoint { get; set; }
         /// <summary>
-        /// Check whether the provided values is valid for processing.
+        /// The end point of the continuous range (inclusive).
         /// </summary>
-        public bool IsValuesValid(object[] value);
-
-        public sealed new object GenerateValue(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
-        {
-            throw new NotSupportedException("The GenerateValue method is not supported in IMultipleInputBindableArgumentEffectProcesser.");
-        }
-
-        public sealed new object ProcessValue(object source, IComputer? computer, int targetWidth, int targetHeight)
-        {
-            throw new NotSupportedException("The ProcessValue method is not supported in IMultipleInputBindableArgumentEffectProcesser. Call ProcessValues instead.");
-        }
-
-        public sealed new IPicture GenerateResult(object source, IPicture frame, IComputer? computer, int targetWidth, int targetHeight)
-        {
-            throw new NotSupportedException("The GenerateResult method is not supported in IMultipleInputBindableArgumentEffectProcesser.");
-        }
-
-        public sealed new IPictureProcessStep GenerateResultStep(object source, int targetWidth, int targetHeight)
-        {
-            throw new NotSupportedException("The GenerateResultStep method is not supported in IMultipleInputBindableArgumentEffectProcesser.");
-        }
-
-        public sealed new bool IsValueValid(object value)
-        {
-            throw new NotSupportedException("The IsValueValid method is not supported in IMultipleInputBindableArgumentEffectProcesser. Use IsValuesValid instead.");
-        }
+        /// <remarks>
+        /// similar to <see cref="IContinuousEffect.EndPoint"/>
+        /// </remarks>
+        public int EndPoint { get; set; }
+        /// <summary>
+        /// Produce the final result based on the provided source value.
+        /// </summary>
+        public IPicture GenerateResult(object source, uint index, IPicture frame, IComputer? computer, int targetWidth, int targetHeight);
+        /// <summary>
+        /// Generate the final process step based on the provided source value.
+        /// </summary>
+        public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight);
     }
+
+
+
 
 
     public enum BindableArgumentEffectType
@@ -138,6 +140,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         ValueProvider,
         ValueProcessor,
         ResultGenerator,
+        ContinuousResultGenerator,
         MultipleInputValueProcessor
     }
 }

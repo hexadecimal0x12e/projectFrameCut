@@ -58,11 +58,26 @@ namespace projectFrameCut.WinUI
 
         protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
 
-        [DllImport("user32.dll")]
-        private static extern bool SetForegroundWindow(IntPtr hWnd);
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr GetLastError();
 
         [DllImport("user32.dll")]
-        private static extern IntPtr SetFocus(IntPtr hWnd);
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr SetFocus(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        public static extern bool MessageBeep(uint uType);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr FlashWindow(IntPtr hWnd, bool bInvert);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr ExitWindowsEx(uint uFlags, uint dwReason);
+
+        [DllImport("Powrprof.dll", SetLastError = true)]
+        public static extern bool SetSuspendState(bool bHibernate, bool bForceCritical, bool bDisableWakeEvent);
 
         public static async Task BringToForeground()
         {
@@ -78,6 +93,8 @@ namespace projectFrameCut.WinUI
             });
 
         }
+
+
     }
 
 

@@ -676,6 +676,7 @@ public partial class HomePage : ContentPage
                 {
                     try
                     {
+                        App.Current?.Windows?.First()?.Title = $"{Localized.AppBrand} - {project.projectName}";
                         AppShell.instance.HideNavView();
                         Shell.SetTabBarIsVisible(page, false);
                         Shell.SetNavBarIsVisible(page, true);
@@ -745,13 +746,6 @@ public partial class HomePage : ContentPage
 
     private async Task ShowManyAlertsAsync()
     {
-        if (!SettingsManager.IsBoolSettingTrue("EULAagreed"))
-        {
-            var agree = await DisplayAlertAsync(Localized._Info, Localized.HomePage_AgreeEULA(), Localized._OK, Localized.HomePage_AgreeEULA_Disagree);
-            if (!agree) Environment.Exit(0);
-            SettingsManager.WriteSetting("EULAagreed", true.ToString());
-        }
-
         if (SimpleLocalizer.IsFallbackMatched)
         {
             List<string> localeDispName = new();
@@ -766,6 +760,13 @@ public partial class HomePage : ContentPage
 
             await DisplayAlertAsync("Info", $"it seems like projectFrameCut doesn't support your system language yet.\r\nwe support {localeDispName.Aggregate((a, b) => $"{a}, {b}")} yet.\r\nIf you'd like to contribute the localization, do it and make a pull request.", "OK");
             SimpleLocalizer.IsFallbackMatched = false;
+        }
+
+        if (!SettingsManager.IsBoolSettingTrue("EULAagreed"))
+        {
+            var agree = await DisplayAlertAsync(Localized._Info, Localized.HomePage_AgreeEULA(), Localized._OK, Localized.HomePage_AgreeEULA_Disagree);
+            if (!agree) Environment.Exit(0);
+            SettingsManager.WriteSetting("EULAagreed", true.ToString());
         }
 
         if (SettingsManager.IsBoolSettingTrue("_SettingFailLoad"))

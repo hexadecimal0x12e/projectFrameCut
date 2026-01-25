@@ -54,6 +54,47 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// EffectImplementType.NotSpecified.</remarks>
         public virtual EffectImplementType DefaultImplementType => SupportsImplementTypes.Length > 0 ? SupportsImplementTypes[0] : EffectImplementType.NotSpecified;
 
+    }
+
+    public interface IBindableEffectFactory : IEffectFactory
+    {
+        /// <summary>
+        /// the unique ID of this effect instance.
+        /// </summary>
+        public string? ID { get; set; }
+        /// <summary>
+        /// The binded source input ID.
+        /// </summary>
+        public string? BindedInputID { get; set; }
+        /// <summary>
+        /// The binded sources input ids.
+        /// </summary>
+        public string[]? BindedInputIDs { get; set; }
+
+        /// <summary>
+        /// Build a effect with default implementation type.
+        /// </summary>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        public IEffect BuildWithDefaultType(string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null);
+
+        /// <summary>
+        /// Build the specified effect implementation type.
+        /// </summary>
+        /// <param name="implementType"></param>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null,  Dictionary<string, object>? parameters = null);
+
+        IEffect IEffectFactory.Build(EffectImplementType implementType, Dictionary<string, object>? parameters)
+        {
+            throw new NotSupportedException("Cast to IBindableEffectFactory and use IBindableEffectFactory.Build method instead.");
+        }
+
+        IEffect IEffectFactory.BuildWithDefaultType(Dictionary<string, object>? parameters)
+        {
+            throw new NotSupportedException("Cast to IBindableEffectFactory and use IBindableEffectFactory.BuildWithDefaultType method instead.");
+        }
 
     }
 

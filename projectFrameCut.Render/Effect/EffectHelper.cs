@@ -9,7 +9,23 @@ namespace projectFrameCut.Render.Effect
 {
     public static class EffectHelper
     {
-        public  static IEffect PickFromEffectCombinations(List<Func<IEffect>> EffectCombinations, EffectImplementType preferredType)
+        public static double GetContinuesEffectProgress(uint index, int startPoint, int endPoint)
+        {
+            if (endPoint <= startPoint) return 1.0;
+            if (index < startPoint) return 0.0;
+            if (index >= endPoint) return 1.0;
+            return (double)(index - startPoint) / (endPoint - startPoint);
+        }
+
+        public static double GetContinuesEffectProgress(this IContinuousEffect effect, uint index)
+        {
+            if (effect.EndPoint <= effect.StartPoint) return 1.0;
+            if (index < effect.StartPoint) return 0.0;
+            if (index >= effect.EndPoint) return 1.0;
+            return (double)(index - effect.StartPoint) / (effect.EndPoint - effect.StartPoint);
+        }
+
+        public static IEffect PickFromEffectCombinations(List<Func<IEffect>> EffectCombinations, EffectImplementType preferredType)
         {
             foreach (var item in EffectCombinations)
             {
@@ -38,10 +54,7 @@ namespace projectFrameCut.Render.Effect
         public static Dictionary<string, Func<IEffect>> EffectsEnum =>
                 PluginManager.LoadedPlugins.Values
                 .SelectMany(p =>
-                    p.EffectFactoryProvider.Select(kv => new KeyValuePair<string, Func<IEffect>>(kv.Key, () => kv.Value.BuildWithDefaultType()))
-                        .Concat(p.ContinuousEffectFactoryProvider.Select(kv => new KeyValuePair<string, Func<IEffect>>(kv.Key, () => kv.Value.BuildWithDefaultType())))
-                        .Concat(p.BindableArgumentEffectFactoryProvider.Select(kv => new KeyValuePair<string, Func<IEffect>>(kv.Key, () => kv.Value.BuildWithDefaultType())))
-                        .Concat(p.EffectProvider)
+                       p.EffectProvider
                         .Concat(p.ContinuousEffectProvider)
                         .Concat(p.BindableArgumentEffectProvider))
                 .DistinctBy(kv => kv.Value().TypeName)

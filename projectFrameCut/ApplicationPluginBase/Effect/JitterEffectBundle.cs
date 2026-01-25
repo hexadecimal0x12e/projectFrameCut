@@ -39,36 +39,46 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public PropertyPanelBuilder CreateUI()
         {
             var ppb = new PropertyPanelBuilder();
-
-            foreach (var paramName in ParametersNeeded)
+            ppb.AddEntry("MaxOffsetX", PluginManager.GetLocalizationItem("Effect_Jitter_MaxOffsetX", "Max X Offset"), (Parameters.TryGetValue("MaxOffsetX", out var mx) ? mx.ToString() : "10") ?? "10", "10");
+            ppb.AddEntry("MaxOffsetY", PluginManager.GetLocalizationItem("Effect_Jitter_MaxOffsetY", "Max Y Offset"), (Parameters.TryGetValue("MaxOffsetY", out var my) ? my.ToString() : "10") ?? "10", "10");
+            string[] options = [
+                                    PluginManager.GetLocalizationItem("_Effect_Jitter_Both", "Both directions"),
+                        PluginManager.GetLocalizationItem("_Effect_Jitter_XOnly", "X direction"),
+                        PluginManager.GetLocalizationItem("_Effect_Jitter_YOnly", "Y direction")
+                                ];
+            string val = Parameters.TryGetValue("Direction", out var d) ? d as string ?? JitterEffect.Direction_Both : JitterEffect.Direction_Both;
+            string defaultVal = val switch
             {
-                if (!ParametersType.TryGetValue(paramName, out var paramType)) continue;
-
-                var currentVal = Parameters.ContainsKey(paramName) ? Parameters[paramName] : null;
-                if (currentVal is JsonElement je)
-                {
-                    if (je.ValueKind == JsonValueKind.True || je.ValueKind == JsonValueKind.False)
-                        currentVal = je.GetBoolean();
-                    else if (je.ValueKind == JsonValueKind.String)
-                        currentVal = je.GetString();
-                    else
-                        currentVal = je.ToString();
-                }
-
-                if (paramType == "bool")
-                {
-                    bool val = false;
-                    if (currentVal is bool b) val = b;
-                    else if (bool.TryParse(currentVal?.ToString(), out var bParsed)) val = bParsed;
-                    ppb.AddCheckbox(paramName, PluginManager.GetLocalizationItem($"_{paramName}", paramName), val);
-                }
-                else
-                {
-                    string valStr = currentVal?.ToString() ?? "";
-                    ppb.AddEntry(paramName, PluginManager.GetLocalizationItem($"_{paramName}", paramName), valStr, "");
-                }
-            }
+                JitterEffect.Direction_XOnly => options[1],
+                JitterEffect.Direction_YOnly => options[2],
+                _ => options[0]
+            };
+            ppb.AddPicker("Direction", PluginManager.GetLocalizationItem("Direction", "Direction"), options, defaultVal);
+            ppb.AddEntry("Seed", PluginManager.GetLocalizationItem("Effect_Jitter_Seed", "Random Seed"), (Parameters.TryGetValue("Seed", out var s) ? s.ToString() : "0") ?? "0", "0");
             return ppb;
+        }
+
+        public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
+        {
+            if (args.Id == "Direction")
+            {
+                string[] options = [
+                    PluginManager.GetLocalizationItem("_Effect_Jitter_Both", "Both directions"),
+                    PluginManager.GetLocalizationItem("_Effect_Jitter_XOnly", "X direction"),
+                    PluginManager.GetLocalizationItem("_Effect_Jitter_YOnly", "Y direction")
+                ];
+                if (args.Value?.ToString() == options[1])
+                    Parameters["Direction"] = JitterEffect.Direction_XOnly;
+                else if (args.Value?.ToString() == options[2])
+                    Parameters["Direction"] = JitterEffect.Direction_YOnly;
+                else
+                    Parameters["Direction"] = JitterEffect.Direction_Both;
+            }
+            else
+            {
+                Parameters[args.Id] = int.TryParse(args.Value as string, out var result) ? result : throw new InvalidDataException();
+            }
+            return Parameters;
         }
 
         public EffectBundleDisplayItem GetEffectBundleItem(string? locate = null)

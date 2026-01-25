@@ -1,4 +1,6 @@
 ﻿using Microsoft.Maui.Controls;
+using projectFrameCut.Services;
+
 
 
 #if WINDOWS
@@ -68,6 +70,29 @@ namespace projectFrameCut
 #pragma warning disable CS0618
                 Program.Crash(e.ExceptionObject as Exception ?? new ExecutionEngineException($"projectFrameCut can't gather more information about this exception."));
 #pragma warning restore CS0618
+
+            };
+
+            AppDomain.CurrentDomain.ProcessExit += (s, e) =>
+            {
+                Log("App is closing...");
+                try
+                {
+                    MauiProgram.LogWriter.Flush();
+                }
+                catch { }
+                try
+                {
+                    foreach (var item in Render.Plugin.PluginManager.LoadedPlugins)
+                    {
+                        try
+                        {
+                            item.Value.OnClosing();
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
 
             };
 #endif

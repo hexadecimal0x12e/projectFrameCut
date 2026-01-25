@@ -24,6 +24,16 @@ namespace projectFrameCut.Services
 
             newEffect.RelativeWidth = page?.ProjectInfo?.RelativeWidth ?? 1920;
             newEffect.RelativeHeight = page?.ProjectInfo?.RelativeHeight ?? 1080;
+            
+            // Preserve IBindableArgumentEffect properties
+            if (effect is IBindableArgumentEffect oldBindable && newEffect is IBindableArgumentEffect newBindable)
+            {
+                newBindable.Id = oldBindable.Id;
+                newBindable.BindedArgumentProviderID = oldBindable.BindedArgumentProviderID;
+            }
+            
+            // Preserve BindedEffectGroupID
+            newEffect.BindedEffectGroupID = effect.BindedEffectGroupID;
 
             return newEffect;
         }

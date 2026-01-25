@@ -9,7 +9,7 @@
              Shell.NavBarIsVisible="False"
              Title="">
     <ContentPage.MenuBarItems>
-        <MenuBarItem x:Name="ProjectNameMenuBarItem" Text="{Binding ProjectName}">
+        <MenuBarItem x:Name="ProjectNameMenuBarItem" Text="{l:Localized Key=DraftPage_MenuBar_Project}">
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_GoRender}"  Command="{Binding GoRenderCommand}" />
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Save}" Command="{Binding SaveCommand}">
@@ -19,10 +19,11 @@
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_CleanRenderCache}" Command="{Binding CleanRenderCacheCommand}"/>
-
+            <!-- TODO
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Share}"/>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Cooperate}"/>
+            -->
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Option}" Command="{Binding SettingsCommand}"/>
         </MenuBarItem>
@@ -116,7 +117,8 @@
         <VerticalStackLayout Grid.Row="0" x:Name="UpperContent">
             <Grid Padding="4" HeightRequest="250" >
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition x:Name="LeftContentColDefinition" Width="*"/>
+                    <ColumnDefinition Width="5"/>
                     <ColumnDefinition x:Name="RightContentColDefinition" Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Grid x:Name="MainUpperContent" Grid.Column="0">
@@ -146,7 +148,12 @@
                             AbsoluteLayout.LayoutFlags="All" />
                     </AbsoluteLayout>
                 </Grid>
-                <Border x:Name="RightContentBorder" ZIndex="0" Grid.Column="1" StrokeThickness="5" HorizontalOptions="Fill">
+                <BoxView x:Name="ContentWidthHandle" Grid.Column="1" Color="Gray" WidthRequest="8" >
+                     <BoxView.GestureRecognizers>
+                        <PanGestureRecognizer PanUpdated="ContentWidthHandlePanUpdated"/>
+                    </BoxView.GestureRecognizers>
+                </BoxView>
+                <Border x:Name="RightContentBorder" ZIndex="0" Grid.Column="2" StrokeThickness="5" HorizontalOptions="Fill">
                     <ScrollView x:Name="CustomContent1" />
                 </Border>
             </Grid>

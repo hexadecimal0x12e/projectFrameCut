@@ -197,25 +197,10 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region init
+#pragma warning disable CS8618 
     public DraftPage()
     {
-        BindingContext = this;
-        AddCommand = new Command(() => AddClip_Clicked(this, EventArgs.Empty));
-        ExportCommand = new Command(() => OnExportedClick(this, EventArgs.Empty));
-        GoRenderCommand = new Command(() => OnExportedClick(this, EventArgs.Empty));
-        SettingsCommand = new Command(() => SettingsClick(this, EventArgs.Empty));
-        UndoCommand = new Command(() => UndoChanges());
-        RedoCommand = new Command(() => RedoChanges());
-        SpiltCommand = new Command(() => Split_Clicked(this, EventArgs.Empty));
-        DeleteCommand = new Command(() => DeleteAClip());
-        SaveCommand = new Command(() => OnRefreshButtonClicked(this, EventArgs.Empty));
-        GotoCommand = new Command(async () => await GotoButtonClicked());
-        ManageJobsCommand = new Command(async () => await OnManageJobsClicked());
-        ClosePopupCommand = new Command(async () => await HidePopup());
-        PlayPauseCommand = new Command(async () => PlayPauseButton_Clicked(this, EventArgs.Empty));
-        CleanRenderCacheCommand = new Command(async () => await CleanRenderCache());
-        PlayheadMoveLeftCommand = new Command(async () => await MovePlayhead(-10));
-        PlayheadMoveRightCommand = new Command(async () => await MovePlayhead(10));
+        RegisterCommands();
         InitializeComponent();
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
         ClipEditorHost.Content = ClipEditor;
@@ -233,26 +218,11 @@ public partial class DraftPage : ContentPage
     }
 
     public DraftPage(ProjectJSONStructure info, ConcurrentDictionary<string, ClipElementUI> clips, ConcurrentDictionary<string, AssetItem> assets, int initialTrackCount, string workingDir, string title = "Untitled draft", bool isReadonly = false)
+#pragma warning restore CS8618
     {
-        Environment.CurrentDirectory = workingDir;
-
         BindingContext = this;
-        AddCommand = new Command(() => AddClip_Clicked(this, EventArgs.Empty));
-        ExportCommand = new Command(() => OnExportedClick(this, EventArgs.Empty));
-        GoRenderCommand = new Command(() => OnExportedClick(this, EventArgs.Empty));
-        SettingsCommand = new Command(() => SettingsClick(this, EventArgs.Empty));
-        UndoCommand = new Command(() => UndoChanges());
-        RedoCommand = new Command(() => RedoChanges());
-        SpiltCommand = new Command(() => Split_Clicked(this, EventArgs.Empty));
-        DeleteCommand = new Command(() => DeleteAClip());
-        SaveCommand = new Command(() => OnRefreshButtonClicked(this, EventArgs.Empty));
-        GotoCommand = new Command(async () => await GotoButtonClicked());
-        ManageJobsCommand = new Command(async () => await OnManageJobsClicked());
-        ClosePopupCommand = new Command(async () => await HidePopup());
-        PlayPauseCommand = new Command(async () => PlayPauseButton_Clicked(this, EventArgs.Empty));
-        CleanRenderCacheCommand = new Command(async () => await CleanRenderCache());
-        PlayheadMoveLeftCommand = new Command(async () => await MovePlayhead(-10));
-        PlayheadMoveRightCommand = new Command(async () => await MovePlayhead(10));
+        if (Directory.Exists(workingDir)) Environment.CurrentDirectory = workingDir;
+        RegisterCommands();
         InitializeComponent();
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
         ClipEditorHost.Content = ClipEditor;
@@ -281,14 +251,30 @@ public partial class DraftPage : ContentPage
         }
 
         trackCount = initialTrackCount;
-        ProjectName = isReadonly ? Localized.DraftPage_IsInMode_Readonly(title) : title;
         ProjectInfo.projectName = title;
-        ProjectNameMenuBarItem.Text = ProjectInfo.projectName ?? "Unknown project";
         SecondsPerFrame = 1d / ProjectInfo.targetFrameRate;
         IsReadonly = isReadonly;
-
     }
 
+    private void RegisterCommands()
+    {
+        AddCommand = new Command(() => AddClip_Clicked(this, EventArgs.Empty));
+        ExportCommand = new Command(() => OnExportedClick(this, EventArgs.Empty));
+        GoRenderCommand = new Command(() => OnExportedClick(this, EventArgs.Empty));
+        SettingsCommand = new Command(() => SettingsClick(this, EventArgs.Empty));
+        UndoCommand = new Command(() => UndoChanges());
+        RedoCommand = new Command(() => RedoChanges());
+        SpiltCommand = new Command(() => Split_Clicked(this, EventArgs.Empty));
+        DeleteCommand = new Command(() => DeleteAClip());
+        SaveCommand = new Command(() => OnRefreshButtonClicked(this, EventArgs.Empty));
+        GotoCommand = new Command(async () => await GotoButtonClicked());
+        ManageJobsCommand = new Command(async () => await OnManageJobsClicked());
+        ClosePopupCommand = new Command(async () => await HidePopup());
+        PlayPauseCommand = new Command(async () => PlayPauseButton_Clicked(this, EventArgs.Empty));
+        CleanRenderCacheCommand = new Command(async () => await CleanRenderCache());
+        PlayheadMoveLeftCommand = new Command(async () => await MovePlayhead(-10));
+        PlayheadMoveRightCommand = new Command(async () => await MovePlayhead(10));
+    }
 
 
     private bool Inited = false;
@@ -345,10 +331,8 @@ public partial class DraftPage : ContentPage
                 ResolutionPicker.SelectedItem = resString;
             }
 
-            ProjectNameMenuBarItem.Text = ProjectInfo.projectName ?? "Unknown project";
             rulerTapGesture.Tapped += PlayheadTapped;
             OnClipChanged += DraftChanged;
-            if (!Directory.Exists(WorkingPath)) Title = Localized.DraftPage_IsInMode_Special(Title);
             UpdatePlayheadPosition();
             Loaded += DraftPage_Loaded;
             if (this.Window is not null)
@@ -425,6 +409,7 @@ public partial class DraftPage : ContentPage
             RightMenuBar.IsVisible = false;
             RightContentBorder.IsVisible = false;
             SpiltButton.IsVisible = false;
+            ContentWidthHandle.IsVisible = false;
             PlayingControlLayout.HorizontalOptions = LayoutOptions.End;
             AddClip.Text = "+";
             RightContentColDefinition.Width = new GridLength(0, GridUnitType.Absolute);
@@ -1094,7 +1079,7 @@ public partial class DraftPage : ContentPage
 
     }
 
-    private void SelectTapGesture_Tapped(object? sender, TappedEventArgs e)
+    private async void SelectTapGesture_Tapped(object? sender, TappedEventArgs e)
     {
         if (sender is not Border border) return;
         if (border.BindingContext is not ClipElementUI clip) return;
@@ -1110,7 +1095,7 @@ public partial class DraftPage : ContentPage
         SetStatusText(Localized.DraftPage_Selected(clip.displayName));
         ClipEditor.SetClip(clip, Assets.TryGetValue(clip.Id, out var asset) ? asset : null);
         SetTimelineScrollEnabled(false);
-        CustomContent1.Content = BuildPropertyPanel(clip);
+        CustomContent1.Content = await BuildPropertyPanel(clip);
     }
 
     private void ContextSelectTapGesture_Tapped(object? sender, TappedEventArgs e)
@@ -1692,7 +1677,7 @@ public partial class DraftPage : ContentPage
 
     #region properties
 
-    private View BuildPropertyPanel(ClipElementUI clip)
+    private async Task<View> BuildPropertyPanel(ClipElementUI clip)
     {
         if (clip is null)
         {
@@ -1704,7 +1689,7 @@ public partial class DraftPage : ContentPage
                       $"{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}",
             };
         }
-        return infoBuilder.Build(clip, OnClipPropertiesChanged);
+        return await infoBuilder.Build(clip, OnClipPropertiesChanged);
 
     }
 
@@ -1715,8 +1700,8 @@ public partial class DraftPage : ContentPage
 
         if (e.Id == "__REFRESH_PANEL__")
         {
-            Popup.Content = new ScrollView { Content = BuildPropertyPanel(clip) };
-            CustomContent1.Content = BuildPropertyPanel(clip);
+            Popup.Content = new ScrollView { Content = await BuildPropertyPanel(clip) };
+            CustomContent1.Content = await BuildPropertyPanel(clip);
             Clips[clip.Id] = clip;
             await ReRenderUI();
             DraftChanged(sender, new());
@@ -1724,55 +1709,13 @@ public partial class DraftPage : ContentPage
         }
 
         SetStatusText($"{clip.displayName}'s property '{e.Id}' changed from {e.OriginValue} to {e.Value}");
-        switch (e.Id)
-        {
-            case "displayName":
-                clip.displayName = e.Value?.ToString() ?? clip.displayName;
-                break;
-            case "speedRatio":
-                {
-                    if (e.Value is double ratio || double.TryParse(e.Value as string, out ratio))
-                    {
-                        if (ratio != 0f)
-                            clip.SecondPerFrameRatio = (float)ratio;
-                    }
-
-                    break;
-                }
-            case "rawJsonEditor":
-                {
-                    try
-                    {
-                        if (JsonSerializer.Deserialize<ClipElementUI>(e.Value?.ToString() ?? "") is not ClipElementUI updatedClip)
-                        {
-                            break;
-                        }
-                        if (updatedClip.Id != clip.Id)
-                        {
-                            SetStateFail("ClipId mismatch.");
-                            break;
-                        }
-                        Clips[clip.Id] = updatedClip;
-                    }
-                    catch (Exception ex)
-                    {
-                        Log(ex, "Deserialize clip from rawJsonEditor", this);
-                    }
-                    break;
-                }
-            default:
-                {
-
-                    break;
-                }
-        }
-
 
         Clips[clip.Id] = clip;
 
+        await ReRenderUI();
+
         SetStatusText(Localized.DraftPage_ClipPropertyUpdated(clip.displayName));
 
-        await ReRenderUI();
 
     }
 
@@ -2505,6 +2448,23 @@ public partial class DraftPage : ContentPage
         }
     }
 
+    double _initialRightWidth;
+
+    void ContentWidthHandlePanUpdated(object sender, PanUpdatedEventArgs e)
+    {
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                _initialRightWidth = RightContentBorder.Bounds.Width;
+                break;
+            case GestureStatus.Running:
+                var newWidth = _initialRightWidth - e.TotalX;
+                if (newWidth < 100) newWidth = 100;
+                RightContentColDefinition.Width = new GridLength(newWidth, GridUnitType.Absolute);
+                break;
+        }
+    }
+
     #endregion
 
     #region drag and drop
@@ -2556,7 +2516,7 @@ public partial class DraftPage : ContentPage
 #pragma warning restore CS0414
     private async Task ShowAPopup(View? content = null, Border? border = null, ClipElementUI? clip = null, string mode = "")
     {
-        content ??= (border != null && clip != null) ? BuildPropertyPanel(clip) : new Label { Text = $"No content to show. This SHOULD is a bug, please feedback.\r\n{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}" };
+        content ??= (border != null && clip != null) ? await BuildPropertyPanel(clip) : new Label { Text = $"No content to show. This SHOULD is a bug, please feedback.\r\n{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}" };
 
         if (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS())
         {
@@ -2792,7 +2752,7 @@ public partial class DraftPage : ContentPage
             StrokeShape = new RoundRectangle { CornerRadius = 4 },
             Padding = new Thickness(2),
             Opacity = 0.95,
-            Content = new ScrollView { Content = BuildPropertyPanel(clip) }
+            Content = new ScrollView { Content = await BuildPropertyPanel(clip) }
         };
 
         frame.GestureRecognizers.Add(nopGesture);
@@ -3990,7 +3950,7 @@ public partial class DraftPage : ContentPage
                 {
                     string[] type = ["right", "bottom","center","dialog"];
                     var select = await DisplayActionSheetAsync("info", "select", null, type);
-                    await ShowAPopup(content: BuildPropertyPanel(_selected), border: _selected?.Clip, clip:_selected, mode: select);
+                    await ShowAPopup(content: await BuildPropertyPanel(_selected), border: _selected?.Clip, clip:_selected, mode: select);
                 })
             },
             {
@@ -4154,6 +4114,7 @@ public partial class DraftPage : ContentPage
         base.OnAppearing();
         if (AlreadyDisappeared)
         {
+            Log($"FATAL: DraftPage has been appeared again since disappeared. \r\nStackTrace:{Environment.StackTrace}","fatal");
             await Task.Delay(500);
             await Navigation.PopAsync();
             Content = new Label
@@ -4184,6 +4145,7 @@ public partial class DraftPage : ContentPage
     protected override async void OnDisappearing()
     {
         AlreadyDisappeared = true;
+        await HidePopup();
         Content = new VerticalStackLayout
         {
             HorizontalOptions = LayoutOptions.Center,
@@ -4204,7 +4166,6 @@ public partial class DraftPage : ContentPage
         };
         base.OnDisappearing();
 
-        await HidePopup();
         if (this.Window is not null)
         {
             this.Window.SizeChanged -= Window_SizeChanged;
@@ -4227,6 +4188,7 @@ public partial class DraftPage : ContentPage
         try
         {
             await Save(true);
+            App.Current?.Windows?.First()?.Title = Localized.AppBrand;
         }
         catch (Exception ex)
         {

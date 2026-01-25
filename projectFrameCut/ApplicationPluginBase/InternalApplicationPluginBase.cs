@@ -12,7 +12,8 @@ namespace projectFrameCut.ApplicationPluginBase
         public Dictionary<string, Func<IEffectBundle>> EffectBundleProvider => new Dictionary<string, Func<IEffectBundle>>
         {
             {"ZoomIn", () => new Effect.ZoominEffectBundle() },
-            {"Jitter", () => new Effect.JitterEffectBundle() }
+            {"Jitter", () => new Effect.JitterEffectBundle() },
+            {"Movement", () => new Effect.MovementEffectBundle()  },
         };
 
         public View? SettingPageProvider(ref IApplicationPluginBase instance)

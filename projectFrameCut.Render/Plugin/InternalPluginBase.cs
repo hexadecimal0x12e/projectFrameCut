@@ -95,13 +95,17 @@ public class InternalPluginBase : IPluginBase
     public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>
     {
         {"SubjectMattingMaskGenerator", () => new SubjectMattingMaskGenerator() },
-        {"MaskApplier", () => new MaskApplier() }
+        {"MaskApplier", () => new MaskApplier() },
+        {"StraightLineMovementValueProducer",() => new StraightLineMovementValueProducer() },
+        {"PointPlacer",() => new PointPlacer() }
     };
 
     public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider => new Dictionary<string, IEffectFactory>
     {
         { "SubjectMattingMaskGenerator", new SubjectMattingMaskGeneratorFactory() },
-        { "MaskApplier", new MaskApplierFactory() }
+        { "MaskApplier", new MaskApplierFactory() },
+        { "StraightLineMovementValueProducer",new StraightLineMovementValueProducerFactory() },
+        { "PointPlacer", new PointPlacerFactory() }
     };
 
 

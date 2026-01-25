@@ -116,6 +116,7 @@ public partial class RenderSettingPage : ContentPage
             .AddPicker("render_DefaultFramerate", Localized.RenderPage_SelectFrameRate, framerates, GetSetting("render_DefaultFramerate", "30"), null)
             .AddPicker("render_DefaultEncoding", Localized.RenderPage_SelectEncoding, encodings, GetSetting("render_DefaultEncoding", "h264"), null)
             .AddPicker("render_DefaultBitDepth", Localized.RenderPage_SelectBitdepth, bitdepths, GetSetting("render_DefaultBitDepth", "8bit"), null)
+            .AddPicker("render_DefaultPostRenderAction", Localized.RenderPage_PostRenderAction, RenderPageViewModel.PostRenderActionNames.Keys.ToArray(), Localized.DynamicLookup($"RenderPage_PostRenderAction_{GetSetting("render_DefaultPostRenderAction", "None")}", Localized.RenderPage_PostRenderAction_None), null)
             .AddSeparator();
 
         rootPPB
@@ -134,8 +135,10 @@ public partial class RenderSettingPage : ContentPage
 
         rootPPB
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AccelOptsTitle, SettingLocalizedResources.Render_AccelOptsSubTitle))
-            .AddSwitch("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, multiAccel, null)
+            .AddSwitch("accel_enableMultiAccel", SettingLocalizedResources.Render_EnableMultiAccel, multiAccel, (s) => s.IsEnabled = AcceleratorInfos?.Count(c => c.Type != "CPU") >= 2)
+            .AppendWhen(AcceleratorInfos?.Count(c => c.Type != "CPU") < 2, (p) => p.AddText(new Label { Text = SettingLocalizedResources.Render_EnableMultiAccel_NotAvailable, TextColor = Colors.Gray, FontSize = 12 }))
             .AddPicker("accel_DeviceId", multiAccel ? SettingLocalizedResources.Render_SelectAccel_WhenMultiAccelEnabled : SettingLocalizedResources.Render_SelectAccel, accels, int.TryParse(GetSetting("accel_DeviceId", ""), out var result) ? accels[result] : "", null);
+
 
         try
         {
@@ -311,6 +314,17 @@ public partial class RenderSettingPage : ContentPage
                             return;
                         }
                         WriteSetting("render_GCOption", key.Key.ToString());
+                        return;
+                    }
+                case "render_DefaultPostRenderAction":
+                    {
+                        if (args.Value is string localizedAction)
+                        {
+                            if (RenderPageViewModel.PostRenderActionNames.TryGetValue(localizedAction, out var actionEnum))
+                            {
+                                WriteSetting("render_DefaultPostRenderAction", actionEnum.ToString());
+                            }
+                        }
                         return;
                     }
 

@@ -115,20 +115,32 @@ namespace projectFrameCut.DraftStuff
                                 SecondPerFrameRatio = elem.SecondPerFrameRatio,
                                 MetaData = elem.ExtraData,
                                 Effects = elem.Effects?.Select((kv) =>
-                                new EffectAndMixtureJSONStructure
                                 {
-                                    Name = kv.Key,
-                                    FromPlugin = kv.Value.FromPlugin,
-                                    TypeName = kv.Value.TypeName,
-                                    Parameters = kv.Value.Parameters,
-                                    Index = kv.Value.Index,
-                                    Enabled = kv.Value.Enabled,
-                                    RelativeHeight = kv.Value.RelativeHeight,
-                                    RelativeWidth = kv.Value.RelativeWidth,
-                                    IsMixture = false,
-                                    IsContinuousEffect = kv.Value is IContinuousEffect,
-                                    IsVariableArgumentEffect = kv.Value is IBindableArgumentEffect,
-                                    BindedEffectGroupID = kv.Value.BindedEffectGroupID,
+                                    var effect = kv.Value;
+                                    var structure = new EffectAndMixtureJSONStructure
+                                    {
+                                        Name = kv.Key,
+                                        FromPlugin = effect.FromPlugin,
+                                        TypeName = effect.TypeName,
+                                        Parameters = effect.Parameters,
+                                        Index = effect.Index,
+                                        Enabled = effect.Enabled,
+                                        RelativeHeight = effect.RelativeHeight,
+                                        RelativeWidth = effect.RelativeWidth,
+                                        IsMixture = false,
+                                        IsContinuousEffect = effect is IContinuousEffect,
+                                        IsVariableArgumentEffect = effect is IBindableArgumentEffect,
+                                        BindedEffectGroupID = effect.BindedEffectGroupID,
+                                    };
+                                    
+                                    // Save IBindableArgumentEffect specific properties
+                                    if (effect is IBindableArgumentEffect bindableEffect)
+                                    {
+                                        structure.Id = bindableEffect.Id;
+                                        structure.BindedInputID = bindableEffect.BindedArgumentProviderID;
+                                    }
+                                    
+                                    return structure;
                                 }).ToArray(),
                                 EffectBundles = elem.EffectBundles?.Values
                                     .OrderBy(b => b.Index)

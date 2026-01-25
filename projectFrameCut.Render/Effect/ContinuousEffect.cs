@@ -210,12 +210,18 @@ namespace projectFrameCut.Render.Effect
         public int MaxOffsetX { get; init; }
         public int MaxOffsetY { get; init; }
         public int Seed { get; init; } = 0;
+        public string Direction { get; init; } = Direction_Both;
+
+        public const string Direction_Both = "Both";
+        public const string Direction_XOnly = "XOnly";
+        public const string Direction_YOnly = "YOnly";
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
             { "MaxOffsetX", MaxOffsetX },
             { "MaxOffsetY", MaxOffsetY },
             { "Seed", Seed },
+            { "Direction", Direction },
         };
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
@@ -231,6 +237,7 @@ namespace projectFrameCut.Render.Effect
         {
             "MaxOffsetX",
             "MaxOffsetY",
+            "Direction",
         };
 
         public static Dictionary<string, string> s_ParametersType { get; } = new Dictionary<string, string>
@@ -238,6 +245,7 @@ namespace projectFrameCut.Render.Effect
             { "MaxOffsetX", "int" },
             { "MaxOffsetY", "int" },
             { "Seed", "int" },
+            { "Direction", "string" },
         };
 
         public Dictionary<string, string> ParametersType => s_ParametersType;
@@ -260,12 +268,14 @@ namespace projectFrameCut.Render.Effect
             {
                 seed = Convert.ToInt32(s);
             }
+            string direction = parameters.TryGetValue("Direction", out var d) ? d.ToString() : Direction_Both;
 
             return new JitterEffect
             {
                 MaxOffsetX = maxX,
                 MaxOffsetY = maxY,
                 Seed = seed,
+                Direction = direction,
             };
         }
 
@@ -290,13 +300,19 @@ namespace projectFrameCut.Render.Effect
         {
 
             int offX = 0, offY = 0;
-            if (MaxOffsetX > 0)
+            if (Direction == Direction_Both || Direction == Direction_XOnly)
             {
-                offX = rnd.Next(-MaxOffsetX, MaxOffsetX + 1);
+                if (MaxOffsetX > 0)
+                {
+                    offX = rnd.Next(-MaxOffsetX, MaxOffsetX + 1);
+                }
             }
-            if (MaxOffsetY > 0)
+            if (Direction == Direction_Both || Direction == Direction_YOnly)
             {
-                offY = rnd.Next(-MaxOffsetY, MaxOffsetY + 1);
+                if (MaxOffsetY > 0)
+                {
+                    offY = rnd.Next(-MaxOffsetY, MaxOffsetY + 1);
+                }
             }
 
             return new PlaceProcessStep(offX, offY, targetWidth, targetHeight).Process(source);
@@ -305,13 +321,19 @@ namespace projectFrameCut.Render.Effect
         public IPictureProcessStep GetStep(IPicture source, uint index, int targetWidth, int targetHeight)
         {
             int offX = 0, offY = 0;
-            if (MaxOffsetX > 0)
+            if (Direction == Direction_Both || Direction == Direction_XOnly)
             {
-                offX = rnd.Next(-MaxOffsetX, MaxOffsetX + 1);
+                if (MaxOffsetX > 0)
+                {
+                    offX = rnd.Next(-MaxOffsetX, MaxOffsetX + 1);
+                }
             }
-            if (MaxOffsetY > 0)
+            if (Direction == Direction_Both || Direction == Direction_YOnly)
             {
-                offY = rnd.Next(-MaxOffsetY, MaxOffsetY + 1);
+                if (MaxOffsetY > 0)
+                {
+                    offY = rnd.Next(-MaxOffsetY, MaxOffsetY + 1);
+                }
             }
             return new PlaceProcessStep(offX, offY, targetWidth, targetHeight);
         }

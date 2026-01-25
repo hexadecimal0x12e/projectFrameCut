@@ -24,6 +24,13 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public object[] Compute(object[] args);
     }
 
+    public interface IEffectArgsEnumHandler
+    {
+        public int Parse(string value);
+        public string FromEnum(int value);
+        public Dictionary<int,string> Mapping { get; }
+    }
+
     public class EffectAndMixtureJSONStructure
     {
         public string BindedEffectGroupID { get; set; } = string.Empty;
@@ -38,6 +45,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
         public Dictionary<string, object>? Parameters { get; set; }
+        public string? Id { get; set; }
+        public string? BindedInputID { get; set; } = null;
+        public string[]? BindedInputIDs { get; set; } = null;
     }
 
     public class EffectBundleJSONStructure
@@ -58,14 +68,26 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <param name="ParametersType"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public static Dictionary<string, object> ConvertElementDictToObjectDict(Dictionary<string, object> elements, Dictionary<string, string> ParametersType)
+        public static Dictionary<string, object> ConvertElementDictToObjectDict(Dictionary<string, object> elements, Dictionary<string, string> ParametersType, IEffectArgsEnumHandler? EnumHandler = null)
         {
             var result = new Dictionary<string, object>();
             foreach (var kvp in elements)
             {
                 if (kvp.Value is not JsonElement)
                 {
-                    result.Add(kvp.Key, kvp.Value);
+                    object obj = ParametersType[kvp.Key] switch
+                    {
+                        "ushort" => Convert.ToUInt16(kvp.Value),
+                        "int" => Convert.ToInt32(kvp.Value),
+                        "float" => Convert.ToSingle(kvp.Value),
+                        "double" => Convert.ToDouble(kvp.Value),
+                        "string" => Convert.ToString(kvp.Value)!,
+                        "bool" => Convert.ToBoolean(kvp.Value),
+                        "long" => Convert.ToInt64(kvp.Value),
+                        "enum" => EnumHandler is not null ? EnumHandler.Parse(Convert.ToString(kvp.Value)!) : throw new NotSupportedException($"Source is enum but no handler provided."),
+                        _ => throw new NotImplementedException($"Parameter type '{ParametersType[kvp.Key]}' is not implemented."),
+                    };
+                    result.Add(kvp.Key, obj);
                 }
                 else
                 {
@@ -91,6 +113,16 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                         case "bool":
                             value = source.GetBoolean();
                             break;
+                        case "long":
+                            value = source.GetInt64();
+                            break;
+                        case "enum":
+                            if(EnumHandler is not null)
+                            {
+                                value = EnumHandler.Parse(source.GetString());
+                                break;
+                            }
+                            throw new NotSupportedException($"Source is enum but no handler provided.");
                         default:
                             throw new NotImplementedException($"Parameter type '{ParametersType[kvp.Key]}' is not implemented.");
                     }
@@ -99,5 +131,14 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             }
             return result;
         }
+
+        public static string ArgTypeString => "string";
+        public static string ArgTypeUInt16 => "ushort";
+        public static string ArgTypeInt32 => "int";
+        public static string ArgTypeInt64 => "long";
+        public static string ArgTypeDouble => "double";
+        public static string ArgTypeFloat => "float";
+        public static string ArgTypeBool => "bool";
+        public static string ArgTypeEnum => "enum";
     }
 }

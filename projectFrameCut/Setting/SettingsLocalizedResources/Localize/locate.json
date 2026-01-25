@@ -1634,6 +1634,14 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableMultiAccel_NotAvailable",
+        "Value": "\u4F60\u9700\u8981\u81F3\u5C11\u6709\u4E24\u4E2A\u53EF\u7528\u7684CUDA/OpenCL\u8BBE\u5907\u624D\u80FD\u542F\u7528\u591A\u52A0\u901F\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
       }
     ],
     "en-US": [

@@ -234,9 +234,10 @@ namespace projectFrameCut.Render.Plugin
         {
             if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
             {
-                var effect = plugin.EffectCreator(stru);
+                var effect = plugin.EffectCreator(stru, type);
                 effect.Index = stru.Index;
                 effect.Enabled = stru.Enabled;
+                effect.BindedEffectGroupID = stru.BindedEffectGroupID;
                 try
                 {
                     effect.Initialize();

@@ -243,6 +243,20 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 effect.RelativeHeight = s.RelativeHeight;
                 effect.Enabled = s.Enabled;
                 effect.BindedEffectGroupID = s.BindedEffectGroupID;
+
+                // Restore IBindableArgumentEffect properties
+                if (effect is IBindableArgumentEffect bindableEffect)
+                {
+                    if (!string.IsNullOrEmpty(s.Id))
+                    {
+                        bindableEffect.Id = s.Id;
+                    }
+                    if (!string.IsNullOrEmpty(s.BindedInputID))
+                    {
+                        bindableEffect.BindedArgumentProviderID = s.BindedInputID;
+                    }
+                }
+
                 return effect;
             }
 
@@ -267,11 +281,18 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
             {
                 if (BindableArgumentEffectFactoryProvider.TryGetValue(stru.TypeName, out var vFactory))
                 {
-                    if (implementType != EffectImplementType.NotSpecified && vFactory.SupportsImplementTypes.Contains(implementType))
+                    if (vFactory is IBindableEffectFactory bef)
                     {
-                        return ApplyCommonProperties(vFactory.Build(implementType, ConvertParams(stru.Parameters, vFactory.ParametersType)), stru);
+                        if (implementType != EffectImplementType.NotSpecified && bef.SupportsImplementTypes.Contains(implementType))
+                        {
+                            return ApplyCommonProperties(bef.Build(implementType, stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, vFactory.ParametersType)), stru);
+                        }
+                        return ApplyCommonProperties(bef.BuildWithDefaultType(stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, vFactory.ParametersType)), stru);
                     }
-                    return ApplyCommonProperties(vFactory.BuildWithDefaultType(ConvertParams(stru.Parameters, vFactory.ParametersType)), stru);
+                    else
+                    {
+                        throw new InvalidDataException($"{stru.Name} is marked as a variable argument effect but does not implement IBindableEffectFactory.");
+                    }
                 }
             }
             else
@@ -465,7 +486,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
             get;
             set
             {
-                if(PluginGetter is not null)
+                if (PluginGetter is not null)
                 {
                     throw new InvalidOperationException("PluginGetter is already initialized.");
                 }
@@ -491,7 +512,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// </summary>
         public static IPluginBase GetPlugin(string pluginID)
         {
-            if(PluginGetter is null) throw new InvalidOperationException("PluginGetter is not initialized.");
+            if (PluginGetter is null) throw new InvalidOperationException("PluginGetter is not initialized.");
             return PluginGetter(pluginID) ?? throw new KeyNotFoundException($"Plugin with ID '{pluginID}' maybe not found.");
         }
 

@@ -21,6 +21,8 @@ using projectFrameCut.Services;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.EncodeAndDecode;
 using JsonElement = System.Text.Json.JsonElement;
+using System.Runtime.InteropServices;
+
 
 
 
@@ -45,6 +47,14 @@ using ILGPU;
 #endif
 
 namespace projectFrameCut;
+
+public enum PostRenderAction
+{
+    None,
+    CloseApp,
+    Shutdown,
+    Hibernate
+}
 
 public partial class RenderPage : ContentPage
 {
@@ -71,6 +81,7 @@ public partial class RenderPage : ContentPage
 #endif
 
     private CancellationTokenSource _cts = new CancellationTokenSource();
+    private CancellationTokenSource? _countdownCts;
 
     public RenderPage()
     {
@@ -82,6 +93,10 @@ public partial class RenderPage : ContentPage
             vmDefault.FramerateDisplay = SettingsManager.GetSetting("render_DefaultFramerate", vmDefault.FramerateDisplay);
             vmDefault.EncodingDisplay = SettingsManager.GetSetting("render_DefaultEncoding", vmDefault.EncodingDisplay);
             vmDefault.BitDepthDisplay = SettingsManager.GetSetting("render_DefaultBitDepth", vmDefault.BitDepthDisplay);
+            if (Enum.TryParse<PostRenderAction>(SettingsManager.GetSetting("render_DefaultPostRenderAction", "None"), out var action))
+            {
+                vmDefault.SelectedPostRenderActionEnum = action;
+            }
         }
         catch { }
         BindingContext = vmDefault;
@@ -108,13 +123,21 @@ public partial class RenderPage : ContentPage
             vm.FramerateDisplay = SettingsManager.GetSetting("render_DefaultFramerate", vm.FramerateDisplay);
             vm.EncodingDisplay = SettingsManager.GetSetting("render_DefaultEncoding", vm.EncodingDisplay);
             vm.BitDepthDisplay = SettingsManager.GetSetting("render_DefaultBitDepth", vm.BitDepthDisplay);
+            if (Enum.TryParse<PostRenderAction>(SettingsManager.GetSetting("render_DefaultPostRenderAction", "None"), out var action))
+            {
+                vm.SelectedPostRenderActionEnum = action;
+            }
         }
         catch { }
         BindingContext = vm;
         MaxParallelThreadsCount.Value = Environment.ProcessorCount * 2;
         MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)MaxParallelThreadsCount.Value);
         CancelRender.IsEnabled = false;
-        DraftJSONViewer.Text = JsonSerializer.Serialize(_draft, DraftPage.DraftJSONOption);
+        if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+        {
+            ExportProjectJSONButton.IsVisible = true;
+            PerformPostRenderActionNowTestButton.IsVisible = true;
+        }
         InitializeLogTimer();
         InitializeScreenSaverTimer();
 
@@ -410,7 +433,6 @@ public partial class RenderPage : ContentPage
                 await FlushLogQueue();
                 MyLoggerExtensions.OnLog -= _WriteToLogBox;
 
-                await DisplayAlertAsync(Localized._Info, Localized.RenderPage_Done, Localized._OK);
                 running = false;
                 CancelRender.IsEnabled = false;
 
@@ -454,8 +476,11 @@ public partial class RenderPage : ContentPage
         {
             StopScreenSaverTimer();
             Shell.SetNavBarIsVisible(this, true);
+            DeviceDisplay.Current.KeepScreenOn = false;
+            await PerformPostRenderAction();
 
         }
+
     }
 
     double totalProg = 0, lastProg = 0;
@@ -737,6 +762,95 @@ public partial class RenderPage : ContentPage
 
     #endregion
 
+    private async Task PerformPostRenderAction()
+    {
+        if (BindingContext is RenderPageViewModel vm)
+        {
+            var action = vm.SelectedPostRenderActionEnum;
+#if WINDOWS
+            await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                var window = Microsoft.Maui.Controls.Application.Current?.Windows[0];
+                if (window?.Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow)
+                {
+                    var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(nativeWindow);
+                    WinUI.App.FlashWindow(hwnd, true);
+                }
+
+                if (action == PostRenderAction.None)
+                {
+                    WinUI.App.MessageBeep(0x00000040);
+                    await DisplayAlertAsync(Localized._Info, Localized.RenderPage_Done, Localized._OK);
+                    return;
+                }
+            });
+#endif
+
+            if (action == PostRenderAction.None)
+                return;
+
+            _countdownCts?.Cancel();
+            _countdownCts = new CancellationTokenSource();
+            vm.IsCountdownVisible = true;
+
+            try
+            {
+                for (int i = 30; i > 0; i--)
+                {
+                    if (_countdownCts.IsCancellationRequested)
+                    {
+                        Log("Post-render action cancelled by user.");
+                        vm.IsCountdownVisible = false;
+                        return;
+                    }
+                    vm.CountdownText = Localized.RenderPage_PostRenderAction_Countdown(i, RenderPageViewModel.PostRenderActionNames.ReverseLookup(action, action.ToString()));
+                    await Task.Delay(1000, _countdownCts.Token);
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                Log("Post-render action cancelled.");
+                vm.IsCountdownVisible = false;
+                return;
+            }
+
+            vm.IsCountdownVisible = false;
+            Log($"Performing post-render action: {action}");
+
+            switch (action)
+            {
+                case PostRenderAction.CloseApp:
+                    Environment.Exit(0);
+                    break;
+                case PostRenderAction.Shutdown:
+#if WINDOWS
+                    WinUI.App.ExitWindowsEx(0x00000001 | 0x00400000 | 0x00000004 | 0x00000010, 0x00040000 | 0x80000000);
+#endif
+                    break;
+                case PostRenderAction.Hibernate:
+#if WINDOWS
+                    if (!WinUI.App.SetSuspendState(true, true, false)) //user may disabled hibernate
+                    {
+                        if (!WinUI.App.SetSuspendState(false, true, false)) //sleep may not available, shutdown
+                        {
+                            WinUI.App.ExitWindowsEx(0x00000001 | 0x00400000 | 0x00000004 | 0x00000010, 0x00040000 | 0x80000000);
+                        }
+                    }
+#endif
+
+                    break;
+            }
+        }
+    }
+
+    private void CancelPostRenderCountdown_Clicked(object sender, EventArgs e)
+    {
+        _countdownCts?.Cancel();
+    }
+
+
+
+
 
     private void MaxParallelThreadsCount_ValueChanged(object sender, ValueChangedEventArgs e)
     {
@@ -754,6 +868,16 @@ public partial class RenderPage : ContentPage
 
     }
 
+    private async void PerformPostRenderActionNowTestButton_Clicked(object sender, EventArgs e)
+    {
+        await PerformPostRenderAction();
+    }
+
+    private void ExportProjectJSONButton_Clicked(object sender, EventArgs e)
+    {
+        DraftJSONViewer.Text = JsonSerializer.Serialize(_draft, DraftPage.DraftJSONOption);
+        DraftJSONViewer.IsVisible = true;
+    }
 
     private async void CancelRender_Clicked(object sender, EventArgs e)
     {
@@ -801,6 +925,48 @@ public class RenderPageViewModel : INotifyPropertyChanged
     public string[] ExportOptions_BitDepth { get; } = [
         "8bit", "10bit", "12bit"
     ];
+
+    public static Dictionary<string, PostRenderAction> PostRenderActionNames = Enum.GetNames(typeof(PostRenderAction))
+        .Select(s => (Localized.DynamicLookup($"RenderPage_PostRenderAction_{s}"), Enum.Parse<PostRenderAction>(s)))
+        .ToDictionary(t => t.Item1, t => t.Item2);
+
+    public string[] PostRenderActions { get; } = PostRenderActionNames.Keys.ToArray();
+
+    PostRenderAction _selectedPostRenderAction = PostRenderAction.None;
+
+    public string SelectedPostRenderAction
+    {
+        get => PostRenderActionNames.ReverseLookup(_selectedPostRenderAction, Localized.RenderPage_PostRenderAction_None) ?? "None";
+        set
+        {
+            _selectedPostRenderAction = PostRenderActionNames.GetValueOrDefault(value, PostRenderAction.None);
+            SetProperty(ref _selectedPostRenderAction, _selectedPostRenderAction);
+        }
+    }
+
+    public PostRenderAction SelectedPostRenderActionEnum
+    {
+        get => _selectedPostRenderAction;
+        set
+        {
+            _selectedPostRenderAction = value;
+            OnPropertyChanged(nameof(SelectedPostRenderAction));
+        }
+    }
+
+    bool _isCountdownVisible = false;
+    public bool IsCountdownVisible
+    {
+        get => _isCountdownVisible;
+        set => SetProperty(ref _isCountdownVisible, value);
+    }
+
+    string _countdownText = "";
+    public string CountdownText
+    {
+        get => _countdownText;
+        set => SetProperty(ref _countdownText, value);
+    }
 
     string _resoultion = "3840x2160";
     public string Resoultion

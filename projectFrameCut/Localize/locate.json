@@ -1538,7 +1538,7 @@
       },
       {
         "Id": "HomePage_AgreeEULA",
-        "Value": "\u6B22\u8FCE\u4F7F\u7528 {AppBrand}!\r\u6B64\u7248\u672C\u7684 {AppBrand} \u53EA\u53EF\u7528\u4E8E\u975E\u5546\u7528\u573A\u666F\u3002\r\u7EE7\u7EED\u4F7F\u7528 {AppBrand}\uFF0C\u5373\u4EE3\u8868\u4F60\u540C\u610F\u7528\u6237\u534F\u8BAE\u3002",
+        "Value": "\u6B22\u8FCE\u4F7F\u7528 {AppBrand}!\r\u7EE7\u7EED\u4F7F\u7528 {AppBrand}\uFF0C\u5373\u4EE3\u8868\u4F60\u540C\u610F\u7528\u6237\u534F\u8BAE\u3002",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -2485,7 +2485,7 @@
       },
       {
         "Id": "RenderPage_SelectBitdepth",
-        "Value": "\u9009\u62E9\u4F4D\u6DF1\u5EA6",
+        "Value": "\u9009\u62E9\u4F4D\u6DF1\u5EA6\uFF1A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2493,7 +2493,7 @@
       },
       {
         "Id": "RenderPage_SelectEncoding",
-        "Value": "\u9009\u62E9\u7F16\u7801",
+        "Value": "\u9009\u62E9\u7F16\u7801\uFF1A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2501,7 +2501,7 @@
       },
       {
         "Id": "RenderPage_SelectFrameRate",
-        "Value": "\u9009\u62E9\u5E27\u7387",
+        "Value": "\u9009\u62E9\u5E27\u7387\uFF1A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2509,7 +2509,7 @@
       },
       {
         "Id": "RenderPage_SelectResolution",
-        "Value": "\u9009\u62E9\u4E00\u4E2A\u5206\u8FA8\u7387",
+        "Value": "\u9009\u62E9\u4E00\u4E2A\u5206\u8FA8\u7387\uFF1A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2612,6 +2612,80 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction",
+        "Value": "\u6E32\u67D3\u5B8C\u6210\u540E\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_None",
+        "Value": "\u4EC0\u4E48\u4E5F\u4E0D\u505A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_CloseApp",
+        "Value": "\u9000\u51FA\u5E94\u7528\u7A0B\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Shutdown",
+        "Value": "\u5173\u673A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Hibernate",
+        "Value": "\u4F11\u7720",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Countdown",
+        "Value": "\u6E32\u67D3\u5B8C\u6210\uFF0C\u5C06\u5728{i}\u79D2\u540E{action}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "string",
+            "Value": "action"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "action",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Project",
+        "Value": "\u9879\u76EE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "HasValidationErrors": false
       }
     ],
@@ -5459,6 +5533,87 @@
         ],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction",
+        "Value": "Unset localization item:RenderPage_PostRenderAction()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_None",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_CloseApp",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_CloseApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Shutdown",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Shutdown()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Hibernate",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Hibernate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Countdown",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Countdown(int i, string action)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "string",
+            "Value": "action"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "action",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Project",
+        "Value": "Unset localization item:DraftPage_MenuBar_Project()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -8303,6 +8458,87 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction",
+        "Value": "Unset localization item:RenderPage_PostRenderAction()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_None",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_CloseApp",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_CloseApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Shutdown",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Shutdown()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Hibernate",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Hibernate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Countdown",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Countdown(int i, string action)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "string",
+            "Value": "action"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "action",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Project",
+        "Value": "Unset localization item:DraftPage_MenuBar_Project()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -11155,6 +11391,87 @@
         ],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction",
+        "Value": "Unset localization item:RenderPage_PostRenderAction()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_None",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_CloseApp",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_CloseApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Shutdown",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Shutdown()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Hibernate",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Hibernate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Countdown",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Countdown(int i, string action)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "string",
+            "Value": "action"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "action",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Project",
+        "Value": "Unset localization item:DraftPage_MenuBar_Project()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -14006,6 +14323,87 @@
         ],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction",
+        "Value": "Unset localization item:RenderPage_PostRenderAction()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_None",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_CloseApp",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_CloseApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Shutdown",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Shutdown()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Hibernate",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Hibernate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Countdown",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Countdown(int i, string action)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "string",
+            "Value": "action"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "action",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Project",
+        "Value": "Unset localization item:DraftPage_MenuBar_Project()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -16851,6 +17249,87 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction",
+        "Value": "Unset localization item:RenderPage_PostRenderAction()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_None",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_CloseApp",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_CloseApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Shutdown",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Shutdown()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Hibernate",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Hibernate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Countdown",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Countdown(int i, string action)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "string",
+            "Value": "action"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "action",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Project",
+        "Value": "Unset localization item:DraftPage_MenuBar_Project()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -19702,6 +20181,87 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction",
+        "Value": "Unset localization item:RenderPage_PostRenderAction()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_None",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_CloseApp",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_CloseApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Shutdown",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Shutdown()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Hibernate",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Hibernate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_PostRenderAction_Countdown",
+        "Value": "Unset localization item:RenderPage_PostRenderAction_Countdown(int i, string action)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          },
+          {
+            "Key": "string",
+            "Value": "action"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          },
+          {
+            "Key": "action",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Project",
+        "Value": "Unset localization item:DraftPage_MenuBar_Project()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]

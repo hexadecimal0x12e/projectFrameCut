@@ -10,6 +10,7 @@ using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.Rendering;
 using projectFrameCut.Render.WindowsRender;
 using projectFrameCut.Shared;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
@@ -30,23 +31,34 @@ namespace projectFrameCut.StandaloneRender
 
         static async Task<int> Main(string[] args)
         {
-            if(!args.Contains("--nolog"))
+            if (!args.Contains("--nolog"))
             {
                 MyLoggerExtensions.OnLog += (m, l) => Console.WriteLine($"[{l}] {m}");
+                Console.WriteLine($"projectFrameCut.StandaloneRender - {Assembly.GetExecutingAssembly().GetName().Version}");
+                Console.WriteLine($"Copyright hexadecimal0x12e 2025-2026.");
+                Console.WriteLine(GetInfo());
             }
-            Log(GetInfo());
-            Log($"cmdline: {Environment.GetCommandLineArgs().Aggregate((a, b) => $"{a} {b}")}");
+            if (args.Contains("--logDiagnostic"))
+            {
+                MyLoggerExtensions.LoggingDiagnosticInfo = true;
+            }
+            
 
             if (args.Length == 0 || args.Any(x => x.Equals("-h") || x.Equals("--help")))
             {
                 Console.WriteLine(
                     """
-                    Usage: projectFrameCut.StandaloneRender <mode> [<args>]
+                    Help:
+                    Usage for render: 
+                        projectFrameCut.StandaloneRender 
+                            [--nolog | --logDiagnostic] 
+                            [--resolveArgsFromEnvironmentVars] 
+                            [--externalAssemblyPath=<path1>[;<path2>;<path3>...]] 
+                            <mode> <args>
+
                     Available modes:
                         - render: Render video/audio/all from the given project file.
                         - bench: Benchmark hardware accelerators for rendering.
-                        - list_accels: List available hardware accelerators.
-                        - about: Show information about this program.
 
                     Arguments:
                     Mode 'render':
@@ -69,8 +81,16 @@ namespace projectFrameCut.StandaloneRender
                     Mode 'bench':
                         [-multiAccelerator=<true|false>]
                         [-acceleratorType=<auto|cuda|opencl|cpu> or -acceleratorDeviceId=<device id> or -acceleratorDeviceIds=<device ids|all>]    
+
+                    ---
+
+                    Other usage:
+                        projectFrameCut.StandaloneRender list_accels - List all available accelerator devices. Result will printed in JSON format to stderr.
+                        projectFrameCut.StandaloneRender about - Print about info.
+                        projectFrameCut.StandaloneRender -h | --help - Show this help message.
                         
                     See more at the document.
+                    Press Enter to exit.
                     """);
                 Console.ReadLine();
                 return 0;
@@ -78,7 +98,6 @@ namespace projectFrameCut.StandaloneRender
 
             var runningMode = args[0];
 
-            Log($"Running mode: {runningMode}");
 
             ConcurrentDictionary<string, string> switches = new(args
                .Skip(1)
@@ -86,6 +105,37 @@ namespace projectFrameCut.StandaloneRender
                .Where(x => x.Length == 2)
                .Select(x => new KeyValuePair<string, string>(x[0].TrimStart('-', '/'), x[1])));
 
+            if (args.Contains("--resolveArgsFromEnvironmentVars"))
+            {
+                var envVars = new Dictionary<string, string>();
+                foreach (DictionaryEntry de in Environment.GetEnvironmentVariables())
+                {
+                    if (de.Key is string key && de.Value is string value) envVars[key] = value;
+                }
+
+                foreach (var item in envVars.Where(kv =>kv.Key.StartsWith("projectFrameCut_")))
+                {
+                    switches[item.Key.Split("projectFrameCut_",2)[1]] = item.Value;
+                }
+               
+            }
+
+            Log($"Running mode: {runningMode}");
+            Log($"Switches: {string.Join(", ", switches.Select(kv => $"{kv.Key}={kv.Value}"))}");
+
+            AppDomain.CurrentDomain.AssemblyResolve += (sender, eventArgs) =>
+            {
+                var requestedAssembly = new AssemblyName(eventArgs.Name);
+                var probingPaths = new List<string>
+                {
+                    AppContext.BaseDirectory,
+                };
+                if (switches.TryGetValue("externalAssemblyPath", out string? value))
+                {
+                    probingPaths.AddRange(value.Split([';'], StringSplitOptions.RemoveEmptyEntries));
+                }
+                return TryResolveAssembly(requestedAssembly.Name!, probingPaths.ToArray(), keepInMemory: true);
+            };
 
 
             switch (runningMode)
@@ -106,8 +156,7 @@ namespace projectFrameCut.StandaloneRender
                         var item = devices[(int)i];
                         listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
                     }
-                    Console.Error.WriteLine(JsonSerializer.Serialize(listAccels, new JsonSerializerOptions { WriteIndented = true })
-                        );
+                    Console.Error.WriteLine(JsonSerializer.Serialize(listAccels, new JsonSerializerOptions { WriteIndented = true }));
                     return 0;
 
                 case "about":
@@ -143,6 +192,7 @@ namespace projectFrameCut.StandaloneRender
                     var acc = ILGPUComputerHelper.PickOneAccel(accelType, acceleratorId, devices);
                     if (acc is null)
                     {
+                        Log($"ERROR: Cannot pick accelerator device. Check the configuration.");
                         return 2;
                     }
                     picked.Add(acc);
@@ -190,7 +240,7 @@ namespace projectFrameCut.StandaloneRender
 
                 foreach (var item in picked)
                 {
-                    Log($"Picked accelerator {item.Name} : {item.AcceleratorType}\r\n");
+                    Log($"Picked accelerator {item.Name} : {item.AcceleratorType}");
                 }
 
                 Accelerator[] accelerators = picked.Select(d => d.CreateAccelerator(context)).ToArray();
@@ -202,14 +252,12 @@ namespace projectFrameCut.StandaloneRender
             catch (Exception ex)
             {
                 Log(ex, "Get accels");
-                return ex.HResult;
+                throw;
             }
         }
 
         private static async Task<int> GoRender(ConcurrentDictionary<string, string> switches)
         {
-
-
             #region init encoder
             Log("Initiliazing FFmpeg...");
             ffmpeg.RootPath = switches.GetOrAdd("FFmpegLibraryPath", AppContext.BaseDirectory);
@@ -576,8 +624,6 @@ namespace projectFrameCut.StandaloneRender
         public static string GetInfo(bool all = false)
         {
             StringBuilder builder = new StringBuilder();
-            builder.AppendLine($"projectFrameCut.StandaloneRender - {Assembly.GetExecutingAssembly().GetName().Version}");
-            builder.AppendLine($"Copyright hexadecimal0x12e 2025-2026.");
             var renderType = typeof(Renderer).Assembly;
             var baseType = typeof(IPluginBase).Assembly;
             string renderHash = "";
@@ -593,8 +639,8 @@ namespace projectFrameCut.StandaloneRender
             }
             catch { baseHash = "unknown"; }
             builder.AppendLine($"APIBase Version: {IPluginBase.CurrentPluginAPIVersion}");
-            builder.AppendLine($"Render: {renderType.FullName}, hash:{renderHash}");
-            builder.AppendLine($"APIBase: {baseType.FullName}, hash:{baseHash}");
+            builder.AppendLine($"Render: version {renderType.GetName().Version}, hash:{renderHash}");
+            builder.AppendLine($"APIBase: version {baseType.GetName().Version}, hash:{baseHash}");
             if (all)
             {
                 List<string> printedAsb = new();
@@ -628,6 +674,32 @@ namespace projectFrameCut.StandaloneRender
                 }
             }
             return builder.ToString();
+        }
+
+        private static Assembly? TryResolveAssembly(string name, string[] paths, bool keepInMemory)
+        {
+            Log($"Try loading assembly {name}...");
+            foreach (var item in paths)
+            {
+                var p = Path.Combine(item, name + ".dll");
+                if (!File.Exists(p)) continue;
+                Log($"Found assembly {name} in {p}.");
+                if (keepInMemory)
+                {
+                    var fs = File.OpenRead(p);
+                    var buf = new byte[fs.Length];
+                    fs.ReadExactly(buf);
+                    fs.Dispose();
+                    return Assembly.Load(buf);
+                }
+                else
+                {
+                    return Assembly.LoadFile(p);
+                }
+
+            }
+            Log($"Assembly {name} not found.");
+            return null;
         }
     }
 }
