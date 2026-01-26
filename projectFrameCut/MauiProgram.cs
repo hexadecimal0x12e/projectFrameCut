@@ -249,14 +249,14 @@ namespace projectFrameCut
 #if WINDOWS
             try
             {
-                if (SettingsManager.IsBoolSettingTrue("DedicatedLogWindow") && !projectFrameCut.WinUI.Program.LogWindowShowing)
+                if (SettingsManager.IsBoolSettingTrue("DedicatedLogWindow") && !Program.LogWindowShowing)
                 {
                     Thread logThread = new Thread(Helper.HelperProgram.LogMain);
                     logThread.Name = "LogWindow thread";
                     logThread.Priority = ThreadPriority.Highest;
                     logThread.IsBackground = false;
                     logThread.Start();
-                    projectFrameCut.WinUI.Program.LogWindowShowing = true;
+                    Program.LogWindowShowing = true;
                     Log($"Logger window started.");
                 }
             }
@@ -550,6 +550,9 @@ namespace projectFrameCut
                         if (Environment.GetCommandLineArgs().Contains("--forceLoadPlugins") || (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine")))
                         {
                             plugins.AddRange(PluginService.LoadUserPlugins());
+#if WINDOWS
+                            Helper.HelperProgram.ResetPluginLoadingStat();
+#endif
                         }
                         else
                         {

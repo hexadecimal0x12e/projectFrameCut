@@ -102,7 +102,7 @@ projectFrameCut.StandaloneRender <mode> [<args>]
   - `all`: 渲染视频和音频并合成
 
 - **`-assetDbFile=<path to database.json file>`**  
-  资产数据库 JSON 文件路径。
+  全局素材数据库 JSON 文件路径。默认位于projectFrameCut用户数据目录下的`My Assets/.database/database.json`
 
 - **`-pluginRoot=<path to plugin root>`**  
   外部插件根目录路径。
@@ -115,7 +115,8 @@ projectFrameCut.StandaloneRender <mode> [<args>]
   最大并行渲染线程数。默认：`8`
 
 - **`-oneByOneRender=<true|false>`**  
-  是否逐帧渲染（等同于设置 `maxParallelThreads=1`）。默认：`false`
+  是否逐帧渲染，并且在每一帧的结果产生之后同步写入输出视频，而不是计划写入。默认：`false`
+  设置此参数为`true`会覆盖参数**`-maxParallelThreads`**为1。
 
 - **`-multiAccelerator=<true|false>`**  
   是否使用多个加速器设备。默认：`false`

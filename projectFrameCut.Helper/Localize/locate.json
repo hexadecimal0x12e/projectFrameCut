@@ -11,7 +11,7 @@
     "zh-CN": [
       {
         "Id": "AppLoading",
-        "Value": "\u52A0\u8F7D\u4E2D...",
+        "Value": "\u52A0\u8F7D\u5E94\u7528\u7A0B\u5E8F...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -74,6 +74,32 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "SplashForm_PluginLoading",
+        "Value": "\u52A0\u8F7D\u63D2\u4EF6\u300C{name}\u300D...",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PostInit",
+        "Value": "\u521D\u59CB\u5316\u7528\u6237\u754C\u9762...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "SplashForm_Version",
         "Value": "\u7248\u672C {HelperProgram.AppVersion}",
         "Mode": "InterpolationString",
@@ -93,7 +119,7 @@
     "en-US": [
       {
         "Id": "AppLoading",
-        "Value": "Loading...",
+        "Value": "Loading application...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -151,7 +177,7 @@
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "The original value is a space, likely used as a placeholder for empty license text in the splash form.",
         "HasValidationErrors": false
       },
       {
@@ -180,12 +206,40 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PluginLoading",
+        "Value": "Loading plugin \u0027{name}\u0027...",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PostInit",
+        "Value": "Initializing user interface...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
       {
         "Id": "AppLoading",
-        "Value": "\u8F09\u5165\u4E2D...",
+        "Value": "\u8F09\u5165\u61C9\u7528\u7A0B\u5F0F...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -239,11 +293,11 @@
       },
       {
         "Id": "SplashForm_License",
-        "Value": " ",
+        "Value": "\u3000",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u539F\u59CB\u503C\u70BA\u55AE\u4E00\u7A7A\u683C\uFF0C\u5DF2\u8F49\u63DB\u70BA\u5168\u5F62\u7A7A\u683C\u4EE5\u7B26\u5408\u4E2D\u6587\u6392\u7248\u7FD2\u6163\u3002",
         "HasValidationErrors": false
       },
       {
@@ -272,12 +326,40 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PluginLoading",
+        "Value": "\u8F09\u5165\u63D2\u4EF6\u300C{name}\u300D...",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PostInit",
+        "Value": "\u521D\u59CB\u5316\u4F7F\u7528\u8005\u4ECB\u9762...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "ja-JP": [
       {
         "Id": "AppLoading",
-        "Value": "\u8AAD\u307F\u8FBC\u307F\u4E2D...",
+        "Value": "\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u3092\u8AAD\u307F\u8FBC\u3093\u3067\u3044\u307E\u3059...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -364,12 +446,40 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PluginLoading",
+        "Value": "\u30D7\u30E9\u30B0\u30A4\u30F3\u300C{name}\u300D\u3092\u8AAD\u307F\u8FBC\u3093\u3067\u3044\u307E\u3059...",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PostInit",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u3092\u521D\u671F\u5316\u3057\u3066\u3044\u307E\u3059...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
       {
         "Id": "AppLoading",
-        "Value": "\uB85C\uB529 \uC911...",
+        "Value": "\uC560\uD50C\uB9AC\uCF00\uC774\uC158 \uB85C\uB529 \uC911...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -456,12 +566,40 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PluginLoading",
+        "Value": "\uD50C\uB7EC\uADF8\uC778 \u0027{name}\u0027 \uB85C\uB529 \uC911...",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PostInit",
+        "Value": "\uC0AC\uC6A9\uC790 \uC778\uD130\uD398\uC774\uC2A4 \uCD08\uAE30\uD654 \uC911...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
       {
         "Id": "AppLoading",
-        "Value": "Chargement...",
+        "Value": "Chargement de l\u0027application...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -544,6 +682,34 @@
         "Id": "CorruptedInstallPrompt",
         "Value": "D\u00E9sol\u00E9, l\u0027installation de {HelperProgram.AppTitle} semble \u00EAtre corrompue. Veuillez essayer de r\u00E9installer l\u0027application.",
         "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PluginLoading",
+        "Value": "Chargement du plugin \u00AB {name} \u00BB...",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PostInit",
+        "Value": "Initialisation de l\u0027interface utilisateur...",
+        "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "",

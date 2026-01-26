@@ -9,7 +9,6 @@ using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Effect;
-using projectFrameCut.Render.Effect.ImageSharp;
 
 namespace InteractableEditor
 {

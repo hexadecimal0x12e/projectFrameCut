@@ -13,7 +13,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace projectFrameCut.Render.Effect.ImageSharp
+namespace projectFrameCut.Render.Effect
 {
 
     public class PlaceEffect_ImageSharp : IEffect
@@ -350,7 +350,7 @@ namespace projectFrameCut.Render.Effect.ImageSharp
             var img = source.SaveToSixLaborsImage();
             img.Mutate(i => i.Resize(new ResizeOptions
             {
-                Size = new SixLabors.ImageSharp.Size(Width, Height),
+                Size = new Size(Width, Height),
                 Mode = PreserveAspectRatio ? ResizeMode.Max : ResizeMode.Stretch
             }));
             IPicture resized = (int)source.bitPerPixel switch
@@ -370,7 +370,7 @@ namespace projectFrameCut.Render.Effect.ImageSharp
         {
             return imgCtx => imgCtx.Resize(new ResizeOptions
             {
-                Size = new SixLabors.ImageSharp.Size(Width, Height),
+                Size = new Size(Width, Height),
                 Mode = PreserveAspectRatio ? ResizeMode.Max : ResizeMode.Stretch
             });
         }

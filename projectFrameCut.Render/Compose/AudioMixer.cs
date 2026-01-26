@@ -2,7 +2,7 @@ using projectFrameCut.Render.RenderAPIBase.Sources;
 using System;
 using System.Collections.Generic;
 
-namespace projectFrameCut.Render.VideoMakeEngine
+namespace projectFrameCut.Render.Compose
 {
     public static class AudioMixer
     {

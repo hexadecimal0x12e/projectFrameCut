@@ -113,7 +113,7 @@ public partial class RenderPage : ContentPage
         _duration = projectDuration;
         _project = projectInfo;
         _draft = draft;
-        Title = Localized.RenderPage_ExportTitle(projectInfo.projectName);
+        Title = Localized.RenderPage_ExportTitle(projectInfo.ProjectName);
         ScreenSaverOverlay.InputTransparent = true;
         ScreenSaverOverlay.CascadeInputTransparent = true;
         var vm = new RenderPageViewModel();
@@ -343,11 +343,11 @@ public partial class RenderPage : ContentPage
                 running = true;
                 DeviceDisplay.Current.KeepScreenOn = true;
                 Log("Output options:\r\n" + vm.BuildSummary());
-                string vidOutputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
-                string audOutputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
-                string compOutputPath = Path.Combine(outputDir, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.composed{ext}");
+                string vidOutputPath = Path.Combine(outputDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+                string audOutputPath = Path.Combine(outputDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
+                string compOutputPath = Path.Combine(outputDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.composed{ext}");
 #if WINDOWS
-                var resultPath = await FileSystemService.PickASavePath($"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", outputDir);
+                var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", outputDir);
                 if (string.IsNullOrWhiteSpace(resultPath)) goto done;
 #else
                 string resultPath = compOutputPath;
@@ -440,7 +440,7 @@ public partial class RenderPage : ContentPage
                 try
                 {
 #if ANDROID
-                    var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
+                    var path = await MediaStoreSaver.SaveMediaFileAsync(resultPath, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", ext switch { ".mp4" => "video/mp4", ".mov" => "video/quicktime", ".mkv" => "video/x-matroska", _ => "video/mp4" }, subFolder: Localized.AppBrand, mediaType: MediaStoreSaver.MediaType.Video);
                     if (!string.IsNullOrWhiteSpace(path) && !SettingsManager.IsBoolSettingTrue("DeveloperMode"))
                     {
                         try
@@ -745,7 +745,7 @@ public partial class RenderPage : ContentPage
             clip.ReInit();
         }
 
-        var buf = AudioComposer.Compose(clips, null, (int)_project.targetFrameRate, 48000, 2);
+        var buf = AudioComposer.Compose(clips, null, (int)_project.TargetFrameRate, 48000, 2);
         AudioWriter writer = new(outputPath, 48000, 2);
         writer.Append(buf);
         writer.Finish();

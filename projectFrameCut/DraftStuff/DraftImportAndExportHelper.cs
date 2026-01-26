@@ -46,7 +46,7 @@ namespace projectFrameCut.DraftStuff
                         uint durationFrames = (uint)Math.Round(page.PixelToFrame(widthPx) / elem.SecondPerFrameRatio);
                         if (durationFrames == 0) durationFrames = 1;
 
-                        string name = string.IsNullOrWhiteSpace(elem.displayName) ? ExtractLabelText(border) ?? elem.Id : elem.displayName;
+                        string name = string.IsNullOrWhiteSpace(elem.DisplayName) ? ExtractLabelText(border) ?? elem.Id : elem.DisplayName;
 
                         if (elem.ClipType == ClipMode.AudioClip)
                         {
@@ -65,7 +65,7 @@ namespace projectFrameCut.DraftStuff
                                     Duration = durationFrames,
                                     FrameTime = elem.sourceSecondPerFrame,
                                     MixtureMode = MixtureMode.Overlay,
-                                    FilePath = elem.sourcePath,
+                                    FilePath = elem.SourcePath,
                                     SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
                                     IsInfiniteLength = elem.isInfiniteLength,
                                     SecondPerFrameRatio = elem.SecondPerFrameRatio,
@@ -88,7 +88,7 @@ namespace projectFrameCut.DraftStuff
                                     RelativeStartFrame = elem.relativeStartFrame,
                                     Duration = durationFrames,
                                     SecondPerFrameRatio = elem.SecondPerFrameRatio,
-                                    FilePath = elem.sourcePath,
+                                    FilePath = elem.SourcePath,
                                     MetaData = elem.ExtraData
                                 };
                                 soundtracks.Add(dto);
@@ -109,7 +109,7 @@ namespace projectFrameCut.DraftStuff
                                 Duration = durationFrames,
                                 FrameTime = elem.sourceSecondPerFrame,
                                 MixtureMode = MixtureMode.Overlay,
-                                FilePath = elem.sourcePath,
+                                FilePath = elem.SourcePath,
                                 SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
                                 IsInfiniteLength = elem.isInfiniteLength,
                                 SecondPerFrameRatio = elem.SecondPerFrameRatio,
@@ -189,7 +189,7 @@ namespace projectFrameCut.DraftStuff
 
             var d = new DraftStructureJSON
             {
-                targetFrameRate = page.ProjectInfo.targetFrameRate,
+                TargetFrameRate = page.ProjectInfo.TargetFrameRate,
                 Clips = clips.Cast<object>().ToArray(),
                 SoundTracks = soundtracks.Cast<object>().ToArray(),
                 Duration = (uint)max,
@@ -299,14 +299,14 @@ namespace projectFrameCut.DraftStuff
                     maxFrames: maxFrames
                 );
 
-                element.displayName = string.IsNullOrWhiteSpace(dto.Name) ? element.Id : dto.Name;
+                element.DisplayName = string.IsNullOrWhiteSpace(dto.Name) ? element.Id : dto.Name;
                 element.origTrack = (int)dto.LayerIndex;
                 element.origLength = widthPx;
                 element.origX = startPx;
                 element.relativeStartFrame = dto.RelativeStartFrame;
                 element.maxFrameCount = maxFrames;
                 element.isInfiniteLength = dto.IsInfiniteLength;
-                element.sourcePath = dto.FilePath ?? (dto.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
+                element.SourcePath = dto.FilePath ?? (dto.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
                 element.ClipType = dto.ClipType;
                 element.ExtraData = dto.MetaData ?? new();
                 element.sourceSecondPerFrame = dto.FrameTime;
@@ -389,17 +389,17 @@ namespace projectFrameCut.DraftStuff
                     maxFrames: dto.Duration
                 );
 
-                element.displayName = string.IsNullOrWhiteSpace(dto.Name) ? element.Id : dto.Name;
+                element.DisplayName = string.IsNullOrWhiteSpace(dto.Name) ? element.Id : dto.Name;
                 element.origTrack = (int)dto.LayerIndex;
                 element.origLength = widthPx;
                 element.origX = startPx;
                 element.relativeStartFrame = dto.RelativeStartFrame;
                 element.maxFrameCount = dto.Duration;
                 element.isInfiniteLength = false;
-                element.sourcePath = dto.FilePath ?? (dto.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
+                element.SourcePath = dto.FilePath ?? (dto.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
                 element.ClipType = ClipMode.AudioClip;
                 element.ExtraData = dto.MetaData ?? new();
-                element.sourceSecondPerFrame = 1f / proj.targetFrameRate;
+                element.sourceSecondPerFrame = 1f / proj.TargetFrameRate;
                 element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
                 element.ApplySpeedRatio();
                 element.TypeName = dto.TypeName;

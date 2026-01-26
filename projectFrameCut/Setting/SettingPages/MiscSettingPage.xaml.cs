@@ -197,7 +197,8 @@ public partial class MiscSettingPage : ContentPage
                 await MainSettingsPage.RebootApp(this);
 
         done:
-            BuildPPB();
+            { }
+            //BuildPPB();
         }
         catch (Exception ex)
         {

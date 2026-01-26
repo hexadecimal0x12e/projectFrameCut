@@ -32,6 +32,8 @@ using projectFrameCut.ViewModels;
 using projectFrameCut.Render.Rendering;
 using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
 using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using System.Runtime;
+
 
 
 
@@ -166,6 +168,7 @@ public partial class DraftPage : ContentPage
     public ICommand CleanRenderCacheCommand { get; private set; }
     public ICommand PlayheadMoveRightCommand { get; private set; }
     public ICommand PlayheadMoveLeftCommand { get; private set; }
+    public ICommand ExitNoSaveCommand { get; private set; }
     #endregion
 
     #region options
@@ -251,8 +254,8 @@ public partial class DraftPage : ContentPage
         }
 
         trackCount = initialTrackCount;
-        ProjectInfo.projectName = title;
-        SecondsPerFrame = 1d / ProjectInfo.targetFrameRate;
+        ProjectInfo.ProjectName = title;
+        SecondsPerFrame = 1d / ProjectInfo.TargetFrameRate;
         IsReadonly = isReadonly;
     }
 
@@ -274,6 +277,7 @@ public partial class DraftPage : ContentPage
         CleanRenderCacheCommand = new Command(async () => await CleanRenderCache());
         PlayheadMoveLeftCommand = new Command(async () => await MovePlayhead(-10));
         PlayheadMoveRightCommand = new Command(async () => await MovePlayhead(10));
+        ExitNoSaveCommand = new Command(async () => await ExitButNoSave());
     }
 
 
@@ -450,7 +454,7 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region add stuff
-    private ClipElementUI CreateAndAddClip(
+    public ClipElementUI CreateAndAddClip(
         double startX,
         double width,
         int trackIndex,
@@ -472,7 +476,7 @@ public partial class DraftPage : ContentPage
             element.ClipType = sourceElement.ClipType;
             element.FromPlugin = sourceElement.FromPlugin;
             element.SecondPerFrameRatio = sourceElement.SecondPerFrameRatio;
-            element.sourcePath = sourceElement.sourcePath;
+            element.SourcePath = sourceElement.SourcePath;
             element.maxFrameCount = sourceElement.maxFrameCount;
             element.isInfiniteLength = sourceElement.isInfiniteLength;
             element.ExtraData = sourceElement.ExtraData;
@@ -485,19 +489,19 @@ public partial class DraftPage : ContentPage
         return element;
     }
 
-    private ClipElementUI CreateFromAsset(AssetItem asset, int trackIndex, string fromPlugin = InternalPluginBase.InternalPluginBaseID, string? path = null)
+    public ClipElementUI CreateFromAsset(AssetItem asset, int trackIndex, string fromPlugin = InternalPluginBase.InternalPluginBaseID, string? path = null)
     {
         var elem = ClipElementUI.CreateClip(
                            startX: 0,
-                           width: FrameToPixel(asset.isInfiniteLength ? 300 : AssetDatabase.DetermineLengthInFrame(asset, ProjectInfo.targetFrameRate)),
+                           width: FrameToPixel(asset.isInfiniteLength ? 300 : AssetDatabase.DetermineLengthInFrame(asset, ProjectInfo.TargetFrameRate)),
                            trackIndex: trackIndex,
                            labelText: asset.Name,
                            background: ClipElementUI.DetermineAssetColor(asset.AssetType, asset.GetClipMode()),
-                           maxFrames: AssetDatabase.DetermineLengthInFrame(asset, ProjectInfo.targetFrameRate),
+                           maxFrames: AssetDatabase.DetermineLengthInFrame(asset, ProjectInfo.TargetFrameRate),
                            relativeStart: 0
                           );
 
-        elem.sourcePath = path ?? $"${asset.AssetId}";
+        elem.SourcePath = path ?? $"${asset.AssetId}";
         elem.ClipType = asset.GetClipMode();
         elem.FromPlugin = fromPlugin;
         elem.sourceSecondPerFrame = asset.SecondPerFrame;
@@ -506,7 +510,7 @@ public partial class DraftPage : ContentPage
         return elem;
     }
 
-    private void RegisterClip(ClipElementUI element, bool resolveOverlap)
+    public void RegisterClip(ClipElementUI element, bool resolveOverlap)
     {
         var cid = element.Id;
 
@@ -548,7 +552,7 @@ public partial class DraftPage : ContentPage
         Clips.AddOrUpdate(element.Id, element, (_, _) => element);
     }
 
-    private void AddAClip(ClipElementUI c)
+    public void AddAClip(ClipElementUI c)
     {
         if (c.origTrack is null)
             throw new ArgumentNullException(nameof(c.origTrack));
@@ -596,7 +600,7 @@ public partial class DraftPage : ContentPage
                 width: rightWidth,
                 trackIndex: trackIdx,
                 id: null,
-                labelText: $"{clip.displayName} (2)",
+                labelText: $"{clip.DisplayName} (2)",
                 background: border.Background,
                 prototype: border,
                 resolveOverlap: true,
@@ -863,50 +867,12 @@ public partial class DraftPage : ContentPage
 
     private async void AddClip_Clicked(object sender, EventArgs e)
     {
-        int nativeTrackIndex = Tracks.Last().Key;
-        PropertyPanelBuilder ppb = new();
-        ppb
-        .AddCustomChild(BuildAssetPanel(false))
-        .AddSeparator()
-        .AddButton("textClip", "Create a text clip")
-        .AddButton("solidColorClip", "Create a solid color clip")
-        .AddButton("subTitleClip", "Create some subtitle")
-        .AddButton("alternativeSourceClip", "Add from another source")
-        .AddSeparator(s =>
-        {
-            s.HeightRequest = 350;
-            s.BackgroundColor = Colors.Transparent;
-            s.Color = Colors.Transparent;
-        })
-        .ListenToChanges(async (e) =>
-        {
-            switch (e.Id)
-            {
-                case "textClip":
-                    {
-                        await AddATextClip();
-                        break;
-                    }
-                case "solidColorClip":
-                    {
-                        await AddASolidColorClip();
-                        break;
-                    }
-                case "subTitleClip":
-                    {
-                        await AddATextClip(true);
-                        break;
-                    }
-                case "alternativeSourceClip":
-                    {
-                        await AddAlternativeSourceClip();
-                        break;
-                    }
-            }
-            await HidePopup();
-        });
-
-        await ShowAPopup(new ScrollView { Content = ppb.Build() });
+        var addClipView = new ProjectAddClipView(this);
+        
+        // 订阅事件以便在添加clip后关闭弹窗
+        addClipView.ClipAdded += async (s, args) => await HidePopup();
+        
+        await ShowAPopup(addClipView);
     }
 
     private async Task AddAlternativeSourceClip()
@@ -934,7 +900,7 @@ public partial class DraftPage : ContentPage
         );
 
         element.ClipType = ClipMode.VideoClip;
-        element.sourcePath = path;
+        element.SourcePath = path;
         element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
         element.isInfiniteLength = false;
         element.maxFrameCount = (uint)vidSrc.TotalFrames;
@@ -1092,7 +1058,7 @@ public partial class DraftPage : ContentPage
         _selected = clip;
         _selectedOrigColor = clip.Clip.Background;
         clip.Clip.Background = Colors.YellowGreen;
-        SetStatusText(Localized.DraftPage_Selected(clip.displayName));
+        SetStatusText(Localized.DraftPage_Selected(clip.DisplayName));
         ClipEditor.SetClip(clip, Assets.TryGetValue(clip.Id, out var asset) ? asset : null);
         SetTimelineScrollEnabled(false);
         CustomContent1.Content = await BuildPropertyPanel(clip);
@@ -1708,13 +1674,13 @@ public partial class DraftPage : ContentPage
             return;
         }
 
-        SetStatusText($"{clip.displayName}'s property '{e.Id}' changed from {e.OriginValue} to {e.Value}");
+        SetStatusText($"{clip.DisplayName}'s property '{e.Id}' changed from {e.OriginValue} to {e.Value}");
 
         Clips[clip.Id] = clip;
 
         await ReRenderUI();
 
-        SetStatusText(Localized.DraftPage_ClipPropertyUpdated(clip.displayName));
+        SetStatusText(Localized.DraftPage_ClipPropertyUpdated(clip.DisplayName));
 
 
     }
@@ -1796,15 +1762,18 @@ public partial class DraftPage : ContentPage
     {
         try
         {
-            await ShowAPopup(BuildAssetPanel());
-
+            var draftPage = this;
+            var assetView = new ProjectAssetView(ref draftPage)
+            {
+                
+            };
+            await ShowAPopup(assetView);
         }
         catch (Exception ex)
         {
             Log(ex, "Show asset panel", this);
             throw;
         }
-
     }
 
     private ScrollView BuildAssetPanel(bool includeHeader = true)
@@ -2202,7 +2171,7 @@ public partial class DraftPage : ContentPage
                             {
                                 if (child is Microsoft.Maui.Controls.Label lab)
                                 {
-                                    lab.Text = clip.displayName;
+                                    lab.Text = clip.DisplayName;
                                 }
                                 else if (child is Border b)
                                 {
@@ -2221,7 +2190,7 @@ public partial class DraftPage : ContentPage
                                     // nested layout: search for labels/handles inside
                                     foreach (var sub in subLayout.Children)
                                     {
-                                        if (sub is Microsoft.Maui.Controls.Label sl) sl.Text = clip.displayName;
+                                        if (sub is Microsoft.Maui.Controls.Label sl) sl.Text = clip.DisplayName;
                                         if (sub is Border sb)
                                         {
                                             sb.BindingContext = clip;
@@ -2301,7 +2270,7 @@ public partial class DraftPage : ContentPage
         public ClipElementUI Clip { get; set; }
     }
 
-    private async Task UpdateAdjacencyForTrack()
+    public async Task UpdateAdjacencyForTrack()
     {
         foreach (var item in Tracks.Keys)
         {
@@ -2785,7 +2754,7 @@ public partial class DraftPage : ContentPage
         catch { }
     }
 
-    private async Task HidePopup()
+    public async Task HidePopup()
     {
 #if iDevices
         if (OrigionalUIContent is not null)
@@ -2916,7 +2885,7 @@ public partial class DraftPage : ContentPage
         catch { }
     }
 
-    private async Task ShowACenteredPopup(double desiredHeight, double desiredWidth, View content)
+    public async Task ShowACenteredPopup(double desiredHeight, double desiredWidth, View content)
     {
         popupShowingDirection = "dialog";
 
@@ -3392,7 +3361,7 @@ public partial class DraftPage : ContentPage
             SetStatusText(Localized._ProcessingWithProg(p));
         }
         previewer.OnProgressChanged += progChanged;
-        var path = await previewer.RenderSomeFrames((int)_currentFrame, LiveVideoPreviewBufferLength, (int)(previewWidth / LivePreviewResolutionFactor), (int)(previewHeight / LivePreviewResolutionFactor), (int)ProjectInfo.targetFrameRate, ct);
+        var path = await previewer.RenderSomeFrames((int)_currentFrame, LiveVideoPreviewBufferLength, (int)(previewWidth / LivePreviewResolutionFactor), (int)(previewHeight / LivePreviewResolutionFactor), (int)ProjectInfo.TargetFrameRate, ct);
         previewer.OnProgressChanged -= progChanged;
         return path;
     }
@@ -3815,8 +3784,32 @@ public partial class DraftPage : ContentPage
         SetTimelineScrollEnabled(true);
         await ReRenderUI();
         DraftChanged(sender, new() { NoSave = true });
+#if WINDOWS
+        var origMode = GCSettings.LargeObjectHeapCompactionMode;
+        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+        GC.WaitForPendingFinalizers();
+        GC.Collect(2, GCCollectionMode.Forced, blocking: true, compacting: true);
+        GCSettings.LargeObjectHeapCompactionMode = origMode;
+#else
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+#endif
         SetStateOK();
     }
+
+    bool ExitNoSave = false;
+
+    private async Task ExitButNoSave()
+    {
+        if (await DisplayAlertAsync(Localized._Warn, Localized.DraftPage_ExitWithoutSave_Warn, Localized._Confirm, Localized._Cancel))
+        {
+            ExitNoSave = true;
+            await Navigation.PopAsync();
+        }
+    }
+
+
     private async Task GotoButtonClicked()
     {
         var input = await DisplayPromptAsync(Localized._Info, Localized.DraftPage_GotoFrame, Localized._OK, Localized._Cancel, null, 0, null, "");
@@ -3957,7 +3950,7 @@ public partial class DraftPage : ContentPage
                 "Debug_ComposeAudio", new Command(() =>
                 {
                     var clip = DraftImportAndExportHelper.JSONToIClips(DraftImportAndExportHelper.ExportFromDraftPage(this,true));
-                    var buf = AudioComposer.Compose(clip, null, (int)ProjectInfo.targetFrameRate, 44100, 2);
+                    var buf = AudioComposer.Compose(clip, null, (int)ProjectInfo.TargetFrameRate, 44100, 2);
                     AudioWriter w = new(Path.Combine(MauiProgram.DataPath,$"audioExport-{DateTime.Now:yyyyMMddHHmmss}.wav"));
                     w.Append(buf);
                     w.Finish();
@@ -4114,7 +4107,7 @@ public partial class DraftPage : ContentPage
         base.OnAppearing();
         if (AlreadyDisappeared)
         {
-            Log($"FATAL: DraftPage has been appeared again since disappeared. \r\nStackTrace:{Environment.StackTrace}","fatal");
+            Log($"FATAL: DraftPage has been appeared again since disappeared. \r\nStackTrace:{Environment.StackTrace}", "fatal");
             await Task.Delay(500);
             await Navigation.PopAsync();
             Content = new Label
@@ -4164,7 +4157,6 @@ public partial class DraftPage : ContentPage
                 }
             }
         };
-        base.OnDisappearing();
 
         if (this.Window is not null)
         {
@@ -4187,11 +4179,14 @@ public partial class DraftPage : ContentPage
 
         try
         {
-            await Save(true);
+            if (!ExitNoSave) await Save(true);
             App.Current?.Windows?.First()?.Title = Localized.AppBrand;
+            base.OnDisappearing();
+
         }
         catch (Exception ex)
         {
+            Log(ex, "Save on exit", this);
             await DisplayAlertAsync("Error", $"Failed to save project on exit: {ex.Message}", "OK");
         }
 

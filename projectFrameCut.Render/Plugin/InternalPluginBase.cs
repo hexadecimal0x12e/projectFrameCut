@@ -4,7 +4,6 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
-using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -13,9 +12,8 @@ using System.Text;
 using System.Text.Json;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Benchmark;
-using projectFrameCut.Render.Effect.HwAccel;
-using projectFrameCut.Render.Effect.ImageSharp;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.Compose;
 
 namespace projectFrameCut.Render.Plugin;
 
@@ -56,10 +54,10 @@ public class InternalPluginBase : IPluginBase
 
     public Dictionary<string, Func<IEffect>> EffectProvider => new Dictionary<string, Func<IEffect>>
     {
-        {"RemoveColor_HwAccel",  new(() => new RemoveColorEffect_HwAccel())},
-        {"PlaceEffect_ImageSharp",  new(() => new PlaceEffect_ImageSharp())},
-        {"CropEffect_ImageSharp",  new(() => new CropEffect_ImageSharp())},
-        {"ResizeEffect_ImageSharp",  new(() => new ResizeEffect_ImageSharp())},
+        {"RemoveColor",  new(() => new RemoveColorEffect_HwAccel())},
+        {"Place",  new(() => new PlaceEffect_ImageSharp())},
+        {"Crop",  new(() => new CropEffect_ImageSharp())},
+        {"Resize",  new(() => new ResizeEffect_ImageSharp())},
     };
 
     public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>

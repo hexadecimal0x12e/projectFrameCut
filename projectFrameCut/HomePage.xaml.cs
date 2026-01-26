@@ -236,7 +236,7 @@ public partial class HomePage : ContentPage
         Directory.CreateDirectory(draftSourcePath);
         var ProjectInfo = new ProjectJSONStructure
         {
-            projectName = projName,
+            ProjectName = projName,
             NormallyExited = true,
             LastChanged = DateTime.Now
         };
@@ -277,7 +277,7 @@ public partial class HomePage : ContentPage
 
         var ProjectInfo = new ProjectJSONStructure
         {
-            projectName = projName,
+            ProjectName = projName,
             NormallyExited = true,
             LastChanged = DateTime.Now
         };
@@ -498,11 +498,11 @@ public partial class HomePage : ContentPage
                 Dictionary<string, string> notfounds = new();
                 foreach (var item in dict)
                 {
-                    if (!string.IsNullOrWhiteSpace(item.Value.sourcePath) && !File.Exists(item.Value.sourcePath))
+                    if (!string.IsNullOrWhiteSpace(item.Value.SourcePath) && !File.Exists(item.Value.SourcePath))
                     {
-                        if (item.Value.sourcePath.StartsWith('#')) break;
-                        if (item.Value.sourcePath.StartsWith('$') && AssetDatabase.Assets.ContainsKey(item.Value.sourcePath.Substring(1))) break;
-                        notfounds.Add(item.Value.displayName, item.Value.sourcePath.StartsWith('$') ? $"Asset@{item.Value.sourcePath.Substring(1)}" : item.Value.sourcePath);
+                        if (item.Value.SourcePath.StartsWith('#')) break;
+                        if (item.Value.SourcePath.StartsWith('$') && AssetDatabase.Assets.ContainsKey(item.Value.SourcePath.Substring(1))) break;
+                        notfounds.Add(item.Value.DisplayName, item.Value.SourcePath.StartsWith('$') ? $"Asset@{item.Value.SourcePath.Substring(1)}" : item.Value.SourcePath);
                     }
                 }
                 foreach (var item in assetDict)
@@ -562,7 +562,7 @@ public partial class HomePage : ContentPage
                                     if (input != "yes") return;
                                     foreach (var item in notfounds)
                                     {
-                                        dict = new(dict.RemoveRange(dict.Where(c => c.Value.sourcePath == item.Value)));
+                                        dict = new(dict.RemoveRange(dict.Where(c => c.Value.SourcePath == item.Value)));
                                         assetDict = new(assetDict.RemoveRange(assetDict.Where(c => c.Value.Path == item.Value)));
                                     }
 
@@ -580,8 +580,8 @@ public partial class HomePage : ContentPage
                     SettingsManager.WriteSetting("Edit_PreferredPopupMode", "bottom");
 #endif
                 }
-                page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.projectName ?? "?", isReadonly);
-                page.ProjectName = project?.projectName ?? "?";
+                page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.ProjectName ?? "?", isReadonly);
+                page.ProjectName = project?.ProjectName ?? "?";
                 page.IsReadonly = isReadonly;
                 page.Denoise = SettingsManager.IsBoolSettingTrue("Edit_Denoise");
                 page.PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "right");
@@ -635,9 +635,9 @@ public partial class HomePage : ContentPage
                             try
                             {
                                 _previousSession?.Dispose();
-                                var activity = await UserActivityChannel.GetDefault().GetOrCreateUserActivityAsync($"projectFrameCut_draft_{project?.projectName ?? "Project"}");
+                                var activity = await UserActivityChannel.GetDefault().GetOrCreateUserActivityAsync($"projectFrameCut_draft_{project?.ProjectName ?? "Project"}");
                                 activity.ActivationUri = new Uri($"projectFrameCut://draft/{draftSourcePath.Replace('\\', '/')}");
-                                activity.VisualElements.DisplayText = $"projectFrameCut draft-'{project?.projectName ?? "Project"}'";
+                                activity.VisualElements.DisplayText = $"projectFrameCut draft-'{project?.ProjectName ?? "Project"}'";
                                 await activity.SaveAsync();
                                 _previousSession = activity.CreateSession();
                             }
@@ -652,7 +652,7 @@ public partial class HomePage : ContentPage
             }
             catch (Exception ex4)
             {
-                Log(ex4, $"Load project {project?.projectName}", this);
+                Log(ex4, $"Load project {project?.ProjectName}", this);
                 if (throwOnException)
                 {
                     throw;
@@ -664,7 +664,7 @@ public partial class HomePage : ContentPage
             }
         });
         initTimer.Stop();
-        LogDiagnostic($"Initialize project {project?.projectName} cost {initTimer.ElapsedMilliseconds} ms.");
+        LogDiagnostic($"Initialize project {project?.ProjectName} cost {initTimer.ElapsedMilliseconds} ms.");
         if (initTimer.Elapsed.TotalSeconds < 2) await Task.Delay(2000 - (int)initTimer.Elapsed.TotalMilliseconds);
         Content = origContent;
 
@@ -676,7 +676,7 @@ public partial class HomePage : ContentPage
                 {
                     try
                     {
-                        App.Current?.Windows?.First()?.Title = $"{Localized.AppBrand} - {project.projectName}";
+                        App.Current?.Windows?.First()?.Title = $"{Localized.AppBrand} - {project.ProjectName}";
                         AppShell.instance.HideNavView();
                         Shell.SetTabBarIsVisible(page, false);
                         Shell.SetNavBarIsVisible(page, true);
@@ -968,7 +968,7 @@ public partial class HomePage : ContentPage
                 return;
             }
             (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(tml, project);
-            var draftPage = new DraftPage(project ?? new ProjectJSONStructure(), dict, new(), trackCount, vmItem._projectPath, project?.projectName ?? "?", false);
+            var draftPage = new DraftPage(project ?? new ProjectJSONStructure(), dict, new(), trackCount, vmItem._projectPath, project?.ProjectName ?? "?", false);
             var draft = DraftImportAndExportHelper.ExportFromDraftPage(draftPage, true);
             var renderPage = new RenderPage(vmItem._projectPath, tml.Duration, project, draft);
             await Dispatcher.DispatchAsync(async () =>
@@ -1003,7 +1003,7 @@ public partial class HomePage : ContentPage
         var info = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(newPath, "project.json")));
         if (info is not null)
         {
-            info.projectName = projName;
+            info.ProjectName = projName;
             File.WriteAllText(
                 Path.Combine(newPath, "project.json"),
                 JsonSerializer.Serialize(info));
@@ -1214,7 +1214,7 @@ public class ProjectsListViewModel
                     if (proj is not null)
                     {
                         var thumb = Path.Combine(item, "thumbs", "_project.png");
-                        projects.Add(new ProjectsViewModel(proj.projectName, proj.LastChanged ?? DateTime.MinValue, thumb)
+                        projects.Add(new ProjectsViewModel(proj.ProjectName, proj.LastChanged ?? DateTime.MinValue, thumb)
                         {
                             _projectPath = item
                         });
@@ -1229,7 +1229,7 @@ public class ProjectsListViewModel
                 }
 
             fail:
-                failedProjects.Add(new ProjectsViewModel(proj?.projectName ?? "Unknown project", null, "")
+                failedProjects.Add(new ProjectsViewModel(proj?.ProjectName ?? "Unknown project", null, "")
                 {
                     _projectPath = item
                 });

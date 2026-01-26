@@ -530,7 +530,7 @@ namespace projectFrameCut.StandaloneRender
                     clip.ReInit();
                 }
 
-                var buf = AudioComposer.Compose(clips, null, (int)project.targetFrameRate, 48000, 2);
+                var buf = AudioComposer.Compose(clips, null, (int)project.TargetFrameRate, 48000, 2);
                 AudioWriter writer = new(resultPath, 48000, 2);
                 writer.Append(buf);
                 writer.Finish();
@@ -554,8 +554,8 @@ namespace projectFrameCut.StandaloneRender
                     var outputDir = switches.TryGetValue("outputIntermediatePath", out var iPath) ? iPath : Path.GetDirectoryName(outputPath);
                     outputDir ??= Environment.CurrentDirectory;
                     var ext = Path.GetExtension(outputPath);
-                    string vidOutputPath = Path.Combine(outputDir, $"{project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
-                    string audOutputPath = Path.Combine(outputDir, $"{project.projectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
+                    string vidOutputPath = Path.Combine(outputDir, $"{project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+                    string audOutputPath = Path.Combine(outputDir, $"{project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
                     await composeVideo(vidOutputPath);
                     composeAudio(audOutputPath);
                     VideoAudioMuxer.MuxFromFiles(vidOutputPath, audOutputPath, outputPath, true);

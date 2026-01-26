@@ -143,7 +143,12 @@ public partial class PluginSettingPage : ContentPage
 
     private async Task BuildAdvancedConfig(string id)
     {
-        var plugin = PluginManager.LoadedPlugins[id];
+        if(!PluginManager.LoadedPlugins.TryGetValue(id, out var plugin))
+        {
+            await Navigation.PopAsync();
+            BuildPPB();
+            return;
+        }
         var page = new ContentPage { };
         var name = plugin.ReadLocalizationItem("_PluginBase_Name_", Localized._LocaleId_) ?? plugin.Name;
         var desc = plugin.ReadLocalizationItem("_PluginBase_Description_", Localized._LocaleId_) ?? plugin.Description;
@@ -193,9 +198,9 @@ public partial class PluginSettingPage : ContentPage
         else
         {
             ppb
-              .AddButton($"DisablePlugin,{id}", SettingLocalizedResources.Plugin_Disable(plugin.Name))
-              .AddButton($"GotoHomepage,{id}", SettingLocalizedResources.Plugin_GotoHomepage(plugin.Name))
-              //.AddButton($"UpdatePlugin,{id}", SettingLocalizedResources.Plugin_UpdatePlugin(plugin.Name)) //todo
+              .AddButton($"DisablePlugin,{id}", SettingLocalizedResources.Plugin_Disable(name))
+              .AddButton($"GotoHomepage,{id}", SettingLocalizedResources.Plugin_GotoHomepage(name))
+              //.AddButton($"UpdatePlugin,{id}", SettingLocalizedResources.Plugin_UpdatePlugin(name)) //todo
               .AddButton($"OpenDataDir,{id}", SettingLocalizedResources.Plugin_OpenDataDir)
               .AddButton($"RemovePlugin,{id}", SettingLocalizedResources.Plugin_Remove);
         }
@@ -301,8 +306,9 @@ public partial class PluginSettingPage : ContentPage
             }
             if (flag == "EnablePlugin")
             {
+                var pem = await SecureStorage.Default.GetAsync($"plugin_pem_{id}");
                 PluginService.EnablePlugin(id);
-                var p = PluginService.CreateFromID(id, out var fail);
+                var p = PluginService.CreateFromID(id, out var fail, pem);
                 if (p != null)
                 {
                     PluginManager.LoadFrom(p);

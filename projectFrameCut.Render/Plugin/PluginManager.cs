@@ -286,10 +286,11 @@ namespace projectFrameCut.Render.Plugin
         {
             if (filePath.StartsWith("#"))
             {
-                var decoder = filePath.Substring(1).Split(',', 2)[0];
+                var part = filePath.Substring(1).Split(',', 2);
+                var decoder = part[0];
                 var supportedPlugin = LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(decoder));
                 if (supportedPlugin is null) throw new NotSupportedException($"The specificed video decoder '{decoder}' was not found for the file '{filePath}'.");
-                return supportedPlugin.VideoSourceProvider[decoder](null!).CreateNew(filePath);
+                return supportedPlugin.VideoSourceProvider[decoder](null!).CreateNew(part[1]);
 
             }
             else if (!File.Exists(filePath) && !filePath.StartsWith("#"))

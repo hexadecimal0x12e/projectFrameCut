@@ -8,7 +8,6 @@ using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
-using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using SixLabors.ImageSharp;
@@ -22,8 +21,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Path = System.IO.Path;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
-using projectFrameCut.Render.Effect.ImageSharp;
 using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using projectFrameCut.Render.Compose;
 
 
 

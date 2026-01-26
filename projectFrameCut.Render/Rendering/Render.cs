@@ -1,9 +1,8 @@
-﻿using projectFrameCut.Render.Effect;
-using projectFrameCut.Render.Effect.ImageSharp;
+﻿using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
@@ -24,12 +23,35 @@ namespace projectFrameCut.Render.Rendering
         public uint Duration;
         public uint StartFrame = 0;
         public VideoBuilder? builder;
-        public int MaxThreads = (int)(Environment.ProcessorCount * 1.75);
+        private int _maxThreads = (int)(Environment.ProcessorCount * 1.75);
+        public int MaxThreads 
+        { 
+            get => _maxThreads; 
+            set => _maxThreads = value;
+        }
         public bool LogState = false;
         public int GCOption = 0;
         public bool LogStatToLogger = false;
         public bool LogProcessStack = false;
         public bool Use16Bit { get; set; } = true;
+        
+        /// <summary>
+        /// Android 平台由于 OpenGL 必须在主线程执行，多线程会导致主线程拥塞。
+        /// 自动检测并限制 Android 的并发度。
+        /// </summary>
+        private bool IsAndroid => OperatingSystem.IsAndroid();
+        private int GetOptimalMaxThreads()
+        {
+            if (IsAndroid)
+            {
+                // Android OpenGL 受主线程限制，过多线程会排队等待主线程导致死锁
+                // 建议: 1-2 个线程，最多不超过 3
+                int optimal = Math.Min(2, Math.Max(1, Environment.ProcessorCount / 4));
+                Log($"[Renderer] Android 平台检测到，限制渲染线程数为 {optimal} (原: {_maxThreads}) 以避免主线程拥塞", "info");
+                return optimal;
+            }
+            return _maxThreads;
+        }
 
         public bool IsPaused { get; set; } = false;
         public long MemoryThresholdBytes { get; set; } = 0;
@@ -87,6 +109,14 @@ namespace projectFrameCut.Render.Rendering
             ArgumentNullException.ThrowIfNull(builder, nameof(builder));
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             _renderTotalStopwatch.Restart();
+
+            // Apply platform-specific optimizations
+            int effectiveMaxThreads = GetOptimalMaxThreads();
+            if (effectiveMaxThreads != MaxThreads)
+            {
+                Log($"[Renderer] 平台优化: MaxThreads 从 {MaxThreads} 调整为 {effectiveMaxThreads}", "info");
+                MaxThreads = effectiveMaxThreads;
+            }
 
             // Initialize thread limiter
             _threadLimiter = new SemaphoreSlim(MaxThreads, MaxThreads);
@@ -218,14 +248,17 @@ namespace projectFrameCut.Render.Rendering
                     {
                         // Add timeout to avoid infinite wait when preparer is slow (e.g., on Android with OpenGL main-thread bottleneck)
                         int waitIterations = 0;
-                        const int maxWaitIterations = 200; // ~1 second max wait
-                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > MaxThreads / 2 - 2 && PreparedFrames.Count < MaxThreads / 2)
+                        // Android 平台减少等待时间和阈值，因为主线程串行处理 OpenGL 很慢
+                        int maxWaitIterations = IsAndroid ? 100 : 200; // Android: ~0.5秒, 其他: ~1秒
+                        int minPreparedFrames = IsAndroid ? Math.Max(1, MaxThreads / 4) : MaxThreads / 2;
+                        
+                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > MaxThreads / 2 - 2 && PreparedFrames.Count < minPreparedFrames)
                         {
                             await Task.Delay(5);
                             waitIterations++;
                             if (waitIterations >= maxWaitIterations)
                             {
-                                Log($"[Render] Wait timeout reached, proceeding with {PreparedFrames.Count} prepared frames.", "warn");
+                                Log($"[Render] Wait timeout reached (platform: {(IsAndroid ? "Android" : "Other")}), proceeding with {PreparedFrames.Count} prepared frames.", "warn");
                                 break;
                             }
                         }
@@ -323,6 +356,10 @@ namespace projectFrameCut.Render.Rendering
         public void PrepareRender(CancellationToken token)
         {
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
+            if (IsAndroid)
+            {
+                Log($"[Preparer] Android 平台：OpenGL 计算限制在主线程，预期渲染速度较慢", "info");
+            }
             MixtureCache = new ConcurrentDictionary<MixtureMode, IMixture>(new Dictionary<MixtureMode, IMixture> { { MixtureMode.Overlay, new OverlayMixture() } });
             bool found = false;
             for (uint idx = StartFrame; idx < StartFrame + Duration; idx++)
@@ -377,12 +414,15 @@ namespace projectFrameCut.Render.Rendering
         {
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             Stopwatch sw = new();
+            // Android 需要更激进的节流策略，因为主线程串行处理 OpenGL 导致渲染很慢
+            int throttleThreshold = IsAndroid ? MaxThreads : MaxThreads * 4;
+            
             foreach (var idx in ClipNeedForFrame.Keys.OrderBy(x => x))
             {
                 // Throttling: Wait if too many frames are prepared but not yet rendered
-                while (Volatile.Read(ref TotalEnqueued) - Volatile.Read(ref Finished) > MaxThreads * 4 && !token.IsCancellationRequested)
+                while (Volatile.Read(ref TotalEnqueued) - Volatile.Read(ref Finished) > throttleThreshold && !token.IsCancellationRequested)
                 {
-                    Log($"[Preparer] Waiting for more render slots... prepared but not rendered: {Volatile.Read(ref TotalEnqueued) - Volatile.Read(ref Finished)}");
+                    Log($"[Preparer] Waiting for more render slots... prepared but not rendered: {Volatile.Read(ref TotalEnqueued) - Volatile.Read(ref Finished)} (threshold: {throttleThreshold})");
                     Thread.Sleep(500);
                 }
 

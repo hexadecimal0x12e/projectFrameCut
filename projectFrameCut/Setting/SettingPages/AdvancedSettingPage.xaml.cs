@@ -1,4 +1,6 @@
 using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
@@ -100,13 +102,110 @@ public partial class AdvancedSettingPage : ContentPage
         .AddSeparator()
         .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
         .AddSeparator()
-        .AddText(SettingLocalizedResources.Advanced_ExportPlugin,fontSize: 20)
+        .AddText(SettingLocalizedResources.Advanced_ExportPlugin, fontSize: 20)
         .AddPicker("exportPlugin", SettingLocalizedResources.Advanced_ExportPlugin_Select, projectFrameCut.Render.Plugin.PluginManager.LoadedPlugins.Select(c => c.Key).ToArray(), "")
         .AddSeparator()
+        .AddText(new SingleLineLabel(SettingLocalizedResources.Advanced_Reset, 25))
+        .AddButton(SettingLocalizedResources.Advanced_FixDraft, async (s, e) =>
+        {
+            if (!await DisplayAlertAsync(Title, SettingLocalizedResources.Advanced_FixDraft_Info, Localized._OK, Localized._Cancel)) return;
+
+            try
+            {
+                int fixedCount = 0;
+                int errorCount = 0;
+                var draftsPath = Path.Combine(MauiProgram.DataPath, "My Drafts");
+
+                if (!Directory.Exists(draftsPath))
+                {
+                    await DisplayAlertAsync(Localized._Info, "No drafts found", Localized._OK);
+                    return;
+                }
+
+                foreach (var projectDir in Directory.GetDirectories(draftsPath, "*"))
+                {
+                    try
+                    {
+                        // 修复 project.json
+                        var projectFile = Path.Combine(projectDir, "project.json");
+                        if (File.Exists(projectFile))
+                        {
+                            var jsonText = File.ReadAllText(projectFile);
+                            var modified = false;
+
+                            // 替换键名
+                            if (jsonText.Contains("\"projectName\""))
+                            {
+                                jsonText = jsonText.Replace("\"projectName\"", "\"ProjectName\"");
+                                modified = true;
+                            }
+                            if (jsonText.Contains("\"targetFrameRate\""))
+                            {
+                                jsonText = jsonText.Replace("\"targetFrameRate\"", "\"TargetFrameRate\"");
+                                modified = true;
+                            }
+
+                            if (modified)
+                            {
+                                File.WriteAllText(projectFile, jsonText);
+                                fixedCount++;
+                            }
+                        }
+
+                        // 修复 timeline.json
+                        var timelineFile = Path.Combine(projectDir, "timeline.json");
+                        if (File.Exists(timelineFile))
+                        {
+                            var jsonText = File.ReadAllText(timelineFile);
+                            var modified = false;
+
+                            if (jsonText.Contains("\"targetFrameRate\""))
+                            {
+                                jsonText = jsonText.Replace("\"targetFrameRate\"", "\"TargetFrameRate\"");
+                                modified = true;
+                            }
+
+                            if (modified)
+                            {
+                                File.WriteAllText(timelineFile, jsonText);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        errorCount++;
+                        Log(ex, $"Fix project JSON in {projectDir}", this);
+                    }
+                }
+                if (errorCount == 0)
+                {
+                    await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.Advanced_Success, Localized._OK);
+
+                }
+                else
+                {
+                    await DisplayAlertAsync(Localized._Info, $"Fixed {fixedCount} but {errorCount} failed.", Localized._OK);
+
+                }
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlertAsync(Localized._Error, $"修复失败: {ex.Message}", Localized._OK);
+            }
+        })
+        .AddButton(SettingLocalizedResources.Advanced_ResetEffectImplement, async (s, e) =>
+        {
+            if (!await DisplayAlertAsync(Title, SettingLocalizedResources.Advanced_AreYouSure, Localized._OK, Localized._Cancel)) return;
+            EffectHelper.DefaultImplementsType.Clear();
+            var json = JsonSerializer.Serialize(EffectHelper.DefaultImplementsType);
+            File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json"), json);
+            await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.Advanced_Success, Localized._OK);
+
+        })
         .AddButton(SettingLocalizedResources.Advanced_ResetUserID, async (s, e) =>
         {
-            if (!await DisplayAlertAsync(Title, "Are you sure?", Localized._OK, Localized._Cancel)) return;
-            SettingsManager.Settings.TryRemove("UserID", out _);
+            if (!await DisplayAlertAsync(Title, SettingLocalizedResources.Advanced_AreYouSure, Localized._OK, Localized._Cancel)) return;
+            Settings.TryRemove("UserID", out _);
             await MainSettingsPage.RebootApp(this);
         })
         .ListenToChanges(async (e) =>

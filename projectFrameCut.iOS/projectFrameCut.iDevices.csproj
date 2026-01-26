@@ -89,11 +89,11 @@
 		</Compile>
 
 		<Compile Include="..\projectFrameCut\ApplicationPluginBase\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
-		<Compile Include="..\projectFrameCut\Asset\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut\Asset\**\*.cs" Exclude="..\projectFrameCut\Asset\ProjectAssetView.xaml.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Controls\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Localize\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\ViewModels\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
-		<Compile Include="..\projectFrameCut\DraftStuff\**\*.cs" Exclude="..\projectFrameCut\DraftStuff\InteractableEditor\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut\DraftStuff\**\*.cs" Exclude="..\projectFrameCut\DraftStuff\ProjectAddClipView.xaml.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Converters\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Services\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Setting\Setting*\**\*.cs" Exclude="..\projectFrameCut\Setting\SettingPages\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />

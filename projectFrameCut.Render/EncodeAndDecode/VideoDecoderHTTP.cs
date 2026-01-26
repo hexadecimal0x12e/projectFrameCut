@@ -9,7 +9,7 @@ using static projectFrameCut.Shared.Logger;
 
 namespace projectFrameCut.Render.EncodeAndDecode
 {
-    public sealed unsafe partial class HttpDecoderContext : IVideoSource
+    public sealed unsafe class HttpDecoderContext : IVideoSource
     {
         private readonly string _url;
         private AVFormatContext* _fmt = null;
@@ -50,9 +50,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public HttpDecoderContext(string url)
         {
-            if (!string.IsNullOrWhiteSpace(url) && ProtocolUrlRegex().IsMatch(url))
+            if (!string.IsNullOrWhiteSpace(url))
             {
-                _url = url.Split(',', 2)[1];
+                _url = url;
                 Initialize();
             }
         }
@@ -363,7 +363,5 @@ namespace projectFrameCut.Render.EncodeAndDecode
             Dispose();
         }
 
-        [GeneratedRegex("#HttpDecoderContext+,[a-zA-Z][a-zA-Z0-9+.-]*://\\S+")]
-        private static partial Regex ProtocolUrlRegex();
     }
 }

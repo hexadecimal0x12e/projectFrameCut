@@ -59,7 +59,7 @@ namespace projectFrameCut.Render.Effect
                 startY = (int)Math.Round((double)startY * targetHeight / RelativeHeight);
             }
 
-            var step = new ImageSharp.PlaceProcessStep(startX, startY, targetWidth, targetHeight);
+            var step = new PlaceProcessStep(startX, startY, targetWidth, targetHeight);
             return step.Process(frame);
         }
 
@@ -78,7 +78,7 @@ namespace projectFrameCut.Render.Effect
                 startY = (int)Math.Round((double)startY * targetHeight / RelativeHeight);
             }
 
-            return new ImageSharp.PlaceProcessStep(startX, startY, targetWidth, targetHeight);
+            return new PlaceProcessStep(startX, startY, targetWidth, targetHeight);
         }
 
 

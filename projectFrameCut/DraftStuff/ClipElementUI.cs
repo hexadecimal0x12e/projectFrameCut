@@ -25,7 +25,7 @@ namespace projectFrameCut.DraftStuff
         [JsonIgnore]
         public required Border RightHandle { get; set; }
 
-        public string displayName { get; set; } = "Clip";
+        public string DisplayName { get; set; } = "Clip";
 
         public ClipMovingStatus MovingStatus { get; set; } = ClipMovingStatus.Free;
         public double layoutX { get; set; }
@@ -50,7 +50,7 @@ namespace projectFrameCut.DraftStuff
         public ClipMode ClipType { get; set; } = ClipMode.Special;
         public string FromPlugin { get; set; } = string.Empty;
         public string TypeName { get; set; } = string.Empty;
-        public string? sourcePath { get; set; } = null;
+        public string? SourcePath { get; set; } = null;
 
         public string? ClipColor { get; set; } = null;
 
@@ -160,7 +160,7 @@ namespace projectFrameCut.DraftStuff
             var element = new ClipElementUI
             {
                 Id = cid,
-                displayName = labelText ?? "Unnamed Clip",
+                DisplayName = labelText ?? "Unnamed Clip",
                 layoutX = 0,
                 layoutY = 0,
                 Clip = clipBorder,
@@ -211,9 +211,9 @@ namespace projectFrameCut.DraftStuff
             element.LeftHandle.BindingContext = element;
             element.RightHandle.BindingContext = element;
 
-            if (!string.IsNullOrWhiteSpace(element.displayName))
+            if (!string.IsNullOrWhiteSpace(element.DisplayName))
             {
-                ToolTipProperties.SetText(element.Clip, element.displayName);
+                ToolTipProperties.SetText(element.Clip, element.DisplayName);
             }
 
             return element;

@@ -6,7 +6,6 @@ using System.Text;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using projectFrameCut.Render.Effect.ImageSharp;
 
 namespace projectFrameCut.Render.Effect
 {

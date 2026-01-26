@@ -153,6 +153,15 @@ namespace projectFrameCut.Helper
             Application.Exit();
         }
 
+        public static void UpdatePluginLoadingStat(string id)
+        {
+            splash?.Invoke(() => splash?.pluginStatLabel.Text = SimpleLocalizerBaseGeneratedHelper.Localized.SplashForm_PluginLoading(id));
+        }
+        public static void ResetPluginLoadingStat()
+        {
+            splash?.Invoke(() => splash?.pluginStatLabel.Text = SimpleLocalizerBaseGeneratedHelper.Localized.SplashForm_PostInit);
+        }
+
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
     }

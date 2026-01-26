@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using projectFrameCut.Render;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 
-namespace projectFrameCut.Render.Effect.HwAccel
+namespace projectFrameCut.Render.Effect
 {
     public class RemoveColorEffect_HwAccel : IEffect
     {

@@ -37,7 +37,7 @@ public class DraftSettingPage
     public ScrollView BuildGeneralTab()
     {
         PropertyPanelBuilder ppb = new();
-        ppb.AddEntry("targetFrameRate", Localized.DraftSettingPage_General_TargetFramerate, parent.ProjectInfo.targetFrameRate.ToString(), "60", null, default);
+        ppb.AddEntry("targetFrameRate", Localized.DraftSettingPage_General_TargetFramerate, parent.ProjectInfo.TargetFrameRate.ToString(), "60", null, default);
         ppb.AddPicker("relativeResolution", Localized.DraftSettingPage_General_RelativeResultion, resolutions, $"{parent.ProjectInfo.RelativeWidth}x{parent.ProjectInfo.RelativeHeight}", null);
         return ppb.ListenToChanges(OnPropertiesChanged).BuildWithScrollView(null);
     }
@@ -66,7 +66,7 @@ public class DraftSettingPage
         {
             case "targetFrameRate":
                 if (e.Value is string s && uint.TryParse(s, out var result))
-                    parent.ProjectInfo.targetFrameRate = result;
+                    parent.ProjectInfo.TargetFrameRate = result;
                 break;
             case "relativeResolution":
                 if (e.Value is string res)

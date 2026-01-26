@@ -16,7 +16,6 @@ using GridLength = Microsoft.Maui.GridLength;
 using Thickness = Microsoft.Maui.Thickness;
 
 using projectFrameCut.Render.Effect;
-using projectFrameCut.Render.Effect.ImageSharp;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 
@@ -145,7 +144,7 @@ namespace projectFrameCut.DraftStuff
 
             var ppb = new PropertyPanelBuilder()
             .AddText(new SingleLineLabel(Localized.PropertyPanel_General, 20))
-            .AddEntry("displayName", Localized.PropertyPanel_General_DisplayName, clip.displayName, clip.displayName)
+            .AddEntry("displayName", Localized.PropertyPanel_General_DisplayName, clip.DisplayName, clip.DisplayName)
             .AddCustomChild(PPLocalizedResources.General_DisplayColor, (invoker) =>
             {
                 var colorPreview = new BoxView
@@ -354,7 +353,7 @@ namespace projectFrameCut.DraftStuff
                 switch (e.Id)
                 {
                     case "displayName":
-                        clip.displayName = e.Value?.ToString() ?? clip.displayName;
+                        clip.DisplayName = e.Value?.ToString() ?? clip.DisplayName;
                         break;
                     case "speedRatio":
                         {
@@ -415,7 +414,6 @@ namespace projectFrameCut.DraftStuff
 
 
                             var effectFactories = instance.Create();
-                            //var effects = effectFactories.Select(f => f.Build(, )).ToArray();
                             List<IEffect> effects = new();
                             foreach (var item in effectFactories)
                             {
@@ -433,7 +431,6 @@ namespace projectFrameCut.DraftStuff
 
                             if (effects != null)
                             {
-                                // First pass: set up all bindable effects with IDs
                                 for (int i = 0; i < effects.Count; i++)
                                 {
                                     var effect = effects[i];
@@ -441,45 +438,9 @@ namespace projectFrameCut.DraftStuff
                                     effect.Enabled = effect.Enabled && bundleData.Enabled;
                                     effect.Index = globalIndex++;
                                     effect.BindedEffectGroupID = bundleData.Id;
-                                    
-                                    //// For IBindableArgumentEffect, ensure they have proper IDs
-                                    //if (effect is IBindableArgumentEffect bindableEffect)
-                                    //{
-                                    //    // Generate ID if not set
-                                    //    if (string.IsNullOrEmpty(bindableEffect.Id))
-                                    //    {
-                                    //        bindableEffect.Id = $"{bundleData.Id}_bindable_{i}_{Guid.NewGuid().ToString().Substring(0, 8)}";
-                                    //    }
-                                    //}
-                                    
                                     string key = $"{bundleData.Id}_{i}";
                                     newEffects[key] = effect;
                                 }
-                                
-                                // Second pass: wire up bindings between effects
-                                // This allows effects to reference each other via their IDs
-                                //for (int i = 0; i < effects.Count; i++)
-                                //{
-                                //    var effect = effects[i];
-                                    
-                                //    // Check if factory specified binding information
-                                //    var effectFactory = effectFactories[i];
-                                //    if (effectFactory is IEffectFactory factoryWithBinding)
-                                //    {
-                                //        // If the factory has BindedInputID, use it to wire up the effect
-                                //        var bindedInputIdProp = factoryWithBinding.GetType().GetProperty("BindedInputID");
-                                //        if (bindedInputIdProp != null && effect is IBindableArgumentEffect bindableEffect)
-                                //        {
-                                //            var bindedInputId = bindedInputIdProp.GetValue(factoryWithBinding) as string;
-                                //            if (!string.IsNullOrEmpty(bindedInputId))
-                                //            {
-                                //                // Resolve the binding ID within this bundle's effects
-                                //                // The binding ID might reference another effect by index or by ID
-                                //                bindableEffect.BindedArgumentProviderID = bindedInputId;
-                                //            }
-                                //        }
-                                //    }
-                                //}
                             }
                         }
                         catch (Exception ex)
@@ -671,94 +632,6 @@ namespace projectFrameCut.DraftStuff
             return panel;
         }
 
-        private static object AttemptTypeConversion(object value, string targetTypeStr)
-        {
-            if (value == null) return null;
-
-            if (value is JsonElement j)
-            {
-                if (j.ValueKind == JsonValueKind.True || j.ValueKind == JsonValueKind.False)
-                {
-                    return j.GetBoolean();
-                }
-                if (j.TryGetSByte(out var sb)) return sb;
-                if (j.TryGetByte(out var b)) return b;
-                if (j.TryGetInt16(out var i16)) return i16;
-                if (j.TryGetUInt16(out var u16)) return u16;
-                if (j.TryGetInt32(out var i32)) return i32;
-                if (j.TryGetUInt32(out var u32)) return u32;
-                if (j.TryGetInt64(out var i64)) return i64;
-                if (j.TryGetUInt64(out var u64)) return u64;
-                if (j.TryGetSingle(out var f)) return f;
-                if (j.TryGetDouble(out var d)) return d;
-                if (j.TryGetDecimal(out var dec)) return dec;
-                if (j.TryGetDateTimeOffset(out var dto)) return dto;
-                if (j.TryGetDateTime(out var dt)) return dt;
-                if (j.TryGetGuid(out var g)) return g;
-                if (j.TryGetBytesFromBase64(out var bytes)) return bytes;
-                return j.GetString();
-            }
-
-            Type? targetType = Type.GetType(targetTypeStr);
-            if (targetType == null)
-            {
-                switch (targetTypeStr.ToLowerInvariant())
-                {
-                    case "int":
-                    case "int32":
-                    case "system.int32":
-                        targetType = typeof(int);
-                        break;
-                    case "float":
-                    case "single":
-                    case "system.single":
-                        targetType = typeof(float);
-                        break;
-                    case "double":
-                    case "system.double":
-                        targetType = typeof(double);
-                        break;
-                    case "bool":
-                    case "boolean":
-                    case "system.boolean":
-                        targetType = typeof(bool);
-                        break;
-                    case "string":
-                    case "system.string":
-                        targetType = typeof(string);
-                        break;
-                    case "long":
-                    case "int64":
-                    case "system.int64":
-                        targetType = typeof(long);
-                        break;
-                }
-            }
-
-            if (targetType != null)
-            {
-                if (targetType.IsInstanceOfType(value)) return value;
-
-                try
-                {
-                    if (targetType.IsEnum)
-                    {
-                        if (value is string s)
-                        {
-                            return Enum.Parse(targetType, s);
-                        }
-                        return Enum.ToObject(targetType, value);
-                    }
-                    return Convert.ChangeType(value, targetType);
-                }
-                catch
-                {
-                    // Ignore conversion errors and return original
-                }
-            }
-
-            return value;
-        }
 
         private sealed class EffectBundleCardItem
         {
@@ -870,6 +743,7 @@ namespace projectFrameCut.DraftStuff
                     LineBreakMode = LineBreakMode.TailTruncation
                 };
                 title.SetBinding(Label.TextProperty, nameof(EffectBundleCardItem.Title));
+                title.SetBinding(ToolTipProperties.TextProperty, nameof(EffectBundleCardItem.Title));
 
                 var desc = new Label
                 {
@@ -879,6 +753,7 @@ namespace projectFrameCut.DraftStuff
                     MaxLines = 2
                 };
                 desc.SetBinding(Label.TextProperty, nameof(EffectBundleCardItem.Description));
+                desc.SetBinding(ToolTipProperties.TextProperty, nameof(EffectBundleCardItem.Description));
 
                 var textStack = new VerticalStackLayout
                 {
@@ -904,6 +779,8 @@ namespace projectFrameCut.DraftStuff
                     Background = new SolidColorBrush(Colors.Transparent),
                     Content = row
                 };
+
+                
 
 #if WINDOWS || MACCATALYST
                 var selectTap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Primary };

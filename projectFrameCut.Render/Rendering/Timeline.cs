@@ -1,10 +1,9 @@
-﻿using projectFrameCut.Render.Effect;
-using projectFrameCut.Render.Effect.ImageSharp;
+﻿using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
-using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;

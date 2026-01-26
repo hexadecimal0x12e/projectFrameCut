@@ -3,6 +3,7 @@ using projectFrameCut.Services;
 
 
 
+
 #if WINDOWS
 using projectFrameCut.WinUI;
 using Microsoft.UI.Xaml.Media;
@@ -12,6 +13,7 @@ using System.Diagnostics;
 using Microsoft.UI.Windowing;
 using Microsoft.UI;
 using WinRT.Interop;
+using projectFrameCut.Platforms.Windows;
 #endif
 
 namespace projectFrameCut

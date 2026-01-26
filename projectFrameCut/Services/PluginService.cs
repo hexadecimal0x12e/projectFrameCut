@@ -276,6 +276,7 @@ namespace projectFrameCut.Services
                     }
                     items.Add(new PluginItem
                     {
+                        Name = pluginInstance.Name,
                         Author = pluginInstance.Author,
                         Description = pluginInstance.Description,
                         Enabled = true,
@@ -397,7 +398,7 @@ namespace projectFrameCut.Services
                     {
                         var name = new AssemblyName(e.Name).Name;
                         var asb = TryResolveAssembly(name, new[] { pluginRoot, AppContext.BaseDirectory }, false);
-                        if(asb is null)
+                        if (asb is null)
                         {
                             loadFailReason = $"Dependency assembly '{name}' not found.";
                         }
@@ -413,7 +414,7 @@ namespace projectFrameCut.Services
                         plugin = CreateIPluginFromAsb(asb, pluginRoot);
                         Environment.CurrentDirectory = workingDir;
                     }
-                    catch(EntryPointNotFoundException ex)
+                    catch (EntryPointNotFoundException ex)
                     {
                         string? localizedFailReason = null;
                         try
@@ -424,9 +425,9 @@ namespace projectFrameCut.Services
                         failReason = localizedFailReason ?? ex.Message;
                         return null;
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
-                        if(loadFailReason is not null)
+                        if (loadFailReason is not null)
                         {
                             string? localizedPluginBrokenReason = null;
                             try
@@ -626,6 +627,12 @@ namespace projectFrameCut.Services
             {
                 try
                 {
+#if WINDOWS
+                    if (Helper.HelperProgram.SplashShowing)
+                    {
+                        Helper.HelperProgram.UpdatePluginLoadingStat(item.Name ?? item.Id);
+                    }
+#endif
                     Log($"Loading userPlugin: {item.Id}");
                     var p = CreateFromID(item.Id, out string fail, pemGetter?.Invoke(item.Id));
                     if (p is not null)
@@ -722,6 +729,7 @@ namespace projectFrameCut.Services
         public class PluginItem
         {
             public string Id { get; set; }
+            public string Name { get; set; }
             public string Author { get; set; }
             public string Description { get; set; }
             public Version Version { get; set; }

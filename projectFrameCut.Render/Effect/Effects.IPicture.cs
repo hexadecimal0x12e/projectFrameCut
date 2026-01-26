@@ -1,11 +1,10 @@
-﻿using projectFrameCut.Render.Effect.ImageSharp;
-using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+﻿using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace projectFrameCut.Render.Effect.ProjectFrameCutPicture
+namespace projectFrameCut.Render.Effect
 {
     public class ResizeEffect_IPicture : IEffect
     {
