@@ -1848,7 +1848,7 @@ namespace projectFrameCut.Shared
                 else Logger.LogDiagnostic("Unknown picture type, cannot get info.");
             }
             ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(path));
-            imageEncoder = imageEncoder ?? DefaultEncoder;
+            imageEncoder ??= DefaultEncoder;
             image.SaveToSixLaborsImage(resultPPB, saveAlpha).Save(path, imageEncoder);
         }
 

@@ -1682,6 +1682,14 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "\u9009\u4E2D\u7247\u6BB5\u4E4B\u540E\u9501\u5B9A\u8F68\u9053\u89C6\u56FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
       }
     ],
     "en-US": [

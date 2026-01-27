@@ -2,133 +2,163 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:projectFrameCut.Asset"
+             xmlns:cont="clr-namespace:projectFrameCut.Controls"
+             xmlns:l="clr-namespace:LocalizedResources"
              x:Class="projectFrameCut.Asset.ProjectAssetView">
-    <ScrollView Orientation="Horizontal">
-        <VerticalStackLayout Spacing="10" Padding="10">
-            <!-- 本地素材 -->
-            <Label Text="{Binding LocalAssetsTitle}" 
-                   FontSize="18" 
-                   FontAttributes="Bold" 
-                   Margin="0,10,0,5"/>
-            
-            <CollectionView ItemsSource="{Binding LocalAssets}"
-                           SelectionMode="None">
-                <CollectionView.ItemsLayout>
-                    <LinearItemsLayout Orientation="Vertical" ItemSpacing="5"/>
-                </CollectionView.ItemsLayout>
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="local:AssetItemViewModel">
-                        <HorizontalStackLayout Spacing="10" Margin="0,5">
-                            <!-- 缩略图 -->
-                            <Border WidthRequest="120" StrokeThickness="0">
-                                <Image Source="{Binding ThumbnailPath}"
-                                       WidthRequest="120"
-                                       HeightRequest="67.5"
-                                       Aspect="AspectFit"
-                                       IsVisible="{Binding HasThumbnail}"/>
+    <cont:TabbedView>
+        <cont:TabbedView.HeaderRightContent>
+            <Entry Placeholder="{l:Localized Key=AssetPage_Search}" 
+                   Text="{Binding SearchText}"
+                   PlaceholderColor="White" 
+                   BackgroundColor="Gray" 
+                   WidthRequest="250" 
+                   Margin="0,-5,-5,0"
+                   ClearButtonVisibility="WhileEditing" />
+        </cont:TabbedView.HeaderRightContent>
+        <cont:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}">
+            <VerticalStackLayout Spacing="10" Padding="10">
+                <!-- 本地素材 -->
+                <CollectionView ItemsSource="{Binding FilteredLocalAssets}"
+                           SelectionMode="None"
+                           Margin="4,0,4,0">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="local:AssetItemViewModel">
+                            <Border StrokeThickness="1" 
+                                    Stroke="{Binding BackgroundColor}"
+                                    BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2A2A2A}" 
+                                    HeightRequest="160" 
+                                    WidthRequest="180"
+                                    StrokeShape="RoundRectangle 8">
+                                <Grid RowDefinitions="*,Auto,Auto">
+                                    <!-- 缩略图 -->
+                                    <Image Grid.Row="0"
+                                           Source="{Binding ThumbnailPath}" 
+                                           Aspect="AspectFit" 
+                                           Margin="4"
+                                           IsVisible="{Binding HasThumbnail}"/>
+
+                                    <!-- 名称和操作按钮 -->
+                                    <Grid Grid.Row="1" 
+                                          BackgroundColor="{Binding BackgroundColor}" 
+                                          Padding="6,4">
+                                        <Label Text="{Binding DisplayLabel}" 
+                                               LineBreakMode="TailTruncation" 
+                                               FontSize="12" 
+                                               MaxLines="1"
+                                               VerticalOptions="Center"/>
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnAssetClipTapped"/>
+                                        </Grid.GestureRecognizers>
+                                    </Grid>
+
+                                    <!-- 操作按钮栏 -->
+                                    <Grid Grid.Row="2" 
+                                          BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333333}" 
+                                          ColumnDefinitions="*,*" 
+                                          Padding="4">
+                                        <Button Grid.Column="0"
+                                                Text="➕" 
+                                                FontSize="16"
+                                                Padding="4"
+                                                CornerRadius="4"
+                                                BackgroundColor="Green"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type local:ProjectAssetView}}, Path=BindingContext.AddToTrackCommand}"
+                                                CommandParameter="{Binding .}"/>
+                                        <Button Grid.Column="1"
+                                                Text="🗑️" 
+                                                FontSize="16"
+                                                Padding="4"
+                                                CornerRadius="4"
+                                                BackgroundColor="Red"
+                                                IsVisible="{Binding IsLocal}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type local:ProjectAssetView}}, Path=BindingContext.RemoveAssetCommand}"
+                                                CommandParameter="{Binding .}"/>
+                                    </Grid>
+                                </Grid>
                             </Border>
-                            
-                            <!-- 素材片段预览 -->
-                            <Border BackgroundColor="{Binding BackgroundColor}"
-                                    StrokeThickness="1"
-                                    Stroke="Gray"
-                                    Padding="10,5"
-                                    WidthRequest="200"
-                                    HeightRequest="60"
-                                    StrokeShape="RoundRectangle 5">
-                                <Label Text="{Binding DisplayLabel}" 
-                                       VerticalOptions="Center"
-                                       LineBreakMode="TailTruncation"/>
-                                <Border.GestureRecognizers>
-                                    <TapGestureRecognizer Tapped="OnAssetClipTapped"/>
-                                </Border.GestureRecognizers>
-                            </Border>
-                            
-                            <!-- 添加按钮 -->
-                            <Button Text="➕" 
-                                    BackgroundColor="Green"
-                                    WidthRequest="50"
-                                    HeightRequest="50"
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type local:ProjectAssetView}}, Path=BindingContext.AddToTrackCommand}"
-                                    CommandParameter="{Binding .}"/>
-                            
-                            <!-- 删除按钮 (仅本地素材) -->
-                            <Button Text="🗑️" 
-                                    BackgroundColor="Red"
-                                    WidthRequest="50"
-                                    HeightRequest="50"
-                                    IsVisible="{Binding IsLocal}"
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type local:ProjectAssetView}}, Path=BindingContext.RemoveAssetCommand}"
-                                    CommandParameter="{Binding .}"/>
-                        </HorizontalStackLayout>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-            
-            <!-- 分隔线 -->
-            <BoxView HeightRequest="1" 
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <!-- 分隔线 -->
+                <BoxView HeightRequest="1" 
                      BackgroundColor="Gray" 
                      Margin="0,15,0,5"/>
-            
-            <!-- 共享素材 -->
-            <Label Text="{Binding SharedAssetsTitle}" 
-                   FontSize="18" 
-                   FontAttributes="Bold" 
-                   Margin="0,5,0,5"/>
-            
-            <CollectionView ItemsSource="{Binding SharedAssets}"
-                           SelectionMode="None">
-                <CollectionView.ItemsLayout>
-                    <LinearItemsLayout Orientation="Vertical" ItemSpacing="5"/>
-                </CollectionView.ItemsLayout>
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="local:AssetItemViewModel">
-                        <HorizontalStackLayout Spacing="10" Margin="0,5">
-                            <!-- 缩略图 -->
-                            <Image Source="{Binding ThumbnailPath}"
-                                   WidthRequest="120"
-                                   HeightRequest="67.5"
-                                   Aspect="AspectFit"
-                                   IsVisible="{Binding HasThumbnail}"/>
-                            
-                            <!-- 素材片段预览 -->
-                            <Border BackgroundColor="{Binding BackgroundColor}"
-                                    StrokeThickness="1"
-                                    Stroke="Gray"
-                                    Padding="10,5"
-                                    WidthRequest="200"
-                                    HeightRequest="60"
-                                    StrokeShape="RoundRectangle 5">
-                                <Label Text="{Binding DisplayLabel}" 
-                                       VerticalOptions="Center"
-                                       LineBreakMode="TailTruncation"/>
-                                <Border.GestureRecognizers>
-                                    <TapGestureRecognizer Tapped="OnAssetClipTapped"/>
-                                </Border.GestureRecognizers>
-                            </Border>
-                            
-                            <!-- 添加按钮 -->
-                            <Button Text="➕" 
-                                    BackgroundColor="Green"
-                                    WidthRequest="50"
-                                    HeightRequest="50"
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type local:ProjectAssetView}}, Path=BindingContext.AddToTrackCommand}"
-                                    CommandParameter="{Binding .}"/>
-                        </HorizontalStackLayout>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-            
-            <!-- 添加素材按钮 -->
-            <Button Text="{Binding AddButtonText}" 
+
+
+
+                <!-- 添加素材按钮 -->
+                <Button Text="{Binding AddButtonText}" 
                     FontSize="32"
                     Margin="0,20,0,0"
                     Command="{Binding AddAssetCommand}"/>
-            
-            <!-- 底部占位 -->
-            <BoxView WidthRequest="50" 
+
+                <!-- 底部占位 -->
+                <BoxView WidthRequest="50" 
                      HeightRequest="250" 
                      Color="Transparent"/>
-        </VerticalStackLayout>
-    </ScrollView>
+            </VerticalStackLayout>
+        </cont:TabbedViewItem>
+
+        <cont:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_SharedAssets}">
+            <VerticalStackLayout Spacing="10" Padding="10">
+                <CollectionView ItemsSource="{Binding FilteredSharedAssets}"
+                           SelectionMode="None"
+                           Margin="4,0,4,0">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="local:AssetItemViewModel">
+                            <Border StrokeThickness="1" 
+                                    Stroke="{Binding BackgroundColor}"
+                                    BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2A2A2A}" 
+                                    HeightRequest="160" 
+                                    WidthRequest="180"
+                                    StrokeShape="RoundRectangle 8">
+                                <Grid RowDefinitions="*,Auto,Auto">
+                                    <!-- 缩略图 -->
+                                    <Image Grid.Row="0"
+                                           Source="{Binding ThumbnailPath}" 
+                                           Aspect="AspectFit" 
+                                           Margin="4"
+                                           IsVisible="{Binding HasThumbnail}"/>
+
+                                    <!-- 名称 -->
+                                    <Grid Grid.Row="1" 
+                                          BackgroundColor="{Binding BackgroundColor}" 
+                                          Padding="6,4">
+                                        <Label Text="{Binding DisplayLabel}" 
+                                               LineBreakMode="TailTruncation" 
+                                               FontSize="12" 
+                                               MaxLines="1"
+                                               VerticalOptions="Center"/>
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnAssetClipTapped"/>
+                                        </Grid.GestureRecognizers>
+                                    </Grid>
+
+                                    <!-- 添加按钮 -->
+                                    <Grid Grid.Row="2" 
+                                          BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333333}" 
+                                          Padding="4">
+                                        <Button Text="➕" 
+                                                FontSize="16"
+                                                Padding="4"
+                                                CornerRadius="4"
+                                                BackgroundColor="Green"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type local:ProjectAssetView}}, Path=BindingContext.AddToTrackCommand}"
+                                                CommandParameter="{Binding .}"/>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </cont:TabbedViewItem>
+    </cont:TabbedView>
 </ContentView>

@@ -55,6 +55,9 @@ public partial class ProjectAssetView : ContentView
             _viewModel.SharedAssets.Add(assetVM);
         }
 
+        // 初始化过滤后的集合
+        _viewModel.FilterAssets();
+
         LogDiagnostic($"[ProjectAssetView] Loaded {_viewModel.LocalAssets.Count} local assets");
         LogDiagnostic($"[ProjectAssetView] Loaded {_viewModel.SharedAssets.Count} shared assets");
     }
@@ -177,6 +180,7 @@ public partial class ProjectAssetView : ContentView
         {
             workingDraft.Assets[asset.AssetId] = asset;
             _viewModel.LocalAssets.Add(new AssetItemViewModel(asset, isLocal: true));
+            _viewModel.FilterAssets(); // 刷新过滤列表
         }
     }
 
@@ -186,6 +190,7 @@ public partial class ProjectAssetView : ContentView
         {
             workingDraft.Assets.Remove(assetVM.Id, out var _);
             _viewModel.LocalAssets.Remove(assetVM);
+            _viewModel.FilterAssets(); // 刷新过滤列表
         }
     }
 

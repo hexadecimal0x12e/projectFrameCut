@@ -73,12 +73,14 @@ namespace projectFrameCut.Render.Rendering
         public ConcurrentDictionary<uint, TimeSpan> FramePrepareElapsed { get; } = new();
         public ConcurrentDictionary<uint, TimeSpan> FrameRenderElapsed { get; } = new();
         public ConcurrentDictionary<uint, List<PictureProcessStack>> FrameProcessStacks { get; } = new();
+
         public bool running { get; private set; } = false;
 
         ConcurrentDictionary<string, ConcurrentDictionary<uint, IPicture>> FrameCache = new();
         ConcurrentDictionary<uint, IClip[]> ClipNeedForFrame = new();
         ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
         ConcurrentDictionary<string, IEffect[]> EffectCache = new();
+        ConcurrentDictionary<string, object> BindableEffectResultCache = new();
 
         int ThreadWorking = 0, Finished = 0;
         private SemaphoreSlim _threadLimiter = null!;
@@ -141,9 +143,9 @@ namespace projectFrameCut.Render.Rendering
                     {
                         try
                         {
-                            if (EachElapsed.Count > 0)
+                            if (!EachElapsed.IsEmpty)
                                 each = new TimeSpan((long)EachElapsed.Average(x => x.Ticks));
-                            if (EachElapsedForPreparing.Count > 0)
+                            if (!EachElapsedForPreparing.IsEmpty)
                                 eachPrepare = new TimeSpan((long)EachElapsedForPreparing.Average(x => x.Ticks));
 
                             if (token.IsCancellationRequested) return;
@@ -477,8 +479,7 @@ namespace projectFrameCut.Render.Rendering
             }
             Stopwatch sw = Stopwatch.StartNew();
             IPicture result = null!;
-            Dictionary<string, object> bindableEffectResultCache = new();
-            Dictionary<string, bool> producedValueTable = new();
+            Dictionary<string, object> frameLocalCache = new();
 
             PreparedFlag.TryRemove(targetFrame, out _);
 
@@ -514,9 +515,10 @@ namespace projectFrameCut.Render.Rendering
                 if (clip.Effects.ArrayAny() && EffectCache.TryGetValue(clip.Id, out var effects))
                 {
                     List<IPictureProcessStep> steps = new();
-                    bool lastIsProcessStep = false;
-                    foreach (var item in effects)
-                    {
+                    bool lastIsProcessStep = false, effectsChanged = false;
+                    var effectCopy = effects?.ToList() ?? new();
+                    foreach (var item in effects ?? (IEnumerable<IEffect>)[]) 
+                    { 
                         var computer = GetOrCreateComputer(item.NeedComputer);
                         if (item.YieldProcessStep != lastIsProcessStep)
                         {
@@ -524,6 +526,7 @@ namespace projectFrameCut.Render.Rendering
                             steps.Clear();
                         }
 
+                        bool shouldRemove = false;
                         if (item.IsNormalEffect)
                         {
                             EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer, _width, _height);
@@ -536,7 +539,7 @@ namespace projectFrameCut.Render.Rendering
                         }
                         else if (item.IsBindableArgsEffect)
                         {
-                            EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref bindableEffectResultCache, ref producedValueTable, clip, steps, ref lastIsProcessStep, (IBindableArgumentEffect)item, computer, _width, _height);
+                            shouldRemove = EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, steps, ref lastIsProcessStep, (IBindableArgumentEffect)item, computer, _width, _height);
                         }
                         else
                         {
@@ -546,7 +549,7 @@ namespace projectFrameCut.Render.Rendering
                             }
                             else if (item is IBindableArgumentEffect b)
                             {
-                                EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref bindableEffectResultCache, ref producedValueTable, clip, steps, ref lastIsProcessStep, b, computer, _width, _height);
+                                shouldRemove = EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, steps, ref lastIsProcessStep, b, computer, _width, _height);
                             }
                             else
                             {
@@ -554,13 +557,24 @@ namespace projectFrameCut.Render.Rendering
                             }
                         }
 
-
+                        if (shouldRemove)
+                        {
+                            effectCopy.Remove(item);
+                            effectsChanged = true;
+                        }
                     }
                     if (steps.ListAny())
                     {
                         frame = PictureProcesser.Process(steps, frame, _ppb);
                     }
+
+                    if (effectsChanged)
+                    {
+                        EffectCache[clip.Id] = effectCopy.OrderBy(c => c.Index).ToArray();
+                    }
                 }
+
+                
 
                 if (result is null)
                 {

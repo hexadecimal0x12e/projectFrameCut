@@ -1,6 +1,8 @@
 using projectFrameCut.Asset;
+using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -10,27 +12,47 @@ using System.Windows.Input;
 
 namespace projectFrameCut.ViewModels;
 
-public class ProjectAddClipViewModel : INotifyPropertyChanged
+public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 {
     private readonly DraftPage _draftPage;
 
-    public ProjectAddClipViewModel(DraftPage draftPage)
+    public ProjectAddClipViewModel(ref DraftPage draftPage)
     {
         _draftPage = draftPage;
-        
+
         // 初始化命令
         AddTextClipCommand = new Command(async () => await AddTextClip());
         AddSolidColorClipCommand = new Command(async () => await AddSolidColorClip());
         AddSubTitleClipCommand = new Command(async () => await AddSubTitleClip());
         AddAlternativeSourceClipCommand = new Command(async () => await AddAlternativeSourceClip());
         AddAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddAssetClip(asset));
-        
+
         // 加载资源
         LoadAssets();
     }
 
     // 资源列表
-    public ObservableCollection<AssetItemViewModel> Assets { get; } = new();
+    public ObservableCollection<AssetItemViewModel> LocalAssets { get; } = new();
+    public ObservableCollection<AssetItemViewModel> SharedAssets { get; } = new();
+    
+    // 过滤后的资源列表
+    public ObservableCollection<AssetItemViewModel> FilteredLocalAssets { get; } = new();
+    public ObservableCollection<AssetItemViewModel> FilteredSharedAssets { get; } = new();
+
+    private string _searchText = "";
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            if (_searchText != value)
+            {
+                _searchText = value;
+                OnPropertyChanged();
+                FilterAssets();
+            }
+        }
+    }
 
     // 命令
     public ICommand AddTextClipCommand { get; }
@@ -42,12 +64,13 @@ public class ProjectAddClipViewModel : INotifyPropertyChanged
     // 事件：当需要关闭弹窗时触发
     public event EventHandler? ClipAdded;
 
-    private void LoadAssets()
+    private async Task LoadAssets()
     {
-        Assets.Clear();
+        LocalAssets.Clear();
+        SharedAssets.Clear();
         foreach (var asset in _draftPage.Assets.Values.OrderBy(a => a.Name))
         {
-            Assets.Add(new AssetItemViewModel
+            LocalAssets.Add(new AssetItemViewModel
             {
                 Id = asset.AssetId,
                 Name = asset.Name,
@@ -57,6 +80,22 @@ public class ProjectAddClipViewModel : INotifyPropertyChanged
                 OriginalAsset = asset
             });
         }
+
+        foreach (var asset in AssetDatabase.Assets.Values.OrderBy(a => a.Name))
+        {
+            SharedAssets.Add(new AssetItemViewModel
+            {
+                Id = asset.AssetId,
+                Name = asset.Name,
+                Type = asset.AssetType.ToString(),
+                SourcePath = asset.Path,
+                ThumbPath = asset.ThumbnailPath,
+                OriginalAsset = asset
+            });
+        }
+        
+        // 初始化过滤列表
+        await FilterAssets();
     }
 
     private async Task AddTextClip()
@@ -92,7 +131,7 @@ public class ProjectAddClipViewModel : INotifyPropertyChanged
                 { "fontSize", 48 },
                 { "fontColor", Colors.White.ToHex() }
             };
-            
+
             ClipAdded?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -199,7 +238,7 @@ public class ProjectAddClipViewModel : INotifyPropertyChanged
                 { "fontSize", 32 },
                 { "fontColor", Colors.White.ToHex() }
             };
-            
+
             ClipAdded?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -208,7 +247,7 @@ public class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         var path = await _draftPage.DisplayPromptAsync("Add", "Input source path", placeholder: "#<provider>,<stream id>");
         if (string.IsNullOrWhiteSpace(path)) return;
-        
+
         var trackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
         if (!_draftPage.Tracks.ContainsKey(trackIndex))
         {
@@ -236,7 +275,7 @@ public class ProjectAddClipViewModel : INotifyPropertyChanged
         element.maxFrameCount = (uint)vidSrc.TotalFrames;
         element.sourceSecondPerFrame = (float)(1 / vidSrc.Fps);
         element.ExtraData = new();
-        
+
         ClipAdded?.Invoke(this, EventArgs.Empty);
     }
 
@@ -254,12 +293,56 @@ public class ProjectAddClipViewModel : INotifyPropertyChanged
             assetViewModel.OriginalAsset,
             trackIndex,
             InternalPluginBase.InternalPluginBaseID,
-            assetViewModel.SourcePath
+            _draftPage.Assets.ContainsKey(assetViewModel.Id) ? assetViewModel.SourcePath : null
         );
 
         _draftPage.RegisterClip(clip, true);
-        
+
         ClipAdded?.Invoke(this, EventArgs.Empty);
+    }
+
+    private async Task FilterAssets()
+    {
+        FilteredLocalAssets.Clear();
+        FilteredSharedAssets.Clear();
+
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            // 如果搜索文本为空，显示所有素材
+            foreach (var asset in LocalAssets)
+            {
+                FilteredLocalAssets.Add(asset);
+            }
+            foreach (var asset in SharedAssets)
+            {
+                FilteredSharedAssets.Add(asset);
+            }
+        }
+        else
+        {
+            var inputPron = (await TextHelper.GetHowToPronuce(SearchText, default)).ToLower();
+            var inputPronInLocate = ((await TextHelper.GetHowToPronuce(SearchText, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
+            // 过滤素材
+            var searchLower = SearchText.ToLower();
+            foreach (var asset in LocalAssets)
+            {
+                var assetPron = (await TextHelper.GetHowToPronuce(asset.Name, default)).ToLower();
+                var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
+                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
+                {
+                    FilteredLocalAssets.Add(asset);
+                }
+            }
+            foreach (var asset in SharedAssets)
+            {
+                var assetPron = (await TextHelper.GetHowToPronuce(asset.Name, default)).ToLower();
+                var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
+                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
+                {
+                    FilteredSharedAssets.Add(asset);
+                }
+            }
+        }
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -278,20 +361,11 @@ public class AssetItemViewModel
     public string SourcePath { get; set; } = string.Empty;
     public string? ThumbPath { get; set; }
     public AssetItem? OriginalAsset { get; set; }
-    
+
     public bool HasThumbnail => !string.IsNullOrEmpty(ThumbPath);
-    
-    public Color BackgroundColor
+
+    public Brush BackgroundBrush
     {
-        get
-        {
-            return Type?.ToLower() switch
-            {
-                "video" => Colors.DarkSlateBlue,
-                "audio" => Colors.DarkGreen,
-                "image" => Colors.DarkOrange,
-                _ => Colors.Gray
-            };
-        }
+        get => ClipElementUI.DetermineAssetColor(OriginalAsset?.Type ?? ClipMode.Special);
     }
 }

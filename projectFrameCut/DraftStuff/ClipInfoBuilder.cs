@@ -256,7 +256,7 @@ namespace projectFrameCut.DraftStuff
                 }
                 if (e.Id.StartsWith("place") || e.Id.StartsWith("resize"))
                 {
-                    if (clip.Effects == null) clip.Effects = new Dictionary<string, IEffect>();
+                    clip.Effects ??= new Dictionary<string, IEffect>();
 
                     if (e.Id.StartsWith("place"))
                     {
@@ -594,7 +594,7 @@ namespace projectFrameCut.DraftStuff
                                     Enabled = true
                                 };
 
-                                if (clip.EffectBundles == null) clip.EffectBundles = new Dictionary<string, EffectBundleData>();
+                                clip.EffectBundles ??= new Dictionary<string, EffectBundleData>();
                                 var nextIndex = clip.EffectBundles.Count == 0 ? 0 : (clip.EffectBundles.Values.Max(x => x.Index) + 1);
                                 newData.Index = nextIndex;
                                 clip.EffectBundles[newData.Id] = newData;
@@ -628,7 +628,7 @@ namespace projectFrameCut.DraftStuff
                 RebuildAllEffects(clip);
             });
 #endif
-            var panel = ppb.Build();
+            var panel = ppb.BuildWithScrollView();
             return panel;
         }
 
@@ -1043,7 +1043,7 @@ namespace projectFrameCut.DraftStuff
                         if (newEffect != null)
                         {
                             string newKey = typeName;
-                            if (clip.Effects == null) clip.Effects = new Dictionary<string, IEffect>();
+                            clip.Effects ??= new Dictionary<string, IEffect>();
 
                             int maxIndex = 0;
                             if (clip.Effects.Count > 0)
@@ -1083,7 +1083,7 @@ namespace projectFrameCut.DraftStuff
             }
 
             ppb.AddCustomChild(orderContainer);
-            var panel = ppb.Build();
+            var panel = ppb.BuildWithScrollView();
             return panel;
 
         }
@@ -1282,7 +1282,7 @@ namespace projectFrameCut.DraftStuff
                     clip.ApplySpeedRatio();
                 }
             });
-            var panel = ppb.Build();
+            var panel = ppb.BuildWithScrollView();
             return panel;
         }
     }

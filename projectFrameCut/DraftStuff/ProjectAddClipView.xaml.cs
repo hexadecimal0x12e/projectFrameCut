@@ -6,11 +6,11 @@ public partial class ProjectAddClipView : ContentView
 {
     private readonly ProjectAddClipViewModel _viewModel;
 
-    public ProjectAddClipView(DraftPage draftPage)
+    public ProjectAddClipView(ref DraftPage draftPage)
     {
         InitializeComponent();
         
-        _viewModel = new ProjectAddClipViewModel(draftPage);
+        _viewModel = new ProjectAddClipViewModel(ref draftPage);
         BindingContext = _viewModel;
     }
 

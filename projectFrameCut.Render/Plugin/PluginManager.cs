@@ -93,13 +93,9 @@ namespace projectFrameCut.Render.Plugin
             {
                 if (pluginInstance.PluginAPIVersion == CurrentPluginAPIVersion)
                 {
-                    if (loadedPlugins.ContainsKey(pluginInstance.PluginID))
+                    if (!loadedPlugins.TryAdd(pluginInstance.PluginID, pluginInstance))
                     {
                         loadedPlugins[pluginInstance.PluginID] = pluginInstance;
-                    }
-                    else
-                    {
-                        loadedPlugins.Add(pluginInstance.PluginID, pluginInstance);
                     }
                 }
                 else

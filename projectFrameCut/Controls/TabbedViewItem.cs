@@ -3,7 +3,7 @@ using Microsoft.Maui.Controls;
 namespace projectFrameCut.Controls
 {
     [ContentProperty(nameof(Content))]
-    public class TabbedViewItem : ContentView
+    public partial class TabbedViewItem : ContentView
     {
         public static readonly BindableProperty HeaderProperty =
             BindableProperty.Create(nameof(Header), typeof(object), typeof(TabbedViewItem), null);

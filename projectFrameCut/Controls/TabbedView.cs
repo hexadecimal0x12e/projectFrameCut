@@ -9,6 +9,7 @@ public partial class TabbedView : ContentView
 {
     public HorizontalStackLayout HeadersPanel { get; private set; }
     public ContentView ContentPresenter { get; private set; }
+    public ContentView HeaderRightContentContainer { get; private set; }
 
     public TabbedView()
     {
@@ -40,11 +41,32 @@ public partial class TabbedView : ContentView
             Content = HeadersPanel
         };
 
+        // 创建右侧内容容器
+        HeaderRightContentContainer = new ContentView
+        {
+            Padding = new Thickness(5, 5, 5, 0),
+            VerticalOptions = LayoutOptions.Center
+        };
+
+        // 创建包含标题和右侧内容的网格
+        var headerGrid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitionCollection
+            {
+                new ColumnDefinition { Width = GridLength.Star },
+                new ColumnDefinition { Width = GridLength.Auto }
+            }
+        };
+        Grid.SetColumn(headersScroll, 0);
+        Grid.SetColumn(HeaderRightContentContainer, 1);
+        headerGrid.Children.Add(headersScroll);
+        headerGrid.Children.Add(HeaderRightContentContainer);
+
         var headersBorder = new Border
         {
             StrokeThickness = 0,
-            BackgroundColor = Color.FromArgb("#404040"),
-            Content = headersScroll
+            BackgroundColor = Color.FromArgb("#80404040"),
+            Content = headerGrid
         };
         Grid.SetRow(headersBorder, 0);
 
@@ -100,6 +122,25 @@ public partial class TabbedView : ContentView
     {
         get => (TabbedViewItem)GetValue(SelectedItemProperty);
         set => SetValue(SelectedItemProperty, value);
+    }
+
+    public static readonly BindableProperty HeaderRightContentProperty = BindableProperty.Create(
+        nameof(HeaderRightContent), typeof(View), typeof(TabbedView), null, BindingMode.OneWay,
+        propertyChanged: OnHeaderRightContentChanged);
+
+    public View HeaderRightContent
+    {
+        get => (View)GetValue(HeaderRightContentProperty);
+        set => SetValue(HeaderRightContentProperty, value);
+    }
+
+    private static void OnHeaderRightContentChanged(BindableObject bindable, object oldValue, object newValue)
+    {
+        var control = (TabbedView)bindable;
+        if (control.HeaderRightContentContainer != null)
+        {
+            control.HeaderRightContentContainer.Content = newValue as View;
+        }
     }
 
     private static void OnSelectedIndexChanged(BindableObject bindable, object oldValue, object newValue)

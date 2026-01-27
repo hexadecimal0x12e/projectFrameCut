@@ -5,6 +5,7 @@ using System.Windows.Input;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.DraftStuff;
+using projectFrameCut.Services;
 
 namespace projectFrameCut.Asset;
 
@@ -36,6 +37,40 @@ public class ProjectAssetViewModel : INotifyPropertyChanged
         {
             _sharedAssets = value;
             OnPropertyChanged();
+        }
+    }
+
+    private ObservableCollection<AssetItemViewModel> _filteredLocalAssets = new();
+    public ObservableCollection<AssetItemViewModel> FilteredLocalAssets
+    {
+        get => _filteredLocalAssets;
+        set
+        {
+            _filteredLocalAssets = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private ObservableCollection<AssetItemViewModel> _filteredSharedAssets = new();
+    public ObservableCollection<AssetItemViewModel> FilteredSharedAssets
+    {
+        get => _filteredSharedAssets;
+        set
+        {
+            _filteredSharedAssets = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string _searchText = "";
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            _searchText = value;
+            OnPropertyChanged();
+            FilterAssets();
         }
     }
 
@@ -96,6 +131,50 @@ public class ProjectAssetViewModel : INotifyPropertyChanged
     private async Task OnAddToTrack(AssetItemViewModel asset)
     {
         // 这个方法将在 ProjectAssetView.xaml.cs 中被重载
+    }
+
+    public async Task FilterAssets()
+    {
+        FilteredLocalAssets.Clear();
+        FilteredSharedAssets.Clear();
+
+        if (string.IsNullOrWhiteSpace(SearchText))
+        {
+            // 如果搜索文本为空，显示所有素材
+            foreach (var asset in LocalAssets)
+            {
+                FilteredLocalAssets.Add(asset);
+            }
+            foreach (var asset in SharedAssets)
+            {
+                FilteredSharedAssets.Add(asset);
+            }
+        }
+        else
+        {
+            var inputPron = (await TextHelper.GetHowToPronuce(SearchText, default)).ToLower();
+            var inputPronInLocate = ((await TextHelper.GetHowToPronuce(SearchText, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
+            // 过滤素材
+            var searchLower = SearchText.ToLower();
+            foreach (var asset in LocalAssets)
+            {
+                var assetPron = (await TextHelper.GetHowToPronuce(asset.Name, default)).ToLower();
+                var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
+                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate)|| assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
+                {
+                    FilteredLocalAssets.Add(asset);
+                }
+            }
+            foreach (var asset in SharedAssets)
+            {
+                var assetPron = (await TextHelper.GetHowToPronuce(asset.Name, default)).ToLower();
+                var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
+                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
+                {
+                    FilteredSharedAssets.Add(asset);
+                }
+            }
+        }
     }
 }
 

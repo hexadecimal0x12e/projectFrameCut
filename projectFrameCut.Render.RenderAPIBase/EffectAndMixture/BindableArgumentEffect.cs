@@ -80,6 +80,11 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         string? IBindableArgumentEffect.BindedArgumentProviderID { get => throw new NotSupportedException("Use BindedArgumentProviderIDs instead."); set => throw new NotSupportedException("Use BindedArgumentProviderIDs instead."); }
 
         /// <summary>
+        /// Indicate whether this value provider generates a new value only once, or generates a new value for each request.
+        /// </summary>
+        public bool GenerateOnce { get; }
+
+        /// <summary>
         /// Get the input argument provider IDs this processor is bound to.
         /// </summary>
         public string[] BindedArgumentProviderIDs { get; set; }

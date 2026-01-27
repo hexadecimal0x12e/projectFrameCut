@@ -71,7 +71,7 @@ namespace projectFrameCut.Render.Rendering
 
             if (f == "[]") return "nullframe";
 
-            return SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(f)).Aggregate("0x", ((b, c) => b + c.ToString("x2")));
+            return SHA256.HashData(Encoding.UTF8.GetBytes(f)).Aggregate("0x", ((b, c) => b + c.ToString("x2")));
         }
 
 
@@ -80,7 +80,8 @@ namespace projectFrameCut.Render.Rendering
             try
             {
                 IPicture result = Picture.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0);
-                Dictionary<string, object> bindableEffectResultCache = new();
+                ConcurrentDictionary<string, object> bindableEffectResultCache = new();
+                Dictionary<string, object> bindableEffectResultCache2 = new();
                 Dictionary<string, bool> producedValueTable = new();
                 foreach (var srcFrame in frames)
                 {
@@ -89,7 +90,8 @@ namespace projectFrameCut.Render.Rendering
                     IPicture effected = srcFrame.Clip;
                     List<IPictureProcessStep> steps = new();
                     bool lastIsProcessStep = false;
-                    foreach (var effect in srcFrame?.Effects?.OrderBy(e => e.Index)?.ToList() ?? new List<IEffect>())
+                    var effectsList = srcFrame?.Effects?.OrderBy(e => e.Index) ?? (IEnumerable<IEffect>)[];
+                    foreach (var effect in effectsList)
                     {
                         if (effect.YieldProcessStep != lastIsProcessStep)
                         {
@@ -107,12 +109,14 @@ namespace projectFrameCut.Render.Rendering
                         }
                         else if (effect is IBindableArgumentEffect b)
                         {
-                            EffectProcessing.ProcessBindableArgsEffect(frameIndex, ref effected, ref bindableEffectResultCache, ref producedValueTable, srcFrame.ParentClip, steps, ref lastIsProcessStep, b, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                            _ = EffectProcessing.ProcessBindableArgsEffect(frameIndex, ref effected, ref bindableEffectResultCache, bindableEffectResultCache2, srcFrame.ParentClip, steps, ref lastIsProcessStep, b, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight); //single frame render, no need to remove
                         }
                         else
                         {
                             EffectProcessing.ProcessEffect(ref effected, steps, ref lastIsProcessStep, effect, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
+
+
                     }
                     if (steps.Count > 0)
                     {

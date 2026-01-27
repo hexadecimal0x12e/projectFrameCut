@@ -627,7 +627,7 @@ public partial class TestPage : ContentPage
         ppb = new PropertyPanelBuilder()
         {
             DefaultPadding = new Thickness(PPBPaddingSlider.Value),
-            WidthOfContent = PPBRatioSlider.Value
+            WidthOfContent = SettingsManager.GetSettingAs<int>("ui_defaultWidthOfContent", 1) // PPBRatioSlider.Value
         }
         .AddText(new TitleAndDescriptionLineLabel("ppb Test", "a example of PropertyPanelBuilder", 32))
         .AddText("This is a test", fontSize: 16, fontAttributes: FontAttributes.Bold)
@@ -640,11 +640,6 @@ public partial class TestPage : ContentPage
         .AddCheckbox("testCheckbox", "Test Checkbox:", false)
         .AddSwitch("testSwitch", "Test Switch:", true)
         .AddSeparator(null)
-        .AddCustomChild(new Button
-        {
-            Text = "Custom Button",
-            WidthRequest = 150
-        })
         .AddButton("testButton", "Click me!")
         .AddCustomChild("pick a date", (c) =>
         {
@@ -656,6 +651,8 @@ public partial class TestPage : ContentPage
             picker.DateSelected += (s, e) => c(e.NewDate.ToString() ?? "unknown");
             return picker;
         }, "testDatePicker", DateTime.Now.ToString("G"))
+        .AddSeparator()
+        .AddIconTitleDescriptionCard("icon test", "This is an icon title description card.", "This is a longer description for the icon title description card to demonstrate how it looks like in the panel.", "icon_add", 48, 48)
         .AddCustomChild(new Rectangle
         {
             WidthRequest = 100,

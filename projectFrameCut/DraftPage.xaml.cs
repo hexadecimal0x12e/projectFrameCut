@@ -25,6 +25,7 @@ using projectFrameCut.DraftStuff;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.LivePreview;
 using CommunityToolkit.Maui.Views;
+using CommunityToolkit.Maui.Core;
 using projectFrameCut.Services;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Asset;
@@ -109,6 +110,7 @@ public partial class DraftPage : ContentPage
 
     string popupShowingDirection = "none";
     Border Popup = new();
+    CommunityToolkit.Maui.Views.Popup? _currentCommunityToolkitPopup = null;
 
     public InteractableEditor.InteractableEditor ClipEditor;
 
@@ -195,6 +197,7 @@ public partial class DraftPage : ContentPage
     public double PreviewAreaHeight { get; set; } = 250;
     public bool AutoSavePreviewAreaHeight { get; set; } = true;
     public bool? UseCompactLayout { get; set; } = null;
+    public bool UseCommunityToolkitPopupInsteadOfOverlayLayer { get { return (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS()) || field; } set; }
 
 
     #endregion
@@ -711,7 +714,7 @@ public partial class DraftPage : ContentPage
         track.GestureRecognizers.Add(UnselectTapGesture);
         head.GestureRecognizers.Add(UnselectTapGesture);
 
-        Tracks.AddOrUpdate(trackId, track, (int _, AbsoluteLayout _) => track);
+        Tracks.AddOrUpdate(trackId, track, (_, _) => track);
 
 
         int currentTrack = trackId;
@@ -820,7 +823,7 @@ public partial class DraftPage : ContentPage
 
         int currentTrack = trackId;
 
-        Tracks.AddOrUpdate(trackId, track, (int _, AbsoluteLayout _) => track);
+        Tracks.AddOrUpdate(trackId, track, (_, _) => track);
 
         Border content = new Border
         {
@@ -867,172 +870,14 @@ public partial class DraftPage : ContentPage
 
     private async void AddClip_Clicked(object sender, EventArgs e)
     {
-        var addClipView = new ProjectAddClipView(this);
-        
+        var draftPage = this;
+        var addClipView = new ProjectAddClipView(ref draftPage);
+
         // 订阅事件以便在添加clip后关闭弹窗
         addClipView.ClipAdded += async (s, args) => await HidePopup();
-        
+
         await ShowAPopup(addClipView);
     }
-
-    private async Task AddAlternativeSourceClip()
-    {
-        var path = await DisplayPromptAsync("Add", "Input source path", placeholder: "#<provider>,<stream is>");
-        if (string.IsNullOrWhiteSpace(path)) return;
-        var trackIndex = Tracks.Keys.Where(k => k < SubTrackOffset).DefaultIfEmpty(0).Max();
-        if (!Tracks.ContainsKey(trackIndex))
-        {
-            AddATrack(trackIndex);
-        }
-
-        var vidSrc = PluginManager.CreateVideoSource(path);
-
-        var element = CreateAndAddClip(
-            startX: 0,
-            width: FrameToPixel((uint)vidSrc.TotalFrames),
-            trackIndex: trackIndex,
-            id: null,
-            labelText: "Alternative source 1",
-            background: new SolidColorBrush(Colors.MediumPurple),
-            resolveOverlap: true,
-            relativeStart: 0,
-            maxFrames: 0
-        );
-
-        element.ClipType = ClipMode.VideoClip;
-        element.SourcePath = path;
-        element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-        element.isInfiniteLength = false;
-        element.maxFrameCount = (uint)vidSrc.TotalFrames;
-        element.sourceSecondPerFrame = (float)(1 / vidSrc.Fps);
-        element.ExtraData = new();
-
-
-    }
-
-    private async Task AddATextClip(bool sub = false)
-    {
-        var text = await DisplayPromptAsync("Add Text", "Enter the text to add:");
-        if (!string.IsNullOrWhiteSpace(text))
-        {
-            var entry = new TextClip.TextClipEntry(
-                text,
-                100, 100,
-                "HarmonyOS Sans SC",
-                72f,
-                65535, 65535, 65535,
-                1.0f
-            );
-
-            var entries = new List<TextClip.TextClipEntry> { entry };
-            int trackIndex = 0;
-            if (sub)
-            {
-                trackIndex = Tracks.Keys.Where(k => k >= SubTrackOffset).DefaultIfEmpty(SubTrackOffset).Max();
-                if (!Tracks.ContainsKey(trackIndex))
-                {
-                    AddASubTrack(trackIndex);
-                }
-            }
-            else
-            {
-                trackIndex = Tracks.Keys.Where(k => k < SubTrackOffset).DefaultIfEmpty(0).Max();
-                if (!Tracks.ContainsKey(trackIndex))
-                {
-                    AddATrack(trackIndex);
-                }
-            }
-
-
-            var element = CreateAndAddClip(
-                startX: 0,
-                width: FrameToPixel(90),
-                trackIndex: trackIndex,
-                id: null,
-                labelText: text,
-                background: new SolidColorBrush(Colors.MediumPurple),
-                resolveOverlap: true,
-                relativeStart: 0,
-                maxFrames: 0
-            );
-
-            element.ClipType = ClipMode.TextClip;
-            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-            element.isInfiniteLength = true;
-            element.maxFrameCount = 0;
-            element.ExtraData["TextEntries"] = entries;
-            element.ExtraData = new();
-
-            SetStatusText($"Added text clip: {text}");
-        }
-    }
-
-    public async Task AddASolidColorClip()
-    {
-        ushort R = 65535, G = 65535, B = 65535, A = 65535;
-#if WINDOWS
-        var picker = new Microsoft.UI.Xaml.Controls.ColorPicker
-        {
-            ColorSpectrumShape = Microsoft.UI.Xaml.Controls.ColorSpectrumShape.Ring,
-            IsMoreButtonVisible = true,
-            IsColorSliderVisible = true,
-            IsColorChannelTextInputVisible = true,
-            IsHexInputVisible = true,
-            IsAlphaEnabled = true,
-            IsAlphaSliderVisible = true,
-            IsAlphaTextInputVisible = true,
-        };
-        Microsoft.UI.Xaml.Controls.ContentDialog diag = new Microsoft.UI.Xaml.Controls.ContentDialog
-        {
-            Title = "Pick a color",
-            Content = picker,
-            CloseButtonText = Localized._Cancel,
-            PrimaryButtonText = Localized._OK,
-        };
-
-        var services = Microsoft.Maui.Controls.Application.Current?.Handler?.MauiContext?.Services;
-        var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
-        if (dialogueHelper != null)
-        {
-            var r = await dialogueHelper.ShowContentDialogue(diag);
-            var color = picker.Color;
-            R = (ushort)(color.R * 257);
-            G = (ushort)(color.G * 257);
-            B = (ushort)(color.B * 257);
-            A = (ushort)(color.A * 257);
-        }
-#endif
-
-        int trackIndex = Tracks.Keys.Where(k => k < SubTrackOffset).DefaultIfEmpty(0).Max();
-        if (!Tracks.ContainsKey(trackIndex))
-        {
-            AddATrack(trackIndex);
-        }
-
-        var element = CreateAndAddClip(
-            startX: 0,
-            width: FrameToPixel(90),
-            trackIndex: trackIndex,
-            id: null,
-            labelText: $"#{R / 257:X2}{G / 257:X2}{B / 257:X2}{A / 257:X2}",
-            background: new SolidColorBrush(Colors.MediumPurple),
-            resolveOverlap: true,
-            relativeStart: 0,
-            maxFrames: 0
-        );
-
-        element.ClipType = ClipMode.SolidColorClip;
-        element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-        element.isInfiniteLength = true;
-        element.maxFrameCount = 0;
-        element.ExtraData["R"] = R;
-        element.ExtraData["G"] = G;
-        element.ExtraData["B"] = B;
-        element.ExtraData["A"] = A;
-        element.isInfiniteLength = true;
-    }
-
-
     #endregion
 
     #region select clip
@@ -1061,7 +906,7 @@ public partial class DraftPage : ContentPage
         SetStatusText(Localized.DraftPage_Selected(clip.DisplayName));
         ClipEditor.SetClip(clip, Assets.TryGetValue(clip.Id, out var asset) ? asset : null);
         SetTimelineScrollEnabled(false);
-        CustomContent1.Content = await BuildPropertyPanel(clip);
+        RightContentBorder.Content = await BuildPropertyPanel(clip);
     }
 
     private void ContextSelectTapGesture_Tapped(object? sender, TappedEventArgs e)
@@ -1094,7 +939,7 @@ public partial class DraftPage : ContentPage
         SetStatusText(Localized.DraftPage_EverythingFine);
         ClipEditor.SetClip(null, null);
         SetTimelineScrollEnabled(true);
-        CustomContent1.Content = new Label { Text = Localized.DraftPage_PropertyPanel_SelectToContinue, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
+        RightContentBorder.Content = new Label { Text = Localized.DraftPage_PropertyPanel_SelectToContinue, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
     }
 
     private void SetTimelineScrollEnabled(bool enabled)
@@ -1495,7 +1340,7 @@ public partial class DraftPage : ContentPage
 
         Clips[cid].ghostLayoutX = clipElementUI.layoutX;
         Clips[cid].ghostLayoutY = clipElementUI.layoutY;
-        Clips.AddOrUpdate("ghost_" + cid, ghostElement, (string _, ClipElementUI _) => ghostElement);
+        Clips.AddOrUpdate("ghost_" + cid, ghostElement, (_, _) => ghostElement);
         OverlayLayer.Add(ghostBorder);
 
         Border shadowBorder = new Border
@@ -1514,7 +1359,7 @@ public partial class DraftPage : ContentPage
             Clip = shadowBorder,
             origTrack = 0
         };
-        Clips.AddOrUpdate("shadow_" + cid, shadowElement, (string _, ClipElementUI _) => shadowElement);
+        Clips.AddOrUpdate("shadow_" + cid, shadowElement, (_, _) => shadowElement);
     }
 
     private void DeleteAClip(ClipElementUI? clip = null)
@@ -1667,7 +1512,7 @@ public partial class DraftPage : ContentPage
         if (e.Id == "__REFRESH_PANEL__")
         {
             Popup.Content = new ScrollView { Content = await BuildPropertyPanel(clip) };
-            CustomContent1.Content = await BuildPropertyPanel(clip);
+            RightContentBorder.Content = await BuildPropertyPanel(clip);
             Clips[clip.Id] = clip;
             await ReRenderUI();
             DraftChanged(sender, new());
@@ -1734,9 +1579,10 @@ public partial class DraftPage : ContentPage
             var cid = item.AssetId;
             Log($"Added asset '{item.Path}'s info: {item.FrameCount} frames, {1f / item.SecondPerFrame}fps, {item.SecondPerFrame}spf, {item.FrameCount * item.SecondPerFrame} s");
             Assets.AddOrUpdate(cid, item, (_, _) => item);
-            Dispatcher.Dispatch(() =>
+            Dispatcher.Dispatch(async () =>
             {
-                Popup.Content = new ScrollView { Content = BuildAssetPanel() };
+                await HidePopup();
+                AssetPanelButton_Clicked(this, new());
             });
             SetStateOK(Localized.DraftPage_AssetAdded(Path.GetFileNameWithoutExtension(path)));
             var createProxy = (ProxyOption != "never") && ((ProxyOption == "always") || await DisplayAlertAsync(Localized.DraftPage_CreateProxy(item.Name), Localized.DraftPage_CreateProxy_Info, Localized._Confirm, Localized._Cancel));
@@ -1763,10 +1609,7 @@ public partial class DraftPage : ContentPage
         try
         {
             var draftPage = this;
-            var assetView = new ProjectAssetView(ref draftPage)
-            {
-                
-            };
+            var assetView = new ProjectAssetView(ref draftPage);
             await ShowAPopup(assetView);
         }
         catch (Exception ex)
@@ -1775,287 +1618,6 @@ public partial class DraftPage : ContentPage
             throw;
         }
     }
-
-    private ScrollView BuildAssetPanel(bool includeHeader = true)
-    {
-        var layout = new VerticalStackLayout { Spacing = 10 };
-
-        layout.Children.Add(new Label
-        {
-            Text = Localized.DraftPage_AssetPanel_LocalAssets,
-            FontSize = 18,
-            FontAttributes = FontAttributes.Bold,
-            Margin = new Thickness(0, 10, 0, 5)
-        });
-
-        foreach (var kvp in Assets)
-        {
-            var asset = kvp.Value;
-            var label = $"{asset.Icon} {asset.Name}";
-            var assetClip = ClipElementUI.CreateClip(0, FontHelper.MeasureTextLength(label) + 50, 0, labelText: label, background: ClipElementUI.DetermineAssetColor(asset.Type));
-            ToolTipProperties.SetText(assetClip.Clip, asset.Path);
-            assetClip.maxFrameCount = (uint)(asset.FrameCount ?? 0U);
-            assetClip.isInfiniteLength = asset.isInfiniteLength;
-            assetClip.Clip.WidthRequest = 200;
-            var addButton = new Button
-            {
-                Background = Colors.Green,
-                Text = "➕"
-            };
-
-            var removeButton = new Button
-            {
-                Background = Colors.Red,
-                Text = "🗑️"
-            };
-
-            var childLayout = new HorizontalStackLayout
-            {
-                Children =
-                {
-                    new Image
-                    {
-                        Source = File.Exists(asset.ThumbnailPath) ? ImageSource.FromFile(asset.ThumbnailPath) : null,
-                        WidthRequest = 120
-                    },
-                    assetClip.Clip,
-
-                }
-            };
-            removeButton.Clicked += (s, e) =>
-            {
-                Assets.Remove(kvp.Key, out var _asset);
-                layout.Children.Remove(childLayout);
-            };
-            addButton.Clicked += async (s, e) =>
-            {
-                var mode = ClipElementUI.DetermineClipMode(asset.Path);
-                int trackIndex = 0;
-                if (mode == ClipMode.AudioClip || mode == ClipMode.SubtitleClip)
-                {
-                    int maxSub = Tracks.Keys.Where(k => k >= SubTrackOffset).DefaultIfEmpty(SubTrackOffset - 1).Max();
-                    if (maxSub < SubTrackOffset) maxSub = SubTrackOffset;
-                    if (!Tracks.ContainsKey(maxSub)) AddASubTrack(maxSub);
-                    trackIndex = maxSub;
-                }
-                else
-                {
-                    int maxMain = Tracks.Keys.Where(k => k < SubTrackOffset).DefaultIfEmpty(0).Max();
-                    trackIndex = maxMain;
-                }
-                var path = Path.GetRelativePath(WorkingPath, asset.Path);
-                if (path.Contains("..")) path = asset.Path;
-                var elem = CreateFromAsset(asset, trackIndex, InternalPluginBase.InternalPluginBaseID, path);
-                RegisterClip(elem, true);
-                AddAClip(elem);
-
-                await UpdateAdjacencyForTrack();
-                SetStatusText(Localized.DraftPage_AssetAdded(asset.Name));
-                await HidePopup();
-
-            };
-            childLayout.Children.Add(addButton);
-            if (includeHeader) childLayout.Children.Add(removeButton);
-            layout.Children.Add(childLayout);
-        }
-
-        layout.Children.Add(new BoxView
-        {
-            HeightRequest = 1,
-            BackgroundColor = Colors.Gray,
-            Margin = new Thickness(0, 15, 0, 5)
-        });
-
-        layout.Children.Add(new Label
-        {
-            Text = Localized.DraftPage_AssetPanel_SharedAssets,
-            FontSize = 18,
-            FontAttributes = FontAttributes.Bold,
-            Margin = new Thickness(0, 5, 0, 5)
-        });
-
-        foreach (var kvp in AssetDatabase.Assets.Where(c => c.Value.AssetType is AssetType.Video or AssetType.Audio or AssetType.Image))
-        {
-            var asset = kvp.Value;
-            var label = $"{asset.Icon} {asset.Name}";
-            var assetClip = ClipElementUI.CreateClip(0, FontHelper.MeasureTextLength(label) + 50, 0, labelText: label, background: ClipElementUI.DetermineAssetColor(asset.Type));
-            ToolTipProperties.SetText(assetClip.Clip, asset.Path);
-            assetClip.maxFrameCount = (uint)(asset.FrameCount ?? 0U);
-            assetClip.isInfiniteLength = asset.isInfiniteLength;
-            assetClip.Clip.WidthRequest = 200;
-
-            var addToTrackButton = new Button
-            {
-                Background = Colors.Green,
-                Text = "+"
-            };
-
-
-            var childLayout = new HorizontalStackLayout
-            {
-                Children =
-                {
-                    new Image
-                    {
-                        Source = File.Exists(asset.ThumbnailPath) ? ImageSource.FromFile(asset.ThumbnailPath) : null,
-                        WidthRequest = 120,
-                        HeightRequest = 67.5, //16:9
-                        Aspect = Aspect.AspectFit
-                    },
-                    assetClip.Clip,
-                }
-            };
-
-            addToTrackButton.Clicked += async (s, e) =>
-            {
-                var mode = ClipElementUI.DetermineClipMode(asset.Path);
-                int trackIndex = 0;
-                if (mode == ClipMode.AudioClip || mode == ClipMode.SubtitleClip)
-                {
-                    int maxSub = Tracks.Keys.Where(k => k >= SubTrackOffset).DefaultIfEmpty(SubTrackOffset - 1).Max();
-                    if (maxSub < SubTrackOffset) maxSub = SubTrackOffset;
-                    if (!Tracks.ContainsKey(maxSub)) AddASubTrack(maxSub);
-                    trackIndex = maxSub;
-                }
-                else
-                {
-                    int maxMain = Tracks.Keys.Where(k => k < SubTrackOffset).DefaultIfEmpty(0).Max();
-                    trackIndex = maxMain;
-                }
-
-                var elem = CreateFromAsset(asset, trackIndex);
-                RegisterClip(elem, true);
-                AddAClip(elem);
-
-                await UpdateAdjacencyForTrack();
-                SetStatusText($"Shared asset '{asset.Name}' added to track.");
-                await HidePopup();
-            };
-
-            childLayout.Children.Add(addToTrackButton);
-            layout.Children.Add(childLayout);
-        }
-
-        var addBtn = new Button
-        {
-            Text = "Add",
-            FontSize = 32,
-
-        };
-
-        addBtn.Clicked += async (s, e) =>
-        {
-            await MainThread.InvokeOnMainThreadAsync(async () =>
-            {
-                SetStateBusy(Localized.DraftPage_WaitForUser);
-                try
-                {
-
-
-                    var result = await FilePicker.PickAsync(new PickOptions
-                    {
-                        PickerTitle = "Select a asset",
-                        FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
-                        {
-                            { DevicePlatform.WinUI, [".mp4", ".mov", ".mkv", ".avi", ".webm", ".m4v", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tiff"] },
-                            { DevicePlatform.Android, ["image/*", "video/*"] },
-#if iDevices
-                            {DevicePlatform.iOS , ["public.image", "public.movie", "public.video", "public.mpeg-4", "com.apple.protected-mpeg-4-video", "com.apple.quicktime-movie", "public.avi", "org.matroska.mkv"]},
-                            {DevicePlatform.MacCatalyst , ["public.image", "public.movie", "public.video", "public.mpeg-4", "com.apple.protected-mpeg-4-video", "com.apple.quicktime-movie", "public.avi", "org.matroska.mkv"]}
-#endif
-                        })
-                    });
-                    string resultPath = "";
-                    if (result is not null)
-                    {
-                        PropertyPanelBuilder optionPPB = new();
-                        optionPPB.AddText(Localized.DraftPage_AssetPanel_Add_SelectMode)
-                        .AddIconTitleDescriptionCard("Copy", null, Localized.DraftPage_AssetPanel_AsLocalAssets, Localized.DraftPage_AssetPanel_AsSharedAssets_Desc)
-                        .AddIconTitleDescriptionCard("CopyToShared", null, Localized.DraftPage_AssetPanel_AsSharedAssets, Localized.DraftPage_AssetPanel_AsSharedAssets_Desc)
-                        .AddIconTitleDescriptionCard("Reference", null, Localized.DraftPage_AssetPanel_Reference, Localized.DraftPage_AssetPanel_Reference_Desc)
-                        .AddButton("Cancel", Localized._Cancel);
-                        TaskCompletionSource tcs = new();
-
-                        optionPPB.ListenToChanges(async (e) =>
-                        {
-                            switch (e.Id)
-                            {
-                                case "Reference":
-                                    {
-                                        resultPath = result.FullPath;
-                                        break;
-                                    }
-                                case "Copy":
-                                    {
-                                        resultPath = Path.Combine(WorkingPath, "assets", $"imported-{result.FileName}");
-                                        if (!string.IsNullOrWhiteSpace(WorkingPath))
-                                        {
-#if WINDOWS
-                                            File.Copy(result.FullPath, resultPath, true);
-#else
-                                            File.Move(result.FullPath, resultPath, true);
-#endif
-                                            await AddAsset(resultPath);
-
-                                        }
-                                        break;
-                                    }
-                                case "CopyToShared":
-                                    {
-                                        _ = await AssetDatabase.Add(resultPath, this);
-                                        break;
-                                    }
-                                default:
-                                    {
-
-                                        break;
-                                    }
-                            }
-                            tcs.SetResult();
-                        });
-                        await ShowACenteredPopup(600, 400, optionPPB.Build());
-                        try
-                        {
-                            var cts = new CancellationTokenSource();
-                            cts.CancelAfter(60 * 1000);
-                            await tcs.Task.WaitAsync(cts.Token);
-                        }
-                        catch (TaskCanceledException)
-                        {
-
-                        }
-                        await HidePopup();
-                        SetStateOK();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, "Add asset", this);
-                }
-            });
-        };
-
-        if (includeHeader) layout.Add(addBtn);
-        var b = new BoxView
-        {
-            WidthRequest = 50,
-            HeightRequest = 250,
-            BackgroundColor = Colors.Transparent,
-        };
-        b.Color = Colors.Transparent;
-        layout.Add(b);
-
-
-        OverlayLayer.GestureRecognizers.Add(fileDropGesture);
-
-        return new ScrollView
-        {
-            Content = layout,
-            Orientation = ScrollOrientation.Horizontal
-        };
-    }
-
-
     #endregion
 
     #region task
@@ -2483,11 +2045,45 @@ public partial class DraftPage : ContentPage
 #pragma warning disable CS0414 //this stuff only need on iDevices, because of OverlayLayer can't handle any input...... 
     private IView? OrigionalUIContent = null;
 #pragma warning restore CS0414
+
+    /// <summary>
+    /// 显示 CommunityToolkit Popup 的辅助方法
+    /// </summary>
+    private void ShowCommunityToolkitPopup(CommunityToolkit.Maui.Views.Popup popup)
+    {
+        try
+        {
+            // 使用反射调用ShowPopup扩展方法
+            var popupExtensionType = typeof(CommunityToolkit.Maui.Views.Popup).Assembly
+                .GetTypes()
+                .FirstOrDefault(t => t.Name == "PageExtension" || t.Name == "PageExtensions");
+
+            if (popupExtensionType != null)
+            {
+                var showPopupMethod = popupExtensionType.GetMethod("ShowPopup",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+
+                if (showPopupMethod != null)
+                {
+                    showPopupMethod.Invoke(null, new object[] { this, popup });
+                    return;
+                }
+            }
+
+            // 如果找不到扩展方法，记录警告
+            Log("CommunityToolkit Popup extension method not found. Popup may not display correctly.", "error");
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "ShowCommunityToolkitPopup", this);
+        }
+    }
+
     private async Task ShowAPopup(View? content = null, Border? border = null, ClipElementUI? clip = null, string mode = "")
     {
         content ??= (border != null && clip != null) ? await BuildPropertyPanel(clip) : new Label { Text = $"No content to show. This SHOULD is a bug, please feedback.\r\n{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}" };
 
-        if (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS())
+        if (false)//OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS() )
         {
             if (OrigionalUIContent is null && MainUpperContent.Children.Count > 0)
             {
@@ -2559,8 +2155,7 @@ public partial class DraftPage : ContentPage
 
     private async Task ShowClipPopup(Border clipBorder, ClipElementUI clip)
     {
-        OverlayLayer.IsVisible = true;
-        OverlayLayer.InputTransparent = false;
+
 
         var existing = OverlayLayer.Children.FirstOrDefault(c => (c as VisualElement)?.StyleId == "ClipPopupFrame" || (c as VisualElement)?.StyleId == "ClipPopupTriangle");
         if (existing != null)
@@ -2570,7 +2165,6 @@ public partial class DraftPage : ContentPage
                 OverlayLayer.Children.Remove(r);
         }
 
-        OverlayLayer.InputTransparent = false;
 
         double desiredPopupWidth = 500;
         double desiredPopupHeight = 400;
@@ -2736,8 +2330,36 @@ public partial class DraftPage : ContentPage
         triangle.Scale = 0.95;
         triangle.TranslationY = 5;
 
-        OverlayLayer.Children.Add(frame);
-        OverlayLayer.Children.Add(triangle);
+        if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
+        {
+            // 使用 CommunityToolkit Popup
+            var popupContent = new AbsoluteLayout
+            {
+                WidthRequest = popupWidth,
+                HeightRequest = popupHeight + arrowSize,
+                Children = { triangle, frame }
+            };
+
+            // 调整布局为相对于 popup 内容的坐标
+            AbsoluteLayout.SetLayoutBounds(triangle, new Rect(triangleLeft - popupX, popupBelow ? 0 : popupHeight, arrowSize, arrowSize));
+            AbsoluteLayout.SetLayoutBounds(frame, new Rect(0, popupBelow ? arrowSize : 0, popupWidth, popupHeight));
+
+            _currentCommunityToolkitPopup = new CommunityToolkit.Maui.Views.Popup
+            {
+                Content = popupContent,
+                CanBeDismissedByTappingOutsideOfPopup = true
+            };
+
+            ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
+        }
+        else
+        {
+            OverlayLayer.IsVisible = true;
+            OverlayLayer.InputTransparent = false;
+            OverlayLayer.Children.Add(frame);
+            OverlayLayer.Children.Add(triangle);
+        }
+
 
         const uint entranceMs = 220u;
         try
@@ -2770,13 +2392,24 @@ public partial class DraftPage : ContentPage
         return;
 #endif
         //if (!isPopupShowing) return;
-        OverlayLayer.GestureRecognizers?.Remove(fileDropGesture);
-        OverlayLayer.InputTransparent = true;
-        await Task.WhenAll(HideClipPopup(), HideFullscreenPopup());
 
-        OverlayLayer.IsVisible = false;
-        OverlayLayer.InputTransparent = true;
+        if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
+        {
+            if (_currentCommunityToolkitPopup is not null)
+            {
+                await _currentCommunityToolkitPopup.CloseAsync();
+                _currentCommunityToolkitPopup = null;
+            }
+        }
+        else
+        {
+            OverlayLayer.GestureRecognizers?.Remove(fileDropGesture);
+            OverlayLayer.InputTransparent = true;
+            await Task.WhenAll(HideClipPopup(), HideFullscreenPopup());
 
+            OverlayLayer.IsVisible = false;
+            OverlayLayer.InputTransparent = true;
+        }
     }
 
     private async Task HideClipPopup()
@@ -2830,20 +2463,41 @@ public partial class DraftPage : ContentPage
                 StrokeThickness = 8
             },
             Padding = 12,
-            Content = new ScrollView { Content = content },
+            Content = content,
             Opacity = 0.95
         };
-        OverlayLayer.InputTransparent = false;
-        Popup.GestureRecognizers.Add(nopGesture);
-
-        OverlayLayer.Add(Popup);
-
-        var targetY = height;
-        try
+        if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
         {
-            await Popup.TranslateTo(Popup.TranslationX, size.Height - targetY, 300, Easing.SinOut);
+            // 使用 CommunityToolkit Popup
+            var popupContentView = new ScrollView
+            {
+                Content = content,
+                WidthRequest = size.Width - 40,
+                HeightRequest = height
+            };
+
+            _currentCommunityToolkitPopup = new CommunityToolkit.Maui.Views.Popup
+            {
+                Content = popupContentView,
+                CanBeDismissedByTappingOutsideOfPopup = true,
+                VerticalOptions = LayoutOptions.End
+            };
+
+            ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
         }
-        catch { }
+        else
+        {
+            OverlayLayer.InputTransparent = false;
+            Popup.GestureRecognizers.Add(nopGesture);
+            OverlayLayer.Add(Popup);
+
+            var targetY = height;
+            try
+            {
+                await Popup.TranslateToAsync(Popup.TranslationX, size.Height - targetY, 300, Easing.SinOut);
+            }
+            catch { }
+        }
     }
 
     private async Task ShowAFullscreenPopupInRight(double width, View content)
@@ -2869,20 +2523,41 @@ public partial class DraftPage : ContentPage
                 StrokeThickness = 8
             },
             Padding = 12,
-            Content = new ScrollView { Content = content },
+            Content = content,
             Opacity = 0.95
         };
-        OverlayLayer.InputTransparent = false;
-        Popup.GestureRecognizers.Add(nopGesture);
-
-        OverlayLayer.Add(Popup);
-
-        var targetX = width;
-        try
+        if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
         {
-            await Popup.TranslateTo(width, Popup.TranslationY, 300, Easing.SinOut);
+            // 使用 CommunityToolkit Popup
+            var popupContentView = new ScrollView
+            {
+                Content = content,
+                WidthRequest = size.Width - width,
+                HeightRequest = size.Height * 0.85
+            };
+
+            _currentCommunityToolkitPopup = new CommunityToolkit.Maui.Views.Popup
+            {
+                Content = popupContentView,
+                CanBeDismissedByTappingOutsideOfPopup = true,
+                HorizontalOptions = LayoutOptions.End
+            };
+
+            ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
         }
-        catch { }
+        else
+        {
+            OverlayLayer.InputTransparent = false;
+            Popup.GestureRecognizers.Add(nopGesture);
+            OverlayLayer.Add(Popup);
+
+            var targetX = width;
+            try
+            {
+                await Popup.TranslateToAsync(width, Popup.TranslationY, 300, Easing.SinOut);
+            }
+            catch { }
+        }
     }
 
     public async Task ShowACenteredPopup(double desiredHeight, double desiredWidth, View content)
@@ -2934,34 +2609,57 @@ public partial class DraftPage : ContentPage
                 StrokeThickness = 8
             },
             Padding = 12,
-            Content = new ScrollView { Content = content },
+            Content = content,
             Opacity = 0.0,
             Scale = 0.97
         };
 
-        OverlayLayer.InputTransparent = false;
-        Popup.GestureRecognizers.Add(nopGesture);
-        OverlayLayer.Add(Popup);
+        if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
+        {
+            // 使用 CommunityToolkit Popup
+            var popupContentView = new ScrollView
+            {
+                Content = content,
+                WidthRequest = popupWidth,
+                HeightRequest = popupHeight
+            };
 
-        const uint entranceMs = 220u;
-        try
-        {
-            await Task.WhenAll(
-                Popup.FadeToAsync(0.95, entranceMs, Easing.CubicOut),
-                Popup.ScaleToAsync(1, entranceMs, Easing.CubicOut),
-                Popup.TranslateToAsync(targetX, targetY, entranceMs, Easing.CubicOut)
-            );
+            _currentCommunityToolkitPopup = new CommunityToolkit.Maui.Views.Popup
+            {
+                Content = popupContentView,
+                CanBeDismissedByTappingOutsideOfPopup = true,
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center
+            };
+
+            ShowCommunityToolkitPopup(_currentCommunityToolkitPopup);
         }
-        catch
+        else
         {
+            OverlayLayer.InputTransparent = false;
+            Popup.GestureRecognizers.Add(nopGesture);
+            OverlayLayer.Add(Popup);
+
+            const uint entranceMs = 220u;
             try
             {
-                Popup.Opacity = 0.95;
-                Popup.Scale = 1;
-                Popup.TranslationX = targetX;
-                Popup.TranslationY = targetY;
+                await Task.WhenAll(
+                    Popup.FadeToAsync(0.95, entranceMs, Easing.CubicOut),
+                    Popup.ScaleToAsync(1, entranceMs, Easing.CubicOut),
+                    Popup.TranslateToAsync(targetX, targetY, entranceMs, Easing.CubicOut)
+                );
             }
-            catch { }
+            catch
+            {
+                try
+                {
+                    Popup.Opacity = 0.95;
+                    Popup.Scale = 1;
+                    Popup.TranslationX = targetX;
+                    Popup.TranslationY = targetY;
+                }
+                catch { }
+            }
         }
     }
 
@@ -4131,7 +3829,7 @@ public partial class DraftPage : ContentPage
         WindowSize = new Size(w, h);
 
         OverlayLayer.InputTransparent = true;
-        CustomContent1.Content = new Label { Text = Localized.DraftPage_PropertyPanel_SelectToContinue, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
+        RightContentBorder.Content = new Label { Text = Localized.DraftPage_PropertyPanel_SelectToContinue, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
 
     }
 

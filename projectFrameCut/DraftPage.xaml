@@ -155,7 +155,6 @@
                     </BoxView.GestureRecognizers>
                 </BoxView>
                 <Border x:Name="RightContentBorder" ZIndex="0" Grid.Column="2" StrokeThickness="5" HorizontalOptions="Fill">
-                    <ScrollView x:Name="CustomContent1" />
                 </Border>
             </Grid>
 

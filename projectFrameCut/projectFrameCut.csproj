@@ -103,7 +103,19 @@
 
 
 	<ItemGroup>
+	  <Content Remove="C:\Users\azert\.nuget\packages\kawazu\1.1.4\contentFiles\any\net5.0\AUTHORS" />
+	  <Content Remove="C:\Users\azert\.nuget\packages\kawazu\1.1.4\contentFiles\any\net5.0\char.bin" />
+	</ItemGroup>
+
+
+	<ItemGroup>
+	  <None Remove="C:\Users\azert\.nuget\packages\kawazu\1.1.4\contentFiles\any\net5.0\AUTHORS" />
 	  <None Remove="Platforms\Android\Resources\values\styles.xml" />
+	</ItemGroup>
+
+
+	<ItemGroup>
+	  <LibraryProjectProperties Include="C:\Users\azert\.nuget\packages\kawazu\1.1.4\contentFiles\any\net5.0\char.bin" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -113,6 +125,8 @@
 		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.10" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
 		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="7.0.0" />
+		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
+		<PackageReference Include="Kawazu" Version="1.1.4" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -249,6 +263,11 @@
 
 	<ItemGroup>
 	  <MauiImage Include="Resources\Raw\Images\unknown_music.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="C:\Users\azert\.nuget\packages\kawazu\1.1.4\contentFiles\**\*" Link=".\Resources"/>
+		
 	</ItemGroup>
 
 </Project>

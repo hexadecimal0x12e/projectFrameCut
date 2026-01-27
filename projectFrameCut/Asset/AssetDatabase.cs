@@ -236,7 +236,7 @@ namespace projectFrameCut.Asset
                     }
                 case AssetType.Font:
                     {
-                        FontHelper.GenerateFontThumbnail(sourcePath).SaveAsPng8bpp(thumbnailPath, null);
+                        TextHelper.GenerateFontThumbnail(sourcePath).SaveAsPng8bpp(thumbnailPath, null);
                         break;
                     }
                 case AssetType.Image:
