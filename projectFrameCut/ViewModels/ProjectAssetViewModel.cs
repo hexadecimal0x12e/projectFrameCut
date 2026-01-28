@@ -74,6 +74,18 @@ public class ProjectAssetViewModel : INotifyPropertyChanged
         }
     }
 
+    private int _orderOption = 0; // 0: By add date, 1: By name
+    public int OrderOption
+    {
+        get => _orderOption;
+        set
+        {
+            _orderOption = value;
+            OnPropertyChanged();
+            FilterAssets();
+        }
+    }
+
     private string _localAssetsTitle = "本地素材";
     public string LocalAssetsTitle
     {
@@ -138,17 +150,14 @@ public class ProjectAssetViewModel : INotifyPropertyChanged
         FilteredLocalAssets.Clear();
         FilteredSharedAssets.Clear();
 
+        List<AssetItemViewModel> localFiltered = new();
+        List<AssetItemViewModel> sharedFiltered = new();
+
         if (string.IsNullOrWhiteSpace(SearchText))
         {
             // 如果搜索文本为空，显示所有素材
-            foreach (var asset in LocalAssets)
-            {
-                FilteredLocalAssets.Add(asset);
-            }
-            foreach (var asset in SharedAssets)
-            {
-                FilteredSharedAssets.Add(asset);
-            }
+            localFiltered.AddRange(LocalAssets);
+            sharedFiltered.AddRange(SharedAssets);
         }
         else
         {
@@ -162,7 +171,7 @@ public class ProjectAssetViewModel : INotifyPropertyChanged
                 var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
                 if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate)|| assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
-                    FilteredLocalAssets.Add(asset);
+                    localFiltered.Add(asset);
                 }
             }
             foreach (var asset in SharedAssets)
@@ -171,9 +180,32 @@ public class ProjectAssetViewModel : INotifyPropertyChanged
                 var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
                 if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
-                    FilteredSharedAssets.Add(asset);
+                    sharedFiltered.Add(asset);
                 }
             }
+        }
+
+        // 应用排序
+        if (OrderOption == 0)
+        {
+            // By add date - 使用原始资产的创建时间
+            localFiltered = localFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
+            sharedFiltered = sharedFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
+        }
+        else if (OrderOption == 1)
+        {
+            // By name - 使用发音排序
+            localFiltered = localFiltered.OrderBy(a => TextHelper.GetPronounceForOrdering(a.Name).Result).ToList();
+            sharedFiltered = sharedFiltered.OrderBy(a => TextHelper.GetPronounceForOrdering(a.Name).Result).ToList();
+        }
+
+        foreach (var asset in localFiltered)
+        {
+            FilteredLocalAssets.Add(asset);
+        }
+        foreach (var asset in sharedFiltered)
+        {
+            FilteredSharedAssets.Add(asset);
         }
     }
 }

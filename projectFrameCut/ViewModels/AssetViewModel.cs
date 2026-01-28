@@ -34,6 +34,21 @@ namespace projectFrameCut.ViewModels
             }
         }
 
+        private int _orderOption = 0; // 0: By add date, 1: By name
+        public int OrderOption
+        {
+            get => _orderOption;
+            set
+            {
+                if (_orderOption != value)
+                {
+                    _orderOption = value;
+                    OnPropertyChanged();
+                    FilterAssets();
+                }
+            }
+        }
+
         private AssetItem? _selectedAsset;
         public AssetItem? SelectedAsset
         {
@@ -80,7 +95,7 @@ namespace projectFrameCut.ViewModels
             List<AssetItem> filtered = new();
             if (string.IsNullOrEmpty(query))
             {
-                filtered = _allAssets;
+                filtered = _allAssets.ToList();
             }
             else
             {
@@ -98,8 +113,22 @@ namespace projectFrameCut.ViewModels
                         filtered.Add(asset);
                     }
                 }
+            }
 
-
+            // 应用排序
+            if (OrderOption == 0)
+            {
+                // By add date - 按创建时间降序排序
+                filtered = filtered.OrderByDescending(a => a.CreatedAt).ToList();
+            }
+            else if (OrderOption == 1)
+            {
+                // By name - 按名称发音排序并按语言分组
+                filtered = filtered.OrderBy(a => TextHelper.GetPronounceForOrdering(a.Name).Result)
+                                 .GroupBy(c => TextHelper.DetectTextLanguage(c.Name))
+                                 .OrderByDescending(g => g.Count())
+                                 .SelectMany(c => c)
+                                 .ToList();
             }
 
             foreach (var asset in filtered)

@@ -9,13 +9,21 @@
 
     <cont:TabbedView>
         <cont:TabbedView.HeaderRightContent>
-            <Entry Placeholder="{l:Localized Key=AssetPage_Search}" 
+            <HorizontalStackLayout>
+                <Picker x:Name="OrderOptionPicker" WidthRequest="120" Margin="0,-5,-5,0" SelectedIndex="{Binding OrderOption}">
+                    <Picker.Items>
+                        <l:Localized Key="AssetPage_OrderBy_AddDate"/>
+                        <l:Localized Key="AssetPage_OrderBy_Name"/>
+                    </Picker.Items>
+                </Picker>
+                <Entry Placeholder="{l:Localized Key=AssetPage_Search}" 
                    Text="{Binding SearchText}"
                    PlaceholderColor="White" 
                    BackgroundColor="Gray" 
                    WidthRequest="250" 
                    Margin="0,-5,-5,0"
                    ClearButtonVisibility="WhileEditing" />
+            </HorizontalStackLayout>
         </cont:TabbedView.HeaderRightContent>
         <cont:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}">
             <CollectionView ItemsSource="{Binding FilteredLocalAssets}"
@@ -132,6 +140,68 @@
 
                 <CollectionView.EmptyView>
                     <Label Text="No assets available" 
+                           FontSize="14"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           Margin="20"/>
+                </CollectionView.EmptyView>
+            </CollectionView>
+        </cont:TabbedViewItem>
+
+        <cont:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_ReuseableAssets}">
+            <CollectionView ItemsSource="{Binding FilteredReuseableAssets}"
+                            SelectionMode="None"
+                            Margin="8">
+                <CollectionView.ItemsLayout>
+                    <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
+                </CollectionView.ItemsLayout>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="viewmodels:AssetItemViewModel">
+                        <Border StrokeThickness="1" 
+                                Stroke="Gray"
+                                BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2A2A2A}" 
+                                HeightRequest="160" 
+                                WidthRequest="180"
+                                StrokeShape="RoundRectangle 8">
+                            <Grid RowDefinitions="*,Auto,Auto">
+                                <!-- 缩略图 -->
+                                <Image Grid.Row="0"
+                                       Source="{Binding ThumbPath}" 
+                                       Aspect="AspectFit" 
+                                       Margin="4"
+                                       IsVisible="{Binding HasThumbnail}"/>
+                                
+                                <!-- 名称 -->
+                                <Grid Grid.Row="1" 
+                                      Background="{Binding BackgroundBrush}" 
+                                      Padding="6,4">
+                                    <Label Text="{Binding Name}" 
+                                           LineBreakMode="TailTruncation" 
+                                           FontSize="12" 
+                                           MaxLines="1"
+                                           VerticalOptions="Center"/>
+                                </Grid>
+                                
+                                <!-- 添加按钮 -->
+                                <Grid Grid.Row="2" 
+                                      BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333333}" 
+                                      Padding="4">
+                                    <Button Text="➕" 
+                                            FontSize="16"
+                                            Padding="4"
+                                            CornerRadius="4"
+                                            BackgroundColor="Green"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ProjectAddClipViewModel}}, Path=AddReuseableAssetClipCommand}"
+                                            CommandParameter="{Binding .}"/>
+                                </Grid>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+
+                <CollectionView.EmptyView>
+                    <Label Text="No reuseable assets available" 
                            FontSize="14"
                            HorizontalOptions="Center"
                            VerticalOptions="Center"

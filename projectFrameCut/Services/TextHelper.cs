@@ -238,6 +238,24 @@ namespace projectFrameCut.Services
             return detectedLanguage;
         }
 
+        public static async Task<string> GetPronounceForOrdering(string input)
+        {
+            var loc = DetectTextLanguage(input);
+            return loc switch
+            {
+                TextLanguage.Japanese => await GetJapaneseHiragana(input),
+                TextLanguage.Chinese when Localized._LocaleId_ != "ja-JP" => await GetChinesePinyin(input),
+                TextLanguage.Chinese when Localized._LocaleId_ == "ja-JP" => await GetJapaneseHiragana(input),
+                TextLanguage.Korean => input,
+                TextLanguage.Russian => GetRussianTransliteration(input),
+                TextLanguage.Thai => input,
+                TextLanguage.Arabic => GetArabicTransliteration(input),
+                TextLanguage.English => input,
+                _ => input
+            };
+        }
+
+
         private static TextLanguage DetectPrimaryLanguage(FontFamily family)
         {
             TextLanguage result = TextLanguage.Unknown;
@@ -292,7 +310,7 @@ namespace projectFrameCut.Services
                     _ => input,
                 };
                 LogDiagnostic($"Sentence '{input}' has pronunciation '{pron}' in {(language ?? DetectTextLanguage(input))}.");
-                return pron; 
+                return pron;
             }
             catch (Exception ex)
             {
@@ -315,7 +333,7 @@ namespace projectFrameCut.Services
             }
             catch (Exception ex)
             {
-                Log(ex,$"Error converting Chinese to Pinyin via PinyinHelper");
+                Log(ex, $"Error converting Chinese to Pinyin via PinyinHelper");
                 return input;
             }
         }
@@ -330,7 +348,7 @@ namespace projectFrameCut.Services
             }
             catch (Exception ex)
             {
-                Log(ex,$"Error converting Japanese to Romaji via KawazuConverter");
+                Log(ex, $"Error converting Japanese to Romaji via KawazuConverter");
 
                 var result = new StringBuilder();
                 foreach (char c in input)
@@ -353,6 +371,21 @@ namespace projectFrameCut.Services
                 return result.ToString();
             }
 
+
+        }
+
+        public static async Task<string> GetJapaneseHiragana(string input)
+        {
+            try
+            {
+                var converter = new KawazuConverter(AppContext.BaseDirectory);
+                var result = await converter.Convert(input, To.Hiragana);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return input;
+            }
 
         }
 

@@ -7,13 +7,21 @@
              x:Class="projectFrameCut.Asset.ProjectAssetView">
     <cont:TabbedView>
         <cont:TabbedView.HeaderRightContent>
-            <Entry Placeholder="{l:Localized Key=AssetPage_Search}" 
+            <HorizontalStackLayout>
+                <Picker x:Name="OrderOptionPicker" WidthRequest="120" Margin="0,-5,-5,0" SelectedIndex="{Binding OrderOption}">
+                    <Picker.Items>
+                        <l:Localized Key="AssetPage_OrderBy_AddDate"/>
+                        <l:Localized Key="AssetPage_OrderBy_Name"/>
+                    </Picker.Items>
+                </Picker>
+                <Entry Placeholder="{l:Localized Key=AssetPage_Search}" 
                    Text="{Binding SearchText}"
                    PlaceholderColor="White" 
                    BackgroundColor="Gray" 
                    WidthRequest="250" 
                    Margin="0,-5,-5,0"
                    ClearButtonVisibility="WhileEditing" />
+            </HorizontalStackLayout>
         </cont:TabbedView.HeaderRightContent>
         <cont:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}">
             <VerticalStackLayout Spacing="10" Padding="10">

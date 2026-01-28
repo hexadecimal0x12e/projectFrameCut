@@ -197,13 +197,15 @@ public partial class DraftPage : ContentPage
     public double PreviewAreaHeight { get; set; } = 250;
     public bool AutoSavePreviewAreaHeight { get; set; } = true;
     public bool? UseCompactLayout { get; set; } = null;
-    public bool UseCommunityToolkitPopupInsteadOfOverlayLayer { get { return (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS()) || field; } set; }
+    public bool LockScrollViewAfterSelection { get; set; }
 
+
+    public bool UseCommunityToolkitPopupInsteadOfOverlayLayer { get { return (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS()) || field; } set; }
 
     #endregion
 
     #region init
-#pragma warning disable CS8618 
+#pragma warning disable CS8618
     public DraftPage()
     {
         RegisterCommands();
@@ -944,6 +946,7 @@ public partial class DraftPage : ContentPage
 
     private void SetTimelineScrollEnabled(bool enabled)
     {
+        if (!LockScrollViewAfterSelection) return;
 #if WINDOWS
         if (TimelineScrollView.Handler?.PlatformView is Microsoft.UI.Xaml.Controls.ScrollViewer sv)
         {

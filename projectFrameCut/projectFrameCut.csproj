@@ -259,15 +259,11 @@
 		<MauiXaml Remove="AppShell_Windows.xaml" />
 		<None Remove="AppShell_Windows.xaml" />
 		<Compile Remove="AppShell_Windows.xaml.cs" />
-	</ItemGroup>
+	</ItemGroup>	
 
 	<ItemGroup>
 	  <MauiImage Include="Resources\Raw\Images\unknown_music.png" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <None Include="C:\Users\azert\.nuget\packages\kawazu\1.1.4\contentFiles\**\*" Link=".\Resources"/>
-		
-	</ItemGroup>
 
 </Project>

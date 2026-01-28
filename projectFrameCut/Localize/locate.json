@@ -425,6 +425,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "AssetPage_OrderBy_AddDate",
+        "Value": "\u6309\u65B0\u65E7\u6392\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_OrderBy_Name",
+        "Value": "\u6309\u540D\u79F0\u6392\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "AssetPage_PostProcess_FinishPrompt",
         "Value": "\u7D20\u6750\u300C{name}\u300D\u5DF2\u51C6\u5907\u597D\u3002\u4F60\u73B0\u5728\u53EF\u4EE5\u5B89\u5168\u7684\u9000\u51FA\u5E94\u7528\u7A0B\u5E8F",
         "Mode": "InterpolationString",
@@ -2702,6 +2718,14 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_ReuseableAssets",
+        "Value": "\u7D20\u6750\u5E93",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "HasValidationErrors": false
       }
     ],
@@ -5648,6 +5672,33 @@
         "ArgsComment": [],
         "Comment": "Warning message when exiting draft page without saving",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_OrderBy_Name",
+        "Value": "Unset localization item:AssetPage_OrderBy_Name()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_OrderBy_AddDate",
+        "Value": "Unset localization item:AssetPage_OrderBy_AddDate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_ReuseableAssets",
+        "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -8591,6 +8642,33 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u5C07\u8B66\u544A\u8A0A\u606F\u5F9E\u7C21\u9AD4\u4E2D\u6587\u8F49\u63DB\u70BA\u53F0\u7063\u7E41\u9AD4\u4E2D\u6587\uFF0C\u4E26\u8ABF\u6574\u4E86\u7528\u8A5E\uFF08\u5982\u300C\u786E\u8BA4\u300D-\u003E\u300C\u78BA\u5B9A\u300D\u3001\u300C\u4E22\u5931\u300D-\u003E\u300C\u907A\u5931\u300D\uFF09\uFF0C\u4F7F\u8A9E\u6C23\u66F4\u7B26\u5408\u7576\u5730\u8EDF\u9AD4\u4ECB\u9762\u7FD2\u6163\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_OrderBy_Name",
+        "Value": "Unset localization item:AssetPage_OrderBy_Name()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_OrderBy_AddDate",
+        "Value": "Unset localization item:AssetPage_OrderBy_AddDate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_ReuseableAssets",
+        "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -11542,6 +11620,33 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_OrderBy_Name",
+        "Value": "Unset localization item:AssetPage_OrderBy_Name()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_OrderBy_AddDate",
+        "Value": "Unset localization item:AssetPage_OrderBy_AddDate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_ReuseableAssets",
+        "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -14492,6 +14597,33 @@
         "ArgsComment": [],
         "Comment": "\uC800\uC7A5\uD558\uC9C0 \uC54A\uACE0 \uCD08\uC548 \uD398\uC774\uC9C0\uB97C \uB098\uAC08 \uB54C\uC758 \uACBD\uACE0 \uBA54\uC2DC\uC9C0\uC785\uB2C8\uB2E4.",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_OrderBy_Name",
+        "Value": "Unset localization item:AssetPage_OrderBy_Name()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_OrderBy_AddDate",
+        "Value": "Unset localization item:AssetPage_OrderBy_AddDate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_ReuseableAssets",
+        "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -17436,6 +17568,33 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "Avertissement de sortie sans sauvegarde de la page de brouillon",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_OrderBy_Name",
+        "Value": "Unset localization item:AssetPage_OrderBy_Name()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_OrderBy_AddDate",
+        "Value": "Unset localization item:AssetPage_OrderBy_AddDate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_ReuseableAssets",
+        "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -20386,6 +20545,33 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_OrderBy_Name",
+        "Value": "Unset localization item:AssetPage_OrderBy_Name()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_OrderBy_AddDate",
+        "Value": "Unset localization item:AssetPage_OrderBy_AddDate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_ReuseableAssets",
+        "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]

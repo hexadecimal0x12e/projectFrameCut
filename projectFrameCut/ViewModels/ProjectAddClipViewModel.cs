@@ -26,6 +26,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         AddSubTitleClipCommand = new Command(async () => await AddSubTitleClip());
         AddAlternativeSourceClipCommand = new Command(async () => await AddAlternativeSourceClip());
         AddAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddAssetClip(asset));
+        AddReuseableAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddReuseableAssetClip(asset));
 
         // 加载资源
         LoadAssets();
@@ -34,10 +35,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     // 资源列表
     public ObservableCollection<AssetItemViewModel> LocalAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> SharedAssets { get; } = new();
+    public ObservableCollection<AssetItemViewModel> ReuseableAssets { get; } = new();
     
     // 过滤后的资源列表
     public ObservableCollection<AssetItemViewModel> FilteredLocalAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> FilteredSharedAssets { get; } = new();
+    public ObservableCollection<AssetItemViewModel> FilteredReuseableAssets { get; } = new();
 
     private string _searchText = "";
     public string SearchText
@@ -54,12 +57,28 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
+    private int _orderOption = 0; // 0: By add date, 1: By name
+    public int OrderOption
+    {
+        get => _orderOption;
+        set
+        {
+            if (_orderOption != value)
+            {
+                _orderOption = value;
+                OnPropertyChanged();
+                FilterAssets();
+            }
+        }
+    }
+
     // 命令
     public ICommand AddTextClipCommand { get; }
     public ICommand AddSolidColorClipCommand { get; }
     public ICommand AddSubTitleClipCommand { get; }
     public ICommand AddAlternativeSourceClipCommand { get; }
     public ICommand AddAssetClipCommand { get; }
+    public ICommand AddReuseableAssetClipCommand { get; }
 
     // 事件：当需要关闭弹窗时触发
     public event EventHandler? ClipAdded;
@@ -68,6 +87,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         LocalAssets.Clear();
         SharedAssets.Clear();
+        ReuseableAssets.Clear();
+        
         foreach (var asset in _draftPage.Assets.Values.OrderBy(a => a.Name))
         {
             LocalAssets.Add(new AssetItemViewModel
@@ -94,6 +115,29 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             });
         }
         
+        // 加载远程可重用资产
+        try
+        {
+            var remoteAssets = await APIClient.RemoteAssetServices.GetAllAssets();
+            foreach (var asset in remoteAssets.OrderBy(a => a.Name))
+            {
+                ReuseableAssets.Add(new AssetItemViewModel
+                {
+                    Id = asset.AssetId,
+                    Name = asset.Name,
+                    Type = asset.AssetType.ToString(),
+                    SourcePath = asset.Path,
+                    ThumbPath = asset.ThumbnailPath,
+                    OriginalAsset = asset,
+                    IsRemote = true
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "load reuseable asset", this);
+        }
+
         // 初始化过滤列表
         await FilterAssets();
     }
@@ -300,23 +344,108 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
         ClipAdded?.Invoke(this, EventArgs.Empty);
     }
+    
+    private async Task AddReuseableAssetClip(AssetItemViewModel? assetViewModel)
+    {
+        if (assetViewModel?.OriginalAsset == null) return;
+
+        try
+        {
+            // 如果是远程资产，需要先获取访问 token 并下载
+            if (assetViewModel.IsRemote)
+            {
+                // 显示加载提示
+                // TODO: 添加加载指示器
+                
+                // 获取文件 token
+                var tokenResponse = await APIClient.RemoteAssetServices.GetFileToken(assetViewModel.Id);
+                
+                // 构建文件下载 URL
+                var fileServerUri = APIClient.APIClientBase.GetUri(
+                    APIClient.APIClientBase.APIPort_FileServer, 
+                    $"/api/file/download",
+                    $"?token={tokenResponse.token}"
+                );
+
+
+                Log($"Downloading asset from {fileServerUri}...");
+                
+                // 下载文件到缓存目录
+                var cacheDir = Path.Combine(FileSystem.CacheDirectory, "RemoteAssets");
+                if (!Directory.Exists(cacheDir))
+                {
+                    Directory.CreateDirectory(cacheDir);
+                }
+                
+                var fileName = Path.GetFileName(assetViewModel.OriginalAsset.Path) ?? $"{assetViewModel.Id}{Path.GetExtension(assetViewModel.OriginalAsset.Path)}";
+                var localPath = Path.Combine(cacheDir, fileName);
+                
+                // 如果文件已经存在，直接使用
+                if (!File.Exists(localPath))
+                {
+#if DEBUG
+                    // 开发环境：忽略 SSL 证书验证
+                    var handler = new HttpClientHandler
+                    {
+                        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+                    };
+                    using var client = new HttpClient(handler);
+#else
+                    using var client = new HttpClient();
+#endif
+                    var response = await client.GetAsync(fileServerUri);
+                    response.EnsureSuccessStatusCode();
+                    
+                    using var fileStream = File.Create(localPath);
+                    await response.Content.CopyToAsync(fileStream);
+                }
+                
+                // 更新资产的路径为本地缓存路径
+                assetViewModel.OriginalAsset.Path = localPath;
+            }
+
+            var trackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
+            if (!_draftPage.Tracks.ContainsKey(trackIndex))
+            {
+                _draftPage.AddATrack(trackIndex);
+            }
+
+            var clip = _draftPage.CreateFromAsset(
+                assetViewModel.OriginalAsset,
+                trackIndex,
+                InternalPluginBase.InternalPluginBaseID,
+                assetViewModel.SourcePath
+            );
+
+            _draftPage.RegisterClip(clip, true);
+
+            _draftPage.AddAClip(clip);
+
+            ClipAdded?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "load reuseabel asset", this);
+            await _draftPage.DisplayAlert("Error", $"Failed to add asset: {ex.Message}", "OK");
+        }
+    }
 
     private async Task FilterAssets()
     {
         FilteredLocalAssets.Clear();
         FilteredSharedAssets.Clear();
+        FilteredReuseableAssets.Clear();
+
+        List<AssetItemViewModel> localFiltered = new();
+        List<AssetItemViewModel> sharedFiltered = new();
+        List<AssetItemViewModel> reuseableFiltered = new();
 
         if (string.IsNullOrWhiteSpace(SearchText))
         {
             // 如果搜索文本为空，显示所有素材
-            foreach (var asset in LocalAssets)
-            {
-                FilteredLocalAssets.Add(asset);
-            }
-            foreach (var asset in SharedAssets)
-            {
-                FilteredSharedAssets.Add(asset);
-            }
+            localFiltered.AddRange(LocalAssets);
+            sharedFiltered.AddRange(SharedAssets);
+            reuseableFiltered.AddRange(ReuseableAssets);
         }
         else
         {
@@ -330,7 +459,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
                 if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
-                    FilteredLocalAssets.Add(asset);
+                    localFiltered.Add(asset);
                 }
             }
             foreach (var asset in SharedAssets)
@@ -339,9 +468,47 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
                 if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
-                    FilteredSharedAssets.Add(asset);
+                    sharedFiltered.Add(asset);
                 }
             }
+            foreach (var asset in ReuseableAssets)
+            {
+                var assetPron = (await TextHelper.GetHowToPronuce(asset.Name, default)).ToLower();
+                var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
+                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
+                {
+                    reuseableFiltered.Add(asset);
+                }
+            }
+        }
+
+        // 应用排序
+        if (OrderOption == 0)
+        {
+            // By add date - 使用原始资产的创建时间
+            localFiltered = localFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
+            sharedFiltered = sharedFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
+            reuseableFiltered = reuseableFiltered.OrderByDescending(a => a.OriginalAsset?.CreatedAt ?? DateTime.MinValue).ToList();
+        }
+        else if (OrderOption == 1)
+        {
+            // By name - 使用发音排序
+            localFiltered = localFiltered.OrderBy(a => TextHelper.GetPronounceForOrdering(a.Name).Result).ToList();
+            sharedFiltered = sharedFiltered.OrderBy(a => TextHelper.GetPronounceForOrdering(a.Name).Result).ToList();
+            reuseableFiltered = reuseableFiltered.OrderBy(a => TextHelper.GetPronounceForOrdering(a.Name).Result).ToList();
+        }
+
+        foreach (var asset in localFiltered)
+        {
+            FilteredLocalAssets.Add(asset);
+        }
+        foreach (var asset in sharedFiltered)
+        {
+            FilteredSharedAssets.Add(asset);
+        }
+        foreach (var asset in reuseableFiltered)
+        {
+            FilteredReuseableAssets.Add(asset);
         }
     }
 
@@ -361,6 +528,7 @@ public class AssetItemViewModel
     public string SourcePath { get; set; } = string.Empty;
     public string? ThumbPath { get; set; }
     public AssetItem? OriginalAsset { get; set; }
+    public bool IsRemote { get; set; } = false;
 
     public bool HasThumbnail => !string.IsNullOrEmpty(ThumbPath);
 

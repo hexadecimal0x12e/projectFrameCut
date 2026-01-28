@@ -30,8 +30,8 @@ public partial class ProjectAssetView : ContentView
         _viewModel.SharedAssetsTitle = Localized.DraftPage_AssetPanel_SharedAssets;
         _viewModel.AddButtonText = "Add";
 
-        BindingContext = _viewModel;
         InitializeComponent();
+        BindingContext = _viewModel;
         LoadAssets();
     }
 

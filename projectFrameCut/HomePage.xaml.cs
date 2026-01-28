@@ -595,6 +595,8 @@ public partial class HomePage : ContentPage
                 page.DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720;
                 page.ProxyOption = SettingsManager.GetSetting("Edit_ProxyOption", "none");
                 page.AutoSavePreviewAreaHeight = SettingsManager.IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave");
+                page.LockScrollViewAfterSelection = SettingsManager.IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection",true);
+                page.UseCommunityToolkitPopupInsteadOfOverlayLayer = SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer");
                 page.PreviewAreaHeight = double.TryParse(SettingsManager.GetSetting("Edit_UpperContentHeight", "250"), out var upperHeight) ? upperHeight : 250d;
 #if WINDOWS
                 Context context = Context.CreateDefault();

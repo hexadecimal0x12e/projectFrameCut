@@ -23,6 +23,9 @@ using Path = System.IO.Path;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
 using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 using projectFrameCut.Render.Compose;
+using DatePicker = Microsoft.Maui.Controls.DatePicker;
+
+
 
 
 
@@ -857,6 +860,15 @@ public partial class TestPage : ContentPage
 
             });
         });
+    }
+
+    private void TestOrderButton_Clicked(object sender, EventArgs e)
+    {
+        var lines = InputEditor.Text.Split(["\r","\n","\r\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var ordered = lines.OrderBy(a => TextHelper.GetPronounceForOrdering(a).Result).GroupBy(TextHelper.DetectTextLanguage).OrderByDescending(g => g.Count()).SelectMany(c => c).ToList();
+        InputEditor.Text = string.Join(Environment.NewLine, ordered);
+        TestOrderButton.Text = "Order done";
+
     }
 
     private void TestPlaceButton_Clicked(object sender, EventArgs e)

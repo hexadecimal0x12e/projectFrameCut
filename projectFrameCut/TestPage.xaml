@@ -59,9 +59,18 @@
                         <Slider x:Name="PPBRatioSlider" Minimum="1" Maximum="10" Value="5" WidthRequest="250" ValueChanged="PPBPaddingSlider_ValueChanged" ></Slider>
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
+                
+            </Border >
+
+
+            <Border StrokeThickness="4">
+                <VerticalStackLayout>
+                    <Label Text="ordering test"/>
+                    <Editor x:Name="InputEditor" HeightRequest="150" Placeholder="Input here"></Editor>
+                    <Button x:Name="TestOrderButton" Text="Order" Clicked="TestOrderButton_Clicked"/>
+                </VerticalStackLayout>
             </Border>
             <VerticalStackLayout HeightRequest="250" >
-                <WebView x:Name="TestWebView" HeightRequest="250"  Source="https://bing.com" />
             </VerticalStackLayout>
 
             <Image x:Name="ResultImage" Aspect="AspectFit" HeightRequest="300" WidthRequest="300"/>

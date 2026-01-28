@@ -52,7 +52,7 @@ public partial class EditSettingPage : ContentPage
             .AddText(new SingleLineLabel(SettingLocalizedResources.Edit_MiscOption,20,FontAttributes.Bold))
             .AddPicker("Edit_ProxyOption", SettingLocalizedResources.Edit_ProxyOption, ProxyStringMapping.Keys.ToArray(), ProxyStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_ProxyOption", "ask"), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_ProxyOption_Ask, "ask")).Key, null)
             .AddSwitch("Edit_Denoise", SettingLocalizedResources.Edit_Denoise, IsBoolSettingTrue("Edit_Denoise"), null)
-            .AddSwitch("Edit_LockScrollViewAfterSelection", SettingLocalizedResources.Edit_Denoise, IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection",true), null)
+            .AddSwitch("Edit_LockScrollViewAfterSelection", SettingLocalizedResources.Edit_LockScrollViewAfterSelection, IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection",true), null)
 #if WINDOWS || MACCATALYST
             .AddSwitch("Edit_AlwaysShowToolbarButtons", SettingLocalizedResources.Edit_AlwaysShowToolbarButtons, IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons"), null)
 #endif
