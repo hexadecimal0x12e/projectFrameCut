@@ -12,7 +12,8 @@ namespace projectFrameCut.APIClient
         /// <summary>
         /// 创建配置好的 HttpClient（开发环境会忽略 SSL 证书验证）
         /// </summary>
-        private static HttpClient CreateHttpClient()
+        /// <param name="includeAuth">是否包含认证信息</param>
+        private static HttpClient CreateHttpClient(bool includeAuth = false)
         {
 #if DEBUG
             // 开发环境：忽略 SSL 证书验证
@@ -20,19 +21,33 @@ namespace projectFrameCut.APIClient
             {
                 ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
             };
-            return new HttpClient(handler);
+            var client = new HttpClient(handler);
 #else
             // 生产环境：使用默认配置
-            return new HttpClient();
+            var client = new HttpClient();
 #endif
+
+            // 如果需要认证且用户已登录，添加Authorization头
+            if (includeAuth)
+            {
+                var token = TokenManager.CurrentToken;
+                if (!string.IsNullOrEmpty(token))
+                {
+                    client.DefaultRequestHeaders.Authorization = 
+                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                }
+            }
+
+            return client;
         }
+
         /// <summary>
         /// 获取所有可重用资产
         /// </summary>
         public static async Task<List<AssetItem>> GetAllAssets()
         {
-            var uri = APIClientBase.GetUri(APIClientBase.APIPort_ApiServer, "api/assets/all");
-            using var client = CreateHttpClient();
+            var uri = APIClientBase.GetUri(ServiceType.ApiServer, "api/assets/popular");
+            using var client = CreateHttpClient(includeAuth: true);
             var response = await client.GetAsync(uri);
             if (response.IsSuccessStatusCode)
             {
@@ -55,8 +70,8 @@ namespace projectFrameCut.APIClient
         /// </summary>
         public static async Task<FileTokenResponse> GetFileToken(string assetId)
         {
-            var uri = APIClientBase.GetUri(APIClientBase.APIPort_ApiServer, $"api/assets/file-token/{assetId}");
-            using var client = CreateHttpClient();
+            var uri = APIClientBase.GetUri(ServiceType.ApiServer, $"api/assets/getFile/{assetId}");
+            using var client = CreateHttpClient(includeAuth: true);
             var response = await client.GetAsync(uri);
             if (response.IsSuccessStatusCode)
             {
@@ -76,8 +91,8 @@ namespace projectFrameCut.APIClient
         
         public static async Task<AssetItem> GetAssetDetail(string id)
         {
-            var uri = APIClientBase.GetUri(APIClientBase.APIPort_ApiServer, $"assets/detail/{id}");
-            using var client = CreateHttpClient();
+            var uri = APIClientBase.GetUri(ServiceType.ApiServer, $"assets/detail/{id}");
+            using var client = CreateHttpClient(includeAuth: true);
             var response = await client.GetAsync(uri);
             if (response.IsSuccessStatusCode)
             {
@@ -97,8 +112,8 @@ namespace projectFrameCut.APIClient
 
         public static async Task<IEnumerable<string>> SearchAssets(string keyword) 
         {
-            var uri = APIClientBase.GetUri(APIClientBase.APIPort_ApiServer, $"assets/search?keyword={Uri.EscapeDataString(keyword)}");
-            using var client = CreateHttpClient();
+            var uri = APIClientBase.GetUri(ServiceType.ApiServer, $"assets/search?keyword={Uri.EscapeDataString(keyword)}");
+            using var client = CreateHttpClient(includeAuth: true);
             var response = await client.GetAsync(uri);
             if (response.IsSuccessStatusCode)
             {

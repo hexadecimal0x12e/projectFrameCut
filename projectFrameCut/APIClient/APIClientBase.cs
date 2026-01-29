@@ -4,6 +4,26 @@ using System.Text;
 
 namespace projectFrameCut.APIClient
 {
+    /// <summary>
+    /// 服务类型枚举
+    /// </summary>
+    public enum ServiceType
+    {
+        
+        /// <summary>
+        /// API 服务器
+        /// </summary>
+        ApiServer,
+
+
+        AuthServer,
+        
+        /// <summary>
+        /// 文件服务器
+        /// </summary>
+        FileServer
+    }
+
     public static class APIClientBase
     {
 #if DEBUG
@@ -11,15 +31,10 @@ namespace projectFrameCut.APIClient
 
         public static string APIBaseUrl = "0.0.1";
 
-        public static int APIPort_ApiServer = 5427;
-        public static int APIPort_FileServer = 5032;
 #else
         public static string Stage = "develop";
 
         public static string APIBaseUrl = "example.com";
-
-        public static int APIPort_ApiServer = 7146;
-        public static int APIPort_FileServer = 7576;
 #endif
 
         public static int APIVersion = 1;
@@ -36,13 +51,65 @@ namespace projectFrameCut.APIClient
 #endif
         }
 
-        public static Uri GetUri(int port, string relativePath, string query = "")
+        /// <summary>
+        /// 获取服务的子域名前缀
+        /// </summary>
+        /// <param name="serviceType">服务类型</param>
+        /// <returns>子域名前缀</returns>
+        private static string GetServiceSubdomain(ServiceType serviceType)
         {
+#if DEBUG
+            return serviceType switch
+            {
+                ServiceType.ApiServer => "apiservice-projectframecut_apiserver.dev.localhost",
+                ServiceType.FileServer => "fileprovider-projectframecut_apiserver.dev.localhost",
+                ServiceType.AuthServer => "authservice-projectframecut_apiserver.dev.localhost",
+                _ => throw new ArgumentException($"Unknown service type: {serviceType}")
+            };
+#else
+            return serviceType switch
+            {
+                ServiceType.ApiServer => "api",
+                ServiceType.FileServer => "file",
+                _ => throw new ArgumentException($"Unknown service type: {serviceType}")
+            };
+#endif
+        }
+        private static int GetServicePort(ServiceType serviceType)
+        {
+#if !DEBUG
+            return 443;
+#endif
+            return serviceType switch
+            {
+                ServiceType.ApiServer => 7576,
+                ServiceType.FileServer => 7146,
+                ServiceType.AuthServer => 7230,
+                _ => throw new ArgumentException($"Unknown service type: {serviceType}")
+            };
+        }
+
+        /// <summary>
+        /// 根据服务类型获取 URI
+        /// </summary>
+        /// <param name="serviceType">服务类型</param>
+        /// <param name="relativePath">相对路径</param>
+        /// <param name="query">查询字符串</param>
+        /// <returns>完整的 URI</returns>
+        public static Uri GetUri(ServiceType serviceType, string relativePath, string query = "")
+        {
+            var subdomain = GetServiceSubdomain(serviceType);
+            
             var builder = new UriBuilder
             {
-                Scheme = GetScheme(),
-                Host = $"{Stage}.{APIBaseUrl}",
-                Port = port,
+                Scheme = "https",
+#if DEBUG
+                Host = subdomain,
+                Port = GetServicePort(serviceType),
+#else
+                Host = $"{subdomain}.{Stage}.{APIBaseUrl}",
+                Port = -1, // 使用默认端口（HTTP: 80, HTTPS: 443）
+#endif
                 Path = relativePath,
                 Query = query
             };

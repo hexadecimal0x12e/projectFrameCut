@@ -155,6 +155,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string? AssetId { get; set; }
         public DateTime CreatedAt { get; set; }
 
+        public Guid CreatedBy { get; set; }
+
         public int Width { get; set; }
         public int Height { get; set; }
 

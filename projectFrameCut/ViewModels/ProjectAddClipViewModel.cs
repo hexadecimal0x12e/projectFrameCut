@@ -1,3 +1,4 @@
+using projectFrameCut.APIClient;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
@@ -115,21 +116,26 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             });
         }
         
-        // 加载远程可重用资产
+        // 加载远程可重用资产（从多个服务器）
         try
         {
-            var remoteAssets = await APIClient.RemoteAssetServices.GetAllAssets();
-            foreach (var asset in remoteAssets.OrderBy(a => a.Name))
+            var multiServerService = MultiServerRemoteAssetService.Instance;
+            var assetsWithServerInfo = await multiServerService.GetAllAssetsFromAllServersAsync();
+            
+            foreach (var assetInfo in assetsWithServerInfo.OrderBy(a => a.Asset.Name))
             {
                 ReuseableAssets.Add(new AssetItemViewModel
                 {
-                    Id = asset.AssetId,
-                    Name = asset.Name,
-                    Type = asset.AssetType.ToString(),
-                    SourcePath = asset.Path,
-                    ThumbPath = asset.ThumbnailPath,
-                    OriginalAsset = asset,
-                    IsRemote = true
+                    Id = assetInfo.Asset.AssetId,
+                    Name = assetInfo.Asset.Name,
+                    Type = assetInfo.Asset.AssetType.ToString(),
+                    SourcePath = assetInfo.Asset.Path,
+                    ThumbPath = assetInfo.Asset.ThumbnailPath,
+                    OriginalAsset = assetInfo.Asset,
+                    IsRemote = true,
+                    ServerId = assetInfo.ServerId,
+                    ServerName = assetInfo.ServerName,
+                    ServerUrl = assetInfo.ServerUrl
                 });
             }
         }
@@ -357,21 +363,24 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 // 显示加载提示
                 // TODO: 添加加载指示器
                 
-                // 获取文件 token
-                var tokenResponse = await APIClient.RemoteAssetServices.GetFileToken(assetViewModel.Id);
+                // 从多服务器系统获取文件 token
+                var multiServerService = MultiServerRemoteAssetService.Instance;
+                var tokenResponse = await multiServerService.GetFileTokenAsync(assetViewModel.ServerId ?? "", assetViewModel.Id);
                 
-                // 构建文件下载 URL
-                var fileServerUri = APIClient.APIClientBase.GetUri(
-                    APIClient.APIClientBase.APIPort_FileServer, 
-                    $"/api/file/download",
-                    $"?token={tokenResponse.token}"
-                );
-
+                if (tokenResponse == null)
+                {
+                    await _draftPage.DisplayAlert("错误", "无法获取文件访问令牌", "确定");
+                    return;
+                }
+                
+                // 构建文件下载 URL（使用资产所属服务器的 URL）
+                var serverBaseUrl = assetViewModel.ServerUrl?.TrimEnd('/') ?? "";
+                var fileServerUri = new Uri($"{serverBaseUrl}/api/file/download?token={tokenResponse.token}");
 
                 Log($"Downloading asset from {fileServerUri}...");
                 
                 // 下载文件到缓存目录
-                var cacheDir = Path.Combine(FileSystem.CacheDirectory, "RemoteAssets");
+                var cacheDir = Path.Combine(FileSystem.CacheDirectory, "RemoteAssets", assetViewModel.ServerId ?? "default");
                 if (!Directory.Exists(cacheDir))
                 {
                     Directory.CreateDirectory(cacheDir);
@@ -529,6 +538,21 @@ public class AssetItemViewModel
     public string? ThumbPath { get; set; }
     public AssetItem? OriginalAsset { get; set; }
     public bool IsRemote { get; set; } = false;
+
+    /// <summary>
+    /// 远程服务器ID（用于多服务器支持）
+    /// </summary>
+    public string? ServerId { get; set; }
+
+    /// <summary>
+    /// 远程服务器名称
+    /// </summary>
+    public string? ServerName { get; set; }
+
+    /// <summary>
+    /// 远程服务器URL
+    /// </summary>
+    public string? ServerUrl { get; set; }
 
     public bool HasThumbnail => !string.IsNullOrEmpty(ThumbPath);
 

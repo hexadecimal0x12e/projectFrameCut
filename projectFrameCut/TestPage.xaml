@@ -8,6 +8,10 @@
 
         <VerticalStackLayout>
             <Border StrokeThickness="4">
+                <Button x:Name="LoginTestButton" Text="Login" Clicked="LoginTestButton_Clicked"/>
+            </Border>
+            
+            <Border StrokeThickness="4">
                 <VerticalStackLayout>
                     <Button x:Name="OpenGLESStartButton" Text="compute by OpenGL ES (android only)" Clicked="OpenGLESStartButton_Clicked"/>
                     <Button x:Name="MetalRenderStartButton" Text="compute by Metal (ios only)" Clicked="MetalRenderStartButton_Clicked"/>

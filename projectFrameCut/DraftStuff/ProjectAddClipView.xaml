@@ -164,7 +164,7 @@
                                 HeightRequest="160" 
                                 WidthRequest="180"
                                 StrokeShape="RoundRectangle 8">
-                            <Grid RowDefinitions="*,Auto,Auto">
+                            <Grid RowDefinitions="*,Auto,Auto,Auto">
                                 <!-- 缩略图 -->
                                 <Image Grid.Row="0"
                                        Source="{Binding ThumbPath}" 
@@ -183,8 +183,21 @@
                                            VerticalOptions="Center"/>
                                 </Grid>
                                 
-                                <!-- 添加按钮 -->
+                                <!-- 服务器信息（仅远程资源显示） -->
                                 <Grid Grid.Row="2" 
+                                      BackgroundColor="{AppThemeBinding Light=#E8E8E8, Dark=#404040}" 
+                                      Padding="4,2"
+                                      IsVisible="{Binding IsRemote}">
+                                    <Label Text="{Binding ServerName}" 
+                                           FontSize="10" 
+                                           TextColor="Gray"
+                                           LineBreakMode="TailTruncation"
+                                           MaxLines="1"
+                                           VerticalOptions="Center"/>
+                                </Grid>
+                                
+                                <!-- 添加按钮 -->
+                                <Grid Grid.Row="3" 
                                       BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333333}" 
                                       Padding="4">
                                     <Button Text="➕" 

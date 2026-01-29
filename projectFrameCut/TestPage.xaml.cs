@@ -24,6 +24,8 @@ using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
 using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 using projectFrameCut.Render.Compose;
 using DatePicker = Microsoft.Maui.Controls.DatePicker;
+using projectFrameCut.APIClient;
+
 
 
 
@@ -869,6 +871,23 @@ public partial class TestPage : ContentPage
         InputEditor.Text = string.Join(Environment.NewLine, ordered);
         TestOrderButton.Text = "Order done";
 
+    }
+
+    private async void LoginTestButton_Clicked(object sender, EventArgs e)
+    {
+        AuthService.Logout();
+
+        if (AuthService.IsLoggedIn)
+        {
+            // 已登录，显示用户信息或登出
+            var user = await AuthService.GetCurrentUserAsync();
+            await DisplayAlertAsync("已登录", $"当前用户: {user.UserName}", "确定");
+        }
+        else
+        {
+            // 未登录，打开登录页面
+            await Navigation.PushAsync(new LoginPage());
+        }
     }
 
     private void TestPlaceButton_Clicked(object sender, EventArgs e)
