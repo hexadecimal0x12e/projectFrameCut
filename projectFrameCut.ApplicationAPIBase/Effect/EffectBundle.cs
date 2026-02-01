@@ -1,5 +1,5 @@
 ﻿using CommunityToolkit.Maui.Views;
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
 using System.Collections.Generic;

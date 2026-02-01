@@ -1,4 +1,5 @@
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;

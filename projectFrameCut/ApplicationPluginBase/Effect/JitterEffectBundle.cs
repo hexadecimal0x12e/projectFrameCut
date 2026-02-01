@@ -1,5 +1,5 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Effect;
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;

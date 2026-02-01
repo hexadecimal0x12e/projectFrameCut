@@ -21,14 +21,13 @@ using projectFrameCut.ApplicationAPIBase.Plugins;
 
 
 
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+
 using DataTemplate = Microsoft.Maui.Controls.DataTemplate;
 using GridUnitType = Microsoft.Maui.GridUnitType;
 using CommunityToolkit.Maui.Views;
 using System.Diagnostics;
 
-
-
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 
 
 
@@ -882,6 +881,13 @@ namespace projectFrameCut.DraftStuff
             PropertyPanelBuilder ppb = new();
             ppb.AddText(new Label { Text = PPLocalizedResources.EffectProp_ClassicEffectPageWarn, TextColor = Colors.Yellow });
 
+            if (clip.Effects?.Values.Any(e => e is IBindableArgumentEffect) ?? false)
+            {
+                ppb.AddText(new SingleLineLabel("绑定节点图", 18));
+                ppb.AddCustomChild(new BindableEffectBindingView(clip, handler));
+                ppb.AddSeparator();
+            }
+
             var localizedEffectDisplayName = EffectServices.GetLocalizedEffectNames();
 
             if (clip.Effects != null)
@@ -925,17 +931,55 @@ namespace projectFrameCut.DraftStuff
                             ppb.AddEntry(controlId, PluginManager.GetLocalizationItem($"_{paramName}", paramName), valStr, "");
                         }
                     }
-                    if(effect is IBindableArgumentEffect be)
+                    if (effect is IBindableArgumentEffect be)
                     {
                         ppb.AddSeparator();
                         ppb.AddCustomChild("ID", new Label { Text = be.Id });
-                        if(be is not IBindableArgumentEffectMultipleValueProcesser)
+                        switch (be.EffectRole)
                         {
-                            ppb.AddCustomChild("Binded input ID", new Label { Text = be.BindedArgumentProviderID ?? "none" });
-                        }
-                        else if(be is IBindableArgumentEffectMultipleValueProcesser p)
-                        {
-                            ppb.AddCustomChild("Binded input IDs", new Label { Text = string.Join(Environment.NewLine,p.BindedArgumentProviderIDs) });
+                            case BindableArgumentEffectType.ValueProvider:
+                                ppb.AddCustomChild("Output anchor name", new Label { Text = (be as IBindableArgumentEffectValueProvider)?.OutputAnchorName ?? "none" });
+                                break;
+                            case BindableArgumentEffectType.OneInputValueProcessor:
+                                ppb.AddCustomChild($"Input anchor {(be as IBindableArgumentEffectOneInputResultGenerator)?.InputAnchorName ?? "unknown"}", new Label { Text = $"{be.BindedArgumentProviderID} " });
+                                ppb.AddCustomChild("Output anchor name", new Label { Text = (be as IBindableArgumentEffectOneInputResultGenerator)?.OutputAnchorName ?? "none" });
+                                break;
+                            case BindableArgumentEffectType.ManyInputValueProcessor:
+                                if (be is IBindableArgumentEffectManyToOneValueProcesser mpe)
+                                {
+                                    foreach (var item in mpe.BindedArgumentProviderIDs)
+                                    {
+                                        var idx = mpe.BindedArgumentProviderIDs.IndexOf(item);
+                                        string inAnchorName = "unknown";
+                                        if (idx >= 0 && mpe.InputAnchorDisplayNames.Length < idx) inAnchorName = mpe.InputAnchorDisplayNames[idx];
+                                        ppb.AddCustomChild($"Input anchor {inAnchorName}", new Label { Text = item });
+
+                                    }
+                                }
+                                ppb.AddCustomChild("Output anchor name", new Label { Text = (be as IBindableArgumentEffectOneInputResultGenerator)?.OutputAnchorName ?? "none" });
+                                break;
+                            case BindableArgumentEffectType.OneInputResultGenerator:
+                                ppb.AddCustomChild($"Input anchor {(be as IBindableArgumentEffectOneInputResultGenerator)?.InputAnchorName ?? "unknown"}", new Label { Text = $"{be.BindedArgumentProviderID} " });
+                                break;
+
+                            case BindableArgumentEffectType.ManyInputResultGenerator:
+                                if (be is IBindableArgumentEffectManyInputResultGenerator mpg)
+                                {
+                                    foreach (var item in mpg.BindedArgumentProviderIDs)
+                                    {
+                                        var idx = mpg.BindedArgumentProviderIDs.IndexOf(item);
+                                        string inAnchorName = "unknown";
+                                        if (idx >= 0 && mpg.InputAnchorDisplayNames.Length < idx) inAnchorName = mpg.InputAnchorDisplayNames[idx];
+                                        ppb.AddCustomChild($"Input anchor {inAnchorName}", new Label { Text = item });
+
+                                    }
+                                }
+                                break;
+                            default:
+                                ppb.AddText($"unknown effect role.");
+                                break;
+
+
                         }
                     }
                     ppb.AddButton($"Effect|{effectKey}|Remove", PPLocalizedResources.EffectProp_Remove);
@@ -1229,6 +1273,7 @@ namespace projectFrameCut.DraftStuff
             dropGesture.AllowDrop = true;
             dropGesture.Drop += (s, e) =>
             {
+                if (clip.Effects == null) return;
                 if (e.Data.Properties.TryGetValue("EffectKey", out var sourceKeyObj) && sourceKeyObj is string sourceKey)
                 {
                     if (sourceKey == effectKey) return;

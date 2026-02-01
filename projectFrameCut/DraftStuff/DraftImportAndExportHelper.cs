@@ -138,6 +138,14 @@ namespace projectFrameCut.DraftStuff
                                     {
                                         structure.Id = bindableEffect.Id;
                                         structure.BindedInputID = bindableEffect.BindedArgumentProviderID;
+                                        if (bindableEffect is IBindableArgumentEffectManyToOneValueProcesser mpe)
+                                        {
+                                            structure.BindedInputIDs = mpe.BindedArgumentProviderIDs;
+                                        }
+                                        else if (bindableEffect is IBindableArgumentEffectManyInputResultGenerator mpg)
+                                        {
+                                            structure.BindedInputIDs = mpg.BindedArgumentProviderIDs;
+                                        }
                                     }
                                     
                                     return structure;

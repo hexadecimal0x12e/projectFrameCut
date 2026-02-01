@@ -1,16 +1,20 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:mwv="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;assembly=projectFrameCut.ApplicationAPIBase"
              x:Class="projectFrameCut.TestPage"
              Title="TestPage">
     <ScrollView Orientation="Vertical">
-
-
         <VerticalStackLayout>
+            <Border StrokeThickness="4">
+                <VerticalStackLayout>
+                    <Button x:Name="OpenTestWindowButton" Text="Add a window" Clicked="OpenTestWindowButton_Clicked"/>
+                    <mwv:MultiWindowView x:Name="TestMVW" MinimumHeightRequest="300" TaskBarDisplayMode="Always" />
+                </VerticalStackLayout>
+            </Border>
             <Border StrokeThickness="4">
                 <Button x:Name="LoginTestButton" Text="Login" Clicked="LoginTestButton_Clicked"/>
             </Border>
-            
             <Border StrokeThickness="4">
                 <VerticalStackLayout>
                     <Button x:Name="OpenGLESStartButton" Text="compute by OpenGL ES (android only)" Clicked="OpenGLESStartButton_Clicked"/>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Border xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+        x:Class="projectFrameCut.ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem"
+        x:Name="windowRoot"
+        BackgroundColor="{Binding Source={x:Reference windowRoot}, Path=WindowBackgroundColor}"
+        Stroke="{Binding Source={x:Reference windowRoot}, Path=BorderColor}"
+        StrokeThickness="1"
+        StrokeShape="RoundRectangle 8,8,8,8">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="35"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- 标题栏 -->
+        <Grid Grid.Row="0" x:Name="titleBar" 
+              BackgroundColor="{Binding Source={x:Reference windowRoot}, Path=TitleBarBackgroundColor}"
+              IsVisible="{Binding Source={x:Reference windowRoot}, Path=ShowTitleBar}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- 标题文本 -->
+            <Label Grid.Column="0" 
+                   x:Name="titleLabel"
+                   Text="Window"
+                   TextColor="{Binding Source={x:Reference windowRoot}, Path=TitleBarTextColor}"
+                   IsVisible="{Binding Source={x:Reference windowRoot}, Path=ShowTitleText}"
+                   VerticalOptions="Center"
+                   Margin="10,0,0,0"
+                   FontSize="14"
+                   FontAttributes="Bold"/>
+            
+            <!-- 窗口控制按钮 -->
+            <HorizontalStackLayout Grid.Column="1" Spacing="5" Margin="0,0,5,0">
+                <!-- 最小化按钮 -->
+                <Button x:Name="minimizeButton"
+                        Text="➖"
+                        WidthRequest="30"
+                        HeightRequest="30"
+                        BackgroundColor="Transparent"
+                        TextColor="Black"
+                        FontSize="16"
+                        Padding="0"
+                        IsVisible="{Binding Source={x:Reference windowRoot}, Path=ShowMinimizeButton}"
+                        Clicked="OnMinimizeClicked"/>
+                
+                <!-- 最大化/还原按钮 -->
+                <Button x:Name="maximizeButton"
+                        Text="🟦"
+                        WidthRequest="30"
+                        HeightRequest="30"
+                        BackgroundColor="Transparent"
+                        TextColor="Black"
+                        FontSize="16"
+                        Padding="0"
+                        IsVisible="{Binding Source={x:Reference windowRoot}, Path=ShowMaximizeButton}"
+                        Clicked="OnMaximizeClicked"/>
+                
+                <!-- 关闭按钮 -->
+                <Button x:Name="closeButton"
+                        Text="❌"
+                        WidthRequest="30"
+                        HeightRequest="30"
+                        BackgroundColor="Transparent"
+                        TextColor="Black"
+                        FontSize="16"
+                        Padding="0"
+                        IsVisible="{Binding Source={x:Reference windowRoot}, Path=ShowCloseButton}"
+                        Clicked="OnCloseClicked"/>
+            </HorizontalStackLayout>
+        </Grid>
+        
+        <!-- 内容区域 -->
+        <ContentPresenter Grid.Row="1" 
+                         x:Name="contentPresenter"
+                         Margin="5"/>
+        
+        <!-- 调整大小的手柄 (8个方向) -->
+        <BoxView x:Name="resizeTopLeft" 
+                 Grid.Row="0" Grid.RowSpan="2"
+                 WidthRequest="8" HeightRequest="8"
+                 BackgroundColor="Transparent"
+                 HorizontalOptions="Start" VerticalOptions="Start"/>
+        
+        <BoxView x:Name="resizeTop" 
+                 Grid.Row="0"
+                 HeightRequest="4"
+                 BackgroundColor="Transparent"
+                 HorizontalOptions="Fill" VerticalOptions="Start"/>
+        
+        <BoxView x:Name="resizeTopRight" 
+                 Grid.Row="0" Grid.RowSpan="2"
+                 WidthRequest="8" HeightRequest="8"
+                 BackgroundColor="Transparent"
+                 HorizontalOptions="End" VerticalOptions="Start"/>
+        
+        <BoxView x:Name="resizeLeft" 
+                 Grid.Row="0" Grid.RowSpan="2"
+                 WidthRequest="4"
+                 BackgroundColor="Transparent"
+                 HorizontalOptions="Start" VerticalOptions="Fill"/>
+        
+        <BoxView x:Name="resizeRight" 
+                 Grid.Row="0" Grid.RowSpan="2"
+                 WidthRequest="4"
+                 BackgroundColor="Transparent"
+                 HorizontalOptions="End" VerticalOptions="Fill"/>
+        
+        <BoxView x:Name="resizeBottomLeft" 
+                 Grid.Row="1"
+                 WidthRequest="8" HeightRequest="8"
+                 BackgroundColor="Transparent"
+                 HorizontalOptions="Start" VerticalOptions="End"/>
+        
+        <BoxView x:Name="resizeBottom" 
+                 Grid.Row="1"
+                 HeightRequest="4"
+                 BackgroundColor="Transparent"
+                 HorizontalOptions="Fill" VerticalOptions="End"/>
+        
+        <BoxView x:Name="resizeBottomRight" 
+                 Grid.Row="1"
+                 WidthRequest="8" HeightRequest="8"
+                 BackgroundColor="Transparent"
+                 HorizontalOptions="End" VerticalOptions="End"/>
+    </Grid>
+</Border>

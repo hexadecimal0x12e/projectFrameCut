@@ -18,106 +18,97 @@ public class ProjectAssetViewModel : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
-    private ObservableCollection<AssetItemViewModel> _localAssets = new();
     public ObservableCollection<AssetItemViewModel> LocalAssets
     {
-        get => _localAssets;
+        get;
         set
         {
-            _localAssets = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = new();
 
-    private ObservableCollection<AssetItemViewModel> _sharedAssets = new();
     public ObservableCollection<AssetItemViewModel> SharedAssets
     {
-        get => _sharedAssets;
+        get;
         set
         {
-            _sharedAssets = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = new();
 
-    private ObservableCollection<AssetItemViewModel> _filteredLocalAssets = new();
     public ObservableCollection<AssetItemViewModel> FilteredLocalAssets
     {
-        get => _filteredLocalAssets;
+        get;
         set
         {
-            _filteredLocalAssets = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = new();
 
-    private ObservableCollection<AssetItemViewModel> _filteredSharedAssets = new();
     public ObservableCollection<AssetItemViewModel> FilteredSharedAssets
     {
-        get => _filteredSharedAssets;
+        get;
         set
         {
-            _filteredSharedAssets = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = new();
 
-    private string _searchText = "";
     public string SearchText
     {
-        get => _searchText;
+        get;
         set
         {
-            _searchText = value;
+            field = value;
             OnPropertyChanged();
             FilterAssets();
         }
-    }
+    } = "";
 
-    private int _orderOption = 0; // 0: By add date, 1: By name
     public int OrderOption
     {
-        get => _orderOption;
+        get;
         set
         {
-            _orderOption = value;
+            field = value;
             OnPropertyChanged();
             FilterAssets();
         }
-    }
+    } = 0;
 
-    private string _localAssetsTitle = "本地素材";
     public string LocalAssetsTitle
     {
-        get => _localAssetsTitle;
+        get;
         set
         {
-            _localAssetsTitle = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "本地素材";
 
-    private string _sharedAssetsTitle = "共享素材";
     public string SharedAssetsTitle
     {
-        get => _sharedAssetsTitle;
+        get;
         set
         {
-            _sharedAssetsTitle = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "共享素材";
 
-    private string _addButtonText = "Add";
     public string AddButtonText
     {
-        get => _addButtonText;
+        get;
         set
         {
-            _addButtonText = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "Add";
 
     public ICommand AddAssetCommand { get; set; }
     public ICommand RemoveAssetCommand { get; set; }
@@ -219,126 +210,125 @@ public class AssetItemViewModel : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
-    private string _id = "";
     public string Id
     {
-        get => _id;
+        get;
         set
         {
-            _id = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "";
 
-    private string _name = "";
     public string Name
     {
-        get => _name;
+        get;
         set
         {
-            _name = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "";
 
-    private string _icon = "";
     public string Icon
     {
-        get => _icon;
+        get;
         set
         {
-            _icon = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "";
 
-    private string _path = "";
     public string Path
     {
-        get => _path;
+        get;
         set
         {
-            _path = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "";
 
-    private string _thumbnailPath = "";
+    public string DurationDisplay
+    {
+        get;
+        set
+        {
+            field = value;
+            OnPropertyChanged();
+        }
+    } = "";
+
     public string ThumbnailPath
     {
-        get => _thumbnailPath;
+        get;
         set
         {
-            _thumbnailPath = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "";
 
-    private bool _hasThumbnail = false;
     public bool HasThumbnail
     {
-        get => _hasThumbnail;
+        get;
         set
         {
-            _hasThumbnail = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = false;
 
-    private string _displayLabel = "";
     public string DisplayLabel
     {
-        get => _displayLabel;
+        get;
         set
         {
-            _displayLabel = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = "";
 
-    private Brush _backgroundColor = Brush.Gray;
     public Brush BackgroundColor
     {
-        get => _backgroundColor;
+        get;
         set
         {
-            _backgroundColor = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = Brush.Gray;
 
-    private uint _frameCount = 0;
     public uint FrameCount
     {
-        get => _frameCount;
+        get;
         set
         {
-            _frameCount = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = 0;
 
-    private bool _isInfiniteLength = false;
     public bool IsInfiniteLength
     {
-        get => _isInfiniteLength;
+        get;
         set
         {
-            _isInfiniteLength = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = false;
 
-    private bool _isLocal = true;
     public bool IsLocal
     {
-        get => _isLocal;
+        get;
         set
         {
-            _isLocal = value;
+            field = value;
             OnPropertyChanged();
         }
-    }
+    } = true;
 
     public AssetItem OriginalAsset { get; set; }
 
@@ -349,6 +339,7 @@ public class AssetItemViewModel : INotifyPropertyChanged
         Name = asset.Name;
         Icon = asset.Icon ?? "";
         Path = asset.Path ?? "";
+        DurationDisplay = asset.DurationDisplay;
         ThumbnailPath = asset.ThumbnailPath ?? "";
         HasThumbnail = File.Exists(asset.ThumbnailPath);
         DisplayLabel = $"{asset.Icon} {asset.Name}";

@@ -3,11 +3,11 @@ using Microsoft.Maui.Storage;
 using projectFrameCut.Render;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Shared;
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 using Path = System.IO.Path;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 
 namespace projectFrameCut.Asset;
 

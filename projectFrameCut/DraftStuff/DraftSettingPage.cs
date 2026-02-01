@@ -1,5 +1,6 @@
 
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Controls;
 
 

@@ -16,7 +16,7 @@ namespace projectFrameCut.Render.Effect
 
     #region Point Placer
 
-    public class PointPlacer : IBindableArgumentEffectContinuesResultGenerator
+    public class PointPlacer : IBindableArgumentEffectOneInputResultGenerator
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -44,7 +44,7 @@ namespace projectFrameCut.Render.Effect
         public int EndPoint { get; set; }
 
         public IPicture GenerateResult(object source, uint index, IPicture frame, IComputer? computer, int targetWidth, int targetHeight)
-            {
+        {
             if (source is not Func<double, System.Drawing.Point> func) throw new ArgumentException("Source is not a valid callback function.", nameof(source));
             var prog = EffectHelper.GetContinuesEffectProgress(index, StartPoint, EndPoint);
             var pt = func.Invoke(prog);
@@ -93,6 +93,11 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
         public string? BindedEffectGroupID { get; set; }
 
+        public string InputAnchorName => "Input";
+
+        public bool IsContinuous => true;
+
+        public string OutputAnchorName => "Point";
     }
 
     public class PointPlacerFactory : IBindableEffectFactory
@@ -111,10 +116,10 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect BuildWithDefaultType(string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
         {
-            return Build(SupportsImplementTypes[0], ID, BindedInputID, BindedInputIDs,  parameters);
+            return Build(SupportsImplementTypes[0], ID, BindedInputID, BindedInputIDs, parameters);
         }
 
-        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null,  Dictionary<string, object>? parameters = null)
+        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
         {
             if (implementType != EffectImplementType.NotSpecified && !SupportsImplementTypes.Contains(implementType))
             {
@@ -203,6 +208,7 @@ namespace projectFrameCut.Render.Effect
         public int RelativeHeight { get; set; }
         public string? BindedEffectGroupID { get; set; }
 
+        public string OutputAnchorName => "Point";
     }
 
     public class StraightLineMovementValueProducerFactory : IBindableEffectFactory
@@ -236,10 +242,10 @@ namespace projectFrameCut.Render.Effect
 
         public IEffect BuildWithDefaultType(string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
         {
-            return Build(SupportsImplementTypes[0], ID, BindedInputID, BindedInputIDs,  parameters);
+            return Build(SupportsImplementTypes[0], ID, BindedInputID, BindedInputIDs, parameters);
         }
 
-        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null,  Dictionary<string, object>? parameters = null)
+        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
         {
             if (implementType != EffectImplementType.NotSpecified && !SupportsImplementTypes.Contains(implementType))
             {
@@ -266,7 +272,7 @@ namespace projectFrameCut.Render.Effect
 
 
 
-    
+
 
     #endregion
 
@@ -396,9 +402,11 @@ namespace projectFrameCut.Render.Effect
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
         public string? BindedEffectGroupID { get; set; }
+
+        public string OutputAnchorName => "Mask";
     }
 
-    public class MaskApplier : IBindableArgumentEffectNormalResultGenerator
+    public class MaskApplier : IBindableArgumentEffectOneInputResultGenerator
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -426,7 +434,7 @@ namespace projectFrameCut.Render.Effect
         /// <summary>
         /// Applies the mask to the frame (ResultGenerator role).
         /// </summary>
-        public IPicture GenerateResult(object source, IPicture frame, IComputer? computer, int targetWidth, int targetHeight)
+        public IPicture GenerateResult(object source, uint index, IPicture frame, IComputer? computer, int targetWidth, int targetHeight)
         {
             if (source is not BitMaskPicture maskPic)
             {
@@ -479,18 +487,28 @@ namespace projectFrameCut.Render.Effect
             return new Picture8bpp(frameImg);
         }
 
-        public IPictureProcessStep GenerateResultStep(object source, int targetWidth, int targetHeight)
+
+        public bool IsValueValid(object value) => value is BitMaskPicture;
+
+
+
+        public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight)
         {
             throw new NotImplementedException();
         }
-
-        public bool IsValueValid(object value) => value is BitMaskPicture;
 
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
         public string? BindedEffectGroupID { get; set; }
 
+        public string InputAnchorName => "Mask";
 
+        public int StartPoint { get; set; }
+        public int EndPoint { get; set; }
+
+        public bool IsContinuous => false;
+
+        public string OutputAnchorName => "Mask";
     }
 
     #endregion

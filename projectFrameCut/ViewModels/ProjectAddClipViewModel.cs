@@ -97,6 +97,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 Id = asset.AssetId,
                 Name = asset.Name,
                 Type = asset.AssetType.ToString(),
+                DurationDisplay = asset.DurationDisplay,
                 SourcePath = asset.Path,
                 ThumbPath = asset.ThumbnailPath,
                 OriginalAsset = asset
@@ -110,12 +111,15 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 Id = asset.AssetId,
                 Name = asset.Name,
                 Type = asset.AssetType.ToString(),
+                DurationDisplay = asset.DurationDisplay,
                 SourcePath = asset.Path,
                 ThumbPath = asset.ThumbnailPath,
                 OriginalAsset = asset
             });
         }
-        
+        await FilterAssets();
+
+        return;
         // 加载远程可重用资产（从多个服务器）
         try
         {
@@ -130,6 +134,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     Name = assetInfo.Asset.Name,
                     Type = assetInfo.Asset.AssetType.ToString(),
                     SourcePath = assetInfo.Asset.Path,
+                    DurationDisplay = "?",
                     ThumbPath = assetInfo.Asset.ThumbnailPath,
                     OriginalAsset = assetInfo.Asset,
                     IsRemote = true,
@@ -534,6 +539,7 @@ public class AssetItemViewModel
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
+    public string DurationDisplay { get; set; } = string.Empty;
     public string SourcePath { get; set; } = string.Empty;
     public string? ThumbPath { get; set; }
     public AssetItem? OriginalAsset { get; set; }

@@ -52,11 +52,23 @@
                                 <!-- 名称 -->
                                 <Grid Grid.Row="1" 
                                       Background="{Binding BackgroundBrush}" 
+                                      ColumnDefinitions="*,Auto" 
                                       Padding="6,4">
                                     <Label Text="{Binding Name}" 
+                                           ToolTipProperties.Text="{Binding Name}"
+                                           HorizontalOptions="Start"
                                            LineBreakMode="TailTruncation" 
                                            FontSize="12" 
                                            MaxLines="1"
+                                           Grid.Column="0"
+                                           VerticalOptions="Center"/>
+                                    <Label Text="{Binding DurationDisplay}" 
+                                           ToolTipProperties.Text="{Binding DurationDisplay}"
+                                           HorizontalOptions="End"
+                                           LineBreakMode="TailTruncation" 
+                                           FontSize="12" 
+                                           MaxLines="1"
+                                           Grid.Column="1"
                                            VerticalOptions="Center"/>
                                 </Grid>
                                 
@@ -113,11 +125,23 @@
                                 <!-- 名称 -->
                                 <Grid Grid.Row="1" 
                                       Background="{Binding BackgroundBrush}" 
+                                      ColumnDefinitions="*,Auto" 
                                       Padding="6,4">
                                     <Label Text="{Binding Name}" 
+                                           ToolTipProperties.Text="{Binding Name}"
+                                           HorizontalOptions="Start"
                                            LineBreakMode="TailTruncation" 
                                            FontSize="12" 
                                            MaxLines="1"
+                                           Grid.Column="0"
+                                           VerticalOptions="Center"/>
+                                    <Label Text="{Binding DurationDisplay}" 
+                                           ToolTipProperties.Text="{Binding DurationDisplay}"
+                                           HorizontalOptions="End"
+                                           LineBreakMode="TailTruncation" 
+                                           FontSize="12" 
+                                           MaxLines="1"
+                                           Grid.Column="1"
                                            VerticalOptions="Center"/>
                                 </Grid>
                                 
@@ -175,11 +199,23 @@
                                 <!-- 名称 -->
                                 <Grid Grid.Row="1" 
                                       Background="{Binding BackgroundBrush}" 
+                                      ColumnDefinitions="*,Auto" 
                                       Padding="6,4">
                                     <Label Text="{Binding Name}" 
+                                           ToolTipProperties.Text="{Binding Name}"
+                                           HorizontalOptions="Start"
                                            LineBreakMode="TailTruncation" 
                                            FontSize="12" 
                                            MaxLines="1"
+                                           Grid.Column="0"
+                                           VerticalOptions="Center"/>
+                                    <Label Text="{Binding DurationDisplay}" 
+                                           ToolTipProperties.Text="{Binding DurationDisplay}"
+                                           HorizontalOptions="End"
+                                           LineBreakMode="TailTruncation" 
+                                           FontSize="12" 
+                                           MaxLines="1"
+                                           Grid.Column="1"
                                            VerticalOptions="Center"/>
                                 </Grid>
                                 

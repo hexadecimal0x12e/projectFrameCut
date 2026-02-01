@@ -1,5 +1,5 @@
 namespace projectFrameCut.Setting.SettingPages;
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using System.Globalization;
 using static SettingManager.SettingsManager;
 

@@ -57,6 +57,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Indicate whether this value provider generates a new value only once, or generates a new value for each request.
         /// </summary>
         public bool GenerateOnce { get; }
+
+        public string OutputAnchorName { get; }
+
         /// <summary>
         /// Generates a new value based on the specified source picture, computer, and target dimensions.
         /// </summary>
@@ -65,17 +68,24 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public object GenerateValue(IPicture source, IComputer? computer, int targetWidth, int targetHeight);
     }
 
-    public interface IBindableArgumentEffectValueProcesser : IBindableArgumentEffect
+
+    public interface IBindableArgumentEffectOneToOneValueProcesser : IBindableArgumentEffect
     {
-        BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.ValueProcessor;
+        BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.OneInputResultGenerator;
+
+        public string InputAnchorName { get; }
+        public string OutputAnchorName { get; }
+
+
         /// <summary>
         /// Process the provided value.
         /// </summary>
         public object ProcessValue(object source, IComputer? computer, int targetWidth, int targetHeight);
     }
-    public interface IBindableArgumentEffectMultipleValueProcesser : IBindableArgumentEffect
+
+    public interface IBindableArgumentEffectManyToOneValueProcesser : IBindableArgumentEffect
     {
-        BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.MultipleInputValueProcessor;
+        BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.ManyInputResultGenerator;
 
         string? IBindableArgumentEffect.BindedArgumentProviderID { get => throw new NotSupportedException("Use BindedArgumentProviderIDs instead."); set => throw new NotSupportedException("Use BindedArgumentProviderIDs instead."); }
 
@@ -89,29 +99,26 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public string[] BindedArgumentProviderIDs { get; set; }
 
+        public string[] InputAnchorDisplayNames { get; }
+
+        public string OutputAnchorName { get; }
+
+
         /// <summary>
         /// Process the provided value.
         /// </summary>
         public object ProcessValues(object[] sources, IComputer? computer, int targetWidth, int targetHeight);
     }
 
-    public interface IBindableArgumentEffectNormalResultGenerator : IBindableArgumentEffect
+    public interface IBindableArgumentEffectOneInputResultGenerator : IBindableArgumentEffect
     {
-        BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.ResultGenerator;
+        BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.OneInputResultGenerator;
 
-        /// <summary>
-        /// Produce the final result based on the provided source value.
-        /// </summary>
-        public IPicture GenerateResult(object source, IPicture frame, IComputer? computer, int targetWidth, int targetHeight);
-        /// <summary>
-        /// Generate the final process step based on the provided source value.
-        /// </summary>
-        public IPictureProcessStep GenerateResultStep(object source, int targetWidth, int targetHeight);
-    }
+        public string InputAnchorName { get; }
+        public string OutputAnchorName { get; }
 
-    public interface IBindableArgumentEffectContinuesResultGenerator : IBindableArgumentEffect
-    {
-        BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.ContinuousResultGenerator;
+        public bool IsContinuous { get; }
+
         /// <summary>
         /// The start point of the continuous range (inclusive).
         /// </summary>
@@ -135,6 +142,47 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight);
     }
+    public interface IBindableArgumentEffectManyInputResultGenerator : IBindableArgumentEffect
+    {
+        BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.ManyInputResultGenerator;
+
+        string? IBindableArgumentEffect.BindedArgumentProviderID { get => throw new NotSupportedException("Use BindedArgumentProviderIDs instead."); set => throw new NotSupportedException("Use BindedArgumentProviderIDs instead."); }
+
+        /// <summary>
+        /// Get the input argument provider IDs this processor is bound to.
+        /// </summary>
+        public string[] BindedArgumentProviderIDs { get; set; }
+
+        /// <summary>
+        /// Get the input anchors' display name.
+        /// </summary>
+        public string[] InputAnchorDisplayNames { get; }
+
+        /// <summary>
+        /// The start point of the continuous range (inclusive).
+        /// </summary>
+        /// <remarks>
+        /// similar to <see cref="IContinuousEffect.StartPoint"/>
+        /// just ignore it if this effect is not Continuous.
+        /// </remarks>
+        public int StartPoint { get; set; }
+        /// <summary>
+        /// The end point of the continuous range (inclusive).
+        /// </summary>
+        /// <remarks>
+        /// similar to <see cref="IContinuousEffect.EndPoint"/>
+        /// just ignore it if this effect is not Continuous.
+        /// </remarks>
+        public int EndPoint { get; set; }
+        /// <summary>
+        /// Produce the final result based on the provided source value.
+        /// </summary>
+        public IPicture GenerateResult(object source, uint index, IPicture frame, IComputer? computer, int targetWidth, int targetHeight);
+        /// <summary>
+        /// Generate the final process step based on the provided source value.
+        /// </summary>
+        public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight);
+    }
 
 
 
@@ -143,9 +191,10 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     public enum BindableArgumentEffectType
     {
         ValueProvider,
-        ValueProcessor,
-        ResultGenerator,
+        OneInputValueProcessor,
+        ManyInputValueProcessor,
+        OneInputResultGenerator,
+        ManyInputResultGenerator,
         ContinuousResultGenerator,
-        MultipleInputValueProcessor
     }
 }

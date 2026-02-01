@@ -1,5 +1,5 @@
 ﻿using projectFrameCut.APIClient.Models;
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Services;
 using System;
 using System.Collections.Generic;

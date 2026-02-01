@@ -55,4 +55,11 @@
 			<PackagePath>\</PackagePath>
 		</None>
 	</ItemGroup>
+
+
+	<ItemGroup>
+	  <Compile Update="Views\TabbedView\TabbedView.cs">
+	    <DependentUpon>TabbedView.xa1ml</DependentUpon>
+	  </Compile>
+	</ItemGroup>
 </Project>

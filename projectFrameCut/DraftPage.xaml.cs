@@ -32,8 +32,9 @@ using projectFrameCut.Asset;
 using projectFrameCut.ViewModels;
 using projectFrameCut.Render.Rendering;
 using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
 using System.Runtime;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+
 
 
 
@@ -55,6 +56,7 @@ using UIKit;
 using projectFrameCut.iDevicesAPI;
 using MobileCoreServices;
 using projectFrameCut.MetalAccelerater;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 
 
 #endif
@@ -67,6 +69,7 @@ using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using Android.Content.Res;
 using static System.Net.Mime.MediaTypeNames;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 
 #endif
 

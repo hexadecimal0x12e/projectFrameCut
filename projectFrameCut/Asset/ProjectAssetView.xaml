@@ -30,7 +30,7 @@
                            SelectionMode="None"
                            Margin="4,0,4,0">
                     <CollectionView.ItemsLayout>
-                        <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
+                        <GridItemsLayout x:Name="AssetsGridLayout" Orientation="Vertical" Span="6" VerticalItemSpacing="5" HorizontalItemSpacing="5" />
                     </CollectionView.ItemsLayout>
                     <CollectionView.ItemTemplate>
                         <DataTemplate x:DataType="local:AssetItemViewModel">
@@ -51,11 +51,23 @@
                                     <!-- 名称和操作按钮 -->
                                     <Grid Grid.Row="1" 
                                           BackgroundColor="{Binding BackgroundColor}" 
+                                          ColumnDefinitions="*,Auto" 
                                           Padding="6,4">
                                         <Label Text="{Binding DisplayLabel}" 
                                                LineBreakMode="TailTruncation" 
+                                               HorizontalOptions="Start"
                                                FontSize="12" 
                                                MaxLines="1"
+                                               ToolTipProperties.Text="{Binding Name}"
+                                               Grid.Column="0"
+                                               VerticalOptions="Center"/>
+                                        <Label Text="{Binding DurationDisplay}" 
+                                               HorizontalOptions="End"
+                                               LineBreakMode="TailTruncation" 
+                                               FontSize="12" 
+                                               MaxLines="1"
+                                               ToolTipProperties.Text="{Binding DurationDisplay}"
+                                               Grid.Column="1"
                                                VerticalOptions="Center"/>
                                         <Grid.GestureRecognizers>
                                             <TapGestureRecognizer Tapped="OnAssetClipTapped"/>
@@ -138,11 +150,23 @@
                                     <!-- 名称 -->
                                     <Grid Grid.Row="1" 
                                           BackgroundColor="{Binding BackgroundColor}" 
+                                          ColumnDefinitions="*,Auto" 
                                           Padding="6,4">
-                                        <Label Text="{Binding DisplayLabel}" 
+                                        <Label Text="{Binding Name}" 
+                                               LineBreakMode="TailTruncation" 
+                                               HorizontalOptions="Start"
+                                               FontSize="12" 
+                                               MaxLines="1"
+                                               ToolTipProperties.Text="{Binding DisplayLabel}"
+                                               Grid.Column="0"
+                                               VerticalOptions="Center"/>
+                                        <Label Text="{Binding DurationDisplay}" 
+                                               HorizontalOptions="End"
                                                LineBreakMode="TailTruncation" 
                                                FontSize="12" 
                                                MaxLines="1"
+                                               ToolTipProperties.Text="{Binding DurationDisplay}"
+                                               Grid.Column="1"
                                                VerticalOptions="Center"/>
                                         <Grid.GestureRecognizers>
                                             <TapGestureRecognizer Tapped="OnAssetClipTapped"/>

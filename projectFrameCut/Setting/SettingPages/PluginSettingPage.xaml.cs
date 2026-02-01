@@ -1,5 +1,6 @@
 using projectFrameCut.ApplicationAPIBase.Plugins;
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationPluginBase;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;

@@ -8,11 +8,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 #pragma warning disable CS8981 // 该类型名称仅包含小写 ascii 字符。此类名称可能会成为该语言的保留值。
-using pppcea = projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders.PropertyPanelPropertyChangedEventArgs;
+using pppcea = projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders.PropertyPanelPropertyChangedEventArgs;
 using Switch = Microsoft.Maui.Controls.Switch; //make code shorter
 #pragma warning restore CS8981 // 该类型名称仅包含小写 ascii 字符。此类名称可能会成为该语言的保留值。
 
-namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
+namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 {
     /// <summary>
     /// Provides a builder pattern for creating a property panel layout with various UI elements such as labels, entries, checkboxes, switches, sliders, and any custom views.

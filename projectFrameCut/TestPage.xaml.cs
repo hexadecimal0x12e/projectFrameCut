@@ -21,10 +21,13 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Path = System.IO.Path;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+
 using projectFrameCut.Render.Compose;
 using DatePicker = Microsoft.Maui.Controls.DatePicker;
 using projectFrameCut.APIClient;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using Color = Microsoft.Maui.Graphics.Color;
+
 
 
 
@@ -685,6 +688,7 @@ public partial class TestPage : ContentPage
     }
     #endregion
 
+    #region runtime
     private async void TestCrashButton_Clicked(object sender, EventArgs e)
     {
         var type = await DisplayActionSheetAsync("Choose a favour you'd like", "Cancel", "Environment.FailFast", "Native(null pointer)", "Managed(NullReferenceException)");
@@ -731,6 +735,7 @@ public partial class TestPage : ContentPage
         }
 #endif
     }
+    #endregion
 
 
     #region misc
@@ -817,7 +822,7 @@ public partial class TestPage : ContentPage
     {
 
 #if ANDROID
-            Render.AndroidOpenGL.ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
+        Render.AndroidOpenGL.ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
 #elif iDevices
 
 #elif WINDOWS
@@ -866,7 +871,7 @@ public partial class TestPage : ContentPage
 
     private void TestOrderButton_Clicked(object sender, EventArgs e)
     {
-        var lines = InputEditor.Text.Split(["\r","\n","\r\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var lines = InputEditor.Text.Split(["\r", "\n", "\r\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var ordered = lines.OrderBy(a => TextHelper.GetPronounceForOrdering(a).Result).GroupBy(TextHelper.DetectTextLanguage).OrderByDescending(g => g.Count()).SelectMany(c => c).ToList();
         InputEditor.Text = string.Join(Environment.NewLine, ordered);
         TestOrderButton.Text = "Order done";
@@ -888,6 +893,106 @@ public partial class TestPage : ContentPage
             // 未登录，打开登录页面
             await Navigation.PushAsync(new LoginPage());
         }
+    }
+
+    private int windowCount = 0;
+
+    private void OpenTestWindowButton_Clicked(object sender, EventArgs e)
+    {
+        var content = new VerticalStackLayout
+        {
+            new Label
+            {
+                Text = $"This is test window #{++windowCount}"
+            }
+        };
+
+        var item = TestMVW.CreateWindow(content, $"Test Window #{windowCount}");
+
+        content.Add(new Button
+        {
+            Text = "Close this window",
+            Command = new Command(() => TestMVW.RemoveWindow(item))
+        });
+
+        TestMVW.ContainerBackgroundColor = Color.FromArgb("#2C2C2C");
+        TestMVW.TaskBarBackgroundColor = Color.FromArgb("#1E1E1E");
+        item.WindowBackgroundColor = Colors.White;
+        item.TitleBarBackgroundColor = Color.FromArgb("#F0F0F0");
+        item.TitleBarTextColor = Colors.Black;
+        item.BorderColor = Color.FromArgb("#CCCCCC");
+
+        // 创建一个无标题栏的窗口
+        var window1 = TestMVW.CreateWindow(new VerticalStackLayout
+        {
+            new Label
+            {
+                Text = $"This is test window #{++windowCount}"
+            }
+        }, "无标题栏");
+        window1.ShowTitleBar = false;
+
+        // 创建一个只能关闭不能最大化最小化的窗口
+        var window2 = TestMVW.CreateWindow(new VerticalStackLayout
+        {
+            new Label
+            {
+                Text = $"This is test window #{++windowCount}"
+            }
+        }, "简单窗口");
+        window2.ShowMaximizeButton = false;
+        window2.ShowMinimizeButton = false;
+
+        // 创建一个不能移动和缩放的固定窗口
+        var window3 = TestMVW.CreateWindow(new VerticalStackLayout
+        {
+            new Label
+            {
+                Text = $"This is test window #{++windowCount}"
+            }
+        }, "固定窗口");
+        window3.CanMove = false;
+        window3.CanResize = false;
+
+        // 创建一个不显示标题文本，只显示按钮的窗口
+        var window4 = TestMVW.CreateWindow(new VerticalStackLayout
+        {
+            new Label
+            {
+                Text = $"This is test window #{++windowCount}"
+            }
+        }, "标题");
+        window4.ShowTitleText = false;
+
+        // 创建一个只能查看的窗口（不能关闭、移动、缩放）
+        var window5 = TestMVW.CreateWindow(new VerticalStackLayout
+        {
+            new Label
+            {
+                Text = $"This is test window #{++windowCount}"
+            }
+        }, "只读窗口");
+        window5.ShowCloseButton = false;
+        window5.ShowMaximizeButton = false;
+        window5.ShowMinimizeButton = false;
+        window5.CanMove = false;
+        window5.CanResize = false;
+
+        // 创建一个自定义窗口
+        var window6 = TestMVW.CreateWindow(new VerticalStackLayout
+        {
+            new Label
+            {
+                Text = $"This is test window #{++windowCount}"
+            }
+        }, "自定义");
+        window6.ShowTitleBar = true;
+        window6.ShowTitleText = true;
+        window6.ShowCloseButton = true;
+        window6.ShowMaximizeButton = false;  // 不显示最大化
+        window6.ShowMinimizeButton = true;
+        window6.CanMove = true;
+        window6.CanResize = false;  // 不允许缩放
     }
 
     private void TestPlaceButton_Clicked(object sender, EventArgs e)

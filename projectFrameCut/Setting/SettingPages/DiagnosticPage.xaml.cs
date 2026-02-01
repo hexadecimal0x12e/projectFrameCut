@@ -1,6 +1,6 @@
 using FFmpeg.AutoGen;
 using Microsoft.Maui.Storage;
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.Rendering;

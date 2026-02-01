@@ -1,6 +1,7 @@
 using Microsoft.Maui.Storage;
 
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Services;
 using System;

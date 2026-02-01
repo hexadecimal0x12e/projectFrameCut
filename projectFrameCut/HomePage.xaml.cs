@@ -19,7 +19,7 @@ using System.Windows.Input;
 using IPicture = projectFrameCut.Shared.IPicture;
 using projectFrameCut.Asset;
 using Microsoft.Maui.Platform;
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 
 
 #if WINDOWS

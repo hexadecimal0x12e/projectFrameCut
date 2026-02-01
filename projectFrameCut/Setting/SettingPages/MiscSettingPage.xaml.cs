@@ -1,4 +1,5 @@
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System.Diagnostics;

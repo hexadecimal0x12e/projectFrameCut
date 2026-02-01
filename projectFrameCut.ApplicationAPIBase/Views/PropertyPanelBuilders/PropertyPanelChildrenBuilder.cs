@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 #pragma warning disable CS8981 // 该类型名称仅包含小写 ascii 字符。此类名称可能会成为该语言的保留值。
-using pppcea = projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders.PropertyPanelPropertyChangedEventArgs;
+using pppcea = projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders.PropertyPanelPropertyChangedEventArgs;
 using Switch = Microsoft.Maui.Controls.Switch; //make code shorter
 #pragma warning restore CS8981 // 该类型名称仅包含小写 ascii 字符。此类名称可能会成为该语言的保留值。
 
 
-namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
+namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 {
     [DebuggerNonUserCode()]
     public class PropertyPanelChildrenBuilder

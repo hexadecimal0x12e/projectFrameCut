@@ -10,9 +10,10 @@ using static projectFrameCut.Setting.SettingManager.SettingsManager;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
 
-using projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders;
+
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Services;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 
 namespace projectFrameCut.Setting.SettingPages
 {

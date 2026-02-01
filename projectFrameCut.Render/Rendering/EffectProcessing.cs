@@ -87,7 +87,7 @@ namespace projectFrameCut.Render.Rendering
             switch (item.EffectRole)
             {
                 case BindableArgumentEffectType.ValueProvider:
-                    if (item is IBindableArgumentEffectValueProvider vp)
+                    if (item is not IBindableArgumentEffectValueProvider vp) throw new NotSupportedException($"Unsupported BindableArgumentEffectType {item.EffectRole} in IBindableArgumentEffect {item.Name}.");
                     {
                         ArgumentNullException.ThrowIfNull(item.Id, "Id");
                         var value = vp.GenerateValue(frame, computer, width, height);
@@ -100,11 +100,11 @@ namespace projectFrameCut.Render.Rendering
                         {
                             frameLocalCache[item.Id] = value; // 存储到帧缓存
                         }
-                        return vp.GenerateOnce; 
+                        return vp.GenerateOnce;
                     }
                     break;
-                case BindableArgumentEffectType.ValueProcessor:
-                    if (item is IBindableArgumentEffectValueProcesser vproc)
+                case BindableArgumentEffectType.OneInputValueProcessor:
+                    if (item is not IBindableArgumentEffectOneToOneValueProcesser vproc) throw new NotSupportedException($"Unsupported BindableArgumentEffectType {item.EffectRole} in IBindableArgumentEffect {item.Name}.");
                     {
                         ArgumentNullException.ThrowIfNull(item.BindedArgumentProviderID, "BindedArgumentProviderID");
                         var inputValue = GetCachedValue(item.BindedArgumentProviderID, frameLocalCache, globalResultCache);
@@ -120,8 +120,8 @@ namespace projectFrameCut.Render.Rendering
                         }
                     }
                     break;
-                case BindableArgumentEffectType.MultipleInputValueProcessor:
-                    if (item is IBindableArgumentEffectMultipleValueProcesser mvproc)
+                case BindableArgumentEffectType.ManyInputValueProcessor:
+                    if (item is not IBindableArgumentEffectManyToOneValueProcesser mvproc) throw new NotSupportedException($"Unsupported BindableArgumentEffectType {item.EffectRole} in IBindableArgumentEffect {item.Name}.");
                     {
                         ArgumentNullException.ThrowIfNull(mvproc.Id, "Id");
                         ArgumentNullException.ThrowIfNull(mvproc.BindedArgumentProviderIDs, "BindedArgumentProviderIDs");
@@ -133,17 +133,44 @@ namespace projectFrameCut.Render.Rendering
                         var result = mvproc.ProcessValues(sources, computer, width, height);
                         if (mvproc.GenerateOnce)
                         {
-                            globalResultCache[item.Id] = result; 
+                            globalResultCache[item.Id] = result;
                         }
                         else
                         {
-                            frameLocalCache[item.Id] = result; 
+                            frameLocalCache[item.Id] = result;
                         }
                         return mvproc.GenerateOnce;
                     }
                     break;
-                case BindableArgumentEffectType.ResultGenerator:
-                    if (item is IBindableArgumentEffectNormalResultGenerator rg)
+                //case BindableArgumentEffectType.ResultGenerator:
+                //    if (item is IBindableArgumentEffectOneInputResultGenerator rg)
+                //    {
+                //        ArgumentNullException.ThrowIfNull(item.BindedArgumentProviderID, "BindedArgumentProviderID");
+                //        var cachedValue = GetCachedValue(item.BindedArgumentProviderID, frameLocalCache, globalResultCache);
+                //        if (item.YieldProcessStep)
+                //        {
+                //            lastIsProcessStep = true;
+                //            try
+                //            {
+                //                var step = rg.GenerateResultStep(cachedValue, width, height);
+                //                steps.Add(step);
+                //                if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
+                //            }
+                //            catch (Exception ex)
+                //            {
+                //                Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
+                //                lastIsProcessStep = false;
+                //                frame = rg.GenerateResult(cachedValue, frame, computer, width, height);
+                //            }
+                //        }
+                //        else
+                //        {
+                //            frame = rg.GenerateResult(cachedValue, frame, computer, width, height);
+                //        }
+                //    }
+                //    break;
+                case BindableArgumentEffectType.OneInputResultGenerator:
+                    if (item is not IBindableArgumentEffectOneInputResultGenerator crg) throw new NotSupportedException($"Unsupported BindableArgumentEffectType {item.EffectRole} in IBindableArgumentEffect {item.Name}.");
                     {
                         ArgumentNullException.ThrowIfNull(item.BindedArgumentProviderID, "BindedArgumentProviderID");
                         var cachedValue = GetCachedValue(item.BindedArgumentProviderID, frameLocalCache, globalResultCache);
@@ -152,34 +179,7 @@ namespace projectFrameCut.Render.Rendering
                             lastIsProcessStep = true;
                             try
                             {
-                                var step = rg.GenerateResultStep(cachedValue, width, height);
-                                steps.Add(step);
-                                if (IPicture.DiagImagePath is not null) LogDiagnostic($"Process step for effect {item.Name}({item.TypeName}) : {step.GetProcessStack()}");
-                            }
-                            catch (Exception ex)
-                            {
-                                Log($"[Render] WARN: Failed to get process steps for effect {item.Name}: {ex}");
-                                lastIsProcessStep = false;
-                                frame = rg.GenerateResult(cachedValue, frame, computer, width, height);
-                            }
-                        }
-                        else
-                        {
-                            frame = rg.GenerateResult(cachedValue, frame, computer, width, height);
-                        }
-                    }
-                    break;
-                case BindableArgumentEffectType.ContinuousResultGenerator:
-                    if (item is IBindableArgumentEffectContinuesResultGenerator crg)
-                    {
-                        ArgumentNullException.ThrowIfNull(item.BindedArgumentProviderID, "BindedArgumentProviderID");
-                        var cachedValue = GetCachedValue(item.BindedArgumentProviderID, frameLocalCache, globalResultCache);
-                        if (item.YieldProcessStep)
-                        {
-                            lastIsProcessStep = true;
-                            try
-                            {
-                                if (crg.EndPoint == 0 && crg.EndPoint == 0)
+                                if (crg.IsContinuous && (crg.EndPoint == 0 && crg.EndPoint == 0))
                                 {
                                     crg.StartPoint = (int)(clip.StartFrame);
                                     crg.EndPoint = (int)(crg.StartPoint + clip.Duration * clip.SecondPerFrameRatio);

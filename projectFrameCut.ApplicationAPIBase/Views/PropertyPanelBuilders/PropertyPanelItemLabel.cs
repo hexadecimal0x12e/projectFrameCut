@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace projectFrameCut.ApplicationAPIBase.PropertyPanelBuilders
+namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 {
     public class SingleLineLabel(string text, int fontsize = 14, FontAttributes fontAttributes = FontAttributes.None, Color? TextColor = null) : PropertyPanelItemLabel
     {
