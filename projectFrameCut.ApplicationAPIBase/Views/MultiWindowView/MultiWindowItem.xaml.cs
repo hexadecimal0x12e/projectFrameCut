@@ -1,79 +1,33 @@
-﻿using Microsoft.Maui.Controls;
-using Microsoft.Maui.Graphics;
-using System;
-using System.ComponentModel;
+﻿using System;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls.Shapes;
 
 namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 {
-    /// <summary>
-    /// 窗口关闭事件参数，允许取消关闭操作
-    /// </summary>
-    public class WindowClosingEventArgs : CancelEventArgs
+    public partial class MultiWindowItem : ContentView
     {
-        public WindowClosingEventArgs() : base(false)
-        {
-        }
-    }
-
-    public partial class MultiWindowItem : Border
-    {
-        private Point? dragStartPoint = null;
-        private Rect originalBounds;
-        private bool isDragging = false;
-        private ResizeDirection? resizeDirection = null;
-        private bool isMaximized = false;
-        private Rect normalBounds;
+        #region Bindable Properties
 
         public static readonly BindableProperty TitleProperty =
-            BindableProperty.Create(nameof(Title), typeof(string), typeof(MultiWindowItem), "Window",
-                propertyChanged: OnTitleChanged);
+            BindableProperty.Create(nameof(Title), typeof(string), typeof(MultiWindowItem), "Window");
 
-        public static readonly BindableProperty WindowContentProperty =
-            BindableProperty.Create(nameof(WindowContent), typeof(View), typeof(MultiWindowItem), null,
-                propertyChanged: OnContentChanged);
+        public static readonly BindableProperty IsDraggableProperty =
+            BindableProperty.Create(nameof(IsDraggable), typeof(bool), typeof(MultiWindowItem), true);
 
-        public static readonly BindableProperty WindowBackgroundColorProperty =
-            BindableProperty.Create(nameof(WindowBackgroundColor), typeof(Color), typeof(MultiWindowItem), Colors.White,
-                propertyChanged: OnWindowBackgroundColorChanged);
+        public static readonly BindableProperty IsResizableProperty =
+            BindableProperty.Create(nameof(IsResizable), typeof(bool), typeof(MultiWindowItem), true);
 
-        public static readonly BindableProperty TitleBarBackgroundColorProperty =
-            BindableProperty.Create(nameof(TitleBarBackgroundColor), typeof(Color), typeof(MultiWindowItem), Color.FromArgb("#F0F0F0"),
-                propertyChanged: OnTitleBarBackgroundColorChanged);
+        public static readonly BindableProperty IsMaximizableProperty =
+            BindableProperty.Create(nameof(IsMaximizable), typeof(bool), typeof(MultiWindowItem), true, propertyChanged: OnButtonVisibilityChanged);
 
-        public static readonly BindableProperty TitleBarTextColorProperty =
-            BindableProperty.Create(nameof(TitleBarTextColor), typeof(Color), typeof(MultiWindowItem), Colors.Black,
-                propertyChanged: OnTitleBarTextColorChanged);
+        public static readonly BindableProperty IsMinimizableProperty =
+            BindableProperty.Create(nameof(IsMinimizable), typeof(bool), typeof(MultiWindowItem), true, propertyChanged: OnButtonVisibilityChanged);
 
-        public static readonly BindableProperty BorderColorProperty =
-            BindableProperty.Create(nameof(BorderColor), typeof(Color), typeof(MultiWindowItem), Color.FromArgb("#CCCCCC"),
-                propertyChanged: OnBorderColorChanged);
+        public static readonly BindableProperty IsClosableProperty =
+            BindableProperty.Create(nameof(IsClosable), typeof(bool), typeof(MultiWindowItem), true, propertyChanged: OnButtonVisibilityChanged);
 
-        public static readonly BindableProperty ShowTitleBarProperty =
-            BindableProperty.Create(nameof(ShowTitleBar), typeof(bool), typeof(MultiWindowItem), true,
-                propertyChanged: OnShowTitleBarChanged);
-
-        public static readonly BindableProperty ShowTitleTextProperty =
-            BindableProperty.Create(nameof(ShowTitleText), typeof(bool), typeof(MultiWindowItem), true,
-                propertyChanged: OnShowTitleTextChanged);
-
-        public static readonly BindableProperty ShowCloseButtonProperty =
-            BindableProperty.Create(nameof(ShowCloseButton), typeof(bool), typeof(MultiWindowItem), true,
-                propertyChanged: OnShowCloseButtonChanged);
-
-        public static readonly BindableProperty ShowMaximizeButtonProperty =
-            BindableProperty.Create(nameof(ShowMaximizeButton), typeof(bool), typeof(MultiWindowItem), true,
-                propertyChanged: OnShowMaximizeButtonChanged);
-
-        public static readonly BindableProperty ShowMinimizeButtonProperty =
-            BindableProperty.Create(nameof(ShowMinimizeButton), typeof(bool), typeof(MultiWindowItem), true,
-                propertyChanged: OnShowMinimizeButtonChanged);
-
-        public static readonly BindableProperty CanMoveProperty =
-            BindableProperty.Create(nameof(CanMove), typeof(bool), typeof(MultiWindowItem), true);
-
-        public static readonly BindableProperty CanResizeProperty =
-            BindableProperty.Create(nameof(CanResize), typeof(bool), typeof(MultiWindowItem), true,
-                propertyChanged: OnCanResizeChanged);
+        public static readonly BindableProperty IsNavigationVisibleProperty =
+            BindableProperty.Create(nameof(IsNavigationVisible), typeof(bool), typeof(MultiWindowItem), true);
 
         public string Title
         {
@@ -81,610 +35,521 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             set => SetValue(TitleProperty, value);
         }
 
-        public View WindowContent
+        public bool IsDraggable
         {
-            get => (View)GetValue(WindowContentProperty);
-            set => SetValue(WindowContentProperty, value);
+            get => (bool)GetValue(IsDraggableProperty);
+            set => SetValue(IsDraggableProperty, value);
         }
 
-        public Color WindowBackgroundColor
+        public bool IsResizable
         {
-            get => (Color)GetValue(WindowBackgroundColorProperty);
-            set => SetValue(WindowBackgroundColorProperty, value);
+            get => (bool)GetValue(IsResizableProperty);
+            set => SetValue(IsResizableProperty, value);
         }
 
-        public Color TitleBarBackgroundColor
+        public bool IsMaximizable
         {
-            get => (Color)GetValue(TitleBarBackgroundColorProperty);
-            set => SetValue(TitleBarBackgroundColorProperty, value);
+            get => (bool)GetValue(IsMaximizableProperty);
+            set => SetValue(IsMaximizableProperty, value);
         }
 
-        public Color TitleBarTextColor
+        public bool IsMinimizable
         {
-            get => (Color)GetValue(TitleBarTextColorProperty);
-            set => SetValue(TitleBarTextColorProperty, value);
+            get => (bool)GetValue(IsMinimizableProperty);
+            set => SetValue(IsMinimizableProperty, value);
         }
 
-        public Color BorderColor
+        public bool IsClosable
         {
-            get => (Color)GetValue(BorderColorProperty);
-            set => SetValue(BorderColorProperty, value);
+            get => (bool)GetValue(IsClosableProperty);
+            set => SetValue(IsClosableProperty, value);
         }
 
-        public bool ShowTitleBar
+        public bool IsNavigationVisible
         {
-            get => (bool)GetValue(ShowTitleBarProperty);
-            set => SetValue(ShowTitleBarProperty, value);
+            get => (bool)GetValue(IsNavigationVisibleProperty);
+            set => SetValue(IsNavigationVisibleProperty, value);
         }
 
-        public bool ShowTitleText
+        private static readonly BindablePropertyKey CanGoBackPropertyKey =
+            BindableProperty.CreateReadOnly(nameof(CanGoBack), typeof(bool), typeof(MultiWindowItem), false);
+
+        public static readonly BindableProperty CanGoBackProperty = CanGoBackPropertyKey.BindableProperty;
+
+        public bool CanGoBack
         {
-            get => (bool)GetValue(ShowTitleTextProperty);
-            set => SetValue(ShowTitleTextProperty, value);
+            get => (bool)GetValue(CanGoBackProperty);
+            private set => SetValue(CanGoBackPropertyKey, value);
         }
 
-        public bool ShowCloseButton
+        private static readonly BindablePropertyKey CanGoForwardPropertyKey =
+            BindableProperty.CreateReadOnly(nameof(CanGoForward), typeof(bool), typeof(MultiWindowItem), false);
+
+        public static readonly BindableProperty CanGoForwardProperty = CanGoForwardPropertyKey.BindableProperty;
+
+        public bool CanGoForward
         {
-            get => (bool)GetValue(ShowCloseButtonProperty);
-            set => SetValue(ShowCloseButtonProperty, value);
-        }
-
-        public bool ShowMaximizeButton
-        {
-            get => (bool)GetValue(ShowMaximizeButtonProperty);
-            set => SetValue(ShowMaximizeButtonProperty, value);
-        }
-
-        public bool ShowMinimizeButton
-        {
-            get => (bool)GetValue(ShowMinimizeButtonProperty);
-            set => SetValue(ShowMinimizeButtonProperty, value);
-        }
-
-        public bool CanMove
-        {
-            get => (bool)GetValue(CanMoveProperty);
-            set => SetValue(CanMoveProperty, value);
-        }
-
-        public bool CanResize
-        {
-            get => (bool)GetValue(CanResizeProperty);
-            set => SetValue(CanResizeProperty, value);
-        }
-
-        /// <summary>
-        /// 处理调整大小时的 X 方向增量。如果不为 null，将使用此函数处理原始的拖动距离
-        /// </summary>
-        public Func<double, double>? ResizeDeltaXProcessor { get; set; }
-
-        /// <summary>
-        /// 处理调整大小时的 Y 方向增量。如果不为 null，将使用此函数处理原始的拖动距离
-        /// </summary>
-        public Func<double, double>? ResizeDeltaYProcessor { get; set; }
-
-        public event EventHandler<EventArgs> CloseRequested;
-        public event EventHandler<EventArgs> Minimized;
-        public event EventHandler<EventArgs> Maximized;
-        public event EventHandler<EventArgs> Restored;
-        
-        // 生命周期事件
-        public event EventHandler Appearing;
-        public event EventHandler Disappearing;
-        public event EventHandler Focused;
-        public event EventHandler Unfocused;
-        public event EventHandler<WindowClosingEventArgs> Closing;
-
-        public MultiWindowItem()
-        {
-            InitializeComponent();
-            SetupGestureRecognizers();
-        }
-
-        #region 生命周期方法
-
-        /// <summary>
-        /// 窗口显示时调用
-        /// </summary>
-        protected virtual void OnAppear()
-        {
-            Appearing?.Invoke(this, EventArgs.Empty);
-        }
-
-        /// <summary>
-        /// 窗口隐藏时调用
-        /// </summary>
-        protected virtual void OnDisappear()
-        {
-            Disappearing?.Invoke(this, EventArgs.Empty);
-        }
-
-        /// <summary>
-        /// 窗口获得焦点时调用（被选中/置顶）
-        /// </summary>
-        protected virtual void OnFocus()
-        {
-            Focused?.Invoke(this, EventArgs.Empty);
-        }
-
-        /// <summary>
-        /// 窗口失去焦点时调用
-        /// </summary>
-        protected virtual void OnUnfocus()
-        {
-            Unfocused?.Invoke(this, EventArgs.Empty);
-        }
-
-        /// <summary>
-        /// 关闭按钮点击时调用，可以通过设置 e.Cancel = true 来取消关闭
-        /// </summary>
-        /// <param name="e">关闭事件参数</param>
-        protected virtual void OnClosingButtonClick(WindowClosingEventArgs e)
-        {
-            Closing?.Invoke(this, e);
-        }
-
-        /// <summary>
-        /// 内部调用，触发OnAppear
-        /// </summary>
-        internal void RaiseAppear()
-        {
-            OnAppear();
-        }
-
-        /// <summary>
-        /// 内部调用，触发OnDisappear
-        /// </summary>
-        internal void RaiseDisappear()
-        {
-            OnDisappear();
-        }
-
-        /// <summary>
-        /// 内部调用，触发OnFocus
-        /// </summary>
-        internal void RaiseFocus()
-        {
-            OnFocus();
-        }
-
-        /// <summary>
-        /// 内部调用，触发OnUnfocus
-        /// </summary>
-        internal void RaiseUnfocus()
-        {
-            OnUnfocus();
+            get => (bool)GetValue(CanGoForwardProperty);
+            private set => SetValue(CanGoForwardPropertyKey, value);
         }
 
         #endregion
 
-        private static void OnTitleChanged(BindableObject bindable, object oldValue, object newValue)
+        #region Events
+
+        public event EventHandler CloseClicked;
+        public event EventHandler MinimizeClicked;
+        public event EventHandler MaximizeClicked;
+        public event EventHandler Activated;
+
+        #endregion
+
+        #region Fields
+
+        private double _startX, _startY;
+        private double _startWidth, _startHeight;
+
+        // For window state restoration
+        private double _preMaxWidth, _preMaxHeight, _preMaxX, _preMaxY;
+        private bool _isMaximized = false;
+
+        private bool _isMinimized = false;
+        private double _preMinHeight;
+
+        // Template Parts
+        private Grid _titleBarGrid;
+        private Border _visualRoot;
+        private Grid _resizeGrid;
+        private Border _minimizeBtn;
+        private Border _maximizeBtn;
+        private Border _closeBtn;
+
+        private readonly System.Collections.Generic.Stack<View> _backStack = new();
+        private readonly System.Collections.Generic.Stack<View> _forwardStack = new();
+
+        #endregion
+
+        public MultiWindowItem()
         {
-            var control = (MultiWindowItem)bindable;
-            control.titleLabel.Text = newValue?.ToString() ?? "Window";
+            InitializeComponent();
+            
+            // Ensure the window floats and doesn't stretch by default
+            HorizontalOptions = LayoutOptions.Start;
+            VerticalOptions = LayoutOptions.Start;
         }
 
-        private static void OnContentChanged(BindableObject bindable, object oldValue, object newValue)
+        protected override void OnApplyTemplate()
         {
-            var control = (MultiWindowItem)bindable;
-            control.contentPresenter.Content = newValue as View;
-        }
+            base.OnApplyTemplate();
 
-        private static void OnWindowBackgroundColorChanged(BindableObject bindable, object oldValue, object newValue)
-        {
-            var control = (MultiWindowItem)bindable;
-            control.BackgroundColor = (Color)newValue;
-        }
+            _titleBarGrid = GetTemplateChild("TitleBarGrid") as Grid;
+            _visualRoot = GetTemplateChild("VisualRoot") as Border;
+            _resizeGrid = GetTemplateChild("ResizeGrid") as Grid;
+            _minimizeBtn = GetTemplateChild("MinimizeBtn") as Border;
+            _maximizeBtn = GetTemplateChild("MaximizeBtn") as Border;
+            _closeBtn = GetTemplateChild("CloseBtn") as Border;
 
-        private static void OnTitleBarBackgroundColorChanged(BindableObject bindable, object oldValue, object newValue)
-        {
-            var control = (MultiWindowItem)bindable;
-            control.titleBar.BackgroundColor = (Color)newValue;
-        }
-
-        private static void OnTitleBarTextColorChanged(BindableObject bindable, object oldValue, object newValue)
-        {
-            var control = (MultiWindowItem)bindable;
-            control.titleLabel.TextColor = (Color)newValue;
-        }
-
-        private static void OnBorderColorChanged(BindableObject bindable, object oldValue, object newValue)
-        {
-            var control = (MultiWindowItem)bindable;
-            control.Stroke = (Color)newValue;
-        }
-
-        private static void OnShowTitleBarChanged(BindableObject bindable, object oldValue, object newValue)
-        {
-            var control = (MultiWindowItem)bindable;
-            control.titleBar.IsVisible = (bool)newValue;
-        }
-
-        private static void OnShowTitleTextChanged(BindableObject bindable, object oldValue, object newValue)
-        {
-            var control = (MultiWindowItem)bindable;
-            control.titleLabel.IsVisible = (bool)newValue;
-        }
-
-        private static void OnShowCloseButtonChanged(BindableObject bindable, object oldValue, object newValue)
-        {
-            var control = (MultiWindowItem)bindable;
-            control.closeButton.IsVisible = (bool)newValue;
-        }
-
-        private static void OnShowMaximizeButtonChanged(BindableObject bindable, object oldValue, object newValue)
-        {
-            var control = (MultiWindowItem)bindable;
-            control.maximizeButton.IsVisible = (bool)newValue;
-        }
-
-        private static void OnShowMinimizeButtonChanged(BindableObject bindable, object oldValue, object newValue)
-        {
-            var control = (MultiWindowItem)bindable;
-            control.minimizeButton.IsVisible = (bool)newValue;
-        }
-
-        private static void OnCanResizeChanged(BindableObject bindable, object oldValue, object newValue)
-        {
-            var control = (MultiWindowItem)bindable;
-            control.SetResizeHandlesEnabled((bool)newValue);
-        }
-
-        private void SetupGestureRecognizers()
-        {
-            // 标题栏拖动
-            var titleBarPanGesture = new PanGestureRecognizer();
-            titleBarPanGesture.PanUpdated += OnTitleBarPan;
-            titleBar.GestureRecognizers.Add(titleBarPanGesture);
-
-            // 双击标题栏最大化/还原
-            var titleBarTapGesture = new TapGestureRecognizer { NumberOfTapsRequired = 2 };
-            titleBarTapGesture.Tapped += (s, e) => ToggleMaximize();
-            titleBar.GestureRecognizers.Add(titleBarTapGesture);
-
-            // 设置调整大小的手柄
-            SetupResizeHandle(resizeTopLeft, ResizeDirection.TopLeft);
-            SetupResizeHandle(resizeTop, ResizeDirection.Top);
-            SetupResizeHandle(resizeTopRight, ResizeDirection.TopRight);
-            SetupResizeHandle(resizeLeft, ResizeDirection.Left);
-            SetupResizeHandle(resizeRight, ResizeDirection.Right);
-            SetupResizeHandle(resizeBottomLeft, ResizeDirection.BottomLeft);
-            SetupResizeHandle(resizeBottom, ResizeDirection.Bottom);
-            SetupResizeHandle(resizeBottomRight, ResizeDirection.BottomRight);
-        }
-
-        private void SetupResizeHandle(View handle, ResizeDirection direction)
-        {
-            var panGesture = new PanGestureRecognizer();
-            panGesture.PanUpdated += (s, e) => OnResizePan(s, e, direction);
-            handle.GestureRecognizers.Add(panGesture);
-        }
-
-        private void OnTitleBarPan(object sender, PanUpdatedEventArgs e)
-        {
-            if (isMaximized || !CanMove) return;
-
-            switch (e.StatusType)
+            if (_titleBarGrid != null)
             {
-                case GestureStatus.Started:
-                    dragStartPoint = new Point(this.TranslationX, this.TranslationY);
-                    isDragging = true;
-                    break;
+                // Remove existing gestures to avoid duplicates if re-applied
+                _titleBarGrid.GestureRecognizers.Clear();
+                var panGesture = new PanGestureRecognizer();
+                panGesture.PanUpdated += OnTitleBarPanUpdated;
+                _titleBarGrid.GestureRecognizers.Add(panGesture);
+            }
 
-                case GestureStatus.Running:
-                    if (dragStartPoint.HasValue)
-                    {
-                        this.TranslationX = dragStartPoint.Value.X + e.TotalX;
-                        this.TranslationY = dragStartPoint.Value.Y + e.TotalY;
-                    }
-                    break;
+            if (_visualRoot != null)
+            {
+                _visualRoot.GestureRecognizers.Clear();
+                var tapGesture = new TapGestureRecognizer();
+                tapGesture.Tapped += (s, e) => Activated?.Invoke(this, EventArgs.Empty);
+                _visualRoot.GestureRecognizers.Add(tapGesture);
+            }
 
-                case GestureStatus.Completed:
-                case GestureStatus.Canceled:
-                    isDragging = false;
-                    break;
+            // Wire up Buttons
+            if (_minimizeBtn != null)
+            {
+                _minimizeBtn.GestureRecognizers.Clear();
+                var tap = new TapGestureRecognizer();
+                tap.Tapped += OnMinimizeTapped;
+                _minimizeBtn.GestureRecognizers.Add(tap);
+            }
+            if (_maximizeBtn != null)
+            {
+                _maximizeBtn.GestureRecognizers.Clear();
+                var tap = new TapGestureRecognizer();
+                tap.Tapped += OnMaximizeTapped;
+                _maximizeBtn.GestureRecognizers.Add(tap);
+            }
+            if (_closeBtn != null)
+            {
+                _closeBtn.GestureRecognizers.Clear();
+                var tap = new TapGestureRecognizer();
+                tap.Tapped += OnCloseTapped;
+                _closeBtn.GestureRecognizers.Add(tap);
+            }
+
+            // Wire up Resize Handles
+            SetupResizeHandle("ResizeTopLeft", OnResizeTopLeft);
+            SetupResizeHandle("ResizeTop", OnResizeTop);
+            SetupResizeHandle("ResizeTopRight", OnResizeTopRight);
+            SetupResizeHandle("ResizeLeft", OnResizeLeft);
+            SetupResizeHandle("ResizeRight", OnResizeRight);
+            SetupResizeHandle("ResizeBottomLeft", OnResizeBottomLeft);
+            SetupResizeHandle("ResizeBottom", OnResizeBottom);
+            SetupResizeHandle("ResizeBottomRight", OnResizeBottomRight);
+
+            UpdatedButtonVisibility();
+        }
+
+        private void SetupResizeHandle(string name, EventHandler<PanUpdatedEventArgs> handler)
+        {
+            if (GetTemplateChild(name) is View handle)
+            {
+                handle.GestureRecognizers.Clear();
+                var pan = new PanGestureRecognizer();
+                pan.PanUpdated += handler;
+                handle.GestureRecognizers.Add(pan);
             }
         }
 
-        private void OnResizePan(object sender, PanUpdatedEventArgs e, ResizeDirection direction)
+        private static void OnButtonVisibilityChanged(BindableObject bindable, object oldValue, object newValue)
         {
-            if (isMaximized || !CanResize) return;
-
-            switch (e.StatusType)
+            if (bindable is MultiWindowItem item)
             {
-                case GestureStatus.Started:
-                    resizeDirection = direction;
-                    originalBounds = new Rect(this.TranslationX, this.TranslationY, this.Width, this.Height);
-                    break;
-
-                case GestureStatus.Running:
-                    if (resizeDirection.HasValue)
-                    {
-                        double deltaX = ResizeDeltaXProcessor != null ? ResizeDeltaXProcessor(e.TotalX) : e.TotalX;
-                        double deltaY = ResizeDeltaYProcessor != null ? ResizeDeltaYProcessor(e.TotalY) : e.TotalY;
-                        PerformResize(deltaX, deltaY, resizeDirection.Value);
-                    }
-                    break;
-
-                case GestureStatus.Completed:
-                case GestureStatus.Canceled:
-                    resizeDirection = null;
-                    break;
+                item.UpdatedButtonVisibility();
             }
         }
 
-        private void PerformResize(double deltaX, double deltaY, ResizeDirection direction)
+        private void UpdatedButtonVisibility()
         {
-            const double minWidth = 200;
-            const double minHeight = 150;
+             if(_minimizeBtn != null) _minimizeBtn.IsVisible = IsMinimizable;
+             if(_maximizeBtn != null) _maximizeBtn.IsVisible = IsMaximizable;
+             if(_closeBtn != null) _closeBtn.IsVisible = IsClosable;
+        }
 
-            double newX = originalBounds.X;
-            double newY = originalBounds.Y;
-            double newWidth = originalBounds.Width;
-            double newHeight = originalBounds.Height;
+        #region Event Handlers
 
-            switch (direction)
+        private void OnCloseTapped(object sender, EventArgs e)
+        {
+            CloseClicked?.Invoke(this, EventArgs.Empty);
+            // Optionally remove self from parent if no external handler
+            if (Parent is Layout layout)
             {
-                case ResizeDirection.TopLeft:
-                    newWidth = originalBounds.Width - deltaX;
-                    newHeight = originalBounds.Height - deltaY;
-                    // 应用最小尺寸限制
-                    if (newWidth < minWidth)
-                    {
-                        deltaX = originalBounds.Width - minWidth;
-                        newWidth = minWidth;
-                    }
-                    if (newHeight < minHeight)
-                    {
-                        deltaY = originalBounds.Height - minHeight;
-                        newHeight = minHeight;
-                    }
-                    newX = originalBounds.X + deltaX;
-                    newY = originalBounds.Y + deltaY;
-                    break;
-
-                case ResizeDirection.Top:
-                    newHeight = originalBounds.Height - deltaY;
-                    if (newHeight < minHeight)
-                    {
-                        deltaY = originalBounds.Height - minHeight;
-                        newHeight = minHeight;
-                    }
-                    newY = originalBounds.Y + deltaY;
-                    break;
-
-                case ResizeDirection.TopRight:
-                    newWidth = originalBounds.Width + deltaX;
-                    newHeight = originalBounds.Height - deltaY;
-                    if (newWidth < minWidth)
-                    {
-                        newWidth = minWidth;
-                    }
-                    if (newHeight < minHeight)
-                    {
-                        deltaY = originalBounds.Height - minHeight;
-                        newHeight = minHeight;
-                    }
-                    newY = originalBounds.Y + deltaY;
-                    break;
-
-                case ResizeDirection.Left:
-                    newWidth = originalBounds.Width - deltaX;
-                    if (newWidth < minWidth)
-                    {
-                        deltaX = originalBounds.Width - minWidth;
-                        newWidth = minWidth;
-                    }
-                    newX = originalBounds.X + deltaX;
-                    break;
-
-                case ResizeDirection.Right:
-                    newWidth = originalBounds.Width + deltaX;
-                    if (newWidth < minWidth)
-                    {
-                        newWidth = minWidth;
-                    }
-                    break;
-
-                case ResizeDirection.BottomLeft:
-                    newWidth = originalBounds.Width - deltaX;
-                    newHeight = originalBounds.Height + deltaY;
-                    if (newWidth < minWidth)
-                    {
-                        deltaX = originalBounds.Width - minWidth;
-                        newWidth = minWidth;
-                    }
-                    if (newHeight < minHeight)
-                    {
-                        newHeight = minHeight;
-                    }
-                    newX = originalBounds.X + deltaX;
-                    break;
-
-                case ResizeDirection.Bottom:
-                    newHeight = originalBounds.Height + deltaY;
-                    if (newHeight < minHeight)
-                    {
-                        newHeight = minHeight;
-                    }
-                    break;
-
-                case ResizeDirection.BottomRight:
-                    newWidth = originalBounds.Width + deltaX;
-                    newHeight = originalBounds.Height + deltaY;
-                    if (newWidth < minWidth)
-                    {
-                        newWidth = minWidth;
-                    }
-                    if (newHeight < minHeight)
-                    {
-                        newHeight = minHeight;
-                    }
-                    break;
+                layout.Children.Remove(this);
             }
-
-            // 应用计算后的位置和尺寸
-            this.WidthRequest = newWidth;
-            this.HeightRequest = newHeight;
-            this.TranslationX = newX;
-            this.TranslationY = newY;
         }
 
-        private void OnMinimizeClicked(object sender, EventArgs e)
+        private void OnMinimizeTapped(object sender, EventArgs e)
         {
-            this.IsVisible = false;
-            Minimized?.Invoke(this, EventArgs.Empty);
+             MinimizeClicked?.Invoke(this, EventArgs.Empty);
+             ToggleMinimize();
         }
 
-        private void OnMaximizeClicked(object sender, EventArgs e)
+        private void OnMaximizeTapped(object sender, EventArgs e)
         {
+            MaximizeClicked?.Invoke(this, EventArgs.Empty);
             ToggleMaximize();
+        }
+
+        private void OnBackTapped(object sender, EventArgs e)
+        {
+            if (CanGoBack) GoBack();
+        }
+
+        private void OnForwardTapped(object sender, EventArgs e)
+        {
+            if (CanGoForward) GoForward();
+        }
+
+        #endregion
+
+        #region Actions
+
+        private void ToggleMinimize()
+        {
+             if (_isMinimized)
+             {
+                 // Restore
+                 this.HeightRequest = _preMinHeight;
+                 _isMinimized = false;
+                 // Re-enable resize handles
+                 if(_resizeGrid != null) _resizeGrid.IsVisible = true;
+             }
+             else
+             {
+                 _preMinHeight = this.HeightRequest > 0 ? this.HeightRequest : this.Height;
+                 // Minimize to TitleHeight approx 32 + borders
+                 this.HeightRequest = 35; 
+                 _isMinimized = true;
+                 // Disable resize handles
+                 if(_resizeGrid != null) _resizeGrid.IsVisible = false;
+             }
         }
 
         private void ToggleMaximize()
         {
-            if (!isMaximized)
+            if (Parent is not VisualElement parentContainer) return;
+
+            if (_isMaximized)
             {
-                Maximize();
+                // Restore
+                this.HorizontalOptions = LayoutOptions.Start;
+                this.VerticalOptions = LayoutOptions.Start;
+                this.TranslationX = _preMaxX;
+                this.TranslationY = _preMaxY;
+                this.WidthRequest = _preMaxWidth;
+                this.HeightRequest = _preMaxHeight;
+                _isMaximized = false;
+                
+                // Re-enable resize handles
+                if(_resizeGrid != null) _resizeGrid.IsVisible = true;
+                if(_visualRoot != null) _visualRoot.StrokeShape = new RoundRectangle { CornerRadius = 10 };
             }
             else
             {
-                Restore();
-            }
-        }
+                // Snapshot
+                _preMaxX = this.TranslationX;
+                _preMaxY = this.TranslationY;
+                _preMaxWidth = this.Width;
+                _preMaxHeight = this.Height;
 
-        public void Maximize()
-        {
-            if (isMaximized) return;
-
-            // 保存当前状态
-            normalBounds = new Rect(this.TranslationX, this.TranslationY, 
-                this.WidthRequest > 0 ? this.WidthRequest : this.Width, 
-                this.HeightRequest > 0 ? this.HeightRequest : this.Height);
-
-            // 获取父容器尺寸
-            if (this.Parent is AbsoluteLayout parent)
-            {
-                // 重置平移
+                // Maximize
+                // We use Fill options to let the Grid layout engine handle the size, 
+                // ensuring it stays maximized even if parent resizes.
+                parentContainer.InvalidateMeasure(); // Force layout update just in case
+                
                 this.TranslationX = 0;
                 this.TranslationY = 0;
+                this.HorizontalOptions = LayoutOptions.Fill;
+                this.VerticalOptions = LayoutOptions.Fill;
                 
-                // 使用父容器的实际尺寸
-                double containerWidth = parent.Width;
-                double containerHeight = parent.Height;
+                // Clear explicit requests so Fill works
+                this.WidthRequest = -1; 
+                this.HeightRequest = -1;
                 
-                // 设置窗口填满整个容器
-                this.WidthRequest = containerWidth;
-                this.HeightRequest = containerHeight;
-                
-                // 使用AbsoluteLayout进行定位
-                AbsoluteLayout.SetLayoutBounds(this, new Rect(0, 0, containerWidth, containerHeight));
-            }
+                _isMaximized = true;
 
-            // 禁用调整大小手柄
-            SetResizeHandlesEnabled(false);
-            
-            isMaximized = true;
-            maximizeButton.Text = "◱";
-            Maximized?.Invoke(this, EventArgs.Empty);
-        }
-
-        public void Restore()
-        {
-            if (!isMaximized) return;
-
-            // 恢复原始大小和位置
-            this.TranslationX = normalBounds.X;
-            this.TranslationY = normalBounds.Y;
-            this.WidthRequest = normalBounds.Width;
-            this.HeightRequest = normalBounds.Height;
-            
-            // 使用AbsoluteLayout恢复布局
-            if (this.Parent is AbsoluteLayout)
-            {
-                AbsoluteLayout.SetLayoutBounds(this, 
-                    new Rect(normalBounds.X, normalBounds.Y, normalBounds.Width, normalBounds.Height));
-            }
-
-            // 启用调整大小手柄
-            SetResizeHandlesEnabled(true);
-            
-            isMaximized = false;
-            maximizeButton.Text = "□";
-            Restored?.Invoke(this, EventArgs.Empty);
-        }
-
-        private void OnCloseClicked(object sender, EventArgs e)
-        {
-            var args = new WindowClosingEventArgs();
-            OnClosingButtonClick(args);
-            
-            // 如果没有被取消，才触发关闭请求
-            if (!args.Cancel)
-            {
-                CloseRequested?.Invoke(this, EventArgs.Empty);
+                // Disable resize handles
+                if(_resizeGrid != null) _resizeGrid.IsVisible = false;
+                if(_visualRoot != null) _visualRoot.StrokeShape = new RoundRectangle { CornerRadius = 0 };
             }
         }
 
-        public void BringToFront()
+        #endregion
+
+        #region Navigation Methods
+
+        public void NavigateTo(View view)
         {
-            // MAUI中通过移除再添加来实现置顶
-            if (this.Parent is Layout parent)
+            if (view == null) return;
+
+            // If we have current content, push it to back stack
+            if (Content != null)
             {
-                var index = parent.Children.IndexOf(this);
-                if (index >= 0 && index < parent.Children.Count - 1)
+                _backStack.Push((View)Content);
+            }
+
+            // Clear forward stack on new navigation
+            _forwardStack.Clear();
+
+            // Set new content
+            Content = view;
+
+            UpdateNavigationState();
+        }
+
+        public void GoBack()
+        {
+            if (_backStack.Count > 0)
+            {
+                if (Content != null)
                 {
-                    parent.Children.Remove(this);
-                    parent.Children.Add(this);
-                    
-                    // 触发焦点事件
-                    RaiseFocus();
+                    _forwardStack.Push((View)Content);
+                }
+
+                var view = _backStack.Pop();
+                Content = view;
+                UpdateNavigationState();
+            }
+        }
+
+        public void GoForward()
+        {
+             if (_forwardStack.Count > 0)
+            {
+                if (Content != null)
+                {
+                    _backStack.Push((View)Content);
+                }
+
+                var view = _forwardStack.Pop();
+                Content = view;
+                UpdateNavigationState();
+            }
+        }
+
+        private void UpdateNavigationState()
+        {
+            CanGoBack = _backStack.Count > 0;
+            CanGoForward = _forwardStack.Count > 0;
+        }
+
+        #endregion
+
+        #region Moving
+        private void OnTitleBarPanUpdated(object sender, PanUpdatedEventArgs e)
+        {
+            if (_isMaximized || !IsDraggable) return;
+
+            switch (e.StatusType)
+            {
+                case GestureStatus.Started:
+                    _startX = this.TranslationX;
+                    _startY = this.TranslationY;
+                    break;
+                case GestureStatus.Running:
+                    this.TranslationX = _startX + e.TotalX;
+                    this.TranslationY = _startY + e.TotalY;
+                    break;
+                case GestureStatus.Completed:
+                    break;
+            }
+        }
+        #endregion
+
+        #region Resizing
+
+        private void PrepareResize()
+        {
+            _startX = this.TranslationX;
+            _startY = this.TranslationY;
+            _startWidth = this.Width;
+            _startHeight = this.Height;
+        }
+
+        private void OnResizeRight(object sender, PanUpdatedEventArgs e)
+        {
+            if (!IsResizable) return;
+            if (e.StatusType == GestureStatus.Started) PrepareResize();
+            if (e.StatusType == GestureStatus.Running)
+            {
+                this.WidthRequest = Math.Max(100, _startWidth + e.TotalX);
+            }
+        }
+
+        private void OnResizeBottom(object sender, PanUpdatedEventArgs e)
+        {
+            if (!IsResizable) return;
+            if (e.StatusType == GestureStatus.Started) PrepareResize();
+            if (e.StatusType == GestureStatus.Running)
+            {
+                this.HeightRequest = Math.Max(100, _startHeight + e.TotalY);
+            }
+        }
+
+        private void OnResizeBottomRight(object sender, PanUpdatedEventArgs e)
+        {
+            if (!IsResizable) return;
+            if (e.StatusType == GestureStatus.Started) PrepareResize();
+            if (e.StatusType == GestureStatus.Running)
+            {
+                this.WidthRequest = Math.Max(100, _startWidth + e.TotalX);
+                this.HeightRequest = Math.Max(100, _startHeight + e.TotalY);
+            }
+        }
+
+        private void OnResizeLeft(object sender, PanUpdatedEventArgs e)
+        {
+            if (!IsResizable) return;
+            if (e.StatusType == GestureStatus.Started) PrepareResize();
+            if (e.StatusType == GestureStatus.Running)
+            {
+                // Moving left edge means changing X and Width
+                double newWidth = Math.Max(100, _startWidth - e.TotalX);
+                // If we hit min width, don't move X anymore
+                if (newWidth > 100) 
+                {
+                    this.TranslationX = _startX + e.TotalX;
+                    this.WidthRequest = newWidth;
                 }
             }
         }
 
-        private void SetResizeHandlesEnabled(bool enabled)
+        private void OnResizeTop(object sender, PanUpdatedEventArgs e)
         {
-            resizeTopLeft.IsVisible = enabled;
-            resizeTop.IsVisible = enabled;
-            resizeTopRight.IsVisible = enabled;
-            resizeLeft.IsVisible = enabled;
-            resizeRight.IsVisible = enabled;
-            resizeBottomLeft.IsVisible = enabled;
-            resizeBottom.IsVisible = enabled;
-            resizeBottomRight.IsVisible = enabled;
-        }
-
-        /// <summary>
-        /// 重写IsVisible属性以触发生命周期事件
-        /// </summary>
-        protected override void OnPropertyChanged(string propertyName = null)
-        {
-            base.OnPropertyChanged(propertyName);
-
-            if (propertyName == nameof(IsVisible))
+            if (!IsResizable) return;
+            if (e.StatusType == GestureStatus.Started) PrepareResize();
+            if (e.StatusType == GestureStatus.Running)
             {
-                if (IsVisible)
+                double newHeight = Math.Max(100, _startHeight - e.TotalY);
+                if (newHeight > 100)
                 {
-                    RaiseAppear();
-                }
-                else
-                {
-                    RaiseDisappear();
+                    this.TranslationY = _startY + e.TotalY;
+                    this.HeightRequest = newHeight;
                 }
             }
         }
 
-        private enum ResizeDirection
+        // Combinations
+        private void OnResizeTopLeft(object sender, PanUpdatedEventArgs e)
         {
-            TopLeft,
-            Top,
-            TopRight,
-            Left,
-            Right,
-            BottomLeft,
-            Bottom,
-            BottomRight
+            if (!IsResizable) return;
+            if (e.StatusType == GestureStatus.Started) PrepareResize();
+            if (e.StatusType == GestureStatus.Running)
+            {
+                // Top Logic
+                double newHeight = Math.Max(100, _startHeight - e.TotalY);
+                if (newHeight > 100)
+                {
+                    this.TranslationY = _startY + e.TotalY;
+                    this.HeightRequest = newHeight;
+                }
+                // Left Logic
+                double newWidth = Math.Max(100, _startWidth - e.TotalX);
+                if (newWidth > 100)
+                {
+                    this.TranslationX = _startX + e.TotalX;
+                    this.WidthRequest = newWidth;
+                }
+            }
         }
+
+        private void OnResizeTopRight(object sender, PanUpdatedEventArgs e)
+        {
+            if (!IsResizable) return;
+            if (e.StatusType == GestureStatus.Started) PrepareResize();
+            if (e.StatusType == GestureStatus.Running)
+            {
+                 // Top Logic
+                double newHeight = Math.Max(100, _startHeight - e.TotalY);
+                if (newHeight > 100)
+                {
+                    this.TranslationY = _startY + e.TotalY;
+                    this.HeightRequest = newHeight;
+                }
+                // Right Logic
+                this.WidthRequest = Math.Max(100, _startWidth + e.TotalX);
+            }
+        }
+
+        private void OnResizeBottomLeft(object sender, PanUpdatedEventArgs e)
+        {
+            if (!IsResizable) return;
+            if (e.StatusType == GestureStatus.Started) PrepareResize();
+            if (e.StatusType == GestureStatus.Running)
+            {
+                 // Bottom Logic
+                this.HeightRequest = Math.Max(100, _startHeight + e.TotalY);
+                // Left Logic
+                double newWidth = Math.Max(100, _startWidth - e.TotalX);
+                if (newWidth > 100)
+                {
+                    this.TranslationX = _startX + e.TotalX;
+                    this.WidthRequest = newWidth;
+                }
+            }
+        }
+        #endregion
     }
 }

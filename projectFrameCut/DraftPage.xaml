@@ -5,6 +5,7 @@
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:ie="clr-namespace:InteractableEditor"
              xmlns:local="clr-namespace:projectFrameCut"
+             xmlns:mw="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;assembly=projectFrameCut.ApplicationAPIBase"
              x:DataType="local:DraftPage"
              Shell.NavBarIsVisible="False"
              Title="">
@@ -109,20 +110,15 @@
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="25"/>
         </Grid.RowDefinitions>
 
-
-        <VerticalStackLayout Grid.Row="0" x:Name="UpperContent">
-            <Grid Padding="4" HeightRequest="250" >
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition x:Name="LeftContentColDefinition" Width="*"/>
-                    <ColumnDefinition Width="5"/>
-                    <ColumnDefinition x:Name="RightContentColDefinition" Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Grid x:Name="MainUpperContent" Grid.Column="0">
+        <mw:MultiWindowView Grid.Row="0">
+            <!-- Window 1: Preview -->
+            <mw:MultiWindowItem Title="Preview" x:Name="PreviewWindow" 
+                                WidthRequest="600" HeightRequest="400" TranslationX="20" TranslationY="20">
+                <Grid x:Name="MainUpperContent" BackgroundColor="Black">
                     <AbsoluteLayout x:Name="PreviewOverlayLayer"
                         ZIndex="10000"
                         InputTransparent="False"
@@ -149,97 +145,104 @@
                             AbsoluteLayout.LayoutFlags="All" />
                     </AbsoluteLayout>
                 </Grid>
-                <BoxView x:Name="ContentWidthHandle" Grid.Column="1" Color="Gray" WidthRequest="8" >
-                     <BoxView.GestureRecognizers>
-                        <PanGestureRecognizer PanUpdated="ContentWidthHandlePanUpdated"/>
-                    </BoxView.GestureRecognizers>
-                </BoxView>
-                <Border x:Name="RightContentBorder" ZIndex="0" Grid.Column="2" StrokeThickness="5" HorizontalOptions="Fill">
+            </mw:MultiWindowItem>
+
+            <!-- Window 2: Assets/Right Content -->
+            <mw:MultiWindowItem Title="Assets" x:Name="AssetWindow"
+                                WidthRequest="300" HeightRequest="500" TranslationX="640" TranslationY="20">
+                <Border x:Name="RightContentBorder" ZIndex="0" StrokeThickness="5" HorizontalOptions="Fill">
                 </Border>
-            </Grid>
+            </mw:MultiWindowItem>
 
-            <Grid Margin="0,8,0,8" x:Name="MainControlGrid">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <HorizontalStackLayout Grid.Column="0" x:Name="LeftMenuBar">
-                    <Button x:Name="AddClip" Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" Clicked="AddClip_Clicked" Margin="2,0,0,0" />
-                    <Button x:Name="AssetPanelButton" Text="{l:Localized Key=DraftPage_CenterMenuBar_Asset}"  Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
-                    <Button x:Name="SpiltButton" Text="{l:Localized Key=DraftPage_CenterMenuBar_Spilt}" Margin="8,0,0,0" Clicked="Split_Clicked"/>
-                </HorizontalStackLayout>
-                <HorizontalStackLayout x:Name="PlayingControlLayout" Grid.Column="1" HorizontalOptions="Center">
-                    <Button x:Name="PlayPauseButton" Text="▶" Clicked="PlayPauseButton_Clicked" WidthRequest="40" />
-                    <Label x:Name="CurrentPlayheadLabel" Text="00:00/99:99" Margin="8,0,0,0" VerticalOptions="Center"></Label>
-                </HorizontalStackLayout>
+            <!-- Window 3: Controls -->
+            <mw:MultiWindowItem Title="Controls" x:Name="ControlsWindow"
+                                WidthRequest="800" HeightRequest="100" TranslationX="20" TranslationY="440" IsResizable="True">
+                <Grid Margin="0,4,0,4" x:Name="MainControlGrid">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <HorizontalStackLayout Grid.Column="0" x:Name="LeftMenuBar" VerticalOptions="Center">
+                        <Button x:Name="AddClip" Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" Clicked="AddClip_Clicked" Margin="2,0,0,0" />
+                        <Button x:Name="AssetPanelButton" Text="{l:Localized Key=DraftPage_CenterMenuBar_Asset}"  Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
+                        <Button x:Name="SpiltButton" Text="{l:Localized Key=DraftPage_CenterMenuBar_Spilt}" Margin="8,0,0,0" Clicked="Split_Clicked"/>
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout x:Name="PlayingControlLayout" Grid.Column="1" HorizontalOptions="Center" VerticalOptions="Center">
+                        <Button x:Name="PlayPauseButton" Text="▶" Clicked="PlayPauseButton_Clicked" WidthRequest="40" />
+                        <Label x:Name="CurrentPlayheadLabel" Text="00:00/99:99" Margin="8,0,0,0" VerticalOptions="Center"></Label>
+                    </HorizontalStackLayout>
 
-                <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar">
-                    <Picker x:Name="ResolutionPicker" WidthRequest="150"  SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
-                    <Button x:Name="ZoomOutButton" Text="-" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />
-                    <Button x:Name="ZoomResetButton" Text="1x" Margin="8,0,0,0" Clicked="ZoomResetButton_Clicked"/>
-                    <Button x:Name="ZoomInButton" Text="+" Margin="8,0,0,0" Clicked="ZoomInButton_Clicked"/>
-                    <Border BackgroundColor="Transparent" StrokeThickness="0" WidthRequest="8"/>
-                </HorizontalStackLayout>
-            </Grid>
+                    <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar" VerticalOptions="Center">
+                        <Picker x:Name="ResolutionPicker" WidthRequest="150"  SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
+                        <Button x:Name="ZoomOutButton" Text="-" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />
+                        <Button x:Name="ZoomResetButton" Text="1x" Margin="8,0,0,0" Clicked="ZoomResetButton_Clicked"/>
+                        <Button x:Name="ZoomInButton" Text="+" Margin="8,0,0,0" Clicked="ZoomInButton_Clicked"/>
+                        <Border BackgroundColor="Transparent" StrokeThickness="0" WidthRequest="8"/>
+                    </HorizontalStackLayout>
+                </Grid>
+            </mw:MultiWindowItem>
 
-            <HorizontalStackLayout x:Name="RulerLayout" HeightRequest="12" WidthRequest="-1" BackgroundColor="LightGray">
+            <!-- Window 4: Timeline -->
+            <mw:MultiWindowItem Title="Timeline" x:Name="TimelineWindow"
+                                WidthRequest="800" HeightRequest="300" TranslationX="20" TranslationY="540">
+                <Grid x:Name="LowerContent">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Ruler -->
+                        <RowDefinition Height="*"/> <!-- Tracks -->
+                    </Grid.RowDefinitions>
 
-            </HorizontalStackLayout>
-        </VerticalStackLayout>
+                     <HorizontalStackLayout Grid.Row="0" x:Name="RulerLayout" HeightRequest="12" WidthRequest="-1" BackgroundColor="LightGray">
+                    </HorizontalStackLayout>
 
-        <Grid x:Name="LowerContent" Grid.Row="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="25"/>
-            </Grid.RowDefinitions>
+                    <ScrollView Grid.Row="1" x:Name="TracksAndClipsLayout" Orientation="Vertical">
+                        <VerticalStackLayout>
+                            <Grid x:Name="MainTrackContentGrid">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="8*"/>
+                                </Grid.ColumnDefinitions>
 
-            <ScrollView Grid.Row="0" x:Name="TracksAndClipsLayout" Orientation="Vertical">
-                <VerticalStackLayout>
-                    <Grid x:Name="MainTrackContentGrid">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="1*"/>
-                            <ColumnDefinition Width="8*"/>
-                        </Grid.ColumnDefinitions>
+                                <VerticalStackLayout x:Name="TrackHeadLayout" Grid.Column="0" Padding="2">
 
-                        <VerticalStackLayout x:Name="TrackHeadLayout" Grid.Column="0" Padding="2">
+                                </VerticalStackLayout>
 
+                                <ScrollView x:Name="TimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" HorizontalOptions="Fill" VerticalScrollBarVisibility="Never" HorizontalScrollBarVisibility="Never">
+                                    <VerticalStackLayout x:Name="TrackContentLayout" Padding="2" HorizontalOptions="Fill" />
+                                </ScrollView>
+                            </Grid>
+
+                            <Grid x:Name="SubTrackContentGrid">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="8*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <VerticalStackLayout x:Name="SubTrackHeadLayout" Grid.Column="0" Padding="2">
+
+                                </VerticalStackLayout>
+
+                                <ScrollView x:Name="SubTimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" HorizontalOptions="Fill">
+                                    <VerticalStackLayout x:Name="SubTrackContentLayout" Padding="2" HorizontalOptions="Fill" />
+                                </ScrollView>
+                            </Grid>
+                            <Grid ColumnDefinitions="1*,8*">
+                                <Button Margin="0,8,0,0"
+                                        Grid.Column="0"
+                                        x:Name="AddTrackButton"
+                                        Text="+"
+                                        Clicked="AddTrackButton_Clicked"
+                                        HeightRequest="80" />
+                            </Grid>
                         </VerticalStackLayout>
 
-                        <ScrollView x:Name="TimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" HorizontalOptions="Fill" VerticalScrollBarVisibility="Never" HorizontalScrollBarVisibility="Never">
-                            <VerticalStackLayout x:Name="TrackContentLayout" Padding="2" HorizontalOptions="Fill" />
-                        </ScrollView>
-                    </Grid>
+                    </ScrollView>
+                     <BoxView Grid.Row="1" x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>
+                </Grid>
+            </mw:MultiWindowItem>
+        </mw:MultiWindowView>
 
-                    <Grid x:Name="SubTrackContentGrid">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="1*"/>
-                            <ColumnDefinition Width="8*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <VerticalStackLayout x:Name="SubTrackHeadLayout" Grid.Column="0" Padding="2">
-
-                        </VerticalStackLayout>
-
-                        <ScrollView x:Name="SubTimelineScrollView" Grid.Column="1" Orientation="Horizontal" Scrolled="TimelineScrollView_Scrolled" HorizontalOptions="Fill">
-                            <VerticalStackLayout x:Name="SubTrackContentLayout" Padding="2" HorizontalOptions="Fill" />
-                        </ScrollView>
-                    </Grid>
-                    <Grid ColumnDefinitions="1*,8*">
-                        <Button Margin="0,8,0,0"
-                                Grid.Column="0"
-                                x:Name="AddTrackButton"
-                                Text="+"
-                                Clicked="AddTrackButton_Clicked"
-                                HeightRequest="80" />
-                    </Grid>
-                </VerticalStackLayout>
-
-            </ScrollView>
-            <BoxView x:Name="PlayheadLine" WidthRequest="5" HeightRequest="500" TranslationX="10" BackgroundColor="Red" InputTransparent="True" ZIndex="999" HorizontalOptions="Start" VerticalOptions="Start"/>
-        </Grid>
-
-        <Grid Grid.Row="2" x:Name="StatusBarGrid" BackgroundColor="#80001122" Margin="0,0,0,0">
+        <Grid Grid.Row="1" x:Name="StatusBarGrid" BackgroundColor="#80001122" Margin="0,0,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="25"/>
                 <ColumnDefinition Width="Auto"/>
@@ -265,7 +268,7 @@
         </Grid>
 
         <AbsoluteLayout x:Name="OverlayLayer"
-                        Grid.RowSpan="3"
+                        Grid.RowSpan="2"
                         ZIndex="10000"
                         InputTransparent="False"
                         BackgroundColor="#01000000"

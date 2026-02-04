@@ -356,6 +356,7 @@ public partial class DraftPage : ContentPage
 
     private async void DraftPage_Loaded(object? sender, EventArgs e)
     {
+        /*
         if (UpperContent.Children[0] is Grid previewGrid && PreviewAreaHeight > 100)
         {
             if (AutoSavePreviewAreaHeight)
@@ -371,6 +372,7 @@ public partial class DraftPage : ContentPage
                 ClipEditor?.HeightRequest = PreviewAreaHeight - 10;
             }
         }
+        */
 
         PlayheadLine.TranslationX = TrackHeadLayout.Width;
         if (AlwaysShowToolbarBtns || !OperatingSystem.IsWindows()) AddToolbarBtns();
@@ -421,10 +423,14 @@ public partial class DraftPage : ContentPage
             RightMenuBar.IsVisible = false;
             RightContentBorder.IsVisible = false;
             SpiltButton.IsVisible = false;
+            /*
             ContentWidthHandle.IsVisible = false;
+            */
             PlayingControlLayout.HorizontalOptions = LayoutOptions.End;
             AddClip.Text = "+";
+            /*
             RightContentColDefinition.Width = new GridLength(0, GridUnitType.Absolute);
+            */
             MainControlGrid.ColumnDefinitions = new ColumnDefinitionCollection
             {
                 new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
@@ -1069,7 +1075,7 @@ public partial class DraftPage : ContentPage
             yToBe = clip.layoutY + e.TotalY;
         }
 
-        double actualYToBe = yToBe + UpperContent.Height;
+        double actualYToBe = yToBe; // + UpperContent.Height;
 
         bool ghostExists = Clips.ContainsKey("ghost_" + cid);
 
@@ -1959,6 +1965,7 @@ public partial class DraftPage : ContentPage
 
     private void RulerPanUpdated(object? sender, PanUpdatedEventArgs e)
     {
+        /*
         if (UpperContent.Children[0] is not Grid previewGrid) return;
         switch (e.StatusType)
         {
@@ -1983,10 +1990,12 @@ public partial class DraftPage : ContentPage
                 }
                 break;
         }
+        */
     }
 
     double _initialRightWidth;
 
+/*
     void ContentWidthHandlePanUpdated(object sender, PanUpdatedEventArgs e)
     {
         switch (e.StatusType)
@@ -2001,6 +2010,7 @@ public partial class DraftPage : ContentPage
                 break;
         }
     }
+*/
 
     #endregion
 

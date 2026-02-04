@@ -1,42 +1,10 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="projectFrameCut.ApplicationAPIBase.Views.MultiWindowView.MultiWindowView"
-             x:Name="root">
+<Grid xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+      xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+      x:Class="projectFrameCut.ApplicationAPIBase.Views.MultiWindowView.MultiWindowView"
+      BackgroundColor="#2D2D30">
     
-    <Grid>
-        <!-- MDI 容器 - 使用 AbsoluteLayout 模拟窗口布局 -->
-        <AbsoluteLayout x:Name="mdiContainer" 
-                       BackgroundColor="{Binding Source={x:Reference root}, Path=ContainerBackgroundColor}">
-        </AbsoluteLayout>
-        
-        <!-- 任务栏/窗口列表 (可选) -->
-        <Grid x:Name="taskBar" 
-              BackgroundColor="{Binding Source={x:Reference root}, Path=TaskBarBackgroundColor}" 
-              HeightRequest="40"
-              VerticalOptions="End"
-              IsVisible="True">
-            
-            <CollectionView x:Name="windowList"
-                           Margin="5,0"
-                           ItemsLayout="HorizontalList">
-                <CollectionView.ItemTemplate>
-                    <DataTemplate>
-                        <Border Stroke="#CCCCCC" 
-                               StrokeThickness="1"
-                               Margin="5,5"
-                               Padding="10,5"
-                               BackgroundColor="White"
-                               StrokeShape="RoundRectangle 4">
-                            <Border.GestureRecognizers>
-                                <TapGestureRecognizer Tapped="OnWindowListItemTapped"/>
-                            </Border.GestureRecognizers>
-                            <Label Text="{Binding Title}" 
-                                  VerticalOptions="Center"/>
-                        </Border>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
-        </Grid>
-    </Grid>
-</ContentView>
+    <!-- This Grid acts as the MDI Container.
+         Children added here (MultiWindowItems) will float over this background. -->
+         
+</Grid>
