@@ -4,6 +4,7 @@ using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
 using Microsoft.Maui.Controls;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Asset;
 using projectFrameCut.Controls;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -24,6 +25,7 @@ using Windows.Storage;
 #if iDevices
 using Foundation;
 using UIKit;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 
 #endif
 

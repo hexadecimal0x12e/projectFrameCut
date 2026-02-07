@@ -18,10 +18,15 @@ using Foundation;
 
 #endif
 
-namespace projectFrameCut.Services
+namespace projectFrameCut.ApplicationAPIBase.Helpers
 {
     public static class FileDropHelper
     {
+        /// <summary>
+        /// Get the file paths from the drop event args. The implementation is platform-specific, and it will try to extract the file paths from the drop data. If the drop data does not contain file paths, it will return an empty list.
+        /// </summary>
+        /// <param name="e"></param>
+        /// <returns></returns>
         public static async Task<List<string>> GetFilePathsFromDrop(DropEventArgs e)
         {
             List<string> filePaths = new();

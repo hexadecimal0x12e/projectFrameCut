@@ -210,32 +210,6 @@ namespace projectFrameCut.DraftStuff
             .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default)
             ;
 
-#if DEBUG //end user don't want to see raw json editor
-            ppb.AddCustomChild((ivk) =>
-            {
-                var editor = new Editor
-                {
-                    Text = JsonSerializer.Serialize(clip, savingOpts),
-                    HeightRequest = 300,
-                };
-                editor.TextChanged += (s, e) =>
-                {
-                    try
-                    {
-                        if (JsonSerializer.Deserialize<ClipElementUI>(editor.Text) is not ClipElementUI updatedClip)
-                        {
-                            return;
-                        }
-                        ivk(editor.Text);
-                    }
-                    catch (Exception)
-                    {
-                    }
-                };
-                return editor;
-            }, "rawJsonEditor", JsonSerializer.Serialize(clip, savingOpts))
-            .AddCustomChild(new Rectangle { WidthRequest = 50, HeightRequest = 120, Fill = Colors.Transparent });
-#endif
 
             ppb.PropertyChanged += async (s, e) =>
             {
@@ -376,10 +350,10 @@ namespace projectFrameCut.DraftStuff
             return ppb.BuildWithScrollView();
         }
 
-        public static void RebuildAllEffects(ClipElementUI clip)
+        public static void RebuildAllEffects(ClipElementUI clip, bool diag = false)
         {
             var newEffects = clip.Effects ?? new();
-            int globalIndex = clip.Effects?.Select(e => e.Value)?.OrderBy(e => e.Index).LastOrDefault(e => !e.Name.StartsWith("__Internal"))?.Index + 1 ?? 0;
+            int globalIndex = clip.Effects?.Select(e => e.Value)?.OrderBy(e => e.Index).LastOrDefault(e => (!e.Name?.StartsWith("__Internal")) ?? true)?.Index + 1 ?? 0;
             var factories = EffectServices.GetAvailableEffectBundles();
 
             if (clip.EffectBundles != null)
@@ -445,6 +419,7 @@ namespace projectFrameCut.DraftStuff
                         catch (Exception ex)
                         {
                             Log(ex, $"Rebuild effects for bundle {bundleData.BundleTypeName}");
+                            if (diag) throw;
                         }
                     }
                 }
@@ -458,6 +433,22 @@ namespace projectFrameCut.DraftStuff
         public async Task<View> BuildEffectTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             PropertyPanelBuilder ppb = new();
+            ppb.AddButton("Show binding", (s, e) =>
+            {
+                var bindView = new DraftEffectBindingView();
+                bindView.LoadClip(clip,page);
+                var v = new ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem
+                {
+                    Title = $"Effect Bindings for {clip.DisplayName}",
+                    Content = new ScrollView
+                    {
+                        Content = bindView
+                    }
+                };
+                page.MainMultiWindowView.AddWindow(v);
+                v.Maximize();
+                v.CloseClicked += (s, e) => RebuildAllEffects(clip, false);
+            });
             var bundlesFactories = EffectServices.GetAvailableEffectBundles();
 
             if (clip.EffectBundles != null)
@@ -480,7 +471,7 @@ namespace projectFrameCut.DraftStuff
                             var bundleUiInstance = factory();
                             bundleUiInstance.Parameters = bundleData.Parameters;
                             bundleUiInstance.Id = bundleId;
-                            if (!string.IsNullOrEmpty(bundleData.Name)) bundleUiInstance.Name = bundleData.Name;
+                            if (!string.IsNullOrEmpty(bundleUiInstance.Name)) bundleUiInstance.Name = bundleData.Name;
 
                             var bundlePpb = bundleUiInstance.CreateUI();
 
@@ -622,9 +613,18 @@ namespace projectFrameCut.DraftStuff
             ppb.AddCustomChild(bundleOrderContainer);
 #if DEBUG
             ppb.AddSeparator();
-            ppb.AddButton("Rebuild", (s, e) =>
+            ppb.AddButton("Rebuild", async (s, e) =>
             {
-                RebuildAllEffects(clip);
+                try
+                {
+                    RebuildAllEffects(clip,true);
+                    await page.DisplayAlertAsync(Localized._Info, SettingsManager.SettingLocalizedResources.Advanced_Success, Localized._OK);
+
+                }
+                catch (Exception ex)
+                {
+                    if (await page.DisplayAlertAsync("Error", Localized._ExceptionTemplate(ex), "Throw", Localized._OK)) throw;
+                }
             });
 #endif
             var panel = ppb.BuildWithScrollView();

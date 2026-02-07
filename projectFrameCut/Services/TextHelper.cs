@@ -238,14 +238,15 @@ namespace projectFrameCut.Services
             return detectedLanguage;
         }
 
-        public static async Task<string> GetPronounceForOrdering(string input)
+        public static async Task<string> GetPronounceForOrdering(string input, string? locateID = null)
         {
             var loc = DetectTextLanguage(input);
+            locateID ??= Localized._LocaleId_;
             return loc switch
             {
                 TextLanguage.Japanese => await GetJapaneseHiragana(input),
-                TextLanguage.Chinese when Localized._LocaleId_ != "ja-JP" => await GetChinesePinyin(input),
-                TextLanguage.Chinese when Localized._LocaleId_ == "ja-JP" => await GetJapaneseHiragana(input),
+                TextLanguage.Chinese when locateID != "ja-JP" => await GetChinesePinyin(input),
+                TextLanguage.Chinese when locateID == "ja-JP" => await GetJapaneseHiragana(input),
                 TextLanguage.Korean => input,
                 TextLanguage.Russian => GetRussianTransliteration(input),
                 TextLanguage.Thai => input,
@@ -497,6 +498,10 @@ namespace projectFrameCut.Services
             {'Ш', "Sh"}, {'Щ', "Shch"}, {'Ъ', ""}, {'Ы', "Y"}, {'Ь', ""},
             {'Э', "E"}, {'Ю', "Yu"}, {'Я', "Ya"}
         };
+
+        public static string DummyString = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur est tortor, imperdiet et dui id, egestas hendrerit quam. Suspendisse ac felis a felis ultrices cursus a sit amet ligula. Praesent volutpat vitae dolor luctus rutrum. Vestibulum eu nibh magna. Maecenas vel tempus nunc. Donec vitae convallis odio. Donec nec mattis sapien.";
+
+        public static string[] DummyStrings => JapaneseKatakanaOrHiraganaMapping.Keys.Select(c => c.ToString()).ToArray();
 
     }
 

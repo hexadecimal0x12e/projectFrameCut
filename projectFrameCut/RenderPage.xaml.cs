@@ -23,17 +23,7 @@ using projectFrameCut.Render.EncodeAndDecode;
 using JsonElement = System.Text.Json.JsonElement;
 using System.Runtime.InteropServices;
 
-
-
-
-
-
-
-
-
-
-
-
+using projectFrameCut.ApplicationAPIBase.Helpers;
 
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL;

@@ -34,9 +34,9 @@ using projectFrameCut.Render.Rendering;
 using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
 using System.Runtime;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
-
-
-
+using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
+using CommunityToolkit.Maui.Alerts;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 
 
 
@@ -56,7 +56,7 @@ using UIKit;
 using projectFrameCut.iDevicesAPI;
 using MobileCoreServices;
 using projectFrameCut.MetalAccelerater;
-using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 
 
 #endif
@@ -65,11 +65,8 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
 using projectFrameCut.Render.AndroidOpenGL;
 using Microsoft.Maui.Platform;
-using CommunityToolkit.Maui.Alerts;
-using CommunityToolkit.Maui.Core;
 using Android.Content.Res;
-using static System.Net.Mime.MediaTypeNames;
-using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 
 #endif
 
@@ -356,7 +353,6 @@ public partial class DraftPage : ContentPage
 
     private async void DraftPage_Loaded(object? sender, EventArgs e)
     {
-        /*
         if (UpperContent.Children[0] is Grid previewGrid && PreviewAreaHeight > 100)
         {
             if (AutoSavePreviewAreaHeight)
@@ -371,8 +367,29 @@ public partial class DraftPage : ContentPage
                 previewGrid.HeightRequest = PreviewAreaHeight;
                 ClipEditor?.HeightRequest = PreviewAreaHeight - 10;
             }
+
+            if (previewGrid.ColumnDefinitions.Count < 2)
+            {
+                previewGrid.ColumnDefinitions.Clear();
+                previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            }
+            else
+            {
+                previewGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+                previewGrid.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
+            }
+
+            int colIndex = 0;
+            foreach (var child in previewGrid.Children)
+            {
+                if (child.GetType().Name == "MultiWindowItem" && colIndex < 2)
+                {
+                    Grid.SetColumn((BindableObject)child, colIndex);
+                    colIndex++;
+                }
+            }
         }
-        */
 
         PlayheadLine.TranslationX = TrackHeadLayout.Width;
         if (AlwaysShowToolbarBtns || !OperatingSystem.IsWindows()) AddToolbarBtns();
@@ -423,14 +440,10 @@ public partial class DraftPage : ContentPage
             RightMenuBar.IsVisible = false;
             RightContentBorder.IsVisible = false;
             SpiltButton.IsVisible = false;
-            /*
-            ContentWidthHandle.IsVisible = false;
-            */
+            //ContentWidthHandle.IsVisible = false;
             PlayingControlLayout.HorizontalOptions = LayoutOptions.End;
             AddClip.Text = "+";
-            /*
-            RightContentColDefinition.Width = new GridLength(0, GridUnitType.Absolute);
-            */
+            //RightContentColDefinition.Width = new GridLength(0, GridUnitType.Absolute);
             MainControlGrid.ColumnDefinitions = new ColumnDefinitionCollection
             {
                 new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
@@ -938,6 +951,24 @@ public partial class DraftPage : ContentPage
             })
             .AddCommand(Localized.DraftPage_CenterMenuBar_Spilt, () => Split_Clicked(this, EventArgs.Empty))
             .AddCommand(Localized.DraftPage_ContextMenu_Delete, () => DeleteAClip(clip));
+            if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+            {
+                builder.AddCommand("Show JSON", () =>
+                {
+                    var edit = new Editor
+                    {
+                        IsReadOnly = false,
+                        Text = JsonSerializer.Serialize(clip, savingOpts),
+                        HeightRequest = 300
+                    };
+                    var wd = new MultiWindowItem
+                    {
+                        Content = edit
+                    };
+
+                    MainMultiWindowView.AddWindow(wd);
+                });
+            }
             builder.TryShow(border);
         }
     }
@@ -1075,7 +1106,7 @@ public partial class DraftPage : ContentPage
             yToBe = clip.layoutY + e.TotalY;
         }
 
-        double actualYToBe = yToBe; // + UpperContent.Height;
+        double actualYToBe = yToBe + UpperContent.Height;
 
         bool ghostExists = Clips.ContainsKey("ghost_" + cid);
 
@@ -1965,7 +1996,6 @@ public partial class DraftPage : ContentPage
 
     private void RulerPanUpdated(object? sender, PanUpdatedEventArgs e)
     {
-        /*
         if (UpperContent.Children[0] is not Grid previewGrid) return;
         switch (e.StatusType)
         {
@@ -1990,27 +2020,9 @@ public partial class DraftPage : ContentPage
                 }
                 break;
         }
-        */
     }
 
-    double _initialRightWidth;
 
-/*
-    void ContentWidthHandlePanUpdated(object sender, PanUpdatedEventArgs e)
-    {
-        switch (e.StatusType)
-        {
-            case GestureStatus.Started:
-                _initialRightWidth = RightContentBorder.Bounds.Width;
-                break;
-            case GestureStatus.Running:
-                var newWidth = _initialRightWidth - e.TotalX;
-                if (newWidth < 100) newWidth = 100;
-                RightContentColDefinition.Width = new GridLength(newWidth, GridUnitType.Absolute);
-                break;
-        }
-    }
-*/
 
     #endregion
 

@@ -74,7 +74,7 @@ namespace projectFrameCut
 #pragma warning restore CS0618
 
             };
-
+#endif
             AppDomain.CurrentDomain.ProcessExit += (s, e) =>
             {
                 Log("App is closing...");
@@ -97,7 +97,7 @@ namespace projectFrameCut
                 catch { }
 
             };
-#endif
+
         }
 
 #if WINDOWS

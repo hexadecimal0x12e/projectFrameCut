@@ -12,6 +12,7 @@ namespace projectFrameCut.ApplicationPluginBase
         public Dictionary<string, Func<IEffectBundle>> EffectBundleProvider => new Dictionary<string, Func<IEffectBundle>>
         {
             {"ZoomIn", () => new Effect.ZoominEffectBundle() },
+            {"RemoveColor", () => new Effect.RemoveColorEffectBundle() },
             {"Jitter", () => new Effect.JitterEffectBundle() },
             {"Movement", () => new Effect.MovementEffectBundle()  },
         };

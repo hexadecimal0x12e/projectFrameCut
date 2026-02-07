@@ -7,16 +7,20 @@ using SixLabors.ImageSharp.PixelFormats;
 using IPicture = projectFrameCut.Shared.IPicture;
 
 
+
 #if WINDOWS
 using Microsoft.UI.Xaml.Media.Imaging;
 
 #endif
 
-namespace projectFrameCut.DraftStuff
+namespace projectFrameCut.ApplicationAPIBase.Helpers
 {
     public static class ImageHelper
     {
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Microsoft.Maui.Controls.Image, System.Threading.SemaphoreSlim> _loadingLocks = new();
+
+        /// <summary>
+        /// Trying to load PNG image to a Microsoft.Maui.Controls.Image control.
 
         public static async Task ForceLoadPNGToAImage(this Microsoft.Maui.Controls.Image source, string path)
         {
@@ -104,6 +108,11 @@ namespace projectFrameCut.DraftStuff
             }
         }
 
+        /// <summary>
+        /// Trying to load a image from program asset. Don't use this in your plugin, it's a internal method.
+        /// </summary>
+        /// <param name="assetName"></param>
+        /// <returns></returns>
         public static ImageSource LoadFromAsset(string assetName)
         {
 #if WINDOWS
@@ -121,6 +130,11 @@ namespace projectFrameCut.DraftStuff
             return ImageSource.FromFile(assetName);
         }
 
+        /// <summary>
+        /// Convert a <see cref="IPicture"/> to a <see cref="ImageSource"/>.
+        /// </summary>
+        /// <param name="picture"></param>
+        /// <returns></returns>
         public static ImageSource ToImageSource(this IPicture picture)
         {
             if (picture == null) return null;

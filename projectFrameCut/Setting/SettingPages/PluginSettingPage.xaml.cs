@@ -1,3 +1,4 @@
+using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;

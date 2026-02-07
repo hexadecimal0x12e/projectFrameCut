@@ -28,16 +28,7 @@ using projectFrameCut.APIClient;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using Color = Microsoft.Maui.Graphics.Color;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
-
-using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
-
-
-
-
-
-
-
-
+using projectFrameCut.ApplicationAPIBase.Helpers;
 
 
 #if ANDROID
@@ -58,6 +49,11 @@ public partial class TestPage : ContentPage
         InitializeComponent();
 
         Loaded += TestPage_Loaded;
+
+#if WINDOWS
+        MultiWindowItem.ContextMenuProviderGetter = new(() => new WindowsContextMenuBuilder());
+#endif
+
     }
 
     private void TestPage_Loaded(object? sender, EventArgs e)
@@ -876,7 +872,8 @@ public partial class TestPage : ContentPage
     private void TestOrderButton_Clicked(object sender, EventArgs e)
     {
         var lines = InputEditor.Text.Split(["\r", "\n", "\r\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var ordered = lines.OrderBy(a => TextHelper.GetPronounceForOrdering(a).Result).GroupBy(TextHelper.DetectTextLanguage).OrderByDescending(g => g.Count()).SelectMany(c => c).ToList();
+        var loc = string.IsNullOrWhiteSpace(LocateInputer.Text) ? Localized._LocaleId_ : LocateInputer.Text.Trim();
+        var ordered = lines.OrderBy(a => TextHelper.GetPronounceForOrdering(a, loc).Result).GroupBy(TextHelper.DetectTextLanguage).OrderByDescending(g => g.Count()).SelectMany(c => c).ToList();
         InputEditor.Text = string.Join(Environment.NewLine, ordered);
         TestOrderButton.Text = "Order done";
 
@@ -911,7 +908,7 @@ public partial class TestPage : ContentPage
             {
                 Children =
                 {
-                    new Label { Text = $"This window is in level {level + 1}" },
+                    new Label { Text = $"This window is in level {level + 1}\r\nA random number:{Random.Shared.Next()}" },
                     new Button { Text = "Back", Command = new Command(() =>
                     {
                         if (item.CanGoBack)
@@ -919,7 +916,22 @@ public partial class TestPage : ContentPage
                             item.GoBack();
                         }
                     })},
-                    new Button { Text = "Front", Command = new Command(() => item.NavigateTo(makeWindowContent(level+1, item)) )}
+                    new Button { Text = "Front", Command = new Command(() => item.NavigateTo(makeWindowContent(level+1, item)) )},
+                    new Button {Text = "Prompt", Command = new Command(async () =>
+                    {
+                        var result = await item.DisplayAlertAsync("Action", TextHelper.DummyString, "yes", "no");
+                        await DisplayAlertAsync(Title, result.ToString(), "ok");
+                    })},
+                    new Button {Text = "ActionSheet", Command = new Command(async () =>
+                    {
+                        var result = await item.DisplayActionSheetAsync("Options", "no", "destruct", TextHelper.DummyStrings);
+                        await DisplayAlertAsync(Title, result.ToString(), "ok");
+                    })},
+                    new Button {Text = "Input", Command = new Command(async () =>
+                    {
+                        var result = await item.DisplayPromptAsync("Action", "Input some text", "yes", "no");
+                        await DisplayAlertAsync(Title, result?.ToString() ?? "null input, may user cancelled.", "ok");
+                    })}
                 }
             };
         }
@@ -927,9 +939,12 @@ public partial class TestPage : ContentPage
         {
             WidthRequest = 400,
             HeightRequest = 300,
+            IsPopOutVisible = true
         };
         myWindow.Content = makeWindowContent(0, myWindow);
         myWindow.Title = $"Test Window {++windowCount}";
+
+
         myMultiWindowView.AddWindow(myWindow);
     }
 

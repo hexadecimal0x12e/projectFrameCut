@@ -41,6 +41,7 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         /// </summary>
         /// <remarks>
         /// DO NOT set this property manually. It will be set by the user interface when the effect group is added to the effect stack.
+        /// when this value is <see cref="int.MaxValue"/>, it means this EffectGroup is not joined in the effect stack, and it'll be displayed with a effect without any connection.
         /// </remarks>
         public int Index { get; set; }
 

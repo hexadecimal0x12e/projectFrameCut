@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="projectFrameCut.DraftStuff.DraftEffectBindingView">
+    <Grid ColumnDefinitions="*, 300">
+        <!-- Node Canvas -->
+        <Grid Grid.Column="0" BackgroundColor="#1e1e1e">
+             <!-- Connections Layer -->
+            <GraphicsView x:Name="ConnectionsLayer" 
+                          InputTransparent="True"
+                          VerticalOptions="Fill" 
+                          HorizontalOptions="Fill"/>
+            
+            <!-- Nodes Layer -->
+            <AbsoluteLayout x:Name="NodesContainer" 
+                            InputTransparent="False">
+            </AbsoluteLayout>
+            
+            <Label Text="Drag nodes to move. Drag between ports to connect. Double Click to disconnect." 
+                   TextColor="Gray" Margin="10" VerticalOptions="End" HorizontalOptions="Start" InputTransparent="True"/>
+        </Grid>
+
+        <!-- Properties Panel -->
+        <Grid Grid.Column="1" RowDefinitions="Auto, *" BackgroundColor="#252526">
+            <Label Text="Properties" FontAttributes="Bold" Margin="10"/>
+            <ScrollView Grid.Row="1" Padding="10">
+                <VerticalStackLayout x:Name="PropertiesPanel" Spacing="10"/>
+            </ScrollView>
+        </Grid>
+    </Grid>
+</ContentView>

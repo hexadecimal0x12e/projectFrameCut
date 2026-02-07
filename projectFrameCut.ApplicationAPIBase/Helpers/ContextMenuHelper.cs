@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Windows.Input;
 
 
+
 #if WINDOWS
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Maui.Platform;
@@ -13,7 +14,7 @@ using MenuFlyout = Microsoft.UI.Xaml.Controls.MenuFlyout;
 
 #endif
 
-namespace projectFrameCut.Services
+namespace projectFrameCut.ApplicationAPIBase.Helpers
 {
     public interface IContextMenuBuilder
     {

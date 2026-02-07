@@ -15,8 +15,8 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 
-		<AssemblyVersion>2.0.0.0</AssemblyVersion>
-		<FileVersion>2.0.0.0</FileVersion>
+		<AssemblyVersion>3.0.0.0</AssemblyVersion>
+		<FileVersion>3.0.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>codename 'projectFrameCut'</Product>
 		<Description>projectFrameCut Application component shared library</Description>
@@ -56,10 +56,4 @@
 		</None>
 	</ItemGroup>
 
-
-	<ItemGroup>
-	  <Compile Update="Views\TabbedView\TabbedView.cs">
-	    <DependentUpon>TabbedView.xa1ml</DependentUpon>
-	  </Compile>
-	</ItemGroup>
 </Project>

@@ -545,7 +545,7 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class MaskApplierFactory : IEffectFactory
+    public class MaskApplierFactory : IBindableEffectFactory
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "MaskApplier";
@@ -553,6 +553,10 @@ namespace projectFrameCut.Render.Effect
         public Dictionary<string, string> ParametersType => MaskApplier.ParametersType;
 
         public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp };
+
+        public string? ID { get; set; }
+        public string? BindedInputID { get; set; }
+        public string[]? BindedInputIDs { get; set; }
 
         public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
         {
@@ -570,6 +574,16 @@ namespace projectFrameCut.Render.Effect
             {
                 return MaskApplier.FromParametersDictionary(parameters);
             }
+            return new MaskApplier();
+        }
+
+        public IEffect BuildWithDefaultType(string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
+        {
+            return new MaskApplier();
+        }
+
+        public IEffect Build(EffectImplementType implementType, string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null)
+        {
             return new MaskApplier();
         }
     }

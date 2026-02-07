@@ -4,8 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace projectFrameCut
+namespace projectFrameCut.ApplicationAPIBase.Helpers
 {
+    /// <summary>
+    /// Do denoise on a pan event.
+    /// </summary>
     public class PanDeNoise
     {
         // Simple exponential moving average to smooth pan input without introducing a bias offset.

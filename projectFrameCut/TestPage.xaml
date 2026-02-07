@@ -88,6 +88,7 @@
                     <Label Text="ordering test"/>
                     <Editor x:Name="InputEditor" HeightRequest="150" Placeholder="Input here"></Editor>
                     <Button x:Name="TestOrderButton" Text="Order" Clicked="TestOrderButton_Clicked"/>
+                    <Entry x:Name="LocateInputer" Placeholder="Locate for ordering, blank for default"/>
                 </VerticalStackLayout>
             </Border>
             <VerticalStackLayout HeightRequest="250" >
