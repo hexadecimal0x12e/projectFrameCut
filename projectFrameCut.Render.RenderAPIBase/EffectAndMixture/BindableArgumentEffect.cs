@@ -50,6 +50,22 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         }
     }
 
+    public interface IBindableArgumentEffectNoInputValueProvider : IBindableArgumentEffect
+    {
+        BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.ValueProvider;
+        /// <summary>
+        /// Indicate whether this value provider generates a new value only once, or generates a new value for each request.
+        /// </summary>
+        public bool GenerateOnce { get; }
+        public string OutputAnchorName { get; }
+        /// <summary>
+        /// Generates a new value based on the specified computer and target dimensions.
+        /// </summary>
+        /// <returns>An object representing the generated value with the specified dimensions. The exact type and contents depend
+        /// on the implementation.</returns>
+        public object GenerateValue(IComputer? computer, int targetWidth, int targetHeight);
+    }
+
     public interface IBindableArgumentEffectValueProvider : IBindableArgumentEffect
     {
         BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.ValueProvider;
@@ -191,6 +207,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
     public enum BindableArgumentEffectType
     {
         ValueProvider,
+        NoInputValueProvider,
         OneInputValueProcessor,
         ManyInputValueProcessor,
         OneInputResultGenerator,

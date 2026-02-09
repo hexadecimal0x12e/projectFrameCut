@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:l="clr-namespace:projectFrameCut.ApplicationAPIBase.LocalizedResources"
              xmlns:local="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView"
              x:Class="projectFrameCut.ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem" 
              x:Name="Self">
@@ -92,7 +93,7 @@
                                 </Border>
 
                                 <!-- PopOut Button (Open in New Window) -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="PopOutBtn" IsVisible="False" ToolTipProperties.Text="Open in a new window">
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="PopOutBtn" IsVisible="False" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_PopOut}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnPopOutTapped"/>
                                     </Border.GestureRecognizers>
@@ -100,7 +101,7 @@
                                 </Border>
 
                                 <!-- Minimize Button -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="MinimizeBtn" ToolTipProperties.Text="Minimize">
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="MinimizeBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_Minimize}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnMinimizeTapped"/>
                                     </Border.GestureRecognizers>
@@ -108,7 +109,7 @@
                                 </Border>
 
                                 <!-- Maximize/Restore Button -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="MaximizeBtn" ToolTipProperties.Text="Maximize">
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="MaximizeBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_Maximize}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnMaximizeTapped"/>
                                     </Border.GestureRecognizers>
@@ -116,7 +117,7 @@
                                 </Border>
 
                                 <!-- Close Button -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="CloseBtn" ToolTipProperties.Text="Close">
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="CloseBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_Close}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnCloseTapped"/>
                                     </Border.GestureRecognizers>
@@ -187,14 +188,14 @@
                 -->
                 <Grid x:Name="ResizeGrid" InputTransparent="True" CascadeInputTransparent="False"> 
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="8"/>
+                        <RowDefinition Height="12"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="8"/>
+                        <RowDefinition Height="12"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="12"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="12"/>
                     </Grid.ColumnDefinitions>
 
                     <Grid.Resources>

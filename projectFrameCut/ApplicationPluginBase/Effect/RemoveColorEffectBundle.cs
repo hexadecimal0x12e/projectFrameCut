@@ -13,7 +13,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 {
     public class RemoveColorEffectBundle : IEffectBundle
     {
-        public string Id { get; set; } = string.Empty;
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         public string Name { get; set; } = string.Empty;
 
@@ -47,11 +47,24 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public bool IsBindableEffect => false;
 
-        public int Index { get; set; }
+        public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
+        public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
+        public List<Guid>? BindedInputIds { get; set; }
+
+        public bool IsMultiInput => false;
+        public string InputAnchorDisplayName => string.Empty;
+        public string[]? InputAnchorsDisplayName => null;
+        public string OutputAnchorDisplayName => string.Empty;
+        public bool Enabled { get; set; }
+
+        public int StartPoint { get; set; }
+        public int EndPoint { get; set; }
 
         public IEffectFactory[] Create()
         {
-            return new IEffectFactory[] { new RemoveColorEffectFactory() };
+            var factory = new RemoveColorEffectFactory();
+            this.ConfigureFactory(factory);
+            return new IEffectFactory[] { factory };
         }
 
         public PropertyPanelBuilder CreateUI()

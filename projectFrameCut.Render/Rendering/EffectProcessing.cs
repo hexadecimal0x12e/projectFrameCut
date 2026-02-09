@@ -89,7 +89,7 @@ namespace projectFrameCut.Render.Rendering
                 case BindableArgumentEffectType.ValueProvider:
                     if (item is not IBindableArgumentEffectValueProvider vp) throw new NotSupportedException($"Unsupported BindableArgumentEffectType {item.EffectRole} in IBindableArgumentEffect {item.Name}.");
                     {
-                        ArgumentNullException.ThrowIfNull(item.Id, "Id");
+                        ArgumentNullException.ThrowIfNull(vp.Id, "Id");
                         var value = vp.GenerateValue(frame, computer, width, height);
                         // 根据 GenerateOnce 决定存储位置
                         if (vp.GenerateOnce)
@@ -102,15 +102,30 @@ namespace projectFrameCut.Render.Rendering
                         }
                         return vp.GenerateOnce;
                     }
-                    break;
+                case BindableArgumentEffectType.NoInputValueProvider:
+                    if (item is not IBindableArgumentEffectNoInputValueProvider nip) throw new NotSupportedException($"Unsupported BindableArgumentEffectType {item.EffectRole} in IBindableArgumentEffect {item.Name}.");
+                    {
+                        ArgumentNullException.ThrowIfNull(nip.Id, "Id");
+                        var value = nip.GenerateValue(computer, width, height);
+                        // 根据 GenerateOnce 决定存储位置
+                        if (nip.GenerateOnce)
+                        {
+                            globalResultCache[item.Id] = value; // 存储到全局缓存
+                        }
+                        else
+                        {
+                            frameLocalCache[item.Id] = value; // 存储到帧缓存
+                        }
+                        return nip.GenerateOnce;
+                    }
                 case BindableArgumentEffectType.OneInputValueProcessor:
                     if (item is not IBindableArgumentEffectOneToOneValueProcesser vproc) throw new NotSupportedException($"Unsupported BindableArgumentEffectType {item.EffectRole} in IBindableArgumentEffect {item.Name}.");
                     {
-                        ArgumentNullException.ThrowIfNull(item.BindedArgumentProviderID, "BindedArgumentProviderID");
-                        var inputValue = GetCachedValue(item.BindedArgumentProviderID, frameLocalCache, globalResultCache);
+                        ArgumentNullException.ThrowIfNull(vproc.BindedArgumentProviderID, "BindedArgumentProviderID");
+                        var inputValue = GetCachedValue(vproc.BindedArgumentProviderID, frameLocalCache, globalResultCache);
                         var processedValue = vproc.ProcessValue(inputValue, computer, width, height);
                         // 处理后的值存储到原值所在的位置
-                        if (frameLocalCache.ContainsKey(item.BindedArgumentProviderID))
+                        if (frameLocalCache.ContainsKey(vproc.BindedArgumentProviderID))
                         {
                             frameLocalCache[item.BindedArgumentProviderID] = processedValue;
                         }
@@ -172,8 +187,8 @@ namespace projectFrameCut.Render.Rendering
                 case BindableArgumentEffectType.OneInputResultGenerator:
                     if (item is not IBindableArgumentEffectOneInputResultGenerator crg) throw new NotSupportedException($"Unsupported BindableArgumentEffectType {item.EffectRole} in IBindableArgumentEffect {item.Name}.");
                     {
-                        ArgumentNullException.ThrowIfNull(item.BindedArgumentProviderID, "BindedArgumentProviderID");
-                        var cachedValue = GetCachedValue(item.BindedArgumentProviderID, frameLocalCache, globalResultCache);
+                        ArgumentNullException.ThrowIfNull(crg.BindedArgumentProviderID, "BindedArgumentProviderID");
+                        var cachedValue = GetCachedValue(crg.BindedArgumentProviderID, frameLocalCache, globalResultCache);
                         if (item.YieldProcessStep)
                         {
                             lastIsProcessStep = true;

@@ -22,8 +22,10 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
     /// </remarks>
     public interface IApplicationPluginBase : IPluginBase
     {
-
-        public Dictionary<string,Func<IEffectBundle>> EffectBundleProvider { get; }
+        /// <summary>
+        /// Gets a dictionary that maps effect names to their corresponding effect bundle creation functions.
+        /// </summary>
+        public Dictionary<string, Func<IEffectBundle>> EffectBundleProvider { get; }
 
         /// <summary>
         /// Create the setting page for the plugin.
@@ -31,13 +33,22 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         /// </summary>
         public View? SettingPageProvider(ref IApplicationPluginBase instance);
 
+        /// <summary>
+        /// Override this method to do some custom action after this plugin loaded in application level.
+        /// </summary>
+        /// <remarks>
+        /// If you override both <see cref="IPluginBase.OnLoaded(out string)"/> and <see cref="OnApplicationPluginLoaded"/>, Application will call <see cref="IPluginBase.OnLoaded(out string)"/> first then call <see cref="OnApplicationPluginLoaded"/> if previous one is succeed.
+        /// </remarks>
+        public virtual void OnApplicationPluginLoaded()
+        {
 
+        }
     }
 
 
 
 
-   
-    
+
+
 
 }

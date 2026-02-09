@@ -136,7 +136,7 @@ public partial class DraftPage : ContentPage
 
     ConcurrentDictionary<string, DraftTasks> RunningTasks = new();
 
-    ClipInfoBuilder infoBuilder;
+    public ClipInfoBuilder infoBuilder;
     LivePreviewer previewer = new();
 
     DateTime lastSyncTime = DateTime.MinValue;
@@ -420,7 +420,7 @@ public partial class DraftPage : ContentPage
 
         ResolutionPicker.SelectedIndex = 0;
 
-        DraftChanged(sender, new());
+        DraftChanged(sender, new ClipUpdateEventArgs { NoSave = true });
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
         MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog;
@@ -452,6 +452,10 @@ public partial class DraftPage : ContentPage
             Grid.SetColumn(LeftMenuBar, 0);
             Grid.SetColumn(PlayingControlLayout, 1);
             PlayingControlLayout.Margin = new(0, 0, 8, 0);
+            PreviewSubwindow.IsTitleBarVisible = false;
+            PropertiesSubwindow.IsTitleBarVisible = false;
+            PreviewSubwindow.IsResizable = false;
+            PropertiesSubwindow.IsResizable = false;
         }
         else
         {
@@ -471,6 +475,11 @@ public partial class DraftPage : ContentPage
             ssv.PointerWheelChanged += OnTimelineScrollViewPointerWheelChanged;
         }
 #endif
+        PreviewSubwindow.IsClosable = false;
+        PropertiesSubwindow.IsClosable = false;
+
+        PropertiesSubwindow.HorizontalOptions = LayoutOptions.Fill;
+        PropertiesSubwindow.VerticalOptions = LayoutOptions.Fill;
         fileDropGesture.AllowDrop = true;
         fileDropGesture.DragOver += File_DragOver;
         fileDropGesture.Drop += File_Drop;
@@ -1547,7 +1556,7 @@ public partial class DraftPage : ContentPage
 
     }
 
-    private async void OnClipPropertiesChanged(object? sender, PropertyPanelPropertyChangedEventArgs e)
+    public async void OnClipPropertiesChanged(object? sender, PropertyPanelPropertyChangedEventArgs e)
     {
         if (_selected is null) return;
         var clip = _selected;

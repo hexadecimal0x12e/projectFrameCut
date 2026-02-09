@@ -20,6 +20,8 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.ApplicationPluginBase;
 using LocalizedResources;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.ApplicationAPIBase.Plugins;
+
 
 
 
@@ -235,6 +237,13 @@ namespace projectFrameCut
             catch (Exception ex)
             {
                 Log(ex, "load settings", CreateMauiApp);
+                try
+                {
+                    File.Copy(Path.Combine(BasicDataPath, "settings.json"), Path.Combine(BasicDataPath, "settings.json.bak"));
+                    File.Copy(Path.Combine(BasicDataPath, "settings_a.json"), Path.Combine(BasicDataPath, "settings_a.json.bak"));
+                    File.Copy(Path.Combine(BasicDataPath, "settings_b.json"), Path.Combine(BasicDataPath, "settings_b.json.bak"));
+                }
+                catch { }
 #if ANDROID
                 Android.Util.Log.Wtf("projectFrameCut", $"Failed to init the settings because of a {ex.GetType().Name} exception:{ex.Message}");
 #elif WINDOWS
@@ -537,6 +546,7 @@ namespace projectFrameCut
                     PluginManager.InitGlobalGetter();
                     var internalBase = new InternalApplicationPluginBase();
                     internalBase.MessagingQueue = MessagingServices.MessagingService;
+                    (internalBase as IApplicationPluginBase).OnApplicationPluginLoaded();
                     List<IPluginBase> plugins = new() { internalBase };
 #if ANDROID
                     plugins.Add(new OpenGLPlugin());

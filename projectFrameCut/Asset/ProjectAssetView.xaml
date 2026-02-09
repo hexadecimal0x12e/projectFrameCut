@@ -2,11 +2,11 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:projectFrameCut.Asset"
-             xmlns:cont="clr-namespace:projectFrameCut.Controls"
+             xmlns:tv="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.TabbedView;assembly=projectFrameCut.ApplicationAPIBase"
              xmlns:l="clr-namespace:LocalizedResources"
              x:Class="projectFrameCut.Asset.ProjectAssetView">
-    <cont:TabbedView>
-        <cont:TabbedView.HeaderRightContent>
+    <tv:TabbedView>
+        <tv:TabbedView.HeaderRightContent>
             <HorizontalStackLayout>
                 <Picker x:Name="OrderOptionPicker" WidthRequest="120" Margin="0,-5,-5,0" SelectedIndex="{Binding OrderOption}">
                     <Picker.Items>
@@ -22,8 +22,8 @@
                    Margin="0,-5,-5,0"
                    ClearButtonVisibility="WhileEditing" />
             </HorizontalStackLayout>
-        </cont:TabbedView.HeaderRightContent>
-        <cont:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}">
+        </tv:TabbedView.HeaderRightContent>
+        <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}">
             <VerticalStackLayout Spacing="10" Padding="10">
                 <!-- 本地素材 -->
                 <CollectionView ItemsSource="{Binding FilteredLocalAssets}"
@@ -121,9 +121,9 @@
                      HeightRequest="250" 
                      Color="Transparent"/>
             </VerticalStackLayout>
-        </cont:TabbedViewItem>
+        </tv:TabbedViewItem>
 
-        <cont:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_SharedAssets}">
+        <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_SharedAssets}">
             <VerticalStackLayout Spacing="10" Padding="10">
                 <CollectionView ItemsSource="{Binding FilteredSharedAssets}"
                            SelectionMode="None"
@@ -191,6 +191,6 @@
                     </CollectionView.ItemTemplate>
                 </CollectionView>
             </VerticalStackLayout>
-        </cont:TabbedViewItem>
-    </cont:TabbedView>
+        </tv:TabbedViewItem>
+    </tv:TabbedView>
 </ContentView>

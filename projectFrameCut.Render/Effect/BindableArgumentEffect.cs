@@ -48,7 +48,6 @@ namespace projectFrameCut.Render.Effect
             if (source is not Func<double, System.Drawing.Point> func) throw new ArgumentException("Source is not a valid callback function.", nameof(source));
             var prog = EffectHelper.GetContinuesEffectProgress(index, StartPoint, EndPoint);
             var pt = func.Invoke(prog);
-            LogDiagnostic($"[PointPlacer,{Id}] Placing to {pt} in {prog}...");
             var x = pt.X;
             var y = pt.Y;
 
@@ -68,7 +67,6 @@ namespace projectFrameCut.Render.Effect
             if (source is not Func<double, System.Drawing.Point> func) throw new ArgumentException("Source is not a valid callback function.", nameof(source));
             var prog = EffectHelper.GetContinuesEffectProgress(index, StartPoint, EndPoint);
             var pt = func.Invoke(prog);
-            LogDiagnostic($"[PointPlacer,{Id}] Placing to {pt} in {prog}...");
             var x = pt.X;
             var y = pt.Y;
             int startX = x, startY = y;

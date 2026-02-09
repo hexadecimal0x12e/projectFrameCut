@@ -636,7 +636,10 @@ namespace projectFrameCut.Services
                     Log($"Loading userPlugin: {item.Id}");
                     var p = CreateFromID(item.Id, out string fail, pemGetter?.Invoke(item.Id));
                     if (p is not null)
+                    {
+                        if (p is IApplicationPluginBase b) b.OnApplicationPluginLoaded();
                         plugins.Add(p);
+                    }
                     else
                     {
                         Log($"Failed to load user plugin {item.Id}: {fail}");

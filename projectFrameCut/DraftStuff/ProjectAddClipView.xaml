@@ -3,12 +3,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.DraftStuff.ProjectAddClipView"
              xmlns:viewmodels="clr-namespace:projectFrameCut.ViewModels"
-             xmlns:cont="clr-namespace:projectFrameCut.Controls"
+             xmlns:tv="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.TabbedView;assembly=projectFrameCut.ApplicationAPIBase"
              xmlns:l="clr-namespace:LocalizedResources"
              x:DataType="viewmodels:ProjectAddClipViewModel">
 
-    <cont:TabbedView>
-        <cont:TabbedView.HeaderRightContent>
+    <tv:TabbedView>
+        <tv:TabbedView.HeaderRightContent>
             <HorizontalStackLayout>
                 <Picker x:Name="OrderOptionPicker" WidthRequest="120" Margin="0,-5,-5,0" SelectedIndex="{Binding OrderOption}">
                     <Picker.Items>
@@ -24,8 +24,8 @@
                    Margin="0,-5,-5,0"
                    ClearButtonVisibility="WhileEditing" />
             </HorizontalStackLayout>
-        </cont:TabbedView.HeaderRightContent>
-        <cont:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}">
+        </tv:TabbedView.HeaderRightContent>
+        <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}">
             <CollectionView ItemsSource="{Binding FilteredLocalAssets}"
                             SelectionMode="None"
                             Margin="8">
@@ -97,8 +97,8 @@
                            Margin="20"/>
                 </CollectionView.EmptyView>
             </CollectionView>
-        </cont:TabbedViewItem>
-        <cont:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_SharedAssets}">
+        </tv:TabbedViewItem>
+        <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_SharedAssets}">
             <CollectionView ItemsSource="{Binding FilteredSharedAssets}"
                             SelectionMode="None"
                             Margin="8">
@@ -170,9 +170,9 @@
                            Margin="20"/>
                 </CollectionView.EmptyView>
             </CollectionView>
-        </cont:TabbedViewItem>
+        </tv:TabbedViewItem>
 
-        <cont:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_ReuseableAssets}">
+        <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_ReuseableAssets}">
             <CollectionView ItemsSource="{Binding FilteredReuseableAssets}"
                             SelectionMode="None"
                             Margin="8">
@@ -257,9 +257,9 @@
                            Margin="20"/>
                 </CollectionView.EmptyView>
             </CollectionView>
-        </cont:TabbedViewItem>
+        </tv:TabbedViewItem>
 
-        <cont:TabbedViewItem Header="Other">
+        <tv:TabbedViewItem Header="Other">
             <ScrollView Orientation="Horizontal">
                 <VerticalStackLayout Spacing="10" Padding="10">
 
@@ -401,8 +401,8 @@
 
                 </VerticalStackLayout>
             </ScrollView>
-        </cont:TabbedViewItem>
-    </cont:TabbedView>
+        </tv:TabbedViewItem>
+    </tv:TabbedView>
 
 
 </ContentView>

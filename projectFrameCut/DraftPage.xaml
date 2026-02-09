@@ -117,7 +117,7 @@
 
         <VerticalStackLayout Grid.Row="0" x:Name="UpperContent">
             <mw:MultiWindowView x:FieldModifier="public" x:Name="MainMultiWindowView" ZIndex="9999">
-                <mw:MultiWindowItem Title="{l:Localized Key=AssetPage_ShowPreview}" IsNavigationVisible="False" IsClosable="False">
+                <mw:MultiWindowItem x:Name="PreviewSubwindow" Title="{l:Localized Key=AssetPage_ShowPreview}" IsNavigationVisible="False" IsClosable="False" IsPopOutVisible="True">
                     <Grid x:Name="MainUpperContent" Grid.Column="0">
                         <AbsoluteLayout x:Name="PreviewOverlayLayer"
                         ZIndex="10000"
@@ -146,8 +146,8 @@
                         </AbsoluteLayout>
                     </Grid>
                 </mw:MultiWindowItem>
-                <mw:MultiWindowItem Title="{l:Localized Key=PropertyPanel}" IsClosable="False">
-                    <Border x:Name="RightContentBorder" StrokeThickness="0" HorizontalOptions="Fill" />  
+                <mw:MultiWindowItem x:Name="PropertiesSubwindow" Title="{l:Localized Key=PropertyPanel}" IsClosable="False" IsPopOutVisible="True" HorizontalOptions="Fill" VerticalOptions="Fill">
+                    <Border x:Name="RightContentBorder" StrokeThickness="0" HorizontalOptions="Fill" VerticalOptions="Fill" />  
                 </mw:MultiWindowItem>
             </mw:MultiWindowView>
             

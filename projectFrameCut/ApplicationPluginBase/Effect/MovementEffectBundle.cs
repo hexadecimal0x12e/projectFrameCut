@@ -38,16 +38,28 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public bool IsBindableEffect => true;
 
-        public string Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; }
-        public int Index { get; set; }
+
+        public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
+        public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
+        public List<Guid>? BindedInputIds { get; set; }
+        public bool IsMultiInput => false;
+        public bool Enabled { get; set; }
+
+        public string InputAnchorDisplayName => string.Empty;
+        public string[]? InputAnchorsDisplayName => null;
+        public string OutputAnchorDisplayName => string.Empty;
+
+        public int StartPoint { get; set; }
+        public int EndPoint { get; set; }
+
         public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>
         {
             { "StartX", 0d },
             { "StartY", 0d },
             { "EndX", 0d },
             { "EndY", 0d },
-            { "Duration", 0d },
 
         };
 
@@ -64,8 +76,13 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             };
             var move = new PointPlacerFactory()
             {
+                ID = this.Id.ToString(),
                 BindedInputID = id
             };
+            
+            // We do not use ConfigureFactory(move) because it would overwrite BindedInputID which is internal here.
+            // But we do set ID.
+            
             return [prod, move];
         }
 

@@ -1,6 +1,6 @@
 using Microsoft.Maui.Controls;
 
-namespace projectFrameCut.Controls
+namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
 {
     [ContentProperty(nameof(Content))]
     public partial class TabbedViewItem : ContentView

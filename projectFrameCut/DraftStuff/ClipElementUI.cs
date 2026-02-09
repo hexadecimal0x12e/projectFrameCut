@@ -55,7 +55,7 @@ namespace projectFrameCut.DraftStuff
         public string? ClipColor { get; set; } = null;
 
         public Dictionary<string, IEffect>? Effects { get; set; } = new();
-        public Dictionary<string, EffectBundleData>? EffectBundles { get; set; } = new();
+        public Dictionary<Guid, IEffectBundle>? EffectBundles { get; set; } = new();
         public Dictionary<string, object> ExtraData { get; set; } = new();
 
         public void ApplySpeedRatio()

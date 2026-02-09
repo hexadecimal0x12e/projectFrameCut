@@ -1,6 +1,7 @@
 
 
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.Controls;
 
 

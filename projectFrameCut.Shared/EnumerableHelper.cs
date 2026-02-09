@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Linq;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace projectFrameCut.Shared
 {
@@ -12,7 +13,7 @@ namespace projectFrameCut.Shared
         /// Get whether the array have any value.
         /// </summary>
         [DebuggerNonUserCode()]
-        public static bool ArrayAny<T>(this T[]? input)
+        public static bool ArrayAny<T>([NotNullWhen(true)] this T[]? input)
         {
             if (input is null) return false;
             return input.Length > 0;
@@ -22,7 +23,7 @@ namespace projectFrameCut.Shared
         /// Get whether the list have any value.
         /// </summary>
         [DebuggerNonUserCode()]
-        public static bool ListAny<T>(this List<T>? input)
+        public static bool ListAny<T>([NotNullWhen(true)] this List<T>? input)
         {
             if (input is null) return false;
             return input.Count > 0;

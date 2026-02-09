@@ -3,6 +3,8 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Text;
 
 namespace projectFrameCut.ApplicationAPIBase.Effect
@@ -10,12 +12,27 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
     public interface IEffectBundle
     {
         /// <summary>
+        /// The ID for input anchor.
+        /// </summary>
+        public static readonly Guid InputAnchorGUID = new("00000000-0000-0000-0000-000000000000");
+        /// <summary>
+        /// The ID for output anchor.
+        /// </summary>
+        public static readonly Guid OutputAnchorGUID = new("ffffffff-ffff-ffff-ffff-ffffffffffff");
+        /// <summary>
+        /// The Id for any unconnected anchor.
+        /// </summary>
+        public static readonly Guid NoConnectionGUID = new("00001234-5678-90ab-cdef-012345678900");
+
+        /// <summary>
         /// The TypeName of the EffectGroup.
         /// </summary>
         /// <remarks>
         /// it SHOULD equals to <see cref="IEffect.TypeName"/>, <see cref="IEffectFactory.TypeName"/> and so on.
         /// </remarks>
         public string TypeName { get; }
+
+        public bool Enabled { get; set; }
 
         public string FromPlugin { get; }
 
@@ -29,7 +46,7 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         /// <remarks>
         /// DO NOT set this property manually. It will be set when the effect group is created.
         /// </remarks>
-        public string Id { get; set; }
+        public Guid Id { get; set; }
 
         /// <summary>
         /// Get or set the name for the EffectGroup.
@@ -37,13 +54,64 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         public string Name { get; set; }
 
         /// <summary>
-        /// The index of this EffectGroup's Index. 
+        /// The name of the input anchor.
         /// </summary>
         /// <remarks>
-        /// DO NOT set this property manually. It will be set by the user interface when the effect group is added to the effect stack.
-        /// when this value is <see cref="int.MaxValue"/>, it means this EffectGroup is not joined in the effect stack, and it'll be displayed with a effect without any connection.
+        /// Keep it blank while <see cref="IsBindableEffect"/> is false.
         /// </remarks>
-        public int Index { get; set; }
+        public string InputAnchorDisplayName { get; }
+        /// <summary>
+        /// The name of the input anchors.
+        /// </summary>
+        /// <remarks>
+        /// Keep it null except <see cref="IsMultiInput"/> is true.
+        /// </remarks>
+        public string[]? InputAnchorsDisplayName { get; }
+        /// <summary>
+        /// The name of the output anchor.
+        /// </summary>
+        /// <remarks>
+        /// Keep it blank except the output of this effect is not <see cref="projectFrameCut.Shared.IPicture"/>
+        /// </remarks>
+        public string OutputAnchorDisplayName { get; }
+
+
+        /// <summary>
+        /// The ID of the input effect/argument provider this effect is bound to.
+        /// </summary>
+        /// <remarks>
+        /// Use GUID 00000000-0000-0000-0000-000000000000 for Input Anchor, ffffffff-ffff-ffff-ffff-ffffffffffff for Output Anchor.
+        /// </remarks>
+        public Guid BindedInputId { get; set; }
+
+        /// <summary>
+        /// The ID of the next step of the effect.
+        /// </summary>
+        /// <remarks>
+        /// Use GUID 00000000-0000-0000-0000-000000000000 for Input Anchor, ffffffff-ffff-ffff-ffff-ffffffffffff for Output Anchor.
+        /// Keep this field blank when <see cref="IsMultiInput"/> is true.
+        /// </remarks>
+        public Guid BindedOutputId { get; set; }
+
+        /// <summary>
+        /// Determine whether this EffectBundle supports multi input.
+        /// </summary>
+        public bool IsMultiInput { get; }
+
+        /// <summary>
+        /// The IDs of the input effects/argument providers this effect is bound to when <see cref="IsMultiInput"/> is true.
+        /// </summary>
+        public List<Guid>? BindedInputIds { get; set; }
+
+        /// <summary>
+        /// The start point of the continuous range (inclusive).
+        /// </summary>
+        public int StartPoint { get; set; }
+
+        /// <summary>
+        /// The end point of the continuous range (inclusive).
+        /// </summary>
+        public int EndPoint { get; set; }
 
         /// <summary>
         /// The arguments of the EffectGroup.
@@ -96,6 +164,40 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
 
     }
 
+    public class EffectBundleComparer : IEqualityComparer<IEffectBundle>
+    {
+        public bool Equals(IEffectBundle? x, IEffectBundle? y)
+        {
+            if (x is null || y is null) return false;
+            return x.Id == y.Id;
+        }
+
+        public int GetHashCode([DisallowNull] IEffectBundle obj)
+        {
+            return obj.Id.GetHashCode();
+        }
+    }
+
+
+
+    public static class EffectBundleExtensions
+    {
+        /// <summary>
+        /// Configures the created factory with the unified properties (Id, Bindings).
+        /// </summary>
+        /// <param name="bundle">The effect bundle.</param>
+        /// <param name="factory">The factory to configure.</param>
+        public static void ConfigureFactory(this IEffectBundle bundle, IEffectFactory factory)
+        {
+            if (factory is IBindableEffectFactory bindableFactory)
+            {
+                bindableFactory.ID = bundle.Id.ToString();
+                bindableFactory.BindedInputID = bundle.BindedInputId.ToString();
+                bindableFactory.BindedInputIDs = bundle.BindedInputIds?.Select(x => x.ToString()).ToArray();
+            }
+        }
+    }
+
     public class EffectBundleDisplayItem
     {
         public required string Name { get; set; }
@@ -104,13 +206,21 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         public MediaSource? VideoThumbnail { get; set; }
     }
 
-    public class EffectBundleData
-    {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-        public string BundleTypeName { get; set; }
-        public Dictionary<string, object> Parameters { get; set; } = new();
-        public bool Enabled { get; set; } = true;
-        public string Name { get; set; }
-        public int Index { get; set; }
-    }
+    //public class EffectBundleData
+    //{
+    //    public string Id { get; set; } = Guid.NewGuid().ToString();
+    //    public string BundleTypeName { get; set; }
+    //    public Dictionary<string, object> Parameters { get; set; } = new();
+    //    public bool Enabled { get; set; } = true;
+    //    public string Name { get; set; }
+        
+    //    public string? BindedInputId { get; set; }
+    //    public string? BindedOutputId { get; set; }
+    //    public List<string>? BindedInputIds { get; set; }
+    //    public int StartPoint { get; set; }
+    //    public int EndPoint { get; set; }
+
+    //    public double InteractiveEditorX { get; set; } = -1;
+    //    public double InteractiveEditorY { get; set; } = -1;
+    //}
 }

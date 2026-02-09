@@ -52,15 +52,29 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
     public class EffectBundleJSONStructure
     {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string FromPlugin { get; set; } = string.Empty;
         public string BundleTypeName { get; set; } = string.Empty;
         public Dictionary<string, object> Parameters { get; set; } = new();
-        public bool Enabled { get; set; } = true;
         public string Name { get; set; } = string.Empty;
+        public double InteractiveEditorX { get; set; } = -1;
+        public double InteractiveEditorY { get; set; } = -1;
     }
 
     public static class EffectArgsHelper
     {
+        static string GetParamType(string type, Dictionary<string, string> ParametersType)
+        {
+            if (ParametersType.TryGetValue(type, out var t)) return t;
+            return type switch
+            {
+                "__DraftEffectBindingView_InteractiveEditorX__" => "double",
+                "__DraftEffectBindingView_InteractiveEditorY__" => "double",
+                _ => throw new NotImplementedException($"Parameter '{type}' has an undefined type."),
+
+            };
+        }
+
         /// <summary>
         /// Convert a dictionary with JsonElement values to a dictionary with object values according to the given parameter types.
         /// </summary>
@@ -71,11 +85,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public static Dictionary<string, object> ConvertElementDictToObjectDict(Dictionary<string, object> elements, Dictionary<string, string> ParametersType, IEffectArgsEnumHandler? EnumHandler = null)
         {
             var result = new Dictionary<string, object>();
+            
             foreach (var kvp in elements)
             {
                 if (kvp.Value is not JsonElement)
                 {
-                    object obj = ParametersType[kvp.Key] switch
+                    object obj = GetParamType(kvp.Key, ParametersType) switch
                     {
                         "ushort" => Convert.ToUInt16(kvp.Value),
                         "int" => Convert.ToInt32(kvp.Value),
@@ -93,7 +108,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
                 {
                     object value = null;
                     JsonElement source = (JsonElement)kvp.Value;
-                    switch (ParametersType[kvp.Key])
+                    switch (GetParamType(kvp.Key, ParametersType))
                     {
                         case "ushort":
                             value = source.GetUInt16();

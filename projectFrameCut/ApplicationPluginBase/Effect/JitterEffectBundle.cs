@@ -22,9 +22,21 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public bool IsBindableEffect => false;
 
-        public string Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; }
-        public int Index { get; set; }
+        
+        public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
+        public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
+        public List<Guid>? BindedInputIds { get; set; }
+        public bool IsMultiInput => false;
+
+        public string InputAnchorDisplayName => string.Empty;
+        public string[]? InputAnchorsDisplayName => null;
+        public string OutputAnchorDisplayName => string.Empty;
+
+        public int StartPoint { get; set; }
+        public int EndPoint { get; set; }
+
         public Dictionary<string, object> Parameters { get; set; }
 
         public List<string> ParametersNeeded => JitterEffect.s_ParametersNeeded;
@@ -33,7 +45,9 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public IEffectFactory[] Create()
         {
-            return [new JitterContinuousEffectFactory()];
+            var factory = new JitterContinuousEffectFactory();
+            this.ConfigureFactory(factory);
+            return [factory];
         }
 
         public PropertyPanelBuilder CreateUI()
@@ -90,6 +104,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
             };
         }
+
+        public bool Enabled { get; set; }
 
     }
 }

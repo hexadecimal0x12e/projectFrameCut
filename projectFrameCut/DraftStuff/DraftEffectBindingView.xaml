@@ -1,31 +1,53 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:tv="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.TabbedView;assembly=projectFrameCut.ApplicationAPIBase"
+             xmlns:l="clr-namespace:LocalizedResources"
              x:Class="projectFrameCut.DraftStuff.DraftEffectBindingView">
     <Grid ColumnDefinitions="*, 300">
         <!-- Node Canvas -->
         <Grid Grid.Column="0" BackgroundColor="#1e1e1e">
-             <!-- Connections Layer -->
+            <Grid.GestureRecognizers>
+                <PanGestureRecognizer PanUpdated="OnCanvasPanUpdated" />
+                <PinchGestureRecognizer PinchUpdated="OnCanvasPinchUpdated" />
+            </Grid.GestureRecognizers>
+
+            <!-- Connections Layer -->
             <GraphicsView x:Name="ConnectionsLayer" 
                           InputTransparent="True"
                           VerticalOptions="Fill" 
                           HorizontalOptions="Fill"/>
-            
+
             <!-- Nodes Layer -->
             <AbsoluteLayout x:Name="NodesContainer" 
                             InputTransparent="False">
             </AbsoluteLayout>
-            
-            <Label Text="Drag nodes to move. Drag between ports to connect. Double Click to disconnect." 
-                   TextColor="Gray" Margin="10" VerticalOptions="End" HorizontalOptions="Start" InputTransparent="True"/>
+
+            <Label Text="Drag nodes to move. Drag between ports to connect. Double Click to disconnect. Pan empty space to move view." 
+                   x:Name="InfoLabel" TextColor="Gray" Margin="10" VerticalOptions="End" HorizontalOptions="Start" InputTransparent="True"/>
         </Grid>
 
         <!-- Properties Panel -->
-        <Grid Grid.Column="1" RowDefinitions="Auto, *" BackgroundColor="#252526">
-            <Label Text="Properties" FontAttributes="Bold" Margin="10"/>
-            <ScrollView Grid.Row="1" Padding="10">
-                <VerticalStackLayout x:Name="PropertiesPanel" Spacing="10"/>
-            </ScrollView>
+        <Grid Grid.Column="1" RowDefinitions="*, Auto" BackgroundColor="#252526">
+
+            <tv:TabbedView Grid.Row="0">
+                <tv:TabbedViewItem Header="{l:Localized Key=PropertyPanel}">
+                    <ScrollView Padding="10">
+                        <VerticalStackLayout x:Name="PropertiesPanel" Spacing="10"/>
+                    </ScrollView>
+                </tv:TabbedViewItem>
+                <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_EffectBindView_AddEffect}">
+                    <ScrollView Padding="10">
+                        <VerticalStackLayout x:Name="AddEffectsPanel" Spacing="10"/>
+                    </ScrollView>
+                </tv:TabbedViewItem>
+            </tv:TabbedView>
+
+            <HorizontalStackLayout HorizontalOptions="Center" VerticalOptions="End" Grid.Row="1" Margin="0,0,0,10">
+                <Button x:Name="ZoomInButton" Margin="4,0,4,0" Text="+"/>
+                <Button x:Name="ResetButton" Margin="4,0,4,0" Text="↺"/>
+                <Button x:Name="ZoomOutButton" Margin="4,0,4,0" Text="-"/>
+            </HorizontalStackLayout>
         </Grid>
     </Grid>
 </ContentView>

@@ -925,7 +925,7 @@ public partial class TestPage : ContentPage
                     new Button {Text = "ActionSheet", Command = new Command(async () =>
                     {
                         var result = await item.DisplayActionSheetAsync("Options", "no", "destruct", TextHelper.DummyStrings);
-                        await DisplayAlertAsync(Title, result.ToString(), "ok");
+                        await DisplayAlertAsync(Title, result?.ToString() ?? "null input, may user cancelled.", "ok");
                     })},
                     new Button {Text = "Input", Command = new Command(async () =>
                     {

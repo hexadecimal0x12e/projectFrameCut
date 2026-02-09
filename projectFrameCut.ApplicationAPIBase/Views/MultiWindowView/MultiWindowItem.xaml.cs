@@ -31,12 +31,15 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         public static readonly BindableProperty IsClosableProperty =
             BindableProperty.Create(nameof(IsClosable), typeof(bool), typeof(MultiWindowItem), true, propertyChanged: OnButtonVisibilityChanged);
-        
+
         public static readonly BindableProperty IsPopOutVisibleProperty =
             BindableProperty.Create(nameof(IsPopOutVisible), typeof(bool), typeof(MultiWindowItem), false, propertyChanged: OnButtonVisibilityChanged);
 
         public static readonly BindableProperty IsNavigationVisibleProperty =
             BindableProperty.Create(nameof(IsNavigationVisible), typeof(bool), typeof(MultiWindowItem), true);
+
+        public static readonly BindableProperty IsTitleBarVisibleProperty =
+            BindableProperty.Create(nameof(IsTitleBarVisible), typeof(bool), typeof(MultiWindowItem), true, propertyChanged: OnTitleBarVisibilityChanged);
 
         public string Title
         {
@@ -84,6 +87,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             get => (bool)GetValue(IsNavigationVisibleProperty);
             set => SetValue(IsNavigationVisibleProperty, value);
+        }
+
+        public bool IsTitleBarVisible
+        {
+            get => (bool)GetValue(IsTitleBarVisibleProperty);
+            set => SetValue(IsTitleBarVisibleProperty, value);
         }
 
         private static readonly BindablePropertyKey CanGoBackPropertyKey =
@@ -285,15 +294,16 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             SetupResizeHandle("ResizeBottomRight", OnResizeBottomRight);
 
             UpdatedButtonVisibility();
+            UpdateTitleBarVisibility();
 
-            if(ContextMenuProviderGetter is not null && _titleBarGrid is not null)
+            if (ContextMenuProviderGetter is not null && _titleBarGrid is not null)
             {
                 var ContextMenuProvider = ContextMenuProviderGetter();
 
                 ContextMenuProvider.AddCommand("Recover", () =>
                     {
-                        if(_isMaximized) Maximize();
-                        if(_isMinimized) Minimize();
+                        if (_isMaximized) Maximize();
+                        if (_isMinimized) Minimize();
                     })
                     .AddCommand("Close", () => OnCloseTapped(this, EventArgs.Empty))
                     .AddCommand("Maximize", Maximize)
@@ -308,7 +318,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     Buttons = ButtonsMask.Secondary
                 };
                 gesture.Tapped += (s, e) => ContextMenuProvider.TryShow(_titleBarGrid);
-                _titleBarGrid.GestureRecognizers.Add(gesture);   
+                _titleBarGrid.GestureRecognizers.Add(gesture);
 
             }
 
@@ -333,6 +343,15 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             }
         }
 
+        static void OnTitleBarVisibilityChanged(BindableObject bindable, object oldValue, object newValue)
+        {
+            if (bindable is MultiWindowItem item)
+            {
+                item.UpdateTitleBarVisibility();
+            }
+        }
+
+
         private void UpdatedButtonVisibility()
         {
             if (_isInWindowMode)
@@ -344,13 +363,27 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 return;
             }
 
+
             if (_minimizeBtn != null) _minimizeBtn.IsVisible = IsMinimizable;
             if (_maximizeBtn != null) _maximizeBtn.IsVisible = IsMaximizable;
             if (_closeBtn != null) _closeBtn.IsVisible = IsClosable;
             if (_popOutBtn != null) _popOutBtn.IsVisible = IsPopOutVisible; // Show based on property
         }
+        private void UpdateTitleBarVisibility()
+        {
+            if (_titleBarGrid == null) return;
+            _titleBarGrid.IsVisible = IsTitleBarVisible;
 
-#endregion
+            if (!_isInWindowMode && _titleBarGrid.Parent is Grid parentGrid && parentGrid.RowDefinitions.Count > 0)
+            {
+                parentGrid.RowDefinitions[0].Height = IsTitleBarVisible ? new GridLength(32) : new GridLength(0);
+            }
+
+
+
+        }
+
+        #endregion
 
         #region Dialogs
 
@@ -390,6 +423,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             _dialogMessage.Text = message;
             _dialogCancelBtn.Text = cancel;
 
+            ToolTipProperties.SetText(_dialogCancelBtn, cancel);
+
             if (string.IsNullOrEmpty(accept))
             {
                 _dialogOkBtn.IsVisible = false;
@@ -398,6 +433,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             else
             {
                 _dialogOkBtn.Text = accept;
+                ToolTipProperties.SetText(_dialogOkBtn, accept);
                 _dialogOkBtn.IsVisible = true;
                 if (_dialogButtonGrid != null) Grid.SetColumnSpan(_dialogCancelBtn, 1);
             }
@@ -423,7 +459,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// <returns>The text entered by the user if accepted; otherwise, null.</returns>
         public async Task<string> DisplayPromptAsync(string title, string message, string accept = "OK", string cancel = "Cancel", string placeholder = null, int maxLength = -1, Keyboard keyboard = null, string initialValue = "")
         {
-            if (_hostWindow?.Page is not null) return await _hostWindow.Page.DisplayPromptAsync(title, message, accept, cancel,placeholder,maxLength,keyboard,initialValue);
+            if (_hostWindow?.Page is not null) return await _hostWindow.Page.DisplayPromptAsync(title, message, accept, cancel, placeholder, maxLength, keyboard, initialValue);
 
             if (_dialogOverlay == null) return null;
 
@@ -432,6 +468,10 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             _dialogMessage.Text = message;
             _dialogOkBtn.Text = accept;
             _dialogCancelBtn.Text = cancel;
+
+            ToolTipProperties.SetText(_dialogCancelBtn, cancel);
+            ToolTipProperties.SetText(_dialogOkBtn, accept);
+
 
             if (_dialogInput != null)
             {
@@ -475,6 +515,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 if (!string.IsNullOrEmpty(destruction))
                 {
                     var btn = CreateActionSheetButton(destruction, true);
+                    ToolTipProperties.SetText(btn, destruction);
                     btn.Clicked += (s, e) => OnActionSheetButtonClicked(destruction);
                     _actionSheetContainer.Children.Add(btn);
                 }
@@ -484,6 +525,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     foreach (var b in buttons)
                     {
                         var btn = CreateActionSheetButton(b, false);
+                        ToolTipProperties.SetText(btn, b);
                         btn.Clicked += (s, e) => OnActionSheetButtonClicked(b);
                         _actionSheetContainer.Children.Add(btn);
                     }
@@ -493,6 +535,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (!string.IsNullOrEmpty(cancel) && _actionSheetCancelBtn != null)
             {
                 _actionSheetCancelBtn.Text = cancel;
+                ToolTipProperties.SetText(_actionSheetCancelBtn, cancel);
                 _actionSheetCancelBtn.IsVisible = true;
             }
 
@@ -598,16 +641,16 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             if (_isInWindowMode && _hostWindow != null)
             {
-                 // In Window Mode, simply close the host window.
-                 // The 'CloseClicked' event is subscribed in OpenInNewWindow to handle cleanup if needed,
-                 // but typically we can just close the window.
-                 // However, to keep consistency with 'CloseClicked' allowing cancel, we invoke it.
-                 var a = new CloseEventArgs { Cancel = false };
-                 CloseClicked?.Invoke(this, a);
-                 if (a.Cancel) return; // Allow user to cancel closing
-                 
-                 Application.Current?.CloseWindow(_hostWindow);
-                 return;
+                // In Window Mode, simply close the host window.
+                // The 'CloseClicked' event is subscribed in OpenInNewWindow to handle cleanup if needed,
+                // but typically we can just close the window.
+                // However, to keep consistency with 'CloseClicked' allowing cancel, we invoke it.
+                var a = new CloseEventArgs { Cancel = false };
+                CloseClicked?.Invoke(this, a);
+                if (a.Cancel) return; // Allow user to cancel closing
+
+                Application.Current?.CloseWindow(_hostWindow);
+                return;
             }
 
             CloseDialog();
@@ -625,25 +668,25 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         {
             if (_isInWindowMode && _hostWindow != null)
             {
-                 // Minimize Host Window
-                 // MAUI 8/9 doesn't have a direct 'Minimize' on Window cross-platform easily accessible 
-                 // without lifecycle hooks, but on Windows/MacCatalyst we might be able to.
-                 // Actually, standard MAUI Window doesn't expose WindowState.
-                 // We will skip explicit Minimize implementation for now or rely on native titlebar if present.
-                 // But since we are "replacing" the titlebar, we should implement it.
+                // Minimize Host Window
+                // MAUI 8/9 doesn't have a direct 'Minimize' on Window cross-platform easily accessible 
+                // without lifecycle hooks, but on Windows/MacCatalyst we might be able to.
+                // Actually, standard MAUI Window doesn't expose WindowState.
+                // We will skip explicit Minimize implementation for now or rely on native titlebar if present.
+                // But since we are "replacing" the titlebar, we should implement it.
 #if WINDOWS
-                 // Check if we can access platform specific window
-                 var platformWindow = _hostWindow.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
-                 if (platformWindow != null)
-                 {
-                      var handle = WinRT.Interop.WindowNative.GetWindowHandle(platformWindow);
-                      var id = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(handle);
-                      var appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(id);
-                      if (appWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter p)
-                      {
-                           p.Minimize();
-                      }
-                 }
+                // Check if we can access platform specific window
+                var platformWindow = _hostWindow.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
+                if (platformWindow != null)
+                {
+                    var handle = WinRT.Interop.WindowNative.GetWindowHandle(platformWindow);
+                    var id = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(handle);
+                    var appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(id);
+                    if (appWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter p)
+                    {
+                        p.Minimize();
+                    }
+                }
 #elif MACCATALYST
                  // MacCatalyst specific minimize
                  var uiWindow = _hostWindow.Handler?.PlatformView as UIKit.UIWindow;
@@ -652,7 +695,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                  // but for MacCatalyst we can use NSWindow via dynamic lookup if needed.
                  // Getting simple: just do nothing or maybe Hide? No.
 #endif
-                 return;
+                return;
             }
             MinimizeClicked?.Invoke(this, EventArgs.Empty);
             Minimize();
@@ -663,20 +706,20 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (_isInWindowMode && _hostWindow != null)
             {
 #if WINDOWS
-                 var platformWindow = _hostWindow.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
-                 if (platformWindow != null)
-                 {
-                      var handle = WinRT.Interop.WindowNative.GetWindowHandle(platformWindow);
-                      var id = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(handle);
-                      var appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(id);
-                      if (appWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter p)
-                      {
-                          if (p.State == Microsoft.UI.Windowing.OverlappedPresenterState.Maximized)
-                              p.Restore();
-                          else
-                              p.Maximize();
-                      }
-                 }
+                var platformWindow = _hostWindow.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
+                if (platformWindow != null)
+                {
+                    var handle = WinRT.Interop.WindowNative.GetWindowHandle(platformWindow);
+                    var id = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(handle);
+                    var appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(id);
+                    if (appWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter p)
+                    {
+                        if (p.State == Microsoft.UI.Windowing.OverlappedPresenterState.Maximized)
+                            p.Restore();
+                        else
+                            p.Maximize();
+                    }
+                }
 #elif MACCATALYST
                  var uiWindow = _hostWindow.Handler?.PlatformView as UIKit.UIWindow;
                  if (uiWindow?.WindowScene != null)
@@ -685,7 +728,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                       // We can't easily toggle zoom from shared code without binding
                  }
 #endif
-                 return;
+                return;
             }
 
             MaximizeClicked?.Invoke(this, EventArgs.Empty);
@@ -714,7 +757,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             var win = _hostWindow;
             _hostWindow = null;
             _isInWindowMode = false;
-            
+
             if (closeWindow)
             {
                 Application.Current?.CloseWindow(win);
@@ -736,7 +779,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             // 4. Restore Visual State
             if (_dockBtn != null) _dockBtn.IsVisible = false;
-            
+
             // Re-enable internal MDI
             IsDraggable = true;
             IsResizable = true;
@@ -744,7 +787,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             IsMinimizable = true;
             // Update buttons visibility (restore them)
             UpdatedButtonVisibility();
-            
+
             if (_resizeGrid != null) _resizeGrid.IsVisible = true;
             if (_visualRoot != null)
             {
@@ -760,26 +803,19 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     // It was moved to Window.TitleBar, move it back
                     // TitleBar control might need to release it first? 
                     // Usually removing from one parent and adding to another is fine, 
-                    // but since Window is closing, just adding it back should work.
-                    // Check if it's already removed?
-                    if (_titleBarGrid.Parent is Layout oldP) oldP.Remove(_titleBarGrid); 
-                    else if (_titleBarGrid.Parent is ContentView oldCV) oldCV.Content = null;
-                    
-                    if (!_originalTitleBarParent.Children.Contains(_titleBarGrid))
-                    {
-                        _originalTitleBarParent.Children.Add(_titleBarGrid);
-                        Grid.SetRow(_titleBarGrid, 0); // Assuming row 0
-                    }
+                    UpdateTitleBarVisibility(); _originalTitleBarParent.Children.Add(_titleBarGrid);
+                    Grid.SetRow(_titleBarGrid, 0); // Assuming row 0
                 }
-                _titleBarGrid.IsVisible = true;
-                if (_originalTitleBarParent != null && _originalTitleBarParent.RowDefinitions.Count > 0)
-                {
-                    _originalTitleBarParent.RowDefinitions[0].Height = new GridLength(32);
-                }
-
-
-
             }
+            _titleBarGrid.IsVisible = true;
+            if (_originalTitleBarParent != null && _originalTitleBarParent.RowDefinitions.Count > 0)
+            {
+                _originalTitleBarParent.RowDefinitions[0].Height = new GridLength(32);
+            }
+
+
+
+
 
             // Restore size/pos
             this.HorizontalOptions = LayoutOptions.Start;
@@ -788,7 +824,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             this.TranslationY = _preWindowY;
             this.WidthRequest = _preWindowWidth > 0 ? _preWindowWidth : 400; // Fallback
             this.HeightRequest = _preWindowHeight > 0 ? _preWindowHeight : 300; // Fallback
-            
+
             // Reset margin just in case
             this.Margin = new Thickness(0);
         }
@@ -926,9 +962,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// Moves this MultiWindowItem into a new independent OS window.
         /// Supported on Windows and MacCatalyst.
         /// </summary>
+        /// <param name="CloseWindowOnNativeCloseButtonClicked">
+        /// when this argument is true, when you click on the 'close' button on the new native window, the window'll be closed and <see cref="CloseClicked"/> will be invoked.
+        /// </param>
         [SupportedOSPlatform("windows")]
         [SupportedOSPlatform("maccatalyst")]
-        public void OpenInNewWindow()
+        public async Task OpenInNewWindow(bool CloseWindowOnNativeCloseButtonClicked = false)
         {
 #if WINDOWS || MACCATALYST
             // 0. Save state
@@ -960,13 +999,13 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             IsResizable = false;
             // Note: We keep IsMaximizable/IsMinimizable/IsClosable true so buttons appear, 
             // but handlers delegate to Window (via _isInWindowMode check).
-            
+
             // 2.1 Update internal chrome for Window Mode
             if (_resizeGrid != null) _resizeGrid.IsVisible = false; // OS handles resizing
 
             if (_visualRoot != null)
             {
-                 // Remove rounded corners/border to look like a full window
+                // Remove rounded corners/border to look like a full window
                 _visualRoot.StrokeThickness = 0;
                 _visualRoot.StrokeShape = new RoundRectangle { CornerRadius = 0 };
             }
@@ -985,7 +1024,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 }
                 _titleBarGrid.IsVisible = true; // Ensure it's visible for the TitleBar
             }
-            
+
             // Show Dock Button
             if (_dockBtn != null) _dockBtn.IsVisible = true;
 
@@ -1004,6 +1043,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 Content = this,
                 Title = this.Title ?? "Window"
             };
+
+
             NavigationPage.SetHasNavigationBar(hostingPage, false); // Hide default MAUI Navigation Bar
 
             // 5. Create a new Window
@@ -1016,16 +1057,39 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             // Update visibility of internal buttons (hide them in window mode)
             UpdatedButtonVisibility();
 
-
             // 7. Cleanup when the OS window is closed physically
-            newWindow.Destroying += (s, e) =>
+            if (!CloseWindowOnNativeCloseButtonClicked)
             {
-                PerformDock(false);
+                newWindow.Destroying += (s, e) =>
+                {
+                    PerformDock(false);
+                };
+            }
+            else
+            {
+                newWindow.Destroying += (s, e) =>
+                {
+                    CloseClicked.Invoke(s, new());
+                };
+            }
 
-            };
+
 
             // 8. Open the window
             Application.Current?.OpenWindow(newWindow);
+
+
+
+            if (!CloseWindowOnNativeCloseButtonClicked && ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources.Localized is ApplicationAPIBaseLocalizerBase b && !Preferences.Default.Get("MultiWindowView_DockPrompt_NotPromptAgain", false))
+            {
+                await Task.Delay(800);
+                bool p = false;
+                await Dispatcher.DispatchAsync(async () =>
+                {
+                    p = await hostingPage.DisplayAlertAsync(b._Info, b.MultiWindowView_DockPrompt, b.MultiWindowView_DockPrompt_NotPromptAgain, b._OK);
+                });
+                if (p) Preferences.Default.Set("MultiWindowView_DockPrompt_NotPromptAgain", true);
+            }
 #endif
         }
 

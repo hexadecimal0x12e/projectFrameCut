@@ -314,7 +314,7 @@ public partial class HomePage : ContentPage
     private async Task GoDraft(ProjectsViewModel pvm, bool isReadonly = false, bool throwOnException = false)
         => await GoDraft(pvm._projectPath, pvm.Name, isReadonly, throwOnException);
 
-    private async Task GoDraft(string draftSourcePath, string title, bool isReadonly = false, bool throwOnException = false, bool? skipAskForRecover = null)
+    private async Task GoDraft(string draftSourcePath, string title, bool isReadonly = false, bool throwOnException = false, bool? skipAskForRecover = null, bool? overrideLayoutOption = null)
     {
         LogDiagnostic($"Loading draft {draftSourcePath}, {title}, \r\n{Environment.StackTrace}");
         Stopwatch initTimer = Stopwatch.StartNew();
@@ -596,9 +596,10 @@ public partial class HomePage : ContentPage
                 page.DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720;
                 page.ProxyOption = SettingsManager.GetSetting("Edit_ProxyOption", "none");
                 page.AutoSavePreviewAreaHeight = SettingsManager.IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave");
-                page.LockScrollViewAfterSelection = SettingsManager.IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection",true);
+                page.LockScrollViewAfterSelection = SettingsManager.IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection", true);
                 page.UseCommunityToolkitPopupInsteadOfOverlayLayer = SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer");
                 page.PreviewAreaHeight = double.TryParse(SettingsManager.GetSetting("Edit_UpperContentHeight", "250"), out var upperHeight) ? upperHeight : 250d;
+                page.UseCompactLayout = overrideLayoutOption ?? DeviceInfo.Idiom == DeviceIdiom.Phone;
 #if WINDOWS
                 Context context = Context.CreateDefault();
                 var devices = context.Devices.ToList();
@@ -626,11 +627,11 @@ public partial class HomePage : ContentPage
 
                     }
                 }
+#if WINDOWS //for recall/timeline
 
                 await Dispatcher.DispatchAsync(async () =>
                 {
 
-#if WINDOWS //for recall/timeline
                     try
                     {
                         await MainThread.InvokeOnMainThreadAsync(async () =>
@@ -649,9 +650,9 @@ public partial class HomePage : ContentPage
 
                     }
                     catch { }
-#endif
-                });
 
+                });
+#endif
             }
             catch (Exception ex4)
             {
@@ -1095,6 +1096,7 @@ public partial class HomePage : ContentPage
         if (SettingsManager.IsBoolSettingTrue("DeveloperMode"))
         {
             verbs.Add("Debug: throw the exceptions while opening");
+            verbs.Add("Debug: use mobile layout");
         }
 
         var action = await DisplayActionSheetAsync(vmItem.Name, Localized._Cancel, null, verbs.ToArray());
@@ -1108,6 +1110,12 @@ public partial class HomePage : ContentPage
                         await GoDraft(vmItem, throwOnException: true);
                         return;
                     }
+                case "Debug: use mobile layout":
+                    {
+                        await GoDraft(vmItem._projectPath, vmItem.Name, false, false, true, true);
+                        return;
+                    }
+
                 default:
                     {
                         break;

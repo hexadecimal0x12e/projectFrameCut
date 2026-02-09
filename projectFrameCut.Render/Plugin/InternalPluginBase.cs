@@ -92,10 +92,15 @@ public class InternalPluginBase : IPluginBase
 
     public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>
     {
-        {"SubjectMattingMaskGenerator", () => new SubjectMattingMaskGenerator() },
-        {"MaskApplier", () => new MaskApplier() },
-        {"StraightLineMovementValueProducer",() => new StraightLineMovementValueProducer() },
-        {"PointPlacer",() => new PointPlacer() }
+        { "SubjectMattingMaskGenerator", () => new SubjectMattingMaskGenerator() },
+        { "MaskApplier", () => new MaskApplier() },
+        { "StraightLineMovementValueProducer",() => new StraightLineMovementValueProducer() },
+        { "PointPlacer",() => new PointPlacer() },
+        { "MockValueProvider", () => new MockValueProvider() },
+        { "MockOneToOneProcessor", () => new MockOneToOneProcessor() },
+        { "MockManyToOneProcessor", () => new MockManyToOneProcessor() },
+        { "MockOneInputResultGenerator", () => new MockOneInputResultGenerator() },
+        { "MockManyInputResultGenerator", () => new MockManyInputResultGenerator() },
     };
 
     public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -103,7 +108,12 @@ public class InternalPluginBase : IPluginBase
         { "SubjectMattingMaskGenerator", new SubjectMattingMaskGeneratorFactory() },
         { "MaskApplier", new MaskApplierFactory() },
         { "StraightLineMovementValueProducer",new StraightLineMovementValueProducerFactory() },
-        { "PointPlacer", new PointPlacerFactory() }
+        { "PointPlacer", new PointPlacerFactory() },
+        { "MockValueProvider",  new MockValueProviderFactory() },
+        { "MockOneToOneProcessor",  new MockOneToOneProcessorFactory() },
+        { "MockManyToOneProcessor",  new MockManyToOneProcessorFactory() },
+        { "MockOneInputResultGenerator",  new MockOneInputResultGeneratorFactory() },
+        { "MockManyInputResultGenerator",  new MockManyInputResultGeneratorFactory() },
     };
 
 

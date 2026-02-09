@@ -658,6 +658,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_AssetPanel_ReuseableAssets",
+        "Value": "\u7D20\u6750\u5E93",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_AssetPanel_SharedAssets",
         "Value": "\u5171\u4EAB\u7D20\u6750",
         "Mode": "ConstString",
@@ -2721,8 +2729,16 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "DraftPage_AssetPanel_ReuseableAssets",
-        "Value": "\u7D20\u6750\u5E93",
+        "Id": "_Done",
+        "Value": "\u64CD\u4F5C\u6210\u529F\u5B8C\u6210\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_EffectBindView_AddEffect",
+        "Value": "\u6DFB\u52A0\u6548\u679C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5699,6 +5715,24 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "Unset localization item:_Done()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_EffectBindView_AddEffect",
+        "Value": "Unset localization item:DraftPage_EffectBindView_AddEffect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -8665,6 +8699,24 @@
       {
         "Id": "DraftPage_AssetPanel_ReuseableAssets",
         "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "Unset localization item:_Done()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_EffectBindView_AddEffect",
+        "Value": "Unset localization item:DraftPage_EffectBindView_AddEffect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11647,6 +11699,24 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "Unset localization item:_Done()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_EffectBindView_AddEffect",
+        "Value": "Unset localization item:DraftPage_EffectBindView_AddEffect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -14624,6 +14694,24 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "Unset localization item:_Done()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_EffectBindView_AddEffect",
+        "Value": "Unset localization item:DraftPage_EffectBindView_AddEffect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -17591,6 +17679,24 @@
       {
         "Id": "DraftPage_AssetPanel_ReuseableAssets",
         "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "Unset localization item:_Done()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_EffectBindView_AddEffect",
+        "Value": "Unset localization item:DraftPage_EffectBindView_AddEffect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20568,6 +20674,24 @@
       {
         "Id": "DraftPage_AssetPanel_ReuseableAssets",
         "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Done",
+        "Value": "Unset localization item:_Done()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_EffectBindView_AddEffect",
+        "Value": "Unset localization item:DraftPage_EffectBindView_AddEffect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

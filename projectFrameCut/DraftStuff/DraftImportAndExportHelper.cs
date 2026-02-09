@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
+using projectFrameCut.Services;
 
 namespace projectFrameCut.DraftStuff
 {
@@ -130,9 +131,9 @@ namespace projectFrameCut.DraftStuff
                                         IsMixture = false,
                                         IsContinuousEffect = effect is IContinuousEffect,
                                         IsVariableArgumentEffect = effect is IBindableArgumentEffect,
-                                        BindedEffectGroupID = effect.BindedEffectGroupID,
+                                        BindedEffectGroupID = effect.BindedEffectGroupID ?? "",
                                     };
-                                    
+
                                     // Save IBindableArgumentEffect specific properties
                                     if (effect is IBindableArgumentEffect bindableEffect)
                                     {
@@ -146,20 +147,20 @@ namespace projectFrameCut.DraftStuff
                                         {
                                             structure.BindedInputIDs = mpg.BindedArgumentProviderIDs;
                                         }
+                                        structure.Enabled = true;
                                     }
-                                    
+
                                     return structure;
                                 }).ToArray(),
                                 EffectBundles = elem.EffectBundles?.Values
-                                    .OrderBy(b => b.Index)
-                                    .ThenBy(b => b.Id)
                                     .Select(b => new EffectBundleJSONStructure
                                     {
                                         Id = b.Id,
-                                        BundleTypeName = b.BundleTypeName,
+                                        BundleTypeName = b.TypeName,
                                         Parameters = b.Parameters,
-                                        Enabled = b.Enabled,
-                                        Name = b.Name
+                                        Name = b.Name,
+                                        InteractiveEditorX = -1,
+                                        InteractiveEditorY = -1,
                                     }).ToArray()
                             };
 
@@ -329,20 +330,12 @@ namespace projectFrameCut.DraftStuff
 
                 if (dto.EffectBundles != null)
                 {
-                    var dict = new Dictionary<string, EffectBundleData>();
+                    var dict = new Dictionary<Guid, IEffectBundle>();
                     for (int i = 0; i < dto.EffectBundles.Length; i++)
                     {
                         var b = dto.EffectBundles[i];
-                        var id = string.IsNullOrWhiteSpace(b.Id) ? Guid.NewGuid().ToString() : b.Id;
-                        dict[id] = new EffectBundleData
-                        {
-                            Id = id,
-                            BundleTypeName = b.BundleTypeName,
-                            Parameters = b.Parameters ?? new Dictionary<string, object>(),
-                            Enabled = b.Enabled,
-                            Name = b.Name,
-                            Index = i
-                        };
+                        var f = EffectServices.GetAvailableEffectBundles()[b.BundleTypeName]();
+                        dict.Add(b.Id, f);
                     }
                     element.EffectBundles = dict;
                 }

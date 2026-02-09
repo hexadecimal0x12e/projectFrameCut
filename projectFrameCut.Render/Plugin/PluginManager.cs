@@ -142,7 +142,7 @@ namespace projectFrameCut.Render.Plugin
 
         public static string GetLocalizationItemInSpecificPlugin(this IPluginBase src, string key, string fallback)
         {
-            var localizedString = src.ReadLocalizationItem(key, CurrentLocale);
+            var localizedString = src?.ReadLocalizationItem(key, CurrentLocale);
             if (!string.IsNullOrEmpty(localizedString))
             {
                 return localizedString;
