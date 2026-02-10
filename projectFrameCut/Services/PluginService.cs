@@ -468,6 +468,22 @@ namespace projectFrameCut.Services
                         failReason = localizedFailReason ?? $"The type 'PluginLoader' not found in the assembly.";
                         return null;
                     }
+
+                    if(plugin is IApplicationPluginBase apb)
+                    {
+                        if(apb.AppLevelPluginAPIVersion != IApplicationPluginBase.CurrentAppLevelPluginAPIVersion)
+                        {
+                            string? localizedFailReason = null;
+                            try
+                            {
+                                localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
+                            }
+                            catch { }
+                            failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
+                            return null;
+                        }
+                    }
+
                     var optionFilePath = Path.Combine(pluginRoot, "option.json");
                     if (File.Exists(optionFilePath))
                     {
@@ -581,7 +597,7 @@ namespace projectFrameCut.Services
                         var failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
                         throw new FeatureNotSupportedException(failReason);
                     }
-                    plugin.MessagingQueue = MessagingServices.MessagingService;
+                    
                     return plugin;
                 }
                 return null;

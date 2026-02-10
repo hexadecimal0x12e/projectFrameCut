@@ -23,6 +23,16 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
     public interface IApplicationPluginBase : IPluginBase
     {
         /// <summary>
+        /// Get the current Application-level plugin API version.
+        /// </summary>
+        public static int CurrentAppLevelPluginAPIVersion => 3;
+
+        /// <summary>
+        /// Get the version of the Application-level plugin.
+        /// </summary>
+        public int AppLevelPluginAPIVersion { get; }
+
+        /// <summary>
         /// Gets a dictionary that maps effect names to their corresponding effect bundle creation functions.
         /// </summary>
         public Dictionary<string, Func<IEffectBundle>> EffectBundleProvider { get; }

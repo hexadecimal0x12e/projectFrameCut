@@ -869,11 +869,11 @@ public partial class TestPage : ContentPage
         });
     }
 
-    private void TestOrderButton_Clicked(object sender, EventArgs e)
+    private async void TestOrderButton_Clicked(object sender, EventArgs e)
     {
         var lines = InputEditor.Text.Split(["\r", "\n", "\r\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var loc = string.IsNullOrWhiteSpace(LocateInputer.Text) ? Localized._LocaleId_ : LocateInputer.Text.Trim();
-        var ordered = lines.OrderBy(a => TextHelper.GetPronounceForOrdering(a, loc).Result).GroupBy(TextHelper.DetectTextLanguage).OrderByDescending(g => g.Count()).SelectMany(c => c).ToList();
+        var ordered = lines.OrderBy(async a => await TextHelper.GetPronounceForOrdering(a, loc)).GroupBy(TextHelper.DetectTextLanguage).OrderByDescending(g => g.Count()).SelectMany(c => c).ToList();
         InputEditor.Text = string.Join(Environment.NewLine, ordered);
         TestOrderButton.Text = "Order done";
 

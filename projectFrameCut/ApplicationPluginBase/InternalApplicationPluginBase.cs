@@ -23,6 +23,8 @@ namespace projectFrameCut.ApplicationPluginBase
             { "MockManyInputResultGenerator", () => new MockManyInputResultGeneratorBundle() },
         };
 
+        public int AppLevelPluginAPIVersion => IApplicationPluginBase.CurrentAppLevelPluginAPIVersion;
+
         public View? SettingPageProvider(ref IApplicationPluginBase instance)
         {
             return null;

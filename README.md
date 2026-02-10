@@ -35,7 +35,7 @@
 
 - [x] 字幕和文本
 
-- [x] 远程服务器支持
+- [ ] 远程服务器支持 （仍然需要完善）
 
 - [ ] AI功能（AI生成字幕，配音，甚至素材）
 
@@ -50,9 +50,9 @@ projectFrameCut性能的差异不会随着CPU或者GPU的变化而差异很大�
 
 对于Windows目标，我们支持**Windows 10 2004或者更新**的系统，并且你还需要安装WinUI3的必要组件（系统会提示你安装它）。要使用硬件加速，你的电脑上还要有一张/多张支持CUDA或者OpenCL的图形处理器（这涵盖了你在市面上能买到的99%的显卡）。
 
-对于安卓目标，目前我们只保证projectFrameCut能够**在Android 12或者更新系统**，搭载至少8GB的运行内存，使用Arm64架构的CPU上运行。要使用硬件加速，你的设备的GPU必须支持OpenGL ES 3.1 或者更新。
+对于安卓目标，projectFrameCut需要**在Android 11或者更新系统**，搭载至少8GB的运行内存，使用Arm64架构的CPU上运行。要使用硬件加速，你的设备的GPU必须支持OpenGL ES 3.1 或者更新。
 
-对于iOS目标，我们支持iOS 17.0 或者更新。请注意，**projectFrameCut不支持运行内存小于4GB的iOS设备**。
+对于iOS目标，我们支持iOS 13.0 或者更新，建议使用 iOS 17.0 或者更新。请注意，**projectFrameCut不支持运行内存小于4GB的iOS设备**。
 如果你使用iPhone，建议使用iPhone 12/13/14 Pro \(Max\)，或者iPhone 15及更新的各款机型。
 如果你使用iPad，建议使用 iPad 11th Generation或者更新、Pad mini 5th Generation或者更新、以及使用Apple M系列芯片的各款iPad Air/Pro。
 

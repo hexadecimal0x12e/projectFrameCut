@@ -469,7 +469,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Represents the messaging queue provided by the host application.
         /// </summary>
-        [Obsolete("Use GlobalPluginHelper.MessagingService instead.", false)]
+        [Obsolete("Use GlobalPluginHelper.MessagingService instead. This property is no longer been assigned while initialization and it will be removed in next Plugin API version.", false)]
         public IMessagingService MessagingQueue { get; set; }
     }
 
