@@ -2,12 +2,15 @@ using CommunityToolkit.Maui.Views;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Layouts;
 using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System.Diagnostics;
+using System.Text.Json;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
 using Rect = Microsoft.Maui.Graphics.Rect;
 
@@ -17,6 +20,14 @@ public enum NodeKind { Effect, Input, Output }
 
 public partial class DraftEffectBindingView : ContentView
 {
+    private const string ExtraDataInputXKey = "__DraftEffectBindingView_InputX__";
+    private const string ExtraDataInputYKey = "__DraftEffectBindingView_InputY__";
+    private const string ExtraDataOutputXKey = "__DraftEffectBindingView_OutputX__";
+    private const string ExtraDataOutputYKey = "__DraftEffectBindingView_OutputY__";
+    private const string ExtraDataViewScaleKey = "__DraftEffectBindingView_ViewScale__";
+    private const string ExtraDataViewPanXKey = "__DraftEffectBindingView_ViewPanX__";
+    private const string ExtraDataViewPanYKey = "__DraftEffectBindingView_ViewPanY__";
+
     private ClipElementUI? _clip;
     private DraftPage? _page;
     private Dictionary<Guid, NodeViewModel> _nodes = new();
@@ -30,6 +41,11 @@ public partial class DraftEffectBindingView : ContentView
     private double _panStartX, _panStartY;
     private bool _isDraggingNodeOrPort;
     private double _startScale = 1.0;
+    private const double PanelMinWidth = 230;
+    private const double PanelMaxWidth = 800;
+    private double _panelStartWidth;
+    private double _panelWidthBeforeCollapse = 300;
+    private bool _isPanelCollapsed;
 
 
     public DraftEffectBindingView()
@@ -43,7 +59,10 @@ public partial class DraftEffectBindingView : ContentView
         ResetButton.Clicked += OnReset;
 
         InfoLabel.Text = PPLocalizedResources.EffectBindView_Hint;
-        
+
+        _panelWidthBeforeCollapse = RightPanelColumn.Width.Value;
+        UpdatePanelToggleText();
+
     }
 
     protected override void OnHandlerChanged()
@@ -144,6 +163,7 @@ public partial class DraftEffectBindingView : ContentView
         _drawable.PanX = newTransX;
         _drawable.PanY = newTransY;
         UpdateDrawableScale();
+        SaveViewTransform();
     }
 
     private void OnReset(object? sender, EventArgs e)
@@ -159,6 +179,56 @@ public partial class DraftEffectBindingView : ContentView
         _drawable.PanY = 0;
         UpdateDrawableScale();
         ConnectionsLayer.Invalidate();
+        SaveViewTransform();
+    }
+
+    private void OnSplitterPanUpdated(object? sender, PanUpdatedEventArgs e)
+    {
+        switch (e.StatusType)
+        {
+            case GestureStatus.Started:
+                _panelStartWidth = RightPanelColumn.Width.Value;
+                if (_isPanelCollapsed)
+                {
+                    _isPanelCollapsed = false;
+                    RightPanel.IsVisible = true;
+                    UpdatePanelToggleText();
+                }
+                break;
+            case GestureStatus.Running:
+                double newWidth = Math.Clamp(_panelStartWidth - e.TotalX, PanelMinWidth, PanelMaxWidth);
+                RightPanelColumn.Width = new GridLength(newWidth, GridUnitType.Absolute);
+                _panelWidthBeforeCollapse = newWidth;
+                break;
+            case GestureStatus.Completed:
+            case GestureStatus.Canceled:
+                break;
+        }
+    }
+
+    private void OnTogglePanelClicked(object? sender, EventArgs e)
+    {
+        if (_isPanelCollapsed)
+        {
+            double restoredWidth = Math.Clamp(_panelWidthBeforeCollapse, PanelMinWidth, PanelMaxWidth);
+            RightPanelColumn.Width = new GridLength(restoredWidth, GridUnitType.Absolute);
+            RightPanel.IsVisible = true;
+            _isPanelCollapsed = false;
+        }
+        else
+        {
+            _panelWidthBeforeCollapse = Math.Clamp(RightPanelColumn.Width.Value, PanelMinWidth, PanelMaxWidth);
+            RightPanelColumn.Width = new GridLength(0, GridUnitType.Absolute);
+            RightPanel.IsVisible = false;
+            _isPanelCollapsed = true;
+        }
+
+        UpdatePanelToggleText();
+    }
+
+    private void UpdatePanelToggleText()
+    {
+        TogglePanelButton.Text = _isPanelCollapsed ? ">" : "<";
     }
 
     private void UpdateDrawableScale()
@@ -191,7 +261,19 @@ public partial class DraftEffectBindingView : ContentView
         _drawable.Scale = 1.0;
 
         // Create System Nodes
-        _inputNode = new NodeViewModel { Kind = NodeKind.Input, X = 50, Y = 150, Id = IEffectBundle.InputAnchorGUID, Bundle = null };
+        var inputX = GetExtraDataDouble(ExtraDataInputXKey, 50);
+        var inputY = GetExtraDataDouble(ExtraDataInputYKey, 150);
+        _inputNode = new NodeViewModel
+        {
+            Kind = NodeKind.Input,
+            X = inputX,
+            Y = inputY,
+            Id = IEffectBundle.InputAnchorGUID,
+            Bundle = null,
+            InputAnchorID = IEffectBundle.NoConnectionGUID,
+            OutputAnchorID = IEffectBundle.NoConnectionGUID,
+            DisplayName = PPLocalizedResources.EffectBind_SourcePicture
+        };
         AddNode(_inputNode);
 
         if (_clip.EffectBundles != null)
@@ -230,10 +312,23 @@ public partial class DraftEffectBindingView : ContentView
         // Create Output Node
         // Position it far right
         double maxX = _nodes.Max(kvp => kvp.Value.X);
-        _outputNode = new NodeViewModel { Kind = NodeKind.Output, X = Math.Max(maxX + 200, 600), Y = 150, Id = IEffectBundle.OutputAnchorGUID, Bundle = null };
+        var outputX = GetExtraDataDouble(ExtraDataOutputXKey, Math.Max(maxX + 200, 600));
+        var outputY = GetExtraDataDouble(ExtraDataOutputYKey, 150);
+        _outputNode = new NodeViewModel
+        {
+            Kind = NodeKind.Output,
+            X = outputX,
+            Y = outputY,
+            Id = IEffectBundle.OutputAnchorGUID,
+            Bundle = null,
+            InputAnchorID = IEffectBundle.NoConnectionGUID,
+            OutputAnchorID = IEffectBundle.NoConnectionGUID,
+            DisplayName = PPLocalizedResources.EffectBind_FinalResult
+        };
         AddNode(_outputNode);
 
         RebuildConnections();
+        ApplySavedViewTransform();
         ConnectionsLayer.Invalidate();
     }
 
@@ -344,18 +439,31 @@ public partial class DraftEffectBindingView : ContentView
         if (node.Kind == NodeKind.Output) outputPort.Color = Colors.Transparent; // Hide Output on Output Node
 
         // Interaction
-        var tap = new TapGestureRecognizer();
-        tap.Tapped += (s, e) => SelectNode(node);
-        tap.NumberOfTapsRequired = 2;
-        tap.Tapped += (s, e) => DisconnectNode(node);
-
-        var singleTap = new TapGestureRecognizer();
-        singleTap.Tapped += (s, e) => SelectNode(node);
+        UIServices.RegisterSelectOrContextMenu(
+            frame,
+            OnSelected: () =>
+            {
+                SelectNode(node);
+            },
+            OnClicked: () =>
+            {
+#if ANDROID || IOS
+                SelectNode(node);
+#elif WINDOWS || MACCATALYST
+                if (node.Kind == NodeKind.Effect)
+                {
+                    DisconnectNode(node);
+                }
+                else
+                {
+                    SelectNode(node);
+                }
+#endif
+            },
+            OnContextMenuClick: async () => await ShowContextMenu(node)
+        );
 
         var bodyActionContainer = new Grid();
-
-        bodyActionContainer.GestureRecognizers.Add(singleTap);
-        if (node.Kind == NodeKind.Effect) bodyActionContainer.GestureRecognizers.Add(tap); // Only disconnect effects
 
         var pan = new PanGestureRecognizer();
         pan.PanUpdated += (s, e) => OnNodePan(node, e);
@@ -414,11 +522,79 @@ public partial class DraftEffectBindingView : ContentView
             case GestureStatus.Completed:
             case GestureStatus.Canceled:
                 _isDraggingNodeOrPort = false;
-                node?.Bundle?.Parameters?["__DraftEffectBindingView_InteractiveEditorX__"] = node.X;
-                node?.Bundle?.Parameters?["__DraftEffectBindingView_InteractiveEditorY__"] = node.Y;
+                if (node.Kind == NodeKind.Effect)
+                {
+                    node?.Bundle?.Parameters?["__DraftEffectBindingView_InteractiveEditorX__"] = node.X;
+                    node?.Bundle?.Parameters?["__DraftEffectBindingView_InteractiveEditorY__"] = node.Y;
+                }
+                else
+                {
+                    SaveSystemNodePosition(node);
+                }
                 ConnectionsLayer.Invalidate();
                 break;
         }
+    }
+
+    private void SaveSystemNodePosition(NodeViewModel node)
+    {
+        if (_clip == null) return;
+        _clip.ExtraData ??= new Dictionary<string, object>();
+
+        switch (node.Kind)
+        {
+            case NodeKind.Input:
+                _clip.ExtraData[ExtraDataInputXKey] = node.X;
+                _clip.ExtraData[ExtraDataInputYKey] = node.Y;
+                break;
+            case NodeKind.Output:
+                _clip.ExtraData[ExtraDataOutputXKey] = node.X;
+                _clip.ExtraData[ExtraDataOutputYKey] = node.Y;
+                break;
+        }
+    }
+
+    private double GetExtraDataDouble(string key, double fallback)
+    {
+        if (_clip?.ExtraData == null) return fallback;
+        if (_clip.ExtraData.TryGetValue(key, out var value))
+        {
+            if (value is JsonElement e && e.TryGetDouble(out var jd)) return jd;
+            if (value is double d) return d;
+            if (value is float f) return f;
+            if (value is int i) return i;
+            if (value is long l) return l;
+            if (value is decimal m) return (double)m;
+            if (value is string s && double.TryParse(s, out var parsed)) return parsed;
+        }
+        return fallback;
+    }
+
+    private void SaveViewTransform()
+    {
+        if (_clip == null) return;
+        _clip.ExtraData ??= new Dictionary<string, object>();
+        _clip.ExtraData[ExtraDataViewScaleKey] = NodesContainer.Scale;
+        _clip.ExtraData[ExtraDataViewPanXKey] = NodesContainer.TranslationX;
+        _clip.ExtraData[ExtraDataViewPanYKey] = NodesContainer.TranslationY;
+    }
+
+    private void ApplySavedViewTransform()
+    {
+        if (_clip == null) return;
+        double scale = GetExtraDataDouble(ExtraDataViewScaleKey, 1.0);
+        double panX = GetExtraDataDouble(ExtraDataViewPanXKey, 0.0);
+        double panY = GetExtraDataDouble(ExtraDataViewPanYKey, 0.0);
+
+        NodesContainer.AnchorX = 0;
+        NodesContainer.AnchorY = 0;
+        NodesContainer.Scale = Math.Clamp(scale, 0.2, 5.0);
+        NodesContainer.TranslationX = panX;
+        NodesContainer.TranslationY = panY;
+
+        _drawable.PanX = panX;
+        _drawable.PanY = panY;
+        UpdateDrawableScale();
     }
 
     private void OnPortPan(NodeViewModel node, PanUpdatedEventArgs e, bool isInput, int portIndex = 0)
@@ -495,7 +671,7 @@ public partial class DraftEffectBindingView : ContentView
                         if (isInput)
                         {
                             // Dragging FROM Input, looking for Output
-                            if (candidate.Kind == NodeKind.Input) continue;
+                            if (candidate.Kind == NodeKind.Output) continue;
 
                             // Target in Screen Space (Output Port)
                             double targetX = (candidate.X + candidate.Width) * finalScale + _drawable.PanX;
@@ -511,7 +687,7 @@ public partial class DraftEffectBindingView : ContentView
                         else
                         {
                             // Dragging FROM Output, looking for Input
-                            if (candidate.Kind == NodeKind.Output) continue;
+                            if (candidate.Kind == NodeKind.Input) continue;
 
                             // If Candidate has Multiple Inputs, Check which one we hit
                             if (candidate.InputPortNames != null && candidate.InputPortNames.Length > 1)
@@ -599,6 +775,10 @@ public partial class DraftEffectBindingView : ContentView
                 _drawable.PanY = NodesContainer.TranslationY;
                 ConnectionsLayer.Invalidate();
                 break;
+            case GestureStatus.Completed:
+            case GestureStatus.Canceled:
+                SaveViewTransform();
+                break;
         }
     }
 
@@ -609,7 +789,7 @@ public partial class DraftEffectBindingView : ContentView
         if (node.View is Border b2) b2.Stroke = Colors.Yellow;
 
         PropertiesPanel.Children.Clear();
-        PropertiesPanel.Children.Add(new Label { Text = node.DisplayName, FontAttributes = FontAttributes.Bold });
+        PropertiesPanel.Children.Add(new Label { Text = node.DisplayName, FontAttributes = FontAttributes.Bold, HorizontalOptions = LayoutOptions.Center });
 
         if (node.Kind != NodeKind.Effect)
         {
@@ -623,18 +803,114 @@ public partial class DraftEffectBindingView : ContentView
             ArgumentNullException.ThrowIfNull(ppb, $"CreateUI() for {node.Bundle?.TypeName}");
             ppb.PropertyChanged += (s, args) =>
             {
+                ArgumentNullException.ThrowIfNull(node.Bundle);
                 node.Bundle.Parameters = node.Bundle.HandlePropertyPanelChange(args);
                 RebuildConnections();
                 ConnectionsLayer.Invalidate();
             };
 
-            PropertiesPanel.Children.Add(ppb.Build());
+            PropertiesPanel.Children.Add(ppb.BuildWithScrollView());
         }
         catch (Exception ex)
         {
-            PropertiesPanel.Children.Add(new Label { Text = "Error loading properties: " + ex.Message });
+            PropertiesPanel.Children.Add(new Label { Text = $"Error loading properties. {Environment.NewLine}{Localized._ExceptionTemplate(ex)}" });
         }
 
+    }
+
+    private async Task ShowContextMenu(NodeViewModel node)
+    {
+        if (node.Kind != NodeKind.Effect) return;
+        string[] commands = [
+            PPLocalizedResources.EffectBindView_Configure,
+            PPLocalizedResources.EffectBindView_Disconnect,
+            Localized.DraftPage_ContextMenu_Delete
+            ];
+        async Task process(int command)
+        {
+            switch (command)
+            {
+                case 0:
+                    {
+                        SelectNode(node);
+                        RightTabView.SelectedIndex = 0;
+                        break;
+                    }
+                case 1:
+                    {
+                        DisconnectNode(node);
+                        break;
+                    }
+                case 2:
+                    {
+                        RemoveEffect(node);
+                        break;
+                    }
+                default:
+                    break;
+            }
+
+        }
+
+        //if (IContextMenuBuilder.Default is IContextMenuBuilder)
+        //{
+        //    var b = IContextMenuBuilder.Default.CreateNewInstance();
+        //    for (int i = 0; i < commands.Length; i++)
+        //    {
+        //        b.AddCommand(commands[i], async () => await process(i));
+        //    }
+        //    if (node?.View is not null) b.TryShow(node.View);
+        //}
+        //else
+        {
+            if (Parent is MultiWindowItem i)
+            {
+                var r = await i.DisplayActionSheetAsync(Localized.HomePage_ProjectContextMenu(node.DisplayName), Localized._Cancel, null, commands);
+                await process(Array.IndexOf(commands, r));
+            }
+            else
+            {
+                var r = await (_page?.DisplayActionSheetAsync(Localized.HomePage_ProjectContextMenu(node.DisplayName), Localized._Cancel, null, commands) ?? new Task<string>(() => "")) ?? "";
+                await process(Array.IndexOf(commands, r));
+            }
+        }
+    }
+
+    private void RemoveEffect(NodeViewModel node)
+    {
+        if (_clip == null) return;
+        if (node.Kind != NodeKind.Effect) return;
+
+        if (_pendingConnectionSource?.Node == node) _pendingConnectionSource = null;
+
+        if (_drawable.DragSourceNode == node)
+        {
+            _drawable.DragSourceNode = null;
+            _drawable.DragPoint = null;
+        }
+
+        DisconnectNode(node);
+
+        _clip.EffectBundles?.Remove(node.Id);
+        ClipInfoBuilder.RebuildAllEffects(_clip);
+
+        _nodes.Remove(node.Id);
+
+        if (node.View != null)
+        {
+            NodesContainer.Children.Remove(node.View);
+        }
+
+        if (_selectedNode == node)
+        {
+            _selectedNode = null;
+            PropertiesPanel.Children.Clear();
+            PropertiesPanel.Children.Add(new Label { Text = Localized.DraftPage_PropertyPanel_SelectToContinue });
+        }
+
+        RebuildConnections();
+        ConnectionsLayer.Invalidate();
+        SetStatusText(Localized._Done);
     }
 
     private void OnPortClicked(NodeViewModel node, bool isInput, int portIndex = 0)
@@ -668,7 +944,7 @@ public partial class DraftEffectBindingView : ContentView
         if (target.InputPortNames is null) ConnectNodesForOneinOneout(source, target);
         else ConnectNodesForOneinMultiout(source, target, targetPortIndex);
 
-        SetStatusText(PPLocalizedResources.EffectBindView_Connected(source?.DisplayName ?? "Unknown",target?.DisplayName ?? "Unknown"));
+        SetStatusText(PPLocalizedResources.EffectBindView_Connected(source?.DisplayName ?? "Unknown", target?.DisplayName ?? "Unknown"));
     }
 
     private void ConnectNodesForOneinOneout(NodeViewModel source, NodeViewModel target)
@@ -772,6 +1048,40 @@ public partial class DraftEffectBindingView : ContentView
                     if (node.InputAnchorIDs is not null) node.InputAnchorIDs = Enumerable.Repeat(IEffectBundle.NoConnectionGUID, node.InputAnchorIDs.Count).ToList();
                     newList[node.Id] = node;
 
+                    foreach (var item in _nodes)
+                    {
+                        if (item.Key == node.Id) continue;
+
+                        var other = item.Value;
+                        bool changed = false;
+
+                        if (other.InputAnchorID == node.Id)
+                        {
+                            other.InputAnchorID = IEffectBundle.NoConnectionGUID;
+                            changed = true;
+                        }
+
+                        if (other.InputAnchorIDs is not null)
+                        {
+                            for (int i = 0; i < other.InputAnchorIDs.Count; i++)
+                            {
+                                if (other.InputAnchorIDs[i] == node.Id)
+                                {
+                                    other.InputAnchorIDs[i] = IEffectBundle.NoConnectionGUID;
+                                    changed = true;
+                                }
+                            }
+                        }
+
+                        if (other.OutputAnchorID == node.Id)
+                        {
+                            other.OutputAnchorID = IEffectBundle.NoConnectionGUID;
+                            changed = true;
+                        }
+
+                        if (changed) newList[item.Key] = other;
+                    }
+
                     break;
                 }
         }
@@ -811,17 +1121,19 @@ public partial class DraftEffectBindingView : ContentView
 
             }
 
+            if (item.Kind == NodeKind.Effect && item.OutputAnchorID == IEffectBundle.OutputAnchorGUID)
+            {
+                _drawable.Connections.Add((item, _outputNode ?? throw new NullReferenceException(), 0));
+            }
+
             if (kvp.Key == IEffectBundle.OutputAnchorGUID) continue;
 
-            if (item.OutputAnchorID == IEffectBundle.NoConnectionGUID || item.InputAnchorID == IEffectBundle.NoConnectionGUID)
-            {
-                item.View?.Opacity = 0.8;
-            }
-            else
-            {
-                item.View?.Opacity = 1;
+            bool hasInput = item.InputAnchorIDs.ListAny()
+                ? item.InputAnchorIDs.Any(id => id != IEffectBundle.NoConnectionGUID)
+                : item.InputAnchorID != IEffectBundle.NoConnectionGUID;
+            bool hasOutput = item.OutputAnchorID != IEffectBundle.NoConnectionGUID;
 
-            }
+            item.View?.Opacity = hasInput && hasOutput ? 1 : 0.8;
         }
 
     }

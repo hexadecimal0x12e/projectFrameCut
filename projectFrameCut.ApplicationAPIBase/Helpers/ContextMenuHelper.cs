@@ -18,9 +18,16 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
 {
     public interface IContextMenuBuilder
     {
+        public static IContextMenuBuilder? Default;
+
         IContextMenuBuilder AddCommand(string text, Action action);
         IContextMenuBuilder AddCommand(string text, Action action, ImageSource icon);
         IContextMenuBuilder AddSeparator();
+
+
+        IContextMenuBuilder CreateNewInstance();
+
+
 
         bool TryShow(IView anchor);
     }
@@ -36,6 +43,11 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
             public Action Action { get; set; }
             public ImageSource Icon { get; set; }
             public bool IsSeparator { get; set; }
+        }
+
+        public IContextMenuBuilder CreateNewInstance()
+        {
+            return new WindowsContextMenuBuilder();
         }
 
         public IContextMenuBuilder AddCommand(string text, Action action)

@@ -52,11 +52,16 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
     public class EffectBundleJSONStructure
     {
+        private static readonly Guid NoConnectionGuid = new("00001234-5678-90ab-cdef-012345678900");
+
         public Guid Id { get; set; } = Guid.NewGuid();
         public string FromPlugin { get; set; } = string.Empty;
         public string BundleTypeName { get; set; } = string.Empty;
         public Dictionary<string, object> Parameters { get; set; } = new();
         public string Name { get; set; } = string.Empty;
+        public Guid BindedInputId { get; set; } = NoConnectionGuid;
+        public Guid BindedOutputId { get; set; } = NoConnectionGuid;
+        public Guid[]? BindedInputIds { get; set; }
         public double InteractiveEditorX { get; set; } = -1;
         public double InteractiveEditorY { get; set; } = -1;
     }

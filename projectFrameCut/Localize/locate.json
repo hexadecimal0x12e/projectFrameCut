@@ -44,6 +44,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "_Done",
+        "Value": "\u64CD\u4F5C\u6210\u529F\u5B8C\u6210\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "_Error",
         "Value": "\u9519\u8BEF",
         "Mode": "ConstString",
@@ -691,7 +699,7 @@
       },
       {
         "Id": "DraftPage_CannotSave_Exception",
-        "Value": "\u4FDD\u5B58\u8349\u7A3F\u5931\u8D25\uFF0C\u56E0\u4E3A\u4E00\u4E2A\u672A\u88AB\u5904\u7406\u7684 {ex.GetType().Name} \u5F02\u5E38 ({ex.Message})\u3002(\u4F60\u662F\u4E0D\u662F\u6388\u4E88\u4E86\u8DB3\u591F\u7684\u6743\u9650\u6765\u5199\u5165\u8349\u7A3F\u6587\u4EF6\uFF1F)",
+        "Value": "\u4FDD\u5B58\u8349\u7A3F\u5931\u8D25\uFF0C\u56E0\u4E3A\u4E00\u4E2A\u672A\u88AB\u5904\u7406\u7684 {ex.GetType().Name} \u5F02\u5E38 ({ex.Message})\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -859,6 +867,14 @@
       {
         "Id": "DraftPage_DuplicatedAsset_Together",
         "Value": "\u540C\u65F6\u4FDD\u7559",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_EffectBindView_AddEffect",
+        "Value": "\u6DFB\u52A0\u6548\u679C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2727,22 +2743,6 @@
         "ArgsComment": [],
         "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
         "HasValidationErrors": false
-      },
-      {
-        "Id": "_Done",
-        "Value": "\u64CD\u4F5C\u6210\u529F\u5B8C\u6210\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftPage_EffectBindView_AddEffect",
-        "Value": "\u6DFB\u52A0\u6548\u679C",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
       }
     ],
     "en-US": [
@@ -2975,7 +2975,7 @@
       },
       {
         "Id": "DraftPage_CannotSave_Exception",
-        "Value": "Failed to save draft due to an unhandled {ex.GetType().Name} exception ({ex.Message}). (Do you have sufficient permissions to write to the draft file?)",
+        "Value": "Failed to save draft due to an unhandled {ex.GetType().Name} exception ({ex.Message}).",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2989,7 +2989,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Error message when draft saving fails due to an exception, with permission check reminder",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -5691,47 +5691,47 @@
       },
       {
         "Id": "AssetPage_OrderBy_Name",
-        "Value": "Unset localization item:AssetPage_OrderBy_Name()",
+        "Value": "Sort by Name",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_OrderBy_AddDate",
-        "Value": "Unset localization item:AssetPage_OrderBy_AddDate()",
+        "Value": "By date added",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AssetPanel_ReuseableAssets",
-        "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Value": "Reusable Assets",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "_Done",
-        "Value": "Unset localization item:_Done()",
+        "Value": "Operation completed successfully.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_EffectBindView_AddEffect",
-        "Value": "Unset localization item:DraftPage_EffectBindView_AddEffect()",
+        "Value": "Add Effect",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -6459,7 +6459,7 @@
       },
       {
         "Id": "DraftPage_CannotSave_Exception",
-        "Value": "\u5132\u5B58\u8349\u7A3F\u5931\u6557\uFF0C\u56E0\u70BA\u672A\u8655\u7406\u7684 {ex.GetType().Name} \u7570\u5E38 ({ex.Message})\u3002\uFF08\u60A8\u662F\u5426\u6388\u4E88\u4E86\u8DB3\u5920\u7684\u6B0A\u9650\u4F86\u5BEB\u5165\u8349\u7A3F\u6A94\u6848\uFF1F\uFF09",
+        "Value": "\u5132\u5B58\u8349\u7A3F\u5931\u6557\uFF0C\u56E0\u70BA\u4E00\u500B\u672A\u8655\u7406\u7684 {ex.GetType().Name} \u4F8B\u5916 ({ex.Message})\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -8680,47 +8680,47 @@
       },
       {
         "Id": "AssetPage_OrderBy_Name",
-        "Value": "Unset localization item:AssetPage_OrderBy_Name()",
+        "Value": "\u6309\u540D\u7A31\u6392\u5E8F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_OrderBy_AddDate",
-        "Value": "Unset localization item:AssetPage_OrderBy_AddDate()",
+        "Value": "\u4F9D\u65B0\u820A\u6392\u5E8F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AssetPanel_ReuseableAssets",
-        "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Value": "\u7D20\u6750\u5EAB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "_Done",
-        "Value": "Unset localization item:_Done()",
+        "Value": "\u64CD\u4F5C\u6210\u529F\u5B8C\u6210\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_EffectBindView_AddEffect",
-        "Value": "Unset localization item:DraftPage_EffectBindView_AddEffect()",
+        "Value": "\u65B0\u589E\u6548\u679C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -8959,7 +8959,7 @@
       },
       {
         "Id": "DraftPage_CannotSave_Exception",
-        "Value": "\u4E0B\u66F8\u304D\u306E\u4FDD\u5B58\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002\u672A\u51E6\u7406\u306E {ex.GetType().Name} \u4F8B\u5916\u304C\u767A\u751F\u3057\u307E\u3057\u305F ({ex.Message})\u3002\uFF08\u4E0B\u66F8\u304D\u30D5\u30A1\u30A4\u30EB\u3078\u306E\u66F8\u304D\u8FBC\u307F\u6A29\u9650\u304C\u5341\u5206\u306B\u4ED8\u4E0E\u3055\u308C\u3066\u3044\u308B\u304B\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\uFF09",
+        "Value": "\u30C9\u30E9\u30D5\u30C8\u306E\u4FDD\u5B58\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002\u672A\u51E6\u7406\u306E {ex.GetType().Name} \u4F8B\u5916 ({ex.Message}) \u304C\u767A\u751F\u3057\u305F\u305F\u3081\u3067\u3059\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -8973,7 +8973,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Draft saving failed due to unhandled exception error message",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -11675,47 +11675,47 @@
       },
       {
         "Id": "AssetPage_OrderBy_Name",
-        "Value": "Unset localization item:AssetPage_OrderBy_Name()",
+        "Value": "\u540D\u524D\u3067\u4E26\u3079\u66FF\u3048",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_OrderBy_AddDate",
-        "Value": "Unset localization item:AssetPage_OrderBy_AddDate()",
+        "Value": "\u65B0\u7740\u9806",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AssetPanel_ReuseableAssets",
-        "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Value": "\u7D20\u6750\u30E9\u30A4\u30D6\u30E9\u30EA",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "_Done",
-        "Value": "Unset localization item:_Done()",
+        "Value": "\u64CD\u4F5C\u304C\u6B63\u5E38\u306B\u5B8C\u4E86\u3057\u307E\u3057\u305F\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_EffectBindView_AddEffect",
-        "Value": "Unset localization item:DraftPage_EffectBindView_AddEffect()",
+        "Value": "\u52B9\u679C\u3092\u8FFD\u52A0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -11954,7 +11954,7 @@
       },
       {
         "Id": "DraftPage_CannotSave_Exception",
-        "Value": "\uCD08\uC548 \uC800\uC7A5 \uC2E4\uD328: \uCC98\uB9AC\uB418\uC9C0 \uC54A\uC740 {ex.GetType().Name} \uC608\uC678 \uBC1C\uC0DD ({ex.Message}). (\uCD08\uC548 \uD30C\uC77C\uC5D0 \uC4F0\uAE30 \uAD8C\uD55C\uC774 \uCDA9\uBD84\uD788 \uBD80\uC5EC\uB418\uC5C8\uB294\uC9C0 \uD655\uC778\uD574 \uC8FC\uC138\uC694.)",
+        "Value": "\uCD08\uC548 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4. \uCC98\uB9AC\uB418\uC9C0 \uC54A\uC740 {ex.GetType().Name} \uC608\uC678({ex.Message}) \uB54C\uBB38\uC785\uB2C8\uB2E4.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -11968,7 +11968,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Draft saving failed due to unhandled exception with permission hint",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -14670,47 +14670,47 @@
       },
       {
         "Id": "AssetPage_OrderBy_Name",
-        "Value": "Unset localization item:AssetPage_OrderBy_Name()",
+        "Value": "\uC774\uB984\uC21C \uC815\uB82C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_OrderBy_AddDate",
-        "Value": "Unset localization item:AssetPage_OrderBy_AddDate()",
+        "Value": "\uCD94\uAC00 \uB0A0\uC9DC\uC21C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\uC5D0\uC14B \uBAA9\uB85D\uC744 \uCD94\uAC00 \uB0A0\uC9DC \uAE30\uC900\uC73C\uB85C \uC815\uB82C\uD558\uB294 \uC635\uC158\uC785\uB2C8\uB2E4.",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AssetPanel_ReuseableAssets",
-        "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Value": "\uC18C\uC7AC \uB77C\uC774\uBE0C\uB7EC\uB9AC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "_Done",
-        "Value": "Unset localization item:_Done()",
+        "Value": "\uC791\uC5C5\uC774 \uC131\uACF5\uC801\uC73C\uB85C \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_EffectBindView_AddEffect",
-        "Value": "Unset localization item:DraftPage_EffectBindView_AddEffect()",
+        "Value": "\uD6A8\uACFC \uCD94\uAC00",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -14944,7 +14944,7 @@
       },
       {
         "Id": "DraftPage_CannotSave_Exception",
-        "Value": "\u00C9chec de l\u0027enregistrement du brouillon en raison d\u0027une exception {ex.GetType().Name} non g\u00E9r\u00E9e ({ex.Message}). Avez-vous les autorisations n\u00E9cessaires pour \u00E9crire dans le fichier de brouillon ?",
+        "Value": "\u00C9chec de l\u0027enregistrement du brouillon en raison d\u0027une exception non g\u00E9r\u00E9e {ex.GetType().Name} ({ex.Message}).",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -14958,7 +14958,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Message d\u0027erreur lorsque l\u0027enregistrement du brouillon \u00E9choue \u00E0 cause d\u0027une exception, avec rappel de v\u00E9rification des permissions",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -17660,47 +17660,47 @@
       },
       {
         "Id": "AssetPage_OrderBy_Name",
-        "Value": "Unset localization item:AssetPage_OrderBy_Name()",
+        "Value": "Trier par nom",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_OrderBy_AddDate",
-        "Value": "Unset localization item:AssetPage_OrderBy_AddDate()",
+        "Value": "Trier par anciennet\u00E9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AssetPanel_ReuseableAssets",
-        "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Value": "Biblioth\u00E8que de ressources",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "_Done",
-        "Value": "Unset localization item:_Done()",
+        "Value": "Op\u00E9ration termin\u00E9e avec succ\u00E8s.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_EffectBindView_AddEffect",
-        "Value": "Unset localization item:DraftPage_EffectBindView_AddEffect()",
+        "Value": "Ajouter un effet",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -17948,7 +17948,7 @@
       },
       {
         "Id": "DraftPage_CannotSave_Exception",
-        "Value": "\u4FDD\u5B58\u8349\u7A3F\u5931\u8D25\uFF0C\u76D6\u56E0\u672A\u5904\u7406\u4E4B{ex.GetType().Name}\u5F02\u5E38\uFF08{ex.Message}\uFF09\u3002\uFF08\u541B\u5C82\u672A\u6388\u8DB3\u6743\u4EE5\u4E66\u8349\u7A3F\u6587\u4EF6\u8036\uFF1F\uFF09",
+        "Value": "\u7A3F\u5B58\u672A\u679C\uFF0C\u76D6\u56E0 {ex.GetType().Name} \u4E4B\u5F02\u5E38\u672A\u5904\uFF08{ex.Message}\uFF09\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -17962,7 +17962,7 @@
             "Value": ""
           }
         ],
-        "Comment": "\u6587\u8A00\u6587\u7248\u672C\u7684\u7CFB\u7EDF\u5F02\u5E38\u63D0\u793A\uFF0C\u4FDD\u7559\u539F\u6280\u672F\u53C2\u6570\u548C\u7591\u95EE\u53E5\u5F0F",
+        "Comment": "\u5C06\u73B0\u4EE3\u6C49\u8BED\u7684\u5F02\u5E38\u63D0\u793A\u4FE1\u606F\u8F6C\u5316\u4E3A\u6587\u8A00\u6587\u8868\u8FF0\uFF0C\u8C03\u6574\u4E86\u8BED\u5E8F\u4EE5\u7B26\u5408\u6587\u8A00\u4E60\u60EF\uFF0C\u4FDD\u7559\u4E86\u539F\u63D2\u503C\u53D8\u91CF\u3002",
         "HasValidationErrors": false
       },
       {
@@ -20655,47 +20655,47 @@
       },
       {
         "Id": "AssetPage_OrderBy_Name",
-        "Value": "Unset localization item:AssetPage_OrderBy_Name()",
+        "Value": "\u6309\u540D\u79F0\u6392\u5E8F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AssetPage_OrderBy_AddDate",
-        "Value": "Unset localization item:AssetPage_OrderBy_AddDate()",
+        "Value": "\u4EE5\u65B0\u65E7\u5E8F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AssetPanel_ReuseableAssets",
-        "Value": "Unset localization item:DraftPage_AssetPanel_ReuseableAssets()",
+        "Value": "\u7D20\u6750\u5E93",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "_Done",
-        "Value": "Unset localization item:_Done()",
+        "Value": "\u64CD\u4F5C\u5DF2\u6BD5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_EffectBindView_AddEffect",
-        "Value": "Unset localization item:DraftPage_EffectBindView_AddEffect()",
+        "Value": "\u6DFB\u52A0\u6548\u679C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]

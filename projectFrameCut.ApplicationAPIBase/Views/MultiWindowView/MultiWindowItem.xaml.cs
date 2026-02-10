@@ -120,7 +120,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// <summary>
         /// Provide a <see cref="IContextMenuBuilder"/> to help build the ContextMenu when user right-clicks on the title bar. The context menu will be displayed with the options provided by the builder.
         /// </summary>
-        public static Func<IContextMenuBuilder>? ContextMenuProviderGetter { get; set; }
+        public static Func<IContextMenuBuilder?>? ContextMenuProviderGetter { get; set; } = new(() => { if (IContextMenuBuilder.Default is IContextMenuBuilder b) return b; return null; });
 
         #endregion
 
@@ -296,10 +296,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             UpdatedButtonVisibility();
             UpdateTitleBarVisibility();
 
-            if (ContextMenuProviderGetter is not null && _titleBarGrid is not null)
+            if (ContextMenuProviderGetter?.Invoke()?.CreateNewInstance() is IContextMenuBuilder ContextMenuProvider && _titleBarGrid is not null)
             {
-                var ContextMenuProvider = ContextMenuProviderGetter();
-
                 ContextMenuProvider.AddCommand("Recover", () =>
                     {
                         if (_isMaximized) Maximize();
@@ -309,7 +307,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     .AddCommand("Maximize", Maximize)
                     .AddCommand("Minimize", Minimize);
 #if WINDOWS || MACCATALYST
-                ContextMenuProvider.AddCommand("To standalone window", () => OpenInNewWindow());
+                ContextMenuProvider.AddCommand("To standalone window", async () => await OpenInNewWindow());
 #endif
 
                 var gesture = new TapGestureRecognizer

@@ -341,6 +341,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "\u9009\u4E2D\u7247\u6BB5\u4E4B\u540E\u9501\u5B9A\u8F68\u9053\u89C6\u56FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Edit_MaxiumSaveSlot",
         "Value": "\u6700\u5927\u4FDD\u5B58\u6B65\u6570 (\u7528\u4E8E\u64A4\u9500\u548C\u8FD8\u539F)",
         "Mode": "ConstString",
@@ -1678,14 +1686,6 @@
       {
         "Id": "RenderEffectImplement_Unknown",
         "Value": "\u672A\u77E5",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_LockScrollViewAfterSelection",
-        "Value": "\u9009\u4E2D\u7247\u6BB5\u4E4B\u540E\u9501\u5B9A\u8F68\u9053\u89C6\u56FE",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3534,6 +3534,15 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "Lock Track View After Selection",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -5373,6 +5382,15 @@
       {
         "Id": "Advanced_Reset",
         "Value": "\u91CD\u7F6E/\u4FEE\u5FA9\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "\u9078\u53D6\u7247\u6BB5\u5F8C\u9396\u5B9A\u8ECC\u9053\u6AA2\u8996",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7223,6 +7241,15 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "\u30BB\u30B0\u30E1\u30F3\u30C8\u9078\u629E\u5F8C\u306B\u30C8\u30E9\u30C3\u30AF\u30D3\u30E5\u30FC\u3092\u30ED\u30C3\u30AF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -9063,6 +9090,15 @@
       {
         "Id": "Advanced_Reset",
         "Value": "\uC7AC\uC124\uC815/\uAD6C\uC131 \uBCF5\uAD6C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "\uC120\uD0DD\uD55C \uC138\uADF8\uBA3C\uD2B8 \uC774\uD6C4 \uD2B8\uB799 \uBDF0 \uACE0\uC815",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -10913,6 +10949,15 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "Verrouiller la vue de la piste apr\u00E8s la s\u00E9lection d\u0027un fragment",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -12757,6 +12802,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "\u9009\u6BB5\u540E\u56FA\u8F68\u89C6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u610F\u4E3A\u9009\u4E2D\u7247\u6BB5\u540E\u9501\u5B9A\u8F68\u9053\u89C6\u56FE\u3002",
         "HasValidationErrors": false
       }
     ]

@@ -16,7 +16,7 @@
                 <VerticalStackLayout Spacing="8">
                     <Button x:Name="GeneralSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_General}" FontSize="24" Clicked="OnGeneralSettingClicked" />
                     <Button x:Name="EditSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Edit}" FontSize="24" Clicked="OnEditSettingClicked" />
-                    <Button x:Name="RemoteFeedSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_RemoteFeed}" FontSize="24" Clicked="OnRemoteFeedSettingClicked" />
+               <!-- <Button x:Name="RemoteFeedSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_RemoteFeed}" FontSize="24" Clicked="OnRemoteFeedSettingClicked" /> -->
                     <Button x:Name="RenderSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Render}" FontSize="24" Clicked="OnRenderSettingClicked" />
                     <Button x:Name="PluginSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Plugin}" FontSize="24" Clicked="OnPluginSettingClicked" />
                     <Button x:Name="MiscSettingButton" Text="{l:Localized Key=MainSettingsPage_Tab_Misc}" FontSize="24" Clicked="OnMiscSettingClicked" />

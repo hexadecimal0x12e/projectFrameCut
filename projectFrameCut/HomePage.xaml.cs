@@ -21,6 +21,7 @@ using projectFrameCut.Asset;
 using Microsoft.Maui.Platform;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using System.Globalization;
 
 
 #if WINDOWS
@@ -59,9 +60,6 @@ public partial class HomePage : ContentPage
             }
             await projectFrameCut.WinUI.App.BringToForeground();
 
-#endif
-#if !ANDROID
-            ProjectsCollection.SelectionChanged += CollectionView_SelectionChanged;
 #endif
             if (HasAlreadyLaunchedFromFile) return;
             await ShowManyAlertsAsync();
@@ -338,6 +336,8 @@ public partial class HomePage : ContentPage
                 Content = origContent;
             });
         };
+        //TODO: Do you know
+        /*
         string doyouknowText = "";
         try
         {
@@ -353,7 +353,7 @@ public partial class HomePage : ContentPage
             }
         }
         catch { }
-
+        */
         Content = new VerticalStackLayout
         {
             HorizontalOptions = LayoutOptions.Center,
@@ -371,6 +371,7 @@ public partial class HomePage : ContentPage
                     Margin = new Microsoft.Maui.Thickness(0.0, 8.0, 0.0, 8.0)
                 },
                 cancelButton,
+                /*
                 new Label
                 {
                     Text = doyouknowText,
@@ -379,6 +380,7 @@ public partial class HomePage : ContentPage
                     Margin = new Microsoft.Maui.Thickness(0.0, 12.0, 0.0, 0.0),
                     FontSize = 24
                 },
+                */
             }
         };
         ProjectJSONStructure project = new();
@@ -762,7 +764,7 @@ public partial class HomePage : ContentPage
                 localeDispName[localeDispName.Count - 1] = $"and {localeDispName.Last()}";
             }
 
-            await DisplayAlertAsync("Info", $"it seems like projectFrameCut doesn't support your system language yet.\r\nwe support {localeDispName.Aggregate((a, b) => $"{a}, {b}")} yet.\r\nIf you'd like to contribute the localization, do it and make a pull request.", "OK");
+            await DisplayAlertAsync("Info", $"it seems like projectFrameCut doesn't support your system language ({CultureInfo.CurrentCulture.NativeName}) yet.\r\nwe support {localeDispName.Aggregate((a, b) => $"{a}, {b}")} yet.\r\nIf you'd like to contribute the localization, do it and make a pull request.", "OK");
             SimpleLocalizer.IsFallbackMatched = false;
         }
 
@@ -831,6 +833,9 @@ public partial class HomePage : ContentPage
         }
 
 
+#if WINDOWS
+        if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();
+#endif
     }
 
     private async void MenuOpen_Clicked(object? sender, EventArgs e)
@@ -1020,39 +1025,23 @@ public partial class HomePage : ContentPage
     {
         if (sender is Microsoft.Maui.Controls.Border border && border.BindingContext is ProjectsViewModel vmItem)
         {
-#if WINDOWS || MACCATALYST
-            // Windows: Right-click to show context menu
-            var tap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Secondary };
-            tap.Tapped += async (_, _) =>
+            foreach (var gr in border.GestureRecognizers.ToList())
             {
-                await ShowContextMenu(vmItem);
-            };
-
-            // remove existing tap to avoid duplicates
-            var existing = border.GestureRecognizers.OfType<TapGestureRecognizer>().FirstOrDefault();
-            if (existing is not null) border.GestureRecognizers.Remove(existing);
-            border.GestureRecognizers.Add(tap);
-#elif ANDROID || IOS
-            // Android/iOS: Single tap to open, long press (>500ms) to show context menu
-            var pointerGesture = new PointerGestureRecognizer();
-            DateTime pointerDownTime = DateTime.MinValue;
-
-            pointerGesture.PointerPressed += (s, e) =>
-            {
-                pointerDownTime = DateTime.Now;
-            };
-
-            pointerGesture.PointerReleased += async (s, e) =>
-            {
-                var duration = (DateTime.Now - pointerDownTime).TotalMilliseconds;
-                if (duration >= 500)
+                if (gr is TapGestureRecognizer || gr is PointerGestureRecognizer)
                 {
-                    Vibration.Vibrate(120);
-                    await ShowContextMenu(vmItem);
+                    border.GestureRecognizers.Remove(gr);
                 }
-                else if (duration > 0)
+            }
+
+            UIServices.RegisterSelectOrContextMenu(
+                border,
+                OnSelected: () =>
                 {
-                    // Short tap to open
+                    _lastSelectedItemName = vmItem.Name;
+                    ProjectsCollection.SelectedItem = vmItem;
+                },
+                OnClicked: async () =>
+                {
                     if (vmItem._name == CreateButtonName)
                     {
                         await CreateDraft();
@@ -1061,15 +1050,19 @@ public partial class HomePage : ContentPage
                     {
                         await GoDraft(vmItem);
                     }
+
+                    ProjectsCollection.SelectedItem = null;
+                    _lastSelectedItemName = string.Empty;
+                },
+                OnContextMenuClick: async () =>
+                {
+                    if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
+                    {
+                        Vibration.Vibrate(120);
+                    }
+                    await ShowContextMenu(vmItem);
                 }
-            };
-
-            // Remove any existing pointer gesture recognizer to avoid duplicates
-            var existingPointer = border.GestureRecognizers.OfType<PointerGestureRecognizer>().FirstOrDefault();
-            if (existingPointer is not null) border.GestureRecognizers.Remove(existingPointer);
-
-            border.GestureRecognizers.Add(pointerGesture);
-#endif
+            );
         }
     }
 

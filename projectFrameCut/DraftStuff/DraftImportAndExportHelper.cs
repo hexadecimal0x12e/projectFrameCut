@@ -159,8 +159,9 @@ namespace projectFrameCut.DraftStuff
                                         BundleTypeName = b.TypeName,
                                         Parameters = b.Parameters,
                                         Name = b.Name,
-                                        InteractiveEditorX = -1,
-                                        InteractiveEditorY = -1,
+                                        BindedInputId = b.BindedInputId,
+                                        BindedOutputId = b.BindedOutputId,
+                                        BindedInputIds = b.BindedInputIds?.ToArray(),
                                     }).ToArray()
                             };
 
@@ -335,6 +336,12 @@ namespace projectFrameCut.DraftStuff
                     {
                         var b = dto.EffectBundles[i];
                         var f = EffectServices.GetAvailableEffectBundles()[b.BundleTypeName]();
+                        f.Id = b.Id;
+                        f.Name = b.Name;
+                        f.Parameters = b.Parameters ?? new Dictionary<string, object>();
+                        f.BindedInputId = b.BindedInputId;
+                        f.BindedOutputId = b.BindedOutputId;
+                        f.BindedInputIds = b.BindedInputIds?.ToList();
                         dict.Add(b.Id, f);
                     }
                     element.EffectBundles = dict;

@@ -1,9 +1,11 @@
-﻿using CommunityToolkit.Maui.Views;
+﻿using CommunityToolkit.Maui.Extensions;
+using CommunityToolkit.Maui.Views;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Layouts;
 using Microsoft.Maui.Platform;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.Controls;
@@ -484,19 +486,27 @@ namespace projectFrameCut.DraftStuff
         {
             ArgumentNullException.ThrowIfNull(clip);
             PropertyPanelBuilder ppb = new();
-            ppb.AddButton("Show binding", (s, e) =>
+            ppb.AddButton(PPLocalizedResources.EffectBind_Title, (s, e) =>
             {
                 var bindView = new DraftEffectBindingView();
                 bindView.LoadClip(clip, page);
-                var v = new ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem
+                if (page.UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone)
                 {
-                    Title = PPLocalizedResources.EffectBindView_Title(clip.DisplayName),
-                    Content = bindView,
-                    IsPopOutVisible = true
-                };
-                page.MainMultiWindowView.AddWindow(v);
-                v.Maximize();
-                v.CloseClicked += (s, e) => RebuildAllEffects(clip, false);
+                    page.Popup.Content = bindView;
+                }
+                else
+                {
+                    var v = new ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem
+                    {
+                        Title = PPLocalizedResources.EffectBindView_Title(clip.DisplayName),
+                        Content = bindView,
+                        IsPopOutVisible = true
+                    };
+                    page.MainMultiWindowView.AddWindow(v);
+                    v.Maximize();
+                    v.CloseClicked += (s, e) => RebuildAllEffects(clip, false);
+                }
+
             });
             var bundlesFactories = EffectServices.GetAvailableEffectBundles();
 
@@ -921,81 +931,51 @@ namespace projectFrameCut.DraftStuff
 
 
 
-#if WINDOWS || MACCATALYST
-                var selectTap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Primary };
-                selectTap.Tapped += (_, __) =>
+                void SelectCard(Border selected)
                 {
-                    if (border.BindingContext is EffectBundleCardItem item)
-                        ppb.Properties["NewBundleType"] = item.BundleTypeName;
                     foreach (var child in flex.Children)
                     {
                         if (child is Border b)
                         {
-                            if (b == border)
-                            {
-                                b.Stroke = new SolidColorBrush(Colors.DodgerBlue);
-                                b.StrokeThickness = 2;
-                                b.Background = new SolidColorBrush(Colors.DodgerBlue.WithAlpha(0.1f));
-                            }
-                            else
-                            {
-                                b.Stroke = new SolidColorBrush(Colors.Gray.WithAlpha(0.25f));
-                                b.StrokeThickness = 1;
-                                b.Background = new SolidColorBrush(Colors.Transparent);
-                            }
+                            bool isSelected = b == selected;
+                            b.Stroke = new SolidColorBrush(isSelected ? Colors.DodgerBlue : Colors.Gray.WithAlpha(0.25f));
+                            b.StrokeThickness = isSelected ? 2 : 1;
+                            b.Background = new SolidColorBrush(isSelected ? Colors.DodgerBlue.WithAlpha(0.1f) : Colors.Transparent);
                         }
                     }
-                };
+                }
 
-                var addTap = new TapGestureRecognizer { NumberOfTapsRequired = 2, Buttons = ButtonsMask.Primary };
-                addTap.Tapped += (_, __) =>
-                {
-                    if (border.BindingContext is EffectBundleCardItem item)
-                        AddBundle(item.BundleTypeName);
-                };
-
-                border.GestureRecognizers.Add(selectTap);
-                border.GestureRecognizers.Add(addTap);
-
-                var rightTap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Secondary };
-                rightTap.Tapped += async (_, __) =>
-                {
-                    if (border.BindingContext is not EffectBundleCardItem item) return;
-                    var verbs = new[] { PPLocalizedResources.Add_Effect, Localized.AssetPage_ShowPreview, Localized._Cancel };
-                    var action = await page.DisplayActionSheetAsync(item.Title, Localized._Cancel, null, verbs[0], verbs[1]);
-                    if (action == verbs[0])
+                UIServices.RegisterSelectOrContextMenu(
+                    border,
+                    OnSelected: () =>
                     {
-                        AddBundle(item.BundleTypeName);
-                    }
-                    else if (action == verbs[1])
+                        if (border.BindingContext is EffectBundleCardItem item)
+                        {
+                            ppb.Properties["NewBundleType"] = item.BundleTypeName;
+                            SelectCard(border);
+                        }
+                    },
+                    OnClicked: () =>
                     {
-                        await page.DisplayAlertAsync(Localized._Info, item.Description, Localized._OK);
-                    }
-                };
-                border.GestureRecognizers.Add(rightTap);
-#elif ANDROID || IOS
-                var pointerGesture = new PointerGestureRecognizer();
-                DateTime pointerDownTime = DateTime.MinValue;
-                pointerGesture.PointerPressed += (_, __) => pointerDownTime = DateTime.Now;
-                pointerGesture.PointerReleased += async (_, __) =>
-                {
-                    if (border.BindingContext is not EffectBundleCardItem item) return;
-                    var duration = (DateTime.Now - pointerDownTime).TotalMilliseconds;
-                    if (duration >= 500)
-                    {
-                        var action = await page.DisplayActionSheetAsync(item.Title, Localized._Cancel, null, PPLocalizedResources.Add_Effect, Localized.AssetPage_ShowPreview);
-                        if (action == PPLocalizedResources.Add_Effect)
+                        if (border.BindingContext is EffectBundleCardItem item)
                             AddBundle(item.BundleTypeName);
-                        else if (action == Localized.AssetPage_ShowPreview)
-                            await page.DisplayAlertAsync(Localized._Info, item.Description, Localized._OK);
-                    }
-                    else
+                    },
+                    OnContextMenuClick: async () =>
                     {
-                        AddBundle(item.BundleTypeName);
+                        if (border.BindingContext is not EffectBundleCardItem item) return;
+                        var verbs = new[] { PPLocalizedResources.Add_Effect, Localized.AssetPage_ShowPreview };
+                        int action = Array.IndexOf(verbs, await page.DisplayActionSheetAsync(item.Title, Localized._Cancel, null, verbs));
+                        switch (action)
+                        {
+                            case 0:
+                                AddBundle(item.BundleTypeName);
+                                break;
+                            case 1:
+                                await page.DisplayAlertAsync(Localized._Info, item.Description, Localized._OK);
+                                break;
+                        }
                     }
-                };
-                border.GestureRecognizers.Add(pointerGesture);
-#endif
+                );
 
                 return border;
             }));

@@ -239,6 +239,192 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "EffectBind_FinalResult",
+        "Value": "\u8F93\u51FA\u753B\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBind_InputAnchor",
+        "Value": "\u8F93\u5165\u951A\u70B9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBind_InputAnchorWithName",
+        "Value": "\u8F93\u5165\u951A\u70B9\u300C{a}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBind_NoConnection",
+        "Value": "\u65AD\u5F00\u6B64\u951A\u70B9\u7684\u8FDE\u63A5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBind_OutputAnchor",
+        "Value": "\u8F93\u51FA\u951A\u70B9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBind_OutputAnchorWithName",
+        "Value": "\u8F93\u51FA\u951A\u70B9\u300C{a}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBind_SourcePicture",
+        "Value": "\u6E90\u753B\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBind_Title",
+        "Value": "\u6548\u679C\u7ED1\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Configure",
+        "Value": "\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Connected",
+        "Value": "\u5DF2\u8FDE\u63A5\u300C{a}\u300D\u548C\u300C{b}\u300D\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          },
+          {
+            "Key": "string",
+            "Value": "b"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          },
+          {
+            "Key": "b",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_ConnectedFail",
+        "Value": "\u65E0\u6CD5\u5B8C\u6210\u8FDE\u63A5\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Disconnect",
+        "Value": "\u65AD\u5F00\u6240\u6709\u951A\u70B9\u7684\u94FE\u63A5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Disconnected",
+        "Value": "\u5DF2\u65AD\u5F00\u300C{a}\u300D\u7684\u6240\u6709\u8FDE\u63A5\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "a"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "a",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Hint",
+        "Value": "\u62D6\u52A8\u8282\u70B9\u4EE5\u79FB\u52A8\u3001\u5728\u951A\u70B9\u4E4B\u95F4\u62D6\u52A8\u4EE5\u8FDE\u63A5\u3002\r\u53CC\u51FB\u4EFB\u610F\u4EE5\u65AD\u5F00\u6240\u6709\u7684\u8FDE\u63A5\uFF0C\u62D6\u52A8\u7A7A\u767D\u533A\u57DF\u4EE5\u79FB\u52A8\u89C6\u56FE\u3002\r\u4F7F\u7528Control\u002B\u6EDA\u8F6E\u6216\u8005\u53CC\u6307\u634F\u5408\u6765\u7F29\u653E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_OpenWindow",
+        "Value": "\u6253\u5F00\u53EF\u89C6\u5316\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Title",
+        "Value": "\u914D\u7F6E\u300C{name}\u300D\u7684\u6548\u679C",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "EffectProp_ClassicEffectPageWarn",
         "Value": "\u8B66\u544A\uFF1A\u624B\u52A8\u914D\u7F6E\u8FD9\u4E9B\u6548\u679C\u53EF\u80FD\u4F1A\u5BFC\u81F4\u610F\u6599\u4EE5\u5916\u7684\u7ED3\u679C\u3002\u8BF7\u8C28\u614E\u4FEE\u6539\u4ED6\u4EEC\u3002",
         "Mode": "ConstString",
@@ -321,168 +507,6 @@
       {
         "Id": "Tabs_SpeedRatio",
         "Value": "\u901F\u5EA6\u548C\u53D8\u901F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "EffectBindView_Title",
-        "Value": "\u914D\u7F6E\u300C{name}\u300D\u7684\u6548\u679C",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "name"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "name",
-            "Value": ""
-          }
-        ],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "EffectBindView_Hint",
-        "Value": "\u62D6\u52A8\u8282\u70B9\u4EE5\u79FB\u52A8\u3001\u5728\u951A\u70B9\u4E4B\u95F4\u62D6\u52A8\u4EE5\u8FDE\u63A5\u3002\r\u53CC\u51FB\u4EFB\u610F\u4EE5\u65AD\u5F00\u6240\u6709\u7684\u8FDE\u63A5\uFF0C\u62D6\u52A8\u7A7A\u767D\u533A\u57DF\u4EE5\u79FB\u52A8\u89C6\u56FE\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "EffectBindView_Disconnected",
-        "Value": "\u5DF2\u65AD\u5F00\u300C{a}\u300D\u7684\u6240\u6709\u8FDE\u63A5\u3002",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "a"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "a",
-            "Value": ""
-          }
-        ],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "EffectBindView_Connected",
-        "Value": "\u5DF2\u8FDE\u63A5\u300C{a}\u300D\u548C\u300C{b}\u300D\u3002",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "a"
-          },
-          {
-            "Key": "string",
-            "Value": "b"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "a",
-            "Value": ""
-          },
-          {
-            "Key": "b",
-            "Value": ""
-          }
-        ],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "EffectBindView_ConnectedFail",
-        "Value": "\u65E0\u6CD5\u5B8C\u6210\u8FDE\u63A5\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "EffectBindView_OpenWindow",
-        "Value": "\u6253\u5F00\u53EF\u89C6\u5316\u7A97\u53E3",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "EffectBind_InputAnchor",
-        "Value": "\u8F93\u5165\u951A\u70B9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "EffectBind_InputAnchorWithName",
-        "Value": "\u8F93\u5165\u951A\u70B9\u300C{a}\u300D",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "a"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "a",
-            "Value": ""
-          }
-        ],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "EffectBind_OutputAnchor",
-        "Value": "\u8F93\u51FA\u951A\u70B9",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "EffectBind_OutputAnchorWithName",
-        "Value": "\u8F93\u51FA\u951A\u70B9\u300C{a}\u300D",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "a"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "a",
-            "Value": ""
-          }
-        ],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "EffectBind_NoConnection",
-        "Value": "\u65AD\u5F00\u6B64\u951A\u70B9\u7684\u8FDE\u63A5",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "EffectBind_SourcePicture",
-        "Value": "\u6E90\u753B\u9762",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "EffectBind_FinalResult",
-        "Value": "\u8F93\u51FA\u753B\u9762",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -817,34 +841,34 @@
       },
       {
         "Id": "Effect_BindableArgsEffect",
-        "Value": "Unset localization item:Effect_BindableArgsEffect()",
+        "Value": "Bindable (Tentative) Effect",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "Unset localization item:EffectProp_ClassicEffectPageWarn()",
+        "Value": "Warning: Manually configuring these effects may lead to unexpected results. Please modify them with caution.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Tabs_Effect_Classic",
-        "Value": "Unset localization item:Tabs_Effect_Classic()",
+        "Value": "Effects (Classic)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Title",
-        "Value": "Unset localization item:EffectBindView_Title(string name)",
+        "Value": "Configure the effect for \u0027{name}\u0027",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -858,21 +882,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Hint",
-        "Value": "Unset localization item:EffectBindView_Hint()",
+        "Value": "Drag a node to move it, drag between anchor points to connect.\rDouble-click anywhere to disconnect all links, drag on empty area to pan the view.\rUse Control\u002BWheel or two-finger pinch to zoom.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Disconnected",
-        "Value": "Unset localization item:EffectBindView_Disconnected(string a)",
+        "Value": "All connections to \u0022{a}\u0022 have been disconnected.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -886,12 +910,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Connected",
-        "Value": "Unset localization item:EffectBindView_Connected(string a, string b)",
+        "Value": "Connected \u0027{a}\u0027 and \u0027{b}\u0027.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -913,39 +937,39 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_ConnectedFail",
-        "Value": "Unset localization item:EffectBindView_ConnectedFail()",
+        "Value": "Unable to complete connection.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_OpenWindow",
-        "Value": "Unset localization item:EffectBindView_OpenWindow()",
+        "Value": "Open Visualization Window",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_InputAnchor",
-        "Value": "Unset localization item:EffectBind_InputAnchor()",
+        "Value": "Input Anchor Point",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_InputAnchorWithName",
-        "Value": "Unset localization item:EffectBind_InputAnchorWithName(string a)",
+        "Value": "Input anchor point \u0027{a}\u0027",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -959,21 +983,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_OutputAnchor",
-        "Value": "Unset localization item:EffectBind_OutputAnchor()",
+        "Value": "Output Anchor",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_OutputAnchorWithName",
-        "Value": "Unset localization item:EffectBind_OutputAnchorWithName(string a)",
+        "Value": "Output anchor \u0027{a}\u0027",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -987,34 +1011,61 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_NoConnection",
-        "Value": "Unset localization item:EffectBind_NoConnection()",
+        "Value": "Disconnect this anchor point",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_SourcePicture",
-        "Value": "Unset localization item:EffectBind_SourcePicture()",
+        "Value": "Source Picture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_FinalResult",
-        "Value": "Unset localization item:EffectBind_FinalResult()",
+        "Value": "Output",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBind_Title",
+        "Value": "Effect Binding",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Configure",
+        "Value": "Configure",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Disconnect",
+        "Value": "Disconnect all anchor points",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -1346,34 +1397,34 @@
       },
       {
         "Id": "Effect_BindableArgsEffect",
-        "Value": "Unset localization item:Effect_BindableArgsEffect()",
+        "Value": "\u53EF\u7D81\u5B9A\uFF08\u66AB\u5B9A\uFF09\u6548\u679C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "Unset localization item:EffectProp_ClassicEffectPageWarn()",
+        "Value": "\u8B66\u544A\uFF1A\u624B\u52D5\u914D\u7F6E\u9019\u4E9B\u6548\u679C\u53EF\u80FD\u6703\u5C0E\u81F4\u610F\u6599\u4EE5\u5916\u7684\u7D50\u679C\u3002\u8ACB\u8B39\u614E\u4FEE\u6539\u5B83\u5011\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Tabs_Effect_Classic",
-        "Value": "Unset localization item:Tabs_Effect_Classic()",
+        "Value": "\u6548\u679C\uFF08\u7D93\u5178\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Title",
-        "Value": "Unset localization item:EffectBindView_Title(string name)",
+        "Value": "\u914D\u7F6E\u300C{name}\u300D\u7684\u6548\u679C",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1387,21 +1438,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Hint",
-        "Value": "Unset localization item:EffectBindView_Hint()",
+        "Value": "\u62D6\u66F3\u7BC0\u9EDE\u4EE5\u79FB\u52D5\u3001\u5728\u9328\u9EDE\u4E4B\u9593\u62D6\u66F3\u4EE5\u9023\u63A5\u3002\r\n\u96D9\u64CA\u4EFB\u610F\u8655\u4EE5\u65B7\u958B\u6240\u6709\u9023\u63A5\uFF0C\u62D6\u66F3\u7A7A\u767D\u5340\u57DF\u4EE5\u79FB\u52D5\u8996\u5716\u3002\r\n\u4F7F\u7528 Control\u002B\u6EFE\u8F2A\u6216\u96D9\u6307\u634F\u5408\u4F86\u7E2E\u653E\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Disconnected",
-        "Value": "Unset localization item:EffectBindView_Disconnected(string a)",
+        "Value": "\u5DF2\u65B7\u958B\u300E{a}\u300F\u7684\u6240\u6709\u9023\u63A5\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1415,12 +1466,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Connected",
-        "Value": "Unset localization item:EffectBindView_Connected(string a, string b)",
+        "Value": "\u5DF2\u9023\u63A5\u300E{a}\u300F\u548C\u300E{b}\u300F\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1442,39 +1493,39 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_ConnectedFail",
-        "Value": "Unset localization item:EffectBindView_ConnectedFail()",
+        "Value": "\u7121\u6CD5\u5B8C\u6210\u9023\u63A5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_OpenWindow",
-        "Value": "Unset localization item:EffectBindView_OpenWindow()",
+        "Value": "\u958B\u555F\u53EF\u8996\u5316\u8996\u7A97",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_InputAnchor",
-        "Value": "Unset localization item:EffectBind_InputAnchor()",
+        "Value": "\u8F38\u5165\u9328\u9EDE",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_InputAnchorWithName",
-        "Value": "Unset localization item:EffectBind_InputAnchorWithName(string a)",
+        "Value": "\u8F38\u5165\u9328\u9EDE\u300C{a}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1488,21 +1539,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_OutputAnchor",
-        "Value": "Unset localization item:EffectBind_OutputAnchor()",
+        "Value": "\u8F38\u51FA\u9328\u9EDE",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_OutputAnchorWithName",
-        "Value": "Unset localization item:EffectBind_OutputAnchorWithName(string a)",
+        "Value": "\u8F38\u51FA\u9328\u9EDE\u300C{a}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1516,34 +1567,61 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_NoConnection",
-        "Value": "Unset localization item:EffectBind_NoConnection()",
+        "Value": "\u65B7\u958B\u6B64\u9328\u9EDE\u7684\u9023\u63A5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_SourcePicture",
-        "Value": "Unset localization item:EffectBind_SourcePicture()",
+        "Value": "\u4F86\u6E90\u756B\u9762",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_FinalResult",
-        "Value": "Unset localization item:EffectBind_FinalResult()",
+        "Value": "\u8F38\u51FA\u756B\u9762",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBind_Title",
+        "Value": "\u6548\u679C\u7D81\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Configure",
+        "Value": "\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Disconnect",
+        "Value": "\u65B7\u958B\u6240\u6709\u9328\u9EDE\u7684\u9023\u63A5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -1875,34 +1953,34 @@
       },
       {
         "Id": "Effect_BindableArgsEffect",
-        "Value": "Unset localization item:Effect_BindableArgsEffect()",
+        "Value": "\u30D0\u30A4\u30F3\u30C9\u53EF\u80FD\uFF08\u4EEE\uFF09\u52B9\u679C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "Unset localization item:EffectProp_ClassicEffectPageWarn()",
+        "Value": "\u8B66\u544A\uFF1A\u3053\u308C\u3089\u306E\u52B9\u679C\u3092\u624B\u52D5\u3067\u8A2D\u5B9A\u3059\u308B\u3068\u3001\u4E88\u671F\u3057\u306A\u3044\u7D50\u679C\u3092\u5F15\u304D\u8D77\u3053\u3059\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002\u5909\u66F4\u306F\u614E\u91CD\u306B\u884C\u3063\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Tabs_Effect_Classic",
-        "Value": "Unset localization item:Tabs_Effect_Classic()",
+        "Value": "\u52B9\u679C\uFF08\u30AF\u30E9\u30B7\u30C3\u30AF\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Title",
-        "Value": "Unset localization item:EffectBindView_Title(string name)",
+        "Value": "\u300C{name}\u300D\u306E\u52B9\u679C\u3092\u8A2D\u5B9A",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1916,21 +1994,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Hint",
-        "Value": "Unset localization item:EffectBindView_Hint()",
+        "Value": "\u30CE\u30FC\u30C9\u3092\u30C9\u30E9\u30C3\u30B0\u3057\u3066\u79FB\u52D5\u3001\u30A2\u30F3\u30AB\u30FC\u30DD\u30A4\u30F3\u30C8\u9593\u3092\u30C9\u30E9\u30C3\u30B0\u3057\u3066\u63A5\u7D9A\u3002\r\n\u4EFB\u610F\u306E\u5834\u6240\u3092\u30C0\u30D6\u30EB\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u5168\u3066\u306E\u63A5\u7D9A\u3092\u5207\u65AD\u3001\u7A7A\u767D\u9818\u57DF\u3092\u30C9\u30E9\u30C3\u30B0\u3057\u3066\u30D3\u30E5\u30FC\u3092\u79FB\u52D5\u3002\r\nCtrl\uFF0B\u30DB\u30A4\u30FC\u30EB\u307E\u305F\u306F\u4E8C\u672C\u6307\u30D4\u30F3\u30C1\u3067\u30BA\u30FC\u30E0\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u30A8\u30D5\u30A7\u30AF\u30C8\u30D0\u30A4\u30F3\u30C7\u30A3\u30F3\u30B0\u30D3\u30E5\u30FC\u3067\u306E\u64CD\u4F5C\u8AAC\u660E\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Disconnected",
-        "Value": "Unset localization item:EffectBindView_Disconnected(string a)",
+        "Value": "\u300C{a}\u300D\u306E\u3059\u3079\u3066\u306E\u63A5\u7D9A\u304C\u5207\u65AD\u3055\u308C\u307E\u3057\u305F\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1944,12 +2022,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Connected",
-        "Value": "Unset localization item:EffectBindView_Connected(string a, string b)",
+        "Value": "\u300E{a}\u300F\u3068\u300E{b}\u300F\u3092\u63A5\u7D9A\u3057\u307E\u3057\u305F\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1971,39 +2049,39 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_ConnectedFail",
-        "Value": "Unset localization item:EffectBindView_ConnectedFail()",
+        "Value": "\u63A5\u7D9A\u3092\u5B8C\u4E86\u3067\u304D\u307E\u305B\u3093\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_OpenWindow",
-        "Value": "Unset localization item:EffectBindView_OpenWindow()",
+        "Value": "\u53EF\u8996\u5316\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u958B\u304F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_InputAnchor",
-        "Value": "Unset localization item:EffectBind_InputAnchor()",
+        "Value": "\u5165\u529B\u30A2\u30F3\u30AB\u30FC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_InputAnchorWithName",
-        "Value": "Unset localization item:EffectBind_InputAnchorWithName(string a)",
+        "Value": "\u5165\u529B\u30A2\u30F3\u30AB\u30FC\u300C{a}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2017,21 +2095,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_OutputAnchor",
-        "Value": "Unset localization item:EffectBind_OutputAnchor()",
+        "Value": "\u51FA\u529B\u30A2\u30F3\u30AB\u30FC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_OutputAnchorWithName",
-        "Value": "Unset localization item:EffectBind_OutputAnchorWithName(string a)",
+        "Value": "\u51FA\u529B\u30A2\u30F3\u30AB\u30FC\u300C{a}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2045,34 +2123,61 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_NoConnection",
-        "Value": "Unset localization item:EffectBind_NoConnection()",
+        "Value": "\u3053\u306E\u30A2\u30F3\u30AB\u30FC\u30DD\u30A4\u30F3\u30C8\u306E\u63A5\u7D9A\u3092\u5207\u65AD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_SourcePicture",
-        "Value": "Unset localization item:EffectBind_SourcePicture()",
+        "Value": "\u30BD\u30FC\u30B9\u753B\u50CF",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_FinalResult",
-        "Value": "Unset localization item:EffectBind_FinalResult()",
+        "Value": "\u51FA\u529B\u753B\u9762",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBind_Title",
+        "Value": "\u52B9\u679C\u30D0\u30A4\u30F3\u30C9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Configure",
+        "Value": "\u69CB\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Disconnect",
+        "Value": "\u3059\u3079\u3066\u306E\u30A2\u30F3\u30AB\u30FC\u30DD\u30A4\u30F3\u30C8\u306E\u63A5\u7D9A\u3092\u5207\u65AD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -2404,34 +2509,34 @@
       },
       {
         "Id": "Effect_BindableArgsEffect",
-        "Value": "Unset localization item:Effect_BindableArgsEffect()",
+        "Value": "\uBC14\uC778\uB529 \uAC00\uB2A5 (\uC784\uC2DC) \uD6A8\uACFC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "Unset localization item:EffectProp_ClassicEffectPageWarn()",
+        "Value": "\uACBD\uACE0: \uC774 \uD6A8\uACFC\uB4E4\uC744 \uC218\uB3D9\uC73C\uB85C \uAD6C\uC131\uD558\uBA74 \uC608\uC0C1\uCE58 \uBABB\uD55C \uACB0\uACFC\uAC00 \uBC1C\uC0DD\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uC8FC\uC758\uD574\uC11C \uC218\uC815\uD558\uC2ED\uC2DC\uC624.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Tabs_Effect_Classic",
-        "Value": "Unset localization item:Tabs_Effect_Classic()",
+        "Value": "\uD6A8\uACFC (\uD074\uB798\uC2DD)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Title",
-        "Value": "Unset localization item:EffectBindView_Title(string name)",
+        "Value": "\uD6A8\uACFC \u0027{name}\u0027 \uAD6C\uC131",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2445,21 +2550,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Hint",
-        "Value": "Unset localization item:EffectBindView_Hint()",
+        "Value": "\uB178\uB4DC\uB97C \uB4DC\uB798\uADF8\uD558\uC5EC \uC774\uB3D9, \uC575\uCEE4 \uD3EC\uC778\uD2B8 \uC0AC\uC774\uB97C \uB4DC\uB798\uADF8\uD558\uC5EC \uC5F0\uACB0\uD569\uB2C8\uB2E4.\r\n\uC544\uBB34 \uACF3\uC774\uB098 \uB354\uBE14\uD074\uB9AD\uD558\uC5EC \uBAA8\uB4E0 \uC5F0\uACB0\uC744 \uD574\uC81C\uD558\uACE0, \uBE48 \uC601\uC5ED\uC744 \uB4DC\uB798\uADF8\uD558\uC5EC \uBDF0\uB97C \uC774\uB3D9\uD569\uB2C8\uB2E4.\r\nCtrl\u002B\uD720 \uB610\uB294 \uB450 \uC190\uAC00\uB77D \uD540\uCE58\uB85C \uD655\uB300/\uCD95\uC18C\uD569\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Disconnected",
-        "Value": "Unset localization item:EffectBindView_Disconnected(string a)",
+        "Value": "\u300C{a}\u300D\uC758 \uBAA8\uB4E0 \uC5F0\uACB0\uC774 \uB04A\uC5B4\uC84C\uC2B5\uB2C8\uB2E4.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2473,12 +2578,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Connected",
-        "Value": "Unset localization item:EffectBindView_Connected(string a, string b)",
+        "Value": "\u300E{a}\u300F\uC640 \u300E{b}\u300F\uAC00 \uC5F0\uACB0\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2500,39 +2605,39 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_ConnectedFail",
-        "Value": "Unset localization item:EffectBindView_ConnectedFail()",
+        "Value": "\uC5F0\uACB0\uC744 \uC644\uB8CC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_OpenWindow",
-        "Value": "Unset localization item:EffectBindView_OpenWindow()",
+        "Value": "\uC2DC\uAC01\uD654 \uCC3D \uC5F4\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_InputAnchor",
-        "Value": "Unset localization item:EffectBind_InputAnchor()",
+        "Value": "\uC785\uB825 \uC575\uCEE4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_InputAnchorWithName",
-        "Value": "Unset localization item:EffectBind_InputAnchorWithName(string a)",
+        "Value": "\uC785\uB825 \uC575\uCEE4 \uD3EC\uC778\uD2B8 \u0027{a}\u0027",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2546,21 +2651,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_OutputAnchor",
-        "Value": "Unset localization item:EffectBind_OutputAnchor()",
+        "Value": "\uCD9C\uB825 \uC575\uCEE4",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_OutputAnchorWithName",
-        "Value": "Unset localization item:EffectBind_OutputAnchorWithName(string a)",
+        "Value": "\uCD9C\uB825 \uC575\uCEE4 \u0027{a}\u0027",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2574,34 +2679,61 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_NoConnection",
-        "Value": "Unset localization item:EffectBind_NoConnection()",
+        "Value": "\uC774 \uC575\uCEE4 \uD3EC\uC778\uD2B8 \uC5F0\uACB0 \uD574\uC81C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_SourcePicture",
-        "Value": "Unset localization item:EffectBind_SourcePicture()",
+        "Value": "\uC6D0\uBCF8 \uADF8\uB9BC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_FinalResult",
-        "Value": "Unset localization item:EffectBind_FinalResult()",
+        "Value": "\uCD9C\uB825 \uD654\uBA74",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBind_Title",
+        "Value": "\uD6A8\uACFC \uBC14\uC778\uB529",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Configure",
+        "Value": "\uAD6C\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Disconnect",
+        "Value": "\uBAA8\uB4E0 \uC575\uCEE4 \uC5F0\uACB0 \uD574\uC81C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -2933,34 +3065,34 @@
       },
       {
         "Id": "Effect_BindableArgsEffect",
-        "Value": "Unset localization item:Effect_BindableArgsEffect()",
+        "Value": "Effet liant (provisoire)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectProp_ClassicEffectPageWarn",
-        "Value": "Unset localization item:EffectProp_ClassicEffectPageWarn()",
+        "Value": "Avertissement : La configuration manuelle de ces effets peut entra\u00EEner des r\u00E9sultats inattendus. Veuillez les modifier avec prudence.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Tabs_Effect_Classic",
-        "Value": "Unset localization item:Tabs_Effect_Classic()",
+        "Value": "Effet (Classique)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Title",
-        "Value": "Unset localization item:EffectBindView_Title(string name)",
+        "Value": "Configuration de l\u0027effet de \u00AB {name} \u00BB",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2974,21 +3106,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Hint",
-        "Value": "Unset localization item:EffectBindView_Hint()",
+        "Value": "Faites glisser les n\u0153uds pour les d\u00E9placer, faites glisser entre les points d\u0027ancrage pour les connecter.\rDouble-cliquez n\u0027importe o\u00F9 pour rompre toutes les connexions, faites glisser une zone vide pour d\u00E9placer la vue.\rUtilisez Ctrl\u002Bmolette ou pincement \u00E0 deux doigts pour zoomer.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Disconnected",
-        "Value": "Unset localization item:EffectBindView_Disconnected(string a)",
+        "Value": "Toutes les connexions de \u00AB\u00A0{a}\u00A0\u00BB ont \u00E9t\u00E9 d\u00E9connect\u00E9es.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3002,12 +3134,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_Connected",
-        "Value": "Unset localization item:EffectBindView_Connected(string a, string b)",
+        "Value": "\u00AB {a} \u00BB et \u00AB {b} \u00BB sont connect\u00E9s.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3029,39 +3161,39 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_ConnectedFail",
-        "Value": "Unset localization item:EffectBindView_ConnectedFail()",
+        "Value": "Impossible d\u0027\u00E9tablir la connexion.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBindView_OpenWindow",
-        "Value": "Unset localization item:EffectBindView_OpenWindow()",
+        "Value": "Ouvrir la fen\u00EAtre de visualisation",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_InputAnchor",
-        "Value": "Unset localization item:EffectBind_InputAnchor()",
+        "Value": "Ancrage d\u0027entr\u00E9e",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_InputAnchorWithName",
-        "Value": "Unset localization item:EffectBind_InputAnchorWithName(string a)",
+        "Value": "Point d\u0027ancrage d\u0027entr\u00E9e \u00AB {a} \u00BB",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3075,21 +3207,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_OutputAnchor",
-        "Value": "Unset localization item:EffectBind_OutputAnchor()",
+        "Value": "Point d\u0027ancrage de sortie",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_OutputAnchorWithName",
-        "Value": "Unset localization item:EffectBind_OutputAnchorWithName(string a)",
+        "Value": "Point d\u0027ancrage de sortie \u00AB {a} \u00BB",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3103,34 +3235,61 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_NoConnection",
-        "Value": "Unset localization item:EffectBind_NoConnection()",
+        "Value": "D\u00E9connecter cet ancrage",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_SourcePicture",
-        "Value": "Unset localization item:EffectBind_SourcePicture()",
+        "Value": "Image source",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "EffectBind_FinalResult",
-        "Value": "Unset localization item:EffectBind_FinalResult()",
+        "Value": "Image de sortie",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBind_Title",
+        "Value": "Liaison d\u0027effets",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Configure",
+        "Value": "Configurer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "EffectBindView_Disconnect",
+        "Value": "D\u00E9connecter tous les points d\u0027ancrage",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]

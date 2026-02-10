@@ -109,10 +109,8 @@ public partial class DraftPage : ContentPage
     double tracksZoomOffest = 1d;
 
     string popupShowingDirection = "none";
-    Border Popup = new();
     CommunityToolkit.Maui.Views.Popup? _currentCommunityToolkitPopup = null;
 
-    public InteractableEditor.InteractableEditor ClipEditor;
 
     private Size WindowSize = new(500, 500);
 
@@ -120,8 +118,6 @@ public partial class DraftPage : ContentPage
     private const double SnapThresholdPixels = 8.0;
     private bool SnapEnabled = true;
 
-
-    RoundRectangleRadiusType[] RoundRectangleRadius = [];
 
     PanDeNoise Xdenoiser = new(), Ydenoiser = new();
 
@@ -136,7 +132,6 @@ public partial class DraftPage : ContentPage
 
     ConcurrentDictionary<string, DraftTasks> RunningTasks = new();
 
-    public ClipInfoBuilder infoBuilder;
     LivePreviewer previewer = new();
 
     DateTime lastSyncTime = DateTime.MinValue;
@@ -144,6 +139,10 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region public members 
+    public Border Popup = new();
+    public ClipInfoBuilder infoBuilder;
+    public InteractableEditor.InteractableEditor ClipEditor;
+
     public ProjectJSONStructure ProjectInfo { get; set; } = new();
     public ConcurrentDictionary<string, ClipElementUI> Clips = new();
     public ConcurrentDictionary<int, AbsoluteLayout> Tracks = new();
@@ -232,6 +231,7 @@ public partial class DraftPage : ContentPage
         if (Directory.Exists(workingDir)) Environment.CurrentDirectory = workingDir;
         RegisterCommands();
         InitializeComponent();
+        SetStateBusy();
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
         ClipEditorHost.Content = ClipEditor;
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
@@ -244,7 +244,6 @@ public partial class DraftPage : ContentPage
         WorkingPath = workingDir;
         TrackCalculator.HeightPerTrack = ClipHeight;
 
-        SetStateBusy();
         Clips = clips;
         Assets = assets;
         Tracks = new ConcurrentDictionary<int, AbsoluteLayout>();
@@ -395,9 +394,7 @@ public partial class DraftPage : ContentPage
         if (AlwaysShowToolbarBtns || !OperatingSystem.IsWindows()) AddToolbarBtns();
         if (Width < Height) RightMenuBar.IsVisible = false;
 
-        //PlayheadLine.TranslationY = UpperContent.Height - RulerLayout.Height;
         RulerLayout.GestureRecognizers.Add(rulerTapGesture);
-        // Added by Copilot to support resizing UpperContent
         PanGestureRecognizer rulerPanGesture = new();
         rulerPanGesture.PanUpdated += RulerPanUpdated;
         RulerLayout.GestureRecognizers.Add(rulerPanGesture);
@@ -423,7 +420,7 @@ public partial class DraftPage : ContentPage
         DraftChanged(sender, new ClipUpdateEventArgs { NoSave = true });
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
-        MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog;
+        if (Debugger.IsAttached) MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog; //user don't want to see a lot of confused error message
 
         var w = this.Window?.Width ?? 0;
         var h = this.Window?.Height ?? 0;
@@ -432,18 +429,19 @@ public partial class DraftPage : ContentPage
             WindowSize = new Size(w, h);
         }
 
-        var safeZoneRad = UISafeZoneServices.GetSafeZone();
+        var safeZoneRad = UIServices.GetSafeZone();
         StatusBarGrid.Margin = new Thickness(safeZoneRad, StatusBarGrid.Margin.Top, safeZoneRad, StatusBarGrid.Margin.Bottom);
 
         if (UseCompactLayout ?? (DeviceInfo.Idiom == DeviceIdiom.Phone))
         {
+            MainMultiWindowView.CloseWindow(PropertiesSubwindow);
+            PreviewSubwindow.IsTitleBarVisible = false;
+            PreviewSubwindow.IsResizable = false;
+            PreviewSubwindow.Maximize();
             RightMenuBar.IsVisible = false;
             RightContentBorder.IsVisible = false;
             SpiltButton.IsVisible = false;
-            //ContentWidthHandle.IsVisible = false;
             PlayingControlLayout.HorizontalOptions = LayoutOptions.End;
-            AddClip.Text = "+";
-            //RightContentColDefinition.Width = new GridLength(0, GridUnitType.Absolute);
             MainControlGrid.ColumnDefinitions = new ColumnDefinitionCollection
             {
                 new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
@@ -452,10 +450,6 @@ public partial class DraftPage : ContentPage
             Grid.SetColumn(LeftMenuBar, 0);
             Grid.SetColumn(PlayingControlLayout, 1);
             PlayingControlLayout.Margin = new(0, 0, 8, 0);
-            PreviewSubwindow.IsTitleBarVisible = false;
-            PropertiesSubwindow.IsTitleBarVisible = false;
-            PreviewSubwindow.IsResizable = false;
-            PropertiesSubwindow.IsResizable = false;
         }
         else
         {
@@ -2083,9 +2077,7 @@ public partial class DraftPage : ContentPage
     private IView? OrigionalUIContent = null;
 #pragma warning restore CS0414
 
-    /// <summary>
-    /// 显示 CommunityToolkit Popup 的辅助方法
-    /// </summary>
+
     private void ShowCommunityToolkitPopup(CommunityToolkit.Maui.Views.Popup popup)
     {
         try
@@ -2116,11 +2108,11 @@ public partial class DraftPage : ContentPage
         }
     }
 
-    private async Task ShowAPopup(View? content = null, Border? border = null, ClipElementUI? clip = null, string mode = "")
+    public async Task ShowAPopup(View? content = null, Border? border = null, ClipElementUI? clip = null, string mode = "")
     {
         content ??= (border != null && clip != null) ? await BuildPropertyPanel(clip) : new Label { Text = $"No content to show. This SHOULD is a bug, please feedback.\r\n{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}" };
 
-        if (false)//OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS() )
+        if (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS())
         {
             if (OrigionalUIContent is null && MainUpperContent.Children.Count > 0)
             {
@@ -3874,6 +3866,27 @@ public partial class DraftPage : ContentPage
     {
         AlreadyDisappeared = true;
         await HidePopup();
+
+        try
+        {
+            foreach (var item in MainMultiWindowView.Children.Cast<MultiWindowItem>().ToList())
+            {
+                try
+                {
+                    item.Close(true);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"close subwindow {item?.Title}", this);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "close subwindows", this);
+        }
+
+
         Content = new VerticalStackLayout
         {
             HorizontalOptions = LayoutOptions.Center,
@@ -3886,12 +3899,13 @@ public partial class DraftPage : ContentPage
                 },
                 new Label
                 {
-                    Text = Localized.DraftPage_SavingChanges,
+                    Text = ExitNoSave ? Localized.DraftPage_Processing : Localized.DraftPage_SavingChanges,
                     HorizontalTextAlignment = TextAlignment.Center,
                     Margin = new Thickness(0,10,0,0)
                 }
             }
         };
+
 
         if (this.Window is not null)
         {
@@ -3915,14 +3929,14 @@ public partial class DraftPage : ContentPage
         try
         {
             if (!ExitNoSave) await Save(true);
-            App.Current?.Windows?.First()?.Title = Localized.AppBrand;
+            App.Current?.Windows?[0]?.Title = Localized.AppBrand;
             base.OnDisappearing();
 
         }
         catch (Exception ex)
         {
             Log(ex, "Save on exit", this);
-            await DisplayAlertAsync("Error", $"Failed to save project on exit: {ex.Message}", "OK");
+            await (App.Current?.Windows?[0].Page?.DisplayAlertAsync(Localized._Error, Localized.DraftPage_CannotSave_Exception(ex), Localized._OK) ?? Task.CompletedTask);
         }
 
     }
@@ -3935,21 +3949,6 @@ public partial class DraftPage : ContentPage
         LogDiagnostic($"Window size changed: {w:F0} x {h:F0} (DIP)");
         UpdateTimelineWidth();
         UpdatePlayheadPosition();
-        if (IsSyncCooldown()) return;
-        SetSyncCooldown();
-        if (popupShowingDirection != "none")
-        {
-            await Dispatcher.DispatchAsync(async () =>
-            {
-                try
-                {
-                    await HidePopup();
-                    await ShowAPopup(Popup.Content);
-                }
-                catch { }
-            });
-        }
-
     }
 
     private bool ignoreRunningTasks = false;

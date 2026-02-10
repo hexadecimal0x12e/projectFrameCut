@@ -42,7 +42,6 @@
 		<Platforms>AnyCPU;x64</Platforms>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<NeutralLanguage>zh-CN</NeutralLanguage>
-		<AndroidSigningKeyStore>0x12e.keystore</AndroidSigningKeyStore>
 
 		<AssemblyVersion>1.3.0.2</AssemblyVersion>
 		<FileVersion>1.3.0.2</FileVersion>
@@ -74,7 +73,6 @@
 		<AndroidKeyStore>False</AndroidKeyStore>
 		<AndroidCreatePackagePerAbi>True</AndroidCreatePackagePerAbi>
 		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
-		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
