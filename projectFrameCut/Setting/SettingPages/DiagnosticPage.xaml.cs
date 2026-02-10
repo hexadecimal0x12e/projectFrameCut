@@ -41,7 +41,6 @@ public partial class DiagnosticSettingPage : ContentPage
             infoGetted = true;
         }
         rootPPB = new PropertyPanelBuilder()
-            .AddButton("OpenBaseUserdata", SettingLocalizedResources.Diag_OpenBaseData)
             .AddButton("MakeDiagReportButton", SettingLocalizedResources.Diag_GenerateReport)
             .AddSeparator()
             .AddText(SettingLocalizedResources.Diag_InfoSection_App)
@@ -78,15 +77,6 @@ public partial class DiagnosticSettingPage : ContentPage
                     break;
                 case "PerformanceTestButton":
 
-                    break;
-                case "OpenBaseUserdata":
-#if WINDOWS
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName = MauiProgram.BasicDataPath, UseShellExecute = true });
-#elif ANDROID
-
-#elif iDevices
-
-#endif
                     break;
             }
         }

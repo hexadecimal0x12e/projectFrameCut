@@ -22,6 +22,7 @@ using HorizontalAlignment = SixLabors.Fonts.HorizontalAlignment;
 using PointF = SixLabors.ImageSharp.PointF;
 using VerticalAlignment = SixLabors.Fonts.VerticalAlignment;
 using System.Diagnostics;
+using System.IO.Compression;
 
 namespace projectFrameCut.Services
 {
@@ -324,27 +325,45 @@ namespace projectFrameCut.Services
         {
             try
             {
-                var pron = PinyinHelper.GetPinyin(input, "");
-                if (pron != input) return pron;
-                else
-                {
-                    LogDiagnostic($"Sentence {input} seems not like chinese. Try japanese...");
-                    return await GetJapaneseRomaji(input); //some edge case
-                }
+                return PinyinHelper.GetPinyin(input, "");
             }
             catch (Exception ex)
             {
-                Log(ex, $"Error converting Chinese to Pinyin via PinyinHelper");
+                Log(ex, $"converting Chinese to Pinyin via PinyinHelper");
                 return input;
             }
+        }
+
+
+        static async Task<KawazuConverter> GetKawazuConvenerAsync()
+        {
+            if (!Directory.Exists(Path.Combine(MauiProgram.BasicDataPath, "JapaneseDictionary")))
+            {
+                try
+                {
+                    var zip = await FileSystem.OpenAppPackageFileAsync("JapaneseDictionary/JapaneseDictionary.zip");
+                    using var archive = new System.IO.Compression.ZipArchive(zip, System.IO.Compression.ZipArchiveMode.Read);
+                    var extractPath = Path.Combine(MauiProgram.BasicDataPath, "JapaneseDictionary");
+                    if (!Directory.Exists(extractPath))
+                    {
+                        Directory.CreateDirectory(extractPath);
+                    }
+                    archive.ExtractToDirectory(extractPath);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "extracting JapaneseDictionary.zip");
+                }
+            }
+            return new KawazuConverter(Path.Combine(MauiProgram.BasicDataPath, "JapaneseDictionary"));
         }
 
         private static async Task<string> GetJapaneseRomaji(string input)
         {
             try
             {
-                var converter = new KawazuConverter(AppContext.BaseDirectory);
-                var result = await converter.Convert(input, To.Romaji, Mode.Normal, RomajiSystem.Hepburn, "", "");
+
+                var result = await (await GetKawazuConvenerAsync()).Convert(input, To.Romaji, Mode.Normal, RomajiSystem.Hepburn, "", "");
                 return result;
             }
             catch (Exception ex)
@@ -354,15 +373,13 @@ namespace projectFrameCut.Services
                 var result = new StringBuilder();
                 foreach (char c in input)
                 {
-                    // 先尝试使用映射表
                     if (JapaneseKatakanaOrHiraganaMapping.TryGetValue(c, out string? transliteration))
                     {
                         result.Append(transliteration);
                     }
-                    // 汉字保持原样（需要专门的汉字读音库如 Mecab 或 Kuromoji）
                     else if (c >= 0x4E00 && c <= 0x9FFF)
                     {
-                        result.Append(c); // 保留汉字
+                        result.Append(c); 
                     }
                     else
                     {
@@ -379,8 +396,7 @@ namespace projectFrameCut.Services
         {
             try
             {
-                var converter = new KawazuConverter(AppContext.BaseDirectory);
-                var result = await converter.Convert(input, To.Hiragana);
+                var result = await (await GetKawazuConvenerAsync()).Convert(input, To.Hiragana);
                 return result;
             }
             catch (Exception ex)

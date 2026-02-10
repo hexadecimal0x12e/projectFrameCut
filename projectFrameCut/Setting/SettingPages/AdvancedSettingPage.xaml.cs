@@ -105,6 +105,15 @@ public partial class AdvancedSettingPage : ContentPage
         .AddText(SettingLocalizedResources.Advanced_ExportPlugin, fontSize: 20)
         .AddPicker("exportPlugin", SettingLocalizedResources.Advanced_ExportPlugin_Select, projectFrameCut.Render.Plugin.PluginManager.LoadedPlugins.Select(c => c.Key).ToArray(), "")
         .AddSeparator()
+        .AddButton(SettingLocalizedResources.Diag_OpenBaseData, async (s, e) =>
+        {
+            await FileSystemService.OpenFolderAsync(MauiProgram.BasicDataPath);
+        })
+        .AddButton(SettingLocalizedResources.Misc_OpenSettingsJson, async (s, e) =>
+        {
+            var jsonPath = Path.Combine(MauiProgram.BasicDataPath, "settings.json");
+            await FileSystemService.OpenFileAsync(jsonPath);
+        })
         .AddText(new SingleLineLabel(SettingLocalizedResources.Advanced_Reset, 25))
         .AddButton(SettingLocalizedResources.Advanced_FixDraft, async (s, e) =>
         {
@@ -190,7 +199,7 @@ public partial class AdvancedSettingPage : ContentPage
             }
             catch (Exception ex)
             {
-                await DisplayAlertAsync(Localized._Error, $"修复失败: {ex.Message}", Localized._OK);
+                await DisplayAlertAsync(Localized._Error, $"Fail to fix: {ex.Message}", Localized._OK);
             }
         })
         .AddButton(SettingLocalizedResources.Advanced_ResetEffectImplement, async (s, e) =>

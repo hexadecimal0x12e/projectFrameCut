@@ -142,11 +142,7 @@ namespace projectFrameCut
             catch (Exception ex)
             {
                 Debug.WriteLine($"Failed to set up log file: {ex.Message}");
-#if ANDROID
-                Android.Util.Log.Wtf("projectFrameCut", $"Failed to init the basic user data because of a {ex.GetType().Name} exception:{ex.Message}");
-#elif WINDOWS
-                _ = MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot init the basic user data because of a {ex.GetType().Name} exception:\r\n{ex.Message}\r\n\r\nApplication may work abnormally.\r\nTo help us fix this problem, please submit a issue with a screenshot of this dialogue.", "projectFrameCut", 0U);
-#endif
+                Crash(new InvalidOperationException($"projectFrameCut can't initialize BasicData. Try uninstall program, cleanup BasicData and reinstall program.", ex));
             }
 
             Log($"projectFrameCut - v{Assembly.GetExecutingAssembly().GetName().Version} \r\n" +
@@ -557,7 +553,7 @@ namespace projectFrameCut
 #endif
                     try
                     {
-                        if (Environment.GetCommandLineArgs().Contains("--forceLoadPlugins") || (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine")))
+                        if (Environment.GetCommandLineArgs().Contains("--forceLoadPlugins") || (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine") && !File.Exists(Path.Combine(BasicDataPath,"noplugin.flag"))))
                         {
                             plugins.AddRange(PluginService.LoadUserPlugins());
 #if WINDOWS
@@ -593,11 +589,7 @@ namespace projectFrameCut
                     catch (Exception ex1)
                     {
                         Log(ex1, "try load internal plugin", CreateMauiApp);
-#if ANDROID
-                        Android.Util.Log.Wtf("projectFrameCut", $"FATAL: The pluginBase cannot be loaded. projectFrameCut may not work at all.\r\n(a {ex.GetType().Name} exception happends, {ex.Message})");
-#elif WINDOWS
-                        _ = MessageBox(new nint(0), $"FATAL: The pluginBase cannot be loaded. projectFrameCut may not work at all.\r\n(a {ex.GetType().Name} exception happens, {ex.Message})", "projectFrameCut", 0U);
-#endif
+                        Crash(new InvalidOperationException($"FATAL: The pluginBase cannot be loaded. projectFrameCut can't work without PluginEngine. \r\n{ex} \r\n{ex1}",new AggregateException(ex, ex1)));
                     }
                 }
 
@@ -647,12 +639,7 @@ namespace projectFrameCut
                 }
                 catch (Exception ex)
                 {
-                    Log(ex, "query ffmpeg version", CreateMauiApp);
-#if ANDROID
-                    Android.Util.Log.Wtf("projectFrameCut", $"ffmpeg may not work because of a {ex.GetType().Name} exception:{ex.Message}");
-#elif WINDOWS
-                    //_ = MessageBox(new nint(0), $"WARN: projectFrameCut cannot init the ffmpeg to make sure it work because of a {ex.GetType().Name} exception:{ex.Message}\r\nYou can't do any render so far.", "projectFrameCut", 0U);
-#endif
+                    Log(ex, "init ffmpeg", CreateMauiApp);
                     ffmpegFailMessage = ex.Message;
                 }
 
