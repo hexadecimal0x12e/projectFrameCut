@@ -4,6 +4,7 @@ using CommunityToolkit.Maui.Core;
 using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
 using Microsoft.Maui.Controls;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Asset;
 using projectFrameCut.Controls;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -24,6 +25,7 @@ using Windows.Storage;
 #if iDevices
 using Foundation;
 using UIKit;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 
 #endif
 
@@ -93,6 +95,7 @@ public partial class AssetsLibraryPage : ContentPage
 
     public async Task AddAsset(string path)
     {
+       
         await AssetDatabase.Add(path, this);
         if (BindingContext is AssetViewModel vm)
         {
@@ -192,7 +195,7 @@ public partial class AssetsLibraryPage : ContentPage
     {
         try
         {
-            if(OperatingSystem.IsAndroid() || (currentAsset.AssetType is AssetType.Font) || (currentAsset.AssetType is AssetType.Other))
+            if((OperatingSystem.IsAndroid() && (currentAsset.AssetType is AssetType.Video) || (currentAsset.AssetType is AssetType.Audio)) || (currentAsset.AssetType is AssetType.Font) || (currentAsset.AssetType is AssetType.Other))
             {
                 if (!string.IsNullOrWhiteSpace(currentAsset.Path) && File.Exists(currentAsset.Path))
                 {

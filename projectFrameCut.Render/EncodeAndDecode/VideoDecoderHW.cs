@@ -46,7 +46,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public int Height => _height;
 
         public uint Index { get; set; } = 0;
-        public string[] PreferredExtension => [".mp4", ".mov", ".mkv"];
+        public string[] PreferredExtension => [".mp4", ".mov"];
 
         public int? ResultBitPerPixel => 8;
 
@@ -72,19 +72,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 fixed (AVFormatContext** fmtPtr = &_fmt)
                 {
-                    if (ffmpeg.avformat_open_input(fmtPtr, _path, null, null) != 0)
+                    var averr = ffmpeg.avformat_open_input(fmtPtr, _path, null, null);
+                    if (averr != 0)
                     {
-                        var fi = new FileInfo(_path);
-                        if (!fi.Exists)
-                        {
-                            throw new FileNotFoundException($"The video file '{_path}' doesn't exist.");
-                        }
-                        throw new FileNotFoundException($"Cannot open video file '{_path}'");
+                        FFmpegHelper.DetectWhyCannotOpenVideo(_path, averr);
                     }
                 }
 
                 if (ffmpeg.avformat_find_stream_info(_fmt, null) != 0)
-                    throw new InvalidDataException($"File '{_path}' seems don't like a multimedia file.");
+                    throw new InvalidDataException($"File '{_path}' seems don't like a multimedia file. Try install the encoder extension. If you continuously encountering this issue, try install ffmpeg toolkit on your computer, then run this command and observe whether there is any error message:\r\nffprobe {Path.GetFullPath(_path)}");
 
                 for (int i = 0; i < _fmt->nb_streams; i++)
                 {
@@ -96,7 +92,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 }
 
                 if (_videoStreamIndex < 0)
-                    throw new InvalidDataException($"File '{_path}' seems don't like a video file.");
+                    throw new InvalidDataException($"File '{_path}' seems don't like a video file. Try install the encoder extension. If you continuously encountering this issue, try encode your video again to another format.");
 
                 AVCodecParameters* par = _fmt->streams[_videoStreamIndex]->codecpar;
                 AVCodec* codec = ffmpeg.avcodec_find_decoder(par->codec_id);
@@ -217,7 +213,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (available.Contains(AVHWDeviceType.AV_HWDEVICE_TYPE_CUDA)) return AVHWDeviceType.AV_HWDEVICE_TYPE_CUDA;
             if (available.Contains(AVHWDeviceType.AV_HWDEVICE_TYPE_VAAPI)) return AVHWDeviceType.AV_HWDEVICE_TYPE_VAAPI;
             if (available.Contains(AVHWDeviceType.AV_HWDEVICE_TYPE_QSV)) return AVHWDeviceType.AV_HWDEVICE_TYPE_QSV;
-            
+
             return available.Count > 0 ? available[0] : AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
         }
 
@@ -314,7 +310,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 _lastPixelFormat = (AVPixelFormat)srcFrame->format;
                 if (_sws != null) ffmpeg.sws_freeContext(_sws);
-                
+
                 _sws = ffmpeg.sws_getContext(
                     _width, _height, _lastPixelFormat,
                     _width, _height, AVPixelFormat.AV_PIX_FMT_BGR24,
@@ -357,7 +353,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 g = new byte[size],
                 b = new byte[size],
             };
-            result.ProcessStack = $"From video '{filePath}', frame #{frameIdx} (HW)";
+            result.ProcessStack = new List<PictureProcessStack>
+            {
+                new PictureProcessStack
+                {
+                    OperationDisplayName = $"From video '{filePath}', frame #{frameIdx}",
+                    Operator = typeof(DecoderContext16Bit),
+                    ProcessingFuncStackTrace = new StackTrace(true),
+                }
+            };
             int idx, baseIndex, offset, x, y;
             byte* srcRow;
             for (y = 0; y < height; y++)
@@ -388,11 +392,13 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (_frm != null) { AVFrame* tmp = _frm; _frm = null; ffmpeg.av_frame_free(&tmp); }
             if (_pkt != null) { AVPacket* tmp = _pkt; _pkt = null; ffmpeg.av_packet_free(&tmp); }
             if (_sws != null) { ffmpeg.sws_freeContext(_sws); _sws = null; }
-            if (_codec != null) { 
-                if (_hwDeviceCtx != null) {
+            if (_codec != null)
+            {
+                if (_hwDeviceCtx != null)
+                {
                     ffmpeg.av_buffer_unref(&_codec->hw_device_ctx);
                 }
-                AVCodecContext* tmp = _codec; _codec = null; ffmpeg.avcodec_free_context(&tmp); 
+                AVCodecContext* tmp = _codec; _codec = null; ffmpeg.avcodec_free_context(&tmp);
             }
             if (_hwDeviceCtx != null) { AVBufferRef* tmp = _hwDeviceCtx; _hwDeviceCtx = null; ffmpeg.av_buffer_unref(&tmp); }
             if (_fmt != null) { AVFormatContext* tmp = _fmt; _fmt = null; ffmpeg.avformat_close_input(&tmp); }

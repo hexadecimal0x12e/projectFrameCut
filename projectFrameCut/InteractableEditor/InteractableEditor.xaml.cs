@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text.Json;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.ClipsAndTracks;
-using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.Effect;
 
 namespace InteractableEditor
 {
@@ -119,7 +119,7 @@ namespace InteractableEditor
                     double w = size.Width > 0 ? size.Width : 100;
                     double h = size.Height > 0 ? size.Height : 50;
 
-                    // For text clips, position comes from TextEntries (not PlaceEffect).
+                    // For text clips, position comes from TextEntries (not PlaceEffect_ImageSharp).
                     _baseRect = new Rect(entry.x, entry.y, w, h);
 
                     // Normalize storage to a mutable, strongly-typed list to simplify later edits.
@@ -349,7 +349,7 @@ namespace InteractableEditor
 
             if (_currentClip.Effects != null)
             {
-                if (_currentClip.Effects.TryGetValue(InternalPlaceKey, out var p) && p is PlaceEffect place)
+                if (_currentClip.Effects.TryGetValue(InternalPlaceKey, out var p) && p is PlaceEffect_ImageSharp place)
                 {
                     x = place.StartX;
                     y = place.StartY;
@@ -361,7 +361,7 @@ namespace InteractableEditor
                 }
 
                 // For size, prefer internal Resize (scale) over internal Crop (clip). We still fallback to Crop for legacy data.
-                if (_currentClip.Effects.TryGetValue(InternalResizeKey, out var r) && r is ResizeEffect resize)
+                if (_currentClip.Effects.TryGetValue(InternalResizeKey, out var r) && r is ResizeEffect_ImageSharp resize)
                 {
                     if (resize.Width > 0) w = resize.Width;
                     if (resize.Height > 0) h = resize.Height;
@@ -438,7 +438,7 @@ namespace InteractableEditor
             int relH = (int)Math.Round(_videoHeight);
 
             // Place
-            if (_currentClip.Effects.TryGetValue(InternalPlaceKey, out var p) && p is PlaceEffect place)
+            if (_currentClip.Effects.TryGetValue(InternalPlaceKey, out var p) && p is PlaceEffect_ImageSharp place)
             {
                 int newX = (int)Math.Round(x);
                 int newY = (int)Math.Round(y);
@@ -452,7 +452,7 @@ namespace InteractableEditor
                     relH = place.RelativeHeight;
                 }
 
-                _currentClip.Effects["__Internal_Place__"] = new PlaceEffect
+                _currentClip.Effects["__Internal_Place__"] = new PlaceEffect_ImageSharp
                 {
                     StartX = newX,
                     StartY = newY,
@@ -465,7 +465,7 @@ namespace InteractableEditor
             }
             else
             {
-                _currentClip.Effects[InternalPlaceKey] = new PlaceEffect
+                _currentClip.Effects[InternalPlaceKey] = new PlaceEffect_ImageSharp
                 {
                     StartX = (int)Math.Round(x),
                     StartY = (int)Math.Round(y),
@@ -479,22 +479,22 @@ namespace InteractableEditor
 
             if (!_isTextClip)
             {
-                if (_currentClip.Effects.TryGetValue(InternalResizeKey, out var r) && r is ResizeEffect resize)
+                if (_currentClip.Effects.TryGetValue(InternalResizeKey, out var r) && r is ResizeEffect_ImageSharp resize)
                 {
-                    int newW = (int)Math.Round(w);
-                    int newH = (int)Math.Round(h);
+                    int newW = (int)Math.Round(w, MidpointRounding.AwayFromZero);
+                    int newH = (int)Math.Round(h, MidpointRounding.AwayFromZero);
 
                     int resizeRelW = relW;
                     int resizeRelH = relH;
                     if (resize.RelativeWidth > 0 && resize.RelativeHeight > 0)
                     {
-                        newW = (int)Math.Round(w * resize.RelativeWidth / _videoWidth);
-                        newH = (int)Math.Round(h * resize.RelativeHeight / _videoHeight);
+                        newW = (int)Math.Round(w * resize.RelativeWidth / _videoWidth, MidpointRounding.AwayFromZero);
+                        newH = (int)Math.Round(h * resize.RelativeHeight / _videoHeight, MidpointRounding.AwayFromZero);
                         resizeRelW = resize.RelativeWidth;
                         resizeRelH = resize.RelativeHeight;
                     }
 
-                    _currentClip.Effects[InternalResizeKey] = new ResizeEffect
+                    _currentClip.Effects[InternalResizeKey] = new ResizeEffect_ImageSharp
                     {
                         Width = newW,
                         Height = newH,
@@ -508,10 +508,10 @@ namespace InteractableEditor
                 }
                 else
                 {
-                    _currentClip.Effects[InternalResizeKey] = new ResizeEffect
+                    _currentClip.Effects[InternalResizeKey] = new ResizeEffect_ImageSharp
                     {
-                        Width = (int)Math.Round(w),
-                        Height = (int)Math.Round(h),
+                        Width = (int)Math.Round(w, MidpointRounding.AwayFromZero),
+                        Height = (int)Math.Round(h, MidpointRounding.AwayFromZero),
                         PreserveAspectRatio = false,
                         Enabled = true,
                         Index = int.MinValue + 50,

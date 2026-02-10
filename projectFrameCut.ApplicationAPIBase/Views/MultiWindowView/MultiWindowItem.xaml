@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:l="clr-namespace:projectFrameCut.ApplicationAPIBase.LocalizedResources"
+             xmlns:local="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView"
+             x:Class="projectFrameCut.ApplicationAPIBase.Views.MultiWindowView.MultiWindowItem" 
+             x:Name="Self">
+
+
+    <ContentView.ControlTemplate>
+        <ControlTemplate>
+            <Grid BackgroundColor="Transparent" Padding="5">
+                <Grid.Resources>
+                    <Style x:Key="WindowButtonStyle" TargetType="Border">
+                        <Setter Property="WidthRequest" Value="24"/>
+                        <Setter Property="HeightRequest" Value="24"/>
+                        <Setter Property="StrokeShape" Value="RoundRectangle 4"/>
+                        <Setter Property="BackgroundColor" Value="Transparent"/>
+                        <Setter Property="Stroke" Value="Transparent"/>
+                        <Setter Property="VerticalOptions" Value="Center"/>
+                    </Style>
+                </Grid.Resources>
+                
+                <!-- 
+                    The Visible Window
+                    Background is the deep teal color from the image.
+                -->
+                <Border x:Name="VisualRoot"
+                        Stroke="Black"
+                        StrokeThickness="1"
+                        StrokeShape="RoundRectangle 10"
+                        BackgroundColor="#164e66"
+                        VerticalOptions="Fill"
+                        HorizontalOptions="Fill">
+                    
+                    <Grid RowDefinitions="32, *">
+                        
+                        <!-- Title Bar Region -->
+                        <!-- We add a PanGestureRecognizer in Code-behind to this Grid for moving -->
+                        <Grid x:Name="TitleBarGrid" Grid.Row="0" ColumnDefinitions="Auto, *, Auto" BackgroundColor="Transparent">
+
+                            <!-- Navigation Controls -->
+                            <HorizontalStackLayout Grid.Column="0" Spacing="2" Margin="5,0,-5,0" VerticalOptions="Center"
+                                                   IsVisible="{TemplateBinding IsNavigationVisible}">
+                                <!-- Back Button -->
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="BackBtn" ToolTipProperties.Text="Back">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnBackTapped"/>
+                                    </Border.GestureRecognizers>
+                                    <Label Text="◄" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12"/>
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding CanGoBack, Source={x:Reference Self}}" Value="False">
+                                            <Setter Property="Opacity" Value="0.3"/>
+                                            <Setter Property="InputTransparent" Value="True"/>
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                </Border>
+
+                                <!-- Forward Button -->
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="ForwardBtn" ToolTipProperties.Text="Forward">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnForwardTapped"/>
+                                    </Border.GestureRecognizers>
+                                    <Label Text="►" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontSize="12"/>
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding CanGoForward, Source={x:Reference Self}}" Value="False">
+                                            <Setter Property="Opacity" Value="0.3"/>
+                                            <Setter Property="InputTransparent" Value="True"/>
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                </Border>
+                            </HorizontalStackLayout>
+                            
+                            <!-- Title Text -->
+                            <Label Grid.Column="1"
+                                   Text="{TemplateBinding Title}"
+                                   ToolTipProperties.Text="{TemplateBinding Title}"
+                                   TextColor="White"
+                                   FontSize="14"
+                                   VerticalOptions="Center"
+                                   Margin="10,0,0,0"
+                                   LineBreakMode="TailTruncation"/>
+                            
+                            <!-- Window Controls: Min, Max, Close -->
+                            <HorizontalStackLayout Grid.Column="2"  Spacing="4" Margin="0,0,8,0">
+                                
+                                <!-- Dock Button (Return to MDI) -->
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="DockBtn" IsVisible="False" ToolTipProperties.Text="Back to container">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnDockTapped"/>
+                                    </Border.GestureRecognizers>
+                                    <Label Text="↙" TextColor="#40FF40" HorizontalOptions="Center" VerticalOptions="Center" FontSize="14"/>
+                                </Border>
+
+                                <!-- PopOut Button (Open in New Window) -->
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="PopOutBtn" IsVisible="False" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_PopOut}">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnPopOutTapped"/>
+                                    </Border.GestureRecognizers>
+                                    <Label Text="↗" TextColor="#40FF40" HorizontalOptions="Center" VerticalOptions="Center" FontSize="14"/>
+                                </Border>
+
+                                <!-- Minimize Button -->
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="MinimizeBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_Minimize}">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnMinimizeTapped"/>
+                                    </Border.GestureRecognizers>
+                                    <Label Text="—" TextColor="#A060F0" HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold"/>
+                                </Border>
+
+                                <!-- Maximize/Restore Button -->
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="MaximizeBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_Maximize}">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnMaximizeTapped"/>
+                                    </Border.GestureRecognizers>
+                                    <Label Text="☐" TextColor="#4080FF" HorizontalOptions="Center" VerticalOptions="Center" FontSize="16"/>
+                                </Border>
+
+                                <!-- Close Button -->
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="CloseBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_Close}">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Tapped="OnCloseTapped"/>
+                                    </Border.GestureRecognizers>
+                                    <Label Text="✕" TextColor="#FF4040" HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold"/>
+                                </Border>
+                            </HorizontalStackLayout>
+                            
+                        </Grid>
+
+                        <!-- Separator -->
+                        <BoxView Grid.Row="0" VerticalOptions="End" HeightRequest="1" Color="#10000000"/>
+
+                        <!-- Content Area -->
+                        <ContentPresenter Grid.Row="1" />
+                        
+                        <!-- Helper Dialog Overlay -->
+                        <Grid x:Name="DialogOverlay" Grid.Row="0" Grid.RowSpan="2" 
+                              BackgroundColor="#AA000000" 
+                              IsVisible="False"
+                              InputTransparent="False"
+                              ZIndex="999">
+                            
+                             <Border x:Name="DialogBox" 
+                                    BackgroundColor="#252526" 
+                                    Stroke="#3e3e42"
+                                    StrokeThickness="1"
+                                    StrokeShape="RoundRectangle 8"
+                                    VerticalOptions="Center" 
+                                    HorizontalOptions="Center"
+                                    WidthRequest="320"
+                                    Padding="20" 
+                                    MaximumHeightRequest="{Binding Height, Source={x:Reference VisualRoot}}">
+                                    <Border.Shadow>
+                                        <Shadow Brush="Black" Offset="0,4" Radius="20" Opacity="0.5"/>
+                                    </Border.Shadow>
+                  
+                                  <Grid RowDefinitions="Auto, Auto, Auto, *, Auto, Auto" RowSpacing="15">
+                                      <Label Grid.Row="0" x:Name="DialogTitle" Text="Title" FontAttributes="Bold" FontSize="18" TextColor="White" HorizontalOptions="Center"/>
+                                      <Label Grid.Row="1" x:Name="DialogMessage" Text="Message" TextColor="#E0E0E0"  HorizontalOptions="Center" HorizontalTextAlignment="Center"/>
+                                      
+                                      <Entry Grid.Row="2" x:Name="DialogInput" IsVisible="False" BackgroundColor="#1E1E1E" TextColor="White" PlaceholderColor="Gray"/>
+                                      
+                                      <ScrollView Grid.Row="3" x:Name="ActionSheetScroll" MaximumHeightRequest="200" IsVisible="False">
+                                          <VerticalStackLayout x:Name="ActionSheetContainer" Spacing="5" />
+                                      </ScrollView>
+
+                                      <Grid Grid.Row="4" x:Name="DialogButtonGrid" ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,10,0,0">
+                                          <Button x:Name="DialogCancelBtn" Text="Cancel" BackgroundColor="#454545" TextColor="White" Grid.Column="0" CornerRadius="4"/>
+                                          <Button x:Name="DialogOkBtn" Text="OK" BackgroundColor="#007ACC" TextColor="White" Grid.Column="1" CornerRadius="4"/>
+                                      </Grid>
+                                      
+                                      <Button Grid.Row="5" x:Name="ActionSheetCancelBtn" Text="Cancel" IsVisible="False" BackgroundColor="#454545" TextColor="White" Margin="0,10,0,0" CornerRadius="4"/>
+                                      
+                                  </Grid>
+                              </Border>
+                        </Grid>
+
+                    </Grid>
+                </Border>
+
+                <!-- 
+                     Resize Handles
+                     We overlay a Grid with rows/cols to define hit test areas for resizing.
+                     Rows/Cols: [5, *, 5]
+                -->
+                <!-- 
+                     Resize Handles
+                -->
+                <Grid x:Name="ResizeGrid" InputTransparent="True" CascadeInputTransparent="False"> 
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="12"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="12"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Grid.Resources>
+                        <Color x:Key="HandleColor">#01000000</Color>
+                    </Grid.Resources>
+
+                    <!-- Top Left -->
+                    <BoxView x:Name="ResizeTopLeft" Grid.Row="0" Grid.Column="0" BackgroundColor="{StaticResource HandleColor}" InputTransparent="False" />
+                    <!-- Top -->
+                    <BoxView x:Name="ResizeTop" Grid.Row="0" Grid.Column="1" BackgroundColor="{StaticResource HandleColor}" InputTransparent="False" />
+                    <!-- Top Right -->
+                    <BoxView x:Name="ResizeTopRight" Grid.Row="0" Grid.Column="2" BackgroundColor="{StaticResource HandleColor}" InputTransparent="False" />
+
+                    <!-- Left -->
+                    <BoxView x:Name="ResizeLeft" Grid.Row="1" Grid.Column="0" BackgroundColor="{StaticResource HandleColor}" InputTransparent="False" />
+                    <!-- Right -->
+                    <BoxView x:Name="ResizeRight" Grid.Row="1" Grid.Column="2" BackgroundColor="{StaticResource HandleColor}" InputTransparent="False" />
+
+                    <!-- Bottom Left -->
+                    <BoxView x:Name="ResizeBottomLeft" Grid.Row="2" Grid.Column="0" BackgroundColor="{StaticResource HandleColor}" InputTransparent="False" />
+                    <!-- Bottom -->
+                    <BoxView x:Name="ResizeBottom" Grid.Row="2" Grid.Column="1" BackgroundColor="{StaticResource HandleColor}" InputTransparent="False" />
+                    <!-- Bottom Right -->
+                    <BoxView x:Name="ResizeBottomRight" Grid.Row="2" Grid.Column="2" BackgroundColor="{StaticResource HandleColor}" InputTransparent="False" />
+
+                </Grid>
+            </Grid>
+        </ControlTemplate>
+    </ContentView.ControlTemplate>
+
+</ContentView>

@@ -1,0 +1,78 @@
+{
+  "DefaultLocate": "zh-CN",
+  "AdditionalUsing": "",
+  "NameSpaceOfLocalizerInstance": "projectFrameCut.ApplicationAPIBase.LocalizedResources",
+  "ClassNameSpaceOfLocalizerInstance": "APIBaseLocalizedResources",
+  "NameOfLocalizerInstance": "Localized",
+  "NameOfBaseInterface": "ApplicationAPIBaseLocalizerBase",
+  "EnableDynamicGenerate": false,
+  "EnableBaseGenerate": true,
+  "Values": {
+    "zh-CN": [
+      {
+        "Id": "MultiWindowView_Close",
+        "Value": "\u5173\u95ED",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MultiWindowView_Maximize",
+        "Value": "\u6700\u5927\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MultiWindowView_Minimize",
+        "Value": "\u6700\u5C0F\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MultiWindowView_PopOut",
+        "Value": "\u4F5C\u4E3A\u72EC\u7ACB\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt",
+        "Value": "\u5F53\u4F60\u5173\u95ED\u6B64\u72EC\u7ACB\u7A97\u53E3\u65F6\uFF0C\u6B64\u7A97\u53E3\u5C06\u4F1A\u56DE\u5230\u539F\u5148\u7684\u5BB9\u5668\u91CC\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Info",
+        "Value": "\u63D0\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_OK",
+        "Value": "\u597D\u7684",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MultiWindowView_DockPrompt_NotPromptAgain",
+        "Value": "\u4E0D\u518D\u63D0\u793A\u6211",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      }
+    ]
+  }
+}

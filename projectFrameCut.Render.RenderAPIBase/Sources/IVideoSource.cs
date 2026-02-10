@@ -98,7 +98,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         public int Height { get; set; }
         public string OutputPath { get; set; }
         public int FramePerSecond { get; set; }
-        public string CodecName { get;  set; }
+        public string CodecName { get; set; }
         public string PixelFormat { get; set; }
         public uint DurationWritten { get; }
 
@@ -116,6 +116,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
                 return false;
             }
         }
+        public bool SupportCodec(string codecName);
         public void Finish();
 
 

@@ -19,7 +19,7 @@ namespace projectFrameCut.Converters
                     AssetType.Image => Localized.AssetPage_AssetType_Image,
                     AssetType.Font => Localized.AssetPage_AssetType_Font,
                     AssetType.Other => Localized.AssetPage_AssetType_Other,
-                    _ => Localized.AssetPage_AssetType_Unknown
+                    _ => "Unknown"
                 };
             }
             return value?.ToString() ?? "";

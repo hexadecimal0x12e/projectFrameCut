@@ -2,9 +2,15 @@ using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Devices;
-
 using projectFrameCut.DraftStuff;
-using projectFrameCut.PropertyPanel;
+
+using projectFrameCut.Render.Benchmark;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Plugin;
+using projectFrameCut.Services;
+using projectFrameCut.Shared;
+using SixLabors.ImageSharp;
 using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -14,21 +20,15 @@ using System.Runtime.Versioning;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Path = System.IO.Path;
-using projectFrameCut.Shared;
-using projectFrameCut.Render.VideoMakeEngine;
-using SixLabors.ImageSharp;
-using projectFrameCut.Services;
-using projectFrameCut.Render.Plugin;
 using Rectangle = Microsoft.Maui.Controls.Shapes.Rectangle;
-using projectFrameCut.Render.EncodeAndDecode;
 
-
-
-
-
-
-
-
+using projectFrameCut.Render.Compose;
+using DatePicker = Microsoft.Maui.Controls.DatePicker;
+using projectFrameCut.APIClient;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using Color = Microsoft.Maui.Graphics.Color;
+using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 
 
 #if ANDROID
@@ -49,6 +49,11 @@ public partial class TestPage : ContentPage
         InitializeComponent();
 
         Loaded += TestPage_Loaded;
+
+#if WINDOWS
+        MultiWindowItem.ContextMenuProviderGetter = new(() => new WindowsContextMenuBuilder());
+#endif
+
     }
 
     private void TestPage_Loaded(object? sender, EventArgs e)
@@ -630,7 +635,7 @@ public partial class TestPage : ContentPage
         ppb = new PropertyPanelBuilder()
         {
             DefaultPadding = new Thickness(PPBPaddingSlider.Value),
-            WidthOfContent = PPBRatioSlider.Value
+            WidthOfContent = SettingsManager.GetSettingAs<int>("ui_defaultWidthOfContent", 1) // PPBRatioSlider.Value
         }
         .AddText(new TitleAndDescriptionLineLabel("ppb Test", "a example of PropertyPanelBuilder", 32))
         .AddText("This is a test", fontSize: 16, fontAttributes: FontAttributes.Bold)
@@ -643,12 +648,7 @@ public partial class TestPage : ContentPage
         .AddCheckbox("testCheckbox", "Test Checkbox:", false)
         .AddSwitch("testSwitch", "Test Switch:", true)
         .AddSeparator(null)
-        .AddCustomChild(new Button
-        {
-            Text = "Custom Button",
-            WidthRequest = 150
-        })
-        .AddButton("testButton",  "Click me!")
+        .AddButton("testButton", "Click me!")
         .AddCustomChild("pick a date", (c) =>
         {
             var picker = new DatePicker
@@ -659,6 +659,8 @@ public partial class TestPage : ContentPage
             picker.DateSelected += (s, e) => c(e.NewDate.ToString() ?? "unknown");
             return picker;
         }, "testDatePicker", DateTime.Now.ToString("G"))
+        .AddSeparator()
+        .AddIconTitleDescriptionCard("icon test", "This is an icon title description card.", "This is a longer description for the icon title description card to demonstrate how it looks like in the panel.", "icon_add", 48, 48)
         .AddCustomChild(new Rectangle
         {
             WidthRequest = 100,
@@ -686,6 +688,7 @@ public partial class TestPage : ContentPage
     }
     #endregion
 
+    #region runtime
     private async void TestCrashButton_Clicked(object sender, EventArgs e)
     {
         var type = await DisplayActionSheetAsync("Choose a favour you'd like", "Cancel", "Environment.FailFast", "Native(null pointer)", "Managed(NullReferenceException)");
@@ -732,6 +735,7 @@ public partial class TestPage : ContentPage
         }
 #endif
     }
+    #endregion
 
 
     #region misc
@@ -744,29 +748,25 @@ public partial class TestPage : ContentPage
 
     private async void TestFFmpegButton_Clicked(object sender, EventArgs e)
     {
-        string ver = "unknown";
-#if !iDevices
-        unsafe
+
+        var vidFile = await DisplayPromptAsync("info", "input src path");
+        if (string.IsNullOrWhiteSpace(vidFile)) vidFile = await FileSystemService.PickFileAsync();
+        var src = PluginManager.CreateVideoSource(vidFile);
+        var frame = src.GetFrame(42U, false);
+        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
-            ver = $"internal FFmpeg library: version {FFmpeg.AutoGen.ffmpeg.av_version_info()}, {FFmpeg.AutoGen.ffmpeg.avcodec_license()}\r\nconfiguration:{FFmpeg.AutoGen.ffmpeg.avcodec_configuration()}";
-        }
-#elif IOS || MACCATALYST
-#if IOS26_0_OR_GREATER || MACCATALYST26_0_OR_GREATER
-        var codecs = AVFoundation.AVUrlAsset.AudiovisualContentTypes;
-        ver = "AudiovisualContentTypes: "+ string.Concat(codecs,",");
-#else
-        var codecs = AVFoundation.AVUrlAsset.AudiovisualTypes;
-        ver = "AudiovisualTypes: "+ string.Concat(codecs,",");
-#endif
-#endif
-        await DisplayAlert("FFmpeg Version", ver, "OK");
+            MemoryStream ms = new();
+            frame.SaveToSixLaborsImage().SaveAsPng(ms);
+            ms.Position = 0;
+            return ms;
+        });
 
     }
 
     private void TestMixtureButton_Clicked(object sender, EventArgs e)
     {
         Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
-        PlaceEffect p = new()
+        PlaceEffect_ImageSharp p = new()
         {
             StartX = 50,
             StartY = 120
@@ -777,7 +777,7 @@ public partial class TestPage : ContentPage
         {
 
         };
-        var final = m.Mix(canvas, result, PluginManager.CreateComputer(m.ComputerId, false));   
+        var final = m.Mix(canvas, result, PluginManager.CreateComputer(m.ComputerId, false));
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
@@ -792,7 +792,22 @@ public partial class TestPage : ContentPage
         void dialog(string msg) => Dispatcher.Dispatch(async () => await DisplayAlertAsync("info", msg, "ok"));
 #if WINDOWS
         WindowsContextMenuBuilder b = new();
-        b.AddCommand("Command 1", () => dialog("You clicked 1")).AddSeparator().AddCommand("Command 2", () => dialog("You clicked 2")).AddCommand("Command 1", () => dialog("You clicked 3"));
+        b.AddCommand("Command 1", () => dialog("You clicked 1")).AddSeparator().AddCommand("Command 2", () => dialog("You clicked 2")).AddCommand("command 3", async () =>
+        {
+            await Task.Delay(500);
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                var window = Microsoft.Maui.Controls.Application.Current?.Windows[0];
+                if (window?.Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow)
+                {
+                    var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(nativeWindow);
+                    WinUI.App.SetForegroundWindow(hwnd);
+                    WinUI.App.SetFocus(hwnd);
+                    WinUI.App.FlashWindow(hwnd, true);
+                }
+                WinUI.App.MessageBeep(0x00000040);
+            });
+        });
         b.TryShow(ContextMenuTestBtn);
 #endif
     }
@@ -803,15 +818,145 @@ public partial class TestPage : ContentPage
 
     }
 
+    private async void BenchmarkButton_Clicked(object sender, EventArgs e)
+    {
+
+#if ANDROID
+        Render.AndroidOpenGL.ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
+#elif iDevices
+
+#elif WINDOWS
+        var context = ILGPU.Context.CreateDefault();
+        var devices = context.Devices.ToList();
+        if (SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel"))
+        {
+            var accels = SettingsManager.GetSetting("accel_MultiDeviceID", "all");
+            if (accels == "all")
+            {
+                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
+            }
+            else
+            {
+                var accelList = accels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                            .Select(s => int.TryParse(s, out var id) ? id : -1)
+                            .Where(id => id >= 0)
+                            .ToList();
+                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
+            }
+
+        }
+        else
+        {
+            var accelId = SettingsManager.GetSetting("accel_DeviceId", "");
+            if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
+        }
+
+        if (!projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
+
+#endif
+        await Benchmarker.Start((d, etr) =>
+        {
+            string timeStr = "";
+            if (etr.TotalSeconds > 0)
+            {
+                timeStr = (etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss"));
+            }
+            Dispatcher.Dispatch(async () =>
+            {
+                BenchmarkButton.Text = Localized.RenderPage_Stat(d, timeStr);
+
+            });
+        });
+    }
+
+    private void TestOrderButton_Clicked(object sender, EventArgs e)
+    {
+        var lines = InputEditor.Text.Split(["\r", "\n", "\r\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var loc = string.IsNullOrWhiteSpace(LocateInputer.Text) ? Localized._LocaleId_ : LocateInputer.Text.Trim();
+        var ordered = lines.OrderBy(a => TextHelper.GetPronounceForOrdering(a, loc).Result).GroupBy(TextHelper.DetectTextLanguage).OrderByDescending(g => g.Count()).SelectMany(c => c).ToList();
+        InputEditor.Text = string.Join(Environment.NewLine, ordered);
+        TestOrderButton.Text = "Order done";
+
+    }
+
+    private async void LoginTestButton_Clicked(object sender, EventArgs e)
+    {
+        AuthService.Logout();
+
+        if (AuthService.IsLoggedIn)
+        {
+            // 已登录，显示用户信息或登出
+            var user = await AuthService.GetCurrentUserAsync();
+            await DisplayAlertAsync("已登录", $"当前用户: {user.UserName}", "确定");
+        }
+        else
+        {
+            // 未登录，打开登录页面
+            await Navigation.PushAsync(new LoginPage());
+        }
+    }
+
+    private int windowCount = 0;
+
+
+
+    private void OpenTestWindowButton_Clicked(object sender, EventArgs e)
+    {
+        View makeWindowContent(int level, MultiWindowItem item)
+        {
+            return new VerticalStackLayout
+            {
+                Children =
+                {
+                    new Label { Text = $"This window is in level {level + 1}\r\nA random number:{Random.Shared.Next()}" },
+                    new Button { Text = "Back", Command = new Command(() =>
+                    {
+                        if (item.CanGoBack)
+                        {
+                            item.GoBack();
+                        }
+                    })},
+                    new Button { Text = "Front", Command = new Command(() => item.NavigateTo(makeWindowContent(level+1, item)) )},
+                    new Button {Text = "Prompt", Command = new Command(async () =>
+                    {
+                        var result = await item.DisplayAlertAsync("Action", TextHelper.DummyString, "yes", "no");
+                        await DisplayAlertAsync(Title, result.ToString(), "ok");
+                    })},
+                    new Button {Text = "ActionSheet", Command = new Command(async () =>
+                    {
+                        var result = await item.DisplayActionSheetAsync("Options", "no", "destruct", TextHelper.DummyStrings);
+                        await DisplayAlertAsync(Title, result?.ToString() ?? "null input, may user cancelled.", "ok");
+                    })},
+                    new Button {Text = "Input", Command = new Command(async () =>
+                    {
+                        var result = await item.DisplayPromptAsync("Action", "Input some text", "yes", "no");
+                        await DisplayAlertAsync(Title, result?.ToString() ?? "null input, may user cancelled.", "ok");
+                    })}
+                }
+            };
+        }
+        var myWindow = new MultiWindowItem
+        {
+            WidthRequest = 400,
+            HeightRequest = 300,
+            IsPopOutVisible = true
+        };
+        myWindow.Content = makeWindowContent(0, myWindow);
+        myWindow.Title = $"Test Window {++windowCount}";
+
+
+        myMultiWindowView.AddWindow(myWindow);
+    }
+
     private void TestPlaceButton_Clicked(object sender, EventArgs e)
     {
-        Picture8bpp src = Picture8bpp.GenerateSolidColor(200,300,128,128,128,1);
-        PlaceEffect p = new()
+        Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
+        PlaceEffect_ImageSharp p = new()
         {
             StartX = 50,
             StartY = 120
         };
-        var result = p.Render(src, null, 2560,1440);
+        var result = p.Render(src, null, 2560, 1440);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
@@ -827,12 +972,12 @@ public partial class TestPage : ContentPage
     private async void TestPlaceAndResizeButton_Clicked(object sender, EventArgs e)
     {
         Picture8bpp src = new Picture8bpp(await FileSystemService.PickFileAsync());
-        PlaceEffect p = new()
+        PlaceEffect_ImageSharp p = new()
         {
             StartX = 250,
             StartY = 180
         };
-        ResizeEffect r = new()
+        ResizeEffect_ImageSharp r = new()
         {
             Height = 300,
             Width = 1000,

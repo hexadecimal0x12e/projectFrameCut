@@ -40,6 +40,26 @@ namespace projectFrameCut.Setting.SettingManager
         }
 
         [DebuggerNonUserCode()]
+        public static T GetSettingAs<T>(string key, T onNotExist, T? onFail = default)
+        {
+            if (Settings.TryGetValue(key, out var value))
+            {
+                try
+                {
+                    var t = typeof(T);
+                    var method = t?.GetMethod("Parse", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, new Type[] { typeof(string) }, null);
+                    var result = method?.Invoke(null, [value]);
+                    return (T)result;
+                }
+                catch (Exception ex)
+                {
+                    return onFail ?? throw new InvalidCastException($"'{value}' ({key}) cannot be parsed to {typeof(T).Name}.", ex);
+                }
+            }
+            return onNotExist;
+        }
+
+        [DebuggerNonUserCode()]
         public static void WriteSetting(string key, string value)
         {
             if (protectedSettingsList.Any((k) => k == key)) throw new UnauthorizedAccessException("Trying to write a protected setting.");
@@ -53,6 +73,9 @@ namespace projectFrameCut.Setting.SettingManager
 
         [DebuggerNonUserCode()]
         public static bool IsBoolSettingTrue(string key) => Settings.ContainsKey(key) && (bool.TryParse(GetSetting(key, "False"), out var result) ? result : false);
+
+        [DebuggerNonUserCode()]
+        public static bool IsBoolSettingTrueOrDefault(string key, bool defaultValue) => Settings.ContainsKey(key) ? (bool.TryParse(GetSetting(key, "False"), out var result) ? result : false) : defaultValue;
 
         [DebuggerStepThrough()]
         public static void ToggleSaveSignal() => saveSignal.Set();

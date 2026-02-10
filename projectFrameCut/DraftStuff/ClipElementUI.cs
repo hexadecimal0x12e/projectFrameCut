@@ -1,4 +1,5 @@
 ﻿using Microsoft.Maui.Controls.Shapes;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.Render;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -24,7 +25,7 @@ namespace projectFrameCut.DraftStuff
         [JsonIgnore]
         public required Border RightHandle { get; set; }
 
-        public string displayName { get; set; } = "Clip";
+        public string DisplayName { get; set; } = "Clip";
 
         public ClipMovingStatus MovingStatus { get; set; } = ClipMovingStatus.Free;
         public double layoutX { get; set; }
@@ -49,11 +50,12 @@ namespace projectFrameCut.DraftStuff
         public ClipMode ClipType { get; set; } = ClipMode.Special;
         public string FromPlugin { get; set; } = string.Empty;
         public string TypeName { get; set; } = string.Empty;
-        public string? sourcePath { get; set; } = null;
+        public string? SourcePath { get; set; } = null;
 
         public string? ClipColor { get; set; } = null;
 
         public Dictionary<string, IEffect>? Effects { get; set; } = new();
+        public Dictionary<Guid, IEffectBundle>? EffectBundles { get; set; } = new();
         public Dictionary<string, object> ExtraData { get; set; } = new();
 
         public void ApplySpeedRatio()
@@ -158,7 +160,7 @@ namespace projectFrameCut.DraftStuff
             var element = new ClipElementUI
             {
                 Id = cid,
-                displayName = labelText ?? "Unnamed Clip",
+                DisplayName = labelText ?? "Unnamed Clip",
                 layoutX = 0,
                 layoutY = 0,
                 Clip = clipBorder,
@@ -197,7 +199,7 @@ namespace projectFrameCut.DraftStuff
                     cont,
                     element.RightHandle
                 },
-                    ColumnDefinitions =
+                ColumnDefinitions =
                 {
                     new ColumnDefinition { Width = new GridLength(30, GridUnitType.Absolute) },
                     new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
@@ -208,6 +210,11 @@ namespace projectFrameCut.DraftStuff
             element.Clip.BindingContext = element;
             element.LeftHandle.BindingContext = element;
             element.RightHandle.BindingContext = element;
+
+            if (!string.IsNullOrWhiteSpace(element.DisplayName))
+            {
+                ToolTipProperties.SetText(element.Clip, element.DisplayName);
+            }
 
             return element;
         }
@@ -230,7 +237,7 @@ namespace projectFrameCut.DraftStuff
             return ClipMode.Special; // fallback
         }
 
-        public static Brush DetermineAssetColor(ClipMode? mode) 
+        public static Brush DetermineAssetColor(ClipMode? mode)
         {
             return mode switch
             {
@@ -242,7 +249,7 @@ namespace projectFrameCut.DraftStuff
                 _ => new SolidColorBrush(Colors.Gray),
             };
         }
-        public static Brush DetermineAssetColor(AssetType type, ClipMode? mode = null) 
+        public static Brush DetermineAssetColor(AssetType type, ClipMode? mode = null)
         {
             return type switch
             {
@@ -263,6 +270,8 @@ namespace projectFrameCut.DraftStuff
         public string? SourceId { get; set; }
 
         public ClipUpdateReason? Reason { get; set; }
+
+        public bool NoSave { get; set; } = false;
     }
 
     public enum ClipUpdateReason

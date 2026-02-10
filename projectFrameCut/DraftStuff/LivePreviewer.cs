@@ -1,4 +1,5 @@
 ﻿using Microsoft.Maui.Controls.PlatformConfiguration;
+using projectFrameCut.Asset;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -9,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using IPicture = projectFrameCut.Shared.IPicture;
 
 namespace projectFrameCut.LivePreview
 {
@@ -19,6 +21,14 @@ namespace projectFrameCut.LivePreview
         public string TempPath;
         public string? ProxyRoot;
         public event Action<double, TimeSpan>? OnProgressChanged;
+
+        public bool IsFrameRendered(uint frameIndex)
+        {
+            if (Clips == null) return false;
+            var frameHash = Timeline.GetFrameHash(Clips, frameIndex);
+            var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{frameHash}.png");
+            return Path.Exists(destPath);
+        }
 
         public string RenderFrame(uint frameIndex, int targetWidth, int targetHeight)
         {
@@ -42,7 +52,12 @@ namespace projectFrameCut.LivePreview
             return destPath;
         }
 
-
+        public IPicture GetFrame(uint frameIndex, int targetWidth, int targetHeight)
+        {
+            var layers = Timeline.GetFramesInOneFrame(Clips, frameIndex, targetWidth, targetHeight, true);
+            var pic = Timeline.MixtureLayers(layers, frameIndex, targetWidth, targetHeight);
+            return pic;
+        }
 
         public void UpdateDraft(DraftStructureJSON json)
         {
@@ -53,21 +68,38 @@ namespace projectFrameCut.LivePreview
             foreach (var clip in elements.Cast<JsonElement>())
             {
                 var clipInstance = PluginManager.CreateClip(clip);
-                if (ProxyRoot is not null && clipInstance.FilePath is not null)
+                if (clipInstance.FilePath is not null)
                 {
-                    var proxiedPath = Path.Combine(ProxyRoot, $"{Path.GetFileNameWithoutExtension(clipInstance.FilePath)}.proxy.mp4");
-
-                    if (Path.Exists(proxiedPath))
+                    if (clipInstance.FilePath.StartsWith('$'))
                     {
-                        clipInstance.FilePath = proxiedPath;
-                        Log($"The proxy for {clipInstance.Name} is used.");
+                        var asset = AssetDatabase.Assets[clipInstance.FilePath.Substring(1)];
+                        clipInstance.FilePath = asset.Path;
+                        var proxyPath = Path.Combine(MauiProgram.DataPath, "My Assets", ".proxy", $"{asset.AssetId}.mp4");
+                        if (Path.Exists(proxyPath))
+                        {
+                            clipInstance.FilePath = proxyPath;
+                            Log($"The proxy for {clipInstance.Name} is used.");
+                        }
+                        else
+                        {
+                            Log($"The proxy for {clipInstance.Name} does not exist.");
+                        }
                     }
-                    else
+                    else if (ProxyRoot is not null && clipInstance.FilePath is not null)
                     {
-                        Log($"The proxy for {clipInstance.Name} does not exist.");
+                        var proxiedPath = Path.Combine(ProxyRoot, $"{Path.GetFileNameWithoutExtension(clipInstance.FilePath)}.proxy.mp4");
+
+                        if (Path.Exists(proxiedPath))
+                        {
+                            clipInstance.FilePath = proxiedPath;
+                            Log($"The proxy for {clipInstance.Name} is used.");
+                        }
+                        else
+                        {
+                            Log($"The proxy for {clipInstance.Name} does not exist.");
+                        }
                     }
                 }
-
                 clipInstance.ReInit();
                 clipsList.Add(clipInstance);
 
@@ -120,7 +152,7 @@ namespace projectFrameCut.LivePreview
             renderer.OnProgressChanged -= OnProgressChanged;
 
             builder.Writer.Finish(); //Finish doesn't support non-0 start frame, just end the writer
-            builder.Dispose();  
+            builder.Dispose();
             LogDiagnostic($"[LiveRender] RenderSomeFrames finished: {destPath}");
             return destPath;
         }

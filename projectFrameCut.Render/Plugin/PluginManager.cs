@@ -14,13 +14,31 @@ namespace projectFrameCut.Render.Plugin
 {
     public static class PluginManager
     {
-        public const int CurrentPluginAPIVersion = 1;
+        public const int CurrentPluginAPIVersion = IPluginBase.CurrentPluginAPIVersion;
         private static Dictionary<string, IPluginBase> loadedPlugins = new();
         public static IReadOnlyDictionary<string, IPluginBase> LoadedPlugins => loadedPlugins;
-        private static bool Inited = false;
+        public static bool Inited { get; private set; } = false;
 
         public static Func<string, string?>? ExtenedLocalizationGetter = null;
         public static string CurrentLocale = "en-US";
+
+        public static void InitGlobalGetter()
+        {
+            if (GlobalPluginHelper.PluginGetter is null)
+            {
+                //LogDiagnostic($"Initing Global getter, {Environment.StackTrace}");
+                GlobalPluginHelper.PluginGetter = (id) =>
+                {
+                    if (loadedPlugins.TryGetValue(id, out IPluginBase? value))
+                    {
+                        return value;
+                    }
+                    return null;
+                };
+                return;
+            }
+            throw new InvalidOperationException("GlobalPluginHelper has already been initialized.");
+        }
 
         public static void Init(IEnumerable<IPluginBase> plugins)
         {
@@ -36,24 +54,53 @@ namespace projectFrameCut.Render.Plugin
 
 #endif
             }
+
+            
         }
 
+        public static void Unload(string id)
+        {
+            if (loadedPlugins.TryGetValue(id, out IPluginBase? value))
+            {
+                try
+                {
+                    value.OnClosing();
+                }
+                catch { }
+                loadedPlugins.Remove(id);
+                Logger.Log($"Plugin {id} unloaded.");
+            }
+        }
+
+        public static void ForceUnloadAll()
+        {
+            foreach (var item in loadedPlugins)
+            {
+                try
+                {
+                    item.Value.OnClosing();
+                }
+                catch { }
+            }
+            loadedPlugins.Clear();
+            Inited = false;
+        }
 
         public static void LoadFrom(IPluginBase pluginInstance)
         {
-#if !DEBUG
-            throw new InvalidOperationException("Loading plugins at runtime is not supported in release builds.");
-#endif
             ArgumentNullException.ThrowIfNull(pluginInstance, nameof(pluginInstance));
             try
             {
                 if (pluginInstance.PluginAPIVersion == CurrentPluginAPIVersion)
                 {
-                    loadedPlugins.Add(pluginInstance.PluginID, pluginInstance);
+                    if (!loadedPlugins.TryAdd(pluginInstance.PluginID, pluginInstance))
+                    {
+                        loadedPlugins[pluginInstance.PluginID] = pluginInstance;
+                    }
                 }
                 else
                 {
-                    Logger.Log($"Plugin {pluginInstance.Name} has incompatible API version {pluginInstance.PluginAPIVersion}, expected {CurrentPluginAPIVersion}.", "warning");
+                   throw new InvalidProgramException($"Plugin {pluginInstance.Name} has incompatible API version {pluginInstance.PluginAPIVersion}, expected {CurrentPluginAPIVersion}.");
                 }
             }
             catch (Exception ex)
@@ -63,6 +110,16 @@ namespace projectFrameCut.Render.Plugin
 
             Logger.Log($"Plugin {pluginInstance.PluginID} loaded.");
 
+        }
+
+        public static void UnloadPlugin(string id)
+        {
+            if (loadedPlugins.TryGetValue(id, out IPluginBase? value))
+            {
+                value.OnClosing();
+                loadedPlugins.Remove(id);
+                Logger.Log($"Plugin {id} unloaded.");
+            }
         }
 
         public static string GetLocalizationItem(string key, string fallback)
@@ -82,6 +139,18 @@ namespace projectFrameCut.Render.Plugin
             }
             return fallback;
         }
+
+        public static string GetLocalizationItemInSpecificPlugin(this IPluginBase src, string key, string fallback)
+        {
+            var localizedString = src?.ReadLocalizationItem(key, CurrentLocale);
+            if (!string.IsNullOrEmpty(localizedString))
+            {
+                return localizedString;
+            }
+            return fallback;
+        }
+
+
 
         public static IClip CreateClip(JsonElement source)
         {
@@ -157,13 +226,14 @@ namespace projectFrameCut.Render.Plugin
 
         }
 
-        public static IEffect CreateEffect(EffectAndMixtureJSONStructure stru)
+        public static IEffect CreateEffect(EffectAndMixtureJSONStructure stru, EffectImplementType type = EffectImplementType.NotSpecified)
         {
             if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
             {
-                var effect = plugin.EffectCreator(stru);
+                var effect = plugin.EffectCreator(stru, type);
                 effect.Index = stru.Index;
                 effect.Enabled = stru.Enabled;
+                effect.BindedEffectGroupID = stru.BindedEffectGroupID;
                 try
                 {
                     effect.Initialize();
@@ -187,7 +257,20 @@ namespace projectFrameCut.Render.Plugin
             if (stru.RelativeHeight <= 0) stru.RelativeHeight = relativeHeight;
             if (PluginManager.LoadedPlugins.TryGetValue(stru.FromPlugin, out var plugin))
             {
-                return plugin.EffectCreator(stru);
+                var effect = plugin.EffectCreator(stru);
+                effect.Index = stru.Index;
+                effect.Enabled = stru.Enabled;
+                effect.BindedEffectGroupID = stru.BindedEffectGroupID;
+                try
+                {
+                    effect.Initialize();
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Init effect {effect.Name}", effect);
+                    throw;
+                }
+                return effect;
             }
             else
             {
@@ -197,10 +280,20 @@ namespace projectFrameCut.Render.Plugin
 
         public static IVideoSource CreateVideoSource(string filePath)
         {
-            if(!File.Exists(filePath) && !filePath.StartsWith("#"))
+            if (filePath.StartsWith("#"))
+            {
+                var part = filePath.Substring(1).Split(',', 2);
+                var decoder = part[0];
+                var supportedPlugin = LoadedPlugins.Values.FirstOrDefault(p => p.VideoSourceProvider.ContainsKey(decoder));
+                if (supportedPlugin is null) throw new NotSupportedException($"The specificed video decoder '{decoder}' was not found for the file '{filePath}'.");
+                return supportedPlugin.VideoSourceProvider[decoder](null!).CreateNew(part[1]);
+
+            }
+            else if (!File.Exists(filePath) && !filePath.StartsWith("#"))
             {
                 throw new FileNotFoundException("The specified video file was not found.", filePath);
             }
+
             foreach (var plugin in LoadedPlugins.Values)
             {
                 try
@@ -243,7 +336,7 @@ namespace projectFrameCut.Render.Plugin
             throw new NotSupportedException($"No suitable audio source found for the given file '{filePath}'.");
         }
 
-        public static IVideoWriter CreateVideoWriter(string filePath)
+        public static IVideoWriter CreateVideoWriter(string codec)
         {
             foreach (var plugin in LoadedPlugins.Values)
             {
@@ -251,10 +344,9 @@ namespace projectFrameCut.Render.Plugin
                 {
                     foreach (var item in plugin.VideoWriterProvider)
                     {
-                        var instance = item.Value(filePath);
-                        if (instance.TryInitialize())
+                        if (string.Equals(item.Key, codec, StringComparison.OrdinalIgnoreCase))
                         {
-                            return instance;
+                            return item.Value(codec);
                         }
                     }
                 }
@@ -263,7 +355,39 @@ namespace projectFrameCut.Render.Plugin
                     // Ignore and try next plugin
                 }
             }
-            throw new NotSupportedException($"No suitable video writer found for the given file '{filePath}'.");
+
+            // Fallback: probe each writer implementation by asking whether it supports the codec.
+            // IMPORTANT: dispose non-selected instances to avoid leaking unmanaged resources.
+            foreach (var plugin in LoadedPlugins.Values)
+            {
+                foreach (var item in plugin.VideoWriterProvider)
+                {
+                    IVideoWriter? instance = null;
+                    var selected = false;
+                    try
+                    {
+                        instance = item.Value(codec);
+                        if (instance.SupportCodec(codec))
+                        {
+                            selected = true;
+                            return instance;
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore and try next plugin/writer
+                    }
+                    finally
+                    {
+                        if (!selected && instance is not null)
+                        {
+                            try { instance.Dispose(); } catch { }
+                        }
+                    }
+                }
+            }
+
+            throw new NotSupportedException($"No suitable video writer found for the codec '{codec}'.");
         }
 
         private static readonly ConcurrentDictionary<string, IComputer> ComputerCache = new();
@@ -283,7 +407,6 @@ namespace projectFrameCut.Render.Plugin
                     {
                         if (forceCreate)
                         {
-                            // Caller explicitly requests a new instance (often for thread-safety).
                             return computer;
                         }
 

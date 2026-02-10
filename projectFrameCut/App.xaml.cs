@@ -1,4 +1,7 @@
 ﻿using Microsoft.Maui.Controls;
+using projectFrameCut.Services;
+
+
 
 
 #if WINDOWS
@@ -10,6 +13,7 @@ using System.Diagnostics;
 using Microsoft.UI.Windowing;
 using Microsoft.UI;
 using WinRT.Interop;
+using projectFrameCut.Platforms.Windows;
 #endif
 
 namespace projectFrameCut
@@ -34,6 +38,17 @@ namespace projectFrameCut
                     "light" => AppTheme.Light,
                     _ => AppTheme.Unspecified
                 };
+#if WINDOWS
+                if (SettingsManager.GetSetting("ui_defaultTheme", "default") != "default")
+                {
+                    (projectFrameCut.WinUI.App.Current as Microsoft.UI.Xaml.Application)?.RequestedTheme = SettingsManager.GetSetting("ui_defaultTheme", "default") switch
+                    {
+                        "dark" => Microsoft.UI.Xaml.ApplicationTheme.Dark,
+                        "light" => Microsoft.UI.Xaml.ApplicationTheme.Light,
+                        _ => Microsoft.UI.Xaml.ApplicationTheme.Light
+                    };
+                }
+#endif
             }
             catch { }
 
@@ -51,6 +66,38 @@ namespace projectFrameCut
             {
                 // ignore if preferences fail
             }
+#if WINDOWS
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+            {
+#pragma warning disable CS0618
+                Program.Crash(e.ExceptionObject as Exception ?? new ExecutionEngineException($"projectFrameCut can't gather more information about this exception."));
+#pragma warning restore CS0618
+
+            };
+#endif
+            AppDomain.CurrentDomain.ProcessExit += (s, e) =>
+            {
+                Log("App is closing...");
+                try
+                {
+                    MauiProgram.LogWriter.Flush();
+                }
+                catch { }
+                try
+                {
+                    foreach (var item in Render.Plugin.PluginManager.LoadedPlugins)
+                    {
+                        try
+                        {
+                            item.Value.OnClosing();
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+
+            };
+
         }
 
 #if WINDOWS
@@ -122,7 +169,7 @@ namespace projectFrameCut
 
                 assetItem = new NavigationViewItem { Content = Localized.AppShell_AssetsTab, Tag = "Assets", Height = 36, Padding = new(4) };
                 assetItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.SlideShow };
-            
+
 
                 nav.MenuItems.Add(homeItem);
                 nav.MenuItems.Add(assetItem);
@@ -175,7 +222,7 @@ namespace projectFrameCut
                         {
                             Log(ex, $"Navigate to {tag} failed", this);
                             await AppShell.instance.DisplayAlertAsync(Localized._Info, Localized.AppShell_NavFailed(ex, tag), Localized._OK);
-                            
+
                         }
                     });
                 };
@@ -188,14 +235,19 @@ namespace projectFrameCut
             MainNavView?.IsPaneVisible = false;
 
         }
-        public static void ShowNavBar()
+        public static async Task ShowNavBar()
         {
-            MainNavView?.IsPaneVisible = true;
-            Thread.Sleep(50);
-            var appWindow = Current?.Windows[0]; 
-            appWindow?.Width = appWindow.Width - 1; //avoid the contents go inside navigation bar
-            appWindow?.Width = appWindow.Width + 1;
+            if (MainNavView != null)
+                MainNavView.IsPaneVisible = true;
 
+            await Task.Delay(50);
+            var appWindow = Current?.Windows[0];
+            if (appWindow != null)
+            {
+                appWindow.Width = appWindow.Width - 8; //avoid the contents go inside navigation bar
+                await Task.Delay(50);
+                appWindow.Width = appWindow.Width + 8;
+            }
         }
 
 #endif

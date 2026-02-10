@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
@@ -21,7 +22,14 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <summary>
         /// Define the type name of the effect. 
         /// </summary>
+        /// <remarks>
+        /// it SHOULD equals to <see cref="IEffectBundle.TypeName"/>, <see cref="IEffectFactory.TypeName"/> and so on.
+        /// </remarks>
         public string TypeName { get; }
+        /// <summary>
+        /// Get how this effect is implemented.
+        /// </summary>
+        public EffectImplementType ImplementType { get; }
         /// <summary>
         /// Name of this effect. Most for display purpose.
         /// </summary>
@@ -30,6 +38,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Parameters of the effect.
         /// </summary>
         public Dictionary<string, object> Parameters { get; }
+
+
         /// <summary>
         /// Get or set whether the effect is enabled.
         /// </summary>
@@ -38,22 +48,20 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// The index of the effect in the effect stack.
         /// </summary>
         public int Index { get; set; }
-        /// <summary>
-        /// Indicates which parameters are needed for this effect.
-        /// </summary>
-        [JsonIgnore]
-        public List<string> ParametersNeeded { get; }
-        /// <summary>
-        /// Indicates the type of each parameter.
-        /// </summary>
-        [JsonIgnore]
-        public Dictionary<string, string> ParametersType { get; }
+
         /// <summary>
         /// Indicates whether this effect needs a specific computer with the computer which it's ID is <see cref="NeedComputer"/> to run.
         /// Or be null indicates this effect does not need a specific computer.
         /// </summary>
         [JsonIgnore]
         public string? NeedComputer { get; }
+        /// <summary>
+        /// Gets a value indicating whether the effect produces a rendered <see cref="IPicture"/> or a un-processed <see cref="IPictureProcessStep"/> to be used in the next step.
+        /// </summary>
+        [JsonIgnore]
+        public bool YieldProcessStep { get; }
+
+
         /// <summary>
         /// Get the relative width of the effect.
         /// </summary>
@@ -81,10 +89,47 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight);
 
         /// <summary>
+        /// Generate some process step instead of rendering the picture directly.
+        /// Throw a <see cref="NotImplementedException"/> if this effect does not support yielding process step.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="computer"></param>
+        /// <param name="targetWidth"></param>
+        /// <param name="targetHeight"></param>
+        /// <returns>the processed frame</returns>
+        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight);
+
+        /// <summary>
         /// If you'd like to initialize the effect before use, override it.
         /// </summary>
         public virtual void Initialize()
         {
         }
+
+        public bool IsNormalEffect => true;
+        public bool IsContinuousEffect => false;
+        public bool IsBindableArgsEffect => false;
+
+        /// <summary>
+        /// Get the binded EffectGroup's ID
+        /// </summary>
+        /// <remarks>
+        /// DO NOT set this property manually. EffectGroup will do this.
+        /// </remarks>
+        public string? BindedEffectGroupID { get; set; }
+    }
+
+    public enum EffectImplementType
+    {
+        NotSpecified,
+        IPicture,
+        ImageSharp,
+        HwAcceleration,
+        Custom1,
+        Custom2,
+        Custom3,
+        Custom4,
+        Custom5,
+
     }
 }

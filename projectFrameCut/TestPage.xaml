@@ -1,25 +1,55 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:v="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;assembly=projectFrameCut.ApplicationAPIBase"
              x:Class="projectFrameCut.TestPage"
              Title="TestPage">
     <ScrollView Orientation="Vertical">
-
-
         <VerticalStackLayout>
-            <Button x:Name="OpenGLESStartButton" Text="compute by OpenGL ES (android only)" Clicked="OpenGLESStartButton_Clicked"/>
-            <Button x:Name="MetalRenderStartButton" Text="compute by Metal (ios only)" Clicked="MetalRenderStartButton_Clicked"/>
-            <Button x:Name="TestFFmpegButton" Text="Test FFmpeg" Clicked="TestFFmpegButton_Clicked"/>
-            <Button x:Name="TestCrashButton" Text="Crash" Clicked="TestCrashButton_Clicked"/>
-            <Button x:Name="WinUIDiagTestBtn" Text="Test WinUI3 diag" Clicked="WinUIDiagTestBtn_Clicked"/>
-            <Button x:Name="ContextMenuTestBtn" Text="Test context button" Clicked="ContextMenuTestBtn_Clicked" />
-            <Button x:Name="MuxVideoTestBtn" Text="mixture aud and vid" Clicked="MuxVideoTestBtn_Clicked" />
             <Border StrokeThickness="4">
                 <VerticalStackLayout>
-                   <Button x:Name="TestPlaceButton" Text="Test place" Clicked="TestPlaceButton_Clicked"/>
-                   <Button x:Name="TestMixtureButton" Text="Test mixture" Clicked="TestMixtureButton_Clicked"/>
-                   <Button x:Name="TestPlaceAndResizeButton" Text="Test place and resize" Clicked="TestPlaceAndResizeButton_Clicked"/>
-                   <Image x:Name="PlaceResizeTestImage" />
+                    <Button x:Name="OpenTestWindowButton" Text="Add a window" Clicked="OpenTestWindowButton_Clicked"/>
+                    <v:MultiWindowView x:Name="myMultiWindowView" MinimumHeightRequest="500">
+                        <v:MultiWindowItem Title="我的文档" WidthRequest="300" HeightRequest="200" TranslationX="50" TranslationY="50">
+                            <StackLayout Padding="10">
+                                <Label Text="这是一个可以移动和缩放的窗体" TextColor="White"/>
+                                <Button Text="点击测试" />
+                            </StackLayout>
+                        </v:MultiWindowItem>
+
+                        <!-- 窗体 2 (不可调整大小) -->
+                        <v:MultiWindowItem Title="工具箱" IsResizable="False" WidthRequest="150" HeightRequest="300" TranslationX="400" TranslationY="50" IsNavigationVisible="False">
+                            <Label Text="工具列表..." TextColor="White"/>
+                        </v:MultiWindowItem>
+                    </v:MultiWindowView>
+                </VerticalStackLayout>
+            </Border>
+            <Border StrokeThickness="4">
+                <Button x:Name="LoginTestButton" Text="Login" Clicked="LoginTestButton_Clicked"/>
+            </Border>
+            <Border StrokeThickness="4">
+                <VerticalStackLayout>
+                    <Button x:Name="OpenGLESStartButton" Text="compute by OpenGL ES (android only)" Clicked="OpenGLESStartButton_Clicked"/>
+                    <Button x:Name="MetalRenderStartButton" Text="compute by Metal (ios only)" Clicked="MetalRenderStartButton_Clicked"/>
+                    <Button x:Name="BenchmarkButton" Text="Run benchmark" Clicked="BenchmarkButton_Clicked" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border StrokeThickness="4">
+                <VerticalStackLayout>
+                    <Button x:Name="TestFFmpegButton" Text="Test decode" Clicked="TestFFmpegButton_Clicked"/>
+                    <Button x:Name="TestPlaceButton" Text="Test place" Clicked="TestPlaceButton_Clicked"/>
+                    <Button x:Name="TestMixtureButton" Text="Test mixture" Clicked="TestMixtureButton_Clicked"/>
+                    <Button x:Name="TestPlaceAndResizeButton" Text="Test place and resize" Clicked="TestPlaceAndResizeButton_Clicked"/>
+                    <Image x:Name="PlaceResizeTestImage" />
+                </VerticalStackLayout>
+            </Border>
+            <Border StrokeThickness="4">
+                <VerticalStackLayout>
+                    <Button x:Name="TestCrashButton" Text="Crash" Clicked="TestCrashButton_Clicked"/>
+                    <Button x:Name="WinUIDiagTestBtn" Text="Test WinUI3 diag" Clicked="WinUIDiagTestBtn_Clicked"/>
+                    <Button x:Name="ContextMenuTestBtn" Text="Test context button" Clicked="ContextMenuTestBtn_Clicked" />
+                    <Button x:Name="MuxVideoTestBtn" Text="mixture aud and vid" Clicked="MuxVideoTestBtn_Clicked" />
                 </VerticalStackLayout>
             </Border>
             <Border StrokeThickness="4">
@@ -49,9 +79,19 @@
                         <Slider x:Name="PPBRatioSlider" Minimum="1" Maximum="10" Value="5" WidthRequest="250" ValueChanged="PPBPaddingSlider_ValueChanged" ></Slider>
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
+                
+            </Border >
+
+
+            <Border StrokeThickness="4">
+                <VerticalStackLayout>
+                    <Label Text="ordering test"/>
+                    <Editor x:Name="InputEditor" HeightRequest="150" Placeholder="Input here"></Editor>
+                    <Button x:Name="TestOrderButton" Text="Order" Clicked="TestOrderButton_Clicked"/>
+                    <Entry x:Name="LocateInputer" Placeholder="Locate for ordering, blank for default"/>
+                </VerticalStackLayout>
             </Border>
             <VerticalStackLayout HeightRequest="250" >
-                <WebView x:Name="TestWebView" HeightRequest="250"  Source="https://bing.com" />
             </VerticalStackLayout>
 
             <Image x:Name="ResultImage" Aspect="AspectFit" HeightRequest="300" WidthRequest="300"/>

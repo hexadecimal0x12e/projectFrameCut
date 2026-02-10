@@ -10,6 +10,14 @@
   "Values": {
     "zh-CN": [
       {
+        "Id": "Advanced_AreYouSure",
+        "Value": "\u4F60\u786E\u5B9A\u8981\u6267\u884C\u6B64\u64CD\u4F5C\u5417\uFF1F\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF01",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Advanced_AutoRecoverDraft",
         "Value": "\u81EA\u52A8\u6062\u590D\u635F\u574F\u7684\u8349\u7A3F\uFF08\u53EF\u80FD\u9020\u6210\u610F\u5916\u884C\u4E3A\uFF09",
         "Mode": "ConstString",
@@ -66,6 +74,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Advanced_FixDraft",
+        "Value": "\u5C1D\u8BD5\u4FEE\u590D\u6240\u6709\u8349\u7A3F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_FixDraft_Info",
+        "Value": "\u8FD9\u4F1A\u5C1D\u8BD5\u4FEE\u590D/\u5347\u7EA7\u6240\u6709\u7684\u9879\u76EE\u7684\u914D\u7F6E\uFF0C\u4E0D\u4F1A\u5F71\u54CD\u4F60\u7684\u8349\u7A3F\u3002\u8981\u7EE7\u7EED\u5417\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Advanced_KeyBox_Hint",
         "Value": "\u8F93\u5165\u8BBE\u7F6E\u7684\u952E\uFF0C\u7136\u540E\u4F1A\u81EA\u52A8\u586B\u5145\u503C",
         "Mode": "ConstString",
@@ -92,6 +116,22 @@
       {
         "Id": "Advanced_ManualEditSetting",
         "Value": "\u624B\u52A8\u914D\u7F6E\u8BBE\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Reset",
+        "Value": "\u91CD\u7F6E/\u4FEE\u590D\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ResetEffectImplement",
+        "Value": "\u91CD\u8BBE\u6548\u679C\u5B9E\u73B0\u5668",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -301,8 +341,24 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "\u9009\u4E2D\u7247\u6BB5\u4E4B\u540E\u9501\u5B9A\u8F68\u9053\u89C6\u56FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Edit_MaxiumSaveSlot",
         "Value": "\u6700\u5927\u4FDD\u5B58\u6B65\u6570 (\u7528\u4E8E\u64A4\u9500\u548C\u8FD8\u539F)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MiscOption",
+        "Value": "\u6742\u9879",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -351,6 +407,22 @@
       {
         "Id": "Edit_PreferredPopupMode_Window",
         "Value": "\u72EC\u7ACB\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "\u7BA1\u7406\u9884\u89C8\u7684\u914D\u7F6E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -415,6 +487,30 @@
       {
         "Id": "Edit_ProxyOption_Never",
         "Value": "\u4E0D\u8981\u521B\u5EFA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ShowAllEffects",
+        "Value": "\u5728\u5C5E\u6027\u9762\u677F\u91CC\u663E\u793A\u6240\u6709\u7684Effect\uFF08\u5305\u62EC\u5185\u90E8Effect\u548C\u4E2D\u95F4Effect\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "\u9884\u89C8/\u5C5E\u6027\u533A\u57DF\u7684\u9AD8\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "\u81EA\u52A8\u4FDD\u5B58\u9884\u89C8/\u5C5E\u6027\u533A\u57DF\u7684\u9AD8\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -906,7 +1002,7 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn",
-        "Value": "\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\u3002\u6240\u6709\u7684\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u3001\u63D2\u4EF6\u548C\u65E5\u5FD7\u5C06\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\u4F60\u7684\u8349\u7A3F\u548C\u7D20\u6750\u4E0D\u4F1A\u88AB\u79FB\u9664\uFF0C\u4F46\u662F\u7528\u6237\u5B58\u50A8\u76EE\u5F55\u4F1A\u88AB\u91CD\u7F6E\u4E3A\u9ED8\u8BA4\u503C\u3002\r\u4F60\u7684\u7528\u6237ID\u4E5F\u4F1A\u88AB\u4E00\u5E76\u91CD\u7F6E\uFF0C\u8FD9\u4F1A\u5BFC\u81F4\u4E2D\u592E\u7D20\u6750\u670D\u52A1\u5668\u4E2D\u7684\u4F60\u4E0D\u5728\u6709\u6548\u3002\r\u5728\u91CD\u7F6E\u4E4B\u540E\uFF0C\u5E94\u7528\u7A0B\u5E8F\u4F1A\u81EA\u52A8\u9000\u51FA\u3002\u4F60\u9700\u8981\u4ECE\u5934\u5F00\u59CB\u914D\u7F6E\u3002\r\r\u6B64\u64CD\u4F5C\u65E0\u6CD5\u88AB\u64A4\u9500\uFF0C\u6240\u6709\u7684\u5E94\u7528\u6570\u636E\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\u4F60\u786E\u8BA4\u5417\uFF1F\u8F93\u5165\u0022yes\u0022\u6765\u786E\u8BA4\u3002\r",
+        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\u3002\u6240\u6709\u7684\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u3001\u63D2\u4EF6\u548C\u65E5\u5FD7\u5C06\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\u4F60\u7684\u8349\u7A3F\u548C\u7D20\u6750\u4E0D\u4F1A\u88AB\u79FB\u9664\uFF0C\u4F46\u662F\u7528\u6237\u5B58\u50A8\u76EE\u5F55\u4F1A\u88AB\u91CD\u7F6E\u4E3A\u9ED8\u8BA4\u503C\u3002\r\u4F60\u7684\u7528\u6237ID\u4E5F\u4F1A\u88AB\u4E00\u5E76\u91CD\u7F6E\uFF0C\u8FD9\u4F1A\u5BFC\u81F4\u4E2D\u592E\u7D20\u6750\u670D\u52A1\u5668\u4E2D\u7684\u4F60\u4E0D\u5728\u6709\u6548\u3002\r\u5728\u91CD\u7F6E\u4E4B\u540E\uFF0C\u5E94\u7528\u7A0B\u5E8F\u4F1A\u81EA\u52A8\u9000\u51FA\u3002\u4F60\u9700\u8981\u4ECE\u5934\u5F00\u59CB\u914D\u7F6E\u3002\r\r\u6B64\u64CD\u4F5C\u65E0\u6CD5\u88AB\u64A4\u9500\uFF0C\u6240\u6709\u7684\u5E94\u7528\u6570\u636E\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\u4F60\u786E\u8BA4\u5417\uFF1F\u8F93\u5165\u0022yes\u0022\u6765\u786E\u8BA4\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1252,6 +1348,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Plugin_ReloadAllButton",
+        "Value": "\u91CD\u65B0\u52A0\u8F7D\u6240\u6709\u7684\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Plugin_Remove",
         "Value": "\u5378\u8F7D\u6269\u5C55",
         "Mode": "ConstString",
@@ -1386,8 +1490,24 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Render_DumpDiagData",
+        "Value": "\u4FDD\u5B58\u6E32\u67D3\u65F6\u7684\u8BE6\u7EC6\u8BCA\u65AD\u62A5\u544A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Render_EnableMultiAccel",
         "Value": "\u542F\u7528\u591A\u52A0\u901F\u5668\uFF08\u4EC5\u9650\u6E32\u67D3\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableMultiAccel_NotAvailable",
+        "Value": "\u4F60\u9700\u8981\u81F3\u5C11\u6709\u4E24\u4E2A\u53EF\u7528\u7684CUDA/OpenCL\u8BBE\u5907\u624D\u80FD\u542F\u7528\u591A\u52A0\u901F\u5668\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1443,6 +1563,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Render_RenderEffectImplement",
+        "Value": "\u6548\u679C\u5B9E\u73B0\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement_Subtitle",
+        "Value": "\u914D\u7F6E\u6BCF\u4E00\u4E2A\u6548\u679C\u7684\u5177\u4F53\u5B9E\u73B0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Render_SaveCheckpoint",
         "Value": "\u4FDD\u5B58\u6E32\u67D3\u8FC7\u7A0B\u7684\u4E2D\u95F4\u6570\u636E",
         "Mode": "ConstString",
@@ -1477,6 +1613,79 @@
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
         "Value": "\u9009\u62E9\u7528\u4E8E\u7F16\u8F91\u65F6\u786C\u4EF6\u52A0\u901F\u7684GPU",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Custom",
+        "Value": "\u81EA\u5B9A\u4E49",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Description",
+        "Value": "\u5728\u8FD9\u91CC\u914D\u7F6E\u6BCF\u4E00\u4E2A\u6548\u679C\u7684\u9ED8\u8BA4\u5B9E\u73B0\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Hint",
+        "Value": "\u5173\u4E8E\u6548\u679C\u5B9E\u73B0\u5668\uFF1A\r- \u0027IPicture CPU\u5B9E\u73B0\u0027 \u63D0\u4F9B\u6700\u5C0F\u7684\u5F00\u9500\uFF0C\u4F46\u662F\u5B83\u53EF\u80FD\u4E0D\u51C6\u786E\r- \u0027SixLabors.ImageSharp CPU\u5B9E\u73B0\u0027 \u63D0\u4F9B\u5F88\u9AD8\u7684\u51C6\u786E\u6027\uFF0C\u4F46\u662F\u53EF\u80FD\u4F1A\u9020\u6210\u5927\u91CF\u7684\u5F00\u9500\r- \u0027GPU \u786C\u4EF6\u52A0\u901F\u0027 \u63D0\u4F9B\u4E86\u8F83\u9AD8\u7684\u6027\u80FD\u548C\u76F8\u5BF9\u8F83\u5C0F\u7684\u5F00\u9500",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_HwAcceleration",
+        "Value": "GPU \u786C\u4EF6\u52A0\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_ImageSharp",
+        "Value": "SixLabors.ImageSharp CPU\u5B9E\u73B0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u2018SixLabors.ImageSharp\u2019",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_IPicture",
+        "Value": "IPicture CPU\u5B9E\u73B0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotSpecified",
+        "Value": "\u81EA\u52A8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Title",
+        "Value": "\u914D\u7F6E\u6548\u679C\u5B9E\u73B0\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Unknown",
+        "Value": "\u672A\u77E5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2190,11 +2399,11 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn",
-        "Value": "\rThis operation cannot be undone. All settings, securely stored content, plugins, and logs will be permanently lost.\rYour drafts and materials will not be removed, but the user storage directory will be reset to its default value.\rYour user ID will also be reset, which will cause you to no longer be valid in the central material server.\rAfter the reset, the application will automatically exit. You will need to configure it from scratch.\r\rThis operation cannot be undone, and all application data will be permanently lost.\rAre you sure? Enter \u0022yes\u0022 to confirm.\r",
+        "Value": "This operation cannot be undone. All settings, secure storage contents, plugins, and logs will be permanently lost.\r\nYour drafts and assets will not be removed, but the user storage directory will be reset to default.\r\nYour user ID will also be reset, which will cause you to no longer be valid in the central asset server.\r\nAfter resetting, the application will automatically exit. You need to configure from scratch.\r\n\r\nThis operation cannot be undone, all application data will be permanently lost.\r\nAre you sure? Enter \u0022yes\u0022 to confirm.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Warning message for resetting all settings. The word \u0027yes\u0027 is kept as is because the user must type it to confirm.",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -3100,6 +3309,240 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ShowAllEffects",
+        "Value": "Show all Effects (including internal and intermediate Effects) in the property panel",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "Preview/Properties Area Height",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "Auto-save the height of the preview/property area",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "Preview",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "Manage preview configurations",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MiscOption",
+        "Value": "Miscellaneous Options",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Title",
+        "Value": "Configure Effect Implementer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Description",
+        "Value": "Configure the default implementation for each effect here.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotSpecified",
+        "Value": "Auto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Unknown",
+        "Value": "Unknown",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_HwAcceleration",
+        "Value": "GPU Hardware Acceleration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_IPicture",
+        "Value": "IPicture CPU Implementation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Custom",
+        "Value": "Custom",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_ImageSharp",
+        "Value": "SixLabors.ImageSharp CPU implementation",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement",
+        "Value": "Effect Implementer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement_Subtitle",
+        "Value": "Configure the specific implementation for each effect.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Hint",
+        "Value": "About effect renderer implementations:\r- \u0027IPicture CPU Implementation\u0027 offers minimal overhead but may be less accurate\r- \u0027SixLabors.ImageSharp CPU Implementation\u0027 provides high accuracy but may incur significant overhead\r- \u0027GPU Hardware Acceleration\u0027 delivers higher performance with relatively lower overhead",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DumpDiagData",
+        "Value": "Save detailed diagnostic report during rendering",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_ReloadAllButton",
+        "Value": "Reload All Plugins",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableMultiAccel_NotAvailable",
+        "Value": "You need at least two available CUDA/OpenCL devices to enable multi-accelerator.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ResetEffectImplement",
+        "Value": "Reset Effect Implementer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_FixDraft",
+        "Value": "Try to fix all drafts",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_FixDraft_Info",
+        "Value": "This will attempt to fix/upgrade the configuration of all projects and will not affect your drafts. Continue?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_AreYouSure",
+        "Value": "Are you sure you want to perform this operation?\nThis operation cannot be undone!",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Reset",
+        "Value": "Reset/Repair Configuration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "Lock Track View After Selection",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -3808,11 +4251,11 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn",
-        "Value": "\r\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\u3002\u6240\u6709\u7684\u8A2D\u5B9A\u3001\u5B89\u5168\u5132\u5B58\u5167\u5BB9\u3001\u63D2\u4EF6\u548C\u65E5\u8A8C\u5C07\u6703\u6C38\u4E45\u6D88\u5931\u3002\r\u4F60\u7684\u8349\u7A3F\u548C\u7D20\u6750\u4E0D\u6703\u88AB\u79FB\u9664\uFF0C\u4F46\u662F\u4F7F\u7528\u8005\u5132\u5B58\u76EE\u9304\u6703\u88AB\u91CD\u8A2D\u70BA\u9810\u8A2D\u503C\u3002\r\u4F60\u7684\u4F7F\u7528\u8005ID\u4E5F\u6703\u4E00\u4F75\u91CD\u8A2D\uFF0C\u9019\u6703\u5C0E\u81F4\u4E2D\u592E\u7D20\u6750\u4F3A\u670D\u5668\u4E2D\u7684\u4F60\u4E0D\u518D\u6709\u6548\u3002\r\u5728\u91CD\u8A2D\u4E4B\u5F8C\uFF0C\u61C9\u7528\u7A0B\u5F0F\u6703\u81EA\u52D5\u9000\u51FA\u3002\u4F60\u9700\u8981\u5F9E\u982D\u958B\u59CB\u914D\u7F6E\u3002\r\r\u6B64\u64CD\u4F5C\u7121\u6CD5\u88AB\u64A4\u92B7\uFF0C\u6240\u6709\u7684\u61C9\u7528\u8CC7\u6599\u6703\u6C38\u4E45\u5730\u6D88\u5931\u3002\r\u4F60\u78BA\u8A8D\u55CE\uFF1F\u8F38\u5165\u201Cyes\u201D\u4F86\u78BA\u8A8D\u3002\r",
+        "Value": "\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\u3002\u6240\u6709\u7684\u8A2D\u5B9A\u3001\u5B89\u5168\u5132\u5B58\u5167\u5BB9\u3001\u5916\u639B\u7A0B\u5F0F\u548C\u65E5\u8A8C\u5C07\u6703\u6C38\u4E45\u6D88\u5931\u3002\r\n\u4F60\u7684\u8349\u7A3F\u548C\u7D20\u6750\u4E0D\u6703\u88AB\u79FB\u9664\uFF0C\u4F46\u662F\u4F7F\u7528\u8005\u5132\u5B58\u76EE\u9304\u6703\u88AB\u91CD\u8A2D\u70BA\u9810\u8A2D\u503C\u3002\r\n\u4F60\u7684\u4F7F\u7528\u8005ID\u4E5F\u6703\u4E00\u4F75\u91CD\u8A2D\uFF0C\u9019\u6703\u5C0E\u81F4\u4E2D\u592E\u7D20\u6750\u4F3A\u670D\u5668\u4E2D\u7684\u4F60\u4E0D\u518D\u6709\u6548\u3002\r\n\u5728\u91CD\u8A2D\u4E4B\u5F8C\uFF0C\u61C9\u7528\u7A0B\u5F0F\u6703\u81EA\u52D5\u9000\u51FA\u3002\u4F60\u9700\u8981\u5F9E\u982D\u958B\u59CB\u914D\u7F6E\u3002\r\n\r\n\u6B64\u64CD\u4F5C\u7121\u6CD5\u88AB\u64A4\u92B7\uFF0C\u6240\u6709\u7684\u61C9\u7528\u8CC7\u6599\u6703\u6C38\u4E45\u6D88\u5931\u3002\r\n\u4F60\u78BA\u8A8D\u55CE\uFF1F\u8F38\u5165\u201Cyes\u201D\u4F86\u78BA\u8A8D\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u5DF2\u5C07\u7C21\u9AD4\u4E2D\u6587\u8F49\u63DB\u70BA\u7E41\u9AD4\u4E2D\u6587\uFF0C\u4E26\u4FDD\u6301\u539F\u6587\u683C\u5F0F\u8207\u8853\u8A9E\u4E00\u81F4\u6027\u3002\u6CE8\u610F\uFF1A\u0027yes\u0027 \u70BA\u4F7F\u7528\u8005\u8F38\u5165\u6307\u4EE4\uFF0C\u4F9D\u8981\u6C42\u4E0D\u4E88\u7FFB\u8B6F\u3002",
+        "Comment": "\u5DF2\u5C07\u7C21\u9AD4\u4E2D\u6587\u539F\u6587\u8F49\u63DB\u70BA\u7E41\u9AD4\u4E2D\u6587\uFF0C\u4E26\u4FDD\u6301\u683C\u5F0F\u8207\u8853\u8A9E\u4E00\u81F4\u3002\u6CE8\u610F\uFF1A\u0027yes\u0027 \u70BA\u7528\u6236\u8F38\u5165\u6307\u4EE4\uFF0C\u4F9D\u8A3B\u91CB\u8981\u6C42\u4E0D\u4E88\u7FFB\u8B6F\u3002",
         "HasValidationErrors": false
       },
       {
@@ -4719,6 +5162,240 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ShowAllEffects",
+        "Value": "\u5728\u5C6C\u6027\u9762\u677F\u88E1\u986F\u793A\u6240\u6709\u7684\u6548\u679C\uFF08\u5305\u542B\u5167\u90E8\u6548\u679C\u548C\u4E2D\u9593\u6548\u679C\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "\u9810\u89BD/\u5C6C\u6027\u5340\u57DF\u7684\u9AD8\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "\u81EA\u52D5\u5132\u5B58\u9810\u89BD/\u5C6C\u6027\u5340\u57DF\u7684\u9AD8\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "\u9810\u89BD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "\u7BA1\u7406\u9810\u89BD\u7684\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MiscOption",
+        "Value": "\u96DC\u9805\u9078\u9805",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Title",
+        "Value": "\u914D\u7F6E\u6548\u679C\u5BE6\u4F5C\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Description",
+        "Value": "\u5728\u9019\u88E1\u914D\u7F6E\u6BCF\u500B\u6548\u679C\u7684\u9810\u8A2D\u5BE6\u4F5C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotSpecified",
+        "Value": "\u81EA\u52D5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Unknown",
+        "Value": "\u672A\u77E5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_HwAcceleration",
+        "Value": "GPU \u786C\u9AD4\u52A0\u901F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_IPicture",
+        "Value": "IPicture CPU \u5BE6\u4F5C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Custom",
+        "Value": "\u81EA\u8A02",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_ImageSharp",
+        "Value": "SixLabors.ImageSharp CPU\u5BE6\u73FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement",
+        "Value": "\u6548\u679C\u5BE6\u73FE\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement_Subtitle",
+        "Value": "\u914D\u7F6E\u6BCF\u4E00\u500B\u6548\u679C\u7684\u5177\u9AD4\u5BE6\u73FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Hint",
+        "Value": "\u95DC\u65BC\u6548\u679C\u5BE6\u4F5C\u5668\uFF1A\r- \u0027IPicture CPU \u5BE6\u4F5C\u0027 \u63D0\u4F9B\u6700\u5C0F\u7684\u958B\u92B7\uFF0C\u4F46\u662F\u5B83\u53EF\u80FD\u4E0D\u6E96\u78BA\r- \u0027SixLabors.ImageSharp CPU \u5BE6\u4F5C\u0027 \u63D0\u4F9B\u5F88\u9AD8\u7684\u6E96\u78BA\u6027\uFF0C\u4F46\u662F\u53EF\u80FD\u6703\u9020\u6210\u5927\u91CF\u7684\u958B\u92B7\r- \u0027GPU \u786C\u9AD4\u52A0\u901F\u0027 \u63D0\u4F9B\u4E86\u8F03\u9AD8\u7684\u6548\u80FD\u548C\u76F8\u5C0D\u8F03\u5C0F\u7684\u958B\u92B7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DumpDiagData",
+        "Value": "\u5132\u5B58\u6E32\u67D3\u6642\u7684\u8A73\u7D30\u8A3A\u65B7\u5831\u544A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_ReloadAllButton",
+        "Value": "\u91CD\u65B0\u8F09\u5165\u6240\u6709\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableMultiAccel_NotAvailable",
+        "Value": "\u4F60\u9700\u8981\u81F3\u5C11\u6709\u5169\u500B\u53EF\u7528\u7684CUDA/OpenCL\u88DD\u7F6E\u624D\u80FD\u555F\u7528\u591A\u52A0\u901F\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ResetEffectImplement",
+        "Value": "\u91CD\u8A2D\u6548\u679C\u5BE6\u4F5C\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_FixDraft",
+        "Value": "\u5617\u8A66\u4FEE\u5FA9\u6240\u6709\u8349\u7A3F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_FixDraft_Info",
+        "Value": "\u9019\u5C07\u5617\u8A66\u4FEE\u5FA9/\u5347\u7D1A\u6240\u6709\u9805\u76EE\u7684\u914D\u7F6E\uFF0C\u4E0D\u6703\u5F71\u97FF\u60A8\u7684\u8349\u7A3F\u3002\u8981\u7E7C\u7E8C\u55CE\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_AreYouSure",
+        "Value": "\u4F60\u78BA\u5B9A\u8981\u57F7\u884C\u6B64\u64CD\u4F5C\u55CE\uFF1F\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u92B7\uFF01",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Reset",
+        "Value": "\u91CD\u7F6E/\u4FEE\u5FA9\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "\u9078\u53D6\u7247\u6BB5\u5F8C\u9396\u5B9A\u8ECC\u9053\u6AA2\u8996",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "ja-JP": [
@@ -5428,11 +6105,11 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn",
-        "Value": "\r\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002\u3059\u3079\u3066\u306E\u8A2D\u5B9A\u3001\u5B89\u5168\u306B\u4FDD\u5B58\u3055\u308C\u305F\u30B3\u30F3\u30C6\u30F3\u30C4\u3001\u30D7\u30E9\u30B0\u30A4\u30F3\u3001\u304A\u3088\u3073\u30ED\u30B0\u306F\u6C38\u4E45\u306B\u5931\u308F\u308C\u307E\u3059\u3002\r\u3042\u306A\u305F\u306E\u4E0B\u66F8\u304D\u3084\u7D20\u6750\u306F\u524A\u9664\u3055\u308C\u307E\u305B\u3093\u304C\u3001\u30E6\u30FC\u30B6\u30FC\u30B9\u30C8\u30EC\u30FC\u30B8\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u306F\u30C7\u30D5\u30A9\u30EB\u30C8\u5024\u306B\u30EA\u30BB\u30C3\u30C8\u3055\u308C\u307E\u3059\u3002\r\u3042\u306A\u305F\u306E\u30E6\u30FC\u30B6\u30FCID\u3082\u4E00\u7DD2\u306B\u30EA\u30BB\u30C3\u30C8\u3055\u308C\u3001\u3053\u308C\u306B\u3088\u308A\u4E2D\u592E\u7D20\u6750\u30B5\u30FC\u30D0\u30FC\u3067\u306E\u6709\u52B9\u6027\u304C\u5931\u308F\u308C\u307E\u3059\u3002\r\u30EA\u30BB\u30C3\u30C8\u5F8C\u3001\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u306F\u81EA\u52D5\u7684\u306B\u7D42\u4E86\u3057\u307E\u3059\u3002\u6700\u521D\u304B\u3089\u8A2D\u5B9A\u3092\u3084\u308A\u76F4\u3059\u5FC5\u8981\u304C\u3042\u308A\u307E\u3059\u3002\r\r\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u305A\u3001\u3059\u3079\u3066\u306E\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u30C7\u30FC\u30BF\u306F\u6C38\u4E45\u306B\u5931\u308F\u308C\u307E\u3059\u3002\r\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F\u78BA\u8A8D\u3059\u308B\u306B\u306F\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002\r",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002\u3059\u3079\u3066\u306E\u8A2D\u5B9A\u3001\u5B89\u5168\u306B\u4FDD\u5B58\u3055\u308C\u305F\u5185\u5BB9\u3001\u30D7\u30E9\u30B0\u30A4\u30F3\u3001\u304A\u3088\u3073\u30ED\u30B0\u306F\u6C38\u4E45\u306B\u6D88\u53BB\u3055\u308C\u307E\u3059\u3002\r\n\u3042\u306A\u305F\u306E\u4E0B\u66F8\u304D\u3084\u7D20\u6750\u306F\u524A\u9664\u3055\u308C\u307E\u305B\u3093\u304C\u3001\u30E6\u30FC\u30B6\u30FC\u4FDD\u5B58\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u306F\u30C7\u30D5\u30A9\u30EB\u30C8\u5024\u306B\u30EA\u30BB\u30C3\u30C8\u3055\u308C\u307E\u3059\u3002\r\n\u3042\u306A\u305F\u306E\u30E6\u30FC\u30B6\u30FCID\u3082\u4E00\u7DD2\u306B\u30EA\u30BB\u30C3\u30C8\u3055\u308C\u3001\u3053\u308C\u306B\u3088\u308A\u4E2D\u592E\u7D20\u6750\u30B5\u30FC\u30D0\u30FC\u5185\u306E\u3042\u306A\u305F\u306E\u6709\u52B9\u6027\u304C\u5931\u308F\u308C\u307E\u3059\u3002\r\n\u30EA\u30BB\u30C3\u30C8\u5F8C\u3001\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u306F\u81EA\u52D5\u7684\u306B\u7D42\u4E86\u3057\u307E\u3059\u3002\u6700\u521D\u304B\u3089\u8A2D\u5B9A\u3092\u3084\u308A\u76F4\u3059\u5FC5\u8981\u304C\u3042\u308A\u307E\u3059\u3002\r\n\r\n\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u305A\u3001\u3059\u3079\u3066\u306E\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u30C7\u30FC\u30BF\u306F\u6C38\u4E45\u306B\u5931\u308F\u308C\u307E\u3059\u3002\r\n\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F\u78BA\u8A8D\u3059\u308B\u306B\u306F\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u300Cyes\u300D\u306F\u7FFB\u8A33\u3057\u306A\u3044\uFF08\u30E6\u30FC\u30B6\u30FC\u5165\u529B\u7528\uFF09\u3002\u8B66\u544A\u30E1\u30C3\u30BB\u30FC\u30B8\u5168\u4F53\u3092\u81EA\u7136\u306A\u65E5\u672C\u8A9E\u306B\u8ABF\u6574\u3057\u3001\u91CD\u8981\u306A\u6CE8\u610F\u70B9\uFF08\u64CD\u4F5C\u306E\u4E0D\u53EF\u9006\u6027\u3001\u30C7\u30FC\u30BF\u640D\u5931\u3001\u30E6\u30FC\u30B6\u30FCID\u30EA\u30BB\u30C3\u30C8\u306E\u5F71\u97FF\uFF09\u3092\u660E\u78BA\u306B\u4F1D\u3048\u308B\u3002",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -6339,6 +7016,240 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ShowAllEffects",
+        "Value": "\u30D7\u30ED\u30D1\u30C6\u30A3\u30D1\u30CD\u30EB\u306B\u3059\u3079\u3066\u306E\u30A8\u30D5\u30A7\u30AF\u30C8\uFF08\u5185\u90E8\u30A8\u30D5\u30A7\u30AF\u30C8\u3068\u4E2D\u9593\u30A8\u30D5\u30A7\u30AF\u30C8\u3092\u542B\u3080\uFF09\u3092\u8868\u793A\u3059\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "\u30D7\u30EC\u30D3\u30E5\u30FC/\u30D7\u30ED\u30D1\u30C6\u30A3\u9818\u57DF\u306E\u9AD8\u3055",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "\u81EA\u52D5\u4FDD\u5B58\u30D7\u30EC\u30D3\u30E5\u30FC/\u30D7\u30ED\u30D1\u30C6\u30A3\u9818\u57DF\u306E\u9AD8\u3055",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "\u30D7\u30EC\u30D3\u30E5\u30FC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "\u30D7\u30EC\u30D3\u30E5\u30FC\u8A2D\u5B9A\u306E\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MiscOption",
+        "Value": "\u96D1\u9805",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Title",
+        "Value": "\u30A8\u30D5\u30A7\u30AF\u30C8\u5B9F\u88C5\u306E\u69CB\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Description",
+        "Value": "\u3053\u3053\u3067\u5404\u30A8\u30D5\u30A7\u30AF\u30C8\u306E\u30C7\u30D5\u30A9\u30EB\u30C8\u5B9F\u88C5\u3092\u8A2D\u5B9A\u3057\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotSpecified",
+        "Value": "\u81EA\u52D5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Unknown",
+        "Value": "\u4E0D\u660E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_HwAcceleration",
+        "Value": "GPU\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_IPicture",
+        "Value": "IPicture CPU\u5B9F\u88C5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Custom",
+        "Value": "\u30AB\u30B9\u30BF\u30E0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_ImageSharp",
+        "Value": "SixLabors.ImageSharp CPU\u5B9F\u88C5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u300CSixLabors.ImageSharp\u300D\u306F\u7FFB\u8A33\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement",
+        "Value": "\u30A8\u30D5\u30A7\u30AF\u30C8\u5B9F\u88C5\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement_Subtitle",
+        "Value": "\u5404\u30A8\u30D5\u30A7\u30AF\u30C8\u306E\u5177\u4F53\u7684\u306A\u5B9F\u88C5\u3092\u8A2D\u5B9A\u3057\u307E\u3059",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Hint",
+        "Value": "\u52B9\u679C\u5B9F\u88C5\u5668\u306B\u3064\u3044\u3066\uFF1A\r- \u0027IPicture CPU\u5B9F\u88C5\u0027 \u306F\u6700\u5C0F\u9650\u306E\u30AA\u30FC\u30D0\u30FC\u30D8\u30C3\u30C9\u3092\u63D0\u4F9B\u3057\u307E\u3059\u304C\u3001\u6B63\u78BA\u3067\u306A\u3044\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\r- \u0027SixLabors.ImageSharp CPU\u5B9F\u88C5\u0027 \u306F\u9AD8\u3044\u6B63\u78BA\u6027\u3092\u63D0\u4F9B\u3057\u307E\u3059\u304C\u3001\u5927\u304D\u306A\u30AA\u30FC\u30D0\u30FC\u30D8\u30C3\u30C9\u3092\u751F\u3058\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\r- \u0027GPU\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u0027 \u306F\u6BD4\u8F03\u7684\u9AD8\u3044\u30D1\u30D5\u30A9\u30FC\u30DE\u30F3\u30B9\u3068\u76F8\u5BFE\u7684\u306B\u5C0F\u3055\u3044\u30AA\u30FC\u30D0\u30FC\u30D8\u30C3\u30C9\u3092\u63D0\u4F9B\u3057\u307E\u3059",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DumpDiagData",
+        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u6642\u306E\u8A73\u7D30\u8A3A\u65AD\u30EC\u30DD\u30FC\u30C8\u3092\u4FDD\u5B58",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_ReloadAllButton",
+        "Value": "\u3059\u3079\u3066\u306E\u30D7\u30E9\u30B0\u30A4\u30F3\u3092\u518D\u8AAD\u307F\u8FBC\u307F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableMultiAccel_NotAvailable",
+        "Value": "\u30DE\u30EB\u30C1\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30BF\u3092\u6709\u52B9\u306B\u3059\u308B\u306B\u306F\u3001\u5C11\u306A\u304F\u3068\u30822\u3064\u306E\u5229\u7528\u53EF\u80FD\u306ACUDA/OpenCL\u30C7\u30D0\u30A4\u30B9\u304C\u5FC5\u8981\u3067\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ResetEffectImplement",
+        "Value": "\u52B9\u679C\u5B9F\u88C5\u306E\u30EA\u30BB\u30C3\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_FixDraft",
+        "Value": "\u3059\u3079\u3066\u306E\u4E0B\u66F8\u304D\u3092\u4FEE\u5FA9\u3057\u3066\u307F\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_FixDraft_Info",
+        "Value": "\u3059\u3079\u3066\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u8A2D\u5B9A\u3092\u4FEE\u5FA9/\u30A2\u30C3\u30D7\u30B0\u30EC\u30FC\u30C9\u3057\u3088\u3046\u3068\u3057\u3066\u3044\u307E\u3059\u3002\u30C9\u30E9\u30D5\u30C8\u306B\u306F\u5F71\u97FF\u3057\u307E\u305B\u3093\u3002\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_AreYouSure",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u3092\u5B9F\u884C\u3057\u3066\u3082\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F\r\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\uFF01",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Reset",
+        "Value": "\u30EA\u30BB\u30C3\u30C8/\u8A2D\u5B9A\u4FEE\u5FA9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "\u30BB\u30B0\u30E1\u30F3\u30C8\u9078\u629E\u5F8C\u306B\u30C8\u30E9\u30C3\u30AF\u30D3\u30E5\u30FC\u3092\u30ED\u30C3\u30AF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -7048,11 +7959,11 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn",
-        "Value": "\r\n\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uBAA8\uB4E0 \uC124\uC815, \uC548\uC804 \uC800\uC7A5 \uB0B4\uC6A9, \uD50C\uB7EC\uADF8\uC778 \uBC0F \uB85C\uADF8\uAC00 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AC\uB77C\uC9D1\uB2C8\uB2E4.\r\n\uB2F9\uC2E0\uC758 \uCD08\uC548 \uBC0F \uC18C\uC7AC\uB294 \uC81C\uAC70\uB418\uC9C0 \uC54A\uC9C0\uB9CC, \uC0AC\uC6A9\uC790 \uC800\uC7A5 \uB514\uB809\uD1A0\uB9AC\uB294 \uAE30\uBCF8\uAC12\uC73C\uB85C \uC7AC\uC124\uC815\uB429\uB2C8\uB2E4.\r\n\uB2F9\uC2E0\uC758 \uC0AC\uC6A9\uC790 ID\uB3C4 \uD568\uAED8 \uC7AC\uC124\uC815\uB418\uC5B4 \uC911\uC559 \uC18C\uC7AC \uC11C\uBC84\uC5D0\uC11C \uB354 \uC774\uC0C1 \uC720\uD6A8\uD558\uC9C0 \uC54A\uAC8C \uB429\uB2C8\uB2E4.\r\n\uC7AC\uC124\uC815 \uD6C4, \uC560\uD50C\uB9AC\uCF00\uC774\uC158\uC774 \uC790\uB3D9\uC73C\uB85C \uC885\uB8CC\uB429\uB2C8\uB2E4. \uCC98\uC74C\uBD80\uD130 \uB2E4\uC2DC \uAD6C\uC131\uD574\uC57C \uD569\uB2C8\uB2E4.\r\n\r\n\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC73C\uBA70, \uBAA8\uB4E0 \uC560\uD50C\uB9AC\uCF00\uC774\uC158 \uB370\uC774\uD130\uAC00 \uC601\uAD6C\uC801\uC73C\uB85C \uC190\uC2E4\uB429\uB2C8\uB2E4.\r\n\uD655\uC2E4\uD569\uB2C8\uAE4C? \uD655\uC778\uD558\uB824\uBA74 \u0022yes\u0022\uB97C \uC785\uB825\uD558\uC138\uC694.\r\n",
+        "Value": "\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uBAA8\uB4E0 \uC124\uC815, \uC548\uC804 \uC800\uC7A5 \uB0B4\uC6A9, \uD50C\uB7EC\uADF8\uC778 \uBC0F \uB85C\uADF8\uAC00 \uC601\uC6D0\uD788 \uC0AC\uB77C\uC9D1\uB2C8\uB2E4.\r\n\uB2F9\uC2E0\uC758 \uCD08\uC548\uACFC \uC18C\uC7AC\uB294 \uC81C\uAC70\uB418\uC9C0 \uC54A\uC9C0\uB9CC, \uC0AC\uC6A9\uC790 \uC800\uC7A5 \uB514\uB809\uD1A0\uB9AC\uB294 \uAE30\uBCF8\uAC12\uC73C\uB85C \uC7AC\uC124\uC815\uB429\uB2C8\uB2E4.\r\n\uB2F9\uC2E0\uC758 \uC0AC\uC6A9\uC790 ID\uB3C4 \uD568\uAED8 \uC7AC\uC124\uC815\uB418\uC5B4 \uC911\uC559 \uC18C\uC7AC \uC11C\uBC84\uC5D0\uC11C \uB354 \uC774\uC0C1 \uC720\uD6A8\uD558\uC9C0 \uC54A\uAC8C \uB429\uB2C8\uB2E4.\r\n\uC7AC\uC124\uC815 \uD6C4 \uC560\uD50C\uB9AC\uCF00\uC774\uC158\uC740 \uC790\uB3D9\uC73C\uB85C \uC885\uB8CC\uB429\uB2C8\uB2E4. \uCC98\uC74C\uBD80\uD130 \uB2E4\uC2DC \uC124\uC815\uD574\uC57C \uD569\uB2C8\uB2E4.\r\n\r\n\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC73C\uBA70, \uBAA8\uB4E0 \uC560\uD50C\uB9AC\uCF00\uC774\uC158 \uB370\uC774\uD130\uAC00 \uC601\uAD6C\uC801\uC73C\uB85C \uC190\uC2E4\uB429\uB2C8\uB2E4.\r\n\uD655\uC2E4\uD569\uB2C8\uAE4C? \uD655\uC778\uD558\uB824\uBA74 \u0022yes\u0022\uB97C \uC785\uB825\uD558\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\uC8FC\uC758: \u0027yes\u0027\uB294 \uBC88\uC5ED\uD558\uC9C0 \uC54A\uC74C. \uC0AC\uC6A9\uC790\uAC00 \uC785\uB825\uD574\uC57C \uD558\uB294 \uB0B4\uC6A9\uC785\uB2C8\uB2E4.",
+        "Comment": "\uC0AC\uC6A9\uC790\uAC00 \uC785\uB825\uD574\uC57C \uD558\uB294 \u0022yes\u0022\uB294 \uBC88\uC5ED\uD558\uC9C0 \uC54A\uC74C",
         "HasValidationErrors": false
       },
       {
@@ -7959,6 +8870,240 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ShowAllEffects",
+        "Value": "\uC18D\uC131 \uD328\uB110\uC5D0\uC11C \uBAA8\uB4E0 \uC774\uD399\uD2B8(\uB0B4\uBD80 \uC774\uD399\uD2B8\uC640 \uC911\uAC04 \uC774\uD399\uD2B8 \uD3EC\uD568)\uB97C \uD45C\uC2DC\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "\uBBF8\uB9AC \uBCF4\uAE30/\uC18D\uC131 \uC601\uC5ED \uB192\uC774",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "\uC790\uB3D9 \uC800\uC7A5 \uBBF8\uB9AC\uBCF4\uAE30/\uC18D\uC131 \uC601\uC5ED \uB192\uC774",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "\uBBF8\uB9AC \uBCF4\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "\uBBF8\uB9AC\uBCF4\uAE30 \uC124\uC815 \uAD00\uB9AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MiscOption",
+        "Value": "\uAE30\uD0C0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Title",
+        "Value": "\uB80C\uB354\uB9C1 \uD6A8\uACFC \uAD6C\uD604\uAE30 \uAD6C\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Description",
+        "Value": "\uC5EC\uAE30\uC5D0\uC11C \uAC01 \uD6A8\uACFC\uC758 \uAE30\uBCF8 \uAD6C\uD604\uC744 \uAD6C\uC131\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotSpecified",
+        "Value": "\uC790\uB3D9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Unknown",
+        "Value": "\uC54C \uC218 \uC5C6\uC74C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_HwAcceleration",
+        "Value": "GPU \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_IPicture",
+        "Value": "IPicture CPU \uAD6C\uD604",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Custom",
+        "Value": "\uC0AC\uC6A9\uC790 \uC815\uC758",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_ImageSharp",
+        "Value": "SixLabors.ImageSharp CPU \uAD6C\uD604",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u0027SixLabors.ImageSharp\u0027\uB294 \uBC88\uC5ED\uD558\uC9C0 \uC54A\uC74C",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement",
+        "Value": "\uD6A8\uACFC \uAD6C\uD604\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement_Subtitle",
+        "Value": "\uAC01 \uD6A8\uACFC\uC758 \uAD6C\uCCB4\uC801\uC778 \uAD6C\uD604\uC744 \uAD6C\uC131\uD569\uB2C8\uB2E4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Hint",
+        "Value": "\uD6A8\uACFC \uAD6C\uD604\uAE30\uC5D0 \uAD00\uD558\uC5EC:\r- \u0027IPicture CPU \uAD6C\uD604\u0027\uC740 \uCD5C\uC18C\uD55C\uC758 \uC624\uBC84\uD5E4\uB4DC\uB97C \uC81C\uACF5\uD558\uC9C0\uB9CC \uC815\uD655\uD558\uC9C0 \uC54A\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r- \u0027SixLabors.ImageSharp CPU \uAD6C\uD604\u0027\uC740 \uB9E4\uC6B0 \uB192\uC740 \uC815\uD655\uC131\uC744 \uC81C\uACF5\uD558\uC9C0\uB9CC \uC0C1\uB2F9\uD55C \uC624\uBC84\uD5E4\uB4DC\uB97C \uC720\uBC1C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r- \u0027GPU \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D\u0027\uC740 \uC0C1\uB300\uC801\uC73C\uB85C \uB192\uC740 \uC131\uB2A5\uACFC \uBE44\uAD50\uC801 \uC801\uC740 \uC624\uBC84\uD5E4\uB4DC\uB97C \uC81C\uACF5\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DumpDiagData",
+        "Value": "\uB80C\uB354\uB9C1 \uC2DC\uC758 \uC0C1\uC138 \uC9C4\uB2E8 \uBCF4\uACE0\uC11C \uC800\uC7A5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_ReloadAllButton",
+        "Value": "\uBAA8\uB4E0 \uD50C\uB7EC\uADF8\uC778 \uB2E4\uC2DC \uB85C\uB4DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableMultiAccel_NotAvailable",
+        "Value": "\uB2E4\uC911 \uAC00\uC18D\uAE30\uB97C \uD65C\uC131\uD654\uD558\uB824\uBA74 \uC0AC\uC6A9 \uAC00\uB2A5\uD55C CUDA/OpenCL \uC7A5\uCE58\uAC00 \uCD5C\uC18C \uB450 \uAC1C \uC774\uC0C1 \uD544\uC694\uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ResetEffectImplement",
+        "Value": "\uD6A8\uACFC \uAD6C\uD604\uAE30 \uC7AC\uC124\uC815",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_FixDraft",
+        "Value": "\uBAA8\uB4E0 \uCD08\uC548 \uC218\uC815 \uC2DC\uB3C4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_FixDraft_Info",
+        "Value": "\uC774 \uC791\uC5C5\uC740 \uBAA8\uB4E0 \uD504\uB85C\uC81D\uD2B8\uC758 \uAD6C\uC131\uC744 \uC218\uC815/\uC5C5\uADF8\uB808\uC774\uB4DC\uD558\uB824\uACE0 \uC2DC\uB3C4\uD558\uBA70, \uB2F9\uC2E0\uC758 \uCD08\uC548\uC5D0\uB294 \uC601\uD5A5\uC744 \uBBF8\uCE58\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_AreYouSure",
+        "Value": "\uC774 \uC791\uC5C5\uC744 \uC2E4\uD589\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?\r\n\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4!",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Reset",
+        "Value": "\uC7AC\uC124\uC815/\uAD6C\uC131 \uBCF5\uAD6C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "\uC120\uD0DD\uD55C \uC138\uADF8\uBA3C\uD2B8 \uC774\uD6C4 \uD2B8\uB799 \uBDF0 \uACE0\uC815",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -8668,11 +9813,11 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn",
-        "Value": "\rCette op\u00E9ration est irr\u00E9versible. Tous les param\u00E8tres, le contenu stock\u00E9 en s\u00E9curit\u00E9, les extensions et les journaux seront d\u00E9finitivement supprim\u00E9s.\rVos brouillons et ressources ne seront pas supprim\u00E9s, mais votre r\u00E9pertoire de stockage utilisateur sera r\u00E9initialis\u00E9 aux valeurs par d\u00E9faut.\rVotre identifiant utilisateur sera \u00E9galement r\u00E9initialis\u00E9, ce qui vous rendra invalide sur le serveur central de ressources.\rApr\u00E8s la r\u00E9initialisation, l\u0027application se fermera automatiquement. Vous devrez tout reconfigurer depuis le d\u00E9but.\r\rCette action ne peut pas \u00EAtre annul\u00E9e, toutes les donn\u00E9es de l\u0027application seront d\u00E9finitivement perdues.\r\u00CAtes-vous s\u00FBr ? Tapez \u0022yes\u0022 pour confirmer.\r",
+        "Value": "Cette action est irr\u00E9versible. Tous les param\u00E8tres, le contenu du coffre-fort, les extensions et les journaux seront d\u00E9finitivement supprim\u00E9s.\rVos brouillons et ressources ne seront pas supprim\u00E9s, mais votre r\u00E9pertoire utilisateur sera r\u00E9initialis\u00E9 aux valeurs par d\u00E9faut.\rVotre identifiant utilisateur sera \u00E9galement r\u00E9initialis\u00E9, ce qui vous rendra inactif sur le serveur de ressources central.\rApr\u00E8s la r\u00E9initialisation, l\u0027application se fermera automatiquement. Vous devrez tout reconfigurer depuis le d\u00E9but.\r\rCette action ne peut pas \u00EAtre annul\u00E9e, toutes les donn\u00E9es de l\u0027application seront d\u00E9finitivement perdues.\r\u00CAtes-vous s\u00FBr ? Tapez \u0022yes\u0022 pour confirmer.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Ne pas traduire \u0022yes\u0022 - c\u0027est ce que l\u0027utilisateur doit saisir",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -9579,6 +10724,240 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ShowAllEffects",
+        "Value": "Afficher tous les Effets (y compris les Effets internes et interm\u00E9diaires) dans le panneau de propri\u00E9t\u00E9s",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "Hauteur de la zone de pr\u00E9visualisation/propri\u00E9t\u00E9s",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "Hauteur de la zone de pr\u00E9visualisation/propri\u00E9t\u00E9s en sauvegarde automatique",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "Aper\u00E7u",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "Configuration de la gestion de l\u0027aper\u00E7u",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MiscOption",
+        "Value": "Options diverses",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Title",
+        "Value": "Configurer l\u0027impl\u00E9menteur d\u0027effets",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Description",
+        "Value": "Configurez ici l\u0027impl\u00E9mentation par d\u00E9faut de chaque effet.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotSpecified",
+        "Value": "Automatique",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Unknown",
+        "Value": "Inconnu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_HwAcceleration",
+        "Value": "Acc\u00E9l\u00E9ration mat\u00E9rielle GPU",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_IPicture",
+        "Value": "Impl\u00E9mentation CPU IPicture",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Custom",
+        "Value": "Personnalis\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_ImageSharp",
+        "Value": "SixLabors.ImageSharp impl\u00E9mentation CPU",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement",
+        "Value": "Impl\u00E9menteur d\u0027effets",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement_Subtitle",
+        "Value": "Configurer l\u0027impl\u00E9mentation sp\u00E9cifique de chaque effet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Hint",
+        "Value": "\u00C0 propos des impl\u00E9mentations d\u0027effets de rendu :\r- \u0027Impl\u00E9mentation IPicture CPU\u0027 offre la plus petite surcharge, mais peut manquer de pr\u00E9cision\r- \u0027Impl\u00E9mentation SixLabors.ImageSharp CPU\u0027 offre une grande pr\u00E9cision, mais peut entra\u00EEner une surcharge importante\r- \u0027Acc\u00E9l\u00E9ration mat\u00E9rielle GPU\u0027 offre des performances \u00E9lev\u00E9es avec une surcharge relativement faible",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DumpDiagData",
+        "Value": "Enregistrer le rapport de diagnostic d\u00E9taill\u00E9 du rendu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_ReloadAllButton",
+        "Value": "Recharger tous les plugins",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableMultiAccel_NotAvailable",
+        "Value": "Vous devez avoir au moins deux appareils CUDA/OpenCL disponibles pour activer l\u0027acc\u00E9l\u00E9rateur multiple.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ResetEffectImplement",
+        "Value": "R\u00E9initialiser l\u0027impl\u00E9mentation de l\u0027effet",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_FixDraft",
+        "Value": "Essayer de r\u00E9parer tous les brouillons",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_FixDraft_Info",
+        "Value": "Cela tentera de r\u00E9parer/mettre \u00E0 niveau la configuration de tous les projets, sans affecter vos brouillons. Voulez-vous continuer ?",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_AreYouSure",
+        "Value": "\u00CAtes-vous s\u00FBr de vouloir effectuer cette op\u00E9ration ?\rCette op\u00E9ration ne peut pas \u00EAtre annul\u00E9e !",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Reset",
+        "Value": "R\u00E9initialiser/R\u00E9parer la configuration",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "Verrouiller la vue de la piste apr\u00E8s la s\u00E9lection d\u0027un fragment",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -10288,11 +11667,11 @@
       },
       {
         "Id": "Misc_ResetSettings_Warn",
-        "Value": "\r\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u3002\u6240\u6709\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u4E4B\u7269\u3001\u63D2\u4EF6\u53CA\u65E5\u5FD7\u5C06\u6C38\u901D\u3002\r\u6C5D\u4E4B\u8349\u7A3F\u4E0E\u7D20\u6750\u4E0D\u79FB\uFF0C\u7136\u7528\u6237\u5B58\u50A8\u76EE\u5F55\u5C06\u590D\u4E3A\u9ED8\u8BA4\u3002\r\u6C5D\u4E4B\u7528\u6237ID\u4EA6\u5C06\u91CD\u7F6E\uFF0C\u81F4\u4F7F\u4E2D\u592E\u7D20\u6750\u670D\u52A1\u5668\u4E2D\u6C5D\u6548\u65E0\u6548\u3002\r\u91CD\u7F6E\u4E4B\u540E\uFF0C\u5E94\u7528\u7A0B\u5E8F\u81EA\u9000\u3002\u6C5D\u9700\u4ECE\u5934\u914D\u7F6E\u3002\r\r\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\uFF0C\u6240\u6709\u5E94\u7528\u6570\u636E\u6C38\u901D\u3002\r\u6C5D\u786E\u8BA4\u4E4E\uFF1F\u8F93\u5165\u0022yes\u0022\u4EE5\u786E\u8BA4\u3002\r",
+        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\u3002\u6240\u6709\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u3001\u63D2\u4EF6\u53CA\u65E5\u5FD7\u5C06\u6C38\u4E45\u6D88\u5931\u3002\r\n\u4F60\u7684\u8349\u7A3F\u4E0E\u7D20\u6750\u4E0D\u4F1A\u88AB\u79FB\u9664\uFF0C\u7136\u7528\u6237\u5B58\u50A8\u76EE\u5F55\u5C06\u88AB\u91CD\u7F6E\u4E3A\u9ED8\u8BA4\u503C\u3002\r\n\u4F60\u7684\u7528\u6237ID\u4EA6\u5C06\u4E00\u5E76\u91CD\u7F6E\uFF0C\u6B64\u5C06\u5BFC\u81F4\u4E2D\u592E\u7D20\u6750\u670D\u52A1\u5668\u4E2D\u4F60\u7684\u6570\u636E\u5931\u6548\u3002\r\n\u91CD\u7F6E\u4E4B\u540E\uFF0C\u5E94\u7528\u7A0B\u5E8F\u5C06\u81EA\u52A8\u9000\u51FA\u3002\u4F60\u9700\u8981\u4ECE\u5934\u5F00\u59CB\u914D\u7F6E\u3002\r\n\r\n\u6B64\u64CD\u4F5C\u65E0\u6CD5\u64A4\u9500\uFF0C\u6240\u6709\u5E94\u7528\u6570\u636E\u5C06\u6C38\u4E45\u6D88\u5931\u3002\r\n\u4F60\u786E\u8BA4\u5417\uFF1F\u8F93\u5165\u201Cyes\u201D\u4EE5\u786E\u8BA4\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u6587\u8A00\u6587\u98CE\u683C\u7FFB\u8BD1\uFF0C\u4FDD\u6301\u539F\u6587\u8B66\u544A\u8BED\u6C14\u4E0E\u7ED3\u6784\uFF0C\u0027yes\u0027\u4FDD\u7559\u539F\u6587\u4E0D\u8BD1\u3002",
         "HasValidationErrors": false
       },
       {
@@ -11198,6 +12577,240 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_ShowAllEffects",
+        "Value": "\u4E8E\u5C5E\u6027\u9762\u677F\u4E2D\uFF0C\u5C3D\u793A\u8BF8Effect\uFF08\u542B\u5185Effect\u4E0E\u4E2DEffect\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C06\u73B0\u4EE3\u8F6F\u4EF6\u672F\u8BED\u0027\u5C5E\u6027\u9762\u677F\u0027\u548C\u0027Effect\u0027\u4FDD\u7559\uFF0C\u4F7F\u7528\u6587\u8A00\u6587\u53E5\u5F0F\u7ED3\u6784\u3002\u0027\u5C3D\u793A\u8BF8\u0027\u8868\u793A\u663E\u793A\u6240\u6709\uFF0C\u0027\u542B\u0027\u8868\u793A\u5305\u62EC\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight",
+        "Value": "\u9884\u89C8\u4E0E\u5C5E\u6027\u533A\u4E4B\u9AD8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_UpperContentHeight_AutoSave",
+        "Value": "\u9884\u89C8\u4E0E\u5C5E\u6027\u4E4B\u57DF\uFF0C\u5176\u9AD8\u81EA\u52A8\u5B58\u7109\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C06\u2018\u81EA\u52A8\u4FDD\u5B58\u9884\u89C8/\u5C5E\u6027\u533A\u57DF\u7684\u9AD8\u5EA6\u2019\u610F\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u91C7\u7528\u2018\u4E4B\u2019\u3001\u2018\u5176\u2019\u3001\u2018\u7109\u2019\u7B49\u865A\u8BCD\uFF0C\u4F7F\u53E5\u5F0F\u51DD\u7EC3\u53E4\u96C5\uFF0C\u5E76\u7B26\u5408\u2018\u4E3B\u8BED\u002B\u4E4B\u002B\u5BBE\u8BED\uFF0C\u5176\u002B\u5C5E\u6027\u002B\u52A8\u8BCD\u002B\u7109\u2019\u7684\u6587\u8A00\u7ED3\u6784\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption",
+        "Value": "\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_PreviewOption_Subtitle",
+        "Value": "\u9884\u89C2\u4E4B\u6CBB\u8BBE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_MiscOption",
+        "Value": "\u8BF8\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Title",
+        "Value": "\u6548\u9A8C\u5668\u4E4B\u8BBE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Description",
+        "Value": "\u4E8E\u6B64\u7F6E\u8BF8\u6548\u4E4B\u5E38\u5F0F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_NotSpecified",
+        "Value": "\u81EA\u52A8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Unknown",
+        "Value": "\u672A\u8BE6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_HwAcceleration",
+        "Value": "GPU\u786C\u5668\u52A0\u75BE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_IPicture",
+        "Value": "IPicture CPU\u65BD\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Custom",
+        "Value": "\u81EA\u5B9A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_ImageSharp",
+        "Value": "SixLabors.ImageSharp CPU\u4E4B\u5B9E\u4F5C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement",
+        "Value": "\u6548\u679C\u5B9E\u73B0\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_RenderEffectImplement_Subtitle",
+        "Value": "\u8BBE\u6BCF\u6548\u4E4B\u5B9E\u6CD5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderEffectImplement_Hint",
+        "Value": "\u592B\u6548\u679C\u5B9E\u73B0\u4E4B\u6CD5\uFF1A\n- \u2018IPicture CPU \u4E4B\u6CD5\u2019 \u8017\u6700\u5FAE\uFF0C\u7136\u5176\u6216\u4E0D\u7CBE\u3002\n- \u2018SixLabors.ImageSharp CPU \u4E4B\u672F\u2019 \u7CBE\u751A\u9AD8\uFF0C\u7136\u5176\u6216\u81F4\u5DE8\u8017\u3002\n- \u2018GPU \u786C\u4F53\u8F85\u7B97\u2019 \u6548\u8F83\u9AD8\uFF0C\u800C\u8017\u76F8\u5BF9\u4E3A\u8F7B\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5C06\u73B0\u4EE3\u6280\u672F\u672F\u8BED\u4E0E\u5BF9\u6BD4\u8BF4\u660E\u8F6C\u5316\u4E3A\u6587\u8A00\u6587\u8868\u8FF0\uFF0C\u4F7F\u7528\u2018\u592B\u2019\u5F00\u7BC7\u603B\u8D77\uFF0C\u2018\u7136\u2019\u8868\u8F6C\u6298\uFF0C\u2018\u800C\u2019\u8868\u8F7B\u5FAE\u5BF9\u6BD4\uFF0C\u529B\u6C42\u6587\u96C5\u7B80\u7EC3\u4E14\u8868\u610F\u6E05\u6670\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_DumpDiagData",
+        "Value": "\u5B58\u6E32\u65F6\u8BE6\u8BCA\u4E4B\u5F55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Plugin_ReloadAllButton",
+        "Value": "\u91CD\u65B0\u52A0\u8F7D\u6240\u6709\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_EnableMultiAccel_NotAvailable",
+        "Value": "\u987B\u81F3\u5C11\u4E8C\u53EF\u7528\u4E4BCUDA/OpenCL\u4E4B\u5668\uFF0C\u4E43\u53EF\u542F\u591A\u52A0\u901F\u5668\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ResetEffectImplement",
+        "Value": "\u91CD\u7F6E\u6548\u679C\u5B9E\u73B0\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_FixDraft",
+        "Value": "\u8BD5\u4FEE\u8BF8\u7A3F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_FixDraft_Info",
+        "Value": "\u6B64\u5C06\u5C1D\u8BD5\u4FEE\u590D\u6216\u5347\u7EA7\u8BF8\u9879\u76EE\u4E4B\u914D\u7F6E\uFF0C\u4E8E\u541B\u4E4B\u8349\u7A3F\u65E0\u788D\u3002\u6B32\u7EE7\u7EED\u5426\uFF1F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_AreYouSure",
+        "Value": "\u541B\u679C\u6B32\u884C\u6B64\u4E8B\u4E4E\uFF1F\r\u884C\u5219\u4E0D\u53EF\u590D\u4E5F\uFF01",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u7528\u4E8E\u9AD8\u7EA7\u64CD\u4F5C\u786E\u8BA4\u4E4B\u8B66\u793A\u8BED\uFF0C\u6587\u8A00\u6587\u8868\u8FF0\uFF0C\u610F\u4E3A\u2018\u60A8\u786E\u5B9A\u8981\u6267\u884C\u6B64\u64CD\u4F5C\u5417\uFF1F\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\uFF01\u2019",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Reset",
+        "Value": "\u91CD\u7F6E/\u4FEE\u590D\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_LockScrollViewAfterSelection",
+        "Value": "\u9009\u6BB5\u540E\u56FA\u8F68\u89C6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u610F\u4E3A\u9009\u4E2D\u7247\u6BB5\u540E\u9501\u5B9A\u8F68\u9053\u89C6\u56FE\u3002",
         "HasValidationErrors": false
       }
     ]

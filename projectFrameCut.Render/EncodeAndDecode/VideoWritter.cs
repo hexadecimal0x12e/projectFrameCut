@@ -4,6 +4,7 @@ using projectFrameCut.Render.Rendering;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace projectFrameCut.Render.EncodeAndDecode
@@ -101,13 +102,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public static bool DetectCodec(string codec)
         {
-            if(FFmpegHelper.CodecUtils.GetCodecsByType(AVMediaType.AVMEDIA_TYPE_VIDEO, true).Find(c => c.Name.Equals(codec, StringComparison.OrdinalIgnoreCase)) != null) 
+            if (FFmpegHelper.CodecUtils.GetCodecsByType(AVMediaType.AVMEDIA_TYPE_VIDEO, true).Find(c => c.Name.Equals(codec, StringComparison.OrdinalIgnoreCase)) != null)
             {
                 return true;
             }
-            return  false;
+            return false;
         }
 
+        bool IVideoWriter.SupportCodec(string codecName) => DetectCodec(codecName);
 
         public void Initialize()
         {
@@ -580,7 +582,16 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         ~VideoWriter()
         {
-            Dispose();
+            // Never call into FFmpeg encoding APIs from the finalizer thread.
+            // This type must be disposed deterministically; finalizer is best-effort cleanup only.
+            try
+            {
+                ReleaseUnmanaged();
+            }
+            catch
+            {
+                // Suppress all exceptions on finalizer thread.
+            }
         }
     }
 

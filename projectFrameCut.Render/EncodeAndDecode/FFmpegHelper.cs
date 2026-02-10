@@ -13,12 +13,15 @@ namespace projectFrameCut.Render.EncodeAndDecode
 {
     public static unsafe class FFmpegHelper
     {
+        public const int INTERNAL_FFMPEG_ERRCODE_NOSTREAMFOUND = int.MaxValue - 1;
+        public const int INTERNAL_FFMPEG_ERRCODE_UNSUPPORTFORMAT = int.MaxValue - 2;
+
         public static void Throw(int err, string api)
         {
             if (err >= 0) return;
             var msg = GetErrorString(err);
             throw new InvalidOperationException
-            ($"'{api}' failed during writing the video,{(msg is not null ? $" probably because '{msg}'." : " but we don't know what thing it happens.")}\r\n(FFmpeg internal error code: 0x{err:x2})")
+            ($"'{api}' failed during writing the video,{(msg is not null ? $" probably because '{msg}'." : " but we don't know what thing it happens.")}\r\n(FFmpeg internal error code: 0x{err:x8})")
             {
                 HResult = err,
                 Source = "FFmpeg"
@@ -33,6 +36,47 @@ namespace projectFrameCut.Render.EncodeAndDecode
             return Marshal.PtrToStringAnsi((IntPtr)buffer);
         }
 
+        internal static void DetectWhyCannotOpenVideo(string path, int averr)
+        {
+            var fi = new FileInfo(path);
+            if (!fi.Exists)
+            {
+                throw new FileNotFoundException($"The video file '{path}' doesn't exist.");
+            }
+
+            if (fi.Length <= 16)
+            {
+                throw new ArgumentNullException($"The video file '{path}' is too small, and doesn't seems like a video file.");
+            }
+
+            try
+            {
+                FileStream fs = new FileStream(path, FileMode.Open);
+#pragma warning disable CA2022 // 避免使用 "Stream.Read" 进行不准确读取
+                fs.Read(new byte[16]);
+#pragma warning restore CA2022 // 避免使用 "Stream.Read" 进行不准确读取
+
+                var errstr = FFmpegHelper.GetErrorString(averr);
+                throw new InvalidDataException($"File '{path}' seems don't like a video file or it has an unsupported codec. Try install the codec extension. If you continuously encountering this issue, try encode your video again to another format. \r\n('{errstr}', HResult: 0x{averr:x8})")
+                {
+                    HResult = averr
+                };
+
+
+            }
+            catch (IOException ex)
+            {
+                throw new FileLoadException($"projectFrameCut can't read the video file '{path}', it's maybe because of an error:'{ex.Message}'", ex);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                throw new FileLoadException($"projectFrameCut can't read the video file '{path}' because of no enough privileges. Try grant yourself with enough privileges to read the video.", ex);
+            }
+            catch (Exception ex)
+            {
+                throw new NotSupportedException($"Failed to open the video file '{path}', it's maybe because of an error:'{ex.Message}'. Try restart render, or reboot your computer. If you continuously encountering this issue, try install ffmpeg toolkit on your computer, then run this command and observe whether there is any error message:\r\nffprobe {Path.GetFullPath(path)}");
+            }
+        }
 
         public static class CodecUtils
         {

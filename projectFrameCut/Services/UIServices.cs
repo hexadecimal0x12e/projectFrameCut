@@ -8,9 +8,9 @@ using CoreAnimation;
 
 namespace projectFrameCut.Services
 {
-    internal class UISafeZoneServices
+    internal class UIServices
     {
-        public  static double GetSafeZone()
+        public static double GetSafeZone()
         {
             if (!SettingsManager.IsBoolSettingTrue("ui_ForceUseUserDefinedSafeZone"))
             {
@@ -64,6 +64,50 @@ namespace projectFrameCut.Services
             }
 
             return double.TryParse(SettingsManager.GetSetting("ui_SafeZoneCornerRadius", "10"), out var result) ? result : 10;
+        }
+
+        public static async void RegisterSelectOrContextMenu(Border border, Action OnSelected, Action OnClicked, Action OnContextMenuClick, int ContextMenuMinTime = 500)
+        {
+#if MACCATALYST || WINDOWS
+            var selectTap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Primary };
+            selectTap.Tapped += async (_, __) =>
+            {
+                OnSelected();
+            };
+
+            var addTap = new TapGestureRecognizer { NumberOfTapsRequired = 2, Buttons = ButtonsMask.Primary };
+            addTap.Tapped += (_, __) =>
+            {
+                OnClicked();
+            };
+
+            border.GestureRecognizers.Add(selectTap);
+            border.GestureRecognizers.Add(addTap);
+
+            var rightTap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Secondary };
+            rightTap.Tapped += async (_, __) =>
+            {
+                OnContextMenuClick();
+            };
+            border.GestureRecognizers.Add(rightTap);
+#elif ANDROID || IOS               
+            var pointerGesture = new PointerGestureRecognizer();
+            DateTime pointerDownTime = DateTime.MinValue;
+            pointerGesture.PointerPressed += (_, __) => pointerDownTime = DateTime.Now;
+            pointerGesture.PointerReleased += async (_, __) =>
+            {
+                var duration = (DateTime.Now - pointerDownTime).TotalMilliseconds;
+                if (duration >= ContextMenuMinTime)
+                {
+                    OnContextMenuClick(); 
+                }
+                else
+                {
+                    OnClicked();    
+                }
+            };
+            border.GestureRecognizers.Add(pointerGesture);
+#endif
         }
 
 

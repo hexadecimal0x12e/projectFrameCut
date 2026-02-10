@@ -4,15 +4,23 @@
   "NameSpaceOfLocalizerInstance": "",
   "ClassNameSpaceOfLocalizerInstance": "SimpleLocalizerBaseGeneratedHelper",
   "NameOfLocalizerInstance": "Localized",
-  "NameOfBaseInterface": "ISimpleLocalizerBase",
+  "NameOfBaseInterface": "ISimpleLocalizerBase_Helper",
   "EnableDynamicGenerate": false,
   "EnableBaseGenerate": true,
   "Values": {
     "zh-CN": [
       {
         "Id": "AppLoading",
-        "Value": "\u52A0\u8F7D\u4E2D...",
+        "Value": "\u52A0\u8F7D\u5E94\u7528\u7A0B\u5E8F...",
         "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CorruptedInstallPrompt",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u7684\u5B89\u88C5\u4F3C\u4E4E\u635F\u574F\u4E86\u3002\u8BF7\u5C1D\u8BD5\u91CD\u65B0\u5B89\u88C5\u5E94\u7528\u7A0B\u5E8F\u3002",
+        "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
@@ -59,8 +67,34 @@
       },
       {
         "Id": "SplashForm_License",
-        "Value": "\u6B64\u7248\u672C\u7684 {HelperProgram.AppTitle} \u53EA\u53EF\u7528\u4E8E\u975E\u5546\u7528\u573A\u666F\u3002",
+        "Value": " ",
         "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PluginLoading",
+        "Value": "\u52A0\u8F7D\u63D2\u4EF6\u300C{name}\u300D...",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PostInit",
+        "Value": "\u521D\u59CB\u5316\u7528\u6237\u754C\u9762...",
+        "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
@@ -72,12 +106,20 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
+      },
+      {
+        "Id": "UnsupportedOSPrompt",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u9700\u8981\u5728 Windows 10 2004 / LTSC 2021 (build 19041) \u6216\u8005\u66F4\u65B0\u7684\u7248\u672C\u4E0A\u8FD0\u884C\u3002\r\u8BF7\u8003\u8651\u5347\u7EA7\u4F60\u7684\u7CFB\u7EDF\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
       }
     ],
     "en-US": [
       {
         "Id": "AppLoading",
-        "Value": "Loading...",
+        "Value": "Loading application...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -131,11 +173,11 @@
       },
       {
         "Id": "SplashForm_License",
-        "Value": "This version of {HelperProgram.AppTitle} is for non-commercial use only.",
+        "Value": " ",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "The original value is a space, likely used as a placeholder for empty license text in the splash form.",
         "HasValidationErrors": false
       },
       {
@@ -146,12 +188,58 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "UnsupportedOSPrompt",
+        "Value": "We\u0027re sorry, {HelperProgram.AppTitle} requires Windows 10 2004 / LTSC 2021 (build 19041) or a newer version to run.\r\nPlease consider upgrading your system.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CorruptedInstallPrompt",
+        "Value": "We\u0027re sorry, the installation of {HelperProgram.AppTitle} seems to be corrupted. Please try reinstalling the application.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PluginLoading",
+        "Value": "Loading plugin \u0027{name}\u0027...",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PostInit",
+        "Value": "Initializing user interface...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
       {
         "Id": "AppLoading",
-        "Value": "\u8F09\u5165\u4E2D...",
+        "Value": "\u8F09\u5165\u61C9\u7528\u7A0B\u5F0F...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -205,10 +293,11 @@
       },
       {
         "Id": "SplashForm_License",
-        "Value": "\u6B64\u7248\u672C\u7684 {HelperProgram.AppTitle} \u50C5\u53EF\u7528\u65BC\u975E\u5546\u696D\u7528\u9014\u3002",
+        "Value": "\u3000",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "\u539F\u59CB\u503C\u70BA\u55AE\u4E00\u7A7A\u683C\uFF0C\u5DF2\u8F49\u63DB\u70BA\u5168\u5F62\u7A7A\u683C\u4EE5\u7B26\u5408\u4E2D\u6587\u6392\u7248\u7FD2\u6163\u3002",
         "HasValidationErrors": false
       },
       {
@@ -219,12 +308,58 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "UnsupportedOSPrompt",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u9700\u8981\u5728 Windows 10 2004 / LTSC 2021 (build 19041) \u6216\u66F4\u65B0\u7684\u7248\u672C\u4E0A\u57F7\u884C\u3002\r\n\u8ACB\u8003\u616E\u5347\u7D1A\u4F60\u7684\u7CFB\u7D71\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CorruptedInstallPrompt",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u7684\u5B89\u88DD\u4F3C\u4E4E\u640D\u58DE\u4E86\u3002\u8ACB\u5617\u8A66\u91CD\u65B0\u5B89\u88DD\u61C9\u7528\u7A0B\u5F0F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PluginLoading",
+        "Value": "\u8F09\u5165\u63D2\u4EF6\u300C{name}\u300D...",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PostInit",
+        "Value": "\u521D\u59CB\u5316\u4F7F\u7528\u8005\u4ECB\u9762...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "ja-JP": [
       {
         "Id": "AppLoading",
-        "Value": "\u8AAD\u307F\u8FBC\u307F\u4E2D...",
+        "Value": "\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u3092\u8AAD\u307F\u8FBC\u3093\u3067\u3044\u307E\u3059...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -278,7 +413,7 @@
       },
       {
         "Id": "SplashForm_License",
-        "Value": "\u3053\u306E\u30D0\u30FC\u30B8\u30E7\u30F3\u306E {HelperProgram.AppTitle} \u306F\u975E\u5546\u7528\u76EE\u7684\u3067\u306E\u307F\u3054\u5229\u7528\u3044\u305F\u3060\u3051\u307E\u3059\u3002",
+        "Value": " ",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -293,12 +428,58 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "UnsupportedOSPrompt",
+        "Value": "\u7533\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093\u3001{HelperProgram.AppTitle} \u306F Windows 10 2004 / LTSC 2021 (build 19041) \u4EE5\u964D\u306E\u30D0\u30FC\u30B8\u30E7\u30F3\u3067\u52D5\u4F5C\u3059\u308B\u5FC5\u8981\u304C\u3042\u308A\u307E\u3059\u3002\r\u30B7\u30B9\u30C6\u30E0\u306E\u30A2\u30C3\u30D7\u30B0\u30EC\u30FC\u30C9\u3092\u3054\u691C\u8A0E\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CorruptedInstallPrompt",
+        "Value": "\u7533\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093\u304C\u3001{HelperProgram.AppTitle} \u306E\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u304C\u7834\u640D\u3057\u3066\u3044\u308B\u3088\u3046\u3067\u3059\u3002\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u3092\u518D\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PluginLoading",
+        "Value": "\u30D7\u30E9\u30B0\u30A4\u30F3\u300C{name}\u300D\u3092\u8AAD\u307F\u8FBC\u3093\u3067\u3044\u307E\u3059...",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PostInit",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u30A4\u30F3\u30BF\u30FC\u30D5\u30A7\u30FC\u30B9\u3092\u521D\u671F\u5316\u3057\u3066\u3044\u307E\u3059...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
       {
         "Id": "AppLoading",
-        "Value": "\uB85C\uB529 \uC911...",
+        "Value": "\uC560\uD50C\uB9AC\uCF00\uC774\uC158 \uB85C\uB529 \uC911...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -352,7 +533,7 @@
       },
       {
         "Id": "SplashForm_License",
-        "Value": "\uC774 \uBC84\uC804\uC758 {HelperProgram.AppTitle}\uC740(\uB294) \uBE44\uC0C1\uC5C5\uC801 \uC6A9\uB3C4\uB85C\uB9CC \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Value": " ",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -367,12 +548,58 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "UnsupportedOSPrompt",
+        "Value": "\uC8C4\uC1A1\uD569\uB2C8\uB2E4. {HelperProgram.AppTitle}\uC740(\uB294) Windows 10 2004 / LTSC 2021 (build 19041) \uC774\uC0C1 \uBC84\uC804\uC5D0\uC11C \uC2E4\uD589\uD574\uC57C \uD569\uB2C8\uB2E4.\r\uC2DC\uC2A4\uD15C \uC5C5\uADF8\uB808\uC774\uB4DC\uB97C \uACE0\uB824\uD574 \uC8FC\uC138\uC694.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CorruptedInstallPrompt",
+        "Value": "\uC8C4\uC1A1\uD569\uB2C8\uB2E4. {HelperProgram.AppTitle} \uC124\uCE58\uAC00 \uC190\uC0C1\uB41C \uAC83 \uAC19\uC2B5\uB2C8\uB2E4. \uC560\uD50C\uB9AC\uCF00\uC774\uC158\uC744 \uB2E4\uC2DC \uC124\uCE58\uD574 \uBCF4\uC138\uC694.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PluginLoading",
+        "Value": "\uD50C\uB7EC\uADF8\uC778 \u0027{name}\u0027 \uB85C\uB529 \uC911...",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PostInit",
+        "Value": "\uC0AC\uC6A9\uC790 \uC778\uD130\uD398\uC774\uC2A4 \uCD08\uAE30\uD654 \uC911...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
       {
         "Id": "AppLoading",
-        "Value": "Chargement...",
+        "Value": "Chargement de l\u0027application...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -426,7 +653,7 @@
       },
       {
         "Id": "SplashForm_License",
-        "Value": "Cette version de {HelperProgram.AppTitle} est uniquement destin\u00E9e \u00E0 des fins non commerciales.",
+        "Value": " ",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -437,6 +664,52 @@
         "Id": "SplashForm_Version",
         "Value": "Version {HelperProgram.AppVersion}",
         "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "UnsupportedOSPrompt",
+        "Value": "Nous sommes d\u00E9sol\u00E9s, {HelperProgram.AppTitle} n\u00E9cessite Windows 10 2004 / LTSC 2021 (build 19041) ou une version plus r\u00E9cente pour fonctionner.\r\nVeuillez envisager de mettre \u00E0 niveau votre syst\u00E8me.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "CorruptedInstallPrompt",
+        "Value": "D\u00E9sol\u00E9, l\u0027installation de {HelperProgram.AppTitle} semble \u00EAtre corrompue. Veuillez essayer de r\u00E9installer l\u0027application.",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PluginLoading",
+        "Value": "Chargement du plugin \u00AB {name} \u00BB...",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "SplashForm_PostInit",
+        "Value": "Initialisation de l\u0027interface utilisateur...",
+        "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "Comment": "",

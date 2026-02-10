@@ -1,22 +1,26 @@
 using projectFrameCut.Shared;
 using projectFrameCut.SplashScreen;
+using System;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace projectFrameCut.Helper
 {
     public static class HelperProgram
     {
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
-        /// 
         static SplashForm splash;
         static LogForm log;
         [STAThread]
         public static void SplashMain()
         {
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
@@ -30,7 +34,7 @@ namespace projectFrameCut.Helper
         [STAThread]
         public static void CrashMain()
         {
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
 
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
@@ -44,7 +48,7 @@ namespace projectFrameCut.Helper
         [STAThread]
         public static void LogMain()
         {
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
 
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
 
@@ -58,17 +62,32 @@ namespace projectFrameCut.Helper
         }
 
         [STAThread]
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
-            if(args.Contains("--wait"))
+            if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041, 0))
+            {
+                var opt = MessageBox(IntPtr.Zero,
+                    SimpleLocalizerBaseGeneratedHelper.Localized.UnsupportedOSPrompt(),
+                    AppTitle,
+                    0x10 | 0x4);
+                if (opt == 1)
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "https://www.microsoft.com/en-us/software-download/windows11",
+                        UseShellExecute = true
+                    });
+                }
+                return;
+            }
+            if (args.Contains("--wait"))
             {
                 while (!Debugger.IsAttached)
                 {
                     Thread.Sleep(500);
                 }
-                return;
             }
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
 
             if (args.Length > 1)
             {
@@ -76,7 +95,10 @@ namespace projectFrameCut.Helper
                 switch (mode)
                 {
                     case "crashForm":
-                        ApplicationConfiguration.Initialize();
+                        SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
+                        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+                        Application.EnableVisualStyles();
+                        Application.SetCompatibleTextRenderingDefault(false);
                         Application.Run(new CrashForm());
                         return;
                     case "uriCallback":
@@ -84,12 +106,24 @@ namespace projectFrameCut.Helper
                         return;
                 }
             }
-            var proc = new ProcessStartInfo
+            if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.exe")))
             {
-                FileName = "projectFrameCut.exe",
-                Arguments = args.Length > 0 ? string.Join(" ", args.Select(a => $"\"{a}\"")) : "",
-            };  
-            Process.Start(proc);
+                var proc = new ProcessStartInfo
+                {
+                    FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.exe"),
+                    Arguments = args.Length > 0 ? string.Join(" ", args.Select(a => $"\"{a}\"")) : "",
+                };
+                Process.Start(proc);
+            }
+            else
+            {
+                _ = MessageBox(IntPtr.Zero,
+                     SimpleLocalizerBaseGeneratedHelper.Localized.CorruptedInstallPrompt(),
+                     AppTitle,
+                     0x10);
+                return;
+            }
+
 
 
         }
@@ -118,5 +152,17 @@ namespace projectFrameCut.Helper
         {
             Application.Exit();
         }
+
+        public static void UpdatePluginLoadingStat(string id)
+        {
+            splash?.Invoke(() => splash?.pluginStatLabel.Text = SimpleLocalizerBaseGeneratedHelper.Localized.SplashForm_PluginLoading(id));
+        }
+        public static void ResetPluginLoadingStat()
+        {
+            splash?.Invoke(() => splash?.pluginStatLabel.Text = SimpleLocalizerBaseGeneratedHelper.Localized.SplashForm_PostInit);
+        }
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
     }
 }

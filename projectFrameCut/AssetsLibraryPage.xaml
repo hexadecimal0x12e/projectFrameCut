@@ -29,11 +29,20 @@
         <Grid.GestureRecognizers>
             <DropGestureRecognizer AllowDrop="True" Drop="OnDrop" />
         </Grid.GestureRecognizers>
-        <Grid Grid.Row="0" Margin="8,0,8,8" Padding="0,0" ColumnDefinitions="*,*,Auto" >
-            <SearchBar Grid.Column="0"
+        <Grid Grid.Row="0" Margin="8,0,8,8" Padding="0,0" ColumnDefinitions="*,Auto" >
+            <HorizontalStackLayout>
+                <SearchBar Grid.Column="0"
                        x:Name="AssetSearchBar"
                        Placeholder="{l:Localized Key=AssetPage_Search}"
-                       TextChanged="AssetSearchBar_TextChanged" />  
+                       MinimumWidthRequest="{OnIdiom Phone=80, Default=350}"
+                       TextChanged="AssetSearchBar_TextChanged" />
+                <Picker x:Name="OrderOptionPicker" Grid.Column="1" MinimumWidthRequest="120" Margin="8,-5,-5,0" SelectedIndex="{Binding OrderOption}">
+                    <Picker.Items>
+                        <l:Localized Key="AssetPage_OrderBy_AddDate"/>
+                        <l:Localized Key="AssetPage_OrderBy_Name"/>
+                    </Picker.Items>
+                </Picker>
+            </HorizontalStackLayout>
             <Grid Grid.Column="2" ColumnDefinitions="Auto,Auto">
                 <Label Grid.Column="0" Text="{l:Localized Key=AssetPage_Source}" VerticalOptions="Center" HorizontalOptions="End" Margin="0,0,5,0" />
                 <Picker Grid.Column="1" x:Name="SourcePicker" HorizontalOptions="End" SelectedIndexChanged="SourcePicker_SelectedIndexChanged"/>
@@ -71,8 +80,8 @@
                                 <Image Source="{Binding ThumbnailPath}" Aspect="AspectFit" HeightRequest="130" WidthRequest="200"  Margin="0"/>
                             </Grid>
                             <Grid VerticalOptions="End" BackgroundColor="#112233" ColumnDefinitions="*,Auto" HeightRequest="20" Padding="4,0,4,0">
-                                <Label Grid.Column="0" Text="{Binding Name}" LineBreakMode="TailTruncation" HorizontalOptions="Start" VerticalOptions="Center" FontSize="12" Margin="0,0,6,0" MaxLines="1" />
-                                <Label Grid.Column="1" Text="{Binding DurationDisplay}" LineBreakMode="TailTruncation" HorizontalOptions="End" VerticalOptions="Center" FontSize="12" Margin="0" MaxLines="1" />
+                                <Label Grid.Column="0" Text="{Binding Name}" ToolTipProperties.Text="{Binding Name}" LineBreakMode="TailTruncation" HorizontalOptions="Start" VerticalOptions="Center" FontSize="12" Margin="0,0,6,0" MaxLines="1" ></Label>
+                                <Label Grid.Column="1" Text="{Binding DurationDisplay}" ToolTipProperties.Text="{Binding DurationDisplay}" LineBreakMode="TailTruncation" HorizontalOptions="End" VerticalOptions="Center" FontSize="12" Margin="0" MaxLines="1" />
                             </Grid>
                         </VerticalStackLayout>
                     </Border>

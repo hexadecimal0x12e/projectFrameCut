@@ -8,7 +8,7 @@
              x:DataType="vm:RenderPageViewModel"
              Title="RenderPage">
     <ContentPage.ToolbarItems>
-       <!-- <ToolbarItem Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/> -->
+        <!-- <ToolbarItem Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/> -->
 
     </ContentPage.ToolbarItems>
     <Grid>
@@ -17,6 +17,35 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <Grid Grid.Row="0" Grid.RowSpan="2" BackgroundColor="#80000000" IsVisible="{Binding IsCountdownVisible}" ZIndex="1000">
+            <Border VerticalOptions="Center" HorizontalOptions="Center" BackgroundColor="Grey" Padding="30">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="8"/>
+                </Border.StrokeShape>
+                <VerticalStackLayout Spacing="20" VerticalOptions="Center" HorizontalOptions="Center">
+                    <Label Text="{Binding CountdownText}" FontSize="18" TextColor="Black" HorizontalOptions="Center" HorizontalTextAlignment="Center"/>
+                    <Button Text="{l:Localized Key=_Cancel}" Clicked="CancelPostRenderCountdown_Clicked" WidthRequest="120" HorizontalOptions="Center"/>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <Grid x:Name="ScreenSaverOverlay" 
+              Grid.Row="0"
+              Grid.RowSpan="2" 
+              BackgroundColor="Black" 
+              IsVisible="False"
+              ZIndex="999">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Tapped="ScreenSaverOverlay_Tapped"/>
+            </Grid.GestureRecognizers>
+            <Label x:Name="HintLabel"
+                   Text="{l:Localized Key=RenderPage_ClickToShowUI}" 
+                   TextColor="Gray" 
+                   HorizontalOptions="Center" 
+                   VerticalOptions="Center" 
+                   HorizontalTextAlignment="Center"
+                   FontSize="Large"/>
+        </Grid>
         <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1*"/>
@@ -76,16 +105,27 @@
                        Keyboard="Text"
                        Text="{Binding BitDepth, Mode=TwoWay}" />
                 </HorizontalStackLayout>
+                <Picker
+                Margin="0,8,0,0"
+                x:Name="PostRenderActionPicker"
+                IsVisible="{OnPlatform WinUI=True,Default=False}"
+                Title="{l:Localized Key=RenderPage_PostRenderAction}"
+                ItemsSource="{Binding PostRenderActions}"
+                SelectedItem="{Binding SelectedPostRenderAction, Mode=TwoWay}" />
+
 
                 <Label x:Name="MaxParallelThreadsCountLabel"  Margin="0,8,0,0" Text="RenderPage_MaxParallelThreadsCount" />
                 <Slider x:Name="MaxParallelThreadsCount" Minimum="1" Maximum="64" ValueChanged="MaxParallelThreadsCount_ValueChanged" />
                 <Button Margin="0,8,0,8"  x:Name="StartRender" Text="{l:Localized Key=RenderPage_StartRender}" Clicked="StartRender_Clicked" />
                 <Editor x:Name="DraftJSONViewer" IsReadOnly="True" HeightRequest="250" IsVisible="False"></Editor>
+                <Button x:Name="ExportProjectJSONButton" Text="Export final timeline JSON" Clicked="ExportProjectJSONButton_Clicked" IsVisible="False"/>
+                <Button x:Name="PerformPostRenderActionNowTestButton" Text="Perform Post-Render Action Now (Test)" Clicked="PerformPostRenderActionNowTestButton_Clicked" IsVisible="False"/>
+
 
             </VerticalStackLayout>
 
             <VerticalStackLayout x:Name="PreviewLayout" IsVisible="False" Grid.Column="1" Padding="32,0">
-                <Label  Text="{l:Localized Key=RenderPage_PreviewLabel}"  Margin="0,8,0,8"/>
+                <Label Text="{l:Localized Key=RenderPage_PreviewLabel}"  Margin="0,12,0,8"/>
                 <Border StrokeThickness="5"  Padding="4" HorizontalOptions="Center" VerticalOptions="Start">
                     <Image x:Name="PreviewImage" Aspect="AspectFit" HorizontalOptions="Center" VerticalOptions="Center" WidthRequest="400" HeightRequest="200" />
                 </Border>
@@ -99,41 +139,19 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="2"/>
+                <RowDefinition Height="5"/>
             </Grid.RowDefinitions>
 
             <Button Grid.Row="0" Margin="0,8,0,8" IsVisible="True"  x:Name="CancelRender" Text="{l:Localized Key=RenderPage_CancelRender}" Clicked="CancelRender_Clicked" />
 
             <Label Grid.Row="1" x:Name="SubProgLabel" Text="{l:Localized Key=RenderPage_SubProg_None}" />
             <ProgressBar Grid.Row="2" x:Name="SubProgress" Margin="0,8,0,8" Progress="0" />
-            <Label Grid.Row="3" Text="{l:Localized Key=RenderPage_TotalProg}"  Margin="0,8,0,0"/>
 
-            <ProgressBar Grid.Row="4" x:Name="TotalProgress" Margin="0,8,0,8" Progress="0" />
-            <Label Grid.Row="5" Text="{l:Localized Key=RenderPage_LoggingLabel}"  Margin="0,8,0,0"/>
+            <Label Grid.Row="3" Text="{l:Localized Key=RenderPage_LoggingLabel}"  Margin="0,8,0,0"/>
 
-            <Editor Grid.Row="6" x:Name="LoggingBox" Margin="0,16,0,0" IsReadOnly="True"></Editor>
-            <VerticalStackLayout Grid.Row="7" x:Name="ComputeView" />
-        </Grid>
-
-        <Grid x:Name="ScreenSaverOverlay" 
-              Grid.Row="0"
-              Grid.RowSpan="2" 
-              BackgroundColor="Black" 
-              IsVisible="False"
-              ZIndex="999">
-            <Grid.GestureRecognizers>
-                <TapGestureRecognizer Tapped="ScreenSaverOverlay_Tapped"/>
-            </Grid.GestureRecognizers>
-            <Label x:Name="HintLabel"
-                   Text="{l:Localized Key=RenderPage_ClickToShowUI}" 
-                   TextColor="Gray" 
-                   HorizontalOptions="Center" 
-                   VerticalOptions="Center" 
-                   HorizontalTextAlignment="Center"
-                   FontSize="Large"/>
+            <Editor Grid.Row="4" x:Name="LoggingBox" Margin="0,16,0,0" IsReadOnly="True"></Editor>
+            <VerticalStackLayout Grid.Row="5" x:Name="ComputeView" Background="Black" />
         </Grid>
     </Grid>
 </ContentPage>

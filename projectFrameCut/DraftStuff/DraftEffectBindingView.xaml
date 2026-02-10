@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:tv="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.TabbedView;assembly=projectFrameCut.ApplicationAPIBase"
+             xmlns:l="clr-namespace:LocalizedResources"
+             x:Class="projectFrameCut.DraftStuff.DraftEffectBindingView">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition x:Name="TopRow" Height="*"/>
+            <RowDefinition x:Name="BottomRow" Height="{OnIdiom Phone=260, Default=0}"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition x:Name="SplitterColumn" Width="{OnIdiom Phone=0, Default=16}"/>
+            <ColumnDefinition x:Name="RightPanelColumn" Width="{OnIdiom Phone=0, Default=300}"/>
+        </Grid.ColumnDefinitions>
+        <!-- Node Canvas -->
+        <Grid Grid.Column="0" BackgroundColor="#1e1e1e">
+            <Grid.GestureRecognizers>
+                <PanGestureRecognizer PanUpdated="OnCanvasPanUpdated" />
+                <PinchGestureRecognizer PinchUpdated="OnCanvasPinchUpdated" />
+            </Grid.GestureRecognizers>
+
+            <!-- Connections Layer -->
+            <GraphicsView x:Name="ConnectionsLayer" 
+                          InputTransparent="True"
+                          VerticalOptions="Fill" 
+                          HorizontalOptions="Fill"/>
+
+            <!-- Nodes Layer -->
+            <AbsoluteLayout x:Name="NodesContainer" 
+                            InputTransparent="False">
+            </AbsoluteLayout>
+
+            <Label Text="Drag nodes to move. Drag between ports to connect. Double Click to disconnect. Pan empty space to move view." 
+                   x:Name="InfoLabel" TextColor="Gray" Margin="10" VerticalOptions="End" HorizontalOptions="Start" InputTransparent="True"/>
+            <HorizontalStackLayout HorizontalOptions="End" VerticalOptions="End" Margin="10,0,10,10">
+                <Button x:Name="ZoomInButton" Margin="4,0,4,0" Text="+"/>
+                <Button x:Name="ResetButton" Margin="4,0,4,0" Text="↺"/>
+                <Button x:Name="ZoomOutButton" Margin="4,0,4,0" Text="-"/>
+            </HorizontalStackLayout>
+        </Grid>
+
+        <!-- Splitter -->
+        <Grid Grid.Column="1" BackgroundColor="#801a1a1a" IsVisible="{OnIdiom Phone=False, Default=True}">
+            <Grid.GestureRecognizers>
+                <PanGestureRecognizer PanUpdated="OnSplitterPanUpdated" />
+            </Grid.GestureRecognizers>
+            <Button x:Name="TogglePanelButton" Text="&lt;" WidthRequest="4" HeightRequest="4"
+                    HorizontalOptions="Center" VerticalOptions="Center" Clicked="OnTogglePanelClicked">
+                <Button.GestureRecognizers>
+                    <PanGestureRecognizer PanUpdated="OnSplitterPanUpdated" />
+                </Button.GestureRecognizers>
+            </Button>
+        </Grid>
+
+        <!-- Properties Panel -->
+        <Grid x:Name="RightPanel" Grid.Column="{OnIdiom Phone=0, Default=2}" Grid.ColumnSpan="{OnIdiom Phone=3, Default=1}" Grid.Row="{OnIdiom Phone=1, Default=0}" RowDefinitions="*, Auto" BackgroundColor="#252526">
+
+            <tv:TabbedView Grid.Row="0" x:Name="RightTabView">
+                <tv:TabbedViewItem Header="{l:Localized Key=PropertyPanel}">
+                    <ScrollView Padding="10">
+                        <VerticalStackLayout x:Name="PropertiesPanel" Spacing="10">
+                            <Label HorizontalOptions="Center" VerticalOptions="Center" Text="{l:Localized Key=DraftPage_PropertyPanel_SelectToContinue}"/>
+                        </VerticalStackLayout>
+                    </ScrollView>
+                </tv:TabbedViewItem>
+                <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_EffectBindView_AddEffect}">
+                    <ScrollView Padding="10">
+                        <VerticalStackLayout x:Name="AddEffectsPanel" Spacing="10"/>
+                    </ScrollView>
+                </tv:TabbedViewItem>
+            </tv:TabbedView>
+
+
+        </Grid>
+    </Grid>
+</ContentView>

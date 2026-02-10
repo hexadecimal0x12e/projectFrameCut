@@ -2,6 +2,7 @@
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.Sources;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -17,6 +18,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
     public interface IPluginBase
     {
         /// <summary>
+        /// Get the current plugin API version.
+        /// </summary>
+        public const int CurrentPluginAPIVersion = 2;
+
+        /// <summary>
         /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
         /// </summary>
         public string PluginID { get; }
@@ -24,6 +30,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// The supported API version of the plugin.
         /// </summary>
         public int PluginAPIVersion { get; }
+        /// <summary>
+        /// Get the minor version of plugin. Default to 0.
+        /// </summary>
+        public virtual int PluginAPIMinorVersion => 0;
         /// <summary>
         /// The plugin's name.
         /// </summary>
@@ -34,6 +44,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Plugin's author.
         /// </summary>
+        /// <remarks>
+        /// for this field, it's localized key is '_PluginBase_Author_'.
+        /// </remarks>
         public string Author { get; }
         /// <summary>
         /// Description of the plugin.
@@ -56,6 +69,16 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public string? PublishingUrl { get; }
 
         /// <summary>
+        /// Get the properties of the plugin.
+        /// </summary>
+        /// <remarks>
+        /// Default implementation returns an empty dictionary, override it to provide actual properties.
+        /// </remarks>
+        public virtual IReadOnlyDictionary<string, string> Properties => blankProperties;
+
+        private static Dictionary<string, string> blankProperties = new();
+
+        /// <summary>
         /// Represents the localization strings provided by the plugin.
         /// </summary>
         /// <remarks>
@@ -63,7 +86,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// The first key of <see cref="LocalizationProvider"/> is the default localization.
         /// </remarks>
         public Dictionary<string, Dictionary<string, string>> LocalizationProvider { get; }
- 
+
         /// <summary>
         /// Create an IClip instance from the given file path and JSON data.
         /// </summary>
@@ -80,29 +103,52 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// </remarks>
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
 
-      
+
 
         /// <summary>
-        /// Create an IEffect instance from the given JSON structure.
+        /// Create an blank IEffect instance from the given id.
         /// </summary>
+        /// <remarks>
+        /// Although we have <see cref="IEffectFactory"/>, but you STILL need to register ONE implementation of IEffect here for each effect type.
+        /// </remarks>
         public Dictionary<string, Func<IEffect>> EffectProvider { get; }
+
         /// <summary>
-        /// Create an IEffect instance from the given JSON structure.
+        /// Create an <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
+        /// Key is effect type name (e.g. "Resize").
+        /// </summary>
+        /// 
+        public Dictionary<string, IEffectFactory> EffectFactoryProvider { get; }
+        /// <summary>
+        /// Create an blank IEffect instance from the given id.
         /// </summary>
         public Dictionary<string, Func<IEffect>> ContinuousEffectProvider { get; }
+
         /// <summary>
-        /// Create an IEffect instance from the given JSON structure.
+        /// Create a continuous <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
         /// </summary>
-        public Dictionary<string, Func<IEffect>> VariableArgumentEffectProvider { get; }
+        public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider { get; }
+
+        /// <summary>
+        /// Create an blank IEffect instance from the given id.
+        /// </summary>
+        public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider { get; }
+
+        /// <summary>
+        /// Create a variable-argument <see cref="IEffect"/> instance via <see cref="IEffectFactory"/>.
+        /// </summary>
+        public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider { get; }
+
         /// <summary>
         /// Create an IMixture instance from the given JSON structure.
         /// </summary>
         public Dictionary<string, Func<IMixture>> MixtureProvider { get; }
+
         /// <summary>
         /// Create an IComputer instance from the given JSON structure.
         /// </summary>
         public Dictionary<string, Func<IComputer>> ComputerProvider { get; }
-    
+
         /// <summary>
         /// Create an IVideoSource instance from the given file path.
         /// </summary>
@@ -110,6 +156,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// When the argument is null or empty when creating a IVideoSource, the provider should return an instance that can be used to check for preferred extensions.
         /// </remarks>
         public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider { get; }
+
         /// <summary>
         /// Create an IAudioSource instance from the given file path.
         /// </summary>
@@ -118,6 +165,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// </remarks>
         public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider { get; }
 
+        /// <summary>
+        /// Create an IVideoWriter instance from the given file path.
+        /// </summary>
         public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider { get; }
 
 
@@ -125,7 +175,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Get or set the configuration of the plugin.
         /// </summary>
         /// <remarks>
-        /// The default implementation is the default value of this plugin.
+        /// The default implementation is the default settings value of this plugin.
         /// </remarks>
         public Dictionary<string, string> Configuration { get; set; }
 
@@ -133,10 +183,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Represents the display strings for each configuration key.
         /// </summary>
         /// <remarks>
-        /// Each key represents the locate code (like 'en-US'), and it's values represents the mapping of the setting strings. 
+        /// Same as <see cref="LocalizationProvider"/>,
+        /// each key represents the locate code (like 'en-US'), and it's values represents the mapping of the setting strings. 
         /// For each locate's mapping, the key is the setting key, and the value is the display name.
         /// </remarks>
-        public Dictionary<string, Dictionary<string,string>> ConfigurationDisplayString { get; }
+        public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString { get; }
 
         /// <summary>
         /// Read a localization item from the provider.
@@ -149,14 +200,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <returns>string if key exists; null if key not exist.</returns>
         public virtual string? ReadLocalizationItem(string key, string locate)
         {
-            if(LocalizationProvider.TryGetValue(locate, out var pair))
+            if (LocalizationProvider.TryGetValue(locate, out var pair))
             {
                 if (pair.TryGetValue(key, out var result)) return result;
             }
             else
             {
                 if (!LocalizationProvider.Any()) return null;
-                if(LocalizationProvider.First().Value.TryGetValue(key, out var result)) return result;
+                if (LocalizationProvider.First().Value.TryGetValue(key, out var result)) return result;
             }
             return null;
         }
@@ -183,45 +234,80 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <param name="stru">the source structure</param>
         /// <returns>the effect</returns>
         /// <exception cref="NotSupportedException"></exception>
-        public virtual IEffect EffectCreator(EffectAndMixtureJSONStructure stru)
+        public virtual IEffect EffectCreator(EffectAndMixtureJSONStructure stru, EffectImplementType implementType = EffectImplementType.NotSpecified)
         {
-            if (EffectProvider.TryGetValue(stru.TypeName, out var creator))
+            static IEffect ApplyCommonProperties(IEffect effect, EffectAndMixtureJSONStructure s)
             {
-                var blankInstance = creator();
-                var instance = blankInstance.WithParameters(EffectArgsHelper.ConvertElementDictToObjectDict(stru.Parameters ?? new Dictionary<string, object>(), blankInstance.ParametersType) ?? new Dictionary<string, object>());
-                instance.Name = stru.Name;
-                instance.RelativeWidth = stru.RelativeWidth;
-                instance.RelativeHeight = stru.RelativeHeight;
-                instance.Enabled = stru.Enabled;
-                instance.Initialize();
-                return instance;
+                effect.Name = s.Name;
+                effect.RelativeWidth = s.RelativeWidth;
+                effect.RelativeHeight = s.RelativeHeight;
+                effect.Enabled = s.Enabled;
+                effect.BindedEffectGroupID = s.BindedEffectGroupID;
+
+                // Restore IBindableArgumentEffect properties
+                if (effect is IBindableArgumentEffect bindableEffect)
+                {
+                    if (!string.IsNullOrEmpty(s.Id))
+                    {
+                        bindableEffect.Id = s.Id;
+                    }
+                    if (!string.IsNullOrEmpty(s.BindedInputID))
+                    {
+                        bindableEffect.BindedArgumentProviderID = s.BindedInputID;
+                    }
+                }
+
+                return effect;
             }
-            else if (ContinuousEffectProvider.TryGetValue(stru.TypeName, out var creator1))
+
+            static Dictionary<string, object> ConvertParams(Dictionary<string, object>? source, Dictionary<string, string> parameterTypes)
             {
-                var blankInstance = creator1();
-                var instance = blankInstance.WithParameters(EffectArgsHelper.ConvertElementDictToObjectDict(stru.Parameters ?? new Dictionary<string, object>(), blankInstance.ParametersType) ?? new Dictionary<string, object>());
-                instance.Name = stru.Name;
-                instance.RelativeWidth = stru.RelativeWidth;
-                instance.RelativeHeight = stru.RelativeHeight;
-                instance.Enabled = stru.Enabled;
-                instance.Initialize();
-                return instance;
+                source ??= new Dictionary<string, object>();
+                return EffectArgsHelper.ConvertElementDictToObjectDict(source, parameterTypes);
             }
-            else if (VariableArgumentEffectProvider.TryGetValue(stru.TypeName, out var creator2))
+
+            if (stru.IsContinuousEffect)
             {
-                var blankInstance = creator2();
-                var instance = blankInstance.WithParameters(EffectArgsHelper.ConvertElementDictToObjectDict(stru.Parameters ?? new Dictionary<string, object>(), blankInstance.ParametersType) ?? new Dictionary<string, object>());
-                instance.Name = stru.Name;
-                instance.RelativeWidth = stru.RelativeWidth;
-                instance.RelativeHeight = stru.RelativeHeight;
-                instance.Enabled = stru.Enabled;
-                instance.Initialize();
-                return instance;
+                if (ContinuousEffectFactoryProvider.TryGetValue(stru.TypeName, out var cFactory))
+                {
+                    if (implementType != EffectImplementType.NotSpecified && cFactory.SupportsImplementTypes.Contains(implementType))
+                    {
+                        return ApplyCommonProperties(cFactory.Build(implementType, ConvertParams(stru.Parameters, cFactory.ParametersType)), stru);
+                    }
+                    return ApplyCommonProperties(cFactory.BuildContinuousWithDefaultType(ConvertParams(stru.Parameters, cFactory.ParametersType)), stru);
+                }
+            }
+            else if (stru.IsVariableArgumentEffect)
+            {
+                if (BindableArgumentEffectFactoryProvider.TryGetValue(stru.TypeName, out var vFactory))
+                {
+                    if (vFactory is IBindableEffectFactory bef)
+                    {
+                        if (implementType != EffectImplementType.NotSpecified && bef.SupportsImplementTypes.Contains(implementType))
+                        {
+                            return ApplyCommonProperties(bef.Build(implementType, stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, vFactory.ParametersType)), stru);
+                        }
+                        return ApplyCommonProperties(bef.BuildWithDefaultType(stru.Id, stru.BindedInputID, stru.BindedInputIDs, ConvertParams(stru.Parameters, vFactory.ParametersType)), stru);
+                    }
+                    else
+                    {
+                        throw new InvalidDataException($"{stru.Name} is marked as a variable argument effect but does not implement IBindableEffectFactory.");
+                    }
+                }
             }
             else
             {
-                throw new NotSupportedException($"No suitable effect found for the given type '{stru.TypeName}'.");
+                if (EffectFactoryProvider.TryGetValue(stru.TypeName, out var factory))
+                {
+                    if (implementType != EffectImplementType.NotSpecified && factory.SupportsImplementTypes.Contains(implementType))
+                    {
+                        return ApplyCommonProperties(factory.Build(implementType, ConvertParams(stru.Parameters, factory.ParametersType)), stru);
+                    }
+                    return ApplyCommonProperties(factory.BuildWithDefaultType(ConvertParams(stru.Parameters, factory.ParametersType)), stru);
+                }
             }
+
+            throw new NotSupportedException($"No suitable effect found for the given type '{stru.TypeName}'.");
         }
         /// <summary>
         /// Create a VideoSource instance from the file.
@@ -332,16 +418,18 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 throw new NotSupportedException($"No suitable computer found for the given type '{computerType}'.");
             }
         }
+
         /// <summary>
         /// Invoked when the plugin is loaded. Return true if loaded successfully, false otherwise.
         /// </summary>
-        /// <param name="FailedReason">The reason for failure if loading was unsuccessful.</param>
+        /// <param name="FailedReason">The reason for failure if loading was unsuccessful. Will be displayed in UI</param>
         /// <returns>whether the plugin was loaded successfully</returns>
         public virtual bool OnLoaded(out string FailedReason)
         {
             FailedReason = string.Empty;
             return true;
         }
+
         /// <summary>
         /// Called when a project is loaded.
         /// </summary>
@@ -371,14 +459,66 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         }
 
         /// <summary>
-        /// Called when a command is triggered.
+        /// Called when the application is closing, or this plugin is being unloaded.
         /// </summary>
-        public virtual void OnCommandCalled(string command, IClip? sender)
+        public virtual void OnClosing()
         {
 
         }
+
+        /// <summary>
+        /// Represents the messaging queue provided by the host application.
+        /// </summary>
+        [Obsolete("Use GlobalPluginHelper.MessagingService instead.", false)]
+        public IMessagingService MessagingQueue { get; set; }
     }
 
+    public static class GlobalPluginHelper
+    {
+        /// <summary>
+        /// The global getter.
+        /// </summary>
+        /// <remarks>
+        /// Don't set this property directly, it will cause a exception.
+        /// </remarks>
+        public static Func<string, IPluginBase?>? PluginGetter
+        {
+            get;
+            set
+            {
+                if (PluginGetter is not null)
+                {
+                    throw new InvalidOperationException("PluginGetter is already initialized.");
+                }
+                field = value;
+            }
+        } = null;
+
+        public static IMessagingService? MessagingService
+        {
+            get;
+            set
+            {
+                if (MessagingService is not null)
+                {
+                    throw new InvalidOperationException("MessagingService is already initialized.");
+                }
+                field = value;
+            }
+        } = null;
+
+        /// <summary>
+        /// Get the specific plugin by its ID.
+        /// </summary>
+        public static IPluginBase GetPlugin(string pluginID)
+        {
+            if (PluginGetter is null) throw new InvalidOperationException("PluginGetter is not initialized.");
+            return PluginGetter(pluginID) ?? throw new KeyNotFoundException($"Plugin with ID '{pluginID}' maybe not found.");
+        }
+
+    }
+
+#pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
 
     public class PluginMetadata
     {
@@ -437,28 +577,33 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                     providedContent.AppendLine($"- {item.Key}");
                 }
             }
-            if (pluginBase.EffectProvider.Any())
+            var effectTypes = pluginBase.EffectFactoryProvider.Keys.Concat(pluginBase.EffectProvider.Keys).Distinct();
+            if (effectTypes.Any())
             {
                 providedContent.AppendLine("Effect:");
-                foreach (var item in pluginBase.EffectProvider)
+                foreach (var key in effectTypes)
                 {
-                    providedContent.AppendLine($"- {item.Key}");
+                    providedContent.AppendLine($"- {key}");
                 }
             }
-            if (pluginBase.ContinuousEffectProvider.Any())
+
+            var continuousEffectTypes = pluginBase.ContinuousEffectFactoryProvider.Keys.Concat(pluginBase.ContinuousEffectProvider.Keys).Distinct();
+            if (continuousEffectTypes.Any())
             {
                 providedContent.AppendLine("ContinuousEffect:");
-                foreach (var item in pluginBase.ContinuousEffectProvider)
+                foreach (var key in continuousEffectTypes)
                 {
-                    providedContent.AppendLine($"- {item.Key}");
+                    providedContent.AppendLine($"- {key}");
                 }
             }
-            if (pluginBase.VariableArgumentEffectProvider.Any())
+
+            var variableArgumentEffectTypes = pluginBase.BindableArgumentEffectFactoryProvider.Keys.Concat(pluginBase.BindableArgumentEffectProvider.Keys).Distinct();
+            if (variableArgumentEffectTypes.Any())
             {
                 providedContent.AppendLine("VariableArgumentEffect:");
-                foreach (var item in pluginBase.VariableArgumentEffectProvider)
+                foreach (var key in variableArgumentEffectTypes)
                 {
-                    providedContent.AppendLine($"- {item.Key}");
+                    providedContent.AppendLine($"- {key}");
                 }
             }
 
@@ -489,5 +634,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
             return providedContent.ToString();
         }
     }
+#pragma warning restore CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
 
 }

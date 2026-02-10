@@ -6,22 +6,22 @@ using System.Text;
 using System.Threading.Tasks;
 
 
-public static class SimpleLocalizer
+public static class SimpleLocalizer_Helper
 {
     /// <summary>
     /// Initialize the Localizer
     /// </summary>
     /// <param name="locateCode">The locate Name set for this locate. Optional, default to the <code>System.Globalization.CultureInfo.CurrentUICulture.Name</code></param>
     /// <exception cref="InvalidOperationException">no any locate available</exception>
-    public static ISimpleLocalizerBase Init(string? locateCode = null)
+    public static ISimpleLocalizerBase_Helper Init(string? locateCode = null)
     { 
         if (locateCode == null)
         {
             locateCode = System.Globalization.CultureInfo.CurrentUICulture.Name;
         }
-        if (!ISimpleLocalizerBase.GetMapping().TryGetValue(locateCode, out var localizer))
+        if (!ISimpleLocalizerBase_Helper.GetMapping().TryGetValue(locateCode, out var localizer))
         {
-            localizer = ISimpleLocalizerBase.GetMapping().First().Value;
+            localizer = ISimpleLocalizerBase_Helper.GetMapping().First().Value;
             if(localizer is null) throw new InvalidOperationException("Can't find any localizer. Make sure you initialized the project correctly.");
             else IsFallbackMatchedLocalization = true;
         }
@@ -45,9 +45,9 @@ public static class SimpleLocalizer
     /// </summary>
     /// <param name="locateCode">The locate Name set for this locate.</code></param>
     /// <exception cref="InvalidOperationException">no any locate available</exception>
-    public static ISimpleLocalizerBase GetSpecificLocalizer(string locateCode)
+    public static ISimpleLocalizerBase_Helper GetSpecificLocalizer(string locateCode)
     {
-        if (!ISimpleLocalizerBase.GetMapping().TryGetValue(locateCode, out var localizer))
+        if (!ISimpleLocalizerBase_Helper.GetMapping().TryGetValue(locateCode, out var localizer))
         {
             if (localizer is null) throw new KeyNotFoundException($"Can't find localizer '{locateCode}'.");
         }

@@ -4,6 +4,7 @@ using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Runtime.InteropServices;
 
 namespace projectFrameCut.Render.Rendering
@@ -15,6 +16,12 @@ namespace projectFrameCut.Render.Rendering
         uint index;
         bool running = true, stopped = false;
         ConcurrentDictionary<uint, IPicture> Cache = new();
+
+        private int _totalFramesCount = 0;
+        private int _writtenFramesCount = 0;
+
+        public int TotalFramesCount => _totalFramesCount;
+        public int WrittenFramesCount => _writtenFramesCount;
 
         /// <summary>
         /// When it's true, adding a frame with an existing index will throw an exception, 
@@ -42,6 +49,11 @@ namespace projectFrameCut.Render.Rendering
         /// Path of the preview image.
         /// </summary>
         public string? PreviewPath { get; set; } = null;
+
+        /// <summary>
+        /// Control whether output which frame has written.
+        /// </summary>
+        public bool LogStat { get; set; }
 
         public event EventHandler<IPicture>? OnPreviewGenerated;
         /// <summary>
@@ -93,7 +105,10 @@ namespace projectFrameCut.Render.Rendering
         {
             if (frame == null) throw new ArgumentNullException(nameof(frame));
             if (frame.Width != Width || frame.Height != Height)
-                throw new ArgumentException($"The result ({frame.filePath})'s size {frame.Width}*{frame.Height} is different from original size ({Width}*{Height}). Please check the source.");
+                throw new ArgumentException($"The result ({frame.filePath})'s size {frame.Width}*{frame.Height} is different from original size ({Width}*{Height}). Please check the source.")
+                {
+                    Data = { { "PictureObject", frame }, { "ProcessStack", frame.ProcessStack } }
+                };
 
             if (index > Duration)
             {
@@ -105,7 +120,10 @@ namespace projectFrameCut.Render.Rendering
             {
                 if (StrictMode)
                 {
-                    throw new InvalidOperationException($"Frame #{index} has already been added.");
+                    throw new InvalidOperationException($"Frame #{index} has already been added.")
+                    {
+                        Data = { { "PictureObject", frame }, { "ProcessStack", frame.ProcessStack } }
+                    };
                 }
                 else
                 {
@@ -114,14 +132,22 @@ namespace projectFrameCut.Render.Rendering
                     return;
                 }
             }
+
+            Interlocked.Increment(ref _totalFramesCount);
+
             if (!BlockWrite)
             {
-                Cache.AddOrUpdate(index, frame, (_, _) => throw new InvalidOperationException($"Frame #{index} has already been added."));               
+                Cache.AddOrUpdate(index, frame, 
+                    (_, _) => throw new InvalidOperationException($"Frame #{index} has already been added.")
+                    {
+                        Data = { { "PictureObject", frame }, { "ProcessStack", frame.ProcessStack } }
+                    }
+                    );               
             }
             else
             {
                 builder.Append(frame);
-                Log($"[VideoBuilder] Frame #{index} added.");
+                if (LogStat) Log($"[VideoBuilder] Frame #{index} added.");
             }
 
             if (EnablePreview && ++countSinceLastPreview >= minFrameCountToGeneratePreview)
@@ -157,30 +183,21 @@ namespace projectFrameCut.Render.Rendering
             {
                 Log($"[VideoBuilder] Successfully started writer for {outputPath}");
 
-                do
+                while (running) 
                 {
-                    if (Cache.Count == 0)
-                    {
-                        Thread.Sleep(100);
-                        continue;
-                    }
-
                     if (Cache.ContainsKey(index))
                     {
                         builder.Append(Cache.TryRemove(index, out var f) ? f : throw new KeyNotFoundException());
                         FramePendedToWrite[index] = true;
+                        Interlocked.Increment(ref _writtenFramesCount);
                         index++;
 
                         if (DisposeFrameAfterEachWrite && !f.Flag.HasFlag(IPicture.PictureFlag.NoDisposeAfterWrite)) f.Dispose();
                         if (DoGCAfterEachWrite) GC.Collect();
-                        Log($"[VideoBuilder] Frame #{index} wrote.");
+                        if (LogStat) Log($"[VideoBuilder] Frame #{index} wrote.");
                     }
-                    else
-                    {
-                        Thread.Sleep(200);
-                    }
+
                 }
-                while (running);
                 Thread.Sleep(50);
                 stopped = true;
             })
@@ -203,8 +220,6 @@ namespace projectFrameCut.Render.Rendering
 
             while (Cache.Count > 0 || missingFrames.Count > 0)
             {
-                Console.Error.WriteLine($"@@{currentIndex},{totalFrames}");
-
                 if (Cache.ContainsKey(currentIndex))
                 {
                     builder.Append(Cache.TryRemove(currentIndex, out var f) ? f : throw new KeyNotFoundException());

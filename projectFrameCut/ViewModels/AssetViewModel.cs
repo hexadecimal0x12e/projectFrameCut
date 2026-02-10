@@ -1,15 +1,16 @@
-﻿using System;
+﻿using Microsoft.Maui.Controls;
+using Microsoft.Maui.Storage;
+using projectFrameCut.Asset;
+using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Services;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using System.Windows.Input;
-using Microsoft.Maui.Controls;
-using Microsoft.Maui.Storage;
-using projectFrameCut.Asset;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using projectFrameCut.Render.RenderAPIBase.Project;
+using System.Windows.Input;
 
 namespace projectFrameCut.ViewModels
 {
@@ -27,6 +28,21 @@ namespace projectFrameCut.ViewModels
                 if (_searchText != value)
                 {
                     _searchText = value;
+                    OnPropertyChanged();
+                    FilterAssets();
+                }
+            }
+        }
+
+        private int _orderOption = 0; // 0: By add date, 1: By name
+        public int OrderOption
+        {
+            get => _orderOption;
+            set
+            {
+                if (_orderOption != value)
+                {
+                    _orderOption = value;
                     OnPropertyChanged();
                     FilterAssets();
                 }
@@ -71,23 +87,48 @@ namespace projectFrameCut.ViewModels
             FilterAssets();
         }
 
-        public void FilterAssets()
+        public async void FilterAssets()
         {
             Assets.Clear();
             var query = _searchText?.Trim() ?? string.Empty;
 
-            IEnumerable<AssetItem> filtered;
+            List<AssetItem> filtered = new();
             if (string.IsNullOrEmpty(query))
             {
-                filtered = _allAssets;
+                filtered = _allAssets.ToList();
             }
             else
             {
-                filtered = _allAssets.Where(a =>
-                    (a.Name?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (a.Path?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (a.AssetType.ToString().Contains(query, StringComparison.OrdinalIgnoreCase))
-                );
+                var inputPron = (await TextHelper.GetHowToPronuce(SearchText, default)).ToLower();
+                var inputPronInLocate = ((await TextHelper.GetHowToPronuce(SearchText, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
+                var searchLower = SearchText.ToLower();
+
+
+                foreach (var asset in _allAssets)
+                {
+                    var assetPron = (await TextHelper.GetHowToPronuce(asset.Name, default)).ToLower();
+                    var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
+                    if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
+                    {
+                        filtered.Add(asset);
+                    }
+                }
+            }
+
+            // 应用排序
+            if (OrderOption == 0)
+            {
+                // By add date - 按创建时间降序排序
+                filtered = filtered.OrderByDescending(a => a.CreatedAt).ToList();
+            }
+            else if (OrderOption == 1)
+            {
+                // By name - 按名称发音排序并按语言分组
+                filtered = filtered.OrderBy(a => TextHelper.GetPronounceForOrdering(a.Name).Result)
+                                 .GroupBy(c => TextHelper.DetectTextLanguage(c.Name))
+                                 .OrderByDescending(g => g.Count())
+                                 .SelectMany(c => c)
+                                 .ToList();
             }
 
             foreach (var asset in filtered)

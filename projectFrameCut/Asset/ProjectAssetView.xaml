@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:projectFrameCut.Asset"
+             xmlns:tv="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.TabbedView;assembly=projectFrameCut.ApplicationAPIBase"
+             xmlns:l="clr-namespace:LocalizedResources"
+             x:Class="projectFrameCut.Asset.ProjectAssetView">
+    <tv:TabbedView>
+        <tv:TabbedView.HeaderRightContent>
+            <HorizontalStackLayout>
+                <Picker x:Name="OrderOptionPicker" WidthRequest="120" Margin="0,-5,-5,0" SelectedIndex="{Binding OrderOption}">
+                    <Picker.Items>
+                        <l:Localized Key="AssetPage_OrderBy_AddDate"/>
+                        <l:Localized Key="AssetPage_OrderBy_Name"/>
+                    </Picker.Items>
+                </Picker>
+                <Entry Placeholder="{l:Localized Key=AssetPage_Search}" 
+                   Text="{Binding SearchText}"
+                   PlaceholderColor="White" 
+                   BackgroundColor="Gray" 
+                   WidthRequest="250" 
+                   Margin="0,-5,-5,0"
+                   ClearButtonVisibility="WhileEditing" />
+            </HorizontalStackLayout>
+        </tv:TabbedView.HeaderRightContent>
+        <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}">
+            <VerticalStackLayout Spacing="10" Padding="10">
+                <!-- 本地素材 -->
+                <CollectionView ItemsSource="{Binding FilteredLocalAssets}"
+                           SelectionMode="None"
+                           Margin="4,0,4,0">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout x:Name="AssetsGridLayout" Orientation="Vertical" Span="6" VerticalItemSpacing="5" HorizontalItemSpacing="5" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="local:AssetItemViewModel">
+                            <Border StrokeThickness="1" 
+                                    Stroke="{Binding BackgroundColor}"
+                                    BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2A2A2A}" 
+                                    HeightRequest="160" 
+                                    WidthRequest="180"
+                                    StrokeShape="RoundRectangle 8">
+                                <Grid RowDefinitions="*,Auto,Auto">
+                                    <!-- 缩略图 -->
+                                    <Image Grid.Row="0"
+                                           Source="{Binding ThumbnailPath}" 
+                                           Aspect="AspectFit" 
+                                           Margin="4"
+                                           IsVisible="{Binding HasThumbnail}"/>
+
+                                    <!-- 名称和操作按钮 -->
+                                    <Grid Grid.Row="1" 
+                                          BackgroundColor="{Binding BackgroundColor}" 
+                                          ColumnDefinitions="*,Auto" 
+                                          Padding="6,4">
+                                        <Label Text="{Binding DisplayLabel}" 
+                                               LineBreakMode="TailTruncation" 
+                                               HorizontalOptions="Start"
+                                               FontSize="12" 
+                                               MaxLines="1"
+                                               ToolTipProperties.Text="{Binding Name}"
+                                               Grid.Column="0"
+                                               VerticalOptions="Center"/>
+                                        <Label Text="{Binding DurationDisplay}" 
+                                               HorizontalOptions="End"
+                                               LineBreakMode="TailTruncation" 
+                                               FontSize="12" 
+                                               MaxLines="1"
+                                               ToolTipProperties.Text="{Binding DurationDisplay}"
+                                               Grid.Column="1"
+                                               VerticalOptions="Center"/>
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnAssetClipTapped"/>
+                                        </Grid.GestureRecognizers>
+                                    </Grid>
+
+                                    <!-- 操作按钮栏 -->
+                                    <Grid Grid.Row="2" 
+                                          BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333333}" 
+                                          ColumnDefinitions="*,*" 
+                                          Padding="4">
+                                        <Button Grid.Column="0"
+                                                Text="➕" 
+                                                FontSize="16"
+                                                Padding="4"
+                                                CornerRadius="4"
+                                                BackgroundColor="Green"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type local:ProjectAssetView}}, Path=BindingContext.AddToTrackCommand}"
+                                                CommandParameter="{Binding .}"/>
+                                        <Button Grid.Column="1"
+                                                Text="🗑️" 
+                                                FontSize="16"
+                                                Padding="4"
+                                                CornerRadius="4"
+                                                BackgroundColor="Red"
+                                                IsVisible="{Binding IsLocal}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type local:ProjectAssetView}}, Path=BindingContext.RemoveAssetCommand}"
+                                                CommandParameter="{Binding .}"/>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <!-- 分隔线 -->
+                <BoxView HeightRequest="1" 
+                     BackgroundColor="Gray" 
+                     Margin="0,15,0,5"/>
+
+
+
+                <!-- 添加素材按钮 -->
+                <Button Text="{Binding AddButtonText}" 
+                    FontSize="32"
+                    Margin="0,20,0,0"
+                    Command="{Binding AddAssetCommand}"/>
+
+                <!-- 底部占位 -->
+                <BoxView WidthRequest="50" 
+                     HeightRequest="250" 
+                     Color="Transparent"/>
+            </VerticalStackLayout>
+        </tv:TabbedViewItem>
+
+        <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_SharedAssets}">
+            <VerticalStackLayout Spacing="10" Padding="10">
+                <CollectionView ItemsSource="{Binding FilteredSharedAssets}"
+                           SelectionMode="None"
+                           Margin="4,0,4,0">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="local:AssetItemViewModel">
+                            <Border StrokeThickness="1" 
+                                    Stroke="{Binding BackgroundColor}"
+                                    BackgroundColor="{AppThemeBinding Light=#F5F5F5, Dark=#2A2A2A}" 
+                                    HeightRequest="160" 
+                                    WidthRequest="180"
+                                    StrokeShape="RoundRectangle 8">
+                                <Grid RowDefinitions="*,Auto,Auto">
+                                    <!-- 缩略图 -->
+                                    <Image Grid.Row="0"
+                                           Source="{Binding ThumbnailPath}" 
+                                           Aspect="AspectFit" 
+                                           Margin="4"
+                                           IsVisible="{Binding HasThumbnail}"/>
+
+                                    <!-- 名称 -->
+                                    <Grid Grid.Row="1" 
+                                          BackgroundColor="{Binding BackgroundColor}" 
+                                          ColumnDefinitions="*,Auto" 
+                                          Padding="6,4">
+                                        <Label Text="{Binding Name}" 
+                                               LineBreakMode="TailTruncation" 
+                                               HorizontalOptions="Start"
+                                               FontSize="12" 
+                                               MaxLines="1"
+                                               ToolTipProperties.Text="{Binding DisplayLabel}"
+                                               Grid.Column="0"
+                                               VerticalOptions="Center"/>
+                                        <Label Text="{Binding DurationDisplay}" 
+                                               HorizontalOptions="End"
+                                               LineBreakMode="TailTruncation" 
+                                               FontSize="12" 
+                                               MaxLines="1"
+                                               ToolTipProperties.Text="{Binding DurationDisplay}"
+                                               Grid.Column="1"
+                                               VerticalOptions="Center"/>
+                                        <Grid.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnAssetClipTapped"/>
+                                        </Grid.GestureRecognizers>
+                                    </Grid>
+
+                                    <!-- 添加按钮 -->
+                                    <Grid Grid.Row="2" 
+                                          BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333333}" 
+                                          Padding="4">
+                                        <Button Text="➕" 
+                                                FontSize="16"
+                                                Padding="4"
+                                                CornerRadius="4"
+                                                BackgroundColor="Green"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type local:ProjectAssetView}}, Path=BindingContext.AddToTrackCommand}"
+                                                CommandParameter="{Binding .}"/>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </tv:TabbedViewItem>
+    </tv:TabbedView>
+</ContentView>

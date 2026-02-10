@@ -22,7 +22,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// <summary>
         /// Name of the project.
         /// </summary>
-        public string? projectName { get; set; }
+        public string? ProjectName { get; set; }
         /// <summary>
         /// The relative width of the draft.
         /// </summary>
@@ -34,7 +34,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// <summary>
         /// The target frame rate of the project.
         /// </summary>
-        public uint targetFrameRate { get; set; } = 60;
+        public uint TargetFrameRate { get; set; } = 60;
         /// <summary>
         /// Some project-wide properties defined by user.
         /// </summary>
@@ -63,16 +63,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     public class DraftStructureJSON
     {
         /// <summary>
-        /// The relative resolution of the draft. Unused, just for backward compatibility.
-        /// </summary>
-        [Obsolete("Use RelativeWidth and RelativeHeight instead.")]
-        [JsonIgnore]
-        public uint relativeResolution { get; set; } = 1000;
-
-        /// <summary>
         /// The target frame rate of the draft.
         /// </summary>
-        public uint targetFrameRate { get; set; } = 60;
+        public uint TargetFrameRate { get; set; } = 60;
 
         /// <summary>
         /// All of the clips in the draft.
@@ -119,6 +112,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public long? SourceDuration { get; set; } // in frames, null for infinite length source
         public bool IsInfiniteLength { get; set; }
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
+        public EffectBundleJSONStructure[]? EffectBundles { get; set; }
 
         [JsonExtensionData]
         public Dictionary<string, object>? MetaData { get; set; }
@@ -159,7 +153,9 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public float SecondPerFrame { get; set; } = -1;
         public string? ThumbnailPath { get; set; }
         public string? AssetId { get; set; }
-        public DateTime CreatedAt { get; set; } 
+        public DateTime CreatedAt { get; set; }
+
+        public Guid CreatedBy { get; set; }
 
         public int Width { get; set; }
         public int Height { get; set; }
@@ -208,7 +204,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         {
             get => Icon + " " + AssetType switch
             {
-                AssetType.Video  => TimeSpan.FromSeconds((double)(FrameCount ?? 0 * SecondPerFrame)).ToString(),
+                AssetType.Video => TimeSpan.FromSeconds((double)(FrameCount ?? 0 * SecondPerFrame)).ToString(),
                 AssetType.Audio => TimeSpan.FromSeconds((double)(FrameCount ?? 0d)).ToString(),
                 _ => ""
             };
@@ -227,7 +223,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
             };
         }
 
-        public  static string GetAssetTypeDisplayName(AssetType assetType)
+        public static string GetAssetTypeDisplayName(AssetType assetType)
         {
             return assetType switch
             {
@@ -241,6 +237,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
 
     }
 
-    
+
 
 }

@@ -1,8 +1,9 @@
-﻿using projectFrameCut.Render.Plugin;
+﻿using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
-using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
@@ -36,7 +37,7 @@ namespace projectFrameCut.Render.Rendering
                     {
                         throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
-                    var frame = clip.GetFrame(targetFrame, targetWidth,targetHeight);
+                    var frame = clip.GetFrame(targetFrame, targetWidth, targetHeight);
                     if (frame is not null)
                     {
                         result.Add(new OneFrame(targetFrame, clip, frame));
@@ -70,41 +71,57 @@ namespace projectFrameCut.Render.Rendering
 
             if (f == "[]") return "nullframe";
 
-            return SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(f)).Aggregate("0x", ((b, c) => b + c.ToString("x2")));
+            return SHA256.HashData(Encoding.UTF8.GetBytes(f)).Aggregate("0x", ((b, c) => b + c.ToString("x2")));
         }
 
 
-        public static IPicture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight)
+        public static IPicture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight, int targetPPB = 8)
         {
             try
             {
                 IPicture result = Picture.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0);
+                ConcurrentDictionary<string, object> bindableEffectResultCache = new();
+                Dictionary<string, object> bindableEffectResultCache2 = new();
+                Dictionary<string, bool> producedValueTable = new();
                 foreach (var srcFrame in frames)
                 {
                     // Don't resize the frame before applying effects!
                     // The ResizeEffect and PlaceEffect will handle sizing and positioning.
                     IPicture effected = srcFrame.Clip;
-                    foreach (var effect in srcFrame?.Effects?.OrderBy(e => e.Index)?.ToList() ?? new List<IEffect>())
+                    List<IPictureProcessStep> steps = new();
+                    bool lastIsProcessStep = false;
+                    var effectsList = srcFrame?.Effects?.OrderBy(e => e.Index) ?? (IEnumerable<IEffect>)[];
+                    foreach (var effect in effectsList)
                     {
+                        if (effect.YieldProcessStep != lastIsProcessStep)
+                        {
+                            if (steps.Count > 0)
+                            {
+                                effected = PictureProcesser.Process(steps, effected, targetPPB);
+                                steps.Clear();
+                            }
+                            lastIsProcessStep = effect.YieldProcessStep;
+                        }
+
                         if (effect is IContinuousEffect c)
                         {
-                            if (c.EndPoint == 0 && c.EndPoint == 0)
-                            {
-                                c.StartPoint = (int)(srcFrame.ParentClip.StartFrame);
-                                c.EndPoint = (int)(c.StartPoint + srcFrame.ParentClip.Duration * srcFrame.ParentClip.SecondPerFrameRatio);
-                            }
-                            effected = c.Render(
-                                       effected, frameIndex,
-                                       effect.NeedComputer is not null ? PluginManager.CreateComputer(effect.NeedComputer) : null,
-                                       targetWidth, targetHeight);
+                            EffectProcessing.ProcessContinuousEffect(frameIndex, srcFrame.ParentClip, PluginManager.CreateComputer(effect.NeedComputer), ref effected, steps, ref lastIsProcessStep, effect, c, targetWidth, targetHeight);
+                        }
+                        else if (effect is IBindableArgumentEffect b)
+                        {
+                            _ = EffectProcessing.ProcessBindableArgsEffect(frameIndex, ref effected, ref bindableEffectResultCache, bindableEffectResultCache2, srcFrame.ParentClip, steps, ref lastIsProcessStep, b, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight); //single frame render, no need to remove
                         }
                         else
                         {
-                            effected = effect.Render(
-                                       effected,
-                                       effect.NeedComputer is not null ? PluginManager.CreateComputer(effect.NeedComputer) : null,
-                                       targetWidth, targetHeight);
+                            EffectProcessing.ProcessEffect(ref effected, steps, ref lastIsProcessStep, effect, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
+
+
+                    }
+                    if (steps.Count > 0)
+                    {
+                        effected = PictureProcesser.Process(steps, effected, targetPPB);
+                        steps.Clear();
                     }
                     var mix = GetMixer(srcFrame.MixtureMode);
 
@@ -137,12 +154,12 @@ namespace projectFrameCut.Render.Rendering
             {
                 Log(ex, $"Render frame {frameIndex}", "Timeline");
                 throw;
-                return new Picture(Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png")).Resize(targetHeight, targetHeight, true);
+                return new Picture(Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png")).Resize(targetWidth, targetHeight, true);
             }
 
         }
 
-        private static PlaceEffect Placer = new()
+        private static PlaceEffect_ImageSharp Placer = new()
         {
             StartX = 0,
             StartY = 0
@@ -239,7 +256,7 @@ namespace projectFrameCut.Render.Rendering
             Clip = pic;
             LayerIndex = parent.LayerIndex;
             MixtureMode = parent.MixtureMode;
-            Effects = projectFrameCut.Render.VideoMakeEngine.EffectHelper.GetEffectsInstances(parent.Effects);
+            Effects = EffectHelper.GetEffectsInstances(parent.Effects);
         }
     }
 }

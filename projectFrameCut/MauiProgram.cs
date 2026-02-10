@@ -16,12 +16,17 @@ using projectFrameCut.Render.Plugin;
 using Microsoft.Extensions.Logging;
 using projectFrameCut.Shared;
 using projectFrameCut.Asset;
+using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.ApplicationPluginBase;
+using LocalizedResources;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.ApplicationAPIBase.Plugins;
+
 
 
 
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
-using projectFrameCut.Platforms.Android;
 using Java.Lang;
 
 #endif
@@ -30,6 +35,7 @@ using Java.Lang;
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
+using projectFrameCut.Render.Effect;
 #endif
 
 
@@ -201,10 +207,43 @@ namespace projectFrameCut
                     SettingsManager.Settings.AddOrUpdate("UserID", Guid.NewGuid().ToString(), (_, v) => string.IsNullOrWhiteSpace(v) ? Guid.NewGuid().ToString() : v);
                     SettingsManager.ToggleSaveSignal();
                 }
+
+                try
+                {
+                    if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json")))
+                    {
+                        string json = File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json"));
+                        try
+                        {
+                            var dict = JsonSerializer.Deserialize<Dictionary<string, EffectImplementType>>(json);
+                            if (dict != null)
+                            {
+                                EffectHelper.DefaultImplementsType = dict;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(ex, "read effectImplement", CreateMauiApp);
+                            EffectHelper.DefaultImplementsType = new();
+                        }
+                    }
+                    else
+                    {
+                        EffectHelper.DefaultImplementsType = new();
+                    }
+                }
+                catch { }
             }
             catch (Exception ex)
             {
                 Log(ex, "load settings", CreateMauiApp);
+                try
+                {
+                    File.Copy(Path.Combine(BasicDataPath, "settings.json"), Path.Combine(BasicDataPath, "settings.json.bak"));
+                    File.Copy(Path.Combine(BasicDataPath, "settings_a.json"), Path.Combine(BasicDataPath, "settings_a.json.bak"));
+                    File.Copy(Path.Combine(BasicDataPath, "settings_b.json"), Path.Combine(BasicDataPath, "settings_b.json.bak"));
+                }
+                catch { }
 #if ANDROID
                 Android.Util.Log.Wtf("projectFrameCut", $"Failed to init the settings because of a {ex.GetType().Name} exception:{ex.Message}");
 #elif WINDOWS
@@ -219,14 +258,14 @@ namespace projectFrameCut
 #if WINDOWS
             try
             {
-                if (SettingsManager.IsBoolSettingTrue("DedicatedLogWindow") && !projectFrameCut.WinUI.Program.LogWindowShowing)
+                if (SettingsManager.IsBoolSettingTrue("DedicatedLogWindow") && !Program.LogWindowShowing)
                 {
                     Thread logThread = new Thread(Helper.HelperProgram.LogMain);
                     logThread.Name = "LogWindow thread";
                     logThread.Priority = ThreadPriority.Highest;
                     logThread.IsBackground = false;
                     logThread.Start();
-                    projectFrameCut.WinUI.Program.LogWindowShowing = true;
+                    Program.LogWindowShowing = true;
                     Log($"Logger window started.");
                 }
             }
@@ -257,7 +296,7 @@ namespace projectFrameCut
                     Directory.CreateDirectory(Path.Combine(DataPath, item));
                 }
 
-                if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "@WARNING.txt")))
+                if (!File.Exists(Path.Combine(DataPath, "My Assets",  "@WARNING.txt")))
                 {
                     File.WriteAllText(Path.Combine(DataPath, "My Assets", "@WARNING.txt"),
                         """
@@ -442,7 +481,7 @@ namespace projectFrameCut
 
                     Localized = SimpleLocalizer.Init(locate);
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
-                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResuorces = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
                     PluginManager.CurrentLocale = Localized._LocaleId_;
                     PluginManager.ExtenedLocalizationGetter = new((k) =>
                     {
@@ -484,7 +523,7 @@ namespace projectFrameCut
                     SimpleLocalizer.IsFallbackMatched = true;
                     Localized = ISimpleLocalizerBase.GetMapping().First().Value;
                     SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().First().Value;
-                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResuorces = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+                    LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
                     PluginManager.CurrentLocale = "en-US";
                     PluginManager.ExtenedLocalizationGetter = new((k) => ISimpleLocalizerBase.GetMapping().First().Value.DynamicLookup(k));
                     builder.ConfigureFonts(fonts =>
@@ -493,10 +532,22 @@ namespace projectFrameCut
                         fonts.AddFont("HarmonyOS_Sans_Bold.ttf", "Font_Semibold");
                     });
                 }
+                try
+                {
+                    MessagingServices.Init();
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "init messaging service", CreateMauiApp);
+                }
 
                 try
                 {
-                    List<IPluginBase> plugins = [new InternalPluginBase()];
+                    PluginManager.InitGlobalGetter();
+                    var internalBase = new InternalApplicationPluginBase();
+                    internalBase.MessagingQueue = MessagingServices.MessagingService;
+                    (internalBase as IApplicationPluginBase).OnApplicationPluginLoaded();
+                    List<IPluginBase> plugins = new() { internalBase };
 #if ANDROID
                     plugins.Add(new OpenGLPlugin());
 #elif WINDOWS
@@ -509,6 +560,9 @@ namespace projectFrameCut
                         if (Environment.GetCommandLineArgs().Contains("--forceLoadPlugins") || (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine")))
                         {
                             plugins.AddRange(PluginService.LoadUserPlugins());
+#if WINDOWS
+                            Helper.HelperProgram.ResetPluginLoadingStat();
+#endif
                         }
                         else
                         {
@@ -529,7 +583,12 @@ namespace projectFrameCut
                     Log(ex, "Load plugins", CreateMauiApp);
                     try
                     {
-                        PluginManager.Init([new InternalPluginBase()]);
+                        if (!PluginManager.Inited)
+                        {
+                            PluginManager.Init([new InternalPluginBase()]);
+                            PluginService.FailedLoadPlugin.Add("<No plugin ID available>", $"Plugin engine fail to init. ({ex})");
+
+                        }
                     }
                     catch (Exception ex1)
                     {

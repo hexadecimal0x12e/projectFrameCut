@@ -30,11 +30,11 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SplashForm));
             TitleLabel = new Label();
-            VersionLabel = new Label();
             CopyrightLabel = new Label();
-            label1 = new Label();
             closeButton = new Button();
             LicenseLabel = new Label();
+            pluginStatLabel = new Label();
+            VersionLabel = new Label();
             SuspendLayout();
             // 
             // TitleLabel
@@ -42,20 +42,11 @@
             resources.ApplyResources(TitleLabel, "TitleLabel");
             TitleLabel.Name = "TitleLabel";
             // 
-            // VersionLabel
-            // 
-            resources.ApplyResources(VersionLabel, "VersionLabel");
-            VersionLabel.Name = "VersionLabel";
-            // 
             // CopyrightLabel
             // 
             resources.ApplyResources(CopyrightLabel, "CopyrightLabel");
+            CopyrightLabel.BackColor = Color.Transparent;
             CopyrightLabel.Name = "CopyrightLabel";
-            // 
-            // label1
-            // 
-            resources.ApplyResources(label1, "label1");
-            label1.Name = "label1";
             // 
             // closeButton
             // 
@@ -70,17 +61,27 @@
             resources.ApplyResources(LicenseLabel, "LicenseLabel");
             LicenseLabel.Name = "LicenseLabel";
             // 
+            // pluginStatLabel
+            // 
+            resources.ApplyResources(pluginStatLabel, "pluginStatLabel");
+            pluginStatLabel.Name = "pluginStatLabel";
+            // 
+            // VersionLabel
+            // 
+            resources.ApplyResources(VersionLabel, "VersionLabel");
+            VersionLabel.Name = "VersionLabel";
+            // 
             // SplashForm
             // 
             resources.ApplyResources(this, "$this");
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.FromArgb(255, 210, 114);
             ControlBox = false;
+            Controls.Add(VersionLabel);
+            Controls.Add(pluginStatLabel);
             Controls.Add(LicenseLabel);
             Controls.Add(closeButton);
-            Controls.Add(label1);
             Controls.Add(CopyrightLabel);
-            Controls.Add(VersionLabel);
             Controls.Add(TitleLabel);
             FormBorderStyle = FormBorderStyle.None;
             MaximizeBox = false;
@@ -96,10 +97,10 @@
         #endregion
 
         private Label TitleLabel;
-        private Label VersionLabel;
         private Label CopyrightLabel;
-        private Label label1;
         private Button closeButton;
         private Label LicenseLabel;
+        public Label pluginStatLabel;
+        private Label VersionLabel;
     }
 }

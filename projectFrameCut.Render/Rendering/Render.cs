@@ -1,11 +1,13 @@
-﻿using projectFrameCut.Render.Plugin;
+﻿using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
-using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -21,26 +23,71 @@ namespace projectFrameCut.Render.Rendering
         public uint Duration;
         public uint StartFrame = 0;
         public VideoBuilder? builder;
-        public int MaxThreads = (int)(Environment.ProcessorCount * 1.75);
+        private int _maxThreads = (int)(Environment.ProcessorCount * 1.75);
+        public int MaxThreads 
+        { 
+            get => _maxThreads; 
+            set => _maxThreads = value;
+        }
         public bool LogState = false;
         public int GCOption = 0;
         public bool LogStatToLogger = false;
+        public bool LogProcessStack = false;
         public bool Use16Bit { get; set; } = true;
+        
+        /// <summary>
+        /// Android 平台由于 OpenGL 必须在主线程执行，多线程会导致主线程拥塞。
+        /// 自动检测并限制 Android 的并发度。
+        /// </summary>
+        private bool IsAndroid => OperatingSystem.IsAndroid();
+        private int GetOptimalMaxThreads()
+        {
+            if (IsAndroid)
+            {
+                // Android OpenGL 受主线程限制，过多线程会排队等待主线程导致死锁
+                // 建议: 1-2 个线程，最多不超过 3
+                int optimal = Math.Min(2, Math.Max(1, Environment.ProcessorCount / 4));
+                Log($"[Renderer] Android 平台检测到，限制渲染线程数为 {optimal} (原: {_maxThreads}) 以避免主线程拥塞", "info");
+                return optimal;
+            }
+            return _maxThreads;
+        }
+
+        public bool IsPaused { get; set; } = false;
+        public long MemoryThresholdBytes { get; set; } = 0;
+        public Func<Renderer, Task>? OnLowMemory;
+
+        public void ClearCaches()
+        {
+            FrameCache.Clear();
+            GC.Collect();
+        }
 
         public event Action<double, TimeSpan>? OnProgressChanged;
         private Stopwatch _renderTotalStopwatch = new();
 
         public ConcurrentBag<TimeSpan> EachElapsed = new(), EachElapsedForPreparing = new();
+        public ConcurrentBag<List<PictureProcessStack>> ProcessStacks = new();
+
+        // Per-frame diagnostics (used for CSV reporting)
+        public ConcurrentDictionary<uint, TimeSpan> FramePrepareElapsed { get; } = new();
+        public ConcurrentDictionary<uint, TimeSpan> FrameRenderElapsed { get; } = new();
+        public ConcurrentDictionary<uint, List<PictureProcessStack>> FrameProcessStacks { get; } = new();
+
         public bool running { get; private set; } = false;
 
         ConcurrentDictionary<string, ConcurrentDictionary<uint, IPicture>> FrameCache = new();
         ConcurrentDictionary<uint, IClip[]> ClipNeedForFrame = new();
         ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
         ConcurrentDictionary<string, IEffect[]> EffectCache = new();
-
-        List<Thread> Threads = new List<Thread>();
+        ConcurrentDictionary<string, object> BindableEffectResultCache = new();
 
         int ThreadWorking = 0, Finished = 0;
+        private SemaphoreSlim _threadLimiter = null!;
+
+        // Thread-local computer cache to avoid contention
+        private ThreadLocal<Dictionary<string, IComputer>> _threadLocalComputerCache =
+            new ThreadLocal<Dictionary<string, IComputer>>(() => new Dictionary<string, IComputer>());
 
         ConcurrentQueue<uint> PreparedFrames = new(), BlankFrames = new();
         ConcurrentDictionary<uint, byte> PreparedFlag = new();
@@ -49,10 +96,11 @@ namespace projectFrameCut.Render.Rendering
         volatile bool PreparerFinished = false;
         private int _width;
         private int _height;
+        private int _ppb;
 
         private IPicture BlankFrame = null!;
 
-        private PlaceEffect BlankPlace = new()
+        private PlaceEffect_ImageSharp BlankPlace = new()
         {
             StartX = 0,
             StartY = 0
@@ -63,12 +111,25 @@ namespace projectFrameCut.Render.Rendering
             ArgumentNullException.ThrowIfNull(builder, nameof(builder));
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             _renderTotalStopwatch.Restart();
-            
-            
+
+            // Apply platform-specific optimizations
+            int effectiveMaxThreads = GetOptimalMaxThreads();
+            if (effectiveMaxThreads != MaxThreads)
+            {
+                Log($"[Renderer] 平台优化: MaxThreads 从 {MaxThreads} 调整为 {effectiveMaxThreads}", "info");
+                MaxThreads = effectiveMaxThreads;
+            }
+
+            // Initialize thread limiter
+            _threadLimiter = new SemaphoreSlim(MaxThreads, MaxThreads);
+
             BlankFrame = Use16Bit ? Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
             BlankFrame.Flag = IPicture.PictureFlag.NoDisposeAfterWrite;
             BlankFrame.Disposed = null;
+            GC.KeepAlive(BlankFrame);
             ConcurrentQueue<Exception> exceptions = new();
+
+            _ppb = Use16Bit ? 16 : 8;
 
             running = true;
             if (LogStatToLogger)
@@ -82,23 +143,23 @@ namespace projectFrameCut.Render.Rendering
                     {
                         try
                         {
-                            if (EachElapsed.Count > 0)
+                            if (!EachElapsed.IsEmpty)
                                 each = new TimeSpan((long)EachElapsed.Average(x => x.Ticks));
-                            if (EachElapsedForPreparing.Count > 0)
+                            if (!EachElapsedForPreparing.IsEmpty)
                                 eachPrepare = new TimeSpan((long)EachElapsedForPreparing.Average(x => x.Ticks));
 
                             if (token.IsCancellationRequested) return;
                             finished = Volatile.Read(ref Finished);
-                            wrote = builder.FramePendedToWrite.Count(k => k.Value);
+                            wrote = builder.WrittenFramesCount;
                             working = Volatile.Read(ref ThreadWorking);
 
                             Log($"[STAT] " +
-                                $"Overall finished {finished / d:p2}, and {TotalEnqueued /d:p2} is ready to render. " +
+                                $"Overall finished {finished / d:p2}, and {TotalEnqueued / d:p2} is ready to render. ETA: {GetEstimated(finished / d)}, " +
                                 $"Memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB. \r\n" +
-                                $"       (Total {TotalEnqueued}/{d} prepared and {finished}/{d} finished, " +
+                                $"       (Already elapsed {_renderTotalStopwatch.Elapsed}, Total {TotalEnqueued}/{d} prepared and {finished}/{d} finished, " +
                                 $"pending to render: {Volatile.Read(ref TotalEnqueued) - finished}, " +
-                                $"total write frames: {wrote} wrote and {builder.FramePendedToWrite.Count() - wrote} pended, " +
-                                $"slots {Math.Max(0, MaxThreads - working)}/{MaxThreads}, threads {Threads.Count(t => t.IsAlive)}/{Threads.Count}, " +
+                                $"total write frames: {wrote} wrote and {builder.TotalFramesCount - wrote} pended, " +
+                                $"slots {Math.Max(0, MaxThreads - working)}/{MaxThreads}, active workers: {working}, " +
                                 $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}.)");
                             Thread.Sleep(10000);
                         }
@@ -119,13 +180,39 @@ namespace projectFrameCut.Render.Rendering
             _width = builder.Width;
             _height = builder.Height;
 
-            await Task.Delay(50);
+            await Task.Delay(50, token);
 
             Stopwatch lastActivity = Stopwatch.StartNew();
             int lastFinished = Volatile.Read(ref Finished);
 
             while (true)
             {
+                if (IsPaused)
+                {
+                    Log("[Render] Paused.", "info");
+                    while (IsPaused)
+                    {
+                        if (token.IsCancellationRequested) break;
+                        await Task.Delay(500, token);
+                    }
+                    Log("[Render] Resumed.", "info");
+                }
+
+                if (MemoryThresholdBytes > 0 && !IsPaused)
+                {
+                    var currentMem = Environment.WorkingSet;
+                    if (currentMem > MemoryThresholdBytes)
+                    {
+                        Log($"[Render] Memory usage {currentMem / 1024 / 1024}MB exceeded threshold {MemoryThresholdBytes / 1024 / 1024}MB. Pausing...", "warn");
+                        IsPaused = true;
+                        if (OnLowMemory != null)
+                        {
+                            _ = Task.Run(async () => await OnLowMemory(this));
+                        }
+                        continue;
+                    }
+                }
+
                 if (token.IsCancellationRequested)
                 {
                     Log("Render cancelled by user.", "info");
@@ -163,14 +250,17 @@ namespace projectFrameCut.Render.Rendering
                     {
                         // Add timeout to avoid infinite wait when preparer is slow (e.g., on Android with OpenGL main-thread bottleneck)
                         int waitIterations = 0;
-                        const int maxWaitIterations = 200; // ~1 second max wait
-                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > MaxThreads / 2 - 2 && PreparedFrames.Count < MaxThreads / 2)
+                        // Android 平台减少等待时间和阈值，因为主线程串行处理 OpenGL 很慢
+                        int maxWaitIterations = IsAndroid ? 100 : 200; // Android: ~0.5秒, 其他: ~1秒
+                        int minPreparedFrames = IsAndroid ? Math.Max(1, MaxThreads / 4) : MaxThreads / 2;
+                        
+                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > MaxThreads / 2 - 2 && PreparedFrames.Count < minPreparedFrames)
                         {
                             await Task.Delay(5);
                             waitIterations++;
                             if (waitIterations >= maxWaitIterations)
                             {
-                                Log($"[Render] Wait timeout reached, proceeding with {PreparedFrames.Count} prepared frames.", "warn");
+                                Log($"[Render] Wait timeout reached (platform: {(IsAndroid ? "Android" : "Other")}), proceeding with {PreparedFrames.Count} prepared frames.", "warn");
                                 break;
                             }
                         }
@@ -193,8 +283,15 @@ namespace projectFrameCut.Render.Rendering
                         if (!PreparedFrames.TryDequeue(out var targetFrame))
                             break;
 
+                        if (!_threadLimiter.Wait(0))
+                        {
+                            PreparedFrames.Enqueue(targetFrame);
+                            break;
+                        }
+
                         Interlocked.Increment(ref ThreadWorking);
-                        var thread = new Thread(() =>
+
+                        ThreadPool.QueueUserWorkItem(_ =>
                         {
                             try
                             {
@@ -204,42 +301,20 @@ namespace projectFrameCut.Render.Rendering
                             catch (Exception ex)
                             {
                                 Log($"Error rendering frame {targetFrame}: {ex}", "error");
-                                // Try to avoid leaving a hole: the writer is strictly sequential and will block forever
-                                // if some index is never appended.
-                                try
-                                {
-                                    if (builder != null && !builder.FramePendedToWrite.ContainsKey(targetFrame))
-                                    {
-                                        builder.Append(targetFrame, BlankFrame);
-                                        Interlocked.Increment(ref Finished);
-                                        InvokeProgress();
-                                        Log($"[Render] Filled failed frame {targetFrame} with blank to avoid writer stall.", "warn");
-                                    }
-                                }
-                                catch (Exception fillEx)
-                                {
-                                    Log($"[Render] Failed to fill blank for frame {targetFrame}: {fillEx}", "error");
-                                }
-
                                 exceptions.Enqueue(ex);
                             }
                             finally
                             {
                                 Interlocked.Decrement(ref ThreadWorking);
+                                try
+                                {
+                                    _threadLimiter.Release();
+                                }
+                                catch { }
                             }
-                        });
-
-                        thread.Name = $"Frame {targetFrame}'s render thread";
-                        thread.IsBackground = false;
-                        thread.Start();
-                        Threads.Add(thread);
+                        }, null);
                     }
 
-                    // Periodically clean up finished threads to avoid memory bloat
-                    if (Threads.Count > MaxThreads * 3)
-                    {
-                        Threads.RemoveAll(t => !t.IsAlive);
-                    }
                 }
                 else
                 {
@@ -247,14 +322,9 @@ namespace projectFrameCut.Render.Rendering
                     {
                         FlushBlankFramesBefore(StartFrame + Duration, token);
                     }
-                    await Task.Delay(10);
+                    await Task.Delay(10, token);
                 }
 
-                if (LogState)
-                {
-                    int f = Volatile.Read(ref Finished);
-                    Console.Error.WriteLine($"@@{f},{Duration}");
-                }
 
                 if (!exceptions.IsEmpty)
                 {
@@ -274,17 +344,13 @@ namespace projectFrameCut.Render.Rendering
             }
             Log($"[Preparer] All frames are prepared and waiting for render done...");
 
-            foreach (var t in Threads)
+            int waitCount = 0;
+            while (Volatile.Read(ref ThreadWorking) > 0 && waitCount < 1000)
             {
-                try
-                {
-                    if (t.IsAlive)
-                    {
-                        await Task.Delay(5000, token);
-                    }
-                }
-                catch { }
+                await Task.Delay(50, token);
+                waitCount++;
             }
+
             ReleaseResources();
 
         }
@@ -292,6 +358,11 @@ namespace projectFrameCut.Render.Rendering
         public void PrepareRender(CancellationToken token)
         {
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
+            if (IsAndroid)
+            {
+                Log($"[Preparer] Android 平台：OpenGL 计算限制在主线程，预期渲染速度较慢", "info");
+            }
+            MixtureCache = new ConcurrentDictionary<MixtureMode, IMixture>(new Dictionary<MixtureMode, IMixture> { { MixtureMode.Overlay, new OverlayMixture() } });
             bool found = false;
             for (uint idx = StartFrame; idx < StartFrame + Duration; idx++)
             {
@@ -329,7 +400,11 @@ namespace projectFrameCut.Render.Rendering
             {
                 var effectInstances = EffectHelper.GetEffectsInstances(item.Effects);
                 EffectCache.AddOrUpdate(item.Id, effectInstances, (_, _) => effectInstances);
-                Log($"[Preparer] Cached {effectInstances.Length} effects for clip {item.Id}");
+                foreach (var effect in effectInstances)
+                {
+                    if (effect.YieldProcessStep == true && effect.NeedComputer is not null) throw new InvalidDataException($"A effect can't both yield process step, and use a computer.");
+                }
+                Log($"[Preparer] Cached {effectInstances.Length} effects for clip {item.Id} ({string.Join(", ", effectInstances.Select(c => $"{c.TypeName}:'{c.Name}'"))})");
             }
 
         }
@@ -341,8 +416,18 @@ namespace projectFrameCut.Render.Rendering
         {
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             Stopwatch sw = new();
+            // Android 需要更激进的节流策略，因为主线程串行处理 OpenGL 导致渲染很慢
+            int throttleThreshold = IsAndroid ? MaxThreads : MaxThreads * 4;
+            
             foreach (var idx in ClipNeedForFrame.Keys.OrderBy(x => x))
             {
+                // Throttling: Wait if too many frames are prepared but not yet rendered
+                while (Volatile.Read(ref TotalEnqueued) - Volatile.Read(ref Finished) > throttleThreshold && !token.IsCancellationRequested)
+                {
+                    Log($"[Preparer] Waiting for more render slots... prepared but not rendered: {Volatile.Read(ref TotalEnqueued) - Volatile.Read(ref Finished)} (threshold: {throttleThreshold})");
+                    Thread.Sleep(500);
+                }
+
                 if (token.IsCancellationRequested) return;
                 sw.Restart();
 
@@ -374,9 +459,11 @@ namespace projectFrameCut.Render.Rendering
                 }
                 sw.Stop();
                 EachElapsedForPreparing.Add(sw.Elapsed);
-                Log($"[Preparer] Frame {idx} is ready to render, elapsed {sw.Elapsed}");
+                FramePrepareElapsed[idx] = sw.Elapsed;
+                if (LogState) Log($"[Preparer] Frame {idx} is ready to render, elapsed {sw.Elapsed}");
 
             }
+            Log($"[Preparer] All frames are ready.");
 
             // mark preparer finished so main loop can complete when renders done
             PreparerFinished = true;
@@ -392,6 +479,7 @@ namespace projectFrameCut.Render.Rendering
             }
             Stopwatch sw = Stopwatch.StartNew();
             IPicture result = null!;
+            Dictionary<string, object> frameLocalCache = new();
 
             PreparedFlag.TryRemove(targetFrame, out _);
 
@@ -403,6 +491,7 @@ namespace projectFrameCut.Render.Rendering
                 Interlocked.Increment(ref Finished);
                 InvokeProgress();
                 EachElapsed.Add(sw.Elapsed);
+                FrameRenderElapsed[targetFrame] = sw.Elapsed;
                 return;
             }
 
@@ -411,63 +500,81 @@ namespace projectFrameCut.Render.Rendering
             {
                 if (token.IsCancellationRequested) return;
 
-                IPicture? frame;
-                if (!FrameCache.TryGetValue(clip.Id, out var perClipCache) || !perClipCache.TryRemove(targetFrame, out frame) || frame is null)
+                if (!FrameCache.TryGetValue(clip.Id, out var perClipCache))
                 {
-                    Log($"[Render] WARN: Prepared frame {targetFrame} not found in cache for clip {clip.Id}. Regenerating.");
-                    try
-                    {
-                        var rawFrame = clip.GetFrame(targetFrame, _width, _height, true);
-                        if (rawFrame != null)
+                    Log($"[Render] WARN: Frame cache not found for clip {clip.Id}.");
+                    continue;
+                }
+
+                if (!perClipCache.TryGetValue(targetFrame, out var frame) || frame is null)
+                {
+                    Log($"[Render] WARN: Frame {targetFrame} not found in cache for clip {clip.Id}.");
+                    continue;
+                }
+
+                if (clip.Effects.ArrayAny() && EffectCache.TryGetValue(clip.Id, out var effects))
+                {
+                    List<IPictureProcessStep> steps = new();
+                    bool lastIsProcessStep = false, effectsChanged = false;
+                    var effectCopy = effects?.ToList() ?? new();
+                    foreach (var item in effects ?? (IEnumerable<IEffect>)[]) 
+                    { 
+                        var computer = GetOrCreateComputer(item.NeedComputer);
+                        if (item.YieldProcessStep != lastIsProcessStep)
                         {
-                            if (Use16Bit && rawFrame.bitPerPixel != 16)
+                            frame = PictureProcesser.Process(steps, frame, _ppb);
+                            steps.Clear();
+                        }
+
+                        bool shouldRemove = false;
+                        if (item.IsNormalEffect)
+                        {
+                            EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer, _width, _height);
+
+                        }
+                        else if (item.IsContinuousEffect)
+                        {
+                            EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, (IContinuousEffect)item, _width, _height);
+
+                        }
+                        else if (item.IsBindableArgsEffect)
+                        {
+                            shouldRemove = EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, steps, ref lastIsProcessStep, (IBindableArgumentEffect)item, computer, _width, _height);
+                        }
+                        else
+                        {
+                            if (item is IContinuousEffect c)
                             {
-                                frame = rawFrame.ToBitPerPixel(16);
+                                EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c, _width, _height);
                             }
-                            else if (!Use16Bit && rawFrame.bitPerPixel != 8)
+                            else if (item is IBindableArgumentEffect b)
                             {
-                                frame = rawFrame.ToBitPerPixel(8);
+                                shouldRemove = EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, steps, ref lastIsProcessStep, b, computer, _width, _height);
                             }
                             else
                             {
-                                frame = rawFrame;
+                                EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer, _width, _height);
                             }
                         }
-                        else
+
+                        if (shouldRemove)
                         {
-                            frame = Use16Bit ? Picture.GenerateSolidColor(_width, _height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(_width, _height, 0, 0, 0, 0);
+                            effectCopy.Remove(item);
+                            effectsChanged = true;
                         }
                     }
-                    catch (Exception ex)
+                    if (steps.ListAny())
                     {
-                        Log(ex, $"regenerate frame {targetFrame} for clip {clip.Id}", this);
-                        throw;
+                        frame = PictureProcesser.Process(steps, frame, _ppb);
+                    }
+
+                    if (effectsChanged)
+                    {
+                        EffectCache[clip.Id] = effectCopy.OrderBy(c => c.Index).ToArray();
                     }
                 }
 
-                if (clip.Effects.ArrayAny())
-                {
-                    foreach (var item in EffectCache.TryGetValue(clip.Id, out var value) ? value : [])
-                    {
-                        if (item is IContinuousEffect c)
-                        {
-                            if (c.EndPoint == 0 && c.EndPoint == 0)
-                            {
-                                c.StartPoint = (int)(clip.StartFrame);
-                                c.EndPoint = (int)(c.StartPoint + clip.Duration * clip.SecondPerFrameRatio);
-                            }
-                            frame =
-                                c.Render(frame, targetFrame, PluginManager.CreateComputer(item.NeedComputer), _width, _height)
-                                 .Resize(_width, _height, true);
-                        }
-                        else
-                        {
-                            frame =
-                                item.Render(frame, PluginManager.CreateComputer(item.NeedComputer), _width, _height)
-                                    .Resize(_width, _height, true);
-                        }
-                    }
-                }
+                
 
                 if (result is null)
                 {
@@ -475,24 +582,17 @@ namespace projectFrameCut.Render.Rendering
                 }
                 else
                 {
-                    var mix = GetMixer(clip.MixtureMode);
-                    var mixedFrame = MixtureCache.GetOrAdd(clip.MixtureMode, mix)
-                                         .Mix(result, frame,
-                                              mix.ComputerId is not null ? PluginManager.CreateComputer(mix.ComputerId) : null);
-                    if (mixedFrame.Width != _width || mixedFrame.Height != _height)
+                    if (MixtureCache.TryGetValue(clip.MixtureMode, out var mix))
                     {
-                        result = mixedFrame.Resize(_width, _height, false);
-                    }
-                    else
-                    {
-                        result = mixedFrame;
+                        var temp = mix.Mix(result, frame, GetOrCreateComputer(mix.ComputerId)).Resize(_width, _height, false);
+                        result.Dispose();
+                        result = temp;
                     }
                 }
             }
-            if (result?.Width == _width && result?.Height == _height) goto ok;
             if (result is null)
             {
-                result = Use16Bit ? Picture.GenerateSolidColor(_width, _height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(_width, _height, 0, 0, 0, 0);
+                result = BlankFrame;
             }
             else if (result.Width < _width || result.Height < _height)
             {
@@ -502,22 +602,40 @@ namespace projectFrameCut.Render.Rendering
             {
                 result = result.Resize(_width, _height, false);
             }
-        ok:
+
             builder!.Append(targetFrame, result);
+            if (LogProcessStack)
+            {
+                ProcessStacks.Add(result.ProcessStack);
+                FrameProcessStacks[targetFrame] = result.ProcessStack;
+            }
+            foreach (var clip in ClipsNeed)
+            {
+                if (FrameCache.TryGetValue(clip.Id, out var perClipCache))
+                {
+                    if (perClipCache.TryRemove(targetFrame, out var pic))
+                    {
+                        try { pic?.Dispose(); } catch { }
+                    }
+                }
+            }
             Interlocked.Increment(ref Finished);
             InvokeProgress();
             sw.Stop();
-            Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}");
+            if (LogState) Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}");
             EachElapsed.Add(sw.Elapsed);
+            FrameRenderElapsed[targetFrame] = sw.Elapsed;
             return;
-
-
-
         }
 
         private void InvokeProgress()
         {
             double prog = (double)Volatile.Read(ref Finished) / Duration;
+            OnProgressChanged?.Invoke(prog, GetEstimated(prog));
+        }
+
+        private TimeSpan GetEstimated(double prog)
+        {
             TimeSpan elapsed = _renderTotalStopwatch.Elapsed;
             TimeSpan etr = TimeSpan.Zero;
             if (prog > 0.005)
@@ -526,7 +644,24 @@ namespace projectFrameCut.Render.Rendering
                 double remaining = totalEst - elapsed.TotalSeconds;
                 if (remaining > 0) etr = TimeSpan.FromSeconds(remaining);
             }
-            OnProgressChanged?.Invoke(prog, etr);
+            return etr;
+        }
+
+        private IComputer? GetOrCreateComputer(string? computerType)
+        {
+            if (computerType is null) return null;
+
+            var cache = _threadLocalComputerCache.Value;
+            if (cache != null && cache.TryGetValue(computerType, out var computer))
+                return computer;
+
+            // Create new computer for this thread
+            var newComputer = PluginManager.CreateComputer(computerType, forceCreate: true);
+            if (newComputer != null && cache != null)
+            {
+                cache[computerType] = newComputer;
+            }
+            return newComputer;
         }
 
         private void ReleaseResources()
@@ -583,23 +718,18 @@ namespace projectFrameCut.Render.Rendering
 
                 try { BlankFrame?.Dispose(); } catch { }
 
+                // Clean up thread-local computer cache
+                try { _threadLocalComputerCache?.Dispose(); } catch { }
+
+                // Clean up thread limiter
+                try { _threadLimiter?.Dispose(); } catch { }
+
                 PreparedFlag.Clear();
                 while (PreparedFrames.TryDequeue(out _)) { }
                 while (BlankFrames.TryDequeue(out _)) { }
             }
             catch { }
 
-        }
-
-        private static IMixture GetMixer(MixtureMode mixtureMode)
-        {
-            switch (mixtureMode)
-            {
-                case MixtureMode.Overlay:
-                    return new OverlayMixture();
-                default:
-                    throw new NotSupportedException($"Mixture mode {mixtureMode} is not supported.");
-            }
         }
 
         private void FlushBlankFramesBefore(uint frameIndex, CancellationToken token)
@@ -620,6 +750,8 @@ namespace projectFrameCut.Render.Rendering
 
                     builder!.Append(blankIdx, BlankFrame);
                     EachElapsed.Add(TimeSpan.Zero);
+                    FramePrepareElapsed.TryAdd(blankIdx, TimeSpan.Zero);
+                    FrameRenderElapsed.TryAdd(blankIdx, TimeSpan.Zero);
                     Interlocked.Increment(ref Finished);
                     InvokeProgress();
                     Log($"[Render] Wrote blank frame {blankIdx} before starting frame {frameIndex}.");

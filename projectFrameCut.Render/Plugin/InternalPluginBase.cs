@@ -4,7 +4,6 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Sources;
-using projectFrameCut.Render.VideoMakeEngine;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -12,15 +11,23 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Benchmark;
+using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.Compose;
 
 namespace projectFrameCut.Render.Plugin;
 
 
+/// <summary>
+/// This is the base plugin contains almost all fundamental components required by projectFrameCut.
+/// </summary>
 public class InternalPluginBase : IPluginBase
 {
-    public string PluginID => "projectFrameCut.Render.Plugins.InternalPluginBase";
+    public const string InternalPluginBaseID = "projectFrameCut.Render.Plugins.InternalPluginBase";
 
-    public int PluginAPIVersion => 1;
+    public string PluginID => InternalPluginBaseID;
+
+    public int PluginAPIVersion => IPluginBase.CurrentPluginAPIVersion;
 
     public string Name => "Internal fundamental plugin";
 
@@ -34,33 +41,31 @@ public class InternalPluginBase : IPluginBase
 
     public string? PublishingUrl => null;
 
+    public IReadOnlyDictionary<string, string> Properties => new Dictionary<string, string>
+    {
+        { "IsFFmpegLibraryProvider","false" },
+        { "IsInternalPlugin","true" }
+    };
+
     public Dictionary<string, Dictionary<string, string>> LocalizationProvider => new Dictionary<string, Dictionary<string, string>>
     {
-        {
-            "zh-CN",
-            new Dictionary<string, string>
-            {
-                {"_PluginBase_Name_", "projectFrameCut 内部基础插件" },
-                {"_PluginBase_Description_", "作为 projectFrameCut 的一部分，提供 projectFrameCut 的基本功能" }
-            }
-        },
-        {
-            "option",
-            new Dictionary<string, string>
-            {
-                {"_IsFFmpegLibraryProvider","false" },
-                {"_IsInternalPlugin","true" }
-            }
-        }
 
     };
 
     public Dictionary<string, Func<IEffect>> EffectProvider => new Dictionary<string, Func<IEffect>>
     {
-        {"RemoveColor",  new(() => new RemoveColorEffect())},
-        {"Place",  new(() => new PlaceEffect())},
-        {"Crop", new(() => new CropEffect()) },
-        {"Resize",  new(() => new ResizeEffect())}
+        {"RemoveColor",  new(() => new RemoveColorEffect_HwAccel())},
+        {"Place",  new(() => new PlaceEffect_ImageSharp())},
+        {"Crop",  new(() => new CropEffect_ImageSharp())},
+        {"Resize",  new(() => new ResizeEffect_ImageSharp())},
+    };
+
+    public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
+    {
+        {"Place", new PlaceEffectFactory()},
+        {"Crop", new CropEffectFactory()},
+        {"Resize", new ResizeEffectFactory()},
+        {"RemoveColor", new RemoveColorEffectFactory()},
     };
 
     public Dictionary<string, Func<IMixture>> MixtureProvider => new Dictionary<string, Func<IMixture>>
@@ -79,10 +84,38 @@ public class InternalPluginBase : IPluginBase
         {"Jitter", new(() => new JitterEffect()) }
     };
 
-    public Dictionary<string, Func<IEffect>> VariableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>
+    public Dictionary<string, IEffectFactory> ContinuousEffectFactoryProvider => new Dictionary<string, IEffectFactory>
     {
-
+        {"ZoomIn", new ZoomInContinuousEffectFactory()},
+        {"Jitter", new JitterContinuousEffectFactory()},
     };
+
+    public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider => new Dictionary<string, Func<IEffect>>
+    {
+        { "SubjectMattingMaskGenerator", () => new SubjectMattingMaskGenerator() },
+        { "MaskApplier", () => new MaskApplier() },
+        { "StraightLineMovementValueProducer",() => new StraightLineMovementValueProducer() },
+        { "PointPlacer",() => new PointPlacer() },
+        { "MockValueProvider", () => new MockValueProvider() },
+        { "MockOneToOneProcessor", () => new MockOneToOneProcessor() },
+        { "MockManyToOneProcessor", () => new MockManyToOneProcessor() },
+        { "MockOneInputResultGenerator", () => new MockOneInputResultGenerator() },
+        { "MockManyInputResultGenerator", () => new MockManyInputResultGenerator() },
+    };
+
+    public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider => new Dictionary<string, IEffectFactory>
+    {
+        { "SubjectMattingMaskGenerator", new SubjectMattingMaskGeneratorFactory() },
+        { "MaskApplier", new MaskApplierFactory() },
+        { "StraightLineMovementValueProducer",new StraightLineMovementValueProducerFactory() },
+        { "PointPlacer", new PointPlacerFactory() },
+        { "MockValueProvider",  new MockValueProviderFactory() },
+        { "MockOneToOneProcessor",  new MockOneToOneProcessorFactory() },
+        { "MockManyToOneProcessor",  new MockManyToOneProcessorFactory() },
+        { "MockOneInputResultGenerator",  new MockOneInputResultGeneratorFactory() },
+        { "MockManyInputResultGenerator",  new MockManyInputResultGeneratorFactory() },
+    };
+
 
     public Dictionary<string, Func<string, string, IClip>> ClipProvider => new Dictionary<string, Func<string, string, IClip>>
     {
@@ -92,11 +125,15 @@ public class InternalPluginBase : IPluginBase
         {"TextClip", new((i,n) => new TextClip{Id = i, Name = n}) }
     };
 
-    public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider => new Dictionary<string, Func<string, IVideoSource>>
-    {
-        {"DecoderContext8Bit", new((p) => new DecoderContext8Bit(p)) },
-        {"DecoderContext16Bit", new((p) => new DecoderContext16Bit(p)) }
-    };
+    public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider =>
+        (((MessagingQueue?.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccel"]) ?? "true") is string hwaccel && bool.TryParse(hwaccel, out var result) && result)
+            ? new List<KeyValuePair<string, Func<string, IVideoSource>>>([new("DecoderContextHW", new((p) => new DecoderContextHW(p)))])
+            : new List<KeyValuePair<string, Func<string, IVideoSource>>>([]))
+        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext8Bit", new((p) => new DecoderContext8Bit(p))))
+        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext16Bit", new((p) => new DecoderContext16Bit(p))))
+        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("HttpDecoderContext", new((p) => new HttpDecoderContext(p))))
+        .ToDictionary();
+
 
 
     public Dictionary<string, string> Configuration { get => new(); set { } }
@@ -115,11 +152,13 @@ public class InternalPluginBase : IPluginBase
 
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>>
     {
-        {"VideoWriter", new((c) => {if(VideoWriter.DetectCodec(c)) return new VideoWriter(); throw new NotSupportedException($"Codec {c} not found."); }) }
+        {"VideoWriter", new((_) => new VideoWriter()) },
+        {"BlackHoleWriter", new((_) => new BlackholeVideoWriter()) }
     };
 
+    public IMessagingService MessagingQueue { get; set; }
 
-    //public IEffect EffectCreator(EffectAndMixtureJSONStructure stru) => EffectHelper.CreateFromJSONStructure(stru);
+    public static IMessagingService PluginMessagingQueue { get; private set; }
 
     IClip IPluginBase.ClipCreator(JsonElement element)
     {
@@ -154,7 +193,18 @@ public class InternalPluginBase : IPluginBase
         return result == "!!!NULL!!!" ? null : result;
     }
 
+    bool IPluginBase.OnLoaded(out string FailedReason)
+    {
+        FailedReason = "";
+        PluginMessagingQueue = MessagingQueue;
+        return true;
+    }
 
+    ProjectJSONStructure? IPluginBase.OnProjectLoad(ProjectJSONStructure project)
+    {
+        PluginMessagingQueue = MessagingQueue;
+        return null;
+    }
 
 }
 
