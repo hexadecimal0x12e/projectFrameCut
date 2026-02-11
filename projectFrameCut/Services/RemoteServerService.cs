@@ -31,7 +31,7 @@ namespace projectFrameCut.Services
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 WriteIndented = true
             };
-            LoadServersAsync().GetAwaiter().GetResult();
+            _ = LoadServersAsync();
         }
 
         public static RemoteServerService Instance => _instance ??= new RemoteServerService();

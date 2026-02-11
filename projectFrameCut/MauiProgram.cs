@@ -346,7 +346,6 @@ namespace projectFrameCut
                 }
                 builder.Logging.SetMinimumLevel(logLevel);
                 builder.Logging.AddProvider(new MyLoggerProvider(logLevel));
-                builder.Services.AddSingleton<IScreenReaderService, ScreenReaderService>();
 #if WINDOWS
                 builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
                 try

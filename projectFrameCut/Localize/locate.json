@@ -2743,6 +2743,22 @@
         "ArgsComment": [],
         "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_OpenHint_DoubleClick",
+        "Value": "\u53CC\u51FB\u6765\u6253\u5F00\u6B64\u9879\u76EE\uFF1B\u53F3\u952E\u67E5\u770B\u9AD8\u7EA7\u9009\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_OpenHint_Tap",
+        "Value": "\u77ED\u6309\u6253\u5F00\u6B64\u9879\u76EE\uFF1B\u957F\u6309\u67E5\u770B\u9AD8\u7EA7\u9009\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
       }
     ],
     "en-US": [
@@ -5733,6 +5749,24 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_OpenHint_DoubleClick",
+        "Value": "Unset localization item:HomePage_OpenHint_DoubleClick()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_OpenHint_Tap",
+        "Value": "Unset localization item:HomePage_OpenHint_Tap()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -8721,6 +8755,24 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_OpenHint_DoubleClick",
+        "Value": "Unset localization item:HomePage_OpenHint_DoubleClick()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_OpenHint_Tap",
+        "Value": "Unset localization item:HomePage_OpenHint_Tap()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -11717,6 +11769,24 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_OpenHint_DoubleClick",
+        "Value": "Unset localization item:HomePage_OpenHint_DoubleClick()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_OpenHint_Tap",
+        "Value": "Unset localization item:HomePage_OpenHint_Tap()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -14712,6 +14782,24 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_OpenHint_DoubleClick",
+        "Value": "Unset localization item:HomePage_OpenHint_DoubleClick()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_OpenHint_Tap",
+        "Value": "Unset localization item:HomePage_OpenHint_Tap()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -17701,6 +17789,24 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_OpenHint_DoubleClick",
+        "Value": "Unset localization item:HomePage_OpenHint_DoubleClick()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_OpenHint_Tap",
+        "Value": "Unset localization item:HomePage_OpenHint_Tap()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -20696,6 +20802,24 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_OpenHint_DoubleClick",
+        "Value": "Unset localization item:HomePage_OpenHint_DoubleClick()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_OpenHint_Tap",
+        "Value": "Unset localization item:HomePage_OpenHint_Tap()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]

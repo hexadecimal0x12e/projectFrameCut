@@ -111,6 +111,7 @@ public partial class AssetsLibraryPage : ContentPage
     {
         if (sender is Microsoft.Maui.Controls.Border border && BindingContext is AssetViewModel vm)
         {
+            if (border.BindingContext is not AssetItem currentAsset) return;
 #if WINDOWS || MACCATALYST
             // Windows: Right-click to show context menu
             var tap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Secondary };
@@ -188,6 +189,7 @@ public partial class AssetsLibraryPage : ContentPage
 #endif
 
             ToolTipProperties.SetText(border, Localized.AssetPage_DoubleClickToPreview);
+            SemanticProperties.SetDescription(border, $"{currentAsset.Name} {currentAsset.DurationDisplay}");
         }
     }
 

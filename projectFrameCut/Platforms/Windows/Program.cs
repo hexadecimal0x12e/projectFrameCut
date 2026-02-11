@@ -35,7 +35,7 @@ namespace projectFrameCut.WinUI
                         "Sorry, projectFrameCut requires Windows 10 2004 / LTSC 2021 (build 19041) or higher to run.\r\nConsider upgrade your Windows system.",
                         "projectFrameCut",
                         0x10 | 0x4);
-                    if(opt == 6)
+                    if (opt == 6)
                     {
                         Process.Start(new ProcessStartInfo
                         {
@@ -64,21 +64,21 @@ namespace projectFrameCut.WinUI
                     LogWindowShowing = true;
                     Log($"Logger window started.");
                 }
-                if(args.Any(c => c == "--consoleLog"))
+                if (args.Any(c => c == "--consoleLog"))
                 {
-                    MyLoggerExtensions.OnLog += (msg,level) =>
+                    MyLoggerExtensions.OnLog += (msg, level) =>
                     {
                         Console.WriteLine($"[{level}] {msg}");
                     };
                 }
                 if (args.Any(c => c.StartsWith("--basicUserData")))
                 {
-                    var userDataPath = args.First(c => c.StartsWith("--basicUserData")).Split('=',2)[1];
+                    var userDataPath = args.First(c => c.StartsWith("--basicUserData")).Split('=', 2)[1];
                     BasicDataPathOverride = userDataPath;
                 }
                 if (args.Any(c => c.StartsWith("--userData")))
                 {
-                    var userDataPath = args.First(c => c.StartsWith("--userData")).Split('=',2)[1];
+                    var userDataPath = args.First(c => c.StartsWith("--userData")).Split('=', 2)[1];
                     UserDataPathOverride = userDataPath;
                 }
             }
@@ -103,15 +103,15 @@ namespace projectFrameCut.WinUI
                 WinRT.ComWrappersSupport.InitializeComWrappers();
                 Microsoft.UI.Xaml.Application.Start((p) =>
                 {
-                    var context = new Microsoft.UI.Dispatching.DispatcherQueueSynchronizationContext(
-                        Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+                    var context = new Microsoft.UI.Dispatching.DispatcherQueueSynchronizationContext(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
                     SynchronizationContext.SetSynchronizationContext(context);
                     new App();
                 });
                 Log("Application exited.");
-                SettingsManager.FlushAndStopAsync().GetAwaiter().GetResult();
+                _ = SettingsManager.FlushAndStopAsync();
                 Helper.HelperProgram.Cleanup();
                 MauiProgram.LogWriter.Flush();
+                Environment.Exit(0);
                 return;
             }
             catch (Exception ex)

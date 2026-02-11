@@ -1,5 +1,6 @@
 ﻿using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.Converters;
 using projectFrameCut.Render;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -214,7 +215,9 @@ namespace projectFrameCut.DraftStuff
             if (!string.IsNullOrWhiteSpace(element.DisplayName))
             {
                 ToolTipProperties.SetText(element.Clip, element.DisplayName);
+                SemanticProperties.SetDescription(element.Clip, $"{element.DisplayName}, {element.TypeName}");
             }
+            AutomationProperties.SetIsInAccessibleTree(element.Clip, true);
 
             return element;
         }

@@ -4,14 +4,10 @@ using System.Runtime.InteropServices;
 
 namespace projectFrameCut.Shared
 {
-    public interface IScreenReaderService
-    {
-        bool IsScreenReaderEnabled();
-    }
 
-    public class ScreenReaderService : IScreenReaderService
+    public static class ScreenReaderService 
     {
-        public bool IsScreenReaderEnabled()
+        public static bool IsScreenReaderEnabled()
         {
 #if ANDROID
             try

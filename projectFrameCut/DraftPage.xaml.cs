@@ -4090,6 +4090,7 @@ public partial class DraftPage : ContentPage
             StatusLabel.Text = text;
         });
         if (LogUIMessageToLogger) Log(text, "UI msg");
+        SemanticScreenReader.Default.Announce(text);
     }
     #endregion
 

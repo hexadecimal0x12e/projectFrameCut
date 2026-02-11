@@ -1,5 +1,12 @@
 ﻿using Microsoft.Maui.Controls;
 using projectFrameCut.Services;
+using System.Globalization;
+using Microsoft.Maui.Handlers;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+
+
+
+
 
 
 
@@ -9,6 +16,8 @@ using projectFrameCut.WinUI;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Composition.SystemBackdrops;
+
 using System.Diagnostics;
 using Microsoft.UI.Windowing;
 using Microsoft.UI;
@@ -98,6 +107,8 @@ namespace projectFrameCut
 
             };
 
+
+
         }
 
 #if WINDOWS
@@ -107,17 +118,37 @@ namespace projectFrameCut
 
         protected override Microsoft.Maui.Controls.Window CreateWindow(IActivationState? activationState)
         {
-            var mauiWindow = new Microsoft.Maui.Controls.Window(new AppShell());
-
 #if WINDOWS
-            mauiWindow.HandlerChanged += (s, e) =>
+            
+            if (OperatingSystem.IsWindows() && (CultureInfo.CurrentCulture.TextInfo.IsRightToLeft ||  SettingsManager.IsBoolSettingTrue("ui_ForceUseShell")))
             {
-                MakeWindow(mauiWindow);
-            };
+                var shell = new AppShell(false);
+                var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
 
+                shell.Items.Add(new ShellContent { Content = new HomePage(), Title = Localized.AppShell_ProjectsTab, Icon = ImageHelper.LoadFromAsset("icon_project"), Route = "home" });
+                shell.Items.Add(new ShellContent { Content = new AssetsLibraryPage(), Title = Localized.AppShell_AssetsTab, Icon = ImageHelper.LoadFromAsset("icon_asset"), Route = "assets" });
+                shell.Items.Add(new ShellContent { Content = new MainSettingsPage(), Title = Localized._Settings, Icon = ImageHelper.LoadFromAsset("icon_setting"), Route = "options" });
+                return mauiWindow;
+
+            }
+            else
+            {
+                var shell = new AppShell(true);
+                var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
+
+                mauiWindow.HandlerChanged += (s, e) =>
+                {
+                    MakeWindow(mauiWindow);
+                };
+                return mauiWindow;
+
+
+            }
+
+#else
+            return new Microsoft.Maui.Controls.Window(new AppShell());
 #endif
 
-            return mauiWindow;
         }
 
 #if WINDOWS
@@ -159,10 +190,9 @@ namespace projectFrameCut
                     CompactPaneLength = 48,
                     IsBackEnabled = true,
                     IsTitleBarAutoPaddingEnabled = true,
-                    IsSettingsVisible = false
+                    IsSettingsVisible = false,
                 };
                 MainNavView = nav;
-
 
                 homeItem = new NavigationViewItem { Content = Localized.AppShell_ProjectsTab, Tag = "HomePage", Height = 36, Padding = new(4) };
                 homeItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Folder };

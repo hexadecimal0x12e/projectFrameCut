@@ -2,6 +2,7 @@
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Handlers;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -151,7 +152,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     throw new TimeoutException($"OverlayComputer.Compute timed out after 60 seconds - likely deadlock due to main thread congestion. Consider reducing MaxThreads on Android.");
                 }
 
-                var result = mainThreadTask.Result;
+                var result = TaskHelper.SyncWait(() => mainThreadTask, CancellationToken.None);
 
                 if (result is null)
                     throw new InvalidOperationException($"OverlayComputer Compute failed: accelerator returned null result.");
@@ -251,7 +252,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     throw new TimeoutException($"RemoveColorComputer.Compute timed out after 60 seconds - likely deadlock due to main thread congestion. Consider reducing MaxThreads on Android.");
                 }
 
-                float[] result = mainThreadTask.Result;
+                var result = TaskHelper.SyncWait(() => mainThreadTask, CancellationToken.None);
 
                 if (result is null)
                     throw new InvalidOperationException($"RemoveColorComputer Compute failed: accelerator returned null result.");

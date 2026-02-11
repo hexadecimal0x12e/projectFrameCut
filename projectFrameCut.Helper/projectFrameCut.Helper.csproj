@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
-		<TargetFrameworks>net10.0-windows10.0.19041.0;net10.0-windows7.0</TargetFrameworks>
+		<TargetFrameworks>net10.0-windows</TargetFrameworks>
 		<Nullable>enable</Nullable>
 		<UseWindowsForms>true</UseWindowsForms>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -31,7 +31,7 @@
 	<PropertyGroup Condition="'$(SolutionName)' == 'Publish' Or '$(Configuration)' == 'Release'">
 		<DefineConstants>$(DefineConstants);SETUP</DefineConstants>
 	</PropertyGroup>
-	
+
 	<ItemGroup>
 		<Compile Update="Properties\Resources.Designer.cs">
 			<DesignTime>True</DesignTime>

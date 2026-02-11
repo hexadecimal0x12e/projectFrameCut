@@ -171,9 +171,9 @@ namespace projectFrameCut.Services
 
                                     try
                                     {
-                                        void removeLangDependence(string key)
+                                        static void removeLangDependence(string key)
                                         {
-                                            if (Directory.GetFiles(key).Count() == 1 && Path.GetFileName(Directory.GetFiles(key)[0]) == "Microsoft.Maui.Controls.resources.dll")
+                                            if (Directory.GetFiles(key).Length == 1 && Path.GetFileName(Directory.GetFiles(key)[0]) == "Microsoft.Maui.Controls.resources.dll")
                                             {
                                                 Directory.Delete(key, true);
                                                 Log($"Deleted directory {key}.");
@@ -353,7 +353,7 @@ namespace projectFrameCut.Services
                 var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
                 if (Directory.Exists(pluginRoot))
                 {
-                    pluginPem ??= SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}").GetAwaiter().GetResult();
+                    pluginPem ??= TaskHelper.SyncWait(() => SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}"));
                     if (string.IsNullOrEmpty(pluginPem))
                     {
                         throw new FileNotFoundException("Plugin PEM not found in secure storage", pluginID);
@@ -581,6 +581,23 @@ namespace projectFrameCut.Services
                 {
                     throw new EntryPointNotFoundException($"No suitable PluginLoader class found. Do you forget to add it?");
                 }
+                var ver = ldr.GetField("PluginAPIVersion", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
+                if(ver is not null && ver is int apiVer)
+                {
+                    if (apiVer != PluginAPIVersion)
+                    {
+                        Log($"Plugin has a mismatch PluginAPIVersion. Excepted {PluginAPIVersion}, got {apiVer}.", "error");
+                        string? localizedFailReason = null;
+                        try
+                        {
+                            localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
+                        }
+                        catch { }
+                        var failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
+                        throw new FeatureNotSupportedException(failReason);
+                    }
+                }
+
                 var ldrMethod = ldr.GetMethod("CreateInstance");
                 var pluginObj = ldrMethod?.Invoke(null, [Localized._LocaleId_, workingPath]);
                 if (pluginObj is IPluginBase plugin)

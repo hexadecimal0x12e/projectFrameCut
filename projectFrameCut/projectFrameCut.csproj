@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<TargetFrameworks>net10.0-android</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net10.0-android;net10.0-windows10.0.19041.0</TargetFrameworks>
 
 		<!-- Note for MacCatalyst:
 		The default runtime is maccatalyst-x64, except in Release config, in which case the default is maccatalyst-x64;maccatalyst-arm64.
@@ -108,9 +108,16 @@
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
 		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="7.0.0" />
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
-		
+
 		<!--For which assembles included, see Resources\Assembly\about.txt-->
 		<Reference Include="Resources\Assembly\*.dll" />
+	</ItemGroup>
+
+
+	<ItemGroup>
+	  <MauiAsset Include="Resources\Styles\Colors.xaml" />
+	  <MauiAsset Include="Resources\Styles\Styles.Default.xaml" />
+	  <MauiAsset Include="Resources\Styles\Styles.WinUI.xaml" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -132,6 +139,9 @@
 		<Compile Update="AppShell_Windows.xaml.cs">
 			<DependentUpon>AppShell_Windows.xaml</DependentUpon>
 		</Compile>
+		<Compile Update="App.xaml.cs">
+			<DependentUpon>App.WinUI.xaml</DependentUpon>
+		</Compile>
 	</ItemGroup>
 
 
@@ -142,6 +152,9 @@
 		<Compile Update="AppShell_Android.xaml.cs">
 			<DependentUpon>AppShell_Android.xaml</DependentUpon>
 		</Compile>
+			<Compile Update="App.xaml.cs">
+			<DependentUpon>App.Default.xaml</DependentUpon>
+		</Compile>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -149,13 +162,13 @@
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="Asset\ProjectAssetView.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="DraftStuff\DraftEffectBindingView.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="DraftStuff\ProjectAddClipView.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="HomePage.xaml">
 			<Generator>MSBuild:Compile</Generator>
@@ -166,6 +179,12 @@
 		<MauiXaml Update="RenderPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
+		<MauiXaml Update="Resources\Styles\Styles.Default.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="Resources\Styles\Styles.WinUI.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
 		<MauiXaml Update="Setting\SettingPages\AboutSettingPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
@@ -173,7 +192,7 @@
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="Setting\SettingPages\SafeZoneSettingPage.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="TestPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
@@ -236,17 +255,21 @@
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<MauiXaml Remove="AppShell_Android.xaml" />
 		<None Remove="AppShell_Android.xaml" />
+		<MauiXaml Remove="App.Default.xaml" />
+		<None Remove="App.Default.xaml" />
 		<Compile Remove="AppShell_Android.xaml.cs" />
 	</ItemGroup>
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<MauiXaml Remove="AppShell_Windows.xaml" />
 		<None Remove="AppShell_Windows.xaml" />
+		<MauiXaml Remove="App.WinUI.xaml" />
+		<None Remove="App.WinUI.xaml" />
 		<Compile Remove="AppShell_Windows.xaml.cs" />
-	</ItemGroup>	
+	</ItemGroup>
 
 	<ItemGroup>
-	  <MauiImage Include="Resources\Raw\Images\unknown_music.png" />
+		<MauiImage Include="Resources\Raw\Images\unknown_music.png" />
 	</ItemGroup>
 
 

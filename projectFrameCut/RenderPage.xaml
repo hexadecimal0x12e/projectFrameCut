@@ -9,6 +9,7 @@
              Title="RenderPage">
     <ContentPage.ToolbarItems>
         <!-- <ToolbarItem Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/> -->
+        <ToolbarItem Priority="1" x:Name="GenerateStandaloneArgsButton" Text="Generate CLI Args" Clicked="GenerateStandaloneArgs_Clicked" />
 
     </ContentPage.ToolbarItems>
     <Grid>

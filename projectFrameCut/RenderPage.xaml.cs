@@ -24,6 +24,7 @@ using JsonElement = System.Text.Json.JsonElement;
 using System.Runtime.InteropServices;
 
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using System.Globalization;
 
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL;
@@ -128,6 +129,7 @@ public partial class RenderPage : ContentPage
             ExportProjectJSONButton.IsVisible = true;
             PerformPostRenderActionNowTestButton.IsVisible = true;
         }
+        if (!SettingsManager.IsSettingExists("accel_enableMultiAccel")) SettingsManager.WriteSetting("accel_enableMultiAccel", "true");
         InitializeLogTimer();
         InitializeScreenSaverTimer();
 
@@ -337,7 +339,7 @@ public partial class RenderPage : ContentPage
                 string audOutputPath = Path.Combine(outputDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.wav");
                 string compOutputPath = Path.Combine(outputDir, $"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}.composed{ext}");
 #if WINDOWS
-                var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", outputDir);
+                var resultPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", MauiProgram.DataPath);
                 if (string.IsNullOrWhiteSpace(resultPath)) goto done;
 #else
                 string resultPath = compOutputPath;
@@ -441,9 +443,10 @@ public partial class RenderPage : ContentPage
                     }
 #else
                     await Task.Run(() => File.Move(compOutputPath, resultPath));
+
+#endif
 #if WINDOWS
                     await FileSystemService.ShowFileInFolderAsync(resultPath);
-#endif
 #endif
                 }
                 catch (Exception ex)
@@ -485,7 +488,7 @@ public partial class RenderPage : ContentPage
         }
         catch (Exception)
         {
-            label = $"RenderPage_SubProg_{s}";
+            label = s;
         }
         _currentSubProgText = label;
         Dispatcher.Dispatch(() =>
@@ -595,7 +598,8 @@ public partial class RenderPage : ContentPage
                 DoGCAfterEachWrite = gcOption > 0,
                 DisposeFrameAfterEachWrite = true,
                 Duration = duration,
-                LogStat = false
+                LogStat = false,
+                BlockWrite = SettingsManager.IsBoolSettingTrue("render_BlockWrite")
             };
 
             Renderer renderer = new Renderer
@@ -658,7 +662,14 @@ public partial class RenderPage : ContentPage
             Log("Start render...");
 
             sw1.Restart();
-            await renderer.GoRender(_cts.Token);
+            if (SettingsManager.IsBoolSettingTrue("render_BlockWrite"))
+            {
+                await renderer.GoRenderSync(_cts.Token);
+            }
+            else
+            {
+                await renderer.GoRender(_cts.Token);
+            }
             if (_cts.IsCancellationRequested) return;
 
             Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
@@ -890,6 +901,119 @@ public partial class RenderPage : ContentPage
             running = false;
         }
     }
+
+    private async void GenerateStandaloneArgs_Clicked(object sender, EventArgs e)
+    {
+        if (BindingContext is not RenderPageViewModel vm)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_workingPath) || _project is null)
+        {
+            await DisplayAlertAsync(Localized._Info, Localized.RenderPage_NoDraft, Localized._OK);
+            return;
+        }
+
+        if (!TryParseRenderSettings(vm, out var width, out var height, out var fps))
+        {
+            await DisplayAlertAsync(Localized._Error, "Invalid render settings.", Localized._OK);
+            return;
+        }
+
+        var (pixelFormat, encoder, ext) = GetStandaloneOutputOptions(vm.BitDepth);
+
+#if WINDOWS
+        var outputPath = await FileSystemService.PickASavePath($"{_project.ProjectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}", MauiProgram.DataPath);
+#else
+        var outputDir = Path.Combine(MauiProgram.DataPath, "RenderCache");
+        var projectName = string.IsNullOrWhiteSpace(_project.ProjectName) ? "project" : _project.ProjectName;
+        var outputPath = Path.Combine(outputDir, $"{projectName}_{DateTime.Now:yyyyMMdd_HHmmss}{ext}");
+#endif
+
+
+        var args = BuildStandaloneRenderArgs(width, height, fps, pixelFormat, encoder, outputPath);
+        await DisplayPromptAsync("Standalone render args", "Copy the args below:", "OK", "Cancel", initialValue: args);
+    }
+
+    private static bool TryParseRenderSettings(RenderPageViewModel vm, out int width, out int height, out int fps)
+    {
+        width = 0;
+        height = 0;
+        fps = 0;
+
+        if (!int.TryParse(vm.Width, NumberStyles.Integer, CultureInfo.InvariantCulture, out width))
+        {
+            return false;
+        }
+
+        if (!int.TryParse(vm.Height, NumberStyles.Integer, CultureInfo.InvariantCulture, out height))
+        {
+            return false;
+        }
+
+        if (!double.TryParse(vm.Framerate, NumberStyles.Float, CultureInfo.InvariantCulture, out var fpsDouble))
+        {
+            return false;
+        }
+
+        fps = (int)Math.Round(fpsDouble);
+        return width > 0 && height > 0 && fps > 0;
+    }
+
+    private static (string PixelFormat, string Encoder, string Extension) GetStandaloneOutputOptions(string bitDepth)
+    {
+        return bitDepth switch
+        {
+            "8bit" => ("AV_PIX_FMT_YUV420P", "libx264", ".mp4"),
+            "10bit" => ("AV_PIX_FMT_YUV420P10LE", "libx265", ".mov"),
+            "12bit" => ("AV_PIX_FMT_YUV444P12LE", "libx265", ".mov"),
+            _ => ("AV_PIX_FMT_GBRP16LE", "ffv1", ".mkv")
+        };
+    }
+
+    private string BuildStandaloneRenderArgs(int width, int height, int fps, string pixelFormat, string encoder, string outputPath)
+    {
+        var args = new List<string>
+        {
+            $"-project={_workingPath}",
+            $"-output={outputPath}",
+            $"-output_options={width},{height},{fps},{pixelFormat},{encoder}",
+            $"-assetDbFile={Path.Combine(MauiProgram.DataPath, "My Assets", ".database", "database.json")}"
+        };
+
+        var maxThreads = Math.Max(1, (int)Math.Round(MaxParallelThreadsCount.Value));
+        args.Add($"-maxParallelThreads={maxThreads}");
+
+        if (SettingsManager.IsBoolSettingTrue("render_BlockWrite"))
+        {
+            args.Add("-oneByOneRender=true");
+        }
+
+        if (int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var gcOption) && gcOption is >= 0 and <= 2)
+        {
+            args.Add($"-GCOptions={gcOption}");
+        }
+
+#if WINDOWS
+        string accelId = "";
+        args.Add($"-multiAccelerator={SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel")}");
+
+        if (SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel"))
+        {
+            args.Add($"-acceleratorDeviceIds={SettingsManager.GetSetting("accel_MultiDeviceID", "all")}");
+
+        }
+        else
+        {
+            args.Add($"-acceleratorDeviceId={SettingsManager.GetSetting("accel_DeviceId", "")}");
+        }
+
+#endif
+
+        return "render  " +  string.Join(" ", args.Select(s => $"\"{s}\""));
+    }
+
 }
 
 

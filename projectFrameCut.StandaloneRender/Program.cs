@@ -484,7 +484,14 @@ namespace projectFrameCut.StandaloneRender
                 Stopwatch sw1 = new();
                 Log("Start render...");
                 sw1.Restart();
-                await renderer.GoRender(CancellationToken.None);
+                if (blockWrite)
+                {
+                    await renderer.GoRenderSync(CancellationToken.None);
+                }
+                else
+                {
+                    await renderer.GoRender(CancellationToken.None);
+                }
 
                 Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
 

@@ -123,8 +123,7 @@ namespace projectFrameCut.ViewModels
             }
             else if (OrderOption == 1)
             {
-                // By name - 按名称发音排序并按语言分组
-                filtered = filtered.OrderBy(a => TextHelper.GetPronounceForOrdering(a.Name).Result)
+                filtered = (await filtered.OrderByPronounceAsync(c => c.Name))
                                  .GroupBy(c => TextHelper.DetectTextLanguage(c.Name))
                                  .OrderByDescending(g => g.Count())
                                  .SelectMany(c => c)

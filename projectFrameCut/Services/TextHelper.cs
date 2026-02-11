@@ -1,5 +1,7 @@
-﻿using projectFrameCut.Render.ClipsAndTracks;
+﻿using Kawazu;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
 using SixLabors.Fonts;
 using SixLabors.Fonts.Unicode;
@@ -9,20 +11,19 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.Unicode;
 using TinyPinyin;
-using Kawazu;
 using static projectFrameCut.Services.TextHelper;
 using Color = SixLabors.ImageSharp.Color;
 using Font = SixLabors.Fonts.Font;
 using HorizontalAlignment = SixLabors.Fonts.HorizontalAlignment;
 using PointF = SixLabors.ImageSharp.PointF;
 using VerticalAlignment = SixLabors.Fonts.VerticalAlignment;
-using System.Diagnostics;
-using System.IO.Compression;
 
 namespace projectFrameCut.Services
 {
@@ -239,6 +240,25 @@ namespace projectFrameCut.Services
             return detectedLanguage;
         }
 
+        public static async Task<IEnumerable<TResult>> OrderByPronounceAsync<TResult>(this IEnumerable<TResult> source, Func<TResult,string> keySelector, string? locateID = null)
+        {
+            var kvpList = await GetPronounceKVP(source, keySelector, locateID).ToListAsync();
+            return kvpList.OrderBy(kvp => kvp.Value).Select(kvp => kvp.Key);
+        }
+        public static async Task<IEnumerable<TResult>> OrderByPronounceDescendingAsync<TResult>(this IEnumerable<TResult> source, Func<TResult,string> keySelector, string? locateID = null)
+        {
+            var kvpList = await GetPronounceKVP(source, keySelector, locateID).ToListAsync();
+            return kvpList.OrderByDescending(kvp => kvp.Value).Select(kvp => kvp.Key);
+        }
+
+        private static async IAsyncEnumerable<KeyValuePair<TResult,string>> GetPronounceKVP<TResult>(IEnumerable<TResult> source, Func<TResult,string> keySelector, string? locateID = null)
+        {
+            foreach (var item in source)
+            {
+                yield return new(item, await GetPronounceForOrdering(keySelector(item), locateID));
+            }
+        } 
+
         public static async Task<string> GetPronounceForOrdering(string input, string? locateID = null)
         {
             var loc = DetectTextLanguage(input);
@@ -399,7 +419,7 @@ namespace projectFrameCut.Services
                 var result = await (await GetKawazuConvenerAsync()).Convert(input, To.Hiragana);
                 return result;
             }
-            catch (Exception ex)
+            catch 
             {
                 return input;
             }

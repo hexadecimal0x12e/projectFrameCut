@@ -507,9 +507,9 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         else if (OrderOption == 1)
         {
             // By name - 使用发音排序
-            localFiltered = localFiltered.OrderBy(a => TextHelper.GetPronounceForOrdering(a.Name).Result).ToList();
-            sharedFiltered = sharedFiltered.OrderBy(a => TextHelper.GetPronounceForOrdering(a.Name).Result).ToList();
-            reuseableFiltered = reuseableFiltered.OrderBy(a => TextHelper.GetPronounceForOrdering(a.Name).Result).ToList();
+            localFiltered = (await localFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
+            sharedFiltered = (await sharedFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
+            reuseableFiltered = (await reuseableFiltered.OrderByPronounceAsync(a => a.Name)).ToList();
         }
 
         foreach (var asset in localFiltered)

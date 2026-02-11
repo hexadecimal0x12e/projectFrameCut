@@ -141,6 +141,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     /// <summary>
     /// Represents an asset item in the project. 
     /// </summary>
+    [DebuggerDisplay("{Name}: {DurationDisplay}")]
     public class AssetItem
     {
         public string Name { get; set; } = string.Empty;
@@ -235,6 +236,24 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
             };
         }
 
+        public override int GetHashCode() => Guid.TryParse(AssetId, out var guid) ? guid.GetHashCode() : AssetId?.GetHashCode() ?? base.GetHashCode();
+        public override bool Equals(object? obj) => obj is AssetItem other && AssetId != null && other.AssetId != null && AssetId == other.AssetId;
+        public override string ToString() => $"{Name}: {DurationDisplay}";
+    }
+
+    public class AssetItemComparer : IEqualityComparer<AssetItem>
+    {
+        public bool Equals(AssetItem? x, AssetItem? y)
+        {
+            return x?.AssetId != null && y?.AssetId != null && x.AssetId == y.AssetId;
+        }
+
+        public int GetHashCode([DisallowNull] AssetItem obj)
+        {
+#pragma warning disable CS8602 // already [DisallowNull]
+            return obj.GetHashCode();
+#pragma warning restore CS8602 // 
+        }
     }
 
 

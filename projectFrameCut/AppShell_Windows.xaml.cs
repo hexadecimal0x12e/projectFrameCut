@@ -3,12 +3,12 @@
     public partial class AppShell : Shell
     {
         public static AppShell instance;
-        public AppShell()
+        public AppShell(bool placeDefaultItem = true)
         {
             instance = this;
             Title = Localized.AppBrand;
 #if WINDOWS
-            if (this.Items == null || this.Items.Count == 0)
+            if (placeDefaultItem && (this.Items == null || this.Items.Count == 0))
             {
                 var shellContent = new Microsoft.Maui.Controls.ShellContent
                 {

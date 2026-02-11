@@ -151,7 +151,7 @@ public partial class HomePage : ContentPage
                             "dark" => Microsoft.UI.Xaml.ApplicationTheme.Dark,
                             _ => Microsoft.UI.Xaml.ApplicationTheme.Light,
                         };
-                    }).GetAwaiter().GetResult();
+                    });
                 }
 
             }
@@ -1063,8 +1063,61 @@ public partial class HomePage : ContentPage
                     await ShowContextMenu(vmItem);
                 }
             );
+
+#if WINDOWS
+            if (border.Handler?.PlatformView is Microsoft.UI.Xaml.FrameworkElement fe)
+            {
+                fe.IsTabStop = true;
+                fe.GotFocus -= ItemBorder_GotFocus;
+                fe.GotFocus += ItemBorder_GotFocus;
+                fe.KeyDown -= ItemBorder_KeyDown;
+                fe.KeyDown += ItemBorder_KeyDown;
+            }
+#endif
+            if (vmItem._name != CreateButtonName)
+            {
+                SemanticProperties.SetHint(border, DeviceInfo.Idiom == DeviceIdiom.Desktop ? Localized.HomePage_OpenHint_DoubleClick : Localized.HomePage_OpenHint_Tap);
+            }
+
+            SemanticProperties.SetDescription(border, $"{vmItem.Name}, {vmItem.LastChangedDisplay} {(DeviceInfo.Idiom == DeviceIdiom.Desktop ? Localized.HomePage_OpenHint_DoubleClick : Localized.HomePage_OpenHint_Tap)}");
+
         }
     }
+
+#if WINDOWS
+    private void ItemBorder_GotFocus(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        if (sender is Microsoft.UI.Xaml.FrameworkElement fe && fe.DataContext is ProjectsViewModel vmItem)
+        {
+            _lastSelectedItemName = vmItem.Name;
+            ProjectsCollection.SelectedItem = vmItem;
+        }
+    }
+
+    private async void ItemBorder_KeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (sender is not Microsoft.UI.Xaml.FrameworkElement fe || fe.DataContext is not ProjectsViewModel vmItem)
+        {
+            return;
+        }
+
+        if (e.Key == Windows.System.VirtualKey.Enter || e.Key == Windows.System.VirtualKey.Space)
+        {
+            e.Handled = true;
+            if (vmItem._name == CreateButtonName)
+            {
+                await CreateDraft();
+            }
+            else
+            {
+                await GoDraft(vmItem);
+            }
+
+            ProjectsCollection.SelectedItem = null;
+            _lastSelectedItemName = string.Empty;
+        }
+    }
+#endif
 
     private async Task ShowContextMenu(ProjectsViewModel vmItem)
     {
