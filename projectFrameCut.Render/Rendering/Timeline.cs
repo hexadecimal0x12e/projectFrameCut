@@ -127,7 +127,7 @@ namespace projectFrameCut.Render.Rendering
 
                     result = MixtureCache.GetOrAdd(srcFrame!.MixtureMode, mix)
                                     .Mix(result, effected,
-                                       mix.ComputerId is not null ? PluginManager.CreateComputer(mix.ComputerId) : null);
+                                       mix.ComputerId is not null ? PluginManager.CreateComputer(mix.ComputerId) : null, targetPPB);
 
                 }
                 //LogDiagnostic($"Result's diag info:{result?.GetDiagnosticsInfo() ?? "unknown"}");
@@ -146,7 +146,7 @@ namespace projectFrameCut.Render.Rendering
             ok:
                 result = MixtureCache.GetOrAdd(
                            MixtureMode.Overlay, GetMixer(MixtureMode.Overlay))
-                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer("OverlayComputer"))
+                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer("OverlayComputer"), targetPPB)
                                .Resize(targetWidth, targetHeight, true);
                 return result;
             }

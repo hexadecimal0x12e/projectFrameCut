@@ -237,7 +237,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = await platformView.RunComputeAsync();
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsA.TrySetResult(res);
                             }
                         }
@@ -313,7 +313,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = await platformView.RunComputeAsync();
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsR.TrySetResult(res);
                             }
                         }
@@ -395,7 +395,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = await platformView.RunComputeAsync();
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsG.TrySetResult(res);
                             }
                         }
@@ -477,7 +477,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = await platformView.RunComputeAsync();
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsB.TrySetResult(res);
                             }
                         }
@@ -777,7 +777,7 @@ public partial class TestPage : ContentPage
         {
 
         };
-        var final = m.Mix(canvas, result, PluginManager.CreateComputer(m.ComputerId, false));
+        var final = m.Mix(canvas, result, PluginManager.CreateComputer(m.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
@@ -990,7 +990,7 @@ public partial class TestPage : ContentPage
         {
 
         };
-        var final = m.Mix(canvas, placed, PluginManager.CreateComputer(m.ComputerId, false));
+        var final = m.Mix(canvas, placed, PluginManager.CreateComputer(m.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();

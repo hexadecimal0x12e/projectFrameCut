@@ -2,6 +2,7 @@ using Microsoft.Maui.Controls;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using System;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -20,7 +21,7 @@ public partial class AboutSettingPage : ContentPage
     {
         InitializeComponent();
         Loaded += AboutSettingPage_Loaded;
-        AppVersionLabel.Text = $"Version {AppInfo.VersionString} ({AppInfo.BuildString})";
+        AppVersionLabel.Text = $"Version {Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"} ({AppInfo.BuildString})";
         AppLogoIcon.Source = ImageHelper.LoadFromAsset("projectframecut");
 #if WINDOWS
         tap.Tapped

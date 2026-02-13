@@ -346,6 +346,7 @@ namespace projectFrameCut.Render.Rendering
             ArgumentNullException.ThrowIfNull(builder, nameof(builder));
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
 
+            _renderTotalStopwatch.Restart();
             Log("[Renderer] BlockWrite enabled: switching to single-threaded, synchronous render.", "info");
 
             _ppb = Use16Bit ? 16 : 8;
@@ -362,15 +363,50 @@ namespace projectFrameCut.Render.Rendering
             running = true;
             InitializeRenderCaches();
 
+            if (LogStatToLogger)
+            {
+                new Thread(() =>
+                {
+                    float d = Duration;
+                    int finished = 0;
+                    TimeSpan each = TimeSpan.Zero, eachPrepare = TimeSpan.Zero;
+                    while (running)
+                    {
+                        try
+                        {
+                            if (!EachElapsed.IsEmpty)
+                                each = new TimeSpan((long)EachElapsed.Average(x => x.Ticks));
+                            if (!EachElapsedForPreparing.IsEmpty)
+                                eachPrepare = new TimeSpan((long)EachElapsedForPreparing.Average(x => x.Ticks));
+
+                            if (token.IsCancellationRequested) return;
+                            finished = Volatile.Read(ref Finished);
+
+                            Log($"[STAT] " +
+                                $"Finished {finished / d:p2}. ETA: {GetEstimated(finished / d)}, " +
+                                $"Memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB. \r\n" +
+                                $"       ({finished} of {d} finished, already elapsed {_renderTotalStopwatch.Elapsed}, " +
+                                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}.)");
+                            Thread.Sleep(10000);
+                        }
+                        catch { }
+                    }
+                })
+                {
+                    Name = "Stat logger thread",
+                    IsBackground = false
+                }.Start();
+            }
+
+
+
             for (uint idx = StartFrame; idx < StartFrame + Duration; idx++)
             {
-
                 if (token.IsCancellationRequested)
                 {
                     Log("Render cancelled by user.", "info");
                     break;
                 }
-
                 RenderAFrameSync(idx, token);
             }
 
@@ -560,7 +596,7 @@ namespace projectFrameCut.Render.Rendering
                 Log($"[Render] WARN: Target frame {targetFrame} exceeds project duration. Ignore.");
                 return;
             }
-
+            Stopwatch prep = Stopwatch.StartNew();
             var clipsNeed = new List<IClip>();
             foreach (var item in Clips ?? Array.Empty<IClip>())
             {
@@ -594,6 +630,7 @@ namespace projectFrameCut.Render.Rendering
 
                 framesToRender.Add((clip, frame));
             }
+            EachElapsedForPreparing.Add(prep.Elapsed);
 
             RenderAFrameInternal(
                 targetFrame,
@@ -727,7 +764,7 @@ namespace projectFrameCut.Render.Rendering
                 }
                 else
                 {
-                    var temp = globalMix.Mix(result, frame, mixComputer).Resize(_width, _height, false);
+                    var temp = globalMix.Mix(result, frame, mixComputer, _ppb).Resize(_width, _height, false);
                     result.Dispose();
                     result = temp;
                 }

@@ -85,15 +85,23 @@
                     <KeyboardAccelerator  Key="Right" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutSeparator></MenuFlyoutSeparator>
 
+
+        </MenuBarItem>
+
+        <MenuBarItem x:Name="ViewMenuBarItem" Text="{l:Localized Key=DraftPage_MenuBar_View}">
+            <MenuFlyoutItem Text="{l:Localized Key=AssetPage_ShowPreview}" Command="{Binding ManageWindowCommand}" CommandParameter="preview" />
+            <MenuFlyoutItem Text="{l:Localized Key=PropertyPanel}" Command="{Binding ManageWindowCommand}" CommandParameter="properties" />
+            <MenuFlyoutItem Text="AI Assistant" Command="{Binding ManageWindowCommand}" CommandParameter="assistant" />
+            
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
+            <MenuFlyoutItem Text="关闭附加窗口" Command="{Binding ManageWindowCommand}" CommandParameter="close-extra" />
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_ClosePopup}" Command="{Binding ClosePopupCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Key="{OnPlatform WinUI=Escape, MacCatalyst=UIKeyInputEscape}" />
                 </MenuFlyoutItem.KeyboardAccelerators>
+
             </MenuFlyoutItem>
-
-
         </MenuBarItem>
 
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs}">
@@ -148,6 +156,9 @@
                 </mw:MultiWindowItem>
                 <mw:MultiWindowItem x:Name="PropertiesSubwindow" Title="{l:Localized Key=PropertyPanel}" IsClosable="False" IsPopOutVisible="True" HorizontalOptions="Fill" VerticalOptions="Fill">
                     <Border x:Name="RightContentBorder" StrokeThickness="0" HorizontalOptions="Fill" VerticalOptions="Fill" />  
+                </mw:MultiWindowItem>
+                <mw:MultiWindowItem x:Name="AssisstantSubWindow" Title="AI Assistant" HeightRequest="400" WidthRequest="300">
+                    
                 </mw:MultiWindowItem>
             </mw:MultiWindowView>
             

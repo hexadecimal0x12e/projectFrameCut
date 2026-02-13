@@ -38,10 +38,10 @@ namespace projectFrameCut.Render.WindowsRender
             });
         }
 
-        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>> KernelCache = new();
-        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>> GetKernel(Accelerator accelerator)
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>>> KernelFloatCache = new();
+        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>> GetKernelFloat(Accelerator accelerator)
         {
-            return KernelCache.GetOrAdd(accelerator, static acc =>
+            return KernelFloatCache.GetOrAdd(accelerator, static acc =>
             {
                 return acc.LoadAutoGroupedStreamKernel((Index1D i,
                     ArrayView<float> a,
@@ -86,6 +86,111 @@ namespace projectFrameCut.Render.WindowsRender
             });
         }
 
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<ushort>, ArrayView<float>>> KernelUShortCache = new();
+        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<ushort>, ArrayView<float>> GetKernelUShort(Accelerator accelerator)
+        {
+            return KernelUShortCache.GetOrAdd(accelerator, static acc =>
+            {
+                return acc.LoadAutoGroupedStreamKernel((Index1D i,
+                    ArrayView<float> a,
+                    ArrayView<float> b,
+                    ArrayView<float> aAlpha,
+                    ArrayView<float> bAlpha,
+                    ArrayView<ushort> c,
+                    ArrayView<float> cAlpha) =>
+                {
+                    if (aAlpha[i] == 1f)
+                    {
+                        c[i] = (ushort)a[i];
+                        cAlpha[i] = 1f;
+                    }
+                    else if (aAlpha[i] <= 0.05f)
+                    {
+                        c[i] = (ushort)b[i];
+                        cAlpha[i] = bAlpha[i];
+                    }
+                    else
+                    {
+                        float aA = aAlpha[i];
+                        float bA = bAlpha[i];
+                        float outA = aA + bA * (1 - aA);
+                        if (outA < 1e-6f)
+                        {
+                            c[i] = 0;
+                            cAlpha[i] = 0f;
+                        }
+                        else
+                        {
+                            float aC = a[i] * aA / outA;
+                            float bC = b[i] * bA * (1 - aA) / outA;
+                            float outC = aC + bC;
+                            if (outC < 0f) outC = 0f;
+                            if (outC > ushort.MaxValue) outC = ushort.MaxValue;
+                            c[i] = (ushort)outC;
+                            cAlpha[i] = outA;
+                        }
+                    }
+                });
+            });
+        }
+
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<Accelerator, Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<byte>, ArrayView<float>>> KernelByteCache = new();
+        private static Action<Index1D, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<float>, ArrayView<byte>, ArrayView<float>> GetKernelByte(Accelerator accelerator)
+        {
+            return KernelByteCache.GetOrAdd(accelerator, static acc =>
+            {
+                return acc.LoadAutoGroupedStreamKernel((Index1D i,
+                    ArrayView<float> a,
+                    ArrayView<float> b,
+                    ArrayView<float> aAlpha,
+                    ArrayView<float> bAlpha,
+                    ArrayView<byte> c,
+                    ArrayView<float> cAlpha) =>
+                {
+                    if (aAlpha[i] == 1f)
+                    {
+                        float v = a[i] / 257.0f;
+                        if (v < 0f) v = 0f;
+                        if (v > 255f) v = 255f;
+                        c[i] = (byte)v;
+                        cAlpha[i] = 1f;
+                    }
+                    else if (aAlpha[i] <= 0.05f)
+                    {
+                        float v = b[i] / 257.0f;
+                        if (v < 0f) v = 0f;
+                        if (v > 255f) v = 255f;
+                        c[i] = (byte)v;
+                        cAlpha[i] = bAlpha[i];
+                    }
+                    else
+                    {
+                        float aA = aAlpha[i];
+                        float bA = bAlpha[i];
+                        float outA = aA + bA * (1 - aA);
+                        if (outA < 1e-6f)
+                        {
+                            c[i] = 0;
+                            cAlpha[i] = 0f;
+                        }
+                        else
+                        {
+                            float aC = a[i] * aA / outA;
+                            float bC = b[i] * bA * (1 - aA) / outA;
+                            float outC = aC + bC;
+                            if (outC < 0f) outC = 0f;
+                            if (outC > ushort.MaxValue) outC = ushort.MaxValue;
+                            float v = outC / 257.0f;
+                            if (v < 0f) v = 0f;
+                            if (v > 255f) v = 255f;
+                            c[i] = (byte)v;
+                            cAlpha[i] = outA;
+                        }
+                    }
+                });
+            });
+        }
+
         private int accelIdx = 0;
 
         public object[] Compute(object[] args)
@@ -105,6 +210,7 @@ namespace projectFrameCut.Render.WindowsRender
             var B = args[1] as float[] ?? throw new InvalidDataException("Invalid argument for B");
             var aAlpha = args.Length > 2 ? (args[2] as float[]) : null;
             var bAlpha = args.Length > 3 ? (args[3] as float[]) : null;
+            var outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
             aAlpha ??= GetOnes(A.Length);
             bAlpha ??= GetOnes(A.Length);
 
@@ -112,32 +218,85 @@ namespace projectFrameCut.Render.WindowsRender
             using var b = accelerator.Allocate1D(B);
             using var aAlphaBuffer = accelerator.Allocate1D(aAlpha);
             using var bAlphaBuffer = accelerator.Allocate1D(bAlpha);
-            var outBuffer = accelerator.Allocate1D<float>(A.Length);
-            var outAlphaBuffer = accelerator.Allocate1D<float>(A.Length);
 
-            var krnl = GetKernel(accelerator);
-
-            if (Sync)
+            if (outputBpp == 8)
             {
-                using (ILGPUComputerHelper.locker.EnterScope())
+                var outBuffer = accelerator.Allocate1D<byte>(A.Length);
+                var outAlphaBuffer = accelerator.Allocate1D<float>(A.Length);
+                var krnl = GetKernelByte(accelerator);
+
+                if (Sync)
+                {
+                    using (ILGPUComputerHelper.locker.EnterScope())
+                    {
+                        krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                        accelerator.Synchronize();
+                    }
+                }
+                else
                 {
                     krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
-                    accelerator.Synchronize();
                 }
 
+                var result = outBuffer.GetAsArray1D();
+                outBuffer.Dispose();
+                var alphaResult = outAlphaBuffer.GetAsArray1D();
+                outAlphaBuffer.Dispose();
+
+                return [result, alphaResult];
+            }
+            else if (outputBpp == 16)
+            {
+                var outBuffer = accelerator.Allocate1D<ushort>(A.Length);
+                var outAlphaBuffer = accelerator.Allocate1D<float>(A.Length);
+                var krnl = GetKernelUShort(accelerator);
+
+                if (Sync)
+                {
+                    using (ILGPUComputerHelper.locker.EnterScope())
+                    {
+                        krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                        accelerator.Synchronize();
+                    }
+                }
+                else
+                {
+                    krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                }
+
+                var result = outBuffer.GetAsArray1D();
+                outBuffer.Dispose();
+                var alphaResult = outAlphaBuffer.GetAsArray1D();
+                outAlphaBuffer.Dispose();
+
+                return [result, alphaResult];
             }
             else
             {
-                krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                var outBuffer = accelerator.Allocate1D<float>(A.Length);
+                var outAlphaBuffer = accelerator.Allocate1D<float>(A.Length);
+                var krnl = GetKernelFloat(accelerator);
 
+                if (Sync)
+                {
+                    using (ILGPUComputerHelper.locker.EnterScope())
+                    {
+                        krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                        accelerator.Synchronize();
+                    }
+                }
+                else
+                {
+                    krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                }
+
+                var result = outBuffer.GetAsArray1D();
+                outBuffer.Dispose();
+                var alphaResult = outAlphaBuffer.GetAsArray1D();
+                outAlphaBuffer.Dispose();
+
+                return [result, alphaResult];
             }
-
-            var result = outBuffer.GetAsArray1D();
-            outBuffer.Dispose();
-            var alphaResult = outAlphaBuffer.GetAsArray1D();
-            outAlphaBuffer.Dispose();
-
-            return [result, alphaResult];
         }
     }
 

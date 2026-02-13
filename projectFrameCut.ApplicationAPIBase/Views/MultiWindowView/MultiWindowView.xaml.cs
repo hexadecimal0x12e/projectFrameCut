@@ -8,17 +8,55 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
     /// </summary>
     public partial class MultiWindowView : Grid
     {
+        public event EventHandler<MultiWindowItem>? WindowAdded;
+        public event EventHandler<MultiWindowItem>? WindowClosed;
+        public event EventHandler<MultiWindowItem>? WindowFocused;
+
+        /// <summary>
+        /// Collection of all <see cref="MultiWindowItem"/>.
+        /// </summary>
+        /// <remarks>
+        /// To open a window, use <see cref="AddWindow(MultiWindowItem)"/> to the collection. 
+        /// To close a window, use <see cref="CloseWindow(MultiWindowItem)"/>.
+        /// </remarks>
+        public IReadOnlyList<MultiWindowItem> Windows => base.Children.OfType<MultiWindowItem>().ToList();
+
+        /// <summary>
+        /// <b>DO NOT manipulate this collection directly.</b>
+        /// To open a window, use <see cref="AddWindow(MultiWindowItem)"/> to the collection. 
+        /// To close a window, use <see cref="CloseWindow(MultiWindowItem)"/>.
+        /// </summary>
+        public IList<IView> Children => base.Children;
+
         public MultiWindowView()
         {
             InitializeComponent();
             this.ChildAdded += OnChildAdded;
+            this.ChildRemoved += OnChildRemoved;
         }
 
-        private void OnChildAdded(object sender, ElementEventArgs e)
+
+        private void OnChildAdded(object sender, ElementEventArgs? e)
+        {
+            if (e?.Element is MultiWindowItem item)
+            {
+                WindowAdded?.Invoke(this, item);
+                item.Activated += (s, args) =>
+                {
+                    BringToFront(item);
+                    WindowFocused?.Invoke(this, item);
+                };
+            }
+        }
+
+        private void OnChildRemoved(object? sender, ElementEventArgs e)
         {
             if (e.Element is MultiWindowItem item)
             {
-                item.Activated += (s, args) => BringToFront(item);
+                item.Activated += (s, args) =>
+                {
+                    WindowClosed?.Invoke(this, item);
+                };
             }
         }
 

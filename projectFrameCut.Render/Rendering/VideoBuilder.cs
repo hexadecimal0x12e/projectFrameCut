@@ -94,8 +94,8 @@ namespace projectFrameCut.Render.Rendering
             builder.PixelFormat = fmt;
             builder.OutputPath = outputPath;
             builder.CodecName = encoder;
-            builder.Initialize();   
-            
+            builder.Initialize();
+
 
         }
 
@@ -137,12 +137,12 @@ namespace projectFrameCut.Render.Rendering
 
             if (!BlockWrite)
             {
-                Cache.AddOrUpdate(index, frame, 
+                Cache.AddOrUpdate(index, frame,
                     (_, _) => throw new InvalidOperationException($"Frame #{index} has already been added.")
                     {
                         Data = { { "PictureObject", frame }, { "ProcessStack", PictureExtensions.FormatProcessStackForLog(frame.ProcessStack) } }
                     }
-                    );               
+                    );
             }
             else
             {
@@ -179,11 +179,16 @@ namespace projectFrameCut.Render.Rendering
 
         public Thread Build()
         {
+            if (BlockWrite)
+            {
+                Log($"[VideoWriter] Working in sync-writing mode.");
+                return new(() => { });
+            }
             return new Thread(() =>
             {
                 Log($"[VideoBuilder] Successfully started writer for {outputPath}");
 
-                while (running) 
+                while (running)
                 {
                     if (Cache.ContainsKey(index))
                     {

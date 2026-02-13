@@ -32,6 +32,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <param name="topPicture"></param>
         /// <param name="computer"></param>
         /// <returns>the mixed picture</returns>
-        public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer);
+        public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB);
     }
 }

@@ -1,6 +1,7 @@
 ﻿using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -26,8 +27,12 @@ namespace projectFrameCut.Render.Compose
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public string? ComputerId => "OverlayComputer";
 
-        public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer computer)
+        public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB)
         {
+            if (computer is null)
+            {
+                throw new ArgumentNullException(nameof(computer), "OverlayMixture requires a computer.");
+            }
             var sw = Stopwatch.StartNew();
             OverlayedPictureProcessStack procStack = new OverlayedPictureProcessStack
             {
@@ -90,48 +95,37 @@ namespace projectFrameCut.Render.Compose
                 }
             }
 
-            float[] baseR, baseG, baseB, baseA;
+            var pool = ArrayPool<float>.Shared;
+            float[] baseR, baseG, baseB;
+            float[]? baseA;
+            int basePixels;
             if (basePicture is IPicture<ushort> bp16)
             {
-                baseR = new float[bp16.Pixels];
-                baseG = new float[bp16.Pixels];
-                baseB = new float[bp16.Pixels];
-                for (int i = 0; i < bp16.Pixels; i++)
+                basePixels = bp16.Pixels;
+                baseR = pool.Rent(basePixels);
+                baseG = pool.Rent(basePixels);
+                baseB = pool.Rent(basePixels);
+                for (int i = 0; i < basePixels; i++)
                 {
                     baseR[i] = bp16.r[i];
                     baseG[i] = bp16.g[i];
                     baseB[i] = bp16.b[i];
                 }
-                if (bp16.a is null)
-                {
-                    baseA = new float[bp16.Pixels];
-                    Array.Fill(baseA, 1f);
-                }
-                else
-                {
-                    baseA = bp16.a;
-                }
+                baseA = bp16.hasAlphaChannel ? bp16.a : null;
             }
             else if (basePicture is IPicture<byte> bp8)
             {
-                baseR = new float[bp8.Pixels];
-                baseG = new float[bp8.Pixels];
-                baseB = new float[bp8.Pixels];
-                for (int i = 0; i < bp8.Pixels; i++)
+                basePixels = bp8.Pixels;
+                baseR = pool.Rent(basePixels);
+                baseG = pool.Rent(basePixels);
+                baseB = pool.Rent(basePixels);
+                for (int i = 0; i < basePixels; i++)
                 {
                     baseR[i] = bp8.r[i] * 257.0f;
                     baseG[i] = bp8.g[i] * 257.0f;
                     baseB[i] = bp8.b[i] * 257.0f;
                 }
-                if (bp8.a is null)
-                {
-                    baseA = new float[bp8.Pixels];
-                    Array.Fill(baseA, 1f);
-                }
-                else
-                {
-                    baseA = bp8.a;
-                }
+                baseA = bp8.hasAlphaChannel ? bp8.a : null;
             }
             else throw new NotSupportedException();
 #if DEBUG
@@ -152,55 +146,58 @@ namespace projectFrameCut.Render.Compose
                 topPicture.SaveAsPng16bpp(Path.Combine(IPicture.DiagImagePath, $"_OverlayDiag-{id}-top.png"));
             }
 #endif
-            float[] topR, topG, topB, topA;
+            float[] topR, topG, topB;
+            float[]? topA;
+            int topPixels;
             if (topPicture is IPicture<ushort> tp16)
             {
-                topR = new float[tp16.Pixels];
-                topG = new float[tp16.Pixels];
-                topB = new float[tp16.Pixels];
-                for (int i = 0; i < tp16.Pixels; i++)
+                topPixels = tp16.Pixels;
+                topR = pool.Rent(topPixels);
+                topG = pool.Rent(topPixels);
+                topB = pool.Rent(topPixels);
+                for (int i = 0; i < topPixels; i++)
                 {
                     topR[i] = tp16.r[i];
                     topG[i] = tp16.g[i];
                     topB[i] = tp16.b[i];
                 }
-                if (tp16.a is null)
-                {
-                    topA = new float[tp16.Pixels];
-                    Array.Fill(topA, 1f);
-                }
-                else
-                {
-                    topA = tp16.a;
-                }
+                topA = tp16.hasAlphaChannel ? tp16.a : null;
             }
             else if (topPicture is IPicture<byte> tp8)
             {
-                topR = new float[tp8.Pixels];
-                topG = new float[tp8.Pixels];
-                topB = new float[tp8.Pixels];
-                for (int i = 0; i < tp8.Pixels; i++)
+                topPixels = tp8.Pixels;
+                topR = pool.Rent(topPixels);
+                topG = pool.Rent(topPixels);
+                topB = pool.Rent(topPixels);
+                for (int i = 0; i < topPixels; i++)
                 {
                     topR[i] = tp8.r[i] * 257.0f;
                     topG[i] = tp8.g[i] * 257.0f;
                     topB[i] = tp8.b[i] * 257.0f;
                 }
-                if (tp8.a is null)
-                {
-                    topA = new float[tp8.Pixels];
-                    Array.Fill(topA, 1f);
-                }
-                else
-                {
-                    topA = tp8.a;
-                }
+                topA = tp8.hasAlphaChannel ? tp8.a : null;
             }
             else throw new NotSupportedException();
 
 
-            var outR = computer.Compute([topR, baseR, topA, baseA]);
-            var outG = computer.Compute([topG, baseG, topA, baseA]);
-            var outB = computer.Compute([topB, baseB, topA, baseA]);
+            object[] outR;
+            object[] outG;
+            object[] outB;
+            try
+            {
+                outR = computer.Compute([topR, baseR, topA, baseA, (int)targetPPB]);
+                outG = computer.Compute([topG, baseG, topA, baseA, (int)targetPPB]);
+                outB = computer.Compute([topB, baseB, topA, baseA, (int)targetPPB]);
+            }
+            finally
+            {
+                pool.Return(baseR, clearArray: false);
+                pool.Return(baseG, clearArray: false);
+                pool.Return(baseB, clearArray: false);
+                pool.Return(topR, clearArray: false);
+                pool.Return(topG, clearArray: false);
+                pool.Return(topB, clearArray: false);
+            }
             float[]? outA;
             if (basePicture.hasAlphaChannel || topPicture.hasAlphaChannel)
             {
@@ -211,13 +208,13 @@ namespace projectFrameCut.Render.Compose
                 outA = null;
             }
             IPicture result;
-            if (basePicture is IPicture<byte> && topPicture is IPicture<byte>)
+            if ((int)targetPPB == 8)
             {
                 result = new Picture8bpp(basePicture.Width, basePicture.Height)
                 {
-                    r = ConvertToByteChannel(outR[0] as float[] ?? throw new InvalidOperationException("Invalid overlay output R")),
-                    g = ConvertToByteChannel(outG[0] as float[] ?? throw new InvalidOperationException("Invalid overlay output G")),
-                    b = ConvertToByteChannel(outB[0] as float[] ?? throw new InvalidOperationException("Invalid overlay output B")),
+                    r = ConvertToByteChannel(outR[0]),
+                    g = ConvertToByteChannel(outG[0]),
+                    b = ConvertToByteChannel(outB[0]),
                     a = outA,
                     hasAlphaChannel = basePicture.hasAlphaChannel || topPicture.hasAlphaChannel,
                     ProcessStack = new List<PictureProcessStack> { procStack }
@@ -228,9 +225,9 @@ namespace projectFrameCut.Render.Compose
             {
                 result = new Picture(basePicture.Width, basePicture.Height)
                 {
-                    r = ConvertToUShortChannel(outR[0] as float[] ?? throw new InvalidOperationException("Invalid overlay output R")),
-                    g = ConvertToUShortChannel(outG[0] as float[] ?? throw new InvalidOperationException("Invalid overlay output G")),
-                    b = ConvertToUShortChannel(outB[0] as float[] ?? throw new InvalidOperationException("Invalid overlay output B")),
+                    r = ConvertToUShortChannel(outR[0]),
+                    g = ConvertToUShortChannel(outG[0]),
+                    b = ConvertToUShortChannel(outB[0]),
                     a = outA,
                     hasAlphaChannel = basePicture.hasAlphaChannel || topPicture.hasAlphaChannel,
                     ProcessStack = new List<PictureProcessStack> { procStack }
@@ -239,30 +236,61 @@ namespace projectFrameCut.Render.Compose
             sw.Stop();
             procStack.Elapsed = sw.Elapsed;
 
-            static byte[] ConvertToByteChannel(float[] src)
+            static byte[] ConvertToByteChannel(object? src)
             {
-                var dst = new byte[src.Length];
-                for (int i = 0; i < src.Length; i++)
+                if (src is byte[] b) return b;
+                if (src is ushort[] u16)
                 {
-                    float v = src[i] / 257.0f;
-                    if (v < 0) v = 0;
-                    if (v > 255) v = 255;
-                    dst[i] = (byte)v;
+                    var dstU16 = new byte[u16.Length];
+                    for (int i = 0; i < u16.Length; i++)
+                    {
+                        float v = u16[i] / 257.0f;
+                        if (v < 0) v = 0;
+                        if (v > 255) v = 255;
+                        dstU16[i] = (byte)v;
+                    }
+                    return dstU16;
                 }
-                return dst;
+                if (src is float[] f)
+                {
+                    var dst = new byte[f.Length];
+                    for (int i = 0; i < f.Length; i++)
+                    {
+                        float v = f[i] / 257.0f;
+                        if (v < 0) v = 0;
+                        if (v > 255) v = 255;
+                        dst[i] = (byte)v;
+                    }
+                    return dst;
+                }
+                throw new InvalidOperationException("Invalid overlay output channel type for byte target");
             }
 
-            static ushort[] ConvertToUShortChannel(float[] src)
+            static ushort[] ConvertToUShortChannel(object? src)
             {
-                var dst = new ushort[src.Length];
-                for (int i = 0; i < src.Length; i++)
+                if (src is ushort[] u16) return u16;
+                if (src is byte[] b)
                 {
-                    float v = src[i];
-                    if (v < 0) v = 0;
-                    if (v > 65535) v = 65535;
-                    dst[i] = (ushort)v;
+                    var dstU16 = new ushort[b.Length];
+                    for (int i = 0; i < b.Length; i++)
+                    {
+                        dstU16[i] = (ushort)(b[i] * 257.0f);
+                    }
+                    return dstU16;
                 }
-                return dst;
+                if (src is float[] f)
+                {
+                    var dst = new ushort[f.Length];
+                    for (int i = 0; i < f.Length; i++)
+                    {
+                        float v = f[i];
+                        if (v < 0) v = 0;
+                        if (v > 65535) v = 65535;
+                        dst[i] = (ushort)v;
+                    }
+                    return dst;
+                }
+                throw new InvalidOperationException("Invalid overlay output channel type for ushort target");
             }
 
 #if DEBUG

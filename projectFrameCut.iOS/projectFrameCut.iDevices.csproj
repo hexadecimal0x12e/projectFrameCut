@@ -78,7 +78,13 @@
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
 		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="7.0.0" />
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
-		<PackageReference Include="Kawazu" Version="1.1.4" />
+
+		<Reference Include="..\projectFrameCut\Resources\Assembly\*.dll"/>
+		
+		<PackageReference Include="Microsoft.Extensions.AI" Version="10.3.0" />
+		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
+		<PackageReference Include="OpenAI" Version="2.8.0" />
+
 	</ItemGroup>
 
 

@@ -64,43 +64,81 @@ namespace projectFrameCut.Shared
     {
         public static IPicture Process(List<IPictureProcessStep> steps, IPicture source, int targetPPB)
         {
-            List<PictureProcessStack> procStack = new();
-            var img = source.ToBitPerPixel(targetPPB).SaveToSixLaborsImage(targetPPB, true, false);
-            List<Func<IImageProcessingContext, IImageProcessingContext>> processingContexts = new();
-            foreach (var item in steps)
+            List<PictureProcessStack> procStack = new(steps.Count);
+            List<Func<IImageProcessingContext, IImageProcessingContext>> processingContexts = new(steps.Count);
+            var convertedSource = source.ToBitPerPixel(targetPPB);
+            try
             {
-                var step = item.GetSixLaborsImageSharpProcess();
-                if (step is not null)
+                var img = convertedSource.SaveToSixLaborsImage(targetPPB, true, false);
+                try
                 {
-                    var stack = item.GetProcessStack();
-                    if(IPicture.DiagImagePath is not null) Logger.LogDiagnostic(PictureExtensions.FormatProcessStackForLog(procStack.Concat([stack])));
-                    processingContexts.Add(ctx =>
+                    foreach (var item in steps)
                     {
-                        var sw = Stopwatch.StartNew();
-                        var res = step(ctx);
-                        sw.Stop();
-                        stack.Elapsed = sw.Elapsed;
-                        return res;
-                    });
-                    procStack.Add(stack);
+                        var step = item.GetSixLaborsImageSharpProcess();
+                        if (step is not null)
+                        {
+                            var stack = item.GetProcessStack();
+                            if (IPicture.DiagImagePath is not null) Logger.LogDiagnostic(PictureExtensions.FormatProcessStackForLog(procStack.Concat([stack])));
+                            processingContexts.Add(ctx =>
+                            {
+                                var sw = Stopwatch.StartNew();
+                                var res = step(ctx);
+                                sw.Stop();
+                                stack.Elapsed = sw.Elapsed;
+                                return res;
+                            });
+                            procStack.Add(stack);
+                        }
+                        else
+                        {
+                            //Logger.LogDiagnostic($"Step {item.Name} doesn't have a IImageProcessingContext. Process the picture and convert it...");
+                            if (processingContexts.Count > 0)
+                            {
+                                img = ProcessSixLaborsProcessingContexts(img, processingContexts);
+                                processingContexts.Clear();
+                            }
+
+                            using var inputPicture = img.ToPJFCPicture(targetPPB);
+                            var outputPicture = item.Process(inputPicture);
+                            try
+                            {
+                                img.Dispose();
+                                img = outputPicture.SaveToSixLaborsImage(targetPPB, true, false);
+                            }
+                            finally
+                            {
+                                if (!ReferenceEquals(outputPicture, inputPicture))
+                                {
+                                    outputPicture.Dispose();
+                                }
+                            }
+
+                            procStack.Add(item.GetProcessStack());
+                        }
+                    }
+
+                    if (processingContexts.Count > 0)
+                    {
+                        img = ProcessSixLaborsProcessingContexts(img, processingContexts);
+                    }
+
+                    var result = img.ToPJFCPicture(targetPPB);
+                    result.ProcessStack = source.ProcessStack.Concat(procStack).ToList();
+                    return result;
                 }
-                else
+                finally
                 {
-                    //Logger.LogDiagnostic($"Step {item.Name} doesn't have a IImageProcessingContext. Process the picture and convert it...");
-                    img = ProcessSixLaborsProcessingContexts(img, processingContexts);
-                    processingContexts.Clear();
-                    img = item.Process(img.ToPJFCPicture(targetPPB)).SaveToSixLaborsImage(targetPPB, true, false);
-                    procStack.Add(item.GetProcessStack());
+                    img.Dispose();
                 }
             }
-            if (processingContexts.ListAny())
+            finally
             {
-                img = ProcessSixLaborsProcessingContexts(img, processingContexts);
+                if (!ReferenceEquals(convertedSource, source))
+                {
+                    convertedSource.Dispose();
+                }
+                source.Dispose();
             }
-            source.Dispose();
-            var result = img.ToPJFCPicture(targetPPB);
-            result.ProcessStack = source.ProcessStack.Concat(procStack).ToList();
-            return result;
         }
 
         private static Image ProcessSixLaborsProcessingContexts(Image img, List<Func<IImageProcessingContext, IImageProcessingContext>> processingContexts)

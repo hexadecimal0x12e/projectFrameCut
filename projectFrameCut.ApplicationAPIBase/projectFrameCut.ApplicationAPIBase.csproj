@@ -27,6 +27,7 @@
 		<NeutralLanguage>zh-CN</NeutralLanguage>
 
 		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -118,9 +118,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         }
 
         /// <summary>
+        /// A Id to mark this window. Used for comparing.
+        /// </summary>
+        public Guid WindowID { get; init; }
+
+        /// <summary>
         /// Provide a <see cref="IContextMenuBuilder"/> to help build the ContextMenu when user right-clicks on the title bar. The context menu will be displayed with the options provided by the builder.
         /// </summary>
-        public static Func<IContextMenuBuilder?>? ContextMenuProviderGetter { get; set; } = new(() => { if (IContextMenuBuilder.Default is IContextMenuBuilder b) return b; return null; });
+        public static Func<IContextMenuBuilder?>? ContextMenuProviderGetter { get; set; } = new(() => { return IContextMenuBuilder.Default is IContextMenuBuilder b ? b : null; });
 
         #endregion
 
@@ -191,6 +196,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
         public MultiWindowItem()
         {
+            WindowID = Guid.NewGuid();
             InitializeComponent();
 
             // Ensure the window floats and doesn't stretch by default
@@ -298,16 +304,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             if (ContextMenuProviderGetter?.Invoke()?.CreateNewInstance() is IContextMenuBuilder ContextMenuProvider && _titleBarGrid is not null)
             {
-                ContextMenuProvider.AddCommand("Recover", () =>
-                    {
-                        if (_isMaximized) Maximize();
-                        if (_isMinimized) Minimize();
-                    })
-                    .AddCommand("Close", () => OnCloseTapped(this, EventArgs.Empty))
-                    .AddCommand("Maximize", Maximize)
-                    .AddCommand("Minimize", Minimize);
+                ContextMenuProvider
+                    .AddCommand(LocalizedResources.APIBaseLocalizedResources.Localized?.MultiWindowView_Close ?? "Close", () => OnCloseTapped(this, EventArgs.Empty))
+                    .AddCommand(LocalizedResources.APIBaseLocalizedResources.Localized?.MultiWindowView_Maximize ?? "Maximize", Maximize)
+                    .AddCommand(LocalizedResources.APIBaseLocalizedResources.Localized?.MultiWindowView_Minimize ?? "Minimize", Minimize);
 #if WINDOWS || MACCATALYST
-                ContextMenuProvider.AddCommand("To standalone window", async () => await OpenInNewWindow());
+                ContextMenuProvider.AddCommand(LocalizedResources.APIBaseLocalizedResources.Localized?.MultiWindowView_PopOut ?? "To standalone window", async () => await OpenInNewWindow());
 #endif
 
                 var gesture = new TapGestureRecognizer
@@ -496,7 +498,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// <param name="destruction">The text for the destructive button, which represents a destructive action the user can take.</param>
         /// <param name="buttons">An array of other button texts representing different options the user can select.</param>
         /// <returns>The user's option selection as a string, or null if cancelled.</returns>
-        public async Task<string> DisplayActionSheetAsync(string title, string cancel, string destruction, params string[] buttons)
+        public async Task<string> DisplayActionSheetAsync(string title, string cancel, string? destruction, params string[] buttons)
         {
             if (_hostWindow?.Page is not null) return await _hostWindow.Page.DisplayActionSheetAsync(title, cancel, destruction, buttons);
             if (_dialogOverlay == null) return null;
@@ -1326,7 +1328,35 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             }
         }
         #endregion
+
+        #region misc
+        public override bool Equals(object? obj) => obj is MultiWindowItem item && this.WindowID == item.WindowID;
+        public override int GetHashCode() => WindowID.GetHashCode();
+
+        public static bool ReferenceEquals(MultiWindowItem? a, MultiWindowItem? b)
+        {
+            if (a is null && b is null) return true;
+            if (a is null || b is null) return false;
+            return a.WindowID == b.WindowID;
+        }
+        #endregion
     }
+
+    public class MultiWindowItemComparer : IEqualityComparer<MultiWindowItem>
+    {
+        public bool Equals(MultiWindowItem? x, MultiWindowItem? y)
+        {
+            if (x is null && y is null) return true;
+            if (x is null || y is null) return false;
+            return x.WindowID == y.WindowID;
+        }
+        public int GetHashCode(MultiWindowItem obj)
+        {
+            return obj.WindowID.GetHashCode();
+        }
+    }
+
+
 
     public class CloseEventArgs : EventArgs
     {

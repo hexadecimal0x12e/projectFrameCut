@@ -2,6 +2,7 @@ using Microsoft.Maui.Controls;
 using projectFrameCut.Setting.SettingPages;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading.Tasks;
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
 
@@ -17,7 +18,7 @@ namespace projectFrameCut
 
             instance = this;
             HintLabel.Text = SettingLocalizedResources.General_SelectAPageToGo;
-            VersionLabel.Text = $"{Localized.AppBrand} v{AppInfo.VersionString}";
+            VersionLabel.Text = $"{Localized.AppBrand} v{Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}";
             CopyrightText.Text += DateTime.Now.Year.ToString();
 #if iDevices && !DEBUG // no reflection in momo on ios, plugin can't work at all.
             PluginSettingButton.IsVisible = false; 

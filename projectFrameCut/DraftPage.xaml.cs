@@ -170,6 +170,7 @@ public partial class DraftPage : ContentPage
     public ICommand PlayheadMoveRightCommand { get; private set; }
     public ICommand PlayheadMoveLeftCommand { get; private set; }
     public ICommand ExitNoSaveCommand { get; private set; }
+    public ICommand ManageWindowCommand { get; private set; }
     #endregion
 
     #region options
@@ -282,6 +283,48 @@ public partial class DraftPage : ContentPage
         PlayheadMoveLeftCommand = new Command(async () => await MovePlayhead(-10));
         PlayheadMoveRightCommand = new Command(async () => await MovePlayhead(10));
         ExitNoSaveCommand = new Command(async () => await ExitButNoSave());
+        ManageWindowCommand = new Command<string?>(ExecuteManageWindowCommand);
+    }
+
+    private void ActivateMultiWindowItem(MultiWindowItem window)
+    {
+        if (!MainMultiWindowView.Children.Contains(window))
+        {
+            MainMultiWindowView.AddWindow(window);
+        }
+
+        window.IsVisible = true;
+        MainMultiWindowView.BringToFront(window);
+    }
+
+    private void ExecuteManageWindowCommand(string? action)
+    {
+        switch (action)
+        {
+            case var c when Guid.TryParse(c, out var wid):
+                {
+                    if(MainMultiWindowView.Windows.FirstOrDefault(x => x.WindowID == wid) is MultiWindowItem window)
+                    {
+                        ActivateMultiWindowItem(window);
+                    }
+                    break;
+                }
+            case "preview":
+                ActivateMultiWindowItem(PreviewSubwindow);
+                break;
+            case "properties":
+                ActivateMultiWindowItem(PropertiesSubwindow);
+                break;
+            case "assistant":
+                ActivateMultiWindowItem(AssisstantSubWindow);
+                break;
+            case "close-extra":
+                foreach (var window in MainMultiWindowView.Children.OfType<MultiWindowItem>().Where(x => x.IsClosable).ToList())
+                {
+                    MainMultiWindowView.CloseWindow(window);
+                }
+                break;
+        }
     }
 
 
@@ -455,6 +498,21 @@ public partial class DraftPage : ContentPage
         {
             RightMenuBar.IsVisible = true;
             RightContentBorder.IsVisible = true;
+            MainMultiWindowView.WindowAdded += (s, e) =>
+            {
+                ViewMenuBarItem.Insert(ViewMenuBarItem.Count - 2, new MenuFlyoutItem { Text = e.Title, Command = ManageWindowCommand, CommandParameter = e.WindowID.ToString() });
+            };
+            MainMultiWindowView.WindowClosed += (s, e) =>
+            {
+                var wid = e.WindowID.ToString();
+                if (ViewMenuBarItem.OfType<MenuFlyoutItem>().Where(c => c?.CommandParameter is string s && s == wid) is IEnumerable<MenuFlyoutItem> items)
+                {
+                    foreach (var item in items)
+                    {
+                        ViewMenuBarItem.Remove(item);
+                    }
+                }
+            };
 
         }
 #if WINDOWS
@@ -479,6 +537,8 @@ public partial class DraftPage : ContentPage
         fileDropGesture.Drop += File_Drop;
         if (!Tracks.Any()) AddATrack(0);
         UpdatePlayheadHeight();
+
+        AssisstantSubWindow.Content = new AIAssistance.AssistanceChatSessionsView();
     }
 
     #endregion
