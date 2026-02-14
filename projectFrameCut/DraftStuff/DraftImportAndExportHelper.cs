@@ -19,6 +19,26 @@ namespace projectFrameCut.DraftStuff
 {
     internal static class DraftImportAndExportHelper
     {
+        public static ClipDraftDTO ExportClipElementFromDraftPage(projectFrameCut.DraftPage page, ClipElementUI element, bool wrapSoundtrackAsClip = true)
+        {
+            if (page == null) throw new ArgumentNullException(nameof(page));
+            if (element == null) throw new ArgumentNullException(nameof(element));
+
+            if (!TryFindElementBorder(page, element, out var border, out var trackIndex))
+            {
+                throw new KeyNotFoundException($"Cannot find clip element '{element.Id}' in current draft page tracks.");
+            }
+
+            ClipInfoBuilder.RebuildAllEffects(element);
+
+            if (element.Id.StartsWith("ghost_") || element.Id.StartsWith("shadow_"))
+            {
+                throw new InvalidOperationException("Ghost/Shadow clips cannot be exported as ClipDraftDTO.");
+            }
+
+            return CreateClipDraftDTO(page, border, element, (uint)trackIndex, wrapSoundtrackAsClip);
+        }
+
         public static DraftStructureJSON ExportFromDraftPage(projectFrameCut.DraftPage page, bool wrapSoundtrackAsClip = false)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
@@ -53,26 +73,7 @@ namespace projectFrameCut.DraftStuff
                         {
                             if (wrapSoundtrackAsClip)
                             {
-                                var clipDto = new ClipDraftDTO
-                                {
-                                    Id = elem.Id,
-                                    Name = name,
-                                    FromPlugin = InternalPluginBase.InternalPluginBaseID,
-                                    TypeName = nameof(SoundTrackToClipWrapper),
-                                    ClipType = ClipMode.AudioClip,
-                                    LayerIndex = (uint)trackKey,
-                                    StartFrame = startFrame,
-                                    RelativeStartFrame = elem.relativeStartFrame,
-                                    Duration = durationFrames,
-                                    FrameTime = elem.sourceSecondPerFrame,
-                                    MixtureMode = MixtureMode.Overlay,
-                                    FilePath = elem.SourcePath,
-                                    SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
-                                    IsInfiniteLength = elem.isInfiniteLength,
-                                    SecondPerFrameRatio = elem.SecondPerFrameRatio,
-                                    MetaData = elem.ExtraData,
-                                    Effects = null
-                                };
+                                var clipDto = CreateClipDraftDTO(page, border, elem, (uint)trackKey, true);
                                 clips.Add(clipDto);
                             }
                             else
@@ -97,73 +98,7 @@ namespace projectFrameCut.DraftStuff
                         }
                         else
                         {
-                            var dto = new ClipDraftDTO
-                            {
-                                Id = elem.Id,
-                                Name = name,
-                                FromPlugin = elem.FromPlugin,
-                                TypeName = elem.TypeName,
-                                ClipType = elem.ClipType,
-                                LayerIndex = (uint)trackKey,
-                                StartFrame = startFrame,
-                                RelativeStartFrame = elem.relativeStartFrame,
-                                Duration = durationFrames,
-                                FrameTime = elem.sourceSecondPerFrame,
-                                MixtureMode = MixtureMode.Overlay,
-                                FilePath = elem.SourcePath,
-                                SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
-                                IsInfiniteLength = elem.isInfiniteLength,
-                                SecondPerFrameRatio = elem.SecondPerFrameRatio,
-                                MetaData = elem.ExtraData,
-                                Effects = elem.Effects?.Select((kv) =>
-                                {
-                                    var effect = kv.Value;
-                                    var structure = new EffectAndMixtureJSONStructure
-                                    {
-                                        Name = kv.Key,
-                                        FromPlugin = effect.FromPlugin,
-                                        TypeName = effect.TypeName,
-                                        Parameters = effect.Parameters,
-                                        Index = effect.Index,
-                                        Enabled = effect.Enabled,
-                                        RelativeHeight = effect.RelativeHeight,
-                                        RelativeWidth = effect.RelativeWidth,
-                                        IsMixture = false,
-                                        IsContinuousEffect = effect is IContinuousEffect,
-                                        IsVariableArgumentEffect = effect is IBindableArgumentEffect,
-                                        BindedEffectGroupID = effect.BindedEffectGroupID ?? "",
-                                    };
-
-                                    // Save IBindableArgumentEffect specific properties
-                                    if (effect is IBindableArgumentEffect bindableEffect)
-                                    {
-                                        structure.Id = bindableEffect.Id;
-                                        structure.BindedInputID = bindableEffect.BindedArgumentProviderID;
-                                        if (bindableEffect is IBindableArgumentEffectManyToOneValueProcesser mpe)
-                                        {
-                                            structure.BindedInputIDs = mpe.BindedArgumentProviderIDs;
-                                        }
-                                        else if (bindableEffect is IBindableArgumentEffectManyInputResultGenerator mpg)
-                                        {
-                                            structure.BindedInputIDs = mpg.BindedArgumentProviderIDs;
-                                        }
-                                        structure.Enabled = true;
-                                    }
-
-                                    return structure;
-                                }).ToArray(),
-                                EffectBundles = elem.EffectBundles?.Values
-                                    .Select(b => new EffectBundleJSONStructure
-                                    {
-                                        Id = b.Id,
-                                        BundleTypeName = b.TypeName,
-                                        Parameters = b.Parameters,
-                                        Name = b.Name,
-                                        BindedInputId = b.BindedInputId,
-                                        BindedOutputId = b.BindedOutputId,
-                                        BindedInputIds = b.BindedInputIds?.ToArray(),
-                                    }).ToArray()
-                            };
+                            var dto = CreateClipDraftDTO(page, border, elem, (uint)trackKey, false);
 
                             clips.Add(dto);
                         }
@@ -207,6 +142,131 @@ namespace projectFrameCut.DraftStuff
             };
             if (wrapSoundtrackAsClip) d.AudioDuration = (uint)audMax;
             return d;
+        }
+
+        private static bool TryFindElementBorder(projectFrameCut.DraftPage page, ClipElementUI element, [NotNullWhen(true)] out Microsoft.Maui.Controls.Border? border, out int trackIndex)
+        {
+            var trackKeys = page.Tracks.Keys.OrderBy(k => k).ToArray();
+            foreach (var key in trackKeys)
+            {
+                if (!page.Tracks.TryGetValue(key, out var layout)) continue;
+                foreach (var child in layout.Children)
+                {
+                    if (child is Microsoft.Maui.Controls.Border currentBorder && ReferenceEquals(currentBorder.BindingContext, element))
+                    {
+                        border = currentBorder;
+                        trackIndex = key;
+                        return true;
+                    }
+                }
+            }
+
+            border = null;
+            trackIndex = -1;
+            return false;
+        }
+
+        private static ClipDraftDTO CreateClipDraftDTO(projectFrameCut.DraftPage page, Microsoft.Maui.Controls.Border border, ClipElementUI elem, uint layerIndex, bool wrapSoundtrackAsClip)
+        {
+            double startPx = border.TranslationX;
+            double widthPx = (border.WidthRequest > 0) ? border.WidthRequest : ((border.Width > 0) ? border.Width : border.WidthRequest);
+
+            uint startFrame = (uint)Math.Round(page.PixelToFrame(startPx) / elem.SecondPerFrameRatio);
+            uint durationFrames = (uint)Math.Round(page.PixelToFrame(widthPx) / elem.SecondPerFrameRatio);
+            if (durationFrames == 0) durationFrames = 1;
+
+            string name = string.IsNullOrWhiteSpace(elem.DisplayName) ? ExtractLabelText(border) ?? elem.Id : elem.DisplayName;
+
+            if (elem.ClipType == ClipMode.AudioClip && wrapSoundtrackAsClip)
+            {
+                return new ClipDraftDTO
+                {
+                    Id = elem.Id,
+                    Name = name,
+                    FromPlugin = InternalPluginBase.InternalPluginBaseID,
+                    TypeName = nameof(SoundTrackToClipWrapper),
+                    ClipType = ClipMode.AudioClip,
+                    LayerIndex = layerIndex,
+                    StartFrame = startFrame,
+                    RelativeStartFrame = elem.relativeStartFrame,
+                    Duration = durationFrames,
+                    FrameTime = elem.sourceSecondPerFrame,
+                    MixtureMode = MixtureMode.Overlay,
+                    FilePath = elem.SourcePath,
+                    SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
+                    IsInfiniteLength = elem.isInfiniteLength,
+                    SecondPerFrameRatio = elem.SecondPerFrameRatio,
+                    MetaData = elem.ExtraData,
+                    Effects = null
+                };
+            }
+
+            return new ClipDraftDTO
+            {
+                Id = elem.Id,
+                Name = name,
+                FromPlugin = elem.FromPlugin,
+                TypeName = elem.TypeName,
+                ClipType = elem.ClipType,
+                LayerIndex = layerIndex,
+                StartFrame = startFrame,
+                RelativeStartFrame = elem.relativeStartFrame,
+                Duration = durationFrames,
+                FrameTime = elem.sourceSecondPerFrame,
+                MixtureMode = MixtureMode.Overlay,
+                FilePath = elem.SourcePath,
+                SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
+                IsInfiniteLength = elem.isInfiniteLength,
+                SecondPerFrameRatio = elem.SecondPerFrameRatio,
+                MetaData = elem.ExtraData,
+                Effects = elem.Effects?.Select((kv) =>
+                {
+                    var effect = kv.Value;
+                    var structure = new EffectAndMixtureJSONStructure
+                    {
+                        Name = kv.Key,
+                        FromPlugin = effect.FromPlugin,
+                        TypeName = effect.TypeName,
+                        Parameters = effect.Parameters,
+                        Index = effect.Index,
+                        Enabled = effect.Enabled,
+                        RelativeHeight = effect.RelativeHeight,
+                        RelativeWidth = effect.RelativeWidth,
+                        IsMixture = false,
+                        IsContinuousEffect = effect is IContinuousEffect,
+                        IsVariableArgumentEffect = effect is IBindableArgumentEffect,
+                        BindedEffectGroupID = effect.BindedEffectGroupID ?? "",
+                    };
+
+                    if (effect is IBindableArgumentEffect bindableEffect)
+                    {
+                        structure.Id = bindableEffect.Id;
+                        structure.BindedInputID = bindableEffect.BindedArgumentProviderID;
+                        if (bindableEffect is IBindableArgumentEffectManyToOneValueProcesser mpe)
+                        {
+                            structure.BindedInputIDs = mpe.BindedArgumentProviderIDs;
+                        }
+                        else if (bindableEffect is IBindableArgumentEffectManyInputResultGenerator mpg)
+                        {
+                            structure.BindedInputIDs = mpg.BindedArgumentProviderIDs;
+                        }
+                        structure.Enabled = true;
+                    }
+
+                    return structure;
+                }).ToArray(),
+                EffectBundles = elem.EffectBundles?.Values
+                    .Select(b => new EffectBundleJSONStructure
+                    {
+                        Id = b.Id,
+                        BundleTypeName = b.TypeName,
+                        Parameters = b.Parameters,
+                        Name = b.Name,
+                        BindedInputId = b.BindedInputId,
+                        BindedOutputId = b.BindedOutputId,
+                        BindedInputIds = b.BindedInputIds?.ToArray(),
+                    }).ToArray()
+            };
         }
 
         public static IClip[] JSONToIClips(DraftStructureJSON json)

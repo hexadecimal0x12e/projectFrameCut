@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
+using Microsoft.Extensions.AI;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Layouts;
 using Microsoft.Maui.Platform;
@@ -1360,6 +1361,17 @@ namespace projectFrameCut.DraftStuff
             });
             var panel = ppb.BuildWithScrollView();
             return panel;
+        }
+
+        public Func<IEnumerable<AIFunction>>? BuildToolCalls(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            List<AIFunction> toolCalls = new List<AIFunction>
+            {
+                AIFunctionFactory.Create(() => DraftImportAndExportHelper.ExportFromDraftPage(page, false).Clips, "get_all_clips","Get all clips inside this project."),
+                AIFunctionFactory.Create(() => DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip, false), "get_selected_clip_info","Get the clip selected by the user's info.")
+            };
+
+            return new(() => toolCalls);
         }
 
         private class DummyEffectBundle : IEffectBundle

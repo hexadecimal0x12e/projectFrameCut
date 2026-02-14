@@ -1019,7 +1019,7 @@
       },
       {
         "Id": "Misc_UserDisplayName",
-        "Value": "\u7528\u6237\u663E\u793A\u540D\u79F0",
+        "Value": "\u6635\u79F0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1043,7 +1043,7 @@
       },
       {
         "Id": "Misc_UserInfo_Subtitle",
-        "Value": "\u7528\u4E8E\u534F\u4F5C\u548C\u7D20\u6750\u7BA1\u7406\u65F6\uFF0C\u6807\u8BC6\u60A8",
+        "Value": "\u7528\u4E8E\u6807\u8BC6\u60A8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

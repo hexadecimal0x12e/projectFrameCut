@@ -15,7 +15,7 @@ using Path = System.IO.Path;
 
 namespace projectFrameCut.DraftStuff
 {
-    [DebuggerDisplay("{displayName}, {ClipType}")]
+    [DebuggerDisplay("{displayName}, {ClipType} ({Id})")]
     public class ClipElementUI
     {
         public required string Id { get; set; }

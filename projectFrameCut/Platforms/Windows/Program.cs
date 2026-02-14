@@ -115,6 +115,18 @@ namespace projectFrameCut.WinUI
                 _ = SettingsManager.FlushAndStopAsync();
                 Helper.HelperProgram.Cleanup();
                 MauiProgram.LogWriter.Flush();
+                try
+                {
+                    foreach (var item in Render.Plugin.PluginManager.LoadedPlugins)
+                    {
+                        try
+                        {
+                            item.Value.OnClosing();
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
                 Environment.Exit(0);
                 return;
             }

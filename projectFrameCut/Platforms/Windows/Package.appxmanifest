@@ -7,11 +7,12 @@
 	xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
 	xmlns:uap4="http://schemas.microsoft.com/appx/manifest/uap/windows10/4"
-  IgnorableNamespaces="uap rescap com desktop">
+  IgnorableNamespaces="uap uap4 rescap com desktop ">
 
-  <Identity Name="hexadecimal0x12e.projectFrameCut" Publisher="CN=hexadecimal0x12e" Version="1.3.0.0" />
+	<!--wtf, why the pfn is not hexadecimal0x12e.projectFrameCut-->
+  <Identity Name="hexadecimal0x12e.projectFrameCut" Publisher="CN=0AD263CD-E10E-4A8B-A187-25C0A41C69D7" Version="1.3.0.3" />
 
-  <mp:PhoneIdentity PhoneProductId="45A60FBE-2C92-4E69-A0C6-52E4EADB0B42" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="8bc4e03e-2606-4817-8070-e1aa4a22658f" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>$placeholder$</DisplayName>

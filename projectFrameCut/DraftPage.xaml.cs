@@ -56,7 +56,6 @@ using UIKit;
 using projectFrameCut.iDevicesAPI;
 using MobileCoreServices;
 using projectFrameCut.MetalAccelerater;
-using projectFrameCut.ApplicationAPIBase.Helpers;
 
 
 #endif
@@ -66,7 +65,6 @@ using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
 using projectFrameCut.Render.AndroidOpenGL;
 using Microsoft.Maui.Platform;
 using Android.Content.Res;
-using projectFrameCut.ApplicationAPIBase.Helpers;
 
 #endif
 
@@ -142,6 +140,7 @@ public partial class DraftPage : ContentPage
     public Border Popup = new();
     public ClipInfoBuilder infoBuilder;
     public InteractableEditor.InteractableEditor ClipEditor;
+    public AIAssistance.AssistanceChatSessionsView ChatSessionsView = new();
 
     public ProjectJSONStructure ProjectInfo { get; set; } = new();
     public ConcurrentDictionary<string, ClipElementUI> Clips = new();
@@ -171,6 +170,7 @@ public partial class DraftPage : ContentPage
     public ICommand PlayheadMoveLeftCommand { get; private set; }
     public ICommand ExitNoSaveCommand { get; private set; }
     public ICommand ManageWindowCommand { get; private set; }
+    public ICommand ResetMultiWindowViewCommand { get; private set; }
     #endregion
 
     #region options
@@ -242,6 +242,7 @@ public partial class DraftPage : ContentPage
 #endif
 
         infoBuilder = new ClipInfoBuilder(this);
+        ChatSessionsView = new AIAssistance.AssistanceChatSessionsView();
         WorkingPath = workingDir;
         TrackCalculator.HeightPerTrack = ClipHeight;
 
@@ -284,47 +285,7 @@ public partial class DraftPage : ContentPage
         PlayheadMoveRightCommand = new Command(async () => await MovePlayhead(10));
         ExitNoSaveCommand = new Command(async () => await ExitButNoSave());
         ManageWindowCommand = new Command<string?>(ExecuteManageWindowCommand);
-    }
-
-    private void ActivateMultiWindowItem(MultiWindowItem window)
-    {
-        if (!MainMultiWindowView.Children.Contains(window))
-        {
-            MainMultiWindowView.AddWindow(window);
-        }
-
-        window.IsVisible = true;
-        MainMultiWindowView.BringToFront(window);
-    }
-
-    private void ExecuteManageWindowCommand(string? action)
-    {
-        switch (action)
-        {
-            case var c when Guid.TryParse(c, out var wid):
-                {
-                    if(MainMultiWindowView.Windows.FirstOrDefault(x => x.WindowID == wid) is MultiWindowItem window)
-                    {
-                        ActivateMultiWindowItem(window);
-                    }
-                    break;
-                }
-            case "preview":
-                ActivateMultiWindowItem(PreviewSubwindow);
-                break;
-            case "properties":
-                ActivateMultiWindowItem(PropertiesSubwindow);
-                break;
-            case "assistant":
-                ActivateMultiWindowItem(AssisstantSubWindow);
-                break;
-            case "close-extra":
-                foreach (var window in MainMultiWindowView.Children.OfType<MultiWindowItem>().Where(x => x.IsClosable).ToList())
-                {
-                    MainMultiWindowView.CloseWindow(window);
-                }
-                break;
-        }
+        ResetMultiWindowViewCommand = new Command(() => ResetLayout());
     }
 
 
@@ -500,17 +461,24 @@ public partial class DraftPage : ContentPage
             RightContentBorder.IsVisible = true;
             MainMultiWindowView.WindowAdded += (s, e) =>
             {
-                ViewMenuBarItem.Insert(ViewMenuBarItem.Count - 2, new MenuFlyoutItem { Text = e.Title, Command = ManageWindowCommand, CommandParameter = e.WindowID.ToString() });
+                ViewMenuBarItem.Insert(3, new MenuFlyoutItem { Text = e.Title, Command = ManageWindowCommand, CommandParameter = e.WindowID.ToString() });
             };
             MainMultiWindowView.WindowClosed += (s, e) =>
             {
-                var wid = e.WindowID.ToString();
-                if (ViewMenuBarItem.OfType<MenuFlyoutItem>().Where(c => c?.CommandParameter is string s && s == wid) is IEnumerable<MenuFlyoutItem> items)
+                try
                 {
-                    foreach (var item in items)
+                    var wid = e.WindowID.ToString();
+                    if (ViewMenuBarItem.OfType<MenuFlyoutItem>().Where(c => c?.CommandParameter is string s && s == wid) is IEnumerable<MenuFlyoutItem> items)
                     {
-                        ViewMenuBarItem.Remove(item);
+                        foreach (var item in items)
+                        {
+                            ViewMenuBarItem.Remove(item);
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Handle window change", this);
                 }
             };
 
@@ -538,7 +506,7 @@ public partial class DraftPage : ContentPage
         if (!Tracks.Any()) AddATrack(0);
         UpdatePlayheadHeight();
 
-        AssisstantSubWindow.Content = new AIAssistance.AssistanceChatSessionsView();
+        AssisstantSubWindow.Content = ChatSessionsView;
     }
 
     #endregion
@@ -1605,6 +1573,15 @@ public partial class DraftPage : ContentPage
                 Text = "No clip are selected. This SHOULD is a bug, please feedback.\r\n" +
                       $"{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}",
             };
+        }
+        try
+        {
+            ChatSessionsView.Current?.ToolCallFactories = infoBuilder.BuildToolCalls(clip, OnClipPropertiesChanged);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"build tools for {clip.Id}", this);
+
         }
         return await infoBuilder.Build(clip, OnClipPropertiesChanged);
 
@@ -2787,6 +2764,77 @@ public partial class DraftPage : ContentPage
 
     }
 
+
+    private void ActivateMultiWindowItem(MultiWindowItem window)
+    {
+        if (!MainMultiWindowView.Children.Contains(window))
+        {
+            MainMultiWindowView.AddWindow(window);
+        }
+
+        window.IsVisible = true;
+        MainMultiWindowView.BringToFront(window);
+    }
+
+    private void ExecuteManageWindowCommand(string? action)
+    {
+        switch (action)
+        {
+            case var c when Guid.TryParse(c, out var wid):
+                {
+                    if (MainMultiWindowView.Windows.FirstOrDefault(x => x.WindowID == wid) is MultiWindowItem window)
+                    {
+                        ActivateMultiWindowItem(window);
+                    }
+                    break;
+                }
+            case "active":
+                if (MainMultiWindowView?.ActiveWindow?.IsClosable ?? false) MainMultiWindowView?.ActiveWindow?.Close(false);
+                break;
+            case "preview":
+                ActivateMultiWindowItem(PreviewSubwindow);
+                break;
+            case "properties":
+                ActivateMultiWindowItem(PropertiesSubwindow);
+                break;
+            case "assistant":
+                ActivateMultiWindowItem(AssisstantSubWindow);
+                break;
+            case "close-extra":
+                foreach (var window in MainMultiWindowView.Children.OfType<MultiWindowItem>().Where(x => x.IsClosable).ToList())
+                {
+                    MainMultiWindowView.CloseWindow(window);
+                }
+                break;
+        }
+    }
+
+
+    private void ResetLayout()
+    {
+        foreach (var window in MainMultiWindowView.Children.OfType<MultiWindowItem>().Where(x => x.IsClosable).ToList())
+        {
+            MainMultiWindowView.CloseWindow(window);
+        }
+        if (UpperContent.Children[0] is Grid previewGrid && PreviewAreaHeight > 100)
+        {
+            previewGrid.ColumnDefinitions.Clear();
+            previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            int colIndex = 0;
+            foreach (var child in previewGrid.Children)
+            {
+                if (child.GetType().Name == "MultiWindowItem" && colIndex < 2)
+                {
+                    Grid.SetColumn((BindableObject)child, colIndex);
+                    colIndex++;
+                }
+            }
+        }
+    }
+
+
     #endregion
 
     #region math stuff
@@ -3716,8 +3764,8 @@ public partial class DraftPage : ContentPage
         {
             {"DraftPage_GoRender",GoRenderCommand  },
             {"DraftPage_MenuBar_Project_Save", SaveCommand },
-            {"DraftPage_MenuBar_Project_Share",null },
-            {"DraftPage_MenuBar_Project_Cooperate",null },
+            //{"DraftPage_MenuBar_Project_Share",null },
+            //{"DraftPage_MenuBar_Project_Cooperate",null },
             {"DraftPage_MenuBar_Edit_Spilt", SpiltCommand },
             {"DraftPage_MenuBar_Edit_DeleteClip", DeleteCommand },
             {"DraftPage_MenuBar_Edit_Undo", UndoCommand },
@@ -3750,6 +3798,29 @@ public partial class DraftPage : ContentPage
                     var f = previewer.GetFrame((uint)_currentFrame, previewWidth, previewHeight);
                     var text = PictureExtensions.FormatProcessStackForLog(f.ProcessStack);
                     await Microsoft.Maui.ApplicationModel.DataTransfer.Clipboard.Default.SetTextAsync(text);
+                })
+            },
+            {
+                "Debug_OpenAWindow", new Command(async () =>
+                {
+                    var page = new TestPage();
+                    var wd = new MultiWindowItem()
+                    {
+                        Content = page.Content,
+                        Title = "Test Window",
+                    };
+                    await Dispatcher.DispatchAsync(async () =>
+                    {
+                        MainMultiWindowView.AddWindow(wd);
+                    });
+                })
+            },
+            {
+                "Debug_CollectGarbage", new Command(() =>
+                {
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+                    GC.Collect();
                 })
             }
 #endif

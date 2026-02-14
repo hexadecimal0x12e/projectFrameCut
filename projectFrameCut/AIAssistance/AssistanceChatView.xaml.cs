@@ -24,7 +24,10 @@ public partial class AssistanceChatView : ContentView
     private readonly IChatClient? _chatClient;
     private readonly Guid _sessionId;
     private bool _isReplying;
+    private CancellationTokenSource? _cts;
     private static readonly ILoggerFactory AILoggerFactory = LoggerFactory.Create(_ => { });
+
+    public Func<IEnumerable<AIFunction>>? ToolCallFactories;
 
     public AssistanceChatView() : this(null)
     {
@@ -45,6 +48,12 @@ public partial class AssistanceChatView : ContentView
 
     private async void AISendButton_Clicked(object? sender, EventArgs e)
     {
+        if (_isReplying)
+        {
+            _cts?.Cancel();
+            return;
+        }
+
         await SendMessageAsync();
     }
 
@@ -86,7 +95,7 @@ public partial class AssistanceChatView : ContentView
             Sender = "AI",
             Message = _chatClient is null
                 ? "你好，我是 AI 助手。请先配置 OpenAI Key（设置键 ai_OpenAIApiKey 或环境变量 OPENAI_API_KEY）。"
-                : "你好，我是 AI 助手。",
+                : Localized.AIAssistant_ChatView_WelcomeText,
             IsUser = false,
         });
     }
@@ -114,7 +123,9 @@ public partial class AssistanceChatView : ContentView
             str = str.Replace("!LocateID!", Localized._LocaleId_);
             str = str.Replace("!AppVersion!", Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "1.0.0.0");
             str = str.Replace("!ApproximateLocation!", RegionInfo.CurrentRegion.DisplayName);
-			
+            str = str.Replace("!UserName!", SettingsManager.GetSetting("UserName", Environment.UserName));
+            str = str.Replace("!DeviceIdiom!", DeviceInfo.Idiom.ToString());
+
 
             _chatHistory.Add(new AIChatMessage(ChatRole.System, str));
         }
@@ -129,12 +140,15 @@ public partial class AssistanceChatView : ContentView
 
         AIInputButton.Text = string.Empty;
         _isReplying = true;
-        AISendButton.IsEnabled = false;
-        AIClearContextButton.IsEnabled = false;
-        AINewChatPageButton.IsEnabled = false;
+        AISendButton.Text = Localized.AIAssistant_ChatView_Stop;
+        _cts = new CancellationTokenSource();
+        //AIClearContextButton.IsEnabled = false;
+        //AINewChatPageButton.IsEnabled = false;
 
         string assistantText;
         ChatMessageItem? streamingItem = null;
+        StringBuilder textBuilder = new();
+        StringBuilder reasoningBuilder = new();
         try
         {
             if (_chatClient is null)
@@ -151,9 +165,10 @@ public partial class AssistanceChatView : ContentView
                 };
                 _messages.Add(streamingItem);
 
-                StringBuilder textBuilder = new();
-                StringBuilder reasoningBuilder = new();
-                await foreach (ChatResponseUpdate update in _chatClient.GetStreamingResponseAsync(_chatHistory, new ChatOptions { Tools = BuildTool() }))
+
+                Dictionary<string, ToolCallDisplayState> toolCallsById = new(StringComparer.Ordinal);
+                int anonymousToolCallCounter = 0;
+                await foreach (ChatResponseUpdate update in _chatClient.GetStreamingResponseAsync(_chatHistory, new ChatOptions { Tools = BuildTool() }, _cts.Token))
                 {
                     LogDiagnostic($"Chunk: {JsonSerializer.Serialize(update)}");
                     string textChunk = !string.IsNullOrEmpty(update.Text)
@@ -176,15 +191,29 @@ public partial class AssistanceChatView : ContentView
                         SetReasoningText(streamingItem, reasoningBuilder.ToString());
                     }
 
+                    if (TryUpdateToolCallState(update, toolCallsById, ref anonymousToolCallCounter, out string toolCallsText))
+                    {
+                        SetToolCallsText(streamingItem, toolCallsText);
+                    }
+
                 }
 
-                assistantText = textBuilder.Length == 0 ? "（模型未返回文本内容）" : textBuilder.ToString().Trim();
+                assistantText = textBuilder.Length == 0 ? Localized.AIAssistant_ChatView_ChatFail_NoContent : textBuilder.ToString().Trim();
+                SetMessageText(streamingItem, assistantText);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            assistantText = $"{textBuilder?.ToString()?.Trim()}{Environment.NewLine}{Localized.AIAssistant_ChatView_ChatFail_Cancelled}";
+            if (streamingItem is not null)
+            {
                 SetMessageText(streamingItem, assistantText);
             }
         }
         catch (Exception ex)
         {
-            assistantText = $"请求失败：{ex.GetType().Name} - {ex.Message}";
+            Log(ex, $"Finish request '{input}'", this);
+            assistantText = $"{textBuilder?.ToString()?.Trim()}{Environment.NewLine}{Environment.NewLine}---{Environment.NewLine}{Localized.AIAssistant_ChatView_ChatFail_Exception(ex)}";
             if (streamingItem is not null)
             {
                 SetMessageText(streamingItem, assistantText);
@@ -204,9 +233,12 @@ public partial class AssistanceChatView : ContentView
         PersistSession();
 
         _isReplying = false;
+        AISendButton.Text = Localized.AIAssistant_ChatView_Send;
         AISendButton.IsEnabled = true;
-        AIClearContextButton.IsEnabled = true;
-        AINewChatPageButton.IsEnabled = true;
+        _cts?.Dispose();
+        _cts = null;
+        //AIClearContextButton.IsEnabled = true;
+        //AINewChatPageButton.IsEnabled = true;
         AIInputButton.Focus();
     }
 
@@ -223,6 +255,7 @@ public partial class AssistanceChatView : ContentView
                 Message = message.Message,
                 IsUser = message.IsUser,
                 ReasoningText = message.ReasoningText,
+                ToolCallsText = message.ToolCallsText,
             });
         }
 
@@ -246,6 +279,7 @@ public partial class AssistanceChatView : ContentView
             Message = x.Message,
             IsUser = x.IsUser,
             ReasoningText = x.ReasoningText,
+            ToolCallsText = x.ToolCallsText,
         }).ToList();
 
         var history = _chatHistory.Select(x => new AssistanceChatHistorySnapshot
@@ -266,7 +300,7 @@ public partial class AssistanceChatView : ContentView
 
         if (string.IsNullOrWhiteSpace(firstUserMessage))
         {
-            return "新会话";
+            return Localized.AIAssistant_ChatView_NewSession;
         }
 
         if (firstUserMessage.Length <= SessionTitleMaxLength)
@@ -329,6 +363,432 @@ public partial class AssistanceChatView : ContentView
     {
         string fromPayload = ExtractFieldFromPayload(update, "content");
         return string.IsNullOrWhiteSpace(fromPayload) ? string.Empty : fromPayload;
+    }
+
+    private static bool TryUpdateToolCallState(ChatResponseUpdate update, IDictionary<string, ToolCallDisplayState> toolCallsById, ref int anonymousToolCallCounter, out string displayText)
+    {
+        displayText = string.Empty;
+        bool changed = false;
+
+        foreach (ToolCallFragment fragment in ExtractToolCallFragments(update))
+        {
+            if (ApplyToolCallFragment(toolCallsById, fragment, ref anonymousToolCallCounter))
+            {
+                changed = true;
+            }
+        }
+
+        if (!changed)
+        {
+            return false;
+        }
+
+        displayText = BuildToolCallDisplayText(toolCallsById.Values);
+        return true;
+    }
+
+    private static IEnumerable<ToolCallFragment> ExtractToolCallFragments(ChatResponseUpdate update)
+    {
+        List<ToolCallFragment> fragments = [];
+
+        if (update.Contents is not null)
+        {
+            foreach (AIContent content in update.Contents)
+            {
+                if (TryExtractToolCallFromObject(content, out ToolCallFragment contentFragment))
+                {
+                    fragments.Add(contentFragment);
+                }
+
+                if (content.AdditionalProperties is not null)
+                {
+                    fragments.AddRange(ExtractToolCallFragmentsFromPayload(content.AdditionalProperties));
+                }
+            }
+        }
+
+        fragments.AddRange(ExtractToolCallFragmentsFromPayload(update.AdditionalProperties));
+        fragments.AddRange(ExtractToolCallFragmentsFromPayload(update.RawRepresentation));
+
+        return fragments;
+    }
+
+    private static IEnumerable<ToolCallFragment> ExtractToolCallFragmentsFromPayload(object? source)
+    {
+        if (source is null)
+        {
+            return [];
+        }
+
+        try
+        {
+            if (source is JsonElement element)
+            {
+                return ExtractToolCallFragmentsFromJsonElement(element);
+            }
+
+            if (source is JsonDocument document)
+            {
+                return ExtractToolCallFragmentsFromJsonElement(document.RootElement);
+            }
+
+            if (source is string text)
+            {
+                string trimmed = text.TrimStart();
+                if (!trimmed.StartsWith("{") && !trimmed.StartsWith("["))
+                {
+                    return [];
+                }
+
+                using JsonDocument parsed = JsonDocument.Parse(text);
+                return ExtractToolCallFragmentsFromJsonElement(parsed.RootElement);
+            }
+
+            string serialized = JsonSerializer.Serialize(source);
+            using JsonDocument json = JsonDocument.Parse(serialized);
+            return ExtractToolCallFragmentsFromJsonElement(json.RootElement);
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
+    private static IEnumerable<ToolCallFragment> ExtractToolCallFragmentsFromJsonElement(JsonElement root)
+    {
+        List<ToolCallFragment> result = [];
+        CollectToolCallsFromJsonElement(root, result, 0);
+        return result;
+    }
+
+    private static void CollectToolCallsFromJsonElement(JsonElement element, ICollection<ToolCallFragment> output, int depth)
+    {
+        if (depth > 8)
+        {
+            return;
+        }
+
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                if (element.TryGetProperty("tool_calls", out JsonElement toolCallsElement)
+                    && toolCallsElement.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (JsonElement toolCall in toolCallsElement.EnumerateArray())
+                    {
+                        if (TryCreateToolCallFragment(toolCall, out ToolCallFragment fragment))
+                        {
+                            output.Add(fragment);
+                        }
+                    }
+                }
+
+                if (element.TryGetProperty("function_call", out JsonElement functionCall)
+                    && TryCreateToolCallFragment(functionCall, out ToolCallFragment functionFragment))
+                {
+                    output.Add(functionFragment);
+                }
+
+                foreach (JsonProperty property in element.EnumerateObject())
+                {
+                    CollectToolCallsFromJsonElement(property.Value, output, depth + 1);
+                }
+                break;
+
+            case JsonValueKind.Array:
+                foreach (JsonElement child in element.EnumerateArray())
+                {
+                    CollectToolCallsFromJsonElement(child, output, depth + 1);
+                }
+                break;
+        }
+    }
+
+    private static bool TryCreateToolCallFragment(JsonElement toolCallElement, out ToolCallFragment fragment)
+    {
+        fragment = default;
+        if (toolCallElement.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        string callId = ReadJsonString(toolCallElement, "id", "call_id", "tool_call_id");
+        string name = ReadJsonString(toolCallElement, "name", "function_name");
+        string arguments = ReadJsonStringOrRawJson(toolCallElement, "arguments", "input");
+
+        if (toolCallElement.TryGetProperty("index", out JsonElement indexElement)
+            && indexElement.ValueKind == JsonValueKind.Number
+            && indexElement.TryGetInt32(out int index)
+            && string.IsNullOrWhiteSpace(callId))
+        {
+            callId = $"index-{index}";
+        }
+
+        if (toolCallElement.TryGetProperty("function", out JsonElement functionElement)
+            && functionElement.ValueKind == JsonValueKind.Object)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                name = ReadJsonString(functionElement, "name", "function_name");
+            }
+
+            if (string.IsNullOrWhiteSpace(arguments))
+            {
+                arguments = ReadJsonStringOrRawJson(functionElement, "arguments", "input");
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(arguments))
+        {
+            return false;
+        }
+
+        fragment = new ToolCallFragment
+        {
+            CallId = callId,
+            Name = name,
+            Arguments = arguments,
+        };
+        return true;
+    }
+
+    private static bool TryExtractToolCallFromObject(object source, out ToolCallFragment fragment)
+    {
+        fragment = default;
+        Type type = source.GetType();
+        string typeName = type.Name;
+        if (!typeName.Contains("FunctionCall", StringComparison.OrdinalIgnoreCase)
+            && !typeName.Contains("ToolCall", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        string callId = GetStringProperty(source, "CallId", "Id", "ToolCallId");
+        string name = GetStringProperty(source, "Name", "FunctionName");
+
+        object? argsObject = GetPropertyValue(source, "Arguments")
+            ?? GetPropertyValue(source, "ArgumentsJson")
+            ?? GetPropertyValue(source, "Input")
+            ?? GetPropertyValue(source, "Value");
+
+        object? functionObject = GetPropertyValue(source, "Function");
+        if (functionObject is not null)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                name = GetStringProperty(functionObject, "Name", "FunctionName");
+            }
+
+            argsObject ??= GetPropertyValue(functionObject, "Arguments")
+                ?? GetPropertyValue(functionObject, "ArgumentsJson")
+                ?? GetPropertyValue(functionObject, "Input")
+                ?? GetPropertyValue(functionObject, "Value");
+        }
+
+        string arguments = ConvertObjectToDisplayText(argsObject);
+        if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(arguments))
+        {
+            return false;
+        }
+
+        fragment = new ToolCallFragment
+        {
+            CallId = callId,
+            Name = name,
+            Arguments = arguments,
+        };
+        return true;
+    }
+
+    private static bool ApplyToolCallFragment(IDictionary<string, ToolCallDisplayState> toolCallsById, ToolCallFragment fragment, ref int anonymousToolCallCounter)
+    {
+        string key = fragment.CallId;
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            anonymousToolCallCounter++;
+            key = $"anonymous-{anonymousToolCallCounter}";
+        }
+
+        if (!toolCallsById.TryGetValue(key, out ToolCallDisplayState? state))
+        {
+            state = new ToolCallDisplayState
+            {
+                CallId = fragment.CallId,
+                Order = toolCallsById.Count + 1,
+            };
+            toolCallsById[key] = state;
+        }
+
+        bool changed = false;
+        if (!string.IsNullOrWhiteSpace(fragment.Name) && !string.Equals(state.Name, fragment.Name, StringComparison.Ordinal))
+        {
+            state.Name = fragment.Name;
+            changed = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(fragment.Arguments))
+        {
+            string merged = MergeToolCallArguments(state.Arguments, fragment.Arguments);
+            if (!string.Equals(state.Arguments, merged, StringComparison.Ordinal))
+            {
+                state.Arguments = merged;
+                changed = true;
+            }
+        }
+
+        return changed;
+    }
+
+    private static string MergeToolCallArguments(string existing, string incoming)
+    {
+        if (string.IsNullOrWhiteSpace(incoming))
+        {
+            return existing;
+        }
+
+        if (string.IsNullOrWhiteSpace(existing))
+        {
+            return incoming;
+        }
+
+        if (string.Equals(existing, incoming, StringComparison.Ordinal) || existing.EndsWith(incoming, StringComparison.Ordinal))
+        {
+            return existing;
+        }
+
+        if (incoming.StartsWith(existing, StringComparison.Ordinal))
+        {
+            return incoming;
+        }
+
+        return existing + incoming;
+    }
+
+    private static string BuildToolCallDisplayText(IEnumerable<ToolCallDisplayState> states)
+    {
+        StringBuilder builder = new();
+        foreach (ToolCallDisplayState state in states.OrderBy(x => x.Order))
+        {
+            if (builder.Length > 0)
+            {
+                builder.AppendLine();
+                builder.AppendLine();
+            }
+
+            string name = string.IsNullOrWhiteSpace(state.Name) ? "(unknown_tool)" : state.Name;
+            builder.Append($"#{state.Order} {name}");
+            if (!string.IsNullOrWhiteSpace(state.CallId))
+            {
+                builder.Append($"  [{state.CallId}]");
+            }
+
+            if (!string.IsNullOrWhiteSpace(state.Arguments))
+            {
+                builder.AppendLine();
+                builder.Append(state.Arguments.Trim());
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private static string ReadJsonString(JsonElement obj, params string[] propertyNames)
+    {
+        foreach (string propertyName in propertyNames)
+        {
+            if (obj.TryGetProperty(propertyName, out JsonElement value)
+                && value.ValueKind == JsonValueKind.String)
+            {
+                return value.GetString() ?? string.Empty;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static string ReadJsonStringOrRawJson(JsonElement obj, params string[] propertyNames)
+    {
+        foreach (string propertyName in propertyNames)
+        {
+            if (!obj.TryGetProperty(propertyName, out JsonElement value))
+            {
+                continue;
+            }
+
+            if (value.ValueKind == JsonValueKind.String)
+            {
+                return value.GetString() ?? string.Empty;
+            }
+
+            if (value.ValueKind != JsonValueKind.Null && value.ValueKind != JsonValueKind.Undefined)
+            {
+                return value.GetRawText();
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static object? GetPropertyValue(object source, string propertyName)
+    {
+        PropertyInfo? property = source.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+        if (property is null || !property.CanRead)
+        {
+            return null;
+        }
+
+        try
+        {
+            return property.GetValue(source);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string GetStringProperty(object source, params string[] propertyNames)
+    {
+        foreach (string propertyName in propertyNames)
+        {
+            object? value = GetPropertyValue(source, propertyName);
+            string text = ConvertObjectToDisplayText(value);
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                return text;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static string ConvertObjectToDisplayText(object? value)
+    {
+        if (value is null)
+        {
+            return string.Empty;
+        }
+
+        if (value is string text)
+        {
+            return text;
+        }
+
+        if (value is JsonElement element)
+        {
+            return element.ValueKind == JsonValueKind.String
+                ? element.GetString() ?? string.Empty
+                : element.GetRawText();
+        }
+
+        try
+        {
+            return JsonSerializer.Serialize(value);
+        }
+        catch
+        {
+            return value.ToString() ?? string.Empty;
+        }
     }
 
     private static string ExtractTextFromContents(ChatResponseUpdate update)
@@ -784,7 +1244,9 @@ public partial class AssistanceChatView : ContentView
             AIFunctionFactory.Create((string title, string cancel, string[] verbs) => (Parent as MultiWindowItem)?.DisplayActionSheetAsync(title, cancel, null, verbs) , "display_actionsheet", "Display a ActionSheet to ask user to pick from many specified items. User's input text will be presented in the result, Null or blank result means user canceled this dialogue."),
             AIFunctionFactory.Create((string title, string message, string True, string False) => (Parent as MultiWindowItem)?.DisplayAlertAsync(title, message, True, False) , "display_dialog", "Display a Dialog to ask user for True/False question (Yes/No). Null or blank result means user canceled this dialogue."),
             AIFunctionFactory.Create((string title, string message, string initialValue, string placeholder) => (Parent as MultiWindowItem)?.DisplayPromptAsync(title, message,Localized._Cancel, Localized._OK, initialValue:initialValue, placeholder:placeholder) , "display_prompt", "Display a Dialog to ask user to input a string. User's input text will be presented in the result, Null result means user clicks the cancel button."),
+             .. ToolCallFactories?.Invoke() ?? [],
         ];
+        LogDiagnostic($"Tools:\r\n{string.Join("\r\n", tools.Select(t => JsonSerializer.Serialize(t, new JsonSerializerOptions { WriteIndented = true })))}");
         return tools;
     }
 
@@ -808,6 +1270,17 @@ public partial class AssistanceChatView : ContentView
         }
 
         MainThread.BeginInvokeOnMainThread(() => item.ReasoningText = text);
+    }
+
+    private static void SetToolCallsText(ChatMessageItem item, string text)
+    {
+        if (MainThread.IsMainThread)
+        {
+            item.ToolCallsText = text;
+            return;
+        }
+
+        MainThread.BeginInvokeOnMainThread(() => item.ToolCallsText = text);
     }
 
     private static IChatClient? CreateChatClient()
@@ -880,6 +1353,26 @@ public partial class AssistanceChatView : ContentView
         });
     }
 
+    private sealed class ToolCallDisplayState
+    {
+        public int Order { get; init; }
+
+        public string CallId { get; init; } = string.Empty;
+
+        public string Name { get; set; } = string.Empty;
+
+        public string Arguments { get; set; } = string.Empty;
+    }
+
+    private readonly struct ToolCallFragment
+    {
+        public string CallId { get; init; }
+
+        public string Name { get; init; }
+
+        public string Arguments { get; init; }
+    }
+
     private sealed class ChatMessageItem : INotifyPropertyChanged
     {
         public required string Sender { get; init; }
@@ -920,6 +1413,26 @@ public partial class AssistanceChatView : ContentView
         }
 
         public bool HasReasoning => !string.IsNullOrWhiteSpace(_reasoningText);
+
+        private string _toolCallsText = string.Empty;
+
+        public string ToolCallsText
+        {
+            get => _toolCallsText;
+            set
+            {
+                if (_toolCallsText == value)
+                {
+                    return;
+                }
+
+                _toolCallsText = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasToolCalls));
+            }
+        }
+
+        public bool HasToolCalls => !string.IsNullOrWhiteSpace(_toolCallsText);
 
         public bool IsUser { get; init; }
 

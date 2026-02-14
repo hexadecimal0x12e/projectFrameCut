@@ -211,31 +211,32 @@ namespace projectFrameCut.Render.WindowsRender
             var aAlpha = args.Length > 2 ? (args[2] as float[]) : null;
             var bAlpha = args.Length > 3 ? (args[3] as float[]) : null;
             var outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
-            aAlpha ??= GetOnes(A.Length);
-            bAlpha ??= GetOnes(A.Length);
+            var pixelCount = args.Length > 5 ? Convert.ToInt32(args[5]) : A.Length;
+            aAlpha ??= GetOnes(pixelCount);
+            bAlpha ??= GetOnes(pixelCount);
 
-            using var a = accelerator.Allocate1D(A);
-            using var b = accelerator.Allocate1D(B);
-            using var aAlphaBuffer = accelerator.Allocate1D(aAlpha);
-            using var bAlphaBuffer = accelerator.Allocate1D(bAlpha);
+            using var a = accelerator.Allocate1D(A.Take(pixelCount).ToArray());
+            using var b = accelerator.Allocate1D(B.Take(pixelCount).ToArray());
+            using var aAlphaBuffer = accelerator.Allocate1D(aAlpha.Take(pixelCount).ToArray());
+            using var bAlphaBuffer = accelerator.Allocate1D(bAlpha.Take(pixelCount).ToArray());
 
             if (outputBpp == 8)
             {
-                var outBuffer = accelerator.Allocate1D<byte>(A.Length);
-                var outAlphaBuffer = accelerator.Allocate1D<float>(A.Length);
+                var outBuffer = accelerator.Allocate1D<byte>(pixelCount);
+                var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
                 var krnl = GetKernelByte(accelerator);
 
                 if (Sync)
                 {
                     using (ILGPUComputerHelper.locker.EnterScope())
                     {
-                        krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                        krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
                         accelerator.Synchronize();
                     }
                 }
                 else
                 {
-                    krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
                 }
 
                 var result = outBuffer.GetAsArray1D();
@@ -247,21 +248,21 @@ namespace projectFrameCut.Render.WindowsRender
             }
             else if (outputBpp == 16)
             {
-                var outBuffer = accelerator.Allocate1D<ushort>(A.Length);
-                var outAlphaBuffer = accelerator.Allocate1D<float>(A.Length);
+                var outBuffer = accelerator.Allocate1D<ushort>(pixelCount);
+                var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
                 var krnl = GetKernelUShort(accelerator);
 
                 if (Sync)
                 {
                     using (ILGPUComputerHelper.locker.EnterScope())
                     {
-                        krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                        krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
                         accelerator.Synchronize();
                     }
                 }
                 else
                 {
-                    krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
                 }
 
                 var result = outBuffer.GetAsArray1D();
@@ -273,21 +274,21 @@ namespace projectFrameCut.Render.WindowsRender
             }
             else
             {
-                var outBuffer = accelerator.Allocate1D<float>(A.Length);
-                var outAlphaBuffer = accelerator.Allocate1D<float>(A.Length);
+                var outBuffer = accelerator.Allocate1D<float>(pixelCount);
+                var outAlphaBuffer = accelerator.Allocate1D<float>(pixelCount);
                 var krnl = GetKernelFloat(accelerator);
 
                 if (Sync)
                 {
                     using (ILGPUComputerHelper.locker.EnterScope())
                     {
-                        krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                        krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
                         accelerator.Synchronize();
                     }
                 }
                 else
                 {
-                    krnl(A.Length, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
+                    krnl(pixelCount, a.View, b.View, aAlphaBuffer.View, bAlphaBuffer.View, outBuffer.View, outAlphaBuffer.View);
                 }
 
                 var result = outBuffer.GetAsArray1D();
@@ -376,7 +377,7 @@ namespace projectFrameCut.Render.WindowsRender
                 throw new ArgumentNullException("Input color channels cannot be null.");
             }
 
-            var size = aR.Length;
+            var size = args.Length > 8 ? Convert.ToInt32(args[8]) : aR.Length;
 
             float lowR = toRemoveR - range;
             float lowG = toRemoveG - range;
@@ -399,10 +400,10 @@ namespace projectFrameCut.Render.WindowsRender
             using var aBuf = accelerator.Allocate1D<float>(size);
             using var outABuf = accelerator.Allocate1D<float>(size);
 
-            rBuf.CopyFromCPU(aR);
-            gBuf.CopyFromCPU(aG);
-            bBuf.CopyFromCPU(aB);
-            aBuf.CopyFromCPU(sourceA);
+            rBuf.CopyFromCPU(aR.Take(size).ToArray());
+            gBuf.CopyFromCPU(aG.Take(size).ToArray());
+            bBuf.CopyFromCPU(aB.Take(size).ToArray());
+            aBuf.CopyFromCPU(sourceA.Take(size).ToArray());
 
             LockRun(() => kernel(size, rBuf.View, gBuf.View, bBuf.View, aBuf.View, lowR, highR, lowG, highG, lowB, highB, outABuf.View));
             if (ForceSync) accelerator.Synchronize();
@@ -476,12 +477,13 @@ namespace projectFrameCut.Render.WindowsRender
             if (iDstW <= 0 || iDstH <= 0) return [Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>(), Array.Empty<float>()];
 
             int dstLength = iDstW * iDstH;
+            int srcLength = iSrcW * iSrcH;
 
             // Allocate buffers
-            using var rBufIn = accelerator.Allocate1D(rIn);
-            using var gBufIn = accelerator.Allocate1D(gIn);
-            using var bBufIn = accelerator.Allocate1D(bIn);
-            using var aBufIn = accelerator.Allocate1D(aIn);
+            using var rBufIn = accelerator.Allocate1D(rIn.Take(srcLength).ToArray());
+            using var gBufIn = accelerator.Allocate1D(gIn.Take(srcLength).ToArray());
+            using var bBufIn = accelerator.Allocate1D(bIn.Take(srcLength).ToArray());
+            using var aBufIn = accelerator.Allocate1D(aIn.Take(srcLength).ToArray());
 
             using var rBufOut = accelerator.Allocate1D<float>(dstLength);
             using var gBufOut = accelerator.Allocate1D<float>(dstLength);

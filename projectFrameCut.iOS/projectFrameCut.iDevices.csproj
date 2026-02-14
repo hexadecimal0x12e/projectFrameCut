@@ -94,6 +94,7 @@
 			<DependentUpon>%(Filename).xaml</DependentUpon>
 		</Compile>
 
+		<Compile Include="..\projectFrameCut\AIAssistance\**\*.cs"  Exclude="..\projectFrameCut\AIAssistance\**\*.xaml.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\ApplicationPluginBase\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Asset\**\*.cs" Exclude="..\projectFrameCut\Asset\ProjectAssetView.xaml.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\APIClient\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />

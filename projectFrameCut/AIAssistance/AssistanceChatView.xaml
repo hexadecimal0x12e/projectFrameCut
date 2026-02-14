@@ -2,6 +2,7 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:l="clr-namespace:LocalizedResources"
              x:Class="projectFrameCut.AIAssistance.AssistanceChatView">
     <Grid RowDefinitions="*,Auto,Auto,Auto" RowSpacing="8" Padding="8">
         <CollectionView Grid.Row="0"
@@ -38,7 +39,7 @@
                                         </DataTrigger>
                                     </Border.Triggers>
                                     <VerticalStackLayout Spacing="2">
-                                        <Label Text="思考"
+                                        <Label Text="{l:Localized Key=AIAssistant_ChatView_Thinking}"
                                                FontSize="11"
                                                FontAttributes="Bold"/>
                                         <Label Text="{Binding ReasoningText}"
@@ -46,6 +47,24 @@
                                                LineBreakMode="WordWrap"/>
                                     </VerticalStackLayout>
                                 </Border>
+                                    <Border StrokeThickness="1"
+                                            StrokeShape="RoundRectangle 8"
+                                            Padding="8,6"
+                                            IsVisible="False">
+                                        <Border.Triggers>
+                                            <DataTrigger TargetType="Border" Binding="{Binding HasToolCalls}" Value="True">
+                                                <Setter Property="IsVisible" Value="True"/>
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <VerticalStackLayout Spacing="2">
+                                        <Label Text="{l:Localized Key=AIAssistant_ChatView_ToolCall}"
+                                                   FontSize="11"
+                                                   FontAttributes="Bold"/>
+                                            <Label Text="{Binding ToolCallsText}"
+                                                   FontSize="12"
+                                                   LineBreakMode="WordWrap"/>
+                                        </VerticalStackLayout>
+                                    </Border>
                                 <Label Text="{Binding Message}"
                                        LineBreakMode="WordWrap"/>
                             </VerticalStackLayout>
@@ -55,7 +74,7 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
         <Grid Grid.Row="1">
-            <Label FontSize="12" TextColor="#80ffffff" HorizontalOptions="Center" Text="AI may be incorrect." />
+            <Label FontSize="12" TextColor="#80ffffff" HorizontalOptions="Center" Text="{l:Localized Key=AIAssistant_InfoGrayText}" />
         </Grid>
 
         
@@ -63,13 +82,13 @@
             <Entry x:Name="AIInputButton"
                    Grid.Column="0"
                    HorizontalOptions="Fill"
-                   Placeholder="输入内容后回车或点击发送"
+                   Placeholder="{l:Localized Key=AIAssistant_ChatView_SendHint}"
                    ReturnType="Send"
                    Completed="AIInputButton_Completed"/>
             <Button Grid.Column="1"
                     x:Name="AISendButton"
                     HorizontalOptions="Center"
-                    Text="发送"
+                    Text="{l:Localized Key=AIAssistant_ChatView_Send}"
                     Clicked="AISendButton_Clicked"/>
 
 

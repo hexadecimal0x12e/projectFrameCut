@@ -147,7 +147,8 @@ namespace projectFrameCut.Render.Effect
                 (float)R,
                 (float)G,
                 (float)B,
-                (float)Tolerance
+                (float)Tolerance,
+                source.Pixels
                 ]);
 
             if (alphaArr[0] is not float[] alpha) throw new InvalidOperationException("The output data from computer is invaild.");

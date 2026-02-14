@@ -180,14 +180,14 @@ namespace projectFrameCut.Render.Compose
             else throw new NotSupportedException();
 
 
-            object[] outR;
-            object[] outG;
-            object[] outB;
+            object[]? outR;
+            object[]? outG;
+            object[]? outB;
             try
             {
-                outR = computer.Compute([topR, baseR, topA, baseA, (int)targetPPB]);
-                outG = computer.Compute([topG, baseG, topA, baseA, (int)targetPPB]);
-                outB = computer.Compute([topB, baseB, topA, baseA, (int)targetPPB]);
+                outR = computer.Compute([topR, baseR, topA, baseA, (int)targetPPB, basePixels]);
+                outG = computer.Compute([topG, baseG, topA, baseA, (int)targetPPB, basePixels]);
+                outB = computer.Compute([topB, baseB, topA, baseA, (int)targetPPB, basePixels]);
             }
             finally
             {
@@ -201,7 +201,7 @@ namespace projectFrameCut.Render.Compose
             float[]? outA;
             if (basePicture.hasAlphaChannel || topPicture.hasAlphaChannel)
             {
-                outA = outR[1] as float[];
+                outA = outR![1] as float[];
             }
             else
             {
@@ -212,9 +212,9 @@ namespace projectFrameCut.Render.Compose
             {
                 result = new Picture8bpp(basePicture.Width, basePicture.Height)
                 {
-                    r = ConvertToByteChannel(outR[0]),
-                    g = ConvertToByteChannel(outG[0]),
-                    b = ConvertToByteChannel(outB[0]),
+                    r = ConvertToByteChannel(outR![0]),
+                    g = ConvertToByteChannel(outG![0]),
+                    b = ConvertToByteChannel(outB![0]),
                     a = outA,
                     hasAlphaChannel = basePicture.hasAlphaChannel || topPicture.hasAlphaChannel,
                     ProcessStack = new List<PictureProcessStack> { procStack }
@@ -225,9 +225,9 @@ namespace projectFrameCut.Render.Compose
             {
                 result = new Picture(basePicture.Width, basePicture.Height)
                 {
-                    r = ConvertToUShortChannel(outR[0]),
-                    g = ConvertToUShortChannel(outG[0]),
-                    b = ConvertToUShortChannel(outB[0]),
+                    r = ConvertToUShortChannel(outR![0]),
+                    g = ConvertToUShortChannel(outG![0]),
+                    b = ConvertToUShortChannel(outB![0]),
                     a = outA,
                     hasAlphaChannel = basePicture.hasAlphaChannel || topPicture.hasAlphaChannel,
                     ProcessStack = new List<PictureProcessStack> { procStack }
@@ -309,8 +309,9 @@ namespace projectFrameCut.Render.Compose
             }
 
             return result;
-#endif
+#else
             return result;
+#endif
         }
     }
 

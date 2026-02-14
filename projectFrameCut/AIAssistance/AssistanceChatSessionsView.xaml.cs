@@ -1,6 +1,8 @@
 namespace projectFrameCut.AIAssistance;
 
+using Microsoft.Extensions.AI;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
+using projectFrameCut.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -9,12 +11,24 @@ public partial class AssistanceChatSessionsView : ContentView
 {
     private readonly ObservableCollection<SessionListItem> _sessions = [];
 
+    public AssistanceChatView? Current = null;
+
     public AssistanceChatSessionsView()
     {
         InitializeComponent();
         SessionListView.ItemsSource = _sessions;
         AssistanceChatSessionStore.SessionsChanged += AssistanceChatSessionStore_SessionsChanged;
         RefreshSessions();
+        if (Parent is MultiWindowItem host)
+        {
+            host.OnNavigate += (s, view) =>
+            {
+                if (view.Next is AssistanceChatView v)
+                {
+                    Current = v;
+                }
+            };
+        }
     }
 
     private void AssistanceChatSessionStore_SessionsChanged(object? sender, EventArgs e)
@@ -57,9 +71,16 @@ public partial class AssistanceChatSessionsView : ContentView
 
     private void NavigateToSession(Guid sessionId)
     {
+        var s = new AssistanceChatView(sessionId);
+        Current = s;
         if (GetHostWindow() is MultiWindowItem host)
         {
-            host.NavigateTo(new AssistanceChatView(sessionId));
+            host.NavigateTo(s);
+        }
+        else
+        {
+            Log($"Failed to navigate to session {sessionId} because host window is not found. Parent is a {Parent?.GetType().Name}\r\n{Environment.StackTrace}", "error");
+            _ = Application.Current?.Windows?[0]?.Page?.DisplayAlertAsync(Localized._Error, $"Parent is not a MultiWindowItem. Please feedback this bug.", Localized._OK);
         }
     }
 
@@ -79,7 +100,55 @@ public partial class AssistanceChatSessionsView : ContentView
         return null;
     }
 
-    private sealed class SessionListItem : INotifyPropertyChanged
+    private void Border_Loaded(object sender, EventArgs e)
+    {
+        if (sender is Border b)
+        {
+            UIServices.RegisterSelectOrContextMenu
+                (b,
+                OnContextMenuClick: async () =>
+                {
+                    if (b.BindingContext is SessionListItem item)
+                    {
+                        await ShowContextMenu(item);
+                    }
+                }
+                );
+
+        }
+    }
+
+    private async Task ShowContextMenu(SessionListItem item)
+    {
+        if (GetHostWindow() is not MultiWindowItem page)
+        {
+            return;
+        }
+
+        string rename = Localized.HomePage_ProjectContextMenu_Rename;
+        string delete = Localized.HomePage_ProjectContextMenu_Delete;
+
+        string action = await page.DisplayActionSheetAsync(item.Title, Localized._Cancel, null, rename, delete);
+
+        if (action == rename)
+        {
+            string newTitle = await page.DisplayPromptAsync(rename, "", Localized._Confirm, Localized._Cancel, initialValue: item.Title);
+            if (!string.IsNullOrWhiteSpace(newTitle))
+            {
+                AssistanceChatSessionStore.RenameSession(item.SessionId, newTitle);
+            }
+        }
+        else if (action == delete)
+        {
+            bool confirm = await page.DisplayAlertAsync(delete, $"{Localized.HomePage_ProjectContextMenu_Delete_Confirm0(item.Title)}?", Localized._Confirm, Localized._Cancel);
+            if (confirm)
+            {
+                AssistanceChatSessionStore.DeleteSession(item.SessionId);
+            }
+        }
+    }
+
+    private partial class SessionListItem : INotifyPropertyChanged
     {
         public Guid SessionId { get; init; }
 
@@ -138,4 +207,6 @@ public partial class AssistanceChatSessionsView : ContentView
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
+
+
 }

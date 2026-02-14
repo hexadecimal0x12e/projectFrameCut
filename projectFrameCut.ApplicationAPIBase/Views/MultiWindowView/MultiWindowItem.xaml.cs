@@ -135,6 +135,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         public event EventHandler MinimizeClicked;
         public event EventHandler MaximizeClicked;
         public event EventHandler Activated;
+        public event EventHandler<(View Next, View Current)> OnNavigate;
 
         #endregion
 
@@ -753,31 +754,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 cp.Content = null;
             }
 
-            // 2. Close Window
+            // 2. Capture Window ref
             var win = _hostWindow;
             _hostWindow = null;
             _isInWindowMode = false;
 
-            if (closeWindow)
-            {
-                Application.Current?.CloseWindow(win);
-            }
-
-            // 3. Restore to Original Parent
-            if (_originalParent is Layout layout)
-            {
-                layout.Add(this);
-            }
-            else if (_originalParent is ContentView cv)
-            {
-                cv.Content = this;
-            }
-            else if (_originalParent is ContentPage page)
-            {
-                page.Content = this;
-            }
-
-            // 4. Restore Visual State
+            // Restore Visual State
             if (_dockBtn != null) _dockBtn.IsVisible = false;
 
             // Re-enable internal MDI
@@ -806,16 +788,13 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                     UpdateTitleBarVisibility(); _originalTitleBarParent.Children.Add(_titleBarGrid);
                     Grid.SetRow(_titleBarGrid, 0); // Assuming row 0
                 }
+                _titleBarGrid.IsVisible = true;
             }
-            _titleBarGrid.IsVisible = true;
+            
             if (_originalTitleBarParent != null && _originalTitleBarParent.RowDefinitions.Count > 0)
             {
                 _originalTitleBarParent.RowDefinitions[0].Height = new GridLength(32);
             }
-
-
-
-
 
             // Restore size/pos
             this.HorizontalOptions = LayoutOptions.Start;
@@ -827,6 +806,28 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
 
             // Reset margin just in case
             this.Margin = new Thickness(0);
+
+            // Disconnect handler to avoid context mismatch issues
+            this.Handler = null;
+
+            // 3. Restore to Original Parent
+            if (_originalParent is Layout layout)
+            {
+                layout.Add(this);
+            }
+            else if (_originalParent is ContentView cv)
+            {
+                cv.Content = this;
+            }
+            else if (_originalParent is ContentPage page)
+            {
+                page.Content = this;
+            }
+
+            if (closeWindow && win != null)
+            {
+                Application.Current?.CloseWindow(win);
+            }
         }
 
         private void OnBackTapped(object sender, EventArgs e)
@@ -839,9 +840,9 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             if (CanGoForward) GoForward();
         }
 
-        private void OnPopOutTapped(object sender, EventArgs e)
+        private async void OnPopOutTapped(object sender, EventArgs e)
         {
-            OpenInNewWindow();
+            await OpenInNewWindow();
         }
 
 
@@ -952,6 +953,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 CloseClicked?.Invoke(this, a);
                 if (a.Cancel) return;
             }
+
+            if (_isInWindowMode && _hostWindow != null)
+            {
+                PerformDock(true);
+            }
+
             if (Parent is Layout layout)
             {
                 layout.Children.Remove(this);
@@ -1022,7 +1029,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                         parentGrid.RowDefinitions[0].Height = new GridLength(0); // Collapse space
                     }
                 }
-                _titleBarGrid.IsVisible = true; // Ensure it's visible for the TitleBar
+                _titleBarGrid.IsVisible = false; // Ensure it's visible for the TitleBar
             }
 
             // Show Dock Button
@@ -1038,6 +1045,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             Margin = new Thickness(0);
 
             // 4. Create a hosting ContentPage
+            this.Background = Colors.Transparent;
             var hostingPage = new ContentPage
             {
                 Content = this,
@@ -1048,9 +1056,54 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             NavigationPage.SetHasNavigationBar(hostingPage, false); // Hide default MAUI Navigation Bar
 
             // 5. Create a new Window
+            var backbtn = new Button
+            {
+                Text = "◄",
+                VerticalOptions = LayoutOptions.Center,
+                Command = new Command(() => OnBackTapped(this, EventArgs.Empty))
+            };
+            backbtn.SetBinding(Button.IsEnabledProperty, new Binding(nameof(CanGoBack), source: this));
+            ToolTipProperties.SetText(backbtn, LocalizedResources.APIBaseLocalizedResources.Localized.MultiWindowView_GoBack);
+            var fwdbtn = new Button
+            {
+                Text = "►",
+                VerticalOptions = LayoutOptions.Center,
+                Command = new Command(() => OnBackTapped(this, EventArgs.Empty))
+            };
+            fwdbtn.SetBinding(Button.IsEnabledProperty, new Binding(nameof(CanGoForward), source: this));
+            ToolTipProperties.SetText(backbtn, LocalizedResources.APIBaseLocalizedResources.Localized.MultiWindowView_GoForward);
+
+            var dockBtn = new Button
+            {
+                Text = "↙",
+                VerticalOptions = LayoutOptions.Center,
+                Command = new Command(() => OnDockTapped(this, EventArgs.Empty))
+            };
+            ToolTipProperties.SetText(backbtn, LocalizedResources.APIBaseLocalizedResources.Localized.MultiWindowView_Dock);
+            var bar = new TitleBar
+            {
+                TrailingContent = new HorizontalStackLayout
+                {
+                    dockBtn
+                },
+                LeadingContent = new HorizontalStackLayout
+                {
+                    backbtn,
+                    fwdbtn,
+                    new Label
+                    {
+                        Text = this.Title ?? "Window",
+                        VerticalOptions = LayoutOptions.Center,
+                        Margin = new(8,0,0,0)
+                    }
+                },
+            };
             var newWindow = new Window(hostingPage)
             {
-                Title = this.Title ?? "Window"
+                Title = this.Title ?? "Window",
+                TitleBar = bar,
+                IsMaximizable = IsMaximizable,
+                IsMinimizable = IsMinimizable,
             };
             _hostWindow = newWindow;
 
@@ -1073,7 +1126,16 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 };
             }
 
-
+            newWindow.HandlerChanged += (s, e) =>
+            {
+#if WINDOWS
+                var platformView = newWindow.Handler?.PlatformView;
+                if (platformView is Microsoft.UI.Xaml.Window nativeWindow)
+                {
+                    nativeWindow.SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop();
+                }
+#endif
+            };
 
             // 8. Open the window
             Application.Current?.OpenWindow(newWindow);
@@ -1090,6 +1152,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 });
                 if (p) Preferences.Default.Set("MultiWindowView_DockPrompt_NotPromptAgain", true);
             }
+#else
+            await DisplayAlertAsync("Info", "This operation is not supported on your platform.", "OK");
 #endif
         }
 
@@ -1118,6 +1182,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             Content = view;
 
             UpdateNavigationState();
+            OnNavigate?.Invoke(this, (view, Content));
         }
         /// <summary>
         /// Go back to the prior content if any in the back stack. 
@@ -1134,6 +1199,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 var view = _backStack.Pop();
                 Content = view;
                 UpdateNavigationState();
+                OnNavigate?.Invoke(this, (view, Content));
             }
         }
 
@@ -1152,6 +1218,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 var view = _forwardStack.Pop();
                 Content = view;
                 UpdateNavigationState();
+                OnNavigate?.Invoke(this, (view, Content));
             }
         }
 

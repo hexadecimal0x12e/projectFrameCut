@@ -66,30 +66,38 @@ namespace projectFrameCut.Services
             return double.TryParse(SettingsManager.GetSetting("ui_SafeZoneCornerRadius", "10"), out var result) ? result : 10;
         }
 
-        public static async void RegisterSelectOrContextMenu(Border border, Action OnSelected, Action OnClicked, Action OnContextMenuClick, int ContextMenuMinTime = 500)
+        public static async void RegisterSelectOrContextMenu(Border border, Action? OnSelected = null, Action? OnClicked = null, Action? OnContextMenuClick = null, int ContextMenuMinTime = 500)
         {
 #if MACCATALYST || WINDOWS
-            var selectTap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Primary };
-            selectTap.Tapped += async (_, __) =>
+            if (OnSelected is not null)
             {
-                OnSelected();
-            };
+                var selectTap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Primary };
+                selectTap.Tapped += async (_, __) =>
+                {
+                    OnSelected();
+                };
+                border.GestureRecognizers.Add(selectTap);
+            }
 
-            var addTap = new TapGestureRecognizer { NumberOfTapsRequired = 2, Buttons = ButtonsMask.Primary };
-            addTap.Tapped += (_, __) =>
+            if (OnClicked is not null)
             {
-                OnClicked();
-            };
+                var addTap = new TapGestureRecognizer { NumberOfTapsRequired = 2, Buttons = ButtonsMask.Primary };
+                addTap.Tapped += (_, __) =>
+                {
+                    OnClicked();
+                };
+                border.GestureRecognizers.Add(addTap);
+            }
 
-            border.GestureRecognizers.Add(selectTap);
-            border.GestureRecognizers.Add(addTap);
-
-            var rightTap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Secondary };
-            rightTap.Tapped += async (_, __) =>
+            if (OnContextMenuClick is not null)
             {
-                OnContextMenuClick();
-            };
-            border.GestureRecognizers.Add(rightTap);
+                var rightTap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Secondary };
+                rightTap.Tapped += async (_, __) =>
+                {
+                    OnContextMenuClick();
+                };
+                border.GestureRecognizers.Add(rightTap);
+            }
 #elif ANDROID || IOS               
             var pointerGesture = new PointerGestureRecognizer();
             DateTime pointerDownTime = DateTime.MinValue;
@@ -99,11 +107,11 @@ namespace projectFrameCut.Services
                 var duration = (DateTime.Now - pointerDownTime).TotalMilliseconds;
                 if (duration >= ContextMenuMinTime)
                 {
-                    OnContextMenuClick(); 
+                    OnContextMenuClick?.Invoke(); 
                 }
                 else
                 {
-                    OnClicked();    
+                    OnClicked?.Invoke();    
                 }
             };
             border.GestureRecognizers.Add(pointerGesture);

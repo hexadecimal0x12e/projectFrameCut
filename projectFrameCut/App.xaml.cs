@@ -84,9 +84,10 @@ namespace projectFrameCut
 
             };
 #endif
+#if !WINDOWS
             AppDomain.CurrentDomain.ProcessExit += (s, e) =>
             {
-                Log("App is closing...");
+                Log("Process is exiting...");
                 try
                 {
                     MauiProgram.LogWriter.Flush();
@@ -107,7 +108,7 @@ namespace projectFrameCut
 
             };
 
-
+#endif
 
         }
 

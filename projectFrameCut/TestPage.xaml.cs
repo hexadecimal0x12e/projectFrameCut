@@ -871,6 +871,7 @@ public partial class TestPage : ContentPage
 
     private async void TestOrderButton_Clicked(object sender, EventArgs e)
     {
+        if (string.IsNullOrWhiteSpace(InputEditor.Text)) return;
         var lines = InputEditor.Text.Split(["\r", "\n", "\r\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var loc = string.IsNullOrWhiteSpace(LocateInputer.Text) ? Localized._LocaleId_ : LocateInputer.Text.Trim();
         var ordered = lines.OrderBy(async a => await TextHelper.GetPronounceForOrdering(a, loc)).GroupBy(TextHelper.DetectTextLanguage).OrderByDescending(g => g.Count()).SelectMany(c => c).ToList();
@@ -931,6 +932,10 @@ public partial class TestPage : ContentPage
                     {
                         var result = await item.DisplayPromptAsync("Action", "Input some text", "yes", "no");
                         await DisplayAlertAsync(Title, result?.ToString() ?? "null input, may user cancelled.", "ok");
+                    })},
+                    new Button {Text = "DraftPage", Command = new Command(async () =>
+                    {
+                        item.Content = new DraftPage().Content;
                     })}
                 }
             };

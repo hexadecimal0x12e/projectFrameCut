@@ -27,6 +27,8 @@ internal sealed class AssistanceChatMessageSnapshot
     public required bool IsUser { get; init; }
 
     public string ReasoningText { get; init; } = string.Empty;
+
+    public string ToolCallsText { get; init; } = string.Empty;
 }
 
 internal sealed class AssistanceChatHistorySnapshot
@@ -115,6 +117,28 @@ internal static class AssistanceChatSessionStore
         {
             AssistanceChatSession session = GetOrCreate(sessionId);
             session.UpdatedAt = DateTime.Now;
+            RaiseChanged();
+        }
+    }
+
+    public static void RenameSession(Guid sessionId, string newTitle)
+    {
+        lock (Gate)
+        {
+            AssistanceChatSession? session = SessionsInner.FirstOrDefault(x => x.SessionId == sessionId);
+            if (session is not null)
+            {
+                session.Title = newTitle.Trim();
+                RaiseChanged();
+            }
+        }
+    }
+
+    public static void DeleteSession(Guid sessionId)
+    {
+        lock (Gate)
+        {
+            SessionsInner.RemoveAll(x => x.SessionId == sessionId);
             RaiseChanged();
         }
     }
