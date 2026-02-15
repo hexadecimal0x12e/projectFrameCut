@@ -415,18 +415,26 @@ namespace projectFrameCut.StandaloneRender
             {
                 blockWrite = false;
             }
+
+            bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
+            InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
+
             #endregion
 
             #region read draft
             ProjectJSONStructure project = new();
             DraftStructureJSON timeline = new();
-            if (File.Exists(Path.Combine(workingPath, "project.json")))
+            if (File.Exists(Path.Combine(workingPath, "project.pjfc")))
+            {
+                project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.pjfc")), savingOpts) ?? new();
+            }
+            else if (File.Exists(Path.Combine(workingPath, "project.json")))
             {
                 project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.json")), savingOpts) ?? new();
             }
             else
             {
-                Log("ERROR: project.json not found in project directory.");
+                Log("ERROR: project.pjfc or project.json not found in project directory.");
                 return 1;
             }
 

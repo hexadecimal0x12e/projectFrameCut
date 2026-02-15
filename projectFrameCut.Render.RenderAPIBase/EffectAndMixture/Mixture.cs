@@ -5,6 +5,7 @@ using System.Text;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
+    [Obsolete("This interface is deprecated and may be removed in future versions. We have no plan on custom type of mixturing.")]
     public interface IMixture
     {
         /// <summary>

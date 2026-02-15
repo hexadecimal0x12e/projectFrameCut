@@ -77,7 +77,7 @@ namespace projectFrameCut.Render.Rendering
 
         ConcurrentDictionary<string, ConcurrentDictionary<uint, IPicture>> FrameCache = new();
         ConcurrentDictionary<uint, IClip[]> ClipNeedForFrame = new();
-        ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
+        //ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
         ConcurrentDictionary<string, IEffect[]> EffectCache = new();
         ConcurrentDictionary<string, object> BindableEffectResultCache = new();
         OverlayMixture globalMix = new();
@@ -801,10 +801,10 @@ namespace projectFrameCut.Render.Rendering
         private void InitializeRenderCaches()
         {
             EffectCache.Clear();
-            MixtureCache = new ConcurrentDictionary<MixtureMode, IMixture>(new Dictionary<MixtureMode, IMixture>
-            {
-                { MixtureMode.Overlay, new OverlayMixture() }
-            });
+            //MixtureCache = new ConcurrentDictionary<MixtureMode, IMixture>(new Dictionary<MixtureMode, IMixture>
+            //{
+            //    { MixtureMode.Overlay, new OverlayMixture() }
+            //});
 
             foreach (var item in Clips ?? Array.Empty<IClip>())
             {
@@ -881,18 +881,18 @@ namespace projectFrameCut.Render.Rendering
                 FrameCache.Clear();
                 ClipNeedForFrame.Clear();
 
-                try
-                {
-                    foreach (var mix in MixtureCache.Values)
-                    {
-                        if (mix is IDisposable d)
-                        {
-                            try { d.Dispose(); } catch { }
-                        }
-                    }
-                }
-                catch { }
-                MixtureCache.Clear();
+                //try
+                //{
+                //    foreach (var mix in MixtureCache.Values)
+                //    {
+                //        if (mix is IDisposable d)
+                //        {
+                //            try { d.Dispose(); } catch { }
+                //        }
+                //    }
+                //}
+                //catch { }
+                //MixtureCache.Clear();
 
                 try
                 {

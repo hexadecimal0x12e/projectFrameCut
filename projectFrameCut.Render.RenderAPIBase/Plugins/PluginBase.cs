@@ -34,6 +34,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Get the minor version of plugin. Default to 0.
         /// </summary>
         public virtual int PluginAPIMinorVersion => 0;
+
         /// <summary>
         /// The plugin's name.
         /// </summary>
@@ -142,7 +143,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Create an IMixture instance from the given JSON structure.
         /// </summary>
-        public Dictionary<string, Func<IMixture>> MixtureProvider { get; }
+        [Obsolete("We have no plan on custom type of mixturing, so this property is no longer used and it will be removed in next Plugin API version.", false)]
+        public virtual Dictionary<string, Func<IMixture>> MixtureProvider { get => new(); }
 
         /// <summary>
         /// Create an IComputer instance from the given JSON structure.

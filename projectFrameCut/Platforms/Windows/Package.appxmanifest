@@ -5,9 +5,7 @@
   xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
 	xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
-  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
-	xmlns:uap4="http://schemas.microsoft.com/appx/manifest/uap/windows10/4"
-  IgnorableNamespaces="uap uap4 rescap com desktop ">
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10">
 
 	<!--wtf, why the pfn is not hexadecimal0x12e.projectFrameCut-->
   <Identity Name="hexadecimal0x12e.projectFrameCut" Publisher="CN=0AD263CD-E10E-4A8B-A187-25C0A41C69D7" Version="1.3.0.3" />
@@ -66,6 +64,16 @@
 						</com:ExeServer>
 					</com:ComServer>
 				</com:Extension>
+			  <uap:Extension Category="windows.protocol">
+					<uap:Protocol Name="pjfc">
+						<uap:DisplayName>projectFrameCut URI Protool</uap:DisplayName>
+					</uap:Protocol>
+        </uap:Extension>
+			  <uap:Extension Category="windows.protocol">
+					<uap:Protocol Name="pjfcappx">
+						<uap:DisplayName>projectFrameCut URI Protool-Windows (APPX)</uap:DisplayName>
+					</uap:Protocol>
+        </uap:Extension>
 			</Extensions>
     </Application>
   </Applications>
@@ -75,7 +83,6 @@
     <Capability Name="internetClientServer"/>
     <Capability Name="internetClient"/>
     <uap:Capability Name="removableStorage"/>
-		<uap4:CustomCapability Name="Microsoft.requiresNonSMode_8wekyb3d8bbwe"/>
 		<uap:Capability Name="documentsLibrary"/>
 	</Capabilities>
 

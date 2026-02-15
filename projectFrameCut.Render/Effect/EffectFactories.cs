@@ -359,4 +359,41 @@ namespace projectFrameCut.Render.Effect
             };
         }
     }
+
+    public class BlurEffectFactory : IEffectFactory
+    {
+        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+        public string TypeName => "Blur";
+        public List<string> ParametersNeeded { get; } = new List<string> { "Sigma" };
+        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string> { { "Sigma", "float" } };
+
+        public EffectImplementType[] SupportsImplementTypes => [EffectImplementType.ImageSharp];
+
+        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
+        {
+            parameters ??= new Dictionary<string, object> { { "Sigma", 0f } };
+
+            // Ensure sigma is present if parameters was not null
+            if (!parameters.ContainsKey("Sigma"))
+            {
+                parameters["Sigma"] = 0f;
+            }
+
+            return BlurEffect_ImageSharp.FromParametersDictionary(parameters);
+        }
+
+        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
+        {
+            if (implementType == EffectImplementType.NotSpecified)
+            {
+                return BuildWithDefaultType(parameters);
+            }
+
+            return implementType switch
+            {
+                EffectImplementType.ImageSharp => BuildWithDefaultType(parameters),
+                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
+            };
+        }
+    }
 }

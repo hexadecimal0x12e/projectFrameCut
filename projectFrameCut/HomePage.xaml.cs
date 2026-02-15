@@ -69,22 +69,47 @@ public partial class HomePage : ContentPage
                 if (MauiProgram.CmdlineArgs.Length > 0)
                 {
                     var args = MauiProgram.CmdlineArgs.Skip(1).ToArray();
-                    if (args.Length >= 2)
+                    if (args.ArrayAny())
                     {
-                        switch (args[0])
+                        var path = args.OrderByDescending(s => s.Length).First();
+                        if (path.Contains(':') && path.Count(c => c == ':') >= 2)
                         {
-                            case "goDraft":
+                            path = path.Split(":", 2, StringSplitOptions.RemoveEmptyEntries)[1] ?? path;
+                        }
+                        switch (Path.GetExtension(path))
+                        {
+                            case ".pjfc":
                                 {
-                                    var draft = args[1];
-                                    if (Directory.Exists(draft))
+                                    if (Directory.Exists(path))
                                     {
-                                        await GoDraft(draft, (Path.GetDirectoryName(draft) ?? "Project").Split('.')?.FirstOrDefault("Project")!, false, false);
+                                        await GoDraft(path, (Path.GetDirectoryName(path) ?? "Project").Split('.')?.FirstOrDefault("Project")!, false, false);
+                                    }
+                                    if (File.Exists(path))
+                                    {
+                                        if (new FileInfo(path).OpenRead().ReadByte() == '{')
+                                        {
+                                            try
+                                            {
+                                                var draft = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(path), DraftPage.DraftJSONOption);
+                                                if (draft is ProjectJSONStructure)
+                                                {
+                                                    await GoDraft(Path.GetDirectoryName(path), draft.ProjectName ?? "Project", false, false);
+                                                    return;
+
+                                                }
+                                            }
+                                            catch
+                                            {
+
+                                            }
+
+                                        }
+                                        await ImportDraft(path);
                                     }
                                     break;
                                 }
-                            case "installPlugin":
+                            case ".pjfcPlugin":
                                 {
-                                    var path = args[1];
                                     if (File.Exists(path))
                                     {
                                         try
@@ -98,15 +123,24 @@ public partial class HomePage : ContentPage
                                     }
                                     break;
                                 }
-                            case "importDraft":
+
+                            default:
                                 {
-                                    var path = args[1];
-                                    if (File.Exists(path))
+                                    if (Directory.Exists(path))
                                     {
-                                        await ImportDraft(path);
+                                        if (File.Exists(Path.Combine(path, "project.json")) || File.Exists(Path.Combine(path, "project.pjfc")))
+                                        {
+                                            await GoDraft(path, (Path.GetDirectoryName(path) ?? "Project").Split('.')?.FirstOrDefault("Project")!, false, false);
+
+                                        }
+                                    }
+                                    else
+                                    {
+                                        //await DisplayAlertAsync(Localized._Error, $"Cannot launch from the file '{path}' because of it's invalid.", Localized._OK);
                                     }
                                     break;
                                 }
+
                         }
                     }
                 }
@@ -386,8 +420,20 @@ public partial class HomePage : ContentPage
         ProjectJSONStructure project = new();
         try
         {
-            project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(draftSourcePath, "project.json")), DraftPage.DraftJSONOption);
-
+            if (File.Exists(Path.Combine(draftSourcePath, "project.pjfc")))
+            {
+                project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(draftSourcePath, "project.pjfc")), DraftPage.DraftJSONOption) ?? new();
+            }
+            else if (File.Exists(Path.Combine(draftSourcePath, "project.json")))
+            {
+                project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(draftSourcePath, "project.json")), DraftPage.DraftJSONOption) ?? new();
+            }
+            else
+            {
+                await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
+                Content = origContent;
+                return;
+            }
         }
         catch (Exception ex)
         {
@@ -405,7 +451,7 @@ public partial class HomePage : ContentPage
                 {
                     throw new DirectoryNotFoundException("Working path not found: " + draftSourcePath);
                 }
-                string[] filesShouldExist = ["project.json", "timeline.json", "assets.json"];
+                string[] filesShouldExist = [(File.Exists(Path.Combine(draftSourcePath, "project.pjfc")) ? "project.pjfc" : "project.json"), "timeline.json", "assets.json"];
                 if (filesShouldExist.Any((f) => !File.Exists(Path.Combine(draftSourcePath, f))))
                 {
                     await Dispatcher.DispatchAsync(async () =>
@@ -413,6 +459,10 @@ public partial class HomePage : ContentPage
                         await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n(These files are missing:{string.Join(", ", filesShouldExist.Where(f => !File.Exists(Path.Combine(draftSourcePath, f))))})", Localized._OK);
                     });
                     return;
+                }
+                if (!File.Exists(Path.Combine(draftSourcePath, "project.pjfc")) && File.Exists(Path.Combine(draftSourcePath, "project.json")))
+                {
+                    File.Move(Path.Combine(draftSourcePath, "project.json"), Path.Combine(draftSourcePath, "project.pjfc"));
                 }
                 List<AssetItem> assets;
                 DraftStructureJSON timeline;
@@ -969,7 +1019,7 @@ public partial class HomePage : ContentPage
     {
         try
         {
-            var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(vmItem._projectPath, "project.json")), DraftPage.DraftJSONOption);
+            var project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(vmItem._projectPath, "project.pjfc")), DraftPage.DraftJSONOption);
             var tml = JsonSerializer.Deserialize<DraftStructureJSON>(File.ReadAllText(Path.Combine(vmItem._projectPath, "timeline.json")), DraftPage.DraftJSONOption);
             if (tml is null || project is null)
             {
@@ -1001,7 +1051,7 @@ public partial class HomePage : ContentPage
     {
         var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, vmItem.Name, 1024, null, vmItem.Name);
         if (projName is null) return;
-        var newPath = Path.Combine(Path.GetDirectoryName(vmItem._projectPath) ?? "", projName + ".pjfc");
+        var newPath = Path.Combine(Path.GetDirectoryName(vmItem._projectPath) ?? "", projName);
         if (Directory.Exists(newPath))
         {
             await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
@@ -1009,12 +1059,12 @@ public partial class HomePage : ContentPage
         }
         Directory.Move(vmItem._projectPath, newPath);
 
-        var info = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(newPath, "project.json")));
+        var info = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(newPath, "project.pjfc")), DraftPage.DraftJSONOption);
         if (info is not null)
         {
             info.ProjectName = projName;
             File.WriteAllText(
-                Path.Combine(newPath, "project.json"),
+                Path.Combine(newPath, "project.pjfc"),
                 JsonSerializer.Serialize(info));
         }
 
@@ -1263,7 +1313,7 @@ public class ProjectsListViewModel
             foreach (var item in Directory.GetDirectories(sourcePath, "*"))
             {
                 ProjectJSONStructure? proj = null;
-                var projFile = Path.Combine(item, "project.json");
+                var projFile = Path.Combine(item, (File.Exists(Path.Combine(item, "project.pjfc")) ? "project.pjfc" : "project.json"));
                 if (!File.Exists(projFile)) goto fail;
                 try
                 {

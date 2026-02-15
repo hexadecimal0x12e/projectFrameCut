@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace projectFrameCut.Render.Compose
 {
-    public class OverlayMixture : IMixture
+    public class OverlayMixture// : IMixture
     {
         public string TypeName => "Overlay";
 
@@ -20,11 +20,11 @@ namespace projectFrameCut.Render.Compose
 
         public Dictionary<string, object> Parameters => new();
 
-        public static IMixture FromParametersDictionary(Dictionary<string, object> parameters)
-        {
-            return new OverlayMixture();
-        }
-        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
+        //public static IMixture FromParametersDictionary(Dictionary<string, object> parameters)
+        //{
+        //    return new OverlayMixture();
+        //}
+        //public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public string? ComputerId => "OverlayComputer";
 
         public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB)

@@ -38,7 +38,6 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">30.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 
-		<WindowsPackageType>None</WindowsPackageType>
 		<DefaultLanguage>zh-CN</DefaultLanguage>
 		<Platforms>AnyCPU;x64</Platforms>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -52,6 +51,7 @@
 		<Copyright>Copyright (c) hexadecimal0x12e 2026</Copyright>
 		<PackageProjectUrl>hexadecimal0x12e.com/projectFrameCut</PackageProjectUrl>
 		<Title>codename 'projectFrameCut'</Title>
+
 
 
 	</PropertyGroup>
@@ -78,6 +78,16 @@
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
 		<ApplicationId>hexadecimal0x12e.projectframecut</ApplicationId>
+		<ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
+		<WindowsPackageType>MSIX</WindowsPackageType>
+		<GenerateAppInstallerFile>True</GenerateAppInstallerFile>
+		<AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
+		<PackageCertificateThumbprint>AADFCEA554CF8361334EFB9B2C8D48B0DA05F7AF</PackageCertificateThumbprint>
+		<AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
+		<AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
+		<AppxSymbolPackageEnabled>True</AppxSymbolPackageEnabled>
+		<GenerateTestArtifacts>True</GenerateTestArtifacts>
+		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
 	</PropertyGroup>
 
 
@@ -119,9 +129,9 @@
 
 
 	<ItemGroup>
-	  <MauiAsset Include="Resources\Styles\Colors.xaml" />
-	  <MauiAsset Include="Resources\Styles\Styles.Default.xaml" />
-	  <MauiAsset Include="Resources\Styles\Styles.WinUI.xaml" />
+		<MauiAsset Include="Resources\Styles\Colors.xaml" />
+		<MauiAsset Include="Resources\Styles\Styles.Default.xaml" />
+		<MauiAsset Include="Resources\Styles\Styles.WinUI.xaml" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -156,14 +166,14 @@
 		<Compile Update="AppShell_Android.xaml.cs">
 			<DependentUpon>AppShell_Android.xaml</DependentUpon>
 		</Compile>
-			<Compile Update="App.xaml.cs">
+		<Compile Update="App.xaml.cs">
 			<DependentUpon>App.Default.xaml</DependentUpon>
 		</Compile>
 	</ItemGroup>
 
 	<ItemGroup>
 		<MauiXaml Update="AIAssistance\AssistanceChatView.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="AssetsLibraryPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
@@ -187,10 +197,10 @@
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="Resources\Styles\Styles.Default.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="Resources\Styles\Styles.WinUI.xaml">
-		  <Generator>MSBuild:Compile</Generator>
+			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="Setting\SettingPages\AboutSettingPage.xaml">
 			<Generator>MSBuild:Compile</Generator>

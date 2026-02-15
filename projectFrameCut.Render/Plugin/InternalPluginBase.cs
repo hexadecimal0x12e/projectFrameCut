@@ -29,6 +29,8 @@ public class InternalPluginBase : IPluginBase
 
     public int PluginAPIVersion => IPluginBase.CurrentPluginAPIVersion;
 
+    public int PluginAPIMinorVersion => 1;
+
     public string Name => "Internal fundamental plugin";
 
     public string Author => "hexadecimal0x12e";
@@ -58,6 +60,7 @@ public class InternalPluginBase : IPluginBase
         {"Place",  new(() => new PlaceEffect_ImageSharp())},
         {"Crop",  new(() => new CropEffect_ImageSharp())},
         {"Resize",  new(() => new ResizeEffect_ImageSharp())},
+        {"Blur",  new(() => new BlurEffect_ImageSharp())},
     };
 
     public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -66,12 +69,13 @@ public class InternalPluginBase : IPluginBase
         {"Crop", new CropEffectFactory()},
         {"Resize", new ResizeEffectFactory()},
         {"RemoveColor", new RemoveColorEffectFactory()},
+        {"Blur", new BlurEffectFactory()},
     };
 
-    public Dictionary<string, Func<IMixture>> MixtureProvider => new Dictionary<string, Func<IMixture>>
-    {
-        {"Overlay", new(() => new OverlayMixture()) }
-    };
+    //public Dictionary<string, Func<IMixture>> MixtureProvider => new Dictionary<string, Func<IMixture>>
+    //{
+    //    {"Overlay", new(() => new OverlayMixture()) }
+    //};
 
     public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>
     {
@@ -109,11 +113,13 @@ public class InternalPluginBase : IPluginBase
         { "MaskApplier", new MaskApplierFactory() },
         { "StraightLineMovementValueProducer",new StraightLineMovementValueProducerFactory() },
         { "PointPlacer", new PointPlacerFactory() },
+#if DEBUG
         { "MockValueProvider",  new MockValueProviderFactory() },
         { "MockOneToOneProcessor",  new MockOneToOneProcessorFactory() },
         { "MockManyToOneProcessor",  new MockManyToOneProcessorFactory() },
         { "MockOneInputResultGenerator",  new MockOneInputResultGeneratorFactory() },
         { "MockManyInputResultGenerator",  new MockManyInputResultGeneratorFactory() },
+#endif
     };
 
 
@@ -126,8 +132,7 @@ public class InternalPluginBase : IPluginBase
     };
 
     public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider =>
-        (((MessagingQueue?.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccel"]) ?? "true") is string hwaccel && bool.TryParse(hwaccel, out var result) && result)
-            ? new List<KeyValuePair<string, Func<string, IVideoSource>>>([new("DecoderContextHW", new((p) => new DecoderContextHW(p)))])
+        (HWAccelOptionGetter() ? new List<KeyValuePair<string, Func<string, IVideoSource>>>([new("DecoderContextHW", new((p) => new DecoderContextHW(p)))])
             : new List<KeyValuePair<string, Func<string, IVideoSource>>>([]))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext8Bit", new((p) => new DecoderContext8Bit(p))))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext16Bit", new((p) => new DecoderContext16Bit(p))))
@@ -205,6 +210,8 @@ public class InternalPluginBase : IPluginBase
         PluginMessagingQueue = MessagingQueue;
         return null;
     }
+
+    public static Func<bool> HWAccelOptionGetter = new(() => ((GlobalPluginHelper.MessagingService?.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccel"]) ?? "true") is string hwaccel && bool.TryParse(hwaccel, out var result) && result));
 
 }
 

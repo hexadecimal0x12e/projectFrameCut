@@ -510,7 +510,75 @@ namespace projectFrameCut.DraftStuff
             return null;
         }
 
+        internal static ClipElementUI ConvertToElement(ClipDraftDTO clip)
+        {
+            double widthPx = Math.Max(1, (double)clip.Duration);
+            uint maxFrames = clip.SourceDuration is null ? clip.Duration : (uint)Math.Max(clip.SourceDuration.Value, clip.Duration);
 
+            var element = ClipElementUI.CreateClip(
+                startX: clip.StartFrame,
+                width: widthPx,
+                trackIndex: (int)clip.LayerIndex,
+                id: string.IsNullOrWhiteSpace(clip.Id) ? null : clip.Id,
+                labelText: string.IsNullOrWhiteSpace(clip.Name) ? null : clip.Name,
+                background: ClipElementUI.DetermineAssetColor(clip.ClipType),
+                prototype: null,
+                relativeStart: clip.RelativeStartFrame,
+                maxFrames: maxFrames
+            );
 
+            element.DisplayName = string.IsNullOrWhiteSpace(clip.Name) ? element.Id : clip.Name;
+            element.origTrack = (int)clip.LayerIndex;
+            element.origLength = widthPx;
+            element.origX = clip.StartFrame;
+            element.relativeStartFrame = clip.RelativeStartFrame;
+            element.maxFrameCount = maxFrames;
+            element.isInfiniteLength = clip.IsInfiniteLength;
+            element.SourcePath = clip.FilePath ?? (clip.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
+            element.ClipType = clip.ClipType;
+            element.ExtraData = clip.MetaData ?? new();
+            element.sourceSecondPerFrame = clip.FrameTime;
+            element.SecondPerFrameRatio = clip.SecondPerFrameRatio;
+
+            // Apply visual properties
+            element.ApplySpeedRatio();
+            element.ApplyClipColor();
+
+            element.TypeName = clip.TypeName;
+            element.FromPlugin = clip.FromPlugin;
+
+            // Reconstruct Effects
+            element.Effects = clip.Effects?.ToDictionary(
+                e => string.IsNullOrWhiteSpace(e.Name) ? $"Effect-{Guid.NewGuid()}" : e.Name,
+                e => PluginManager.CreateEffect(e, 1, 1)
+            ) ?? new Dictionary<string, IEffect>();
+
+            // Reconstruct Effect Bundles
+            if (clip.EffectBundles != null)
+            {
+                var dict = new Dictionary<Guid, IEffectBundle>();
+                foreach (var b in clip.EffectBundles)
+                {
+                    if (EffectServices.GetAvailableEffectBundles().TryGetValue(b.BundleTypeName, out var factory))
+                    {
+                        var f = factory();
+                        f.Id = b.Id;
+                        f.Name = b.Name;
+                        f.Parameters = b.Parameters ?? new Dictionary<string, object>();
+                        f.BindedInputId = b.BindedInputId;
+                        f.BindedOutputId = b.BindedOutputId;
+                        f.BindedInputIds = b.BindedInputIds?.ToList();
+                        dict[b.Id] = f;
+                    }
+                }
+                element.EffectBundles = dict;
+            }
+            else
+            {
+                element.EffectBundles = new Dictionary<Guid, IEffectBundle>();
+            }
+
+            return element;
+        }
     }
 }

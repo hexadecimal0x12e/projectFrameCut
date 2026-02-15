@@ -33,4 +33,8 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="projectFrameCut.Shared" />
+  </ItemGroup>
+
 </Project>

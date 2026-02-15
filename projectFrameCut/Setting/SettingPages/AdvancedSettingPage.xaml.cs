@@ -156,7 +156,8 @@ public partial class AdvancedSettingPage : ContentPage
 
                             if (modified)
                             {
-                                File.WriteAllText(projectFile, jsonText);
+                                File.WriteAllText(Path.ChangeExtension(projectFile, "pjfc"), jsonText);
+                                File.Delete(projectFile);
                                 fixedCount++;
                             }
                         }

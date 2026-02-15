@@ -1,5 +1,6 @@
 ﻿using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Text;

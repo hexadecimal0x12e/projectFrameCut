@@ -98,6 +98,7 @@ public partial class DraftPage : ContentPage
     ClipElementUI? _selected = null;
     Brush? _selectedOrigColor = null;
     private double _currentFrame = 0;
+    public double CurrentFrame => _currentFrame;
 
     TapGestureRecognizer nopGesture = new(), rulerTapGesture = new();
     DropGestureRecognizer fileDropGesture = new();
@@ -130,7 +131,6 @@ public partial class DraftPage : ContentPage
 
     ConcurrentDictionary<string, DraftTasks> RunningTasks = new();
 
-    LivePreviewer previewer = new();
 
     DateTime lastSyncTime = DateTime.MinValue;
 
@@ -138,6 +138,7 @@ public partial class DraftPage : ContentPage
 
     #region public members 
     public Border Popup = new();
+    public LivePreviewer previewer = new();
     public ClipInfoBuilder infoBuilder;
     public InteractableEditor.InteractableEditor ClipEditor;
     public AIAssistance.AssistanceChatSessionsView ChatSessionsView = new();
@@ -3493,7 +3494,7 @@ public partial class DraftPage : ContentPage
         saveLocker.Enter();
         try
         {
-            await File.WriteAllTextAsync(Path.Combine(WorkingPath, "project.json"), JsonSerializer.Serialize(ProjectInfo, savingOpts), default);
+            await File.WriteAllTextAsync(Path.Combine(WorkingPath, "project.pjfc"), JsonSerializer.Serialize(ProjectInfo, savingOpts), default);
         }
         catch (Exception ex)
         {

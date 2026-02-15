@@ -75,7 +75,7 @@ namespace projectFrameCut.Render.Rendering
         }
 
 
-        public static IPicture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight, int targetPPB = 8)
+        public static IPicture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight, int targetPPB = 8, Action<IEffect,IPicture>? AfterEffect = null)
         {
             try
             {
@@ -115,6 +115,18 @@ namespace projectFrameCut.Render.Rendering
                         {
                             EffectProcessing.ProcessEffect(ref effected, steps, ref lastIsProcessStep, effect, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
+                        if(AfterEffect is not null)
+                        {
+                            if (steps.Count > 0)
+                            {
+                                AfterEffect?.Invoke(effect, PictureProcesser.Process(steps, effected, targetPPB));
+                            }
+                            else
+                            {
+                                AfterEffect?.Invoke(effect, effected);
+
+                            }
+                        }
 
 
                     }
@@ -123,11 +135,8 @@ namespace projectFrameCut.Render.Rendering
                         effected = PictureProcesser.Process(steps, effected, targetPPB);
                         steps.Clear();
                     }
-                    var mix = GetMixer(srcFrame.MixtureMode);
 
-                    result = MixtureCache.GetOrAdd(srcFrame!.MixtureMode, mix)
-                                    .Mix(result, effected,
-                                       mix.ComputerId is not null ? PluginManager.CreateComputer(mix.ComputerId) : null, targetPPB);
+                    result = GlobalMixture.Mix(result, effected, PluginManager.CreateComputer("OverlayComputer"), targetPPB);
 
                 }
                 //LogDiagnostic($"Result's diag info:{result?.GetDiagnosticsInfo() ?? "unknown"}");
@@ -144,8 +153,7 @@ namespace projectFrameCut.Render.Rendering
                     result = Placer.Render(result, null, targetWidth, targetHeight);
                 }
             ok:
-                result = MixtureCache.GetOrAdd(
-                           MixtureMode.Overlay, GetMixer(MixtureMode.Overlay))
+                result = GlobalMixture
                                .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer("OverlayComputer"), targetPPB)
                                .Resize(targetWidth, targetHeight, true);
                 return result;
@@ -165,17 +173,8 @@ namespace projectFrameCut.Render.Rendering
             StartY = 0
         };
 
-        private static IMixture GetMixer(MixtureMode mixtureMode)
-        {
-            switch (mixtureMode)
-            {
-                case MixtureMode.Overlay:
-                    return new OverlayMixture();
+        private static OverlayMixture GlobalMixture = new();
 
-                default:
-                    throw new NotSupportedException($"Mixture mode {mixtureMode} is not supported.");
-            }
-        }
 
         public static List<OverlapInfo> FindOverlaps(IEnumerable<ClipDraftDTO>? clips, uint allowedOverlapFrames = 5)
         {

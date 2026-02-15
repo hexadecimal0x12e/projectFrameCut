@@ -27,6 +27,15 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </remarks>
         public string TypeName { get; }
         /// <summary>
+        /// Get which kind of effect is. 
+        /// </summary>
+        /// <remarks>
+        /// It's for replacing properties <see cref="IsNormalEffect"/>, <see cref="IsContinuousEffect"/> and <see cref="IsBindableArgsEffect"/> and so on, to make it more extendable for future effect types.
+        /// For compatibility consideration, the default implementation of this property will check the Is***Effect properties to determine the EffectType. It's best to override this property to provide a specific EffectType because of <b>this feature may be removed in the future</b>.
+        /// </remarks>
+        public virtual EffectType TypeOfEffect { get => IsBindableArgsEffect ? EffectType.BindableEffect : IsContinuousEffect ? EffectType.ContinuousEffect : IsNormalEffect ? EffectType.NormalEffect : throw new NotSupportedException($"The effect {TypeName} has an unspecified EffectType. Either set Is***Effect, or override property TypeOfEffect."); }
+
+        /// <summary>
         /// Get how this effect is implemented.
         /// </summary>
         public EffectImplementType ImplementType { get; }
@@ -34,6 +43,15 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// Name of this effect. Most for display purpose.
         /// </summary>
         public string Name { get; set; }
+
+        /// <summary>
+        /// Get the ID of this specific effect instance.
+        /// </summary>
+        /// <remarks>
+        /// DO NOT set this property manually. It will be set when the effect is created.
+        /// </remarks>
+        public string Id { get; set; }
+
         /// <summary>
         /// Parameters of the effect.
         /// </summary>
@@ -106,8 +124,31 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         {
         }
 
+        /// <summary>
+        /// Get the info of this effect. Used in MCP calling in agent.
+        /// </summary>
+        /// <remarks>
+        /// For UI Displaying purpose please use EffectBundle's GetDisplayInfo method instead.
+        /// </remarks>
+        /// <returns></returns>
+        public virtual EffectInfo GetInfo()
+        {
+            return new EffectInfo
+            {
+                FromPlugin = FromPlugin,
+                TypeName = TypeName,
+                Name = Name,
+                Description = "No description provided. Try guess it's purpose from TypeName.", // Description is not provided in IEffect, so we set it to a default string.
+                Parameters = Parameters.ToDictionary(kv => kv.Key, kv => new EffectParameterInfo { Name = kv.Key, ParameterType = kv.Value.GetType().FullName ?? "unknown", DefaultValue = null }),
+                EffectType = TypeOfEffect
+            };
+        }
+
+        [Obsolete("Consider to use TypeOfEffect instead. This property may be removed in the future.",false)]
         public bool IsNormalEffect => true;
+        [Obsolete("Consider to use TypeOfEffect instead. This property may be removed in the future.", false)]
         public bool IsContinuousEffect => false;
+        [Obsolete("Consider to use TypeOfEffect instead. This property may be removed in the future.", false)]
         public bool IsBindableArgsEffect => false;
 
         /// <summary>
@@ -119,17 +160,5 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public string? BindedEffectGroupID { get; set; }
     }
 
-    public enum EffectImplementType
-    {
-        NotSpecified,
-        IPicture,
-        ImageSharp,
-        HwAcceleration,
-        Custom1,
-        Custom2,
-        Custom3,
-        Custom4,
-        Custom5,
 
-    }
 }

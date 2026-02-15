@@ -1,8 +1,8 @@
 {
   "profiles": {
     "Windows Machine": {
-      "commandName": "Project",
-      "commandLineArgs": "--noSplash",
+      "commandName": "MsixPackage",
+      "commandLineArgs": "--noSplash \"D:\\code\\playground\\projectFrameCut\\My Drafts\\abc (2).pjfc\"",
       "nativeDebugging": false
     }
   }

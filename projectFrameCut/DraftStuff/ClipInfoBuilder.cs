@@ -13,6 +13,7 @@ using projectFrameCut.Controls;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
@@ -389,6 +390,7 @@ namespace projectFrameCut.DraftStuff
                             effect.Index = globalIndex++;
                             effect.BindedEffectGroupID = bundleData.Id.ToString();
                             string key = $"{bundleData.Id}_{i}";
+                            if (effect is not IBindableArgumentEffect) effect.Id = Guid.NewGuid().ToString();
                             newEffects[key] = effect;
                         }
                     }
@@ -1368,7 +1370,11 @@ namespace projectFrameCut.DraftStuff
             List<AIFunction> toolCalls = new List<AIFunction>
             {
                 AIFunctionFactory.Create(() => DraftImportAndExportHelper.ExportFromDraftPage(page, false).Clips, "get_all_clips","Get all clips inside this project."),
-                AIFunctionFactory.Create(() => DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip, false), "get_selected_clip_info","Get the clip selected by the user's info.")
+                AIFunctionFactory.Create(() => DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip, false), "get_selected_clip_info","Get the clip selected by the user's info."),
+                AIFunctionFactory.Create((string Id, ClipDraftDTO Clip) => {page.Clips[Id] = DraftImportAndExportHelper.ConvertToElement(Clip); handler.Invoke(this, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));}, "set_clip_info","Set a specific clip's information."),
+                AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Select(c => c.Value.EffectProvider).FirstOrDefault(c => c.Keys.Contains(Type))?[Type]?.Invoke()?.GetInfo(), "get_effect_info","Get a specific effect's information."),
+                AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().Select(c => c.EffectBundleProvider).FirstOrDefault(c => c.ContainsKey(Type))?[Type]?.Invoke()?.GetEffectBundleItem(), "get_effect_bundle_info","Get a specific effect bundle's information."),
+                //AIFunctionFactory.Create((string Type) => , "get_cliptype_detail_info","Set a specific's clip information.")
             };
 
             return new(() => toolCalls);

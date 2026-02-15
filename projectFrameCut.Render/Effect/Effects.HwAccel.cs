@@ -16,6 +16,7 @@ namespace projectFrameCut.Render.Effect
         public string Name { get; set; }
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
+        public string Id { get; set; }
 
 
         public ushort R { get; init; }
@@ -252,6 +253,7 @@ namespace projectFrameCut.Render.Effect
         public string Name { get; set; }
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
+        public string Id { get; set; }
 
 
         public int Height { get; init; }

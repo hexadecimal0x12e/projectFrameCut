@@ -98,16 +98,8 @@ namespace projectFrameCut
                 catch //use the default path (/data/data/...)           
                 { }
 #elif WINDOWS
-                if (IsPackaged()) //%localappdata%\Packages\<pfn>\LocalState
-                {
-                    loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging");
-                    DataPath = Path.Combine(FileSystem.AppDataDirectory, "Data"); //Respect the vision of store applications (no residuals after uninstallation)
-                }
-                else
-                {
-                    loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging"); //%localappdata%\hexadecimal0x12e\hexadecimal0x12e.projectFrameCut\Data
-                    DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
-                }
+                loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging"); //%localappdata%\hexadecimal0x12e\hexadecimal0x12e.projectFrameCut\Data
+                DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
                 if (Program.UserDataPathOverride != null || Program.BasicDataPathOverride != null)
                 {
                     if (!string.IsNullOrWhiteSpace(Program.BasicDataPathOverride))
@@ -269,9 +261,9 @@ namespace projectFrameCut
 #endif
             try
             {
-                if (File.Exists(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt")))
+                if (File.Exists(Path.Combine(BasicDataPath, "OverrideUserDataPath.txt")))
                 {
-                    var newPath = File.ReadAllText(Path.Combine(FileSystem.AppDataDirectory, "OverrideUserDataPath.txt"));
+                    var newPath = File.ReadAllText(Path.Combine(BasicDataPath, "OverrideUserDataPath.txt"));
                     if (!Directory.Exists(newPath))
                     {
                         Log($"User defined UserData path '{newPath}' is not exist, ignore the override.");
@@ -292,7 +284,7 @@ namespace projectFrameCut
                     Directory.CreateDirectory(Path.Combine(DataPath, item));
                 }
 
-                if (!File.Exists(Path.Combine(DataPath, "My Assets",  "@WARNING.txt")))
+                if (!File.Exists(Path.Combine(DataPath, "My Assets", "@WARNING.txt")))
                 {
                     File.WriteAllText(Path.Combine(DataPath, "My Assets", "@WARNING.txt"),
                         """
@@ -552,7 +544,7 @@ namespace projectFrameCut
 #endif
                     try
                     {
-                        if (Environment.GetCommandLineArgs().Contains("--forceLoadPlugins") || (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine") && !File.Exists(Path.Combine(BasicDataPath,"noplugin.flag"))))
+                        if (Environment.GetCommandLineArgs().Contains("--forceLoadPlugins") || (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine") && !File.Exists(Path.Combine(BasicDataPath, "noplugin.flag"))))
                         {
                             plugins.AddRange(PluginService.LoadUserPlugins());
 #if WINDOWS
@@ -588,7 +580,7 @@ namespace projectFrameCut
                     catch (Exception ex1)
                     {
                         Log(ex1, "try load internal plugin", CreateMauiApp);
-                        Crash(new InvalidOperationException($"FATAL: The pluginBase cannot be loaded. projectFrameCut can't work without PluginEngine. \r\n{ex} \r\n{ex1}",new AggregateException(ex, ex1)));
+                        Crash(new InvalidOperationException($"FATAL: The pluginBase cannot be loaded. projectFrameCut can't work without PluginEngine. \r\n{ex} \r\n{ex1}", new AggregateException(ex, ex1)));
                     }
                 }
 

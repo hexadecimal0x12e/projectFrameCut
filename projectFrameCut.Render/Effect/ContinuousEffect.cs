@@ -20,6 +20,7 @@ namespace projectFrameCut.Render.Effect
         public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
         public bool YieldProcessStep => true;
         public string? BindedEffectGroupID { get; set; }
+        public string Id { get; set; }
 
 
         public int RelativeWidth { get; set; }
@@ -201,6 +202,7 @@ namespace projectFrameCut.Render.Effect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
+        public string Id { get; set; }
         public string Name { get; set; }
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
@@ -230,7 +232,7 @@ namespace projectFrameCut.Render.Effect
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
 
-        public Random rnd;
+        public Random rnd = new();
 
         public static List<string> s_ParametersNeeded { get; } = new List<string>
         {

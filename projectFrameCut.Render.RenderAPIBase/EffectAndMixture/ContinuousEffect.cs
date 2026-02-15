@@ -62,6 +62,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         bool IEffect.IsNormalEffect => false;
         bool IEffect.IsContinuousEffect => true;
         bool IEffect.IsBindableArgsEffect => false;
+
+        EffectType IEffect.TypeOfEffect => EffectType.ContinuousEffect;
+
     }
 
 }

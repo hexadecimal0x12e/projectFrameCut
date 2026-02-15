@@ -53,7 +53,8 @@
     <Using Include="projectFrameCut.Shared.Logger">
       <Static>True</Static>
     </Using>
-  </ItemGroup>
+		<Using Include="projectFrameCut.Shared" />
+	</ItemGroup>
 
 
 </Project>

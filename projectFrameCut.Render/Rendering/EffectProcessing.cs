@@ -9,7 +9,7 @@ using static projectFrameCut.Shared.Logger;
 
 namespace projectFrameCut.Render.Rendering
 {
-    internal static class EffectProcessing
+    public static class EffectProcessing
     {
         /// <summary>
         /// 从缓存中获取值，优先从帧缓存获取，然后从全局缓存获取

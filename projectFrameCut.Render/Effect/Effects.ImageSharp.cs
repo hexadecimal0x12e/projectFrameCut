@@ -103,7 +103,7 @@ namespace projectFrameCut.Render.Effect
         }
 
         public string? BindedEffectGroupID { get; set; }
-
+        public string Id { get; set; }
     }
 
     public class CropEffect_ImageSharp : IEffect
@@ -212,7 +212,7 @@ namespace projectFrameCut.Render.Effect
         }
 
         public string? BindedEffectGroupID { get; set; }
-
+        public string Id { get; set; }
     }
 
     public class ResizeEffect_ImageSharp : IEffect
@@ -315,7 +315,7 @@ namespace projectFrameCut.Render.Effect
         }
 
         public string? BindedEffectGroupID { get; set; }
-
+        public string Id { get; set; }
     }
 
     public class ResizeProcessStep : IPictureProcessStep
@@ -540,6 +540,129 @@ namespace projectFrameCut.Render.Effect
                 { nameof(StartY), StartY },
                 { nameof(Width), Width },
                 { nameof(Height), Height }
+            }
+        };
+    }
+
+    public class BlurEffect_ImageSharp : IEffect
+    {
+        public bool Enabled { get; set; } = true;
+        public int Index { get; set; }
+        public string Name { get; set; } = "Blur";
+        public int RelativeWidth { get; set; }
+        public int RelativeHeight { get; set; }
+
+        public float Sigma { get; init; }
+
+        public Dictionary<string, object> Parameters => new Dictionary<string, object>
+        {
+            {"Sigma", Sigma}
+        };
+
+        public string? NeedComputer => null;
+        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
+        public bool YieldProcessStep => true;
+        public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
+
+        public static List<string> ParametersNeeded { get; } = new List<string>
+        {
+            "Sigma"
+        };
+        public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        {
+            {"Sigma", "float" }
+        };
+
+        public string TypeName => "Blur";
+        public string? BindedEffectGroupID { get; set; }
+        public string Id { get; set; }
+
+
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
+        {
+            ArgumentNullException.ThrowIfNull(parameters);
+            if (!ParametersNeeded.All(parameters.ContainsKey))
+            {
+                throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
+            }
+            // Some parameters might be passed as int, double, or directly float. Convert safely.
+            float sigma = 0;
+            if (parameters.TryGetValue("Sigma", out var val))
+            {
+                sigma = Convert.ToSingle(val);
+            }
+
+            return new BlurEffect_ImageSharp
+            {
+                Sigma = sigma
+            };
+        }
+
+        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
+
+        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        {
+            return GetStep(source, targetWidth, targetHeight).Process(source);
+        }
+
+        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
+        {
+            return new BlurProcessStep(Sigma);
+        }
+    }
+
+    public class BlurProcessStep : IPictureProcessStep
+    {
+        private TimeSpan? _elapsed;
+        public string Name => "Blur";
+        public Dictionary<string, object?> Properties { get; set; } = new();
+
+        public float Sigma { get; }
+
+        public BlurProcessStep(float sigma)
+        {
+            Sigma = sigma;
+            Properties = new Dictionary<string, object?>
+            {
+                { nameof(Sigma), Sigma }
+            };
+        }
+
+        public IPicture Process(IPicture source)
+        {
+            var sw = Stopwatch.StartNew();
+            if (Sigma <= 0) return source; 
+
+            var resultImg = source.SaveToSixLaborsImage().Clone(x => x.GaussianBlur(Sigma));
+
+            IPicture result = (int)source.bitPerPixel switch
+            {
+                8 => new Picture8bpp(resultImg),
+                16 => new Picture16bpp(resultImg),
+                _ => throw new NotSupportedException($"Specific pixel-mode is not supported.")
+            };
+            sw.Stop();
+            _elapsed = sw.Elapsed;
+            result.ProcessStack = source.ProcessStack;
+            return result;
+        }
+
+        public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()
+        {
+            if (Sigma <= 0) return null;
+            return imgCtx => imgCtx.GaussianBlur(Sigma);
+        }
+
+        public PictureProcessStack GetProcessStack() => new PictureProcessStack
+        {
+            Elapsed = _elapsed,
+            OperationDisplayName = "Blur",
+            Operator = typeof(BlurProcessStep),
+            ProcessingFuncStackTrace = new StackTrace(true),
+            StepUsed = this,
+            Properties = new Dictionary<string, object>
+            {
+                { nameof(Sigma), Sigma }
             }
         };
     }
