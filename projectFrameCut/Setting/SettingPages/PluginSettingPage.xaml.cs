@@ -100,7 +100,6 @@ public partial class PluginSettingPage : ContentPage
             try
             {
                 var internalBase = new InternalApplicationPluginBase();
-                internalBase.MessagingQueue = MessagingServices.MessagingService;
                 List<IPluginBase> plugins =
                 [
                     internalBase,

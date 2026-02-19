@@ -19,6 +19,9 @@ namespace projectFrameCut.Render.Rendering
 {
     public class Renderer
     {
+        public const int SubTrackOffset = 10000;
+
+
         public IClip[]? Clips;
         public uint Duration;
         public uint StartFrame = 0;
@@ -35,10 +38,6 @@ namespace projectFrameCut.Render.Rendering
         public bool LogProcessStack = false;
         public bool Use16Bit { get; set; } = true;
 
-        /// <summary>
-        /// Android 平台由于 OpenGL 必须在主线程执行，多线程会导致主线程拥塞。
-        /// 自动检测并限制 Android 的并发度。
-        /// </summary>
         private bool IsAndroid => OperatingSystem.IsAndroid();
         private int GetOptimalMaxThreads()
         {
@@ -80,7 +79,6 @@ namespace projectFrameCut.Render.Rendering
         //ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
         ConcurrentDictionary<string, IEffect[]> EffectCache = new();
         ConcurrentDictionary<string, object> BindableEffectResultCache = new();
-        OverlayMixture globalMix = new();
         IComputer mixComputer = null!;
 
         int ThreadWorking = 0, Finished = 0;
@@ -443,7 +441,11 @@ namespace projectFrameCut.Render.Rendering
                         ClipNeedForFrame.AddOrUpdate(
                             idx,
                             (_) => [item],
-                            (_, old) => old.Append(item).OrderBy(x => x.LayerIndex).ToArray());
+                            (_, old) => old
+                                .Append(item)
+                                .OrderBy(x => x.LayerIndex >= SubTrackOffset ? 1 : 0)
+                                .ThenByDescending(x => x.LayerIndex)
+                                .ToArray());
                     }
                 }
 
@@ -764,7 +766,7 @@ namespace projectFrameCut.Render.Rendering
                 }
                 else
                 {
-                    var temp = globalMix.Mix(result, frame, mixComputer, _ppb).Resize(_width, _height, false);
+                    var temp = OverlayMixture.Mix(result, frame, mixComputer, _ppb).Resize(_width, _height, false);
                     result.Dispose();
                     result = temp;
                 }
@@ -819,7 +821,7 @@ namespace projectFrameCut.Render.Rendering
                 Log($"[Preparer] Cached {effectInstances.Length} effects for clip {item.Id} ({string.Join(", ", effectInstances.Select(c => $"{c.TypeName}:'{c.Name}'"))})");
             }
 
-            mixComputer = GetOrCreateComputer(globalMix.ComputerId) ?? throw new NullReferenceException("Can't create computer for global mixer.");
+            mixComputer = GetOrCreateComputer(OverlayMixture.ComputerId) ?? throw new NullReferenceException("Can't create computer for global mixer.");
         }
 
         private void InvokeProgress()

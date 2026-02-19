@@ -1104,6 +1104,10 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                 TitleBar = bar,
                 IsMaximizable = IsMaximizable,
                 IsMinimizable = IsMinimizable,
+                Width = this.Width,
+                Height = this.Height,
+                X = this.TranslationX,
+                Y = this.TranslationY
             };
             _hostWindow = newWindow;
 

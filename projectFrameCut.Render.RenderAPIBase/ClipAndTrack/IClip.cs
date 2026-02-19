@@ -71,10 +71,12 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <summary>
         /// Get the mixture mode applied to this clip.
         /// </summary>
-        public MixtureMode MixtureMode { get; init; }
+        [Obsolete("We have no plan on custom type of mixturing, so it won't work and it'll be removed in future.")]
+        public virtual MixtureMode MixtureMode { get => MixtureMode.Overlay; init { } }
         /// <summary>
         /// The args for the mixture mode.
         /// </summary>
+        [Obsolete("We have no plan on custom type of mixturing, so it won't work and it'll be removed in future.")]
         public Dictionary<string, object>? MixtureArgs { get; init; }
         /// <summary>
         /// The effects applied to this clip.

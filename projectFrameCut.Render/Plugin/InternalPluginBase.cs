@@ -137,6 +137,7 @@ public class InternalPluginBase : IPluginBase
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext8Bit", new((p) => new DecoderContext8Bit(p))))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext16Bit", new((p) => new DecoderContext16Bit(p))))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("HttpDecoderContext", new((p) => new HttpDecoderContext(p))))
+        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("RPSVDecoderContext", new((p) => new RawPictureSequenceStreamVideoDecoderContext(p))))
         .ToDictionary();
 
 
@@ -160,10 +161,6 @@ public class InternalPluginBase : IPluginBase
         {"VideoWriter", new((_) => new VideoWriter()) },
         {"BlackHoleWriter", new((_) => new BlackholeVideoWriter()) }
     };
-
-    public IMessagingService MessagingQueue { get; set; }
-
-    public static IMessagingService PluginMessagingQueue { get; private set; }
 
     IClip IPluginBase.ClipCreator(JsonElement element)
     {
@@ -201,15 +198,9 @@ public class InternalPluginBase : IPluginBase
     bool IPluginBase.OnLoaded(out string FailedReason)
     {
         FailedReason = "";
-        PluginMessagingQueue = MessagingQueue;
         return true;
     }
 
-    ProjectJSONStructure? IPluginBase.OnProjectLoad(ProjectJSONStructure project)
-    {
-        PluginMessagingQueue = MessagingQueue;
-        return null;
-    }
 
     public static Func<bool> HWAccelOptionGetter = new(() => ((GlobalPluginHelper.MessagingService?.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccel"]) ?? "true") is string hwaccel && bool.TryParse(hwaccel, out var result) && result));
 

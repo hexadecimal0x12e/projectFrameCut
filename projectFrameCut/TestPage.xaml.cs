@@ -773,11 +773,7 @@ public partial class TestPage : ContentPage
         };
         var result = p.Render(src, null, 2560, 1440);
         Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        OverlayMixture m = new()
-        {
-
-        };
-        var final = m.Mix(canvas, result, PluginManager.CreateComputer(m.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        var final = OverlayMixture.Mix(canvas, result, PluginManager.CreateComputer(OverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();
@@ -991,11 +987,7 @@ public partial class TestPage : ContentPage
         var resized = r.Render(src, null, 2560, 1440);
         var placed = p.Render(resized, null, 2560, 1440);
         Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        OverlayMixture m = new()
-        {
-
-        };
-        var final = m.Mix(canvas, placed, PluginManager.CreateComputer(m.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        var final = OverlayMixture.Mix(canvas, placed, PluginManager.CreateComputer(OverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
         PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
             MemoryStream ms = new();

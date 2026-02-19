@@ -532,7 +532,6 @@ namespace projectFrameCut
                 {
                     PluginManager.InitGlobalGetter();
                     var internalBase = new InternalApplicationPluginBase();
-                    internalBase.MessagingQueue = MessagingServices.MessagingService;
                     (internalBase as IApplicationPluginBase).OnApplicationPluginLoaded();
                     List<IPluginBase> plugins = new() { internalBase };
 #if ANDROID

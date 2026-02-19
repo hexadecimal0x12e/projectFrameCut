@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -33,7 +32,6 @@ namespace projectFrameCut.Render.Effect
             { "A", A },
             { "Tolerance", Tolerance },
         };
-
 
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
@@ -140,7 +138,7 @@ namespace projectFrameCut.Render.Effect
                 throw new NotSupportedException($"Unsupported picture type: {source.GetType().Name}");
             }
 
-            var alphaArr = computer.Compute([
+            var alphaArr = computer.Compute(new object[] {
                 r,
                 g,
                 b,
@@ -150,7 +148,7 @@ namespace projectFrameCut.Render.Effect
                 (float)B,
                 (float)Tolerance,
                 source.Pixels
-                ]);
+                });
 
             if (alphaArr[0] is not float[] alpha) throw new InvalidOperationException("The output data from computer is invaild.");
 
@@ -246,202 +244,46 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class ResizeEffect_HwAccel : IEffect
+    public class RemoveColorEffectFactory : IEffectFactory
     {
-        public bool Enabled { get; set; } = true;
-        public int Index { get; set; }
-        public string Name { get; set; }
-        public int RelativeWidth { get; set; }
-        public int RelativeHeight { get; set; }
-        public string Id { get; set; }
-
-
-        public int Height { get; init; }
-        public int Width { get; init; }
-        public bool PreserveAspectRatio { get; init; } = true;
-        public string? BindedEffectGroupID { get; set; }
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
+        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
+        public string TypeName => "RemoveColor";
+        public List<string> ParametersNeeded { get; } = new List<string>
         {
-            {"Height", Height },
-            {"Width", Width },
-            {"PreserveAspectRatio" , PreserveAspectRatio  },
+            "R",
+            "G",
+            "B",
+            "A",
+            "Tolerance",
         };
 
-
-
-        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public string? NeedComputer => "ResizeComputer";
-        public bool YieldProcessStep => false;
-        public EffectImplementType ImplementType => EffectImplementType.HwAcceleration;
-
-
-        public static List<string> ParametersNeeded { get; } = new List<string>
+        public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
         {
-            "Height",
-            "Width",
-            //"PreserveAspectRatio"
+            {"R", "ushort" },
+            {"G", "ushort" },
+            {"B", "ushort" },
+            {"A", "ushort" },
+            {"Tolerance", "ushort" },
         };
 
-        public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.HwAcceleration };
+
+        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
-            {"Height", "int" },
-            {"Width", "int" },
-            {"PreserveAspectRatio", "bool" },
-        };
-
-        public string TypeName => "Resize";
-
-
-        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
-        {
-            ArgumentNullException.ThrowIfNull(parameters);
-            if (!ParametersNeeded.All(parameters.ContainsKey))
+            if (implementType == EffectImplementType.NotSpecified)
             {
-                throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
+                return BuildWithDefaultType(parameters);
             }
-
-            bool preserve = false;
-            if (parameters.TryGetValue("PreserveAspectRatio", out var val))
+            if (implementType != EffectImplementType.HwAcceleration)
             {
-                preserve = Convert.ToBoolean(val);
+                throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.");
             }
-
-            return new ResizeEffect_HwAccel
-            {
-                Height = Convert.ToInt32(parameters["Height"]),
-                Width = Convert.ToInt32(parameters["Width"]),
-                PreserveAspectRatio = preserve,
-            };
+            return RemoveColorEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
         }
 
-        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
-
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
+        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
         {
-            var sw = Stopwatch.StartNew();
-            // 1. Calculate target dimensions (Aspect Ratio Logic)
-            int width = Width;
-            int height = Height;
-
-            if (RelativeWidth > 0 && RelativeHeight > 0 && (RelativeWidth != targetWidth || RelativeHeight != targetHeight))
-            {
-                width = Math.Max(1, (int)Math.Round((double)Width * targetWidth / RelativeWidth, MidpointRounding.AwayFromZero));
-                height = Math.Max(1, (int)Math.Round((double)Height * targetHeight / RelativeHeight, MidpointRounding.AwayFromZero));
-            }
-            else
-            {
-                width = Math.Max(1, width);
-                height = Math.Max(1, height);
-            }
-
-            int destWidth = width;
-            int destHeight = height;
-
-            if (PreserveAspectRatio)
-            {
-                // Logic matching ImageSharp ResizeMode.Max
-                double sourceRatio = (double)source.Width / source.Height;
-                double targetRatio = (double)width / height;
-
-                if (sourceRatio > targetRatio)
-                {
-                    // Fit to width
-                    destHeight = (int)Math.Round(width / sourceRatio, MidpointRounding.AwayFromZero);
-                }
-                else
-                {
-                    // Fit to height
-                    destWidth = (int)Math.Round(height * sourceRatio, MidpointRounding.AwayFromZero);
-                }
-                destWidth = Math.Max(1, destWidth);
-                destHeight = Math.Max(1, destHeight);
-            }
-
-            // 2. Prepare Data
-            float[] r, g, b, a;
-            if (source is IPicture<ushort> p16)
-            {
-                r = p16.r.Select(Convert.ToSingle).ToArray();
-                g = p16.g.Select(Convert.ToSingle).ToArray();
-                b = p16.b.Select(Convert.ToSingle).ToArray();
-                a = p16.a ?? Enumerable.Repeat(1f, p16.Pixels).ToArray();
-            }
-            else if (source is IPicture<byte> p8)
-            {
-                r = p8.r.Select(Convert.ToSingle).ToArray();
-                g = p8.g.Select(Convert.ToSingle).ToArray();
-                b = p8.b.Select(Convert.ToSingle).ToArray();
-                a = p8.a ?? Enumerable.Repeat(1f, p8.Pixels).ToArray();
-            }
-            else
-            {
-                throw new InvalidOperationException($"Source pixel type is not supported.");
-
-            }
-
-            // 3. Compute
-            // Computer should handle: [r, g, b, a, srcW, srcH, dstW, dstH]
-            var resultArr = computer.Compute([
-                r, g, b, a,
-                        (float)source.Width, (float)source.Height,
-                        (float)destWidth, (float)destHeight
-            ]);
-
-
-            if (resultArr.Length == 4 &&
-                resultArr[0] is float[] r_out &&
-                resultArr[1] is float[] g_out &&
-                resultArr[2] is float[] b_out &&
-                resultArr[3] is float[] a_out)
-            {
-                IPicture result;
-                if (source.bitPerPixel == 16)
-                {
-                    var p = new Picture16bpp(destWidth, destHeight);
-                    p.r = r_out.Select(v => (ushort)Math.Clamp(v, 0, 65535)).ToArray();
-                    p.g = g_out.Select(v => (ushort)Math.Clamp(v, 0, 65535)).ToArray();
-                    p.b = b_out.Select(v => (ushort)Math.Clamp(v, 0, 65535)).ToArray();
-                    p.a = a_out;
-                    p.hasAlphaChannel = true;
-                    result = p;
-                }
-                else
-                {
-                    var p = new Picture8bpp(destWidth, destHeight);
-                    p.r = r_out.Select(v => (byte)Math.Clamp(v, 0, 255)).ToArray();
-                    p.g = g_out.Select(v => (byte)Math.Clamp(v, 0, 255)).ToArray();
-                    p.b = b_out.Select(v => (byte)Math.Clamp(v, 0, 255)).ToArray();
-                    p.a = a_out;
-                    p.hasAlphaChannel = true;
-                    result = p;
-                }
-                sw.Stop();
-                result.ProcessStack = source.ProcessStack.Append(new PictureProcessStack
-                {
-                    Elapsed = sw.Elapsed,
-                    OperationDisplayName = $"Resize (GPU)",
-                    Operator = typeof(ResizeEffect_HwAccel),
-                    ProcessingFuncStackTrace = new StackTrace(true),
-                    Properties = new Dictionary<string, object>
-                            {
-                                { "Width", destWidth },
-                                { "Height", destHeight },
-                                { "PreserveAspectRatio", PreserveAspectRatio }
-                            }
-                }).ToList();
-                return result;
-            }
-            throw new InvalidOperationException($"Accelerator doesn't return expected result.");
-
-
-        }
-
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            throw new NotImplementedException();
+            return RemoveColorEffect_HwAccel.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
         }
     }
-
-
 }

@@ -56,5 +56,9 @@
 		<Using Include="projectFrameCut.Shared" />
 	</ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="TemplateSystem\" />
+  </ItemGroup>
+
 
 </Project>

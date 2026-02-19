@@ -62,14 +62,19 @@ namespace projectFrameCut.Shared
 
     public static class PictureProcesser
     {
+        public static bool SaveDiagResult = false;
+        public static string DiagResultPath = null!;
+
         public static IPicture Process(List<IPictureProcessStep> steps, IPicture source, int targetPPB)
         {
             List<PictureProcessStack> procStack = new(steps.Count);
-            List<Func<IImageProcessingContext, IImageProcessingContext>> processingContexts = new(steps.Count);
+            List<(Func<IImageProcessingContext, IImageProcessingContext> processer, IPictureProcessStep step)> processingContexts = new(steps.Count);
             var convertedSource = source.ToBitPerPixel(targetPPB);
             try
             {
                 var img = convertedSource.SaveToSixLaborsImage(targetPPB, true, false);
+                Guid SessionId = Guid.NewGuid();
+                if (SaveDiagResult) img.SaveAsPng(Path.Combine(DiagResultPath, $"diag-before-{SessionId}.png"));
                 try
                 {
                     foreach (var item in steps)
@@ -78,26 +83,17 @@ namespace projectFrameCut.Shared
                         if (step is not null)
                         {
                             var stack = item.GetProcessStack();
-                            if (IPicture.DiagImagePath is not null) Logger.LogDiagnostic(PictureExtensions.FormatProcessStackForLog(procStack.Concat([stack])));
-                            processingContexts.Add(ctx =>
-                            {
-                                var sw = Stopwatch.StartNew();
-                                var res = step(ctx);
-                                sw.Stop();
-                                stack.Elapsed = sw.Elapsed;
-                                return res;
-                            });
-                            procStack.Add(stack);
+                            processingContexts.Add((step, item));
                         }
                         else
                         {
                             //Logger.LogDiagnostic($"Step {item.Name} doesn't have a IImageProcessingContext. Process the picture and convert it...");
                             if (processingContexts.Count > 0)
                             {
-                                img = ProcessSixLaborsProcessingContexts(img, processingContexts);
+                                img = ProcessSixLaborsProcessingContexts(img, processingContexts, ref procStack, SessionId);
                                 processingContexts.Clear();
                             }
-
+                            var sw = Stopwatch.StartNew();
                             using var inputPicture = img.ToPJFCPicture(targetPPB);
                             var outputPicture = item.Process(inputPicture);
                             try
@@ -107,23 +103,35 @@ namespace projectFrameCut.Shared
                             }
                             finally
                             {
+                                sw.Stop();
                                 if (!ReferenceEquals(outputPicture, inputPicture))
                                 {
                                     outputPicture.Dispose();
                                 }
                             }
-
-                            procStack.Add(item.GetProcessStack());
+                            var stack = item.GetProcessStack();
+                            stack.Elapsed = sw.Elapsed;
+                            procStack.Add(stack);
                         }
                     }
 
                     if (processingContexts.Count > 0)
                     {
-                        img = ProcessSixLaborsProcessingContexts(img, processingContexts);
+                        img = ProcessSixLaborsProcessingContexts(img, processingContexts, ref procStack, SessionId);
                     }
-
+                    var swFinal = Stopwatch.StartNew();
                     var result = img.ToPJFCPicture(targetPPB);
+                    swFinal.Stop();
+                    procStack.Add(new PictureProcessStack
+                    {
+                        OperationDisplayName = "Convert final Image to IPicture",
+                        ProcessingFuncStackTrace = new(true),
+                        Operator = typeof(PictureProcesser),
+                        Elapsed = swFinal.Elapsed,
+                        StepUsed = null,
+                    });
                     result.ProcessStack = source.ProcessStack.Concat(procStack).ToList();
+                    if (SaveDiagResult) result.SaveAsPng(Path.Combine(DiagResultPath, $"diag-after-{SessionId}.png"));
                     return result;
                 }
                 finally
@@ -141,15 +149,24 @@ namespace projectFrameCut.Shared
             }
         }
 
-        private static Image ProcessSixLaborsProcessingContexts(Image img, List<Func<IImageProcessingContext, IImageProcessingContext>> processingContexts)
+        private static Image ProcessSixLaborsProcessingContexts(Image img, List<(Func<IImageProcessingContext, IImageProcessingContext> processer, IPictureProcessStep step)> processingContexts, ref List<PictureProcessStack> stacks, Guid SessionId)
         {
-            img.Mutate(ctx =>
+            foreach (var process in processingContexts)
             {
-                foreach (var process in processingContexts)
+                var stack = process.step.GetProcessStack();
+                var sw = Stopwatch.StartNew();
+                img.Mutate((c) => process.processer(c));
+                sw.Stop();
+                stack.Elapsed = sw.Elapsed;
+                stacks.Add(stack);
+                if (SaveDiagResult)
                 {
-                    ctx = process(ctx);
+                    var opId = Guid.NewGuid();
+                    img.SaveAsPng(Path.Combine(DiagResultPath, $"diag-{stack.OperationDisplayName}-{opId}.png"));
+                    File.WriteAllText(Path.Combine(DiagResultPath, $"diag-{SessionId}-{stack.OperationDisplayName}-{opId}-stacks.txt"), PictureExtensions.FormatProcessStackForLog(stacks, 50));
                 }
-            });
+            }
+
             return img;
         }
     }

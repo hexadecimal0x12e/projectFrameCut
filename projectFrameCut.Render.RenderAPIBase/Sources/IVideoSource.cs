@@ -74,10 +74,12 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         public double Fps { get; }
         /// <summary>
         /// Get the width of the video frames.
+        /// Return 0 if unknown.
         /// </summary>
         public int Width { get; }
         /// <summary>
         /// Get the height of the video frames.
+        /// Return 0 if unknown.
         /// </summary>
         public int Height { get; }
         /// <summary>
@@ -89,6 +91,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         /// Enable or disable read-lock to avoid potential crashes.
         /// </summary>
         public bool EnableLock { get; set; }
+
+        /// <summary>
+        /// Controls whether throw a exception while a solvable error occurs (like little bit of exceed range of frame(s)).
+        /// </summary>
+        /// <remarks>
+        /// Note this is not available for all type of IVideoSource.
+        /// </remarks>
+        public bool StrictMode { get; set; }
 
     }
 

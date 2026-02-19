@@ -19,6 +19,7 @@ using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -48,6 +49,7 @@ namespace projectFrameCut.DraftStuff
 {
     public class ClipInfoBuilder
     {
+        #region init
         DraftPage page;
 
         static JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
@@ -85,6 +87,14 @@ namespace projectFrameCut.DraftStuff
                 Header = Localized.MainSettingsPage_Tab_General,
                 Content = BuildGeneralTab(clip, handler)
             });
+            if(clip.ClipType == ClipMode.TextClip || clip.ClipType == ClipMode.SubtitleClip)
+            {
+                t.TabItems.Add(new TabbedViewItem
+                {
+                    Header ="Text",// PPLocalizedResources.Tabs_Effect,
+                    Content = await BuildTextOptionTab(clip, handler)
+                });
+            }
             t.TabItems.Add(new TabbedViewItem
             {
                 Header = PPLocalizedResources.Tabs_Effect,
@@ -107,7 +117,9 @@ namespace projectFrameCut.DraftStuff
             return t;
         }
 
+        #endregion
 
+        #region general
 
         public View BuildGeneralTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
@@ -350,6 +362,157 @@ namespace projectFrameCut.DraftStuff
             return ppb.BuildWithScrollView();
         }
 
+        private async Task<View> BuildTextOptionTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            PropertyPanelBuilder ppb = new();
+
+            // Ensure ExtraData exists
+            clip.ExtraData ??= new Dictionary<string, object>();
+
+            // Load or normalize TextEntries from ExtraData
+            List<projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry>? entries = null;
+            if (clip.ExtraData.TryGetValue("TextEntries", out var entriesObj))
+            {
+                if (entriesObj is List<projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry> list)
+                {
+                    entries = list;
+                }
+                else if (entriesObj is JsonElement je)
+                {
+                    try { entries = JsonSerializer.Deserialize<List<projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry>>(je); }
+                    catch { entries = null; }
+                }
+            }
+
+            if (entries == null)
+            {
+                entries = new List<projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry>
+                {
+                    new projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry("", 0, 0, projectFrameCut.Render.ClipsAndTracks.TextClip.GetFont().Families.FirstOrDefault().Name ?? "Arial", 24f, 65535, 65535, 65535, 1f)
+                };
+                clip.ExtraData["TextEntries"] = entries;
+            }
+
+            var fonts = projectFrameCut.Render.ClipsAndTracks.TextClip.GetFont().Families.Select(f => f.Name).ToArray();
+
+            var entriesContainer = new VerticalStackLayout { Spacing = 8 };
+
+            void UpdateStoredEntries()
+            {
+                clip.ExtraData["TextEntries"] = entries;
+                handler?.Invoke(ppb, new PropertyPanelPropertyChangedEventArgs("TextEntries", entries, entries));
+            }
+
+            void RebuildEntriesUI()
+            {
+                entriesContainer.Children.Clear();
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    int idx = i;
+                    var e = entries[idx];
+
+                    var border = new Border
+                    {
+                        Stroke = Colors.Gray.WithAlpha(0.25f),
+                        StrokeShape = new RoundRectangle { CornerRadius = 8 },
+                        Padding = 8,
+                        Content = new VerticalStackLayout { Spacing = 6 }
+                    };
+
+                    var stack = (VerticalStackLayout)border.Content;
+
+                    // text
+                    var editor = new Editor { Text = e.text, AutoSize = EditorAutoSizeOption.TextChanges, HeightRequest = 80 };
+                    editor.Unfocused += (s, ev) =>
+                    {
+                        entries[idx] = entries[idx] with { text = editor.Text };
+                        UpdateStoredEntries();
+                    };
+                    stack.Children.Add(new Label { Text = "Text" });
+                    stack.Children.Add(editor);
+
+                    // position row
+                    var posRow = new HorizontalStackLayout { Spacing = 8 };
+                    var xEntry = new Entry { Text = e.x.ToString(), WidthRequest = 80 }; 
+                    var yEntry = new Entry { Text = e.y.ToString(), WidthRequest = 80 };
+                    xEntry.Unfocused += (s, ev) => { if (int.TryParse(xEntry.Text, out var nx)) { entries[idx] = entries[idx] with { x = nx }; UpdateStoredEntries(); } };
+                    yEntry.Unfocused += (s, ev) => { if (int.TryParse(yEntry.Text, out var ny)) { entries[idx] = entries[idx] with { y = ny }; UpdateStoredEntries(); } };
+                    posRow.Children.Add(new Label { Text = "X", VerticalOptions = LayoutOptions.Center }); posRow.Children.Add(xEntry);
+                    posRow.Children.Add(new Label { Text = "Y", VerticalOptions = LayoutOptions.Center }); posRow.Children.Add(yEntry);
+                    stack.Children.Add(posRow);
+
+                    // font row
+                    var fontRow = new HorizontalStackLayout { Spacing = 8 };
+                    var fontPicker = new Picker { Title = "Font", ItemsSource = fonts, SelectedItem = fonts.Contains(e.fontFamily) ? e.fontFamily : fonts.FirstOrDefault() };
+                    fontPicker.SelectedIndexChanged += (s, ev) => { if (fontPicker.SelectedItem is string sf) { entries[idx] = entries[idx] with { fontFamily = sf }; UpdateStoredEntries(); } };
+                    var sizeEntry = new Entry { Text = e.fontSize.ToString(), WidthRequest = 80 };
+                    sizeEntry.Unfocused += (s, ev) => { if (float.TryParse(sizeEntry.Text, out var ns)) { entries[idx] = entries[idx] with { fontSize = ns }; UpdateStoredEntries(); } };
+                    fontRow.Children.Add(fontPicker); fontRow.Children.Add(new Label { Text = "Size", VerticalOptions = LayoutOptions.Center }); fontRow.Children.Add(sizeEntry);
+                    stack.Children.Add(fontRow);
+
+                    // color row (hex)
+                    var colorRow = new HorizontalStackLayout { Spacing = 8 };
+                    var colorPreview = new BoxView { WidthRequest = 30, HeightRequest = 30, CornerRadius = 4 };
+                    try
+                    {
+                        var col = Color.FromRgba(e.r / 65535.0, e.g / 65535.0, e.b / 65535.0, (e.a ?? 1f));
+                        colorPreview.Color = col;
+                    }
+                    catch { }
+                    var colorEntry = new Entry { Text = $"#{((int)Math.Round(e.r / 257.0)):X2}{((int)Math.Round(e.g / 257.0)):X2}{((int)Math.Round(e.b / 257.0)):X2}", WidthRequest = 120 };
+                    colorEntry.Unfocused += (s, ev) =>
+                    {
+                        try
+                        {
+                            var c = Color.FromArgb(colorEntry.Text);
+                            ushort r = (ushort)Math.Round(c.Red * 65535);
+                            ushort g = (ushort)Math.Round(c.Green * 65535);
+                            ushort b = (ushort)Math.Round(c.Blue * 65535);
+                            float a = (float)c.Alpha;
+                            entries[idx] = entries[idx] with { r = r, g = g, b = b, a = a };
+                            colorPreview.Color = c;
+                            UpdateStoredEntries();
+                        }
+                        catch { }
+                    };
+                    colorRow.Children.Add(colorPreview); colorRow.Children.Add(colorEntry);
+                    stack.Children.Add(colorRow);
+
+                    // action row
+                    var actionRow = new HorizontalStackLayout { Spacing = 8 };
+                    var removeBtn = new Button { Text = "Remove", BackgroundColor = Colors.Transparent, TextColor = Colors.Red };
+                    removeBtn.Clicked += (s, ev) => { entries.RemoveAt(idx); UpdateStoredEntries(); RebuildEntriesUI(); };
+                    actionRow.Children.Add(removeBtn);
+                    stack.Children.Add(actionRow);
+
+                    entriesContainer.Children.Add(border);
+                }
+            }
+
+            RebuildEntriesUI();
+
+            // Add/Insert controls
+            var addBtn = new Button { Text = "Add Text Entry" };
+            addBtn.Clicked += (s, e) =>
+            {
+                var defFont = fonts.FirstOrDefault() ?? "Arial";
+                entries.Add(new projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry("", 0, 0, defFont, 24f, 65535, 65535, 65535, 1f));
+                UpdateStoredEntries();
+                RebuildEntriesUI();
+            };
+
+            var panel = new VerticalStackLayout { Spacing = 8 };
+            panel.Children.Add(new Label { Text = "Text Entries", FontAttributes = FontAttributes.Bold, FontSize = 16 });
+            panel.Children.Add(entriesContainer);
+            panel.Children.Add(addBtn);
+
+            ppb.AddCustomChild(panel);
+
+            return ppb.BuildWithScrollView();
+        }
+        #endregion
+
+        #region effect
         public static void RebuildAllEffects(ClipElementUI clip, bool diag = false)
         {
             var newEffects = clip.Effects ?? new();
@@ -1348,6 +1511,10 @@ namespace projectFrameCut.DraftStuff
             return frame;
         }
 
+        #endregion
+
+        #region misc
+
         private View BuildSpeedAndRatioTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             PropertyPanelBuilder ppb = new();
@@ -1436,5 +1603,7 @@ namespace projectFrameCut.DraftStuff
                 };
             }
         }
+
+        #endregion
     }
 }

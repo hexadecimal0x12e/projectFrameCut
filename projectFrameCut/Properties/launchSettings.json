@@ -2,7 +2,7 @@
   "profiles": {
     "Windows Machine": {
       "commandName": "MsixPackage",
-      "commandLineArgs": "--noSplash \"D:\\code\\playground\\projectFrameCut\\My Drafts\\abc (2).pjfc\"",
+      "commandLineArgs": "--noSplash \"D:\\code\\playground\\projectFrameCut\\My Drafts\\overlay test 1.pjfc\\project.pjfc\"",
       "nativeDebugging": false
     }
   }

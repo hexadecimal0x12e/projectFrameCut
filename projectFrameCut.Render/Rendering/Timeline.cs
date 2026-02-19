@@ -6,6 +6,7 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -45,7 +46,7 @@ namespace projectFrameCut.Render.Rendering
                 }
             }
 
-            return result.OrderBy((c) => c.LayerIndex);
+            return result.OrderBy(x => x.LayerIndex >= Renderer.SubTrackOffset ? 1 : 0).ThenByDescending(x => x.LayerIndex);
         }
 
         public static string GetFrameHash(IClip[] video, uint targetFrame)
@@ -75,11 +76,11 @@ namespace projectFrameCut.Render.Rendering
         }
 
 
-        public static IPicture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight, int targetPPB = 8, Action<IEffect,IPicture>? AfterEffect = null)
+        public static IPicture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight, int targetPPB = 8, Action<IEffect, IPicture>? AfterEffect = null)
         {
             try
             {
-                IPicture result = Picture.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0);
+                IPicture? result = null;
                 ConcurrentDictionary<string, object> bindableEffectResultCache = new();
                 Dictionary<string, object> bindableEffectResultCache2 = new();
                 Dictionary<string, bool> producedValueTable = new();
@@ -115,7 +116,7 @@ namespace projectFrameCut.Render.Rendering
                         {
                             EffectProcessing.ProcessEffect(ref effected, steps, ref lastIsProcessStep, effect, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
                         }
-                        if(AfterEffect is not null)
+                        if (AfterEffect is not null)
                         {
                             if (steps.Count > 0)
                             {
@@ -136,8 +137,11 @@ namespace projectFrameCut.Render.Rendering
                         steps.Clear();
                     }
 
-                    result = GlobalMixture.Mix(result, effected, PluginManager.CreateComputer("OverlayComputer"), targetPPB);
-
+                    if (result is null) result = effected;
+                    else
+                    {
+                        result = OverlayMixture.Mix(result, effected, PluginManager.CreateComputer("OverlayComputer"), targetPPB);
+                    }
                 }
                 //LogDiagnostic($"Result's diag info:{result?.GetDiagnosticsInfo() ?? "unknown"}");
                 if (result?.Width == targetWidth && result?.Height == targetHeight)
@@ -153,16 +157,20 @@ namespace projectFrameCut.Render.Rendering
                     result = Placer.Render(result, null, targetWidth, targetHeight);
                 }
             ok:
-                result = GlobalMixture
+                result = OverlayMixture
                                .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer("OverlayComputer"), targetPPB)
                                .Resize(targetWidth, targetHeight, true);
+                if (PictureProcesser.SaveDiagResult)
+                {
+                    var opId = Guid.NewGuid();
+                    File.WriteAllText(Path.Combine(PictureProcesser.DiagResultPath, $"diag-render-{frameIndex}-{opId}-stacks.txt"), PictureExtensions.FormatProcessStackForLog(result.ProcessStack, 100000));
+                }
                 return result;
             }
             catch (Exception ex)
             {
                 Log(ex, $"Render frame {frameIndex}", "Timeline");
                 throw;
-                return new Picture(Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png")).Resize(targetWidth, targetHeight, true);
             }
 
         }
@@ -173,7 +181,6 @@ namespace projectFrameCut.Render.Rendering
             StartY = 0
         };
 
-        private static OverlayMixture GlobalMixture = new();
 
 
         public static List<OverlapInfo> FindOverlaps(IEnumerable<ClipDraftDTO>? clips, uint allowedOverlapFrames = 5)

@@ -45,6 +45,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public int? ResultBitPerPixel => 8;
 
         public bool EnableLock { get; set; } = false;
+        public bool StrictMode { get; set; }
         private Lock locker = new();
 
         public DecoderContext16Bit(string path)
@@ -353,6 +354,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public int? ResultBitPerPixel => 8;
 
         public bool EnableLock { get; set; } = false;
+        public bool StrictMode { get; set; }
         private Lock locker = new();
 
         public DecoderContext8Bit(string path)

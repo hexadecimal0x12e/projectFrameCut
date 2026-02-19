@@ -472,7 +472,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Represents the messaging queue provided by the host application.
         /// </summary>
         [Obsolete("Use GlobalPluginHelper.MessagingService instead. This property is no longer been assigned while initialization and it will be removed in next Plugin API version.", false)]
-        public IMessagingService MessagingQueue { get; set; }
+        public virtual IMessagingService MessagingQueue { get => null; set { } }
     }
 
     public static class GlobalPluginHelper
@@ -532,6 +532,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// The supported API version of the plugin.
         /// </summary>
         public int PluginAPIVersion { get; set; }
+        /// <summary>
+        /// Get the minor version of plugin. Default to 0.
+        /// </summary>
+        public int PluginAPIMinorVersion { get; set; } = 0;
         /// <summary>
         /// The plugin's name.
         /// </summary>
@@ -609,14 +613,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 }
             }
 
-            if (pluginBase.MixtureProvider.Any())
-            {
-                providedContent.AppendLine("Mixture:");
-                foreach (var item in pluginBase.MixtureProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-            }
+
             if (pluginBase.ComputerProvider.Any())
             {
                 providedContent.AppendLine("Computer:");

@@ -26,7 +26,8 @@ namespace projectFrameCut.Shared
         ExtendClip,
         AudioClip,
         SubtitleClip,
-        Special
+        MarkingClip,
+        Special = -1
     }
 
     public enum AssetType

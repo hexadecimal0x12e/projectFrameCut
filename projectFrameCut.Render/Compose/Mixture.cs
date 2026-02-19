@@ -10,24 +10,11 @@ using System.Threading.Tasks;
 
 namespace projectFrameCut.Render.Compose
 {
-    public class OverlayMixture// : IMixture
+    public static class OverlayMixture
     {
-        public string TypeName => "Overlay";
+        public static string? ComputerId => "OverlayComputer";
 
-        public static List<string> ParametersNeeded = new();
-
-        public static Dictionary<string, string> ParametersType = new();
-
-        public Dictionary<string, object> Parameters => new();
-
-        //public static IMixture FromParametersDictionary(Dictionary<string, object> parameters)
-        //{
-        //    return new OverlayMixture();
-        //}
-        //public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public string? ComputerId => "OverlayComputer";
-
-        public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB)
+        public static IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB)
         {
             if (computer is null)
             {
@@ -39,7 +26,7 @@ namespace projectFrameCut.Render.Compose
                 BaseSteps = basePicture.ProcessStack,
                 TopSteps = topPicture.ProcessStack,
                 OperationDisplayName = "Overlay effect",
-                Operator = this.GetType(),
+                Operator = typeof(OverlayMixture),
                 ProcessingFuncStackTrace = new(true),
             };
 

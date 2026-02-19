@@ -190,6 +190,8 @@ public partial class HomePage : ContentPage
 
             }
             catch { }
+
+
 #endif
         };
 
@@ -633,33 +635,57 @@ public partial class HomePage : ContentPage
                     SettingsManager.WriteSetting("Edit_PreferredPopupMode", "bottom");
 #endif
                 }
-                page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.ProjectName ?? "?", isReadonly);
-                page.ProjectName = project?.ProjectName ?? "?";
-                page.IsReadonly = isReadonly;
-                page.Denoise = SettingsManager.IsBoolSettingTrue("Edit_Denoise");
-                page.PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "right");
-                page.MaximumSaveSlot = int.TryParse(SettingsManager.GetSetting("Edit_MaximumSaveSlot"), out var slotCount) ? slotCount : 10;
-                page.AlwaysShowToolbarBtns = SettingsManager.IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons");
-                page.ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole");
-                page.LiveVideoPreviewBufferLength = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), out var bufferLen) ? bufferLen : 240;
-                page.LivePreviewResolutionFactor = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), out var resolutionFactor) ? resolutionFactor : 8;
-                var resolution = SettingsManager.GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720");
-                page.DefaultPreviewWidth = int.TryParse(resolution.Split('x', 2)[0], out var w) ? w : 1280;
-                page.DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720;
-                page.ProxyOption = SettingsManager.GetSetting("Edit_ProxyOption", "none");
-                page.AutoSavePreviewAreaHeight = SettingsManager.IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave");
-                page.LockScrollViewAfterSelection = SettingsManager.IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection", true);
-                page.UseCommunityToolkitPopupInsteadOfOverlayLayer = SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer");
-                page.PreviewAreaHeight = double.TryParse(SettingsManager.GetSetting("Edit_UpperContentHeight", "250"), out var upperHeight) ? upperHeight : 250d;
-                page.UseCompactLayout = overrideLayoutOption ?? DeviceInfo.Idiom == DeviceIdiom.Phone;
+                {
+                    int maxRetries = 5;
+                    int attempt = 0;
+                    while (true)
+                    {
+                        try
+                        {
+                            page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.ProjectName ?? "?", isReadonly);
+                            page.ProjectName = project?.ProjectName ?? "?";
+                            page.IsReadonly = isReadonly;
+                            page.Denoise = SettingsManager.IsBoolSettingTrue("Edit_Denoise");
+                            page.PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "right");
+                            page.MaximumSaveSlot = int.TryParse(SettingsManager.GetSetting("Edit_MaximumSaveSlot"), out var slotCount) ? slotCount : 10;
+                            page.AlwaysShowToolbarBtns = SettingsManager.IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons");
+                            page.ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole");
+                            page.LiveVideoPreviewBufferLength = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), out var bufferLen) ? bufferLen : 240;
+                            page.LivePreviewResolutionFactor = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), out var resolutionFactor) ? resolutionFactor : 8;
+                            var resolution = SettingsManager.GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720");
+                            page.DefaultPreviewWidth = int.TryParse(resolution.Split('x', 2)[0], out var w) ? w : 1280;
+                            page.DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720;
+                            page.ProxyOption = SettingsManager.GetSetting("Edit_ProxyOption", "none");
+                            page.AutoSavePreviewAreaHeight = SettingsManager.IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave");
+                            page.LockScrollViewAfterSelection = SettingsManager.IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection", true);
+                            page.UseCommunityToolkitPopupInsteadOfOverlayLayer = SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer");
+                            page.PreviewAreaHeight = double.TryParse(SettingsManager.GetSetting("Edit_UpperContentHeight", "250"), out var upperHeight) ? upperHeight : 250d;
+                            page.UseCompactLayout = overrideLayoutOption ?? DeviceInfo.Idiom == DeviceIdiom.Phone;
 #if WINDOWS
-                Context context = Context.CreateDefault();
-                var devices = context.Devices.ToList();
-                var accelDevice = devices.Index().Select(t => new KeyValuePair<int, ILGPU.Runtime.Device>(t.Index, t.Item))
-                                        .FirstOrDefault((t) => t.Key == (int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var accelIdx) ? accelIdx : -1),
-                                        new KeyValuePair<int, ILGPU.Runtime.Device>(-1, devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices.First()))).Value;
-                page.AcceleratorToUse = accelDevice.CreateAccelerator(context);
+                            Context context = Context.CreateDefault();
+                            var devices = context.Devices.ToList();
+                            var accelDevice = devices.Index().Select(t => new KeyValuePair<int, ILGPU.Runtime.Device>(t.Index, t.Item))
+                                                    .FirstOrDefault((t) => t.Key == (int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var accelIdx) ? accelIdx : -1),
+                                                    new KeyValuePair<int, ILGPU.Runtime.Device>(-1, devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices.First()))).Value;
+                            page.AcceleratorToUse = accelDevice.CreateAccelerator(context);
 #endif
+                            await page.PostInit();
+                            break;
+                        }
+                        catch (COMException comEx)
+                        {
+                            attempt++;
+                            Log(comEx, $"COMException while loading DraftPage attempt {attempt}", this);
+                            if (attempt >= maxRetries)
+                            {
+                                throw;
+                            }
+                            await Task.Delay(500);
+                            continue;
+                        }
+                    }
+                }
+
                 await page.PostInit();
 
                 foreach (var item in PluginManager.LoadedPlugins)
@@ -876,10 +902,14 @@ public partial class HomePage : ContentPage
         {
             Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
             IPicture.DiagImagePath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
+            PictureProcesser.SaveDiagResult = true;
+            PictureProcesser.DiagResultPath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
+
         }
         else
         {
             IPicture.DiagImagePath = null;
+            PictureProcesser.SaveDiagResult = false;
         }
 
 

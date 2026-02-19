@@ -2,10 +2,10 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using System.Diagnostics;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using projectFrameCut.Render.Plugin;
 
 namespace projectFrameCut.Render.Effect
 {
@@ -39,7 +39,6 @@ namespace projectFrameCut.Render.Effect
         };
 
 
-
         public IPicture Render(IPicture source, uint index, IComputer? computer, int targetWidth, int targetHeight)
         {
             int localIndex = (int)index - StartPoint;
@@ -53,8 +52,6 @@ namespace projectFrameCut.Render.Effect
             if (currentWidth < 1) currentWidth = 1;
             if (currentHeight < 1) currentHeight = 1;
 
-            // Crop requires the rectangle to be fully inside the source bounds.
-            // If TargetX/TargetY are larger than the source, the interpolation may exceed bounds.
             if (currentWidth > source.Width) currentWidth = source.Width;
             if (currentHeight > source.Height) currentHeight = source.Height;
 
@@ -106,7 +103,6 @@ namespace projectFrameCut.Render.Effect
             if (currentWidth < 1) currentWidth = 1;
             if (currentHeight < 1) currentHeight = 1;
 
-            // Keep crop rect within bounds to avoid ImageSharp ArgumentException.
             if (currentWidth > source.Width) currentWidth = source.Width;
             if (currentHeight > source.Height) currentHeight = source.Height;
 
@@ -198,149 +194,55 @@ namespace projectFrameCut.Render.Effect
         };
     }
 
-    public class JitterEffect : IContinuousEffect
+    public class ZoomInContinuousEffectFactory : IEffectFactory
     {
-        public bool Enabled { get; set; } = true;
-        public int Index { get; set; }
-        public string Id { get; set; }
-        public string Name { get; set; }
-        public int RelativeWidth { get; set; }
-        public int RelativeHeight { get; set; }
-        public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
+        public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
-        public int MaxOffsetX { get; init; }
-        public int MaxOffsetY { get; init; }
-        public int Seed { get; init; } = 0;
-        public string Direction { get; init; } = Direction_Both;
+        public string TypeName => "ZoomIn";
 
-        public const string Direction_Both = "Both";
-        public const string Direction_XOnly = "XOnly";
-        public const string Direction_YOnly = "YOnly";
-
-        public Dictionary<string, object> Parameters => new Dictionary<string, object>
-        {
-            { "MaxOffsetX", MaxOffsetX },
-            { "MaxOffsetY", MaxOffsetY },
-            { "Seed", Seed },
-            { "Direction", Direction },
-        };
-
-        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public string? NeedComputer => null;
-        public bool YieldProcessStep => true;
-
-        public int StartPoint { get; set; }
-        public int EndPoint { get; set; }
-
-        public Random rnd = new();
-
+        public List<string> ParametersNeeded => s_ParametersNeeded;
         public static List<string> s_ParametersNeeded { get; } = new List<string>
         {
-            "MaxOffsetX",
-            "MaxOffsetY",
-            "Direction",
-        };
-
-        public static Dictionary<string, string> s_ParametersType { get; } = new Dictionary<string, string>
-        {
-            { "MaxOffsetX", "int" },
-            { "MaxOffsetY", "int" },
-            { "Seed", "int" },
-            { "Direction", "string" },
+            "TargetX",
+            "TargetY",
         };
 
         public Dictionary<string, string> ParametersType => s_ParametersType;
-        public List<string> ParametersNeeded => s_ParametersNeeded;
 
-        public string TypeName => "Jitter";
-
-        public IEffect FromParametersDictionary(Dictionary<string, object> parameters)
+        public static Dictionary<string, string> s_ParametersType { get; } = new Dictionary<string, string>
         {
-            ArgumentNullException.ThrowIfNull(parameters);
-            if (!ParametersNeeded.All(parameters.ContainsKey))
+            {"TargetX", "int"},
+            {"TargetY", "int"},
+        };
+
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp };
+
+        public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
+        {
+            if (implementType == EffectImplementType.NotSpecified)
             {
-                throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
+                return BuildWithDefaultType(parameters);
             }
 
-            int maxX = Convert.ToInt32(parameters["MaxOffsetX"]);
-            int maxY = Convert.ToInt32(parameters["MaxOffsetY"]);
-            int seed = 0;
-            if (parameters.TryGetValue("Seed", out var s))
+            if (implementType != EffectImplementType.ImageSharp)
             {
-                seed = Convert.ToInt32(s);
+                throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.");
             }
-            string direction = parameters.TryGetValue("Direction", out var d) ? d.ToString() : Direction_Both;
 
-            return new JitterEffect
+            return BuildWithDefaultType(parameters);
+        }
+
+        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
+        {
+            parameters ??= new Dictionary<string, object>();
+            if (!parameters.ContainsKey("TargetX")) parameters["TargetX"] = 1;
+            if (!parameters.ContainsKey("TargetY")) parameters["TargetY"] = 1;
+
+            return new ZoomInContinuousEffect
             {
-                MaxOffsetX = maxX,
-                MaxOffsetY = maxY,
-                Seed = seed,
-                Direction = direction,
+                TargetX = Convert.ToInt32(parameters["TargetX"]),
+                TargetY = Convert.ToInt32(parameters["TargetY"]),
             };
         }
-
-        public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
-
-        public void Initialize()
-        {
-            if (Seed != 0)
-            {
-                rnd = new(Seed);
-            }
-            else
-            {
-                rnd = new();
-            }
-        }
-
-        /// <summary>
-        /// Render single frame with deterministic random offset based on frame index and seed.
-        /// </summary>
-        public IPicture Render(IPicture source, uint index, IComputer? computer, int targetWidth, int targetHeight)
-        {
-
-            int offX = 0, offY = 0;
-            if (Direction == Direction_Both || Direction == Direction_XOnly)
-            {
-                if (MaxOffsetX > 0)
-                {
-                    offX = rnd.Next(-MaxOffsetX, MaxOffsetX + 1);
-                }
-            }
-            if (Direction == Direction_Both || Direction == Direction_YOnly)
-            {
-                if (MaxOffsetY > 0)
-                {
-                    offY = rnd.Next(-MaxOffsetY, MaxOffsetY + 1);
-                }
-            }
-
-            return new PlaceProcessStep(offX, offY, targetWidth, targetHeight).Process(source);
-        }
-
-        public IPictureProcessStep GetStep(IPicture source, uint index, int targetWidth, int targetHeight)
-        {
-            int offX = 0, offY = 0;
-            if (Direction == Direction_Both || Direction == Direction_XOnly)
-            {
-                if (MaxOffsetX > 0)
-                {
-                    offX = rnd.Next(-MaxOffsetX, MaxOffsetX + 1);
-                }
-            }
-            if (Direction == Direction_Both || Direction == Direction_YOnly)
-            {
-                if (MaxOffsetY > 0)
-                {
-                    offY = rnd.Next(-MaxOffsetY, MaxOffsetY + 1);
-                }
-            }
-            return new PlaceProcessStep(offX, offY, targetWidth, targetHeight);
-        }
-
-        public string? BindedEffectGroupID { get; set; }
-
     }
-
 }

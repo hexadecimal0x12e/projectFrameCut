@@ -179,6 +179,22 @@ namespace projectFrameCut.DraftStuff
 
             if (elem.ClipType == ClipMode.AudioClip && wrapSoundtrackAsClip)
             {
+                // Normalize MetaData so complex objects like TextEntries become JsonElement for reliable serialization
+                Dictionary<string, object>? normalizedMeta = null;
+                if (elem.ExtraData != null)
+                {
+                    normalizedMeta = new Dictionary<string, object>(elem.ExtraData.Count);
+                    foreach (var kv in elem.ExtraData)
+                    {
+                        if (kv.Key == "TextEntries")
+                        {
+                            try { normalizedMeta[kv.Key] = JsonSerializer.SerializeToElement(kv.Value); }
+                            catch { normalizedMeta[kv.Key] = kv.Value; }
+                        }
+                        else normalizedMeta[kv.Key] = kv.Value;
+                    }
+                }
+
                 return new ClipDraftDTO
                 {
                     Id = elem.Id,
@@ -196,9 +212,25 @@ namespace projectFrameCut.DraftStuff
                     SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
                     IsInfiniteLength = elem.isInfiniteLength,
                     SecondPerFrameRatio = elem.SecondPerFrameRatio,
-                    MetaData = elem.ExtraData,
+                    MetaData = normalizedMeta,
                     Effects = null
                 };
+            }
+
+            // Normalize MetaData so complex objects like TextEntries become JsonElement for reliable serialization
+            Dictionary<string, object>? normalizedMeta2 = null;
+            if (elem.ExtraData != null)
+            {
+                normalizedMeta2 = new Dictionary<string, object>(elem.ExtraData.Count);
+                foreach (var kv in elem.ExtraData)
+                {
+                    if (kv.Key == "TextEntries")
+                    {
+                        try { normalizedMeta2[kv.Key] = JsonSerializer.SerializeToElement(kv.Value); }
+                        catch { normalizedMeta2[kv.Key] = kv.Value; }
+                    }
+                    else normalizedMeta2[kv.Key] = kv.Value;
+                }
             }
 
             return new ClipDraftDTO
@@ -218,7 +250,7 @@ namespace projectFrameCut.DraftStuff
                 SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
                 IsInfiniteLength = elem.isInfiniteLength,
                 SecondPerFrameRatio = elem.SecondPerFrameRatio,
-                MetaData = elem.ExtraData,
+                MetaData = normalizedMeta2,
                 Effects = elem.Effects?.Select((kv) =>
                 {
                     var effect = kv.Value;

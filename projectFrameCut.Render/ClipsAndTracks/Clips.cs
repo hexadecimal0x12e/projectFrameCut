@@ -293,4 +293,46 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
     }
 
+    public class MarkingClip : IClip
+    {
+        public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
+
+        public ClipMode ClipType => ClipMode.MarkingClip;
+
+        public string Id { get; init; }
+        public string Name { get; init; }
+        public string BindedSoundTrack { get; init; }
+        public uint LayerIndex { get; init; }
+        public uint StartFrame { get; init; }
+        public uint RelativeStartFrame { get; init; }
+        public uint Duration { get; init; }
+        public float FrameTime { get; init; }
+        public float SecondPerFrameRatio { get; init; }
+        public MixtureMode MixtureMode { get; init; }
+        public Dictionary<string, object>? MixtureArgs { get; init; }
+        public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public IEffect[]? EffectsInstances { get; init; }
+        public string? FilePath { get; set; }
+
+        public bool NeedFilePath => false;
+
+        public string? MarkData;
+        public Guid MarkID;
+
+        public void Dispose()
+        {
+        }
+
+        public uint? GetClipLength() => null;
+
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ReInit()
+        {
+        }
+    }
+
 }
