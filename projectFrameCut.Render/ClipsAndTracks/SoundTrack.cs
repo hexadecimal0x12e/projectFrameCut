@@ -59,7 +59,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
         {
-            throw new NotSupportedException("This clip does not support getting frames relative to the start point of the source.");
+            throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
+        }
+
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
+        {
+            throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
         }
 
         public void ReInit()

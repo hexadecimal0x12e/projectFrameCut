@@ -105,6 +105,13 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
 
 
+        /// <summary>
+        /// Create an IClip instance from the given file path and JSON data.
+        /// </summary>
+        /// <remarks>
+        /// The argument for value is Id of the previous clip, and the second argument is Id of the next clip
+        /// </remarks>
+        public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider { get; }
 
         /// <summary>
         /// Create an blank IEffect instance from the given id.
@@ -231,8 +238,19 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public ISoundTrack SoundTrackCreator(JsonElement element);
 
         /// <summary>
+        /// Obtains an instance of ITransform from the given JSON element. Let this method throw an <see cref="NotImplementedException"/> to indicate that this plugin does not provide any transform.
+        /// </summary>
+        /// <param name="element">the source element</param>
+        /// <returns>the transform</returns>
+        /// <exception cref="NotImplementedException">indicates that this plugin does not provide any transform.</exception>
+        public virtual ITransform TransformCreator(JsonElement element) => throw new NotImplementedException();
+
+        /// <summary>
         /// Creates an effect instance from the given JSON structure.
         /// </summary>
+        /// <remarks>
+        /// We provide you a default implement, which can cover 99% of purpose when you make factories correctly, so you probably don't need to override this method unless you have some special needs that cannot be achieved by factories, or you want to support some special effect types that are not covered by current implementation.
+        /// </remarks>
         /// <param name="stru">the source structure</param>
         /// <returns>the effect</returns>
         /// <exception cref="NotSupportedException"></exception>
@@ -311,6 +329,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
 
             throw new NotSupportedException($"No suitable effect found for the given type '{stru.TypeName}'.");
         }
+
+
         /// <summary>
         /// Create a VideoSource instance from the file.
         /// This method will first try to find a preferred video source by file extension,

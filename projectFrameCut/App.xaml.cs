@@ -61,20 +61,6 @@ namespace projectFrameCut
             }
             catch { }
 
-            try
-            {
-                var uri = Microsoft.Maui.Storage.Preferences.Get("OpenedPjfcUri", (string?)null);
-                if (!string.IsNullOrWhiteSpace(uri))
-                {
-                    LaunchedPjfcUri = uri;
-                    // remove preference once read to avoid reprocessing
-                    Microsoft.Maui.Storage.Preferences.Remove("OpenedPjfcUri");
-                }
-            }
-            catch
-            {
-                // ignore if preferences fail
-            }
 #if WINDOWS
             AppDomain.CurrentDomain.UnhandledException += (s, e) =>
             {
@@ -84,31 +70,20 @@ namespace projectFrameCut
 
             };
 #endif
-#if !WINDOWS
-            AppDomain.CurrentDomain.ProcessExit += (s, e) =>
+
+        }
+
+        protected override async void OnAppLinkRequestReceived(Uri uri)
+        {
+            base.OnAppLinkRequestReceived(uri);
+
+            await Dispatcher.DispatchAsync(async () =>
             {
-                Log("Process is exiting...");
-                try
-                {
-                    MauiProgram.LogWriter.Flush();
-                }
-                catch { }
-                try
-                {
-                    foreach (var item in Render.Plugin.PluginManager.LoadedPlugins)
-                    {
-                        try
-                        {
-                            item.Value.OnClosing();
-                        }
-                        catch { }
-                    }
-                }
-                catch { }
+                HomePage.HasAlreadyLaunchedFromFile = false;
+                Preferences.Set("LaunchedPJFCUri", uri.ToString());
+                await Windows[0].Page!.Navigation.PopToRootAsync();
 
-            };
-
-#endif
+            });
 
         }
 

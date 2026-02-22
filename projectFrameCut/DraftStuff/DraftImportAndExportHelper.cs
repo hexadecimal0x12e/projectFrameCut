@@ -1,19 +1,19 @@
-﻿using projectFrameCut.Asset;
+﻿using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Services;
 using projectFrameCut.Shared;
-using projectFrameCut.ApplicationAPIBase.Effect;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
-using projectFrameCut.Services;
 
 namespace projectFrameCut.DraftStuff
 {
@@ -141,6 +141,7 @@ namespace projectFrameCut.DraftStuff
                 SavedAt = DateTime.Now
             };
             if (wrapSoundtrackAsClip) d.AudioDuration = (uint)audMax;
+            FixSmallOverlaps(d, 3);
             return d;
         }
 
@@ -344,6 +345,14 @@ namespace projectFrameCut.DraftStuff
                 clipsList.Add(clipInstance);
 
             }
+            foreach (var item in clipsList)
+            {
+                if (item is Render.ClipsAndTracks.TransformContainer c)
+                {
+                    c.Transform?.Previous = clipsList.FirstOrDefault(clip => clip.Id == c.Transform?.PreviousClipId.ToString());
+                    c.Transform?.Next = clipsList.FirstOrDefault(clip => clip.Id == c.Transform?.NextClipId.ToString());
+                }
+            }
             return clipsList.ToArray();
         }
 
@@ -443,6 +452,15 @@ namespace projectFrameCut.DraftStuff
                 {
                     element.Effects = new Dictionary<string, IEffect>();
                 }
+
+                if (element.ClipType == ClipMode.TransformClip)
+                {
+                    element.LeftHandle.IsVisible = false;
+                    element.RightHandle.IsVisible = false;
+                    element.LeftHandle.GestureRecognizers.Clear();
+                    element.RightHandle.GestureRecognizers.Clear();
+                }
+
                 clipsDict.AddOrUpdate(element.Id, element, (_, _) => element);
             }
 
@@ -510,6 +528,75 @@ namespace projectFrameCut.DraftStuff
             }
 
             return (clipsDict, trackCount);
+        }
+
+
+        public static void FixSmallOverlaps(DraftStructureJSON draft, uint thresholdFrames = 3)
+        {
+            ArgumentNullException.ThrowIfNull(draft, nameof(draft));
+
+            var dtos = new List<ClipDraftDTO>();
+            foreach (var obj in draft.Clips ?? Array.Empty<object>())
+            {
+                switch (obj)
+                {
+                    case JsonElement je:
+                        try
+                        {
+                            var dto = je.Deserialize<ClipDraftDTO>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                            if (dto != null) dtos.Add(dto);
+                        }
+                        catch { }
+                        break;
+                    case ClipDraftDTO dto:
+                        dtos.Add(dto);
+                        break;
+                }
+            }
+
+            var grouped = dtos.GroupBy(d => d.LayerIndex);
+            foreach (var g in grouped)
+            {
+                var list = g.OrderBy(d => d.StartFrame).ToList();
+                for (int i = 0; i < list.Count - 1; i++)
+                {
+                    var cur = list[i];
+                    var next = list[i + 1];
+                    ulong curEnd = (ulong)cur.StartFrame + cur.Duration;
+                    if (curEnd > next.StartFrame)
+                    {
+                        ulong overlap = curEnd - next.StartFrame;
+                        if (overlap > 0 && overlap < thresholdFrames)
+                        {
+                            next.StartFrame = (uint)(next.StartFrame + overlap);
+                        }
+                    }
+                }
+            }
+
+
+            ulong max = 0, audMax = 0;
+            foreach (var dto in dtos)
+            {
+                if (dto.ClipType == ClipMode.AudioClip)
+                {
+                    audMax = Math.Max(audMax, (ulong)dto.StartFrame + dto.Duration);
+                }
+                else
+                {
+                    max = Math.Max(max, (ulong)dto.StartFrame + dto.Duration);
+                }
+            }
+
+            if (max > uint.MaxValue)
+            {
+                throw new OverflowException($"Project duration overflow, total frames exceed {uint.MaxValue}.");
+            }
+
+            draft.Duration = (uint)max;
+            if (audMax > 0) draft.AudioDuration = (uint)audMax;
+
+            draft.Clips = dtos.Cast<object>().ToArray();
         }
 
         private static string? ExtractLabelText(Microsoft.Maui.Controls.Border border)
@@ -608,6 +695,14 @@ namespace projectFrameCut.DraftStuff
             else
             {
                 element.EffectBundles = new Dictionary<Guid, IEffectBundle>();
+            }
+
+            if(element.ClipType  == ClipMode.TransformClip)
+            {
+                element.LeftHandle.IsVisible = false;
+                element.RightHandle.IsVisible = false;
+                element.LeftHandle.GestureRecognizers.Clear();
+                element.RightHandle.GestureRecognizers.Clear();
             }
 
             return element;

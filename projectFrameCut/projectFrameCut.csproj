@@ -211,6 +211,9 @@
 		<MauiXaml Update="Setting\SettingPages\SafeZoneSettingPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
+		<MauiXaml Update="Setting\SettingPages\UserDataManagePage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
 		<MauiXaml Update="TestPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>

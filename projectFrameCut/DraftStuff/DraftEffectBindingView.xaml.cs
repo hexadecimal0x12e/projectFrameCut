@@ -1264,7 +1264,7 @@ public partial class DraftEffectBindingView : ContentView
                 try
                 {
                     var effectId = effect.BindedEffectGroupID;
-                    LogDiagnostic($"Effect {effectId} returns:\r\n{Shared.PictureExtensions.FormatProcessStackForLog(pic.ProcessStack)}");
+                    LogDiagnostic($"Effect {effectId} returns:\r\n{Shared.PictureProcessStack.FormatProcessStackForLog(pic.ProcessStack)}");
                     if (string.IsNullOrEmpty(effectId) || pic == null) return;
 
                     if (Guid.TryParse(effectId, out var gid) && _nodes.TryGetValue(gid, out var nodeByGuid))

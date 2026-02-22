@@ -17,6 +17,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 {
     private readonly DraftPage _draftPage;
 
+    public bool TransformMenuActivatedViaHandleClick = false;
+
     public ProjectAddClipViewModel(ref DraftPage draftPage)
     {
         _draftPage = draftPage;
@@ -28,16 +30,18 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         AddAlternativeSourceClipCommand = new Command(async () => await AddAlternativeSourceClip());
         AddAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddAssetClip(asset));
         AddReuseableAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddReuseableAssetClip(asset));
+        AddTransformClipCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t));
 
         // 加载资源
         LoadAssets();
+        LoadTransforms();
     }
 
     // 资源列表
     public ObservableCollection<AssetItemViewModel> LocalAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> SharedAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> ReuseableAssets { get; } = new();
-    
+
     // 过滤后的资源列表
     public ObservableCollection<AssetItemViewModel> FilteredLocalAssets { get; } = new();
     public ObservableCollection<AssetItemViewModel> FilteredSharedAssets { get; } = new();
@@ -73,6 +77,9 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
+    // Transform 列表
+    public ObservableCollection<TransformItemViewModel> AvailableTransforms { get; } = new();
+
     // 命令
     public ICommand AddTextClipCommand { get; }
     public ICommand AddSolidColorClipCommand { get; }
@@ -80,6 +87,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ICommand AddAlternativeSourceClipCommand { get; }
     public ICommand AddAssetClipCommand { get; }
     public ICommand AddReuseableAssetClipCommand { get; }
+    public ICommand AddTransformClipCommand { get; }
 
     // 事件：当需要关闭弹窗时触发
     public event EventHandler? ClipAdded;
@@ -89,7 +97,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         LocalAssets.Clear();
         SharedAssets.Clear();
         ReuseableAssets.Clear();
-        
+
         foreach (var asset in _draftPage.Assets.Values.OrderBy(a => a.Name))
         {
             LocalAssets.Add(new AssetItemViewModel
@@ -125,7 +133,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             var multiServerService = MultiServerRemoteAssetService.Instance;
             var assetsWithServerInfo = await multiServerService.GetAllAssetsFromAllServersAsync();
-            
+
             foreach (var assetInfo in assetsWithServerInfo.OrderBy(a => a.Asset.Name))
             {
                 ReuseableAssets.Add(new AssetItemViewModel
@@ -334,6 +342,27 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         ClipAdded?.Invoke(this, EventArgs.Empty);
     }
 
+    private void LoadTransforms()
+    {
+        AvailableTransforms.Clear();
+        var localizedNames = TransformServices.GetLocalizedTransformNames();
+        foreach (var kvp in localizedNames)
+        {
+            AvailableTransforms.Add(new TransformItemViewModel
+            {
+                TypeKey = kvp.Key,
+                DisplayName = kvp.Value
+            });
+        }
+    }
+
+    private async Task AddTransformClip(TransformItemViewModel? transform)
+    {
+        if (transform is null) return;
+        _draftPage.AddTransformToNeighbors(transform.TypeKey);
+        ClipAdded?.Invoke(this, EventArgs.Empty);
+    }
+
     private async Task AddAssetClip(AssetItemViewModel? assetViewModel)
     {
         if (assetViewModel?.OriginalAsset == null) return;
@@ -352,10 +381,10 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         );
 
         _draftPage.RegisterClip(clip, true);
-
+        _draftPage.AddAClip(clip);
         ClipAdded?.Invoke(this, EventArgs.Empty);
     }
-    
+
     private async Task AddReuseableAssetClip(AssetItemViewModel? assetViewModel)
     {
         if (assetViewModel?.OriginalAsset == null) return;
@@ -367,33 +396,33 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 // 显示加载提示
                 // TODO: 添加加载指示器
-                
+
                 // 从多服务器系统获取文件 token
                 var multiServerService = MultiServerRemoteAssetService.Instance;
                 var tokenResponse = await multiServerService.GetFileTokenAsync(assetViewModel.ServerId ?? "", assetViewModel.Id);
-                
+
                 if (tokenResponse == null)
                 {
                     await _draftPage.DisplayAlert("错误", "无法获取文件访问令牌", "确定");
                     return;
                 }
-                
+
                 // 构建文件下载 URL（使用资产所属服务器的 URL）
                 var serverBaseUrl = assetViewModel.ServerUrl?.TrimEnd('/') ?? "";
                 var fileServerUri = new Uri($"{serverBaseUrl}/api/file/download?token={tokenResponse.token}");
 
                 Log($"Downloading asset from {fileServerUri}...");
-                
+
                 // 下载文件到缓存目录
                 var cacheDir = Path.Combine(FileSystem.CacheDirectory, "RemoteAssets", assetViewModel.ServerId ?? "default");
                 if (!Directory.Exists(cacheDir))
                 {
                     Directory.CreateDirectory(cacheDir);
                 }
-                
+
                 var fileName = Path.GetFileName(assetViewModel.OriginalAsset.Path) ?? $"{assetViewModel.Id}{Path.GetExtension(assetViewModel.OriginalAsset.Path)}";
                 var localPath = Path.Combine(cacheDir, fileName);
-                
+
                 // 如果文件已经存在，直接使用
                 if (!File.Exists(localPath))
                 {
@@ -409,11 +438,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 #endif
                     var response = await client.GetAsync(fileServerUri);
                     response.EnsureSuccessStatusCode();
-                    
+
                     using var fileStream = File.Create(localPath);
                     await response.Content.CopyToAsync(fileStream);
                 }
-                
+
                 // 更新资产的路径为本地缓存路径
                 assetViewModel.OriginalAsset.Path = localPath;
             }
@@ -532,6 +561,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
+}
+
+public class TransformItemViewModel
+{
+    public string TypeKey { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
 }
 
 public class AssetItemViewModel

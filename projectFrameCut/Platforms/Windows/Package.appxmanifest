@@ -5,9 +5,10 @@
   xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
 	xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
-  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10">
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+	xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3">
 
-	<!--wtf, why the pfn is not hexadecimal0x12e.projectFrameCut-->
+	<!--wtf, why the pfn is not hexadecimal0x12e.projectFrameCut in ms store-->
   <Identity Name="hexadecimal0x12e.projectFrameCut" Publisher="CN=0AD263CD-E10E-4A8B-A187-25C0A41C69D7" Version="1.3.0.3" />
 
   <mp:PhoneIdentity PhoneProductId="8bc4e03e-2606-4817-8070-e1aa4a22658f" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
@@ -70,10 +71,15 @@
 					</uap:Protocol>
         </uap:Extension>
 			  <uap:Extension Category="windows.protocol">
-					<uap:Protocol Name="pjfcappx">
+					<uap:Protocol Name="pjfcwinappx">
 						<uap:DisplayName>projectFrameCut URI Protool-Windows (APPX)</uap:DisplayName>
 					</uap:Protocol>
         </uap:Extension>
+			<!--	<uap3:Extension Category="windows.appUriHandler">
+					<uap3:AppUriHandler>
+						<uap3:Host Name="pjfc.hexadecimal0x12e.com" />
+					</uap3:AppUriHandler>
+				</uap3:Extension> -->
 			</Extensions>
     </Application>
   </Applications>

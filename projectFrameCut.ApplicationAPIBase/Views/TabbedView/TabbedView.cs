@@ -11,6 +11,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
         public ContentView ContentPresenter { get; private set; }
         public ContentView HeaderRightContentContainer { get; private set; }
 
+        public event EventHandler<TabbedViewItem>? OnTabSwitched;
+
         public TabbedView()
         {
             InitializeComponent();
@@ -111,7 +113,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
         public int SelectedIndex
         {
             get => (int)GetValue(SelectedIndexProperty);
-            set => SetValue(SelectedIndexProperty, value);
+            set
+            {
+                SetValue(SelectedIndexProperty, value);
+                OnTabSwitched?.Invoke(this, TabItems[value]);
+            }
         }
 
         public static readonly BindableProperty SelectedItemProperty = BindableProperty.Create(
@@ -155,6 +161,20 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             if (newValue is TabbedViewItem item && control.TabItems != null && control.TabItems.Contains(item))
             {
                 control.SelectedIndex = control.TabItems.IndexOf(item);
+            }
+        }
+
+        // Select a tab by its Tag value. Uses equality comparison (Equals).
+        public void SelectByTag(string tag)
+        {
+            if (TabItems == null) return;
+            for (int i = 0; i < TabItems.Count; i++)
+            {
+                if (TabItems[i]?.Tag == tag)
+                {
+                    SelectedIndex = i;
+                    return;
+                }
             }
         }
 
@@ -225,8 +245,8 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
                 return;
             }
 
-            if (SelectedIndex < 0) SelectedIndex = 0;
-            if (SelectedIndex >= TabItems.Count) SelectedIndex = TabItems.Count - 1;
+            if (SelectedIndex < 0) throw new IndexOutOfRangeException($"Tab index ({SelectedIndex}) must greater or equals than 0.");
+            if (SelectedIndex >= TabItems.Count) throw new IndexOutOfRangeException($"Tab index {SelectedIndex} is out of range, currently there is {TabItems.Count} tabs.");
 
             var selectedItem = TabItems[SelectedIndex];
 

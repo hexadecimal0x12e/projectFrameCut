@@ -42,7 +42,7 @@ public partial class HomePage : ContentPage
 
     private string _lastSelectedItemName = string.Empty;
 
-    private static bool HasAlreadyLaunchedFromFile = false;
+    public static bool HasAlreadyLaunchedFromFile = false;
 
 
     public HomePage()
@@ -64,93 +64,8 @@ public partial class HomePage : ContentPage
             if (HasAlreadyLaunchedFromFile) return;
             await ShowManyAlertsAsync();
             HasAlreadyLaunchedFromFile = true;
-            try
-            {
-                if (MauiProgram.CmdlineArgs.Length > 0)
-                {
-                    var args = MauiProgram.CmdlineArgs.Skip(1).ToArray();
-                    if (args.ArrayAny())
-                    {
-                        var path = args.OrderByDescending(s => s.Length).First();
-                        if (path.Contains(':') && path.Count(c => c == ':') >= 2)
-                        {
-                            path = path.Split(":", 2, StringSplitOptions.RemoveEmptyEntries)[1] ?? path;
-                        }
-                        switch (Path.GetExtension(path))
-                        {
-                            case ".pjfc":
-                                {
-                                    if (Directory.Exists(path))
-                                    {
-                                        await GoDraft(path, (Path.GetDirectoryName(path) ?? "Project").Split('.')?.FirstOrDefault("Project")!, false, false);
-                                    }
-                                    if (File.Exists(path))
-                                    {
-                                        if (new FileInfo(path).OpenRead().ReadByte() == '{')
-                                        {
-                                            try
-                                            {
-                                                var draft = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(path), DraftPage.DraftJSONOption);
-                                                if (draft is ProjectJSONStructure)
-                                                {
-                                                    await GoDraft(Path.GetDirectoryName(path), draft.ProjectName ?? "Project", false, false);
-                                                    return;
-
-                                                }
-                                            }
-                                            catch
-                                            {
-
-                                            }
-
-                                        }
-                                        await ImportDraft(path);
-                                    }
-                                    break;
-                                }
-                            case ".pjfcPlugin":
-                                {
-                                    if (File.Exists(path))
-                                    {
-                                        try
-                                        {
-                                            await PluginService.AddAPlugin(path, this);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_Import_CannotAddPlugin}\r\n({Localized._ExceptionTemplate(ex)})", Localized._OK);
-                                        }
-                                    }
-                                    break;
-                                }
-
-                            default:
-                                {
-                                    if (Directory.Exists(path))
-                                    {
-                                        if (File.Exists(Path.Combine(path, "project.json")) || File.Exists(Path.Combine(path, "project.pjfc")))
-                                        {
-                                            await GoDraft(path, (Path.GetDirectoryName(path) ?? "Project").Split('.')?.FirstOrDefault("Project")!, false, false);
-
-                                        }
-                                    }
-                                    else
-                                    {
-                                        //await DisplayAlertAsync(Localized._Error, $"Cannot launch from the file '{path}' because of it's invalid.", Localized._OK);
-                                    }
-                                    break;
-                                }
-
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "Launch from file", this);
-                await DisplayAlertAsync(Localized._Error, "Cannot launch from file. Try again later.", Localized._OK);
-            }
-
+            await LaunchFromFile();
+        
             try
             {
                 var defaultWidthOfCont = SettingsManager.GetSetting("ui_defaultWidthOfContent", "-1");
@@ -198,7 +113,106 @@ public partial class HomePage : ContentPage
 
     }
 
+    public async Task LaunchFromFile()
+    {
+        try
+        {
+            string path = "";
 
+            var args = MauiProgram.CmdlineArgs.Skip(1).ToArray();
+            if (args.ArrayAny())
+            {
+                var maybePath = args.OrderByDescending(s => s.Length).First();
+                if (maybePath.Contains(':') && maybePath.Count(c => c == ':') >= 2)
+                {
+                    path = maybePath.Split(":", 2, StringSplitOptions.RemoveEmptyEntries)[1] ?? maybePath;
+                }
+                else
+                {
+                    path = maybePath;
+                }
+            }
+
+            if (Preferences.ContainsKey("LaunchedPJFCUri"))
+            {
+                path = Preferences.Get("LaunchedPJFCUri", "");
+            }
+            if (string.IsNullOrWhiteSpace(path)) return;
+            switch (Path.GetExtension(path))
+            {
+                case ".pjfc":
+                    {
+                        if (Directory.Exists(path))
+                        {
+                            await GoDraft(path, (Path.GetDirectoryName(path) ?? "Project").Split('.')?.FirstOrDefault("Project")!, false, false);
+                        }
+                        if (File.Exists(path))
+                        {
+                            if (new FileInfo(path).OpenRead().ReadByte() == '{')
+                            {
+                                try
+                                {
+                                    var draft = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(path), DraftPage.DraftJSONOption);
+                                    if (draft is ProjectJSONStructure)
+                                    {
+                                        await GoDraft(Path.GetDirectoryName(path), draft.ProjectName ?? "Project", false, false);
+                                        return;
+
+                                    }
+                                }
+                                catch
+                                {
+
+                                }
+
+                            }
+                            await ImportDraft(path);
+                        }
+                        break;
+                    }
+                case ".pjfcPlugin":
+                    {
+                        if (File.Exists(path))
+                        {
+                            try
+                            {
+                                await PluginService.AddAPlugin(path, this);
+                            }
+                            catch (Exception ex)
+                            {
+                                await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_Import_CannotAddPlugin}\r\n({Localized._ExceptionTemplate(ex)})", Localized._OK);
+                            }
+                        }
+                        break;
+                    }
+
+                default:
+                    {
+                        if (Directory.Exists(path))
+                        {
+                            if (File.Exists(Path.Combine(path, "project.json")) || File.Exists(Path.Combine(path, "project.pjfc")))
+                            {
+                                await GoDraft(path, (Path.GetDirectoryName(path) ?? "Project").Split('.')?.FirstOrDefault("Project")!, false, false);
+
+                            }
+                        }
+                        else
+                        {
+                            //await DisplayAlertAsync(Localized._Error, $"Cannot launch from the file '{path}' because of it's invalid.", Localized._OK);
+                        }
+                        break;
+                    }
+
+
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Launch from file", this);
+            await DisplayAlertAsync(Localized._Error, "Cannot launch from file. Try again later.", Localized._OK);
+        }
+    }
 
     private async void CollectionView_SelectionChanged(object? sender, Microsoft.Maui.Controls.SelectionChangedEventArgs e)
     {
@@ -718,7 +732,7 @@ public partial class HomePage : ContentPage
                             {
                                 _previousSession?.Dispose();
                                 var activity = await UserActivityChannel.GetDefault().GetOrCreateUserActivityAsync($"projectFrameCut_draft_{project?.ProjectName ?? "Project"}");
-                                activity.ActivationUri = new Uri($"projectFrameCut://draft/{draftSourcePath.Replace('\\', '/')}");
+                                activity.ActivationUri = new Uri($"pjfc:{draftSourcePath}");
                                 activity.VisualElements.DisplayText = $"projectFrameCut draft-'{project?.ProjectName ?? "Project"}'";
                                 await activity.SaveAsync();
                                 _previousSession = activity.CreateSession();

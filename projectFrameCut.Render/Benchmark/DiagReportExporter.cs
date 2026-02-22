@@ -18,10 +18,12 @@ namespace projectFrameCut.Render.Benchmark
             // Snapshot to avoid concurrent collection issues.
             var prepare = renderer.FramePrepareElapsed.ToArray();
             var render = renderer.FrameRenderElapsed.ToArray();
+            var dirty = renderer.FrameDirtyTime.ToArray();
             var stacks = renderer.FrameProcessStacks.ToArray();
 
             var prepareByFrame = prepare.ToDictionary(k => k.Key, v => v.Value);
             var renderByFrame = render.ToDictionary(k => k.Key, v => v.Value);
+            var dirtyByFrame = dirty.ToDictionary(k => k.Key, v => v.Value);
             var stackByFrame = stacks.ToDictionary(k => k.Key, v => v.Value);
 
             using var fs = new FileStream(outputFile, FileMode.Create, FileAccess.Write, FileShare.Read);
@@ -34,6 +36,7 @@ namespace projectFrameCut.Render.Benchmark
                 "FrameIndex",
                 "PrepareMs",
                 "RenderMs",
+                "FrameDirtyMs",
                 "StepPath",
                 "StepKey",
                 "StepElapsedMs",
@@ -49,12 +52,14 @@ namespace projectFrameCut.Render.Benchmark
             {
                 double? prepMs = prepareByFrame.TryGetValue(frame, out var prepTs) ? prepTs.TotalMilliseconds : null;
                 double? renderMs = renderByFrame.TryGetValue(frame, out var renderTs) ? renderTs.TotalMilliseconds : null;
+                double? frameDirtyMs = dirtyByFrame.TryGetValue(frame, out var dirtyTs) ? dirtyTs.TotalMilliseconds : null;
 
                 WriteRow(writer,
                     rowType: "frame",
                     frameIndex: frame,
                     prepareMs: prepMs,
                     renderMs: renderMs,
+                    frameDirtyMs: frameDirtyMs,
                     stepPath: null,
                     stepKey: null,
                     stepElapsedMs: null,
@@ -77,6 +82,7 @@ namespace projectFrameCut.Render.Benchmark
                         frameIndex: frame,
                         prepareMs: null,
                         renderMs: null,
+                        frameDirtyMs: null,
                         stepPath: path,
                         stepKey: stepKey,
                         stepElapsedMs: elapsed.TotalMilliseconds,
@@ -148,6 +154,7 @@ namespace projectFrameCut.Render.Benchmark
             uint frameIndex,
             double? prepareMs,
             double? renderMs,
+            double? frameDirtyMs,
             string? stepPath,
             string? stepKey,
             double? stepElapsedMs,
@@ -163,6 +170,8 @@ namespace projectFrameCut.Render.Benchmark
             writer.Write(CsvNumber(prepareMs));
             writer.Write(',');
             writer.Write(CsvNumber(renderMs));
+            writer.Write(',');
+            writer.Write(CsvNumber(frameDirtyMs));
             writer.Write(',');
             writer.Write(Csv(stepPath));
             writer.Write(',');

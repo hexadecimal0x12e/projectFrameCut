@@ -67,6 +67,7 @@ namespace projectFrameCut.Render.WindowsRender
         public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider => new Dictionary<string, IEffectFactory> { };
         public IMessagingService MessagingQueue { get; set; }
 
+        public Dictionary<string, Func<Guid, Guid, RenderAPIBase.ClipAndTrack.ITransform>> TransformProvider => new Dictionary<string, Func<Guid, Guid, RenderAPIBase.ClipAndTrack.ITransform>> { };
 
         public IClip ClipCreator(JsonElement element)
         {

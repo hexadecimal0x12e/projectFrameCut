@@ -110,6 +110,11 @@ namespace projectFrameCut.LivePreview
             foreach (var clip in Clips)
             {
                 max = Math.Max(clip.StartFrame + clip.Duration, max);
+                if(clip is Render.ClipsAndTracks.TransformContainer c)
+                {
+                    c.Transform?.Previous = Clips.FirstOrDefault(clip => clip.Id == c.Transform?.PreviousClipId.ToString());
+                    c.Transform?.Next = Clips.FirstOrDefault(clip => clip.Id == c.Transform?.NextClipId.ToString());
+                }
 
             }
 

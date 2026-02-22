@@ -19,8 +19,13 @@ using projectFrameCut.Asset;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.ApplicationPluginBase;
 using LocalizedResources;
-using projectFrameCut.Render.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.Render.Effect;
+using Microsoft.Maui.LifecycleEvents;
+
+
+
+
 
 
 
@@ -35,7 +40,6 @@ using Java.Lang;
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
-using projectFrameCut.Render.Effect;
 #endif
 
 
@@ -141,8 +145,11 @@ namespace projectFrameCut
                 $"                  on {DeviceInfo.Platform} in cpu arch {RuntimeInformation.ProcessArchitecture},\r\n" +
                 $"                  os version {Environment.OSVersion}/{DeviceInfo.Version},\r\n" +
                 $"                  clr version {Environment.Version},\r\n" +
+#if WINDOWS
+                $"                  PackageFullName: {WinUI.App.GetPackageFullName()},\r\n" +
+#endif
                 $"                  cmdline: {Environment.CommandLine}");
-            Log("Copyright (c) hexadecimal0x12e 2025, and thanks to other open-source code's authors.");
+            Log("Copyright (c) hexadecimal0x12e 2025-2026, and thanks to other open-source code's authors.");
             Log($"BasicDataPath:{BasicDataPath}, DataPath:{DataPath}");
             try
             {
@@ -306,7 +313,7 @@ namespace projectFrameCut
 #if ANDROID
                 Android.Util.Log.Wtf("projectFrameCut", $"Failed to init the settings because of a {ex.GetType().Name} exception:{ex.Message}");
 #elif WINDOWS
-                _ = MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot init the UserData directory because of a {ex.GetType().Name} exception:{ex.Message}\r\nYou may found your options disappeared.\r\nTry reset the data directory path.", "projectFrameCut", 0U);
+                _ = WinUI.App.MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot init the UserData directory because of a {ex.GetType().Name} exception:{ex.Message}\r\nYou may found your options disappeared.\r\nTry reset the data directory.", "projectFrameCut", 0U);
 #endif
             }
 
@@ -340,29 +347,6 @@ namespace projectFrameCut
                 builder.Logging.AddProvider(new MyLoggerProvider(logLevel));
 #if WINDOWS
                 builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
-                try
-                {
-                    var userDataFolder = Path.Combine(BasicDataPath, "WebView2Data");
-                    Environment.SetEnvironmentVariable("WEBVIEW2_USER_DATA_FOLDER", userDataFolder);
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, "init webview2", CreateMauiApp);
-                }
-                builder.ConfigureMauiHandlers(handlers =>
-                {
-                    Microsoft.Maui.Handlers.WebViewHandler.Mapper.AppendToMapping("FixWebViewInit", (handler, view) =>
-                    {
-                        handler.PlatformView.CoreWebView2Initialized += (s, e) =>
-                        {
-                            if (handler.PlatformView.CoreWebView2 == null)
-                            {
-                                handler.PlatformView.EnsureCoreWebView2Async().AsTask().Wait();
-                            }
-                        };
-                    });
-                });
-
 #elif ANDROID
                 builder.ConfigureMauiHandlers(handlers =>
                 {
@@ -398,6 +382,57 @@ namespace projectFrameCut
                                     };
                 }
                 catch { } //this is not very important so just let it go
+                Preferences.Remove("LaunchedPJFCUri");
+
+                builder.ConfigureLifecycleEvents(lifecycle =>
+                {
+                    lifecycle.AddAndroid(android =>
+                    {
+                        android.OnCreate(async (activity, bundle) =>
+                        {
+                            var action = activity.Intent?.Action;
+                            var data = activity.Intent?.Data?.ToString();
+
+                            if (action == Android.Content.Intent.ActionView && data is not null)
+                            {
+                                Preferences.Set("LaunchedPJFCUri", data);
+                                HomePage.HasAlreadyLaunchedFromFile = false;
+                                Window? w = App.Current?.Windows?[0];
+                                if (w is not null)
+                                {
+                                    w?.Page?.Navigation?.PopToRootAsync();
+                                    if (w?.Page is HomePage h)
+                                    {
+                                        await h.LaunchFromFile();
+                                    }
+
+                                }
+                            }
+                        });
+                        android.OnNewIntent(async (activity, intent) =>
+                        {
+                            var action = intent?.Action;
+                            var data = intent?.Data?.ToString();
+
+                            if (action == Android.Content.Intent.ActionView && data is not null)
+                            {
+                                Preferences.Set("LaunchedPJFCUri", data);
+                                HomePage.HasAlreadyLaunchedFromFile = false;
+                                Window? w = App.Current?.Windows?[0];
+                                if (w is not null)
+                                {
+                                    w?.Page?.Navigation?.PopToRootAsync();
+                                    if(w?.Page is HomePage h)
+                                    {
+                                        await h.LaunchFromFile();
+                                    }
+
+                                }
+
+                            }
+                        });
+                    });
+                });
 #endif
 
                 try
@@ -645,7 +680,7 @@ namespace projectFrameCut
 #if ANDROID
                 Android.Util.Log.Wtf("projectFrameCut", $"Oh no! application can't be launched because of a {ex.GetType().Name} exception:{ex.Message}.");
 #elif WINDOWS
-                _ = MessageBox(new nint(0), $"Oh no! projectFrameCut cannot start because of a {ex.GetType().Name} exception:\r\n{ex.Message}\r\n\r\nApplication will exit now, and you'll see the detailed info later in the crash report.", "projectFrameCut", 0U);
+                _ = WinUI.App.MessageBox(new nint(0), $"Oh no! projectFrameCut cannot start because of a {ex.GetType().Name} exception:\r\n{ex.Message}\r\n\r\nApplication will exit now, and you'll see the detailed info later in the crash report.", "projectFrameCut", 0U);
                 projectFrameCut.WinUI.App.Crash(ex);
 #endif
                 throw;
@@ -674,46 +709,6 @@ namespace projectFrameCut
             throw ex; //let Fishnet handle it
 #endif
         }
-
-
-#if WINDOWS
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
-
-        private const int APPMODEL_ERROR_NO_PACKAGE = 15700;
-
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
-        private static extern int GetPackageFullName(IntPtr hProcess, ref int packageFullNameLength, StringBuilder packageFullName);
-
-        [DllImport("kernel32.dll")]
-        private static extern IntPtr GetCurrentProcess();
-
-        public static bool IsPackaged()
-        {
-            try
-            {
-                IntPtr h = GetCurrentProcess();
-                int length = 0;
-                int rc = GetPackageFullName(h, ref length, null);
-                if (rc == APPMODEL_ERROR_NO_PACKAGE)
-                    return false;
-                if (length <= 0)
-                    return false;
-
-                var sb = new StringBuilder(length);
-                rc = GetPackageFullName(h, ref length, sb);
-                Log($"Running inside a MSIX container, pfn:{sb}");
-                return rc == 0 && sb.Length > 0;
-            }
-            catch
-            {
-                Log($"Running outside a MSIX container.");
-                return false;
-            }
-
-
-        }
-#endif
         public static void ConfigFontFromCulture(MauiAppBuilder builder, CultureInfo culture)
         {
             int codePage = culture.TextInfo.ANSICodePage;

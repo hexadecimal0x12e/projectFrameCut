@@ -37,7 +37,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using CommunityToolkit.Maui.Alerts;
 using projectFrameCut.ApplicationAPIBase.Helpers;
-
+using ITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
 
 
 
@@ -142,6 +142,7 @@ public partial class DraftPage : ContentPage
     public ClipInfoBuilder infoBuilder;
     public InteractableEditor.InteractableEditor ClipEditor;
     public AIAssistance.AssistanceChatSessionsView ChatSessionsView = new();
+    public ProjectAddClipView AddClipView = null!;
 
     public ProjectJSONStructure ProjectInfo { get; set; } = new();
     public ConcurrentDictionary<string, ClipElementUI> Clips = new();
@@ -172,6 +173,9 @@ public partial class DraftPage : ContentPage
     public ICommand ExitNoSaveCommand { get; private set; }
     public ICommand ManageWindowCommand { get; private set; }
     public ICommand ResetMultiWindowViewCommand { get; private set; }
+    public ICommand AddTransformToNeighborsCommand { get; private set; }
+
+    public ClipElementUI? SelectedClip => _selected;
     #endregion
 
     #region options
@@ -211,6 +215,8 @@ public partial class DraftPage : ContentPage
     {
         RegisterCommands();
         InitializeComponent();
+        SetStateBusy();
+        SetStatusText(Localized.DraftPage_PleaseWait);
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
         ClipEditorHost.Content = ClipEditor;
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
@@ -223,6 +229,9 @@ public partial class DraftPage : ContentPage
 
         TrackCalculator.HeightPerTrack = ClipHeight;
         infoBuilder = new ClipInfoBuilder(this);
+        var page = this;
+        AddClipView = new ProjectAddClipView(ref page);
+
 
     }
 
@@ -234,6 +243,7 @@ public partial class DraftPage : ContentPage
         RegisterCommands();
         InitializeComponent();
         SetStateBusy();
+        SetStatusText(Localized.DraftPage_PleaseWait);
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
         ClipEditorHost.Content = ClipEditor;
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
@@ -241,9 +251,10 @@ public partial class DraftPage : ContentPage
 #if ANDROID
         OverlayLayer.InputTransparent = false;
 #endif
-
+        var page = this;
         infoBuilder = new ClipInfoBuilder(this);
         ChatSessionsView = new AIAssistance.AssistanceChatSessionsView();
+        AddClipView = new ProjectAddClipView(ref page);
         WorkingPath = workingDir;
         TrackCalculator.HeightPerTrack = ClipHeight;
 
@@ -287,6 +298,7 @@ public partial class DraftPage : ContentPage
         ExitNoSaveCommand = new Command(async () => await ExitButNoSave());
         ManageWindowCommand = new Command<string?>(ExecuteManageWindowCommand);
         ResetMultiWindowViewCommand = new Command(() => ResetLayout());
+        //AddTransformToNeighborsCommand = new Command(async () => await AddTransformToNeighbors(""));
     }
 
 
@@ -357,6 +369,8 @@ public partial class DraftPage : ContentPage
 
     private async void DraftPage_Loaded(object? sender, EventArgs e)
     {
+        if (Debugger.IsAttached) MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog; //user don't want to see a lot of confused error message
+
         if (UpperContent.Children[0] is Grid previewGrid && PreviewAreaHeight > 100)
         {
             if (AutoSavePreviewAreaHeight)
@@ -421,11 +435,6 @@ public partial class DraftPage : ContentPage
                 };
 
         ResolutionPicker.SelectedIndex = 0;
-
-        DraftChanged(sender, new ClipUpdateEventArgs { NoSave = true });
-        SetStateOK();
-        SetStatusText(Localized.DraftPage_EverythingFine);
-        if (Debugger.IsAttached) MyLoggerExtensions.OnExceptionLog += MyLoggerExtensions_OnExceptionLog; //user don't want to see a lot of confused error message
 
         var w = this.Window?.Width ?? 0;
         var h = this.Window?.Height ?? 0;
@@ -508,6 +517,14 @@ public partial class DraftPage : ContentPage
         UpdatePlayheadHeight();
 
         AssisstantSubWindow.Content = ChatSessionsView;
+        AddClipView.ClipAdded += async (s, args) =>
+        {
+            this.Popup.Content = null;
+            await HidePopup();
+        };
+        DraftChanged(sender, new ClipUpdateEventArgs { NoSave = true });
+        SetStateOK();
+        SetStatusText(Localized.DraftPage_EverythingFine);
     }
 
     #endregion
@@ -582,16 +599,33 @@ public partial class DraftPage : ContentPage
         var leftHandleGesture = new PanGestureRecognizer();
         leftHandleGesture.PanUpdated += (s, e) => LeftHandlePanded(element.LeftHandle, e);
 
-        var selectTapGesture = new TapGestureRecognizer();
-        selectTapGesture.Buttons = ButtonsMask.Primary;
+        var rightHandleClickGesture = new TapGestureRecognizer
+        {
+            NumberOfTapsRequired = 2
+        };
+        rightHandleClickGesture.Tapped += (s, e) => HandleTransformAdd(element, false, true);
+        var leftHandleClickGesture = new TapGestureRecognizer
+        {
+            NumberOfTapsRequired = 2
+        };
+        leftHandleClickGesture.Tapped += (s,e) => HandleTransformAdd(element, true, false);
+
+        var selectTapGesture = new TapGestureRecognizer
+        {
+            Buttons = ButtonsMask.Primary
+        };
         selectTapGesture.Tapped += SelectTapGesture_Tapped;
 
-        var contextSelectTapGesture = new TapGestureRecognizer();
-        contextSelectTapGesture.Buttons = ButtonsMask.Secondary;
+        var contextSelectTapGesture = new TapGestureRecognizer
+        {
+            Buttons = ButtonsMask.Secondary
+        };
         contextSelectTapGesture.Tapped += ContextSelectTapGesture_Tapped;
 
-        var doubleTapGesture = new TapGestureRecognizer();
-        doubleTapGesture.NumberOfTapsRequired = 2;
+        var doubleTapGesture = new TapGestureRecognizer
+        {
+            NumberOfTapsRequired = 2
+        };
         doubleTapGesture.Tapped += DoubleTapGesture_Tapped;
 
         element.Clip.GestureRecognizers.Add(clipPanGesture);
@@ -600,6 +634,8 @@ public partial class DraftPage : ContentPage
         element.Clip.GestureRecognizers.Add(doubleTapGesture);
         element.LeftHandle.GestureRecognizers.Add(leftHandleGesture);
         element.RightHandle.GestureRecognizers.Add(rightHandleGesture);
+        element.LeftHandle.GestureRecognizers.Add(leftHandleClickGesture);
+        element.RightHandle.GestureRecognizers.Add(rightHandleClickGesture);
 
         // compute X
         if (resolveOverlap)
@@ -926,13 +962,7 @@ public partial class DraftPage : ContentPage
 
     private async void AddClip_Clicked(object sender, EventArgs e)
     {
-        var draftPage = this;
-        var addClipView = new ProjectAddClipView(ref draftPage);
-
-        // 订阅事件以便在添加clip后关闭弹窗
-        addClipView.ClipAdded += async (s, args) => await HidePopup();
-
-        await ShowAPopup(addClipView);
+        await ShowAPopup(AddClipView);
     }
     #endregion
 
@@ -1453,6 +1483,155 @@ public partial class DraftPage : ContentPage
 
     #endregion
 
+    #region add transform to neighbors
+    private void AddTransformClip(
+        ClipElementUI prev, ClipElementUI next,
+        string typeName, Func<Guid, Guid, ITransform> factory,
+        double startX, double width, int TrackId)
+    {
+        Guid prevGuid = Guid.Empty;
+        Guid nextGuid = Guid.Empty;
+        if (prev is not null) Guid.TryParse(prev.Id, out prevGuid);
+        if (next is not null) Guid.TryParse(next.Id, out nextGuid);
+
+        var transform = factory(prevGuid, nextGuid);
+        try
+        {
+            transform?.Init();
+        }
+        catch { }
+
+        var elem = CreateAndAddClip(
+            startX: startX + 3,
+            width: width - 3,
+            trackIndex: TrackId,
+            labelText: "",
+            background: new SolidColorBrush(Color.FromArgb("#AA33BBFF")),
+            resolveOverlap: true);
+
+        elem.ClipType = ClipMode.TransformClip;
+        elem.FromPlugin = InternalPluginBase.InternalPluginBaseID;
+        elem.TypeName = typeName;
+        elem.ExtraData["transformPrevId"] = prev?.Id ?? string.Empty;
+        elem.ExtraData["transformNextId"] = next?.Id ?? string.Empty;
+        elem.ExtraData["transformTypeName"] = typeName;
+        // Persist the transform instance so it can be re-created when the project is loaded.
+        try
+        {
+            elem.ExtraData["TransformElement"] = System.Text.Json.JsonSerializer.SerializeToElement(transform);
+        }
+        catch { }
+        elem.LeftHandle.IsVisible = false;
+        elem.RightHandle.IsVisible = false;
+        elem.LeftHandle.GestureRecognizers.Clear();
+        elem.RightHandle.GestureRecognizers.Clear();
+
+        // Adjust neighboring clips to make room for the transform visual.
+        try
+        {
+            // Position the transform clip at the requested X
+            elem.Clip.TranslationX = startX;
+            elem.origX = startX;
+
+            double half = width / 2.0;
+
+            if (prev is not null)
+            {
+                double prevWidth = prev.Clip.WidthRequest > 0 ? prev.Clip.WidthRequest : prev.origLength;
+                double newPrevWidth = Math.Max(MinClipWidth, prevWidth - half);
+                prev.Clip.WidthRequest = newPrevWidth;
+                prev.origLength = newPrevWidth;
+                prev.lengthInFrame = PixelToFrame(newPrevWidth);
+                // keep prev.Clip.TranslationX unchanged (shrinking from right)
+                OnClipChanged?.Invoke(prev.Id, new ClipUpdateEventArgs { SourceId = prev.Id, Reason = ClipUpdateReason.ClipResized });
+            }
+
+            if (next is not null)
+            {
+                double nextWidth = next.Clip.WidthRequest > 0 ? next.Clip.WidthRequest : next.origLength;
+                double newNextWidth = Math.Max(MinClipWidth, nextWidth - half);
+                // move next clip to the right by half, and shrink from left
+                next.Clip.TranslationX = next.Clip.TranslationX + half;
+                next.origX = next.origX + half;
+                next.Clip.WidthRequest = newNextWidth;
+                next.origLength = newNextWidth;
+                next.lengthInFrame = PixelToFrame(newNextWidth);
+                OnClipChanged?.Invoke(next.Id, new ClipUpdateEventArgs { SourceId = next.Id, Reason = ClipUpdateReason.ClipResized });
+            }
+
+            // Recompute adjacency and timeline width
+            _ = UpdateAdjacencyForTrack();
+            UpdateTimelineWidth();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"adjust neighbors for transform {elem.Id}", this);
+        }
+
+        LogDiagnostic($"Transform '{typeName}' clip added between '{prev?.Id ?? "none"}' and '{next?.Id ?? "none"}'.");
+    }
+
+
+    public bool AddTransformBetweenSelected(string typeKey, ClipElementUI center, bool left, bool right)
+    {
+        if (center is null) return false;
+        if (left && right) throw new InvalidOperationException("Cannot add a transfrom in both direction.");
+        var transforms = TransformServices.GetAvailableTransforms();
+        if (!transforms.TryGetValue(typeKey, out var factory)) return false;
+
+        var (leftNeighbor, rightNeighbor) = FindNeighbors(center);
+
+
+        const double TransformVisualWidth = 40.0;
+
+        double selectedLeft = center.Clip.TranslationX;
+        double selectedWidth = center.Clip.WidthRequest > 0 ? center.Clip.WidthRequest : center.origLength;
+        double selectedRight = selectedLeft + selectedWidth;
+
+
+        if (left)
+        {
+            double posX = selectedLeft - TransformVisualWidth / 2.0;
+            AddTransformClip(leftNeighbor, center, typeKey, factory, posX, TransformVisualWidth, center.origTrack ?? 0);
+            SetStatusText(Localized.DraftPage_TransformAdded(leftNeighbor?.DisplayName ?? "left", center?.DisplayName ?? "right"));
+            _ = UpdateAdjacencyForTrack(center.origTrack ?? 0);
+            return true;
+        }
+        else if (right)
+        {
+            double posX = selectedRight - TransformVisualWidth / 2.0;
+            AddTransformClip(center, rightNeighbor, typeKey, factory, posX, TransformVisualWidth, center.origTrack ?? 0);
+            SetStatusText(Localized.DraftPage_TransformAdded(center?.DisplayName ?? "left", rightNeighbor?.DisplayName ?? "right"));
+            _ = UpdateAdjacencyForTrack(center.origTrack ?? 0);
+            return true;
+        }
+
+        return false;
+    }
+
+    public ClipElementUI? _transformMenuActivatedCenterClip = null;
+    public string _transformMenuActivatedHandle = "none";
+
+    private void HandleTransformAdd(ClipElementUI center, bool left, bool right)
+    {
+        _transformMenuActivatedCenterClip = center;
+        _transformMenuActivatedHandle = left ? "left" : (right ? "right" : "none");
+        AddClip_Clicked(this, EventArgs.Empty);
+        AddClipView.MainTabView.SelectByTag("Transform");
+    }
+
+    public void AddTransformToNeighbors(string type)
+    {
+        if((_transformMenuActivatedCenterClip ?? _selected) is null)
+        {
+            SetStatusText(Localized.DraftPage_PropertyPanel_SelectToContinue);
+            return;
+        }
+        AddTransformBetweenSelected(type, _transformMenuActivatedCenterClip ?? _selected, _transformMenuActivatedHandle == "left", _transformMenuActivatedHandle == "right");
+    }
+
+    #endregion
+
     #region resize clip
     private void LeftHandlePanded(object? sender, PanUpdatedEventArgs e)
     {
@@ -1909,12 +2088,6 @@ public partial class DraftPage : ContentPage
         public double br { get; set; }
     }
 
-    class TrackClassForUpdateAdjacencyForTrack
-    {
-        public double Start { get; set; }
-        public double End { get; set; }
-        public ClipElementUI Clip { get; set; }
-    }
 
     public async Task UpdateAdjacencyForTrack()
     {
@@ -1931,14 +2104,6 @@ public partial class DraftPage : ContentPage
         var byorder = track.Children.OfType<Border>()
             .Select(b => b.BindingContext)
             .OfType<ClipElementUI>()
-            .Select(c =>
-            {
-                double start = Math.Round(c.Clip.X + c.Clip.TranslationX);
-                double width = (!double.IsNaN(c.Clip.Width) && c.Clip.Width > 0) ? Math.Round(c.Clip.Width) : Math.Round(c.Clip.WidthRequest);
-                double end = start + width;
-                return new TrackClassForUpdateAdjacencyForTrack { Start = start, End = end, Clip = c };
-            })
-            .OrderBy(t => t.Start)
             .ToList();
 
         const double defaultRadius = 20.0;
@@ -1953,42 +2118,40 @@ public partial class DraftPage : ContentPage
 
         foreach (var item in byorder)
         {
-            try { item.Clip.Clip.StrokeShape = new RoundRectangle { CornerRadius = new Microsoft.Maui.CornerRadius(defaultRadius) }; } catch { }
+            try { item.Clip.StrokeShape = new RoundRectangle { CornerRadius = new Microsoft.Maui.CornerRadius(defaultRadius) }; } catch { }
         }
-
-        double tol = 3;
 
         for (int i = 0; i < byorder.Count; i++)
         {
             var self = byorder[i];
-            var left = (i > 0) ? byorder[i - 1] : null;
-            var right = (i < byorder.Count - 1) ? byorder[i + 1] : null;
 
-            if (i > 0)
+            var (leftNeighbor, rightNeighbor) = FindNeighbors(self);
+
+            if (leftNeighbor is not null)
             {
-                if (Math.Abs(left.End - self.Start) <= tol) //left
+                int li = byorder.FindIndex(t => t == leftNeighbor);
+                if (li >= 0)
                 {
                     localRadius[i].tl = 0;
                     localRadius[i].br = 0;
-                    localRadius[i - 1].tr = 0;
-                    localRadius[i - 1].bl = 0;
+                    localRadius[li].tr = 0;
+                    localRadius[li].bl = 0;
                 }
             }
 
-            if (i < byorder.Count - 1)
+            if (rightNeighbor is not null)
             {
-                if (Math.Abs(right.Start - self.End) <= tol)  //right
+                int ri = byorder.FindIndex(t => t == rightNeighbor);
+                if (ri >= 0)
                 {
                     localRadius[i].tr = 0;
                     localRadius[i].bl = 0;
-                    localRadius[i + 1].tl = 0;
-                    localRadius[i + 1].br = 0;
+                    localRadius[ri].tl = 0;
+                    localRadius[ri].br = 0;
                 }
             }
-
-
-
         }
+
         await Dispatcher.DispatchAsync(() =>
         {
             foreach (var item in byorder)
@@ -1996,7 +2159,7 @@ public partial class DraftPage : ContentPage
                 var r = localRadius[byorder.IndexOf(item)];
                 try
                 {
-                    item.Clip.Clip.StrokeShape = new RoundRectangle
+                    item.Clip.StrokeShape = new RoundRectangle
                     {
                         CornerRadius = new Microsoft.Maui.CornerRadius(r.tl, r.tr, r.br, r.bl)
                     };
@@ -2758,6 +2921,7 @@ public partial class DraftPage : ContentPage
         }
         catch { }
 
+        Popup.Content = null;
         OverlayLayer.Remove(Popup);
         OverlayLayer.InputTransparent = true;
 
@@ -2838,7 +3002,7 @@ public partial class DraftPage : ContentPage
 
     #endregion
 
-    #region math stuff
+    #region compute stuff
 
     [DebuggerNonUserCode()]
     public uint PixelToFrame(double px) => (uint)(px * FramePerPixel * tracksZoomOffest);
@@ -2977,6 +3141,41 @@ public partial class DraftPage : ContentPage
         // final rounding
         return Math.Max(0, s);
     }
+
+    private (ClipElementUI? left, ClipElementUI? right) FindNeighbors(ClipElementUI clip)
+    {
+        if (clip.origTrack is null) return (null, null);
+        int track = clip.origTrack.Value;
+
+        double selectedLeft = clip.Clip.TranslationX;
+        double selectedWidth = clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength;
+        double selectedRight = selectedLeft + selectedWidth;
+
+        const double tolerance = 8.0; // pixels
+
+        ClipElementUI? leftNeighbor = null;
+        ClipElementUI? rightNeighbor = null;
+
+        foreach (var kv in Clips)
+        {
+            var c = kv.Value;
+            if (c.Id == clip.Id || c.origTrack != track) continue;
+
+            double cWidth = c.Clip.WidthRequest > 0 ? c.Clip.WidthRequest : c.origLength;
+            double cRight = c.Clip.TranslationX + cWidth;
+
+            // c ends where selected begins → left neighbor
+            if (Math.Abs(cRight - selectedLeft) < tolerance)
+                leftNeighbor = c;
+
+            // c starts where selected ends → right neighbor
+            if (Math.Abs(c.Clip.TranslationX - selectedRight) < tolerance)
+                rightNeighbor = c;
+        }
+
+        return (leftNeighbor, rightNeighbor);
+    }
+
     #endregion
 
     #region live preview
@@ -3797,7 +3996,7 @@ public partial class DraftPage : ContentPage
                 "Debug_DumpProcessStack", new Command(async () =>
                 {
                     var f = previewer.GetFrame((uint)_currentFrame, previewWidth, previewHeight);
-                    var text = PictureExtensions.FormatProcessStackForLog(f.ProcessStack);
+                    var text = PictureProcessStack.FormatProcessStackForLog(f.ProcessStack);
                     await Microsoft.Maui.ApplicationModel.DataTransfer.Clipboard.Default.SetTextAsync(text);
                 })
             },
@@ -4220,9 +4419,9 @@ public partial class DraftPage : ContentPage
         {
             StatusLabel.TextColor = Colors.White;
             StatusLabel.Text = text;
+            SemanticScreenReader.Default.Announce(text);
         });
         if (LogUIMessageToLogger) Log(text, "UI msg");
-        SemanticScreenReader.Default.Announce(text);
     }
     #endregion
 

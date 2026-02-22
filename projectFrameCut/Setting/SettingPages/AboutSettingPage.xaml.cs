@@ -12,7 +12,6 @@ public partial class AboutSettingPage : ContentPage
 {
 #if WINDOWS
     TapGestureRecognizer tap = new TapGestureRecognizer();
-
 #else
     PinchGestureRecognizer pinch = new PinchGestureRecognizer();
 #endif
@@ -21,7 +20,6 @@ public partial class AboutSettingPage : ContentPage
     {
         InitializeComponent();
         Loaded += AboutSettingPage_Loaded;
-        AppVersionLabel.Text = $"Version {Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"} ({AppInfo.BuildString})";
         AppLogoIcon.Source = ImageHelper.LoadFromAsset("projectframecut");
 #if WINDOWS
         tap.Tapped
@@ -43,9 +41,29 @@ public partial class AboutSettingPage : ContentPage
         AppLogoIcon.GestureRecognizers.Clear();
 #if WINDOWS
         AppLogoIcon.GestureRecognizers.Add(tap);
+        try
+        {
+            var pfn = WinUI.App.GetPackageFamilyName();
+            var channel = pfn switch
+            {
+                "hexadecimal0x12e.projectFrameCutCommunity_f91nmrsqwpk6y" => "Community",
+                "0xeeeeeeeeeeee.projectFrameCutCommunity_f91nmrsqwpk6y" => "Community MS Store",
+                "hexadecimal0x12e.projectFrameCut_f91nmrsqwpk6y" => "Standard",
+                "0xeeeeeeeeeeee.projectFrameCut_f91nmrsqwpk6y" => "MS Store",
+                _ => "Non-official build"
+            };
+            AppVersionLabel.Text = $"Version {Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"} ({channel} channel)";
+
+        }
+        catch
+        {
+
+        }
 
 #else
         AppLogoIcon.GestureRecognizers.Add(pinch);
+        AppVersionLabel.Text = $"Version {Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}";
+
 
 #endif
     }

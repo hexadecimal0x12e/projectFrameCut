@@ -26,16 +26,6 @@ namespace projectFrameCut.Render.Effect
             return (double)(index - effect.StartPoint) / (effect.EndPoint - effect.StartPoint);
         }
 
-        public static IEffect PickFromEffectCombinations(List<Func<IEffect>> EffectCombinations, EffectImplementType preferredType)
-        {
-            foreach (var item in EffectCombinations)
-            {
-                var instance = item();
-                if (instance.ImplementType == preferredType) return instance;
-            }
-            return EffectCombinations[0]();
-        }
-
         public static Dictionary<string, EffectImplementType> DefaultImplementsType = new();
 
         public static IEffect[] GetEffectsInstances(EffectAndMixtureJSONStructure[]? Effects)

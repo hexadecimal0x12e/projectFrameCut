@@ -70,11 +70,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// <summary>
         /// All of the clips in the draft.
         /// </summary>
-        public object[] Clips { get; init; } = Array.Empty<object>();
+        public object[] Clips { get; set; } = Array.Empty<object>();
         /// <summary>
         /// All of the soundtracks in the draft.
         /// </summary>
-        public object[] SoundTracks { get; init; } = Array.Empty<object>();
+        public object[] SoundTracks { get; set; } = Array.Empty<object>();
 
 
         /// <summary>

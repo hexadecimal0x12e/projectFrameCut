@@ -132,6 +132,7 @@ namespace projectFrameCut.Helper
 
         public static string AppVersion { get; set; } = "";
         public static string AppTitle { get; set; } = "projectFrameCut";
+        public static string AppChannel { get; set; } = "Unknown";
 
         public static void CloseSplash()
         {

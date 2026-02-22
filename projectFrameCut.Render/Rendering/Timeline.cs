@@ -38,7 +38,7 @@ namespace projectFrameCut.Render.Rendering
                     {
                         throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
-                    var frame = clip.GetFrame(targetFrame, targetWidth, targetHeight);
+                    var frame = clip.GetFrame(targetFrame, targetWidth, targetHeight, true);
                     if (frame is not null)
                     {
                         result.Add(new OneFrame(targetFrame, clip, frame));
@@ -163,7 +163,7 @@ namespace projectFrameCut.Render.Rendering
                 if (PictureProcesser.SaveDiagResult)
                 {
                     var opId = Guid.NewGuid();
-                    File.WriteAllText(Path.Combine(PictureProcesser.DiagResultPath, $"diag-render-{frameIndex}-{opId}-stacks.txt"), PictureExtensions.FormatProcessStackForLog(result.ProcessStack, 100000));
+                    File.WriteAllText(Path.Combine(PictureProcesser.DiagResultPath, $"diag-render-{frameIndex}-{opId}-stacks.txt"), PictureProcessStack.FormatProcessStackForLog(result.ProcessStack, 100000));
                 }
                 return result;
             }

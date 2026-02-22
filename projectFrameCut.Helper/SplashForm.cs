@@ -20,7 +20,7 @@ namespace projectFrameCut.SplashScreen
             TitleLabel.Text = HelperProgram.AppTitle;
             CopyrightLabel.Text = Localized.SplashForm_Copyright();
             CopyrightLabel.Left = this.ClientSize.Width - CopyrightLabel.Width - 15;
-            LicenseLabel.Text = Localized.SplashForm_License();
+            LicenseLabel.Text = HelperProgram.AppChannel;
             pluginStatLabel.Text = Localized.AppLoading;
             
 

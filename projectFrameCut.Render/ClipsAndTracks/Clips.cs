@@ -47,7 +47,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame) => (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, bool forceResize) => (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize);
 
         void IClip.ReInit()
         {
@@ -77,9 +77,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string? FilePath { get; set; } = string.Empty;
         public bool NeedFilePath => true;
 
+        public bool Use16bpp = false;
+
 
         [System.Text.Json.Serialization.JsonIgnore]
-        public Picture? source { get; set; } = null;
+        public IPicture? source { get; set; } = null;
 
         public ClipMode ClipType => ClipMode.PhotoClip;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
@@ -96,13 +98,26 @@ namespace projectFrameCut.Render.ClipsAndTracks
             EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
 
         }
-
-
-        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame) => source ?? throw new NullReferenceException("Source is null. Please init it.");
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize) => source?.Resize(targetWidth, targetHeight, forceResize) ?? throw new NullReferenceException("Source is null. Please init it.");
 
         void IClip.ReInit()
         {
-            source = new Picture(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null."));
+            if (FilePath is null) throw new NullReferenceException($"PhotoClip {Id}'s source path is null.");
+            source = Use16bpp ? new Picture16bpp(FilePath) : new Picture8bpp(FilePath);
+            source.Disposed = false;
+            source.ProcessStack = new List<PictureProcessStack>
+            {
+                new PictureProcessStack
+                {
+                    Operator = GetType(),
+                    OperationDisplayName = $"Created for PhotoClip {Name} ({Id})",
+                    ProcessingFuncStackTrace = null,
+                    Properties = new Dictionary<string, object>
+                    {
+                        { "SourcePath", FilePath }
+                    }
+                }
+            };
         }
 
 
@@ -146,7 +161,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int targetWidth { get; init; } = 1920;
         public int targetHeight { get; init; } = 1080;
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight) => Picture.GenerateSolidColor(tWidth, tHeight, R, G, B, A);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize) => Picture.GenerateSolidColor(tWidth, tHeight, R, G, B, A);
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex) => Picture.GenerateSolidColor(targetWidth, targetHeight, R, G, B, A);
 
@@ -166,6 +181,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         public uint? GetClipLength() => Duration;
+
     }
 
     public class TextClip : IClip
@@ -330,9 +346,16 @@ namespace projectFrameCut.Render.ClipsAndTracks
             throw new NotImplementedException();
         }
 
+
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
+        {
+            throw new NotImplementedException();
+        }
+
         public void ReInit()
         {
         }
+
     }
 
 }

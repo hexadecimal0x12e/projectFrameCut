@@ -31,14 +31,18 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         /// <remarks>
         /// It's for replacing properties <see cref="IsNormalEffect"/>, <see cref="IsContinuousEffect"/> and <see cref="IsBindableArgsEffect"/> and so on, to make it more extendable for future effect types.
-        /// For compatibility consideration, the default implementation of this property will check the Is***Effect properties to determine the EffectType. It's best to override this property to provide a specific EffectType because of <b>this feature may be removed in the future</b>.
+        /// For compatibility consideration, the default implementation of this property will check the Is***Effect properties to determine the EffectType. 
+        /// It's best to override this property to provide a specific EffectType because of <b>this feature may be removed in the future</b>.
         /// </remarks>
+#pragma warning disable CS0618
         public virtual EffectType TypeOfEffect { get => IsBindableArgsEffect ? EffectType.BindableEffect : IsContinuousEffect ? EffectType.ContinuousEffect : IsNormalEffect ? EffectType.NormalEffect : throw new NotSupportedException($"The effect {TypeName} has an unspecified EffectType. Either set Is***Effect, or override property TypeOfEffect."); }
+#pragma warning restore CS0618
 
         /// <summary>
         /// Get how this effect is implemented.
         /// </summary>
         public EffectImplementType ImplementType { get; }
+
         /// <summary>
         /// Name of this effect. Most for display purpose.
         /// </summary>
@@ -46,9 +50,11 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         /// <summary>
         /// Get the ID of this specific effect instance.
+        /// This is a <b>REQUIRED</b> property for any kind of <see cref="IBindableArgumentEffect"/>, but optional for others. 
         /// </summary>
         /// <remarks>
         /// DO NOT set this property manually. It will be set when the effect is created.
+        /// If set, it should be a Guid.
         /// </remarks>
         public string Id { get; set; }
 
@@ -144,7 +150,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             };
         }
 
-        [Obsolete("Consider to use TypeOfEffect instead. This property may be removed in the future.",false)]
+        [Obsolete("Consider to use TypeOfEffect instead. This property may be removed in the future.", false)]
         public bool IsNormalEffect => true;
         [Obsolete("Consider to use TypeOfEffect instead. This property may be removed in the future.", false)]
         public bool IsContinuousEffect => false;

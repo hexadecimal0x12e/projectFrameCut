@@ -25,6 +25,8 @@ using System.Runtime.InteropServices;
 
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using System.Globalization;
+using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
+
 
 #if ANDROID
 using projectFrameCut.Render.AndroidOpenGL;
@@ -280,7 +282,7 @@ public partial class RenderPage : ContentPage
             PreviewLayout.IsVisible = true;
             ProgressBox.IsVisible = true;
             CancelRender.IsEnabled = true;
-            //MoreOptions.IsEnabled = false;
+            MoreOptions.IsEnabled = false;
             await SubProgress.ProgressTo(0, 250, Easing.Linear);
 
             _logBuffer.Clear();
@@ -664,21 +666,23 @@ public partial class RenderPage : ContentPage
             sw1.Restart();
             if (SettingsManager.IsBoolSettingTrue("render_BlockWrite"))
             {
-                await renderer.GoRenderSync(_cts.Token);
+                await Task.Run(async () => await renderer.GoRenderSync(_cts.Token));
+                Log($"Sync render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
+                builder?.Writer.Finish();
             }
             else
             {
                 await renderer.GoRender(_cts.Token);
+                Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
+
+                SetSubProg("WriteVideo");
+                Log("Finish writing video...");
+                builder?.Finish((i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), duration);
+
             }
             if (_cts.IsCancellationRequested) return;
 
-            Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
-
-            GC.Collect();
-            SetSubProg("WriteVideo");
-            Log("Finish writing video...");
-            builder?.Finish((i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), duration);
-
+            
             Log($"Releasing resources...");
 
             foreach (var item in clips)
@@ -687,7 +691,8 @@ public partial class RenderPage : ContentPage
             }
 
             // Drop references to large graphs ASAP.
-            renderer.builder = null;
+            builder?.Writer?.Dispose();
+            builder = null!;
 #if WINDOWS
             var origMode = GCSettings.LargeObjectHeapCompactionMode;
             GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
@@ -704,7 +709,21 @@ public partial class RenderPage : ContentPage
 
             if (SettingsManager.IsBoolSettingTrue("render_DumpDiagData"))
             {
+                Guid SessionId = Guid.NewGuid();
                 Render.Benchmark.DiagReportExporter.ExportCsv(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"), renderer);
+                int idx = 0, count = 0;
+                StreamWriter? sw = null;
+                foreach (var item in renderer.FrameProcessStacks.OrderBy(c => c.Key))
+                {
+                    sw ??= new(new FileStream(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint", $"ProcessStack_{SessionId}_{++idx}.md"), FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
+                    await sw.WriteLineAsync($"# Frame {item.Key}");
+                    await sw.WriteLineAsync();
+                    await sw.WriteLineAsync(PictureProcessStack.FormatProcessStackForLogMarkdown(item.Value));
+                    await sw.WriteLineAsync("---");
+                    await sw.WriteLineAsync();
+                    count++;
+                    if (count > 2500) sw = null;
+                }
             }
 
 
@@ -850,23 +869,14 @@ public partial class RenderPage : ContentPage
     }
 
 
-
-
-
     private void MaxParallelThreadsCount_ValueChanged(object sender, ValueChangedEventArgs e)
     {
         MaxParallelThreadsCountLabel.Text = Localized.RenderPage_MaxParallelThreadsCount((int)e.NewValue);
     }
 
-
-
-
-
-    private void MoreOptions_Clicked(object sender, EventArgs e)
+    private async void MoreOptions_Clicked(object sender, EventArgs e)
     {
-
-
-
+        await Navigation.PushAsync(new Setting.SettingPages.RenderSettingPage());  
     }
 
     private async void PerformPostRenderActionNowTestButton_Clicked(object sender, EventArgs e)
@@ -883,7 +893,7 @@ public partial class RenderPage : ContentPage
     private async void CancelRender_Clicked(object sender, EventArgs e)
     {
         if (!running) return;
-        var sure = await DisplayAlert(Localized._Warn, Localized.RenderPage_CancelRender_Warn, Localized._OK, Localized._Cancel);
+        var sure = await DisplayAlertAsync(Localized._Warn, Localized.RenderPage_CancelRender_Warn, Localized._OK, Localized._Cancel);
         if (sure)
         {
             _cts.Cancel();
@@ -896,7 +906,7 @@ public partial class RenderPage : ContentPage
             CancelRender.IsEnabled = false;
             MyLoggerExtensions.OnLog -= _WriteToLogBox;
 
-            //MoreOptions.IsEnabled = true;
+            MoreOptions.IsEnabled = true;
             PreviewLayout.IsVisible = false;
             running = false;
         }
@@ -972,6 +982,7 @@ public partial class RenderPage : ContentPage
         };
     }
 
+
     private string BuildStandaloneRenderArgs(int width, int height, int fps, string pixelFormat, string encoder, string outputPath)
     {
         var args = new List<string>
@@ -1011,7 +1022,7 @@ public partial class RenderPage : ContentPage
 
 #endif
 
-        return "render  " +  string.Join(" ", args.Select(s => $"\"{s}\""));
+        return "render  " + string.Join(" ", args.Select(s => $"\"{s}\""));
     }
 
 }

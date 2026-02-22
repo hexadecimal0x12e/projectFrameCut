@@ -27,6 +27,7 @@ namespace projectFrameCut.Shared
         AudioClip,
         SubtitleClip,
         MarkingClip,
+        TransformClip,
         Special = -1
     }
 

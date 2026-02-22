@@ -11,6 +11,7 @@ using projectFrameCut.Platforms.Windows;
 using projectFrameCut.Setting.SettingManager;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 using WinRT.Interop;
 
@@ -72,6 +73,9 @@ namespace projectFrameCut.WinUI
         [DllImport("user32.dll")]
         public static extern IntPtr SetFocus(IntPtr hWnd);
 
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        public static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
+
         [DllImport("user32.dll")]
         public static extern bool MessageBeep(uint uType);
 
@@ -83,6 +87,96 @@ namespace projectFrameCut.WinUI
 
         [DllImport("Powrprof.dll", SetLastError = true)]
         public static extern bool SetSuspendState(bool bHibernate, bool bForceCritical, bool bDisableWakeEvent);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
+        public static extern int GetPackageFullName(IntPtr hProcess, ref int packageFullNameLength, StringBuilder packageFullName);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
+        public static extern int GetPackageFamilyName(IntPtr hProcess, ref int packageFamilyNameLength, StringBuilder packageFamilyName);
+
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr GetCurrentProcess();
+
+        private const int APPMODEL_ERROR_NO_PACKAGE = 15700;
+
+        public static bool IsPackaged()
+        {
+            try
+            {
+                IntPtr h = GetCurrentProcess();
+                int length = 0;
+                int rc = GetPackageFullName(h, ref length, null);
+                if (rc == APPMODEL_ERROR_NO_PACKAGE)
+                    return false;
+                if (length <= 0)
+                    return false;
+
+                var sb = new StringBuilder(length);
+                rc = GetPackageFullName(h, ref length, sb);
+                return rc == 0 && sb.Length > 0;
+            }
+            catch
+            {
+                return false;
+            }
+
+
+        }
+
+        public static string GetPackageFullName()
+        {
+            try
+            {
+                IntPtr h = GetCurrentProcess();
+                int length = 0;
+                int rc = GetPackageFullName(h, ref length, null);
+                if (rc == APPMODEL_ERROR_NO_PACKAGE)
+                    return "Not running in AppContainer.";
+                if (length <= 0)
+                    return string.Empty;
+                var sb = new StringBuilder(length);
+                rc = GetPackageFullName(h, ref length, sb);
+                if (rc == 0 && sb.Length > 0)
+                {
+                    return sb.ToString();
+                }
+                else
+                {
+                    return "Not running in AppContainer.";
+                }
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+        public static string GetPackageFamilyName()
+        {
+            try
+            {
+                IntPtr h = GetCurrentProcess();
+                int length = 0;
+                int rc = GetPackageFamilyName(h, ref length, null);
+                if (rc == APPMODEL_ERROR_NO_PACKAGE)
+                    return "Not running in AppContainer.";
+                if (length <= 0)
+                    return string.Empty;
+                var sb = new StringBuilder(length);
+                rc = GetPackageFamilyName(h, ref length, sb);
+                if (rc == 0 && sb.Length > 0)
+                {
+                    return sb.ToString();
+                }
+                else
+                {
+                    return "Not running in AppContainer.";
+                }
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
 
         public static async Task BringToForeground()
         {

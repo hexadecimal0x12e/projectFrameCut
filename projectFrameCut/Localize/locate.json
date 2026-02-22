@@ -634,6 +634,46 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_AddClipView_AddMore",
+        "Value": "\u5176\u4ED6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddPicture",
+        "Value": "\u56FE\u7247\u548C\u8D34\u7EB8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch",
+        "Value": "\u7ED8\u56FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText",
+        "Value": "\u6587\u672C\u548C\u5B57\u5E55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform",
+        "Value": "\u8F6C\u573A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_AddOneAsset",
         "Value": "\u677E\u624B\u6765\u6DFB\u52A0\u300C{name ?? \u0022\u672A\u77E5\u540D\u79F0\u0022}\u300D ",
         "Mode": "InterpolationString",
@@ -649,6 +689,14 @@
             "Value": "\u7D20\u6750\u7684\u540D\u5B57"
           }
         ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddTransformNeighbors",
+        "Value": "\u6DFB\u52A0\u8F6C\u573A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "HasValidationErrors": false
       },
       {
@@ -1127,6 +1175,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_MenuBar_Edit_AddTransformNeighbors",
+        "Value": "\u4E3A\u76F8\u90BB\u7247\u6BB5\u6DFB\u52A0\u8F6C\u573A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_MenuBar_Edit_ClosePopup",
         "Value": "\u5173\u95ED\u6240\u6709\u5F39\u51FA\u7A97\u53E3",
         "Mode": "ConstString",
@@ -1279,8 +1335,40 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_MenuBar_View_CloseActive",
+        "Value": "\u5173\u95ED\u6D3B\u8DC3\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_CloseAdditional",
+        "Value": "\u5173\u95ED\u6240\u6709\u7A97\u53E3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_View_Reset",
+        "Value": "\u91CD\u8BBE\u5E03\u5C40",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_NoJobRunning",
         "Value": "\u6CA1\u6709\u6B63\u5728\u6267\u884C\u7684\u4EFB\u52A1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_PleaseWait",
+        "Value": "\u8BF7\u7A0D\u7B49...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1620,6 +1708,32 @@
         "ArgsComment": [
           {
             "Key": "trackId",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_TransformAdded",
+        "Value": "\u6210\u529F\u7684\u5728 \u300C{left}\u300D\u548C\u300C{right}\u300D\u4E4B\u95F4\u6DFB\u52A0\u4E86\u8F6C\u573A\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "left"
+          },
+          {
+            "Key": "string",
+            "Value": "right"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "left",
+            "Value": ""
+          },
+          {
+            "Key": "right",
             "Value": ""
           }
         ],
@@ -2656,7 +2770,7 @@
       },
       {
         "Id": "RenderPage_NoDraft",
-        "Value": "\u4F60\u9700\u8981\u5148\u6253\u5F00\u4E00\u4E2A\u8349\u7A3F\u624D\u80FD\u8FDB\u884C\u6E32\u67D3",
+        "Value": "\u4F60\u9700\u8981\u5148\u6253\u5F00\u4E00\u4E2A\u8349\u7A3F\u624D\u80FD\u8FDB\u884C\u6E32\u67D3\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2680,7 +2794,7 @@
       },
       {
         "Id": "RenderPage_PostRenderAction_Countdown",
-        "Value": "\u6E32\u67D3\u5B8C\u6210\uFF0C\u5C06\u5728{i}\u79D2\u540E{action}",
+        "Value": "\u6E32\u67D3\u5B8C\u6210\uFF0C\u5C06\u5728 {i} \u79D2\u540E\u6267\u884C\u64CD\u4F5C\u300C{action}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2859,8 +2973,24 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "RenderPage_ToolBar_GenerateStandaloneArgs",
+        "Value": "\u5BFC\u51FA\u6E32\u67D3\u5668\u547D\u4EE4\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "RenderPage_TotalProg",
         "Value": "\u603B\u8FDB\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "UserDataManagePage_Title",
+        "Value": "\u7528\u6237\u6570\u636E\u7BA1\u7406",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2873,30 +3003,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_CloseActive",
-        "Value": "\u5173\u95ED\u6D3B\u8DC3\u7A97\u53E3",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_CloseAdditional",
-        "Value": "\u5173\u95ED\u6240\u6709\u7A97\u53E3",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_View_Reset",
-        "Value": "\u91CD\u8BBE\u5E03\u5C40",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
         "HasValidationErrors": false
       }
     ],
@@ -4035,11 +4141,11 @@
       },
       {
         "Id": "RenderPage_NoDraft",
-        "Value": "You need to open a draft first to proceed with rendering",
+        "Value": "You need to open a draft first to perform rendering.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Instructional message about prerequisite for rendering operation",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -4289,6 +4395,24 @@
       {
         "Id": "DraftPage_MenuBar_Edit_Spilt",
         "Value": "Split selected segment",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_AddTransformNeighbors",
+        "Value": "Add transition for neighboring clips",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddTransformNeighbors",
+        "Value": "Add Transfer",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5792,7 +5916,7 @@
       },
       {
         "Id": "RenderPage_PostRenderAction_Countdown",
-        "Value": "Render completed, will {action} in {i} seconds",
+        "Value": "Rendering complete. Executing operation \u0027{action}\u0027 in {i} seconds.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -5891,124 +6015,124 @@
       },
       {
         "Id": "HomePage_OpenHint_DoubleClick",
-        "Value": "Unset localization item:HomePage_OpenHint_DoubleClick()",
+        "Value": "Double-click to open this item; Right-click for advanced options",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_OpenHint_Tap",
-        "Value": "Unset localization item:HomePage_OpenHint_Tap()",
+        "Value": "Tap to open this item; long press to view advanced options.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatViewTitle",
-        "Value": "Unset localization item:AIAssistant_ChatViewTitle()",
+        "Value": "AI Assistant",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_InfoGrayText",
-        "Value": "Unset localization item:AIAssistant_InfoGrayText()",
+        "Value": "AI may make mistakes, please check each output.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View",
-        "Value": "Unset localization item:DraftPage_MenuBar_View()",
+        "Value": "View",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ToolCall",
-        "Value": "Unset localization item:AIAssistant_ChatView_ToolCall()",
+        "Value": "Tool Call",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Thinking",
-        "Value": "Unset localization item:AIAssistant_ChatView_Thinking()",
+        "Value": "Thinking process",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_SendHint",
-        "Value": "Unset localization item:AIAssistant_ChatView_SendHint()",
+        "Value": "Press Enter to send message",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Send",
-        "Value": "Unset localization item:AIAssistant_ChatView_Send()",
+        "Value": "Send",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Stop",
-        "Value": "Unset localization item:AIAssistant_ChatView_Stop()",
+        "Value": "Stop",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_WelcomeText",
-        "Value": "Unset localization item:AIAssistant_ChatView_WelcomeText()",
+        "Value": "Nice to meet you! \uD83D\uDE0A\r\nI\u0027m Assistant P. How can I help you? \u2728",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_NoContent",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_NoContent()",
+        "Value": "Sorry, the model did not return any content. Please try again.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_Cancelled",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_Cancelled()",
+        "Value": "(Request has been cancelled.)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_Exception",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_Exception(Exception ex)",
+        "Value": "We\u0027re sorry, the request could not be completed due to an unhandled {ex.GetType().Name} exception ({ex.Message}).",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -6022,43 +6146,142 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_NewSession",
-        "Value": "Unset localization item:AIAssistant_ChatView_NewSession()",
+        "Value": "New Session",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_CloseActive",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_CloseActive()",
+        "Value": "Close Active Window",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_CloseAdditional",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_CloseAdditional()",
+        "Value": "Close All Windows",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_Reset",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_Reset()",
+        "Value": "Reset Layout",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText",
+        "Value": "Text and Subtitles",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform",
+        "Value": "Transition",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddPicture",
+        "Value": "Pictures \u0026 Stickers",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch",
+        "Value": "Sketch",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddMore",
+        "Value": "More",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_TransformAdded",
+        "Value": "Successfully added a transition between \u0022{left}\u0022 and \u0022{right}\u0022.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "left"
+          },
+          {
+            "Key": "string",
+            "Value": "right"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "left",
+            "Value": ""
+          },
+          {
+            "Key": "right",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_PleaseWait",
+        "Value": "Please wait...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ToolBar_GenerateStandaloneArgs",
+        "Value": "Export Renderer Command Line",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "UserDataManagePage_Title",
+        "Value": "User Data Management",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -6579,7 +6802,7 @@
       },
       {
         "Id": "RenderPage_NoDraft",
-        "Value": "\u4F60\u9700\u8981\u5148\u958B\u555F\u4E00\u500B\u8349\u7A3F\u624D\u80FD\u9032\u884C\u6E32\u67D3",
+        "Value": "\u4F60\u9700\u8981\u5148\u958B\u555F\u4E00\u500B\u8349\u7A3F\u624D\u80FD\u9032\u884C\u6E32\u67D3\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7451,6 +7674,24 @@
       {
         "Id": "DraftPage_MenuBar_Edit_Spilt",
         "Value": "\u62C6\u5206\u9078\u53D6\u7684\u7247\u6BB5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_AddTransformNeighbors",
+        "Value": "\u70BA\u76F8\u9130\u7247\u6BB5\u6DFB\u52A0\u8F49\u5834",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddTransformNeighbors",
+        "Value": "\u65B0\u589E\u8F49\u5834",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8953,7 +9194,7 @@
       },
       {
         "Id": "RenderPage_PostRenderAction_Countdown",
-        "Value": "\u6E32\u67D3\u5B8C\u6210\uFF0C\u5C07\u5728{i}\u79D2\u5F8C{action}",
+        "Value": "\u6E32\u67D3\u5B8C\u6210\uFF0C\u5C07\u5728 {i} \u79D2\u5F8C\u57F7\u884C\u64CD\u4F5C\u300C{action}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -9052,124 +9293,124 @@
       },
       {
         "Id": "HomePage_OpenHint_DoubleClick",
-        "Value": "Unset localization item:HomePage_OpenHint_DoubleClick()",
+        "Value": "\u96D9\u64CA\u4F86\u958B\u555F\u6B64\u9805\u76EE\uFF1B\u53F3\u9375\u67E5\u770B\u9032\u968E\u9078\u9805",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_OpenHint_Tap",
-        "Value": "Unset localization item:HomePage_OpenHint_Tap()",
+        "Value": "\u9EDE\u64CA\u958B\u555F\u6B64\u9805\u76EE\uFF1B\u9577\u6309\u6AA2\u8996\u9032\u968E\u9078\u9805",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatViewTitle",
-        "Value": "Unset localization item:AIAssistant_ChatViewTitle()",
+        "Value": "AI\u52A9\u7406",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_InfoGrayText",
-        "Value": "Unset localization item:AIAssistant_InfoGrayText()",
+        "Value": "AI\u53EF\u80FD\u6703\u72AF\u932F\uFF0C\u8ACB\u6AA2\u67E5\u6BCF\u4E00\u500B\u8F38\u51FA\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View",
-        "Value": "Unset localization item:DraftPage_MenuBar_View()",
+        "Value": "\u6AA2\u8996",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ToolCall",
-        "Value": "Unset localization item:AIAssistant_ChatView_ToolCall()",
+        "Value": "\u5DE5\u5177\u8ABF\u7528",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Thinking",
-        "Value": "Unset localization item:AIAssistant_ChatView_Thinking()",
+        "Value": "\u601D\u8003\u904E\u7A0B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_SendHint",
-        "Value": "Unset localization item:AIAssistant_ChatView_SendHint()",
+        "Value": "\u6309Enter\u9375\u767C\u9001\u8A0A\u606F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Send",
-        "Value": "Unset localization item:AIAssistant_ChatView_Send()",
+        "Value": "\u767C\u9001",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Stop",
-        "Value": "Unset localization item:AIAssistant_ChatView_Stop()",
+        "Value": "\u505C\u6B62",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_WelcomeText",
-        "Value": "Unset localization item:AIAssistant_ChatView_WelcomeText()",
+        "Value": "\u5F88\u9AD8\u8208\u898B\u5230\u4F60\uFF01\uD83D\uDE0A\r\n\u6211\u662FAssistant P\u3002\u6709\u4EC0\u9EBC\u9700\u8981\u5E6B\u5FD9\u7684\u55CE\uFF1F\u2728",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u5DF2\u5C07\u7C21\u9AD4\u4E2D\u6587\u8F49\u63DB\u70BA\u7E41\u9AD4\u4E2D\u6587\uFF0C\u4E26\u4FDD\u6301\u52A9\u7406\u540D\u7A31\u201CAssistant P\u201D\u4E0D\u8B8A\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_NoContent",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_NoContent()",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C\u6A21\u578B\u6C92\u6709\u8FD4\u56DE\u5167\u5BB9\u3002\u8ACB\u518D\u8A66\u4E00\u6B21\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_Cancelled",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_Cancelled()",
+        "Value": "\uFF08\u8ACB\u6C42\u5DF2\u88AB\u53D6\u6D88\u3002\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_Exception",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_Exception(Exception ex)",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C\u7531\u65BC\u4E00\u500B\u672A\u7D93\u8655\u7406\u7684 {ex.GetType().Name} \u7570\u5E38 ({ex.Message})\uFF0C\u8ACB\u6C42\u7121\u6CD5\u5B8C\u6210\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -9183,43 +9424,142 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_NewSession",
-        "Value": "Unset localization item:AIAssistant_ChatView_NewSession()",
+        "Value": "\u65B0\u5C0D\u8A71",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_CloseActive",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_CloseActive()",
+        "Value": "\u95DC\u9589\u6D3B\u52D5\u8996\u7A97",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_CloseAdditional",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_CloseAdditional()",
+        "Value": "\u95DC\u9589\u6240\u6709\u8996\u7A97",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_Reset",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_Reset()",
+        "Value": "\u91CD\u8A2D\u4F48\u5C40",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText",
+        "Value": "\u6587\u5B57\u548C\u5B57\u5E55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform",
+        "Value": "\u8F49\u5834",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddPicture",
+        "Value": "\u5716\u7247\u548C\u8CBC\u7D19",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch",
+        "Value": "\u7E6A\u5716",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddMore",
+        "Value": "\u5176\u4ED6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_TransformAdded",
+        "Value": "\u6210\u529F\u5728\u300E{left}\u300F\u8207\u300E{right}\u300F\u4E4B\u9593\u52A0\u5165\u4E86\u8F49\u5834\u6548\u679C\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "left"
+          },
+          {
+            "Key": "string",
+            "Value": "right"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "left",
+            "Value": ""
+          },
+          {
+            "Key": "right",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_PleaseWait",
+        "Value": "\u8ACB\u7A0D\u7B49...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ToolBar_GenerateStandaloneArgs",
+        "Value": "\u532F\u51FA\u6E32\u67D3\u5668\u547D\u4EE4\u5217",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "UserDataManagePage_Title",
+        "Value": "\u4F7F\u7528\u8005\u8CC7\u6599\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -10363,11 +10703,11 @@
       },
       {
         "Id": "RenderPage_NoDraft",
-        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u3092\u884C\u3046\u306B\u306F\u3001\u307E\u305A\u4E0B\u66F8\u304D\u3092\u958B\u304F\u5FC5\u8981\u304C\u3042\u308A\u307E\u3059\u3002",
+        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u3092\u884C\u3046\u306B\u306F\u3001\u307E\u305A\u30C9\u30E9\u30D5\u30C8\u3092\u958B\u304F\u5FC5\u8981\u304C\u3042\u308A\u307E\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Render operation requires opening a draft first",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -10617,6 +10957,24 @@
       {
         "Id": "DraftPage_MenuBar_Edit_Spilt",
         "Value": "\u9078\u629E\u4E2D\u306E\u30BB\u30B0\u30E1\u30F3\u30C8\u3092\u5206\u5272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_AddTransformNeighbors",
+        "Value": "\u96A3\u63A5\u30D5\u30E9\u30B0\u30E1\u30F3\u30C8\u306B\u30C8\u30E9\u30F3\u30B8\u30B7\u30E7\u30F3\u3092\u8FFD\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddTransformNeighbors",
+        "Value": "\u8EE2\u5834\u3092\u8FFD\u52A0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12120,7 +12478,7 @@
       },
       {
         "Id": "RenderPage_PostRenderAction_Countdown",
-        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u5B8C\u4E86\u3001{i}\u79D2\u5F8C\u306B{action}\u3057\u307E\u3059",
+        "Value": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u5B8C\u4E86\u3001{i}\u79D2\u5F8C\u306B\u64CD\u4F5C\u300C{action}\u300D\u3092\u5B9F\u884C\u3057\u307E\u3059\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -12219,124 +12577,124 @@
       },
       {
         "Id": "HomePage_OpenHint_DoubleClick",
-        "Value": "Unset localization item:HomePage_OpenHint_DoubleClick()",
+        "Value": "\u30C0\u30D6\u30EB\u30AF\u30EA\u30C3\u30AF\u3067\u3053\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3092\u958B\u304F\uFF1B\u53F3\u30AF\u30EA\u30C3\u30AF\u3067\u8A73\u7D30\u30AA\u30D7\u30B7\u30E7\u30F3\u3092\u8868\u793A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_OpenHint_Tap",
-        "Value": "Unset localization item:HomePage_OpenHint_Tap()",
+        "Value": "\u30BF\u30C3\u30D7\u3067\u3053\u306E\u9805\u76EE\u3092\u958B\u304F\uFF1B\u9577\u62BC\u3057\u3067\u8A73\u7D30\u30AA\u30D7\u30B7\u30E7\u30F3\u3092\u8868\u793A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatViewTitle",
-        "Value": "Unset localization item:AIAssistant_ChatViewTitle()",
+        "Value": "AI\u30A2\u30B7\u30B9\u30BF\u30F3\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_InfoGrayText",
-        "Value": "Unset localization item:AIAssistant_InfoGrayText()",
+        "Value": "AI\u306F\u9593\u9055\u3044\u3092\u72AF\u3059\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u306E\u3067\u3001\u3059\u3079\u3066\u306E\u51FA\u529B\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View",
-        "Value": "Unset localization item:DraftPage_MenuBar_View()",
+        "Value": "\u8868\u793A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ToolCall",
-        "Value": "Unset localization item:AIAssistant_ChatView_ToolCall()",
+        "Value": "\u30C4\u30FC\u30EB\u30B3\u30FC\u30EB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Thinking",
-        "Value": "Unset localization item:AIAssistant_ChatView_Thinking()",
+        "Value": "\u601D\u8003\u4E2D",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_SendHint",
-        "Value": "Unset localization item:AIAssistant_ChatView_SendHint()",
+        "Value": "Enter\u30AD\u30FC\u3067\u30E1\u30C3\u30BB\u30FC\u30B8\u3092\u9001\u4FE1",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Send",
-        "Value": "Unset localization item:AIAssistant_ChatView_Send()",
+        "Value": "\u9001\u4FE1",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Stop",
-        "Value": "Unset localization item:AIAssistant_ChatView_Stop()",
+        "Value": "\u505C\u6B62",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_WelcomeText",
-        "Value": "Unset localization item:AIAssistant_ChatView_WelcomeText()",
+        "Value": "\u304A\u4F1A\u3044\u3067\u304D\u3066\u5B09\u3057\u3044\u3067\u3059\uFF01\uD83D\uDE0A\r\n\u79C1\u306FAssistant P\u3067\u3059\u3002\u4F55\u304B\u304A\u624B\u4F1D\u3044\u3067\u304D\u308B\u3053\u3068\u306F\u3042\u308A\u307E\u3059\u304B\uFF1F\u2728",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Assistant P\u306F\u7FFB\u8A33\u305B\u305A\u3001\u305D\u306E\u307E\u307E\u4F7F\u7528\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_NoContent",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_NoContent()",
+        "Value": "\u7533\u3057\u8A33\u3042\u308A\u307E\u305B\u3093\u304C\u3001\u30E2\u30C7\u30EB\u304C\u30B3\u30F3\u30C6\u30F3\u30C4\u3092\u8FD4\u3057\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_Cancelled",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_Cancelled()",
+        "Value": "\uFF08\u30EA\u30AF\u30A8\u30B9\u30C8\u306F\u30AD\u30E3\u30F3\u30BB\u30EB\u3055\u308C\u307E\u3057\u305F\u3002\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_Exception",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_Exception(Exception ex)",
+        "Value": "\u7533\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093\u304C\u3001\u672A\u51E6\u7406\u306E {ex.GetType().Name} \u4F8B\u5916\u304C\u767A\u751F\u3057\u307E\u3057\u305F ({ex.Message})\u3002\u30EA\u30AF\u30A8\u30B9\u30C8\u3092\u5B8C\u4E86\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -12350,43 +12708,142 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_NewSession",
-        "Value": "Unset localization item:AIAssistant_ChatView_NewSession()",
+        "Value": "\u65B0\u3057\u3044\u30C1\u30E3\u30C3\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_CloseActive",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_CloseActive()",
+        "Value": "\u30A2\u30AF\u30C6\u30A3\u30D6\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u9589\u3058\u308B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_CloseAdditional",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_CloseAdditional()",
+        "Value": "\u3059\u3079\u3066\u306E\u30A6\u30A3\u30F3\u30C9\u30A6\u3092\u9589\u3058\u308B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_Reset",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_Reset()",
+        "Value": "\u30EC\u30A4\u30A2\u30A6\u30C8\u3092\u30EA\u30BB\u30C3\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText",
+        "Value": "\u30C6\u30AD\u30B9\u30C8\u3068\u5B57\u5E55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform",
+        "Value": "\u30C8\u30E9\u30F3\u30B8\u30B7\u30E7\u30F3",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddPicture",
+        "Value": "\u753B\u50CF\u3068\u30B9\u30C6\u30C3\u30AB\u30FC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch",
+        "Value": "\u30B9\u30B1\u30C3\u30C1\u3092\u8FFD\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddMore",
+        "Value": "\u305D\u306E\u4ED6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_TransformAdded",
+        "Value": "\u300C{left}\u300D\u3068\u300C{right}\u300D\u306E\u9593\u306B\u8EE2\u8EAB\u3092\u8FFD\u52A0\u3057\u307E\u3057\u305F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "left"
+          },
+          {
+            "Key": "string",
+            "Value": "right"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "left",
+            "Value": ""
+          },
+          {
+            "Key": "right",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_PleaseWait",
+        "Value": "\u304A\u5F85\u3061\u304F\u3060\u3055\u3044...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ToolBar_GenerateStandaloneArgs",
+        "Value": "\u30EC\u30F3\u30C0\u30E9\u30FC\u30B3\u30DE\u30F3\u30C9\u30E9\u30A4\u30F3\u3092\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "UserDataManagePage_Title",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u7BA1\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -13530,11 +13987,11 @@
       },
       {
         "Id": "RenderPage_NoDraft",
-        "Value": "\uB80C\uB354\uB9C1\uC744 \uD558\uB824\uBA74 \uBA3C\uC800 \uCD08\uC548\uC744 \uC5F4\uC5B4\uC57C \uD569\uB2C8\uB2E4",
+        "Value": "\uB80C\uB354\uB9C1\uC744 \uD558\uB824\uBA74 \uBA3C\uC800 \uCD08\uC548\uC744 \uC5F4\uC5B4\uC57C \uD569\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Indicates that a draft must be opened before rendering can be performed",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -13784,6 +14241,24 @@
       {
         "Id": "DraftPage_MenuBar_Edit_Spilt",
         "Value": "\uC120\uD0DD\uD55C \uC138\uADF8\uBA3C\uD2B8 \uBD84\uD560",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_AddTransformNeighbors",
+        "Value": "\uC778\uC811 \uD074\uB9BD\uC5D0 \uC804\uD658 \uCD94\uAC00",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddTransformNeighbors",
+        "Value": "\uC804\uD658 \uCD94\uAC00",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15287,7 +15762,7 @@
       },
       {
         "Id": "RenderPage_PostRenderAction_Countdown",
-        "Value": "\uB80C\uB354\uB9C1 \uC644\uB8CC, {i}\uCD08 \uD6C4 {action}",
+        "Value": "\uB80C\uB354\uB9C1 \uC644\uB8CC, {i}\uCD08 \uD6C4\uC5D0 \u300C{action}\u300D \uC791\uC5C5\uC744 \uC2E4\uD589\uD569\uB2C8\uB2E4.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -15386,124 +15861,124 @@
       },
       {
         "Id": "HomePage_OpenHint_DoubleClick",
-        "Value": "Unset localization item:HomePage_OpenHint_DoubleClick()",
+        "Value": "\uC774 \uD56D\uBAA9\uC744 \uC5F4\uB824\uBA74 \uB354\uBE14\uD074\uB9AD\uD558\uC138\uC694; \uC6B0\uD074\uB9AD\uC73C\uB85C \uACE0\uAE09 \uC635\uC158\uC744 \uD655\uC778\uD558\uC138\uC694",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_OpenHint_Tap",
-        "Value": "Unset localization item:HomePage_OpenHint_Tap()",
+        "Value": "\uC9E7\uAC8C \uB20C\uB7EC \uC774 \uD56D\uBAA9 \uC5F4\uAE30; \uAE38\uAC8C \uB20C\uB7EC \uACE0\uAE09 \uC635\uC158 \uBCF4\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatViewTitle",
-        "Value": "Unset localization item:AIAssistant_ChatViewTitle()",
+        "Value": "AI \uC5B4\uC2DC\uC2A4\uD134\uD2B8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_InfoGrayText",
-        "Value": "Unset localization item:AIAssistant_InfoGrayText()",
+        "Value": "AI\uAC00 \uC2E4\uC218\uB97C \uD560 \uC218 \uC788\uC73C\uBBC0\uB85C, \uBAA8\uB4E0 \uCD9C\uB825\uC744 \uD655\uC778\uD558\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View",
-        "Value": "Unset localization item:DraftPage_MenuBar_View()",
+        "Value": "\uBCF4\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ToolCall",
-        "Value": "Unset localization item:AIAssistant_ChatView_ToolCall()",
+        "Value": "\uB3C4\uAD6C \uD638\uCD9C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Thinking",
-        "Value": "Unset localization item:AIAssistant_ChatView_Thinking()",
+        "Value": "\uC0DD\uAC01 \uC911",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_SendHint",
-        "Value": "Unset localization item:AIAssistant_ChatView_SendHint()",
+        "Value": "\uC5D4\uD130 \uD0A4\uB97C \uB20C\uB7EC \uBA54\uC2DC\uC9C0\uB97C \uBCF4\uB0B4\uC138\uC694",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Send",
-        "Value": "Unset localization item:AIAssistant_ChatView_Send()",
+        "Value": "\uC804\uC1A1",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Stop",
-        "Value": "Unset localization item:AIAssistant_ChatView_Stop()",
+        "Value": "\uC911\uC9C0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_WelcomeText",
-        "Value": "Unset localization item:AIAssistant_ChatView_WelcomeText()",
+        "Value": "\uB9CC\uB098\uC11C \uBC18\uAC11\uC2B5\uB2C8\uB2E4! \uD83D\uDE0A\n\uC800\uB294 Assistant P\uC785\uB2C8\uB2E4. \uBB34\uC5C7\uC744 \uB3C4\uC640\uB4DC\uB9B4\uAE4C\uC694? \u2728",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\uC0AC\uC6A9\uC790\uC5D0\uAC8C \uCE5C\uADFC\uD558\uACE0 \uACF5\uC190\uD55C \uC5B4\uC870\uB85C \uC778\uC0AC\uD558\uB294 \uD14D\uC2A4\uD2B8. \u0027Assistant P\u0027\uB294 \uBC88\uC5ED\uD558\uC9C0 \uC54A\uACE0 \uC6D0\uBB38\uB300\uB85C \uC720\uC9C0\uD568.",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_NoContent",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_NoContent()",
+        "Value": "\uC8C4\uC1A1\uD569\uB2C8\uB2E4, \uBAA8\uB378\uC774 \uB0B4\uC6A9\uC744 \uBC18\uD658\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_Cancelled",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_Cancelled()",
+        "Value": "\uFF08\uC694\uCCAD\uC774 \uCDE8\uC18C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_Exception",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_Exception(Exception ex)",
+        "Value": "\uC8C4\uC1A1\uD569\uB2C8\uB2E4, \uCC98\uB9AC\uB418\uC9C0 \uC54A\uC740 {ex.GetType().Name} \uC608\uC678\uAC00 \uBC1C\uC0DD\uD558\uC5EC ({ex.Message}) \uC694\uCCAD\uC744 \uC644\uB8CC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -15517,43 +15992,142 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_NewSession",
-        "Value": "Unset localization item:AIAssistant_ChatView_NewSession()",
+        "Value": "\uC0C8 \uB300\uD654",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_CloseActive",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_CloseActive()",
+        "Value": "\uD65C\uC131 \uCC3D \uB2EB\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_CloseAdditional",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_CloseAdditional()",
+        "Value": "\uBAA8\uB4E0 \uCC3D \uB2EB\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_Reset",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_Reset()",
+        "Value": "\uB808\uC774\uC544\uC6C3 \uCD08\uAE30\uD654",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText",
+        "Value": "\uD14D\uC2A4\uD2B8 \uBC0F \uC790\uB9C9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform",
+        "Value": "\uC804\uD658 \uCD94\uAC00",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddPicture",
+        "Value": "\uC0AC\uC9C4 \uBC0F \uC2A4\uD2F0\uCEE4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch",
+        "Value": "\uC2A4\uCF00\uCE58 \uCD94\uAC00",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddMore",
+        "Value": "\uAE30\uD0C0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_TransformAdded",
+        "Value": "\uC131\uACF5\uC801\uC73C\uB85C \u0027{left}\u0027\uC640(\uACFC) \u0027{right}\u0027 \uC0AC\uC774\uC5D0 \uC804\uD658\uC744 \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "left"
+          },
+          {
+            "Key": "string",
+            "Value": "right"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "left",
+            "Value": ""
+          },
+          {
+            "Key": "right",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u0027{left}\u0027\uC640 \u0027{right}\u0027 \uC0AC\uC774\uC5D0 \uC804\uD658 \uD6A8\uACFC\uB97C \uC131\uACF5\uC801\uC73C\uB85C \uCD94\uAC00\uD588\uC74C\uC744 \uC54C\uB9AC\uB294 \uBA54\uC2DC\uC9C0\uC785\uB2C8\uB2E4. \u0027\uC804\uD658\u0027\uC740 \uC601\uC0C1 \uD3B8\uC9D1\uC5D0\uC11C \uD074\uB9BD \uAC04\uC758 \uC804\uD658 \uD6A8\uACFC(transition)\uB97C \uC758\uBBF8\uD569\uB2C8\uB2E4.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_PleaseWait",
+        "Value": "\uC7A0\uC2DC\uB9CC \uAE30\uB2E4\uB824 \uC8FC\uC138\uC694...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ToolBar_GenerateStandaloneArgs",
+        "Value": "\uB80C\uB354\uB7EC \uBA85\uB839\uC904 \uB0B4\uBCF4\uB0B4\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "UserDataManagePage_Title",
+        "Value": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uAD00\uB9AC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -16692,11 +17266,11 @@
       },
       {
         "Id": "RenderPage_NoDraft",
-        "Value": "Vous devez d\u0027abord ouvrir un brouillon pour proc\u00E9der au rendu",
+        "Value": "Vous devez d\u0027abord ouvrir un brouillon pour pouvoir effectuer le rendu.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Instruction sur le pr\u00E9requis pour l\u0027op\u00E9ration de rendu",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -16946,6 +17520,24 @@
       {
         "Id": "DraftPage_MenuBar_Edit_Spilt",
         "Value": "Diviser le segment s\u00E9lectionn\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_AddTransformNeighbors",
+        "Value": "Ajouter une transition aux clips adjacents",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddTransformNeighbors",
+        "Value": "Ajouter une transition",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18449,7 +19041,7 @@
       },
       {
         "Id": "RenderPage_PostRenderAction_Countdown",
-        "Value": "Rendu termin\u00E9, {action} dans {i} seconde(s).",
+        "Value": "Rendu termin\u00E9, l\u0027op\u00E9ration \u00AB {action} \u00BB sera ex\u00E9cut\u00E9e dans {i} seconde(s).",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -18548,124 +19140,124 @@
       },
       {
         "Id": "HomePage_OpenHint_DoubleClick",
-        "Value": "Unset localization item:HomePage_OpenHint_DoubleClick()",
+        "Value": "Double-cliquez pour ouvrir ce projet ; clic droit pour voir les options avanc\u00E9es.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_OpenHint_Tap",
-        "Value": "Unset localization item:HomePage_OpenHint_Tap()",
+        "Value": "Appuyez bri\u00E8vement pour ouvrir cet \u00E9l\u00E9ment ; appuyez longuement pour voir les options avanc\u00E9es.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatViewTitle",
-        "Value": "Unset localization item:AIAssistant_ChatViewTitle()",
+        "Value": "Assistant IA",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_InfoGrayText",
-        "Value": "Unset localization item:AIAssistant_InfoGrayText()",
+        "Value": "L\u0027IA peut commettre des erreurs, veuillez v\u00E9rifier chaque sortie.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View",
-        "Value": "Unset localization item:DraftPage_MenuBar_View()",
+        "Value": "Vue",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ToolCall",
-        "Value": "Unset localization item:AIAssistant_ChatView_ToolCall()",
+        "Value": "Appel d\u0027outil",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Thinking",
-        "Value": "Unset localization item:AIAssistant_ChatView_Thinking()",
+        "Value": "Processus de r\u00E9flexion",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_SendHint",
-        "Value": "Unset localization item:AIAssistant_ChatView_SendHint()",
+        "Value": "Appuyez sur Entr\u00E9e pour envoyer le message",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Send",
-        "Value": "Unset localization item:AIAssistant_ChatView_Send()",
+        "Value": "Envoyer",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Stop",
-        "Value": "Unset localization item:AIAssistant_ChatView_Stop()",
+        "Value": "Arr\u00EAter",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_WelcomeText",
-        "Value": "Unset localization item:AIAssistant_ChatView_WelcomeText()",
+        "Value": "Ravi de vous rencontrer ! \uD83D\uDE0A\r\nJe suis Assistant P. En quoi puis-je vous aider ? \u2728",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_NoContent",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_NoContent()",
+        "Value": "D\u00E9sol\u00E9, le mod\u00E8le n\u0027a renvoy\u00E9 aucun contenu. Veuillez r\u00E9essayer.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_Cancelled",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_Cancelled()",
+        "Value": "(La requ\u00EAte a \u00E9t\u00E9 annul\u00E9e.)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_Exception",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_Exception(Exception ex)",
+        "Value": "D\u00E9sol\u00E9, une exception non g\u00E9r\u00E9e de type {ex.GetType().Name} s\u0027est produite ({ex.Message}), emp\u00EAchant la requ\u00EAte d\u0027aboutir.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -18679,43 +19271,142 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_NewSession",
-        "Value": "Unset localization item:AIAssistant_ChatView_NewSession()",
+        "Value": "Nouvelle conversation",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_CloseActive",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_CloseActive()",
+        "Value": "Fermer la fen\u00EAtre active",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_CloseAdditional",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_CloseAdditional()",
+        "Value": "Fermer toutes les fen\u00EAtres",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_Reset",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_Reset()",
+        "Value": "R\u00E9initialiser la disposition",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText",
+        "Value": "Texte et sous-titres",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform",
+        "Value": "Transition",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddPicture",
+        "Value": "Images et autocollants",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch",
+        "Value": "Croquis",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddMore",
+        "Value": "Autres",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_TransformAdded",
+        "Value": "Transition ajout\u00E9e avec succ\u00E8s entre {left} et {right}.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "left"
+          },
+          {
+            "Key": "string",
+            "Value": "right"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "left",
+            "Value": ""
+          },
+          {
+            "Key": "right",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_PleaseWait",
+        "Value": "Veuillez patienter...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ToolBar_GenerateStandaloneArgs",
+        "Value": "Exporter la ligne de commande du moteur de rendu",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "UserDataManagePage_Title",
+        "Value": "Gestion des donn\u00E9es utilisateur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -19161,6 +19852,24 @@
       {
         "Id": "DraftPage_MenuBar_Edit_Spilt",
         "Value": "\u6790\u6240\u9009\u4E4B\u7247\u6BB5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_AddTransformNeighbors",
+        "Value": "\u4E3A\u76F8\u90BB\u7247\u6BB5\u6DFB\u52A0\u8F6C\u573A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddTransformNeighbors",
+        "Value": "\u6DFB\u8F6C\u573A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20067,11 +20776,11 @@
       },
       {
         "Id": "RenderPage_NoDraft",
-        "Value": "\u987B\u5148\u542F\u7A3F\uFF0C\u65B9\u5F97\u65BD\u6E32\u67D3",
+        "Value": "\u6C5D\u987B\u5148\u5F00\u4E00\u8349\u7A3F\uFF0C\u65B9\u80FD\u8FDB\u884C\u6E32\u67D3\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\u64CD\u4F5C\u63D0\u793A\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u91C7\u7528\u6761\u4EF6\u53E5\u5F0F\u8868\u8FBE\u524D\u7F6E\u8981\u6C42",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -21616,7 +22325,7 @@
       },
       {
         "Id": "RenderPage_PostRenderAction_Countdown",
-        "Value": "\u6E32\u67D3\u5DF2\u7AE3\uFF0C{i}\u79D2\u4E4B\u540E\u4E43{action}",
+        "Value": "\u6E32\u67D3\u65E2\u6BD5\uFF0C\u4FDF {i} \u79D2\u540E\u65BD\u884C\u64CD\u4F5C\u300C{action}\u300D\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -21715,124 +22424,124 @@
       },
       {
         "Id": "HomePage_OpenHint_DoubleClick",
-        "Value": "Unset localization item:HomePage_OpenHint_DoubleClick()",
+        "Value": "\u53CC\u51FB\u4EE5\u542F\u6B64\u76EE\uFF1B\u53F3\u51FB\u89C2\u8FDB\u9636\u4E4B\u9009",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "HomePage_OpenHint_Tap",
-        "Value": "Unset localization item:HomePage_OpenHint_Tap()",
+        "Value": "\u8F7B\u6309\u5F00\u6B64\u9879\uFF1B\u957F\u6309\u89C2\u9AD8\u9009\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatViewTitle",
-        "Value": "Unset localization item:AIAssistant_ChatViewTitle()",
+        "Value": "\u667A\u8F85",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u201C\u4EBA\u5DE5\u667A\u80FD\u52A9\u624B\u201D\u4E4B\u6587\u8A00\u610F\u8BD1\uFF0C\u53D6\u201C\u667A\u80FD\u8F85\u52A9\u201D\u4E4B\u4E49\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_InfoGrayText",
-        "Value": "Unset localization item:AIAssistant_InfoGrayText()",
+        "Value": "AI\u6216\u6709\u8C2C\u8BEF\uFF0C\u8BF7\u9010\u4E00\u6838\u9A8C\u5176\u8F93\u51FA\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View",
-        "Value": "Unset localization item:DraftPage_MenuBar_View()",
+        "Value": "\u89C8\u5F0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ToolCall",
-        "Value": "Unset localization item:AIAssistant_ChatView_ToolCall()",
+        "Value": "\u5668\u7528",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Thinking",
-        "Value": "Unset localization item:AIAssistant_ChatView_Thinking()",
+        "Value": "\u601D\u8003\u8FC7\u7A0B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_SendHint",
-        "Value": "Unset localization item:AIAssistant_ChatView_SendHint()",
+        "Value": "\u51FB\u56DE\u8F66\u4EE5\u4F20\u8BAF",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Send",
-        "Value": "Unset localization item:AIAssistant_ChatView_Send()",
+        "Value": "\u53D1\u9001",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_Stop",
-        "Value": "Unset localization item:AIAssistant_ChatView_Stop()",
+        "Value": "\u6B62",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_WelcomeText",
-        "Value": "Unset localization item:AIAssistant_ChatView_WelcomeText()",
+        "Value": "\u5E78\u4F1A\u5E78\u4F1A\uFF01\uD83D\uDE0A\r\u543E\u4E43Assistant P\u3002\u6709\u4F55\u4E8B\u9700\u76F8\u52A9\u4E4E\uFF1F\u2728",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u5C06\u73B0\u4EE3\u4E2D\u6587\u95EE\u5019\u8BED\u8F6C\u6362\u4E3A\u6587\u8A00\u6587\u8868\u8FBE\uFF0C\u4FDD\u6301\u53CB\u597D\u8BED\u6C14\uFF0C\u4FDD\u7559\u52A9\u7406\u540D\u79F0\u4E0D\u8BD1",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_NoContent",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_NoContent()",
+        "Value": "\u6B49\u751A\uFF0C\u6A21\u672A\u590D\u6587\u3002\u8BF7\u590D\u8BD5\u4E4B\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_Cancelled",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_Cancelled()",
+        "Value": "\uFF08\u8BF7\u5DF2\u7F62\u3002\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_ChatFail_Exception",
-        "Value": "Unset localization item:AIAssistant_ChatView_ChatFail_Exception(Exception ex)",
+        "Value": "\u6B49\u54C9\uFF0C\u56E0\u672A\u5904\u4E4B {ex.GetType().Name} \u5F02\u751F ({ex.Message})\uFF0C\u8BF7\u96BE\u6210\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -21846,43 +22555,142 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u7559\u63D2\u503C\u53C2\u6570\u3002\u0027\u5F02\u0027\u4EE3\u6307\u5F02\u5E38\uFF0C\u0027\u8BF7\u0027\u6307\u8BF7\u6C42\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "AIAssistant_ChatView_NewSession",
-        "Value": "Unset localization item:AIAssistant_ChatView_NewSession()",
+        "Value": "\u65B0\u8C08",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_CloseActive",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_CloseActive()",
+        "Value": "\u5173\u95ED\u6D3B\u52A8\u7A97\u53E3",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_CloseAdditional",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_CloseAdditional()",
+        "Value": "\u5C3D\u95ED\u8BF8\u89C6\u7A97",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_View_Reset",
-        "Value": "Unset localization item:DraftPage_MenuBar_View_Reset()",
+        "Value": "\u590D\u521D\u5C40",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText",
+        "Value": "\u6587\u53CA\u5B57\u5E55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform",
+        "Value": "\u8F6C\u5883",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddPicture",
+        "Value": "\u56FE\u4E0E\u8D34\u753B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch",
+        "Value": "\u4F5C\u56FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddMore",
+        "Value": "\u5176\u4ED6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_TransformAdded",
+        "Value": "\u5DF2\u65BC\u300C{left}\u300D\u8207\u300C{right}\u300D\u9593\u589E\u8A2D\u8F49\u5834\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "left"
+          },
+          {
+            "Key": "string",
+            "Value": "right"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "left",
+            "Value": ""
+          },
+          {
+            "Key": "right",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_PleaseWait",
+        "Value": "\u8BF7\u7A0D\u5019...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ToolBar_GenerateStandaloneArgs",
+        "Value": "\u51FA\u6E32\u5668\u4EE4\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "UserDataManagePage_Title",
+        "Value": "\u7528\u6237\u6570\u7406",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u0027\u6570\u636E\u0027\u7B80\u4F5C\u0027\u6570\u0027\uFF0C\u0027\u7BA1\u7406\u0027\u8BD1\u4F5C\u0027\u7406\u0027\uFF0C\u4FDD\u6301\u7B80\u6D01\u3002",
         "HasValidationErrors": false
       }
     ]

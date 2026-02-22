@@ -122,7 +122,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     CornerRadius = 20,
                     BackgroundColor = Colors.White,
-                    StrokeThickness = 8
+                    StrokeThickness = 0
                 }
             };
 

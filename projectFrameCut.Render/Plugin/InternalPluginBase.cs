@@ -14,6 +14,7 @@ using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.Transform;
 
 namespace projectFrameCut.Render.Plugin;
 
@@ -162,6 +163,14 @@ public class InternalPluginBase : IPluginBase
         {"BlackHoleWriter", new((_) => new BlackholeVideoWriter()) }
     };
 
+    public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider => new Dictionary<string, Func<Guid, Guid, ITransform>>
+    {
+        {
+            "Crossfade",
+            (prevId, nextId) => new CrossfadeTransform { PreviousClipId = prevId, NextClipId = nextId }
+        }
+    };
+
     IClip IPluginBase.ClipCreator(JsonElement element)
     {
         ClipMode type = (ClipMode)element.GetProperty("ClipType").GetInt32();
@@ -173,6 +182,7 @@ public class InternalPluginBase : IPluginBase
             ClipMode.SolidColorClip => element.Deserialize<SolidColorClip>() ?? throw new NullReferenceException(),
             ClipMode.TextClip => element.Deserialize<TextClip>() ?? throw new NullReferenceException(),
             ClipMode.AudioClip => element.Deserialize<SoundTrackToClipWrapper>() ?? throw new NullReferenceException(),
+            ClipMode.TransformClip => element.Deserialize<TransformContainer>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
         };
     }
@@ -185,6 +195,16 @@ public class InternalPluginBase : IPluginBase
         {
             TrackMode.NormalTrack => element.Deserialize<NormalSoundTrack>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported sound track type {type}."),
+        };
+    }
+
+    ITransform IPluginBase.TransformCreator(JsonElement element)
+    {
+        var typeName = element.GetProperty("TypeName").GetString();
+        return typeName switch
+        {
+            "Crossfade" => element.Deserialize<CrossfadeTransform>() ?? throw new NullReferenceException("Failed to deserialize CrossfadeTransform."),
+            _ => throw new NotSupportedException($"Unknown or unsupported transform type '{typeName}'.")
         };
     }
 

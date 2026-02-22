@@ -107,7 +107,7 @@ namespace projectFrameCut.Render.Rendering
             if (frame.Width != Width || frame.Height != Height)
                 throw new ArgumentException($"The result ({frame.filePath})'s size {frame.Width}*{frame.Height} is different from original size ({Width}*{Height}). Please check the source.")
                 {
-                    Data = { { "PictureObject", frame }, { "ProcessStack", PictureExtensions.FormatProcessStackForLog(frame.ProcessStack) } }
+                    Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
                 };
 
             if (index > Duration)
@@ -122,7 +122,7 @@ namespace projectFrameCut.Render.Rendering
                 {
                     throw new InvalidOperationException($"Frame #{index} has already been added.")
                     {
-                        Data = { { "PictureObject", frame }, { "ProcessStack", PictureExtensions.FormatProcessStackForLog(frame.ProcessStack) } }
+                        Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
                     };
                 }
                 else
@@ -140,7 +140,7 @@ namespace projectFrameCut.Render.Rendering
                 Cache.AddOrUpdate(index, frame,
                     (_, _) => throw new InvalidOperationException($"Frame #{index} has already been added.")
                     {
-                        Data = { { "PictureObject", frame }, { "ProcessStack", PictureExtensions.FormatProcessStackForLog(frame.ProcessStack) } }
+                        Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
                     }
                     );
             }

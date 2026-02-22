@@ -70,6 +70,7 @@ namespace projectFrameCut.Render.Rendering
         // Per-frame diagnostics (used for CSV reporting)
         public ConcurrentDictionary<uint, TimeSpan> FramePrepareElapsed { get; } = new();
         public ConcurrentDictionary<uint, TimeSpan> FrameRenderElapsed { get; } = new();
+        public ConcurrentDictionary<uint, TimeSpan> FrameDirtyTime { get; } = new();
         public ConcurrentDictionary<uint, List<PictureProcessStack>> FrameProcessStacks { get; } = new();
 
         public bool running { get; private set; } = false;
@@ -102,11 +103,13 @@ namespace projectFrameCut.Render.Rendering
 
         private IPicture BlankFrame = null!;
 
-        private PlaceEffect_ImageSharp BlankPlace = new()
-        {
-            StartX = 0,
-            StartY = 0
-        };
+        // Thread-local: PlaceEffect_ImageSharp has mutable state and is not thread-safe
+        private ThreadLocal<PlaceEffect_ImageSharp> _threadLocalBlankPlace =
+            new(() => new PlaceEffect_ImageSharp { StartX = 0, StartY = 0 });
+
+        // Per-clip lock objects to serialize effect processing for the same clip across threads
+        // (IEffect instances in EffectCache are shared and may be stateful)
+        private ConcurrentDictionary<string, object> _clipEffectLocks = new();
 
         public async Task GoRender(CancellationToken token)
         {
@@ -420,10 +423,6 @@ namespace projectFrameCut.Render.Rendering
         public void PrepareRender(CancellationToken token)
         {
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
-            if (IsAndroid)
-            {
-                Log($"[Preparer] Android 平台：OpenGL 计算限制在主线程，预期渲染速度较慢", "info");
-            }
             InitializeRenderCaches();
             bool found = false;
             for (uint idx = StartFrame; idx < StartFrame + Duration; idx++)
@@ -472,7 +471,6 @@ namespace projectFrameCut.Render.Rendering
         {
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             Stopwatch sw = new();
-            // Android 需要更激进的节流策略，因为主线程串行处理 OpenGL 导致渲染很慢
             int throttleThreshold = IsAndroid ? MaxThreads : MaxThreads * 4;
 
             foreach (var idx in ClipNeedForFrame.Keys.OrderBy(x => x))
@@ -577,15 +575,18 @@ namespace projectFrameCut.Render.Rendering
 
             if (token.IsCancellationRequested) return;
 
+            // DO NOT dispose cache frames here.
+            // - Single-clip: result == the cache frame; builder has queued it for async writing.
+            //   Disposing it now = use-after-free while the writer thread still holds a reference.
+            //   The builder will dispose the frame (via PictureFlag) after the write completes.
+            // - Multi-clip: individual clip frames were already disposed inside RenderAFrameInternal
+            //   immediately after being merged (usedFrames == null branch). Result is a fresh
+            //   allocation owned by builder.
+            // Just remove the entries from cache so they don't leak if the clip appears in future frames.
             foreach (var clip in ClipsNeed)
             {
                 if (FrameCache.TryGetValue(clip.Id, out var perClipCache))
-                {
-                    if (perClipCache.TryRemove(targetFrame, out var pic))
-                    {
-                        try { pic?.Dispose(); } catch { }
-                    }
-                }
+                    perClipCache.TryRemove(targetFrame, out _);
             }
             return;
         }
@@ -664,20 +665,6 @@ namespace projectFrameCut.Render.Rendering
             IPicture result = null!;
             Dictionary<string, object> frameLocalCache = new();
 
-            if (clipsNeed.Count == 0)
-            {
-                if (stopBeforeAppendInBlank) sw.Stop();
-                if (logEmptyFrame) Log($"[Render] Frame {targetFrame} is empty.");
-                builder!.Append(targetFrame, BlankFrame);
-                Interlocked.Increment(ref Finished);
-                InvokeProgress();
-                if (!stopBeforeAppendInBlank) sw.Stop();
-                EachElapsed.Add(sw.Elapsed);
-                FrameRenderElapsed[targetFrame] = sw.Elapsed;
-                if (recordPrepareElapsed) FramePrepareElapsed.TryAdd(targetFrame, TimeSpan.Zero);
-                return;
-            }
-
             foreach (var (clip, Frame) in clipsNeed)
             {
                 var frame = Frame;
@@ -692,6 +679,11 @@ namespace projectFrameCut.Render.Rendering
 
                 if (EffectCache.TryGetValue(clip.Id, out var effects) && effects is not null)
                 {
+                    // Serialize per-clip effect processing: IEffect instances are shared across threads
+                    // (stateful effects like ContinuousEffect would corrupt each other without this lock)
+                    var clipLock = _clipEffectLocks.GetOrAdd(clip.Id, _ => new object());
+                    lock (clipLock)
+                    {
                     List<IPictureProcessStep> steps = new();
                     bool lastIsProcessStep = false, effectsChanged = false;
                     var effectCopy = effects.ToList();
@@ -704,30 +696,22 @@ namespace projectFrameCut.Render.Rendering
                             steps.Clear();
                         }
 
-                        if (item.IsNormalEffect)
+                        switch (item.TypeOfEffect)
                         {
-                            if (item.IsContinuousEffect || item.IsBindableArgsEffect) goto notdefined;
-                            EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer, _width, _height);
-                            continue;
+                            case EffectType.NormalEffect:
+                                EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer, _width, _height);
+                                continue;
+                            case EffectType.ContinuousEffect:
+                                if (item is not IContinuousEffect c) goto notdefined;
+                                EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c, _width, _height);
+                                continue;
+                            case EffectType.BindableEffect:
+                                if (item is not IBindableArgumentEffect b) goto notdefined;
+                                continue;
+                            default:
+                                goto notdefined;
                         }
-                        else if (item.IsContinuousEffect)
-                        {
-                            if (item.IsBindableArgsEffect || item.IsNormalEffect) goto notdefined;
-                            if (item is not IContinuousEffect c) goto notdefined;
-                            EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c, _width, _height);
-                            continue;
-                        }
-                        else if (item.IsBindableArgsEffect)
-                        {
-                            if (item.IsContinuousEffect || item.IsNormalEffect) goto notdefined;
-                            if (item is not IBindableArgumentEffect b) goto notdefined;
-                            if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, steps, ref lastIsProcessStep, b, computer, _width, _height))
-                            {
-                                effectCopy.Remove(item);
-                                effectsChanged = true;
-                            }
-                            continue;
-                        }
+
 
                     notdefined:
                         Log($"[Render] Effect {item.Name} of clip {clip.Id} has an not static defined type.", "warn");
@@ -758,17 +742,27 @@ namespace projectFrameCut.Render.Rendering
                     {
                         EffectCache[clip.Id] = effectCopy.OrderBy(c => c.Index).ToArray();
                     }
+                    } // end lock (clipLock)
                 }
 
                 if (result is null)
                 {
+                    // Single-clip (first clip): result takes ownership of the frame.
+                    // In async mode (usedFrames == null), the caller must NOT dispose this frame –
+                    // the builder queue owns it and will dispose it after the write completes.
                     result = frame;
                 }
                 else
                 {
-                    var temp = OverlayMixture.Mix(result, frame, mixComputer, _ppb).Resize(_width, _height, false);
-                    result.Dispose();
-                    result = temp;
+                    // Multi-clip blending: merge current frame into result.
+                    var threadMixComputer = GetOrCreateComputer(OverlayMixture.ComputerId);
+                    var temp = OverlayMixture.Mix(result, frame, threadMixComputer, _ppb).Resize(_width, _height, false);
+                    result.Dispose();  // dispose previous merged result
+                    result = temp;     // result is now a new allocation, safe to pass to builder
+                    // Dispose the original clip frame now that it has been merged.
+                    // In sync mode usedFrames tracks these for deferred disposal, skip here to avoid double-dispose.
+                    if (usedFrames is null)
+                        try { frame.Dispose(); } catch { }
                 }
             }
 
@@ -778,7 +772,8 @@ namespace projectFrameCut.Render.Rendering
             }
             else if (result.Width < _width || result.Height < _height)
             {
-                result = BlankPlace.Render(result, null, _width, _height);
+                // Bug fix: BlankPlace was a shared instance, not thread-safe under concurrent render
+                result = _threadLocalBlankPlace.Value!.Render(result, null, _width, _height);
             }
             else if (result.Width > _width || result.Height > _height)
             {
@@ -786,15 +781,15 @@ namespace projectFrameCut.Render.Rendering
             }
 
             builder!.Append(targetFrame, result);
+            Interlocked.Increment(ref Finished);
+            sw.Stop();
             if (LogProcessStack)
             {
                 FrameProcessStacks[targetFrame] = result.ProcessStack;
+                FrameDirtyTime[targetFrame] = sw.Elapsed - TimeSpan.FromTicks(result.ProcessStack.Where(c => c.Elapsed is not null).Sum(c => c.Elapsed!.Value.Ticks));
             }
-
-            Interlocked.Increment(ref Finished);
-            sw.Stop();
             InvokeProgress();
-            if (LogState) Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}");
+            if (LogState) Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}, dirty time {FrameDirtyTime[targetFrame]}");
             EachElapsed.Add(sw.Elapsed);
             FrameRenderElapsed[targetFrame] = sw.Elapsed;
             if (recordPrepareElapsed) FramePrepareElapsed.TryAdd(targetFrame, TimeSpan.Zero);
@@ -803,11 +798,6 @@ namespace projectFrameCut.Render.Rendering
         private void InitializeRenderCaches()
         {
             EffectCache.Clear();
-            //MixtureCache = new ConcurrentDictionary<MixtureMode, IMixture>(new Dictionary<MixtureMode, IMixture>
-            //{
-            //    { MixtureMode.Overlay, new OverlayMixture() }
-            //});
-
             foreach (var item in Clips ?? Array.Empty<IClip>())
             {
                 if (!item.Effects.ArrayAny()) continue;
@@ -819,6 +809,11 @@ namespace projectFrameCut.Render.Rendering
                         throw new InvalidDataException("A effect can't both yield process step, and use a computer.");
                 }
                 Log($"[Preparer] Cached {effectInstances.Length} effects for clip {item.Id} ({string.Join(", ", effectInstances.Select(c => $"{c.TypeName}:'{c.Name}'"))})");
+                if (item is Render.ClipsAndTracks.TransformContainer c)
+                {
+                    c.Transform?.Previous = Clips?.FirstOrDefault(clip => clip.Id == c.Transform?.PreviousClipId.ToString());
+                    c.Transform?.Next = Clips?.FirstOrDefault(clip => clip.Id == c.Transform?.NextClipId.ToString());
+                }
             }
 
             mixComputer = GetOrCreateComputer(OverlayMixture.ComputerId) ?? throw new NullReferenceException("Can't create computer for global mixer.");
@@ -916,6 +911,11 @@ namespace projectFrameCut.Render.Rendering
 
                 // Clean up thread-local computer cache
                 try { _threadLocalComputerCache?.Dispose(); } catch { }
+
+                // Clean up thread-local BlankPlace
+                try { _threadLocalBlankPlace?.Dispose(); } catch { }
+
+                _clipEffectLocks.Clear();
 
                 // Clean up thread limiter
                 try { _threadLimiter?.Dispose(); } catch { }

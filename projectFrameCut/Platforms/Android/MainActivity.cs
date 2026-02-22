@@ -1,8 +1,9 @@
 ﻿using Android.App;
+using Android.Content;
 using Android.Content.PM;
 using Android.OS;
-using Android.Runtime;
 using AndroidX.Core.View;
+using Android.Runtime;
 using projectFrameCut.Setting.SettingManager;
 using System;
 
@@ -17,6 +18,22 @@ namespace projectFrameCut.Platforms.Android
         Name = "com.hexadecimal0x12e.projectFrameCut.MainActivity",
         Label = "projectFrameCut"
         )]
+    [IntentFilter([Intent.ActionView],
+        Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable },
+        DataScheme = "pjfc")]
+    [IntentFilter([Intent.ActionView],
+        Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable },
+        DataScheme = "pjfcAndroid")]
+    [IntentFilter([Intent.ActionView],
+        Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable },
+        DataScheme = "https",
+        DataHost = "pjfc.hexadecimal0x12e.com",
+        DataPath = "/launch")]
+    [IntentFilter([Intent.ActionView],
+        Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable },
+        DataScheme = "https",
+        DataHost = "pjfc.wonderhoy.xyz",// in future this domain will get ICP and use as secondary domain in China Mainland
+        DataPath = "/launch")]
     public class MainActivity : MauiAppCompatActivity
     {
         protected override void OnCreate(Bundle? savedInstanceState)
@@ -42,9 +59,22 @@ namespace projectFrameCut.Platforms.Android
             // Best-effort flush settings on activity destroy. Block briefly to increase chance of persistence.
             try
             {
+                Log("OnDestroy() is called. Calling OnClosing() for plugins...");
                 var flushTask = SettingsManager.FlushAndStopAsync();
                 // Wait up to 2 seconds for flush to complete to avoid long ANR.
                 flushTask.Wait(TimeSpan.FromSeconds(2));
+                try
+                {
+                    foreach (var item in Render.Plugin.PluginManager.LoadedPlugins)
+                    {
+                        try
+                        {
+                            item.Value.OnClosing();
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
             }
             catch
             {

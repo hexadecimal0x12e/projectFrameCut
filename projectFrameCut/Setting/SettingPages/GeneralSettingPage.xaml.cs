@@ -92,7 +92,7 @@ public partial class GeneralSettingPage : ContentPage
             .AddButton("userDataSelectButton", SettingLocalizedResources.General_UserData_SelectPath)
 #endif
             .AddButton("openUserDataButton", SettingLocalizedResources.General_UserData_Open(MauiProgram.DataPath))
-            .AddButton("manageUsedDataButton", SettingLocalizedResources.General_UserData_ManagePageOpen, null)
+            .AddButton(SettingLocalizedResources.General_UserData_ManagePageOpen, async (s, e) => await Navigation.PushAsync(new UserDataManagePage()))
 
             .ListenToChanges(SettingInvoker);
         Content = rootPPB.BuildWithScrollView();
@@ -289,9 +289,7 @@ public partial class GeneralSettingPage : ContentPage
                         break;
                     }
 #endif
-                case "manageUsedDataButton":
-                    //todo: manage userdata
-                    goto done;
+
                 case "openUserDataButton":
                     await FileSystemService.OpenFolderAsync(MauiProgram.DataPath);
 #if ANDROID

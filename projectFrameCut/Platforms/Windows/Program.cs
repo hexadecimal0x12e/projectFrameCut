@@ -45,6 +45,30 @@ namespace projectFrameCut.WinUI
                     }
                     return;
                 }
+                if (!args.Any(c => c.StartsWith("--noSplash")))
+                {
+                    try
+                    {
+                        var pfn = WinUI.App.GetPackageFamilyName();
+                        projectFrameCut.Helper.HelperProgram.AppChannel = pfn switch
+                        {
+                            "hexadecimal0x12e.projectFrameCutCommunity_f91nmrsqwpk6y" => "Community",
+                            "0xeeeeeeeeeeee.projectFrameCutCommunity_f91nmrsqwpk6y" => "Community MS Store",
+                            "hexadecimal0x12e.projectFrameCut_f91nmrsqwpk6y" => "Standard",
+                            "0xeeeeeeeeeeee.projectFrameCut_f91nmrsqwpk6y" => "MS Store",
+                            _ => "Non-official build"
+                        };
+
+                    }
+                    catch
+                    {
+
+                    }
+                    var splash = new Thread(projectFrameCut.Helper.HelperProgram.SplashMain);
+                    splash.Priority = ThreadPriority.Highest;
+                    splash.IsBackground = false;
+                    splash.Start();
+                }
                 if (args.Any(c => c.StartsWith("--overrideCulture")))
                 {
                     var overrideCulture = args.First(c => c.StartsWith("--overrideCulture")).Split('=')[1];
@@ -95,14 +119,6 @@ namespace projectFrameCut.WinUI
             }
             try
             {
-                if (!args.Any(c => c.StartsWith("--noSplash")))
-                {
-                    var splash = new Thread(projectFrameCut.Helper.HelperProgram.SplashMain);
-                    splash.Priority = ThreadPriority.Highest;
-                    splash.IsBackground = false;
-                    splash.Start();
-                }
-
                 Log("Initializing application...");
                 WinRT.ComWrappersSupport.InitializeComWrappers();
                 Microsoft.UI.Xaml.Application.Start((p) =>
@@ -191,7 +207,7 @@ If you want to help the development of this application, please consider to subm
                 string appInfo = $"Application: {Assembly.GetExecutingAssembly().GetName().FullName}";
                 try
                 {
-                    appInfo = $"Application: {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} Packaged:{MauiProgram.IsPackaged()}";
+                    appInfo = $"Application: {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} Packaged:{WinUI.App.IsPackaged()}";
                 }
                 catch { }
                 var content =
