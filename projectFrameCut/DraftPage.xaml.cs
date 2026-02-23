@@ -176,6 +176,7 @@ public partial class DraftPage : ContentPage
     public ICommand AddTransformToNeighborsCommand { get; private set; }
 
     public ClipElementUI? SelectedClip => _selected;
+    public event EventHandler? SelectedClipChanged;
     #endregion
 
     #region options
@@ -298,7 +299,6 @@ public partial class DraftPage : ContentPage
         ExitNoSaveCommand = new Command(async () => await ExitButNoSave());
         ManageWindowCommand = new Command<string?>(ExecuteManageWindowCommand);
         ResetMultiWindowViewCommand = new Command(() => ResetLayout());
-        //AddTransformToNeighborsCommand = new Command(async () => await AddTransformToNeighbors(""));
     }
 
 
@@ -520,6 +520,8 @@ public partial class DraftPage : ContentPage
         AddClipView.ClipAdded += async (s, args) =>
         {
             this.Popup.Content = null;
+            _transformMenuActivatedCenterClip = null;
+            _transformMenuActivatedHandle = "none";
             await HidePopup();
         };
         DraftChanged(sender, new ClipUpdateEventArgs { NoSave = true });
@@ -608,7 +610,7 @@ public partial class DraftPage : ContentPage
         {
             NumberOfTapsRequired = 2
         };
-        leftHandleClickGesture.Tapped += (s,e) => HandleTransformAdd(element, true, false);
+        leftHandleClickGesture.Tapped += (s, e) => HandleTransformAdd(element, true, false);
 
         var selectTapGesture = new TapGestureRecognizer
         {
@@ -750,7 +752,8 @@ public partial class DraftPage : ContentPage
         {
             Source = ImageHelper.LoadFromAsset("icon_option"),
             WidthRequest = 16,
-            HeightRequest = 16
+            HeightRequest = 16,
+            IsVisible = false //todo
         };
 
         Label label = new Label
@@ -866,7 +869,8 @@ public partial class DraftPage : ContentPage
         {
             Source = ImageHelper.LoadFromAsset("icon_option"),
             WidthRequest = 16,
-            HeightRequest = 16
+            HeightRequest = 16,
+            IsVisible = false //todo
         };
 
         Label label = new Label
@@ -962,6 +966,7 @@ public partial class DraftPage : ContentPage
 
     private async void AddClip_Clicked(object sender, EventArgs e)
     {
+        await (AddClipView.MainTabView.BindingContext as ProjectAddClipViewModel)?.Refresh();
         await ShowAPopup(AddClipView);
     }
     #endregion
@@ -993,6 +998,7 @@ public partial class DraftPage : ContentPage
         ClipEditor.SetClip(clip, Assets.TryGetValue(clip.Id, out var asset) ? asset : null);
         SetTimelineScrollEnabled(false);
         RightContentBorder.Content = await BuildPropertyPanel(clip);
+        SelectedClipChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void ContextSelectTapGesture_Tapped(object? sender, TappedEventArgs e)
@@ -1044,6 +1050,7 @@ public partial class DraftPage : ContentPage
         ClipEditor.SetClip(null, null);
         SetTimelineScrollEnabled(true);
         RightContentBorder.Content = new Label { Text = Localized.DraftPage_PropertyPanel_SelectToContinue, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
+        SelectedClipChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void SetTimelineScrollEnabled(bool enabled)
@@ -1572,10 +1579,10 @@ public partial class DraftPage : ContentPage
     }
 
 
-    public bool AddTransformBetweenSelected(string typeKey, ClipElementUI center, bool left, bool right)
+    public bool AddTransformBetweenSelected(string typeKey, ClipElementUI? center, bool left, bool right)
     {
         if (center is null) return false;
-        if (left && right) throw new InvalidOperationException("Cannot add a transfrom in both direction.");
+        if (left && right) throw new InvalidOperationException("Cannot add a transform in both direction.");
         var transforms = TransformServices.GetAvailableTransforms();
         if (!transforms.TryGetValue(typeKey, out var factory)) return false;
 
@@ -1614,15 +1621,29 @@ public partial class DraftPage : ContentPage
 
     private void HandleTransformAdd(ClipElementUI center, bool left, bool right)
     {
-        _transformMenuActivatedCenterClip = center;
-        _transformMenuActivatedHandle = left ? "left" : (right ? "right" : "none");
-        AddClip_Clicked(this, EventArgs.Empty);
-        AddClipView.MainTabView.SelectByTag("Transform");
+        var (leftNeighbor, rightNeighbor) = FindNeighbors(center);
+        if (left && leftNeighbor is null)
+        {
+            SetStatusText(Localized.DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft);
+        }
+        else if (right && rightNeighbor is null)
+        {
+            SetStatusText(Localized.DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight);
+        }
+        else
+        {
+
+            _transformMenuActivatedCenterClip = center;
+            _transformMenuActivatedHandle = left ? "left" : (right ? "right" : "none");
+            AddClip_Clicked(this, EventArgs.Empty);
+            AddClipView.MainTabView.SelectByTag("Transform");
+        }
+
     }
 
     public void AddTransformToNeighbors(string type)
     {
-        if((_transformMenuActivatedCenterClip ?? _selected) is null)
+        if ((_transformMenuActivatedCenterClip ?? _selected) is null)
         {
             SetStatusText(Localized.DraftPage_PropertyPanel_SelectToContinue);
             return;
@@ -2927,6 +2948,9 @@ public partial class DraftPage : ContentPage
 
         popupShowingDirection = "none";
 
+        _transformMenuActivatedCenterClip = null;
+        _transformMenuActivatedHandle = "none";
+
     }
 
 
@@ -3142,8 +3166,9 @@ public partial class DraftPage : ContentPage
         return Math.Max(0, s);
     }
 
-    private (ClipElementUI? left, ClipElementUI? right) FindNeighbors(ClipElementUI clip)
+    public (ClipElementUI? left, ClipElementUI? right) FindNeighbors(ClipElementUI? clip)
     {
+        if (clip is null) return (null, null);
         if (clip.origTrack is null) return (null, null);
         int track = clip.origTrack.Value;
 
@@ -3436,6 +3461,7 @@ public partial class DraftPage : ContentPage
         }
         catch (Exception ex)
         {
+            Log(ex, "apply change", this);
             SetStateFail(Localized._ExceptionTemplate(ex));
 #if DEBUG
             if (await DisplayAlertAsync(Localized._Error, Localized.DraftPage_ApplyChangesFail(ex), "Throw", Localized._OK)) throw;
@@ -3831,6 +3857,7 @@ public partial class DraftPage : ContentPage
         GC.WaitForPendingFinalizers();
 #endif
         SetStateOK();
+        SetStatusText(Localized.DraftPage_EverythingFine);
     }
 
     bool ExitNoSave = false;
@@ -4218,24 +4245,31 @@ public partial class DraftPage : ContentPage
         }
 
 
-        Content = new VerticalStackLayout
+        try
         {
-            HorizontalOptions = LayoutOptions.Center,
-            VerticalOptions = LayoutOptions.Center,
-            Children =
+            Content = new VerticalStackLayout
             {
-                new ActivityIndicator
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center,
+                Children =
                 {
-                    IsRunning = true
-                },
-                new Label
-                {
-                    Text = ExitNoSave ? Localized.DraftPage_Processing : Localized.DraftPage_SavingChanges,
-                    HorizontalTextAlignment = TextAlignment.Center,
-                    Margin = new Thickness(0,10,0,0)
+                    new ActivityIndicator
+                    {
+                        IsRunning = true
+                    },
+                    new Label
+                    {
+                        Text = ExitNoSave ? Localized.DraftPage_Processing : Localized.DraftPage_SavingChanges,
+                        HorizontalTextAlignment = TextAlignment.Center,
+                        Margin = new Thickness(0,10,0,0)
+                    }
                 }
-            }
-        };
+            };
+        }
+        catch
+        {
+            //the window maybe closed; just ignore any exception here
+        }
 
 
         if (this.Window is not null)

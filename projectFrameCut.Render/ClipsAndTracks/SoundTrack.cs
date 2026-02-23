@@ -36,6 +36,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string Name { get; init; }
         public string? BindedSoundTrack { get => SoundTrack?.Id; init { throw new NotSupportedException(); } }
         public uint LayerIndex { get; init; }
+        public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }

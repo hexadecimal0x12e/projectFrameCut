@@ -18,7 +18,29 @@ namespace projectFrameCut
 
             instance = this;
             HintLabel.Text = SettingLocalizedResources.General_SelectAPageToGo;
-            VersionLabel.Text = $"{Localized.AppBrand} v{Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}";
+            string channelStr = "";
+#if WINDOWS
+            try
+            {
+                var pfn = WinUI.App.GetPackageFamilyName();
+                var channel = pfn switch
+                {
+                    "hexadecimal0x12e.projectFrameCutCommunity_f91nmrsqwpk6y" => "Community",
+                    "0xeeeeeeeeeeee.projectFrameCutCommunity_f91nmrsqwpk6y" => "Community MS Store",
+                    "hexadecimal0x12e.projectFrameCut_f91nmrsqwpk6y" => "Standard",
+                    "0xeeeeeeeeeeee.projectFrameCut_f91nmrsqwpk6y" => "MS Store",
+                    _ => "Non-official build"
+                };
+                channelStr = $" ({channel} channel)";
+
+            }
+            catch
+            {
+
+            }
+
+#endif
+            VersionLabel.Text = $"{Localized.AppBrand} v{Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}{channelStr}";
             CopyrightText.Text += DateTime.Now.Year.ToString();
 #if iDevices && !DEBUG // no reflection in momo on ios, plugin can't work at all.
             PluginSettingButton.IsVisible = false; 

@@ -124,6 +124,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public RawPictureSequenceStreamVideoDecoderContext(string newSource)
         {
+            if (newSource is null) return;
+
             var pathParts = newSource.Split('@', 2, StringSplitOptions.TrimEntries);
             var protocol = pathParts[0];
             var path = pathParts[1];
@@ -282,6 +284,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public void Initialize()
         {
+
             try
             {
                 if (isTcp)
@@ -301,7 +304,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 }
                 else
                 {
-                    throw new InvalidOperationException("No valid connection protocol specified.");
+                    return; // No connection protocol specified, just return without throwing to allow for TryInitialize to work.
+                    //throw new InvalidOperationException("No valid connection protocol specified.");
                 }
             }
             catch (Exception ex)

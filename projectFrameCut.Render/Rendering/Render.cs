@@ -444,6 +444,7 @@ namespace projectFrameCut.Render.Rendering
                                 .Append(item)
                                 .OrderBy(x => x.LayerIndex >= SubTrackOffset ? 1 : 0)
                                 .ThenByDescending(x => x.LayerIndex)
+                                .ThenByDescending(x => x.SubLayerIndex)
                                 .ToArray());
                     }
                 }

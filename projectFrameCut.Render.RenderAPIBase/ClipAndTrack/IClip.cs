@@ -45,6 +45,10 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// Indicate which layer this clip is in. Higher index means upper layer.
         /// </summary>
         public uint LayerIndex { get; init; }
+        /// <summary>
+        /// Indicate which sub-layer this clip is in. Higher index means upper sub-layer.
+        /// </summary>
+        public uint SubLayerIndex { get; init; }
 
         /// <summary>
         /// Where this clip starts in the whole draft, in frames.

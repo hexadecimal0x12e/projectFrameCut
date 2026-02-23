@@ -5,6 +5,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Drawing.Processing;
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Text;
 using SixLabors.ImageSharp.Processing;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -12,6 +13,7 @@ using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Plugin;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using projectFrameCut.Render.Effect;
 
 namespace projectFrameCut.Render.ClipsAndTracks
@@ -21,6 +23,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public required string Id { get; init; }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
+        public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
@@ -68,6 +71,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public required string Id { get; init; }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
+        public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
@@ -104,7 +108,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             if (FilePath is null) throw new NullReferenceException($"PhotoClip {Id}'s source path is null.");
             source = Use16bpp ? new Picture16bpp(FilePath) : new Picture8bpp(FilePath);
-            source.Disposed = false;
+            source.Disposed = null;
             source.ProcessStack = new List<PictureProcessStack>
             {
                 new PictureProcessStack
@@ -134,6 +138,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public required string Id { get; init; }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
+        public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
@@ -189,6 +194,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public required string Id { get; init; }
         public required string Name { get; init; }
         public uint LayerIndex { get; init; } = 0;
+        public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
@@ -221,14 +227,14 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 Font font;
                 if (GetFont().TryGet(entry.fontFamily, out var family))
                 {
-                    font = family.CreateFont(entry.fontSize);
+                    font = family.CreateFont(entry.fontSize, entry.fontStyle);
                 }
                 else
                 {
                     Log($"Font {entry.fontFamily} not available, try fallback to HarmonyOS_Sans_SC_Regular...");
                     if (GetFont().TryGet("HarmonyOS_Sans_SC_Regular", out var defaultFamily))
                     {
-                        font = defaultFamily.CreateFont(entry.fontSize);
+                        font = defaultFamily.CreateFont(entry.fontSize, entry.fontStyle);
                     }
                     else
                     {
@@ -236,14 +242,64 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
                         var first = GetFont().Families.FirstOrDefault();
                         if (first != default)
-                            font = first.CreateFont(entry.fontSize);
+                            font = first.CreateFont(entry.fontSize, entry.fontStyle);
                         else
                             continue;
                     }
                 }
 
-                var color = new Rgba64(entry.r, entry.g, entry.b, (ushort)((entry.a ?? 1.0f) * 65535));
-                canvas.Mutate(i => i.DrawText(entry.text, font, color, new PointF(entry.x, entry.y)));
+                var fillColor = Color.FromPixel(new Rgba64(entry.r, entry.g, entry.b, (ushort)((entry.a ?? 1.0f) * 65535)));
+                var brush = Brushes.Solid(fillColor);
+
+                var richTextOptions = new RichTextOptions(font)
+                {
+                    KerningMode = entry.applyKerning ? KerningMode.Standard : KerningMode.None,
+                    LineSpacing = entry.lineSpacing,
+                    HorizontalAlignment = entry.horizontalAlignment,
+                    VerticalAlignment = entry.verticalAlignment,
+                    Dpi = entry.dpi ?? 72f,
+                    Origin = new PointF(entry.x, entry.y),
+                };
+                if (entry.wrappingWidth.HasValue)
+                    richTextOptions.WrappingLength = entry.wrappingWidth.Value;
+
+                // prepare stroke if requested
+                bool hasStroke = entry.strokeWidth.HasValue && entry.strokeWidth.Value > 0f;
+                SolidPen? pen = null;
+                if (hasStroke)
+                {
+                    var strokeColor = Color.FromPixel(new Rgba64(entry.strokeR, entry.strokeG, entry.strokeB, 65535));
+                    pen = Pens.Solid(strokeColor, entry.strokeWidth!.Value);
+                }
+
+                // If rotation is specified, draw to a temp layer then rotate it around the entry origin.
+                if (Math.Abs(entry.rotation) > 0.0001f)
+                {
+                    using var textLayer = new Image<Rgba64>(targetWidth, targetHeight);
+                    textLayer.Mutate(ctx =>
+                    {
+                        if (hasStroke)
+                            ctx.DrawText(richTextOptions, entry.text, brush, pen!);
+                        else
+                            ctx.DrawText(richTextOptions, entry.text, brush);
+                    });
+                    var transformBuilder = new AffineTransformBuilder()
+                        .AppendTranslation(new Vector2(-entry.x, -entry.y))
+                        .AppendRotationDegrees(entry.rotation)
+                        .AppendTranslation(new Vector2(entry.x, entry.y));
+                    textLayer.Mutate(ctx => ctx.Transform(transformBuilder));
+                    canvas.Mutate(ctx => ctx.DrawImage(textLayer, 1f));
+                }
+                else
+                {
+                    canvas.Mutate(ctx =>
+                    {
+                        if (hasStroke)
+                            ctx.DrawText(richTextOptions, entry.text, brush, pen!);
+                        else
+                            ctx.DrawText(richTextOptions, entry.text, brush);
+                    });
+                }
             }
 
             return new Picture(canvas)
@@ -293,19 +349,81 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public uint? GetClipLength() => Duration;
 
-        public record TextClipEntry(string text, int x, int y, string fontFamily, float fontSize, ushort r, ushort g, ushort b, float? a = null);
 
         private static FontCollection fontsCache = new();
+        private static bool hasGetFontCache = false;
         public static FontCollection FontsCache { get { return fontsCache; } }
-        public static FontCollection GetFont()
+        public static FontCollection GetFont(bool force = false)
         {
+            if (hasGetFontCache && !force) return fontsCache;
             fontsCache.AddSystemFonts();
             foreach (var item in Directory.GetFiles(AppContext.BaseDirectory, "*.ttf"))
             {
                 fontsCache.Add(item);
             }
+            hasGetFontCache = true;
             return fontsCache;
 
+        }
+
+        public record TextClipEntry
+        {
+            // Core text
+            [JsonInclude] public string text;
+            [JsonInclude] public int x;
+            [JsonInclude] public int y;
+
+            // Font
+            [JsonInclude] public string fontFamily;
+            [JsonInclude] public float fontSize;
+            public FontStyle fontStyle { get; init; } = FontStyle.Regular;
+
+            // Fill color (0..65535 each)
+            [JsonInclude] public ushort r;
+            [JsonInclude] public ushort g;
+            [JsonInclude] public ushort b;
+            [JsonInclude] public float? a;
+
+            // Alignment and wrapping
+            public HorizontalAlignment horizontalAlignment { get; init; } = HorizontalAlignment.Left;
+            public VerticalAlignment verticalAlignment { get; init; } = VerticalAlignment.Top;
+            public float? wrappingWidth { get; init; } = null; // when set, enables wrapping within this width
+
+            // Layout and metrics
+            public bool applyKerning { get; init; } = true;
+            public float lineSpacing { get; init; } = 1.0f; // multiplier for line height
+
+            // Appearance
+            public float rotation { get; init; } = 0f; // degrees clockwise
+
+            // Stroke / outline (optional)
+            public float? strokeWidth { get; init; } = null;
+            public ushort strokeR { get; init; } = 0;
+            public ushort strokeG { get; init; } = 0;
+            public ushort strokeB { get; init; } = 0;
+
+            // Additional: DPI for font rasterization (nullable, uses default when null)
+            public float? dpi { get; init; } = null;
+
+            public bool ShouldInSubtrack { get; set; } = false;
+
+            public TextClipEntry() 
+            {
+
+            }
+
+            public TextClipEntry(string text, int x, int y, string fontFamily, float fontSize, ushort r, ushort g, ushort b, float? a = null)//compactable to older versions
+            {
+                this.text = text ?? throw new ArgumentNullException(nameof(text));
+                this.x = x;
+                this.y = y;
+                this.fontFamily = fontFamily ?? throw new ArgumentNullException(nameof(fontFamily));
+                this.fontSize = fontSize;
+                this.r = r;
+                this.g = g;
+                this.b = b;
+                this.a = a;
+            }
         }
     }
 
@@ -319,6 +437,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string Name { get; init; }
         public string BindedSoundTrack { get; init; }
         public uint LayerIndex { get; init; }
+        public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }

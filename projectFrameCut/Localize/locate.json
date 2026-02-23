@@ -643,7 +643,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddPicture",
-        "Value": "\u56FE\u7247\u548C\u8D34\u7EB8",
+        "Value": "\u63D2\u56FE\u548C\u8D34\u7EB8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -658,6 +658,30 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_AddClipView_AddSketch_DrawHere",
+        "Value": "\u63D0\u793A\uFF1A\u4F60\u53EF\u4EE5\u5728\u4E0B\u9762\u7ED8\u5236\u5185\u5BB9\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_NoContent",
+        "Value": "\u753B\u5E03\u662F\u7A7A\u7684\uFF0C\u8BF7\u5148\u753B\u4E2A\u4E24\u7B14\u518D\u8BD5\u8BD5\u5427\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_SelectColor",
+        "Value": "\u753B\u7B14\u989C\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_AddClipView_AddText",
         "Value": "\u6587\u672C\u548C\u5B57\u5E55",
         "Mode": "ConstString",
@@ -666,8 +690,80 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_AddClipView_AddText_InputPlaceholder",
+        "Value": "\u5728\u8FD9\u91CC\u8F93\u5165\u4F60\u60F3\u8981\u6DFB\u52A0\u7684\u6587\u672C\uFF0C\r\u7136\u540E\u53CC\u51FB\u4E0B\u9762\u4EFB\u610F\u4E00\u4E2A\u4F60\u559C\u6B22\u7684\u6587\u672C\u6837\u5F0F\u6765\u6DFB\u52A0\u5B83\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_SelectStyle",
+        "Value": "\u63D0\u793A\uFF1A\u5728\u8F93\u5165\u6587\u672C\u4E4B\u540E\uFF0C\u53CC\u51FB\u4E0B\u9762\u4EFB\u610F\u4E00\u4E2A\u4F60\u559C\u6B22\u7684\u6587\u672C\u6837\u5F0F\u6765\u6DFB\u52A0\u5B83\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_AddClipView_AddTransform",
         "Value": "\u8F6C\u573A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInLeft",
+        "Value": "\u5728\u5DE6\u8FB9\u6DFB\u52A0\u8FD9\u4E2A\u8F6C\u573A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInRight",
+        "Value": "\u5728\u53F3\u8FB9\u8FB9\u6DFB\u52A0\u8FD9\u4E2A\u8F6C\u573A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInSelectedDirection",
+        "Value": "\u5728\u9009\u4E2D\u7684\u628A\u624B\u5DE6\u8FB9/\u53F3\u8FB9\u6DFB\u52A0\u8FD9\u4E2A\u8F6C\u573A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
+        "Value": "\u9009\u4E2D\u7684\u7247\u6BB5\u7684\u5DE6\u8FB9\u6CA1\u6709\u76F8\u90BB\u7684\u7247\u6BB5\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
+        "Value": "\u9009\u4E2D\u7684\u7247\u6BB5\u7684\u53F3\u8FB9\u6CA1\u6709\u76F8\u90BB\u7684\u7247\u6BB5\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_NoTargetClip",
+        "Value": "\u4F60\u9700\u8981\u9009\u4E2D\u4E00\u4E2A\u7247\u6BB5\uFF0C\u6216\u8005\u76F4\u63A5\u53CC\u51FB\u5B83\u7684\u628A\u624B\uFF0C\u6765\u8BA9\u6211\u4EEC\u77E5\u9053\u4F60\u8981\u6DFB\u52A0\u7684\u76EE\u6807\u7247\u6BB5\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_Search",
+        "Value": "\u641C\u7D22\u6B64\u9875\u9762\u4E2D\u7684\u5185\u5BB9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6283,6 +6379,114 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_NoTargetClip",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_NoTargetClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInLeft",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInLeft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInRight",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInRight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInSelectedDirection",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInSelectedDirection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_InputPlaceholder",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_InputPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_SelectStyle",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_SelectStyle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_DrawHere",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_DrawHere()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_SelectColor",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_SelectColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_Search",
+        "Value": "Unset localization item:DraftPage_AddClipView_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_NoContent",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -9560,6 +9764,114 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_NoTargetClip",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_NoTargetClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInLeft",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInLeft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInRight",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInRight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInSelectedDirection",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInSelectedDirection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_InputPlaceholder",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_InputPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_SelectStyle",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_SelectStyle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_DrawHere",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_DrawHere()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_SelectColor",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_SelectColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_Search",
+        "Value": "Unset localization item:DraftPage_AddClipView_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_NoContent",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -12845,6 +13157,114 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_NoTargetClip",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_NoTargetClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInLeft",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInLeft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInRight",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInRight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInSelectedDirection",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInSelectedDirection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_InputPlaceholder",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_InputPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_SelectStyle",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_SelectStyle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_DrawHere",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_DrawHere()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_SelectColor",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_SelectColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_Search",
+        "Value": "Unset localization item:DraftPage_AddClipView_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_NoContent",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -16129,6 +16549,114 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_NoTargetClip",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_NoTargetClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInLeft",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInLeft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInRight",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInRight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInSelectedDirection",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInSelectedDirection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_InputPlaceholder",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_InputPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_SelectStyle",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_SelectStyle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_DrawHere",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_DrawHere()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_SelectColor",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_SelectColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_Search",
+        "Value": "Unset localization item:DraftPage_AddClipView_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_NoContent",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -19407,6 +19935,114 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_NoTargetClip",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_NoTargetClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInLeft",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInLeft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInRight",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInRight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInSelectedDirection",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInSelectedDirection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_InputPlaceholder",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_InputPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_SelectStyle",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_SelectStyle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_DrawHere",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_DrawHere()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_SelectColor",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_SelectColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_Search",
+        "Value": "Unset localization item:DraftPage_AddClipView_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_NoContent",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -22691,6 +23327,114 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u0027\u6570\u636E\u0027\u7B80\u4F5C\u0027\u6570\u0027\uFF0C\u0027\u7BA1\u7406\u0027\u8BD1\u4F5C\u0027\u7406\u0027\uFF0C\u4FDD\u6301\u7B80\u6D01\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_NoTargetClip",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_NoTargetClip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInLeft",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInLeft()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInRight",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInRight()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddTransform_AddInSelectedDirection",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInSelectedDirection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_InputPlaceholder",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_InputPlaceholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_SelectStyle",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_SelectStyle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_DrawHere",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_DrawHere()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_SelectColor",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_SelectColor()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_Search",
+        "Value": "Unset localization item:DraftPage_AddClipView_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSketch_NoContent",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]

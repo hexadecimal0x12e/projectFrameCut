@@ -8,8 +8,8 @@
              x:DataType="vm:RenderPageViewModel"
              Title="RenderPage">
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/>
-        <ToolbarItem Priority="2" x:Name="GenerateStandaloneArgsButton" Text="{l:Localized Key=RenderPage_ToolBar_GenerateStandaloneArgs}" Clicked="GenerateStandaloneArgs_Clicked" IsEnabled="{OnPlatform WinUI=True, Default=False}" />
+        <ToolbarItem Order="Secondary" Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/>
+        <ToolbarItem Order="Secondary" x:Name="GenerateStandaloneArgsButton" Text="{l:Localized Key=RenderPage_ToolBar_GenerateStandaloneArgs}" Clicked="GenerateStandaloneArgs_Clicked" IsEnabled="{OnPlatform WinUI=True, Default=False}" />
 
     </ContentPage.ToolbarItems>
     <Grid>

@@ -36,7 +36,9 @@ namespace projectFrameCut.Render.Rendering
                 {
                     if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
-                        throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
+                        continue; //keep same behavior in Renderer
+
+                        //throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
                     var frame = clip.GetFrame(targetFrame, targetWidth, targetHeight, true);
                     if (frame is not null)
@@ -46,7 +48,7 @@ namespace projectFrameCut.Render.Rendering
                 }
             }
 
-            return result.OrderBy(x => x.LayerIndex >= Renderer.SubTrackOffset ? 1 : 0).ThenByDescending(x => x.LayerIndex);
+            return result.OrderBy(x => x.LayerIndex >= Renderer.SubTrackOffset ? 1 : 0).ThenByDescending(x => x.LayerIndex).ThenByDescending(x => x.ParentClip.SubLayerIndex);
         }
 
         public static string GetFrameHash(IClip[] video, uint targetFrame)
@@ -58,7 +60,8 @@ namespace projectFrameCut.Render.Rendering
                 {
                     if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
-                        throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
+                        continue; //keep same behavior in Renderer
+                        //throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
                     result.Add(new OneFrame(targetFrame, clip, null!));
                 }

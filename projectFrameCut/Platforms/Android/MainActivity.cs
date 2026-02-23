@@ -13,7 +13,7 @@ namespace projectFrameCut.Platforms.Android
         Theme = "@style/AppTheme",
         MainLauncher = true,
         ResizeableActivity = true,
-        LaunchMode = LaunchMode.SingleTop,
+        LaunchMode = LaunchMode.Multiple,
         ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density,
         Name = "com.hexadecimal0x12e.projectFrameCut.MainActivity",
         Label = "projectFrameCut"
