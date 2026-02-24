@@ -245,7 +245,14 @@ namespace projectFrameCut.Asset
                         break;
                     }
             }
-            return fail ? null : asset;
+            if (DeviceInfo.DeviceType == DeviceType.Virtual)
+            {
+                return (AssetItem?)asset;
+            }
+            else
+            {
+                return (fail ? null : asset);
+            }
         }
 
         public static bool Remove(string assetId)

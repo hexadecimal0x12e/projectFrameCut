@@ -32,11 +32,11 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.10" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.10" />
-		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.10" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.30" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.30" />
+		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.30" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
-		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="7.0.0" />
+		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="8.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

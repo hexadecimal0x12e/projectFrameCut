@@ -22,6 +22,8 @@ using LocalizedResources;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.Render.Effect;
 using Microsoft.Maui.LifecycleEvents;
+using CommunityToolkit.Maui.Core;
+
 
 
 
@@ -327,10 +329,12 @@ namespace projectFrameCut
                            options.SetShouldEnableSnackbarOnWindows(true);
                        })
 #if ANDROID26_0_OR_GREATER || WINDOWS10_0_17763_0_OR_GREATER
-                       .UseMauiCommunityToolkitMediaElement();
-#pragma warning restore CA1416
-
+                       .UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>
+                       {
+                           options.SetDefaultAndroidViewType(AndroidViewType.TextureView);
+                       });
 #endif
+#pragma warning restore CA1416
                 LogLevel logLevel = LogLevel.Information;
                 if (Debugger.IsAttached || SettingsManager.IsBoolSettingTrue("LogDiagnostics"))
                 {

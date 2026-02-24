@@ -294,6 +294,150 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Edit_AddView",
+        "Value": "\u0027\u6DFB\u52A0\u0027\u89C6\u56FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_DefaultOrderOption",
+        "Value": "\u9ED8\u8BA4\u6392\u5E8F\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Subtitle",
+        "Value": "\u914D\u7F6E\u0027\u6DFB\u52A0\u0027\u89C6\u56FE\u7684\u9996\u9009\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template",
+        "Value": "\u0027\u6DFB\u52A0\u0027\u89C6\u56FE - \u6587\u672C\u6A21\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add",
+        "Value": "\u6DFB\u52A0\u6A21\u677F...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_Exists",
+        "Value": "\u5DF2\u6709\u4E00\u4E2A\u76F8\u540C\u540D\u79F0\u7684\u6A21\u677F\u5B58\u5728\u3002\u8BF7\u6362\u4E00\u4E2A\u540D\u79F0\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_InputName",
+        "Value": "\u4E3A\u65B0\u7684\u6A21\u677F\u8F93\u5165\u540D\u5B57",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Configure",
+        "Value": "\u914D\u7F6E\u6A21\u677F\u300C{id}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Export",
+        "Value": "\u4ECE\u6587\u4EF6\u5BFC\u5165\u6A21\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import",
+        "Value": "\u5BFC\u51FA\u4F60\u7684\u6A21\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import_Warn",
+        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF0C\u5DF2\u6709\u7684\u6A21\u677F ({templates}) \u5C06\u4F1A\u88AB\u8986\u76D6\uFF01\r\u5728\u4E0B\u9762\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u6B64\u64CD\u4F5C\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "templates"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "templates",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201Cyes\u201D\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset",
+        "Value": "\u91CD\u7F6E\u6587\u672C\u6A21\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset_Warn",
+        "Value": "\u4F60\u786E\u8BA4\u8981\u8FD9\u4E48\u505A\u5417\uFF1F\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF0C\u6240\u6709\u4F60\u6DFB\u52A0\u7684\u6A21\u677F\u5C06\u4F1A\u88AB\u6C38\u4E45\u5220\u9664\uFF01\r\u5728\u4E0B\u9762\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u6B64\u64CD\u4F5C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201Cyes\u201D\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_TemplateItem",
+        "Value": "\u6A21\u677F\u300C{id}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Edit_AlwaysShowToolbarButtons",
         "Value": "\u603B\u662F\u663E\u793A\u5DE5\u5177\u680F\u6309\u94AE",
         "Mode": "ConstString",
@@ -1699,150 +1843,6 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_AddView",
-        "Value": "\u0027\u6DFB\u52A0\u0027\u89C6\u56FE",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_AddView_Subtitle",
-        "Value": "\u914D\u7F6E\u0027\u6DFB\u52A0\u0027\u89C6\u56FE\u7684\u9996\u9009\u9879",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_AddView_DefaultOrderOption",
-        "Value": "\u9ED8\u8BA4\u6392\u5E8F\u6A21\u5F0F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_AddView_Text_Template",
-        "Value": "\u0027\u6DFB\u52A0\u0027\u89C6\u56FE - \u6587\u672C\u6A21\u677F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_AddView_Text_Template_Add",
-        "Value": "\u6DFB\u52A0\u6A21\u677F...",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_AddView_Text_Template_TemplateItem",
-        "Value": "\u6A21\u677F\u300C{id}\u300D",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "id"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "id",
-            "Value": ""
-          }
-        ],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_AddView_Text_Template_Configure",
-        "Value": "\u914D\u7F6E\u6A21\u677F\u300C{id}\u300D",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "id"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "id",
-            "Value": ""
-          }
-        ],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_AddView_Text_Template_Reset",
-        "Value": "\u91CD\u7F6E\u6587\u672C\u6A21\u677F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_AddView_Text_Template_Reset_Warn",
-        "Value": "\u4F60\u786E\u8BA4\u8981\u8FD9\u4E48\u505A\u5417\uFF1F\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF0C\u6240\u6709\u4F60\u6DFB\u52A0\u7684\u6A21\u677F\u5C06\u4F1A\u88AB\u6C38\u4E45\u5220\u9664\uFF01\r\u5728\u4E0B\u9762\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u6B64\u64CD\u4F5C\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201Cyes\u201D\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_AddView_Text_Template_Import",
-        "Value": "\u5BFC\u51FA\u4F60\u7684\u6A21\u677F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_AddView_Text_Template_Export",
-        "Value": "\u4ECE\u6587\u4EF6\u5BFC\u5165\u6A21\u677F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_AddView_Text_Template_Add_Exists",
-        "Value": "\u5DF2\u6709\u4E00\u4E2A\u76F8\u540C\u540D\u79F0\u7684\u6A21\u677F\u5B58\u5728\u3002\u8BF7\u6362\u4E00\u4E2A\u540D\u79F0\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_AddView_Text_Template_Add_InputName",
-        "Value": "\u4E3A\u65B0\u7684\u6A21\u677F\u8F93\u5165\u540D\u5B57",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Edit_AddView_Text_Template_Import_Warn",
-        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF0C\u5DF2\u6709\u7684\u6A21\u677F ({templates}) \u5C06\u4F1A\u88AB\u8986\u76D6\uFF01\r\u5728\u4E0B\u9762\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u6B64\u64CD\u4F5C\u3002",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "templates"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "templates",
-            "Value": ""
-          }
-        ],
-        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201Cyes\u201D\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
-        "HasValidationErrors": false
       }
     ],
     "en-US": [
@@ -1948,7 +1948,7 @@
       },
       {
         "Id": "Diag_MakingReport_Sub",
-        "Value": "Please do not leave this interface or exit the application.",
+        "Value": "Please do not leave this page or exit the application.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3708,43 +3708,43 @@
       },
       {
         "Id": "Edit_AddView",
-        "Value": "Unset localization item:Edit_AddView()",
+        "Value": "\u0027Add\u0027 View",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Subtitle",
-        "Value": "Unset localization item:Edit_AddView_Subtitle()",
+        "Value": "Configure the default options for the \u0027Add\u0027 view",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_DefaultOrderOption",
-        "Value": "Unset localization item:Edit_AddView_DefaultOrderOption()",
+        "Value": "Default Sorting Mode",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template",
-        "Value": "Unset localization item:Edit_AddView_Text_Template()",
+        "Value": "\u0027Add\u0027 View - Text Template",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_TemplateItem",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_TemplateItem(string id)",
+        "Value": "Template \u0027{id}\u0027",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3758,12 +3758,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Configure",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Configure(string id)",
+        "Value": "Configure template \u0027{id}\u0027",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3777,75 +3777,75 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Reset",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset()",
+        "Value": "Reset Text Template",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Reset_Warn",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset_Warn()",
+        "Value": "Are you sure you want to do this?\r\nThis action cannot be undone, and all templates you added will be permanently deleted!\r\nType \u0027yes\u0027 below to confirm this action.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Do not translate \u0027yes\u0027 as it is a user input keyword.",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Import",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Import()",
+        "Value": "Export your template",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Export",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Export()",
+        "Value": "Import Template from File",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add()",
+        "Value": "Add Template...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add_Exists",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_Exists()",
+        "Value": "A template with the same name already exists. Please use a different name.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add_InputName",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_InputName()",
+        "Value": "Enter a name for the new template",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Import_Warn",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Import_Warn(string templates)",
+        "Value": "This action cannot be undone, existing templates ({templates}) will be overwritten!\r\nEnter \u0022yes\u0022 below to confirm this action.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3859,7 +3859,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -5726,43 +5726,43 @@
       },
       {
         "Id": "Edit_AddView",
-        "Value": "Unset localization item:Edit_AddView()",
+        "Value": "\u0027\u65B0\u589E\u0027\u8996\u5716",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Subtitle",
-        "Value": "Unset localization item:Edit_AddView_Subtitle()",
+        "Value": "\u914D\u7F6E\u300C\u65B0\u589E\u300D\u8996\u5716\u7684\u9996\u9078\u9805",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_DefaultOrderOption",
-        "Value": "Unset localization item:Edit_AddView_DefaultOrderOption()",
+        "Value": "\u9810\u8A2D\u6392\u5E8F\u6A21\u5F0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template",
-        "Value": "Unset localization item:Edit_AddView_Text_Template()",
+        "Value": "\u0027\u65B0\u589E\u0027\u6AA2\u8996 - \u6587\u5B57\u7BC4\u672C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_TemplateItem",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_TemplateItem(string id)",
+        "Value": "\u6A21\u677F\u300E{id}\u300F",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -5776,12 +5776,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Configure",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Configure(string id)",
+        "Value": "\u914D\u7F6E\u6A21\u677F\u300C{id}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -5795,75 +5795,75 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Reset",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset()",
+        "Value": "\u91CD\u8A2D\u6587\u5B57\u7BC4\u672C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Reset_Warn",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset_Warn()",
+        "Value": "\u4F60\u78BA\u8A8D\u8981\u9019\u9EBC\u505A\u55CE\uFF1F\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u92B7\uFF0C\u6240\u6709\u4F60\u6DFB\u52A0\u7684\u6A21\u677F\u5C07\u6703\u88AB\u6C38\u4E45\u522A\u9664\uFF01\r\u5728\u4E0B\u9762\u8F38\u5165\u201Cyes\u201D\u4F86\u78BA\u8A8D\u6B64\u64CD\u4F5C\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Import",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Import()",
+        "Value": "\u532F\u51FA\u4F60\u7684\u6A21\u677F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Export",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Export()",
+        "Value": "\u5F9E\u6A94\u6848\u532F\u5165\u7BC4\u672C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add()",
+        "Value": "\u65B0\u589E\u7BC4\u672C...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add_Exists",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_Exists()",
+        "Value": "\u5DF2\u6709\u4E00\u500B\u76F8\u540C\u540D\u7A31\u7684\u6A21\u677F\u5B58\u5728\u3002\u8ACB\u63DB\u4E00\u500B\u540D\u7A31\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add_InputName",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_InputName()",
+        "Value": "\u70BA\u65B0\u7684\u6A21\u677F\u8F38\u5165\u540D\u7A31",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Import_Warn",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Import_Warn(string templates)",
+        "Value": "\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\uFF0C\u73FE\u6709\u7684\u6A21\u677F ({templates}) \u5C07\u6703\u88AB\u8986\u84CB\uFF01\r\n\u8ACB\u5728\u4E0B\u65B9\u8F38\u5165\u300Cyes\u300D\u4EE5\u78BA\u8A8D\u6B64\u64CD\u4F5C\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -5877,7 +5877,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u8ACB\u52FF\u7FFB\u8B6F\u300Cyes\u300D\uFF0C\u9019\u662F\u7528\u6236\u9700\u8981\u8F38\u5165\u7684\u5167\u5BB9\u3002",
         "HasValidationErrors": false
       }
     ],
@@ -7745,43 +7745,43 @@
       },
       {
         "Id": "Edit_AddView",
-        "Value": "Unset localization item:Edit_AddView()",
+        "Value": "\u0027\u8FFD\u52A0\u0027\u30D3\u30E5\u30FC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Subtitle",
-        "Value": "Unset localization item:Edit_AddView_Subtitle()",
+        "Value": "\u0027\u8FFD\u52A0\u0027\u30D3\u30E5\u30FC\u306E\u8A2D\u5B9A\u306E\u6700\u521D\u306E\u9078\u629E\u80A2",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_DefaultOrderOption",
-        "Value": "Unset localization item:Edit_AddView_DefaultOrderOption()",
+        "Value": "\u30C7\u30D5\u30A9\u30EB\u30C8\u4E26\u3073\u9806\u30E2\u30FC\u30C9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template",
-        "Value": "Unset localization item:Edit_AddView_Text_Template()",
+        "Value": "\u0027\u8FFD\u52A0\u0027\u30D3\u30E5\u30FC - \u30C6\u30AD\u30B9\u30C8\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_TemplateItem",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_TemplateItem(string id)",
+        "Value": "\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u300C{id}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -7795,12 +7795,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Configure",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Configure(string id)",
+        "Value": "\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u300C{id}\u300D\u3092\u69CB\u6210",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -7814,75 +7814,75 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Reset",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset()",
+        "Value": "\u30C6\u30AD\u30B9\u30C8\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3092\u30EA\u30BB\u30C3\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Reset_Warn",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset_Warn()",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u3092\u5B9F\u884C\u3057\u3066\u3082\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F\r\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002\u8FFD\u52A0\u3057\u305F\u3059\u3079\u3066\u306E\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u304C\u6C38\u4E45\u306B\u524A\u9664\u3055\u308C\u307E\u3059\uFF01\r\u4EE5\u4E0B\u306E\u5165\u529B\u6B04\u306B\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u3001\u3053\u306E\u64CD\u4F5C\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u7528\u6237\u9700\u8981\u8F93\u5165\u7684\u786E\u8BA4\u8BCD\u201Cyes\u201D\u672A\u7FFB\u8BD1\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Import",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Import()",
+        "Value": "\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3092\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Export",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Export()",
+        "Value": "\u30D5\u30A1\u30A4\u30EB\u304B\u3089\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3092\u30A4\u30F3\u30DD\u30FC\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add()",
+        "Value": "\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3092\u8FFD\u52A0...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add_Exists",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_Exists()",
+        "Value": "\u540C\u3058\u540D\u524D\u306E\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u304C\u65E2\u306B\u5B58\u5728\u3057\u307E\u3059\u3002\u5225\u306E\u540D\u524D\u306B\u5909\u66F4\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add_InputName",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_InputName()",
+        "Value": "\u65B0\u3057\u3044\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u306E\u540D\u524D\u3092\u5165\u529B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Import_Warn",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Import_Warn(string templates)",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002\u65E2\u5B58\u306E\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8 ({templates}) \u306F\u4E0A\u66F8\u304D\u3055\u308C\u307E\u3059\uFF01\r\u4EE5\u4E0B\u306E\u5165\u529B\u6B04\u306B\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u64CD\u4F5C\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -7896,7 +7896,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u30E6\u30FC\u30B6\u30FC\u5165\u529B\u30AD\u30FC\u30EF\u30FC\u30C9\u300Cyes\u300D\u306F\u7FFB\u8A33\u305B\u305A\u4FDD\u6301\u3002\u8B66\u544A\u30E1\u30C3\u30BB\u30FC\u30B8\u3068\u3057\u3066\u9069\u5207\u306A\u8868\u73FE\u306B\u8ABF\u6574\u3002",
         "HasValidationErrors": false
       }
     ],
@@ -9764,43 +9764,43 @@
       },
       {
         "Id": "Edit_AddView",
-        "Value": "Unset localization item:Edit_AddView()",
+        "Value": "\u0027\uCD94\uAC00\u0027 \uBCF4\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Subtitle",
-        "Value": "Unset localization item:Edit_AddView_Subtitle()",
+        "Value": "\u0027\uCD94\uAC00\u0027 \uBDF0\uC758 \uAE30\uBCF8 \uC635\uC158 \uAD6C\uC131",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_DefaultOrderOption",
-        "Value": "Unset localization item:Edit_AddView_DefaultOrderOption()",
+        "Value": "\uAE30\uBCF8 \uC815\uB82C \uBAA8\uB4DC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template",
-        "Value": "Unset localization item:Edit_AddView_Text_Template()",
+        "Value": "\u0027\uCD94\uAC00\u0027 \uBDF0 - \uD14D\uC2A4\uD2B8 \uD15C\uD50C\uB9BF",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_TemplateItem",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_TemplateItem(string id)",
+        "Value": "\uD15C\uD50C\uB9BF \u201C{id}\u201D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -9814,12 +9814,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Configure",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Configure(string id)",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6839\u636E\u63D0\u4F9B\u7684JSON\u6570\u636E\uFF0C\u9700\u8981\u5C06\u4E2D\u6587\u6587\u672C\u201C\u914D\u7F6E\u6A21\u677F\u300C{id}\u300D\u201D\u7FFB\u8BD1\u6210\u97E9\u8BED\uFF08ko-KR\uFF09\u3002\u8FD9\u662F\u4E00\u4E2A\u63D2\u503C\u5B57\u7B26\u4E32\uFF08Mode: 1\uFF09\uFF0C\u9700\u8981\u4FDD\u7559\u53C2\u6570 \u0060{id}\u0060\u3002\n\n\u7FFB\u8BD1\u65F6\uFF0C\u9700\u8981\u8003\u8651\u97E9\u8BED\u4E2D\u5F15\u53F7\u7684\u4F7F\u7528\u4E60\u60EF\u3002\u4E2D\u6587\u4F7F\u7528\u300C\u300D\u4F5C\u4E3A\u5F15\u53F7\uFF0C\u800C\u5728\u97E9\u8BED\u4E2D\uFF0C\u867D\u7136\u6709\u65F6\u4E5F\u4F1A\u4F7F\u7528\u7C7B\u4F3C\u7684\u7B26\u53F7\uFF0C\u4F46\u66F4\u5E38\u89C1\u548C\u73B0\u4EE3\u7684\u505A\u6CD5\u662F\u4F7F\u7528\u53CC\u5F15\u53F7\uFF08\u0022 \u0022\uFF09\u6216\u5355\u5F15\u53F7\uFF08\u0027 \u0027\uFF09\u3002\u4E3A\u4E86\u4FDD\u6301\u8F6F\u4EF6UI\u7684\u901A\u7528\u6027\u548C\u6E05\u6670\u5EA6\uFF0C\u8FD9\u91CC\u4F7F\u7528\u53CC\u5F15\u53F7\u3002\n\n\u7FFB\u8BD1\u540E\u7684\u97E9\u8BED\u5E94\u4E3A\uFF1A\u201C\uD15C\uD50C\uB9BF \\\u0022{id}\\\u0022 \uAD6C\uC131\u201D\u3002\n\n\u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\uD15C\uD50C\uB9BF \\\u0022{id}\\\u0022 \uAD6C\uC131\u0022,\n    \u0022Comment\u0022: \u0022\u0022\n}\n\u0060\u0060\u0060",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -9833,75 +9833,75 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u6839\u636E\u63D0\u4F9B\u7684JSON\u6570\u636E\uFF0C\u9700\u8981\u5C06\u4E2D\u6587\u6587\u672C\u201C\u914D\u7F6E\u6A21\u677F\u300C{id}\u300D\u201D\u7FFB\u8BD1\u6210\u97E9\u8BED\uFF08ko-KR\uFF09\u3002\u8FD9\u662F\u4E00\u4E2A\u63D2\u503C\u5B57\u7B26\u4E32\uFF08Mode: 1\uFF09\uFF0C\u9700\u8981\u4FDD\u7559\u53C2\u6570 \u0060{id}\u0060\u3002\n\n\u7FFB\u8BD1\u65F6\uFF0C\u9700\u8981\u8003\u8651\u97E9\u8BED\u4E2D\u5F15\u53F7\u7684\u4F7F\u7528\u4E60\u60EF\u3002\u4E2D\u6587\u4F7F\u7528\u300C\u300D\u4F5C\u4E3A\u5F15\u53F7\uFF0C\u800C\u5728\u97E9\u8BED\u4E2D\uFF0C\u867D\u7136\u6709\u65F6\u4E5F\u4F1A\u4F7F\u7528\u7C7B\u4F3C\u7684\u7B26\u53F7\uFF0C\u4F46\u66F4\u5E38\u89C1\u548C\u73B0\u4EE3\u7684\u505A\u6CD5\u662F\u4F7F\u7528\u53CC\u5F15\u53F7\uFF08\u0022 \u0022\uFF09\u6216\u5355\u5F15\u53F7\uFF08\u0027 \u0027\uFF09\u3002\u4E3A\u4E86\u4FDD\u6301\u8F6F\u4EF6UI\u7684\u901A\u7528\u6027\u548C\u6E05\u6670\u5EA6\uFF0C\u8FD9\u91CC\u4F7F\u7528\u53CC\u5F15\u53F7\u3002\n\n\u7FFB\u8BD1\u540E\u7684\u97E9\u8BED\u5E94\u4E3A\uFF1A\u201C\uD15C\uD50C\uB9BF \\\u0022{id}\\\u0022 \uAD6C\uC131\u201D\u3002\n\n\u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022\uD15C\uD50C\uB9BF \\\u0022{id}\\\u0022 \uAD6C\uC131\u0022,\n    \u0022Comment\u0022: \u0022\u0022\n}\n\u0060\u0060\u0060",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Reset",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset()",
+        "Value": "\uD14D\uC2A4\uD2B8 \uD15C\uD50C\uB9BF \uC7AC\uC124\uC815",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Reset_Warn",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset_Warn()",
+        "Value": "\uC815\uB9D0 \uC774\uB807\uAC8C \uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?\r\n\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC73C\uBA70, \uCD94\uAC00\uD55C \uBAA8\uB4E0 \uD15C\uD50C\uB9BF\uC774 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AD\uC81C\uB429\uB2C8\uB2E4!\r\n\uC544\uB798\uC5D0 \u0022yes\u0022\uB97C \uC785\uB825\uD558\uC5EC \uC774 \uC791\uC5C5\uC744 \uD655\uC778\uD558\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\uC0AC\uC6A9\uC790\uAC00 \uC785\uB825\uD574\uC57C \uD558\uB294 \u0022yes\u0022\uB294 \uBC88\uC5ED\uD558\uC9C0 \uC54A\uC74C",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Import",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Import()",
+        "Value": "\uD15C\uD50C\uB9BF \uB0B4\uBCF4\uB0B4\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Export",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Export()",
+        "Value": "\uD30C\uC77C\uC5D0\uC11C \uD15C\uD50C\uB9BF \uAC00\uC838\uC624\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add()",
+        "Value": "\uD15C\uD50C\uB9BF \uCD94\uAC00...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add_Exists",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_Exists()",
+        "Value": "\uB3D9\uC77C\uD55C \uC774\uB984\uC758 \uD15C\uD50C\uB9BF\uC774 \uC774\uBBF8 \uC874\uC7AC\uD569\uB2C8\uB2E4. \uB2E4\uB978 \uC774\uB984\uC744 \uC0AC\uC6A9\uD574 \uC8FC\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add_InputName",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_InputName()",
+        "Value": "\uC0C8 \uD15C\uD50C\uB9BF\uC758 \uC774\uB984\uC744 \uC785\uB825\uD558\uC138\uC694",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Import_Warn",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Import_Warn(string templates)",
+        "Value": "\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC73C\uBA70, \uAE30\uC874 \uD15C\uD50C\uB9BF({templates})\uC774 \uB36E\uC5B4\uC4F0\uAE30\uB429\uB2C8\uB2E4!\r\n\uC544\uB798\uC5D0 \u0027yes\u0027\uB97C \uC785\uB825\uD558\uC5EC \uC774 \uC791\uC5C5\uC744 \uD655\uC778\uD558\uC138\uC694.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -9915,7 +9915,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\uC0AC\uC6A9\uC790\uAC00 \uC785\uB825\uD574\uC57C \uD558\uB294 \u0027yes\u0027\uB294 \uBC88\uC5ED\uD558\uC9C0 \uC54A\uACE0 \uC6D0\uBB38\uC744 \uC720\uC9C0\uD568",
         "HasValidationErrors": false
       }
     ],
@@ -11783,43 +11783,43 @@
       },
       {
         "Id": "Edit_AddView",
-        "Value": "Unset localization item:Edit_AddView()",
+        "Value": "Vue \u0027Ajouter\u0027",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Subtitle",
-        "Value": "Unset localization item:Edit_AddView_Subtitle()",
+        "Value": "Configurer les options par d\u00E9faut de la vue \u0027Ajouter\u0027",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_DefaultOrderOption",
-        "Value": "Unset localization item:Edit_AddView_DefaultOrderOption()",
+        "Value": "Mode de tri par d\u00E9faut",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template",
-        "Value": "Unset localization item:Edit_AddView_Text_Template()",
+        "Value": "Vue \u0027Ajouter\u0027 - Mod\u00E8le de texte",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_TemplateItem",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_TemplateItem(string id)",
+        "Value": "Mod\u00E8le \u00AB {id} \u00BB",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -11833,12 +11833,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Configure",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Configure(string id)",
+        "Value": "Configurer le mod\u00E8le \u00AB\u202F{id}\u202F\u00BB",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -11852,75 +11852,75 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Traduction de \u0027\u914D\u7F6E\u6A21\u677F\u0027 avec les guillemets fran\u00E7ais appropri\u00E9s.",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Reset",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset()",
+        "Value": "R\u00E9initialiser le mod\u00E8le de texte",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Reset_Warn",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset_Warn()",
+        "Value": "\u00CAtes-vous s\u00FBr de vouloir faire cela ?\rCette action est irr\u00E9versible, tous les mod\u00E8les que vous avez ajout\u00E9s seront d\u00E9finitivement supprim\u00E9s !\rTapez \u00AB yes \u00BB ci-dessous pour confirmer cette op\u00E9ration.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Import",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Import()",
+        "Value": "Exporter votre mod\u00E8le",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Export",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Export()",
+        "Value": "Importer un mod\u00E8le depuis un fichier",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add()",
+        "Value": "Ajouter un mod\u00E8le...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add_Exists",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_Exists()",
+        "Value": "Un mod\u00E8le portant le m\u00EAme nom existe d\u00E9j\u00E0. Veuillez en choisir un autre.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add_InputName",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_InputName()",
+        "Value": "Entrez un nom pour le nouveau mod\u00E8le",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Import_Warn",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Import_Warn(string templates)",
+        "Value": "Cette op\u00E9ration ne peut pas \u00EAtre annul\u00E9e, les mod\u00E8les existants ({templates}) seront \u00E9cras\u00E9s !\rEntrez \u00AB yes \u00BB ci-dessous pour confirmer cette op\u00E9ration.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -11934,7 +11934,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Avertissement concernant l\u0027importation de mod\u00E8les, indiquant que l\u0027action est irr\u00E9versible et demande une confirmation par \u0027yes\u0027 (non traduit).",
         "HasValidationErrors": false
       }
     ],
@@ -13802,43 +13802,43 @@
       },
       {
         "Id": "Edit_AddView",
-        "Value": "Unset localization item:Edit_AddView()",
+        "Value": "\u589E\u89C6\u56FE",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Subtitle",
-        "Value": "Unset localization item:Edit_AddView_Subtitle()",
+        "Value": "\u8BBE\u7F6E\u2018\u589E\u6DFB\u2019\u89C6\u56FE\u4E4B\u504F\u597D",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_DefaultOrderOption",
-        "Value": "Unset localization item:Edit_AddView_DefaultOrderOption()",
+        "Value": "\u9ED8\u8BA4\u6392\u5E8F\u6A21\u5F0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template",
-        "Value": "Unset localization item:Edit_AddView_Text_Template()",
+        "Value": "\u2018\u589E\u2019\u89C6\u56FE - \u6587\u8303",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_TemplateItem",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_TemplateItem(string id)",
+        "Value": "\u8303\u672C\u300C{id}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -13852,12 +13852,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u6587\u8A00\u6587\u8BD1\u6CD5\uFF0C\u0027\u6A21\u677F\u0027\u8BD1\u4E3A\u0027\u8303\u672C\u0027\uFF0C\u4FDD\u7559\u63D2\u503C\u53C2\u6570\u53CA\u6807\u70B9\u683C\u5F0F",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Configure",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Configure(string id)",
+        "Value": "\u8BBE\u5F0F\u300C{id}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -13871,75 +13871,75 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u914D\u7F6E\u6A21\u677F\u4E4B\u6587\u8A00\u8BD1\u6CD5\uFF0C\u0027\u8BBE\u0027\u8868\u8BBE\u7F6E\uFF0C\u0027\u5F0F\u0027\u8868\u6A21\u677F\u8303\u5F0F\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Reset",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset()",
+        "Value": "\u91CD\u7F6E\u6587\u672C\u6A21\u677F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Reset_Warn",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset_Warn()",
+        "Value": "\u5C14\u786E\u6B32\u4E3A\u6B64\u4E4E\uFF1F\r\u6B64\u4E3E\u4E0D\u53EF\u590D\uFF0C\u51E1\u5C14\u6240\u589E\u6A21\u677F\uFF0C\u7686\u6C38\u5220\u77E3\uFF01\r\u4E8E\u4E0B\u4E66\u201Cyes\u201D\u4EE5\u786E\u4E4B\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u5DF2\u6309\u8981\u6C42\u4FDD\u7559\u0027yes\u0027\u4E0D\u8BD1\u3002\u8BD1\u6587\u529B\u6C42\u7B80\u6D01\u51DD\u7EC3\uFF0C\u7B26\u5408\u6587\u8A00\u98CE\u683C\uFF0C\u5E76\u6E05\u6670\u4F20\u8FBE\u8B66\u544A\u53CA\u786E\u8BA4\u6307\u4EE4\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Import",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Import()",
+        "Value": "\u5BFC\u51FA\u4F60\u7684\u6A21\u677F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Export",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Export()",
+        "Value": "\u81EA\u6587\u724D\u5BFC\u5165\u8303",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add()",
+        "Value": "\u589E\u8303\u672C\u2026",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add_Exists",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_Exists()",
+        "Value": "\u5DF2\u6709\u540C\u540D\u6A21\u677F\u5B58\u7109\u3002\u8BF7\u6613\u4E00\u540D\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Add_InputName",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_InputName()",
+        "Value": "\u4E3A\u65B0\u7684\u6A21\u677F\u8F93\u5165\u540D\u5B57",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_AddView_Text_Template_Import_Warn",
-        "Value": "Unset localization item:Edit_AddView_Text_Template_Import_Warn(string templates)",
+        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u53EF\u9006\uFF0C\u65E2\u6709\u6A21\u677F ({templates}) \u5C06\u88AB\u8986\u5199\uFF01\r\u8BF7\u4E8E\u4E0B\u65B9\u4E66\u2018yes\u2019\u4EE5\u786E\u8BA4\u6B64\u64CD\u4F5C\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -13953,7 +13953,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u7528\u6237\u9700\u8F93\u5165\u2018yes\u2019\u786E\u8BA4\uFF0C\u6545\u4E0D\u8BD1\u6B64\u8BCD",
         "HasValidationErrors": false
       }
     ]

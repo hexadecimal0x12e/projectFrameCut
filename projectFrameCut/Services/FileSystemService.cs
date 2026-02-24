@@ -24,8 +24,21 @@ namespace projectFrameCut.Services
     /// </summary>
     public static class FileSystemService
     {
+        public static async Task<bool> GrantPermissions()
+        {
+            var read = await Permissions.RequestAsync<Permissions.StorageRead>();
+            var write = await Permissions.RequestAsync<Permissions.StorageWrite>();
+            return read == PermissionStatus.Granted && write == PermissionStatus.Granted;
+        }
+
+        public static async void ThrowWhenNoPermissions()
+        {
+            if (!await GrantPermissions()) throw new PermissionException("No permission for this operation.");
+        }
+
         public static async Task<string> PickASavePath(string defaultName, string defaultPath, CancellationToken ct = default)
         {
+            ThrowWhenNoPermissions();
             using var stream = new MemoryStream([0]);
             var fileSaverResult = await FileSaver.Default.SaveAsync(defaultName, stream, ct);
             if (fileSaverResult.IsSuccessful && fileSaverResult.FilePath is not null)
@@ -58,6 +71,7 @@ namespace projectFrameCut.Services
 
         public static async Task<string?> PickFolderAsync(CancellationToken ct = default)
         {
+            ThrowWhenNoPermissions();
             var result = await FolderPicker.Default.PickAsync(ct);
             if (result.IsSuccessful)
             {

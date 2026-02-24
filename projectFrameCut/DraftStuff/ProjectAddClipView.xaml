@@ -6,7 +6,18 @@
              xmlns:tv="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.TabbedView;assembly=projectFrameCut.ApplicationAPIBase"
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:converters="clr-namespace:projectFrameCut.Converters"
              x:DataType="viewmodels:ProjectAddClipViewModel">
+    <ContentView.Resources>
+        <ResourceDictionary>
+            <SolidColorBrush x:Key="AvaliableColorBrush">Green</SolidColorBrush>
+            <SolidColorBrush x:Key="NotAvaliableColorBrush">Gray</SolidColorBrush>
+
+            <toolkit:BoolToObjectConverter x:Key="IsValidConverter" 
+                TrueObject="{StaticResource AvaliableColorBrush}" 
+                FalseObject="{StaticResource NotAvaliableColorBrush}"/>
+        </ResourceDictionary>
+    </ContentView.Resources>
 
     <tv:TabbedView x:Name="MainTabView" x:FieldModifier="public">
         <tv:TabbedView.HeaderRightContent>
@@ -242,6 +253,7 @@
                                                     CornerRadius="4"
                                                     IsVisible="{Binding IsSideDetermined, Converter={toolkit:InvertedBoolConverter}}"
                                                     IsEnabled="{Binding IsApplicableToLeft}"
+                                                    Background="{Binding IsApplicableToLeft, Converter={StaticResource IsValidConverter}}"
                                                     Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ProjectAddClipViewModel}}, Path=AddTransformClipInLeftCommand}"
                                                     CommandParameter="{Binding .}"/>
 
@@ -256,6 +268,7 @@
                                                     Margin="8,0,0,0"
                                                     IsVisible="{Binding IsSideDetermined, Converter={toolkit:InvertedBoolConverter}}"
                                                     IsEnabled="{Binding IsApplicableToRight}"
+                                                    Background="{Binding IsApplicableToRight, Converter={StaticResource IsValidConverter}}"
                                                     Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ProjectAddClipViewModel}}, Path=AddTransformClipInRightCommand}"
                                                     CommandParameter="{Binding .}"/>
                                         </HorizontalStackLayout>
@@ -301,7 +314,10 @@
                                VerticalOptions="Center"
                                HorizontalOptions="Start" />
                         <Button x:Name="ApplyTextToAllButton"
-                                Text="{l:Localized Key=AssetPage_ShowPreview}"
+                                Text="{Binding TextToAdd, Converter = 
+                                        {converters:StringNullOrWhitespaceSelectionConventor 
+                                            NormalText={l:Localized Key=DraftPage_AddClipView_AddText_PreviewInput}, 
+                                            NullOrWhitespaceOrEmptyText={l:Localized Key=DraftPage_AddClipView_AddText_ResetInput}}}"              
                                 Command="{Binding GenerateTextPreviewCommand}"
                                 HorizontalOptions="End"
                                 VerticalOptions="Center"

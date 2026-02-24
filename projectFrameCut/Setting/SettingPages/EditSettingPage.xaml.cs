@@ -20,7 +20,6 @@ public partial class EditSettingPage : ContentPage
         { SettingLocalizedResources.Edit_PreferredPopupMode_Bottom, "bottom" },
         { SettingLocalizedResources.Edit_PreferredPopupMode_Clip, "clip" },
         { SettingLocalizedResources.Edit_PreferredPopupMode_Window, "window" },
-        { SettingLocalizedResources.Edit_PreferredPopupMode_FixedView, "fixedview" },
     };
     public readonly Dictionary<string, string> ProxyStringMapping = new Dictionary<string, string>
     {
@@ -213,9 +212,9 @@ public partial class EditSettingPage : ContentPage
 
         rootPPB = new();
         rootPPB.AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_EditorPreference, SettingLocalizedResources.Edit_EditorPreference_Subtitle))
-            .AddPicker("Edit_PreferredPopupMode",
+            .AppendWhen(DeviceInfo.Idiom != DeviceIdiom.Phone,c => c.AddPicker("Edit_PreferredPopupMode",
                 SettingLocalizedResources.Edit_PreferredPopupMode, ModeStringMapping.Keys.ToArray(),
-                ModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreferredPopupMode", "right"), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_PreferredPopupMode_Right, "right")).Key)
+                ModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreferredPopupMode", "right"), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_PreferredPopupMode_Right, "right")).Key))
             .AddSwitch("Edit_UpperContentHeight_AutoSave", SettingLocalizedResources.Edit_UpperContentHeight_AutoSave, IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave"), null)
             .AppendWhen(!IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave"), p => p.AddEntry("Edit_UpperContentHeight", SettingLocalizedResources.Edit_UpperContentHeight, GetSetting("Edit_UpperContentHeight", "250"), "250"))
             .AddEntry("Edit_MaximumSaveSlot", SettingLocalizedResources.Edit_MaxiumSaveSlot, GetSetting("Edit_MaximumSaveSlot", "10"), "10")
@@ -375,7 +374,7 @@ public partial class EditSettingPage : ContentPage
                     {
                         var mode = ModeStringMapping.FirstOrDefault(k => k.Key == args.Value as string,
                                                  new KeyValuePair<string, string>("right", "right")).Value;
-                        WriteSetting("Edit_PreferredPopupMode", mode);
+                        WriteSetting("PreferredPopupMode", mode);
                         return;
                     }
                 case "Edit_ProxyOption":

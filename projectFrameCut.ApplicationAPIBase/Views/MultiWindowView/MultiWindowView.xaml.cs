@@ -14,6 +14,11 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         public event EventHandler<MultiWindowItem>? WindowFocused;
 
         /// <summary>
+        /// Allow automatic add the window to the window collection when the window provided to <see cref="ActiveWindow"/> is not in the collection.
+        /// </summary>
+        public static bool StrictMode { get; set; } = false;
+
+        /// <summary>
         /// Represents the currently active window.
         /// When set, the specified window will be brought to the front and receive focus.
         /// </summary>
@@ -22,7 +27,19 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             get => field;
             set
             {
-                if (!Windows.Contains(value, new MultiWindowItemComparer())) throw new InvalidOperationException($"Window {value.Title} ({value.WindowID}) is not part of the collection.");
+                if (!Windows.Contains(value, new MultiWindowItemComparer()))
+                {
+                    if(StrictMode)
+                    {
+                        throw new InvalidOperationException($"Window {value.Title} ({value.WindowID}) is not part of the collection.");
+                    }
+                    else
+                    {
+                        AddWindow(value);
+                        BringToFront(value);
+                        field = value;
+                    }
+                }
                 if (field != value)
                 {
                     field = value;

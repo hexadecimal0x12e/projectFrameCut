@@ -23,6 +23,11 @@ public partial class ProjectAddClipView : ContentView
             "name" => 1,
             _ => 0
         };
+        if (_page?.UseCompactLayout ?? false || DeviceInfo.Idiom == DeviceIdiom.Phone)
+        {
+            SearchInputEntry.IsVisible = false;
+            OrderOptionPicker.IsVisible = false;
+        }
     }
 
     private void MainTabView_OnTabSwitched(object? sender, ApplicationAPIBase.Views.TabbedView.TabbedViewItem e)

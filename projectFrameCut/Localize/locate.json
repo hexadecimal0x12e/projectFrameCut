@@ -3100,6 +3100,22 @@
         "ArgsComment": [],
         "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PreviewInput",
+        "Value": "\u9884\u89C8\u8F93\u5165",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ResetInput",
+        "Value": "\u91CD\u7F6E\u8F93\u5165",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
       }
     ],
     "en-US": [
@@ -6487,6 +6503,24 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PreviewInput",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_PreviewInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ResetInput",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_ResetInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -9868,6 +9902,24 @@
       {
         "Id": "DraftPage_AddClipView_AddSketch_NoContent",
         "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PreviewInput",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_PreviewInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ResetInput",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_ResetInput()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13265,6 +13317,24 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PreviewInput",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_PreviewInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ResetInput",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_ResetInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -16657,6 +16727,24 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PreviewInput",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_PreviewInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ResetInput",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_ResetInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -20039,6 +20127,24 @@
       {
         "Id": "DraftPage_AddClipView_AddSketch_NoContent",
         "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PreviewInput",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_PreviewInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ResetInput",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_ResetInput()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -23431,6 +23537,24 @@
       {
         "Id": "DraftPage_AddClipView_AddSketch_NoContent",
         "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_PreviewInput",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_PreviewInput()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ResetInput",
+        "Value": "Unset localization item:DraftPage_AddClipView_AddText_ResetInput()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

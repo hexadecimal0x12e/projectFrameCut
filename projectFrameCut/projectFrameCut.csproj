@@ -14,7 +14,8 @@
 		<RuntimeIdentifier Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst' and '$(Configuration)' != 'Release' and '$(Platform)' == 'x64'">maccatalyst-x64</RuntimeIdentifier>
 		<RuntimeIdentifier Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst' and '$(Configuration)' != 'Release' and '$(Platform)' == 'Arm64'">maccatalyst-arm64</RuntimeIdentifier>
 		<RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">ios-arm64</RuntimeIdentifiers>
-		<RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">android-arm64</RuntimeIdentifiers>
+		<RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">android-arm64;android-x64</RuntimeIdentifiers>
+		<RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">windows-x64;windows-arm64</RuntimeIdentifiers>
 		<OutputType>Exe</OutputType>
 		<RootNamespace>projectFrameCut</RootNamespace>
 		<UseMaui>true</UseMaui>
@@ -116,11 +117,11 @@
 		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
 		<PackageReference Include="OpenAI" Version="2.8.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.10" />
-		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.10" />
-		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.10" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.30" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.30" />
+		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.30" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
-		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="7.0.0" />
+		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="8.0.0" />
 		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
 
 		<!--For which assembles included, see Resources\Assembly\about.txt-->

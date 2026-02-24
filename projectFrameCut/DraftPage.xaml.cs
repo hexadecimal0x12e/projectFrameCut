@@ -65,6 +65,7 @@ using projectFrameCut.Render.AndroidOpenGL.Platforms.Android;
 using projectFrameCut.Render.AndroidOpenGL;
 using Microsoft.Maui.Platform;
 using Android.Content.Res;
+using CommunityToolkit.Maui.Extensions;
 
 #endif
 
@@ -90,6 +91,56 @@ public partial class DraftPage : ContentPage
 
     public static JsonSerializerOptions DraftJSONOption => savingOpts;
     #endregion
+
+    // Remove transform clips that reference a given clip id (either as prev or next)
+    private void RemoveTransformsReferencingClip(string clipId)
+    {
+        if (string.IsNullOrWhiteSpace(clipId)) return;
+
+        var transformKeys = Clips.Where(kv => kv.Value != null && kv.Value.ClipType == ClipMode.TransformClip)
+            .Where(kv =>
+            {
+                try
+                {
+                    var ed = kv.Value.ExtraData;
+                    if (ed == null) return false;
+                    if (ed.TryGetValue("transformPrevId", out var p) && p?.ToString() == clipId) return true;
+                    if (ed.TryGetValue("transformNextId", out var n) && n?.ToString() == clipId) return true;
+                }
+                catch { }
+                return false;
+            })
+            .Select(kv => kv.Key)
+            .ToList();
+
+        foreach (var key in transformKeys)
+        {
+            if (Clips.TryRemove(key, out var removed))
+            {
+                try
+                {
+                    if (removed?.Clip != null)
+                    {
+                        // remove visual from overlay if present
+                        try { OverlayLayer?.Children.Remove(removed.Clip); } catch { }
+                        // also remove from its track container
+                        if (removed.origTrack is int tr && Tracks.TryGetValue(tr, out var tlayout))
+                        {
+                            try { tlayout.Children.Remove(removed.Clip); } catch { }
+                        }
+                        else
+                        {
+                            foreach (var t in Tracks.Values.ToList())
+                                try { t.Children.Remove(removed.Clip); } catch { }
+                        }
+                    }
+                }
+                catch { }
+                LogDiagnostic($"transform clip {key} removed because it referenced {clipId}.");
+                SetStatusText(Localized.DraftPage_Removed);
+            }
+        }
+    }
 
     #region members
 
@@ -1486,6 +1537,12 @@ public partial class DraftPage : ContentPage
         Clips.TryRemove(clip.Id, out _);
         LogDiagnostic($"clip {clip.Id} deleted.");
         SetStatusText(Localized.DraftPage_Removed);
+        // Remove any transform clips that reference this clip
+        try
+        {
+            RemoveTransformsReferencingClip(clip.Id);
+        }
+        catch { }
     }
 
     #endregion
@@ -2300,29 +2357,11 @@ public partial class DraftPage : ContentPage
 #pragma warning restore CS0414
 
 
-    private void ShowCommunityToolkitPopup(CommunityToolkit.Maui.Views.Popup popup)
+    private async Task ShowCommunityToolkitPopup(CommunityToolkit.Maui.Views.Popup popup)
     {
         try
         {
-            // 使用反射调用ShowPopup扩展方法
-            var popupExtensionType = typeof(CommunityToolkit.Maui.Views.Popup).Assembly
-                .GetTypes()
-                .FirstOrDefault(t => t.Name == "PageExtension" || t.Name == "PageExtensions");
-
-            if (popupExtensionType != null)
-            {
-                var showPopupMethod = popupExtensionType.GetMethod("ShowPopup",
-                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-
-                if (showPopupMethod != null)
-                {
-                    showPopupMethod.Invoke(null, new object[] { this, popup });
-                    return;
-                }
-            }
-
-            // 如果找不到扩展方法，记录警告
-            Log("CommunityToolkit Popup extension method not found. Popup may not display correctly.", "error");
+            await CommunityToolkit.Maui.Extensions.PopupExtensions.ShowPopupAsync(Navigation, popup, null);
         }
         catch (Exception ex)
         {
@@ -2334,29 +2373,13 @@ public partial class DraftPage : ContentPage
     {
         content ??= (border != null && clip != null) ? await BuildPropertyPanel(clip) : new Label { Text = $"No content to show. This SHOULD is a bug, please feedback.\r\n{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}" };
 
-        if (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS())
+        OverlayLayer.IsVisible = true;
+
+        if (DeviceInfo.Idiom == DeviceIdiom.Phone)
         {
-            if (OrigionalUIContent is null && MainUpperContent.Children.Count > 0)
-            {
-                OrigionalUIContent = MainUpperContent.Children.First();
-            }
-            MainUpperContent.Children.Clear();
-            MainUpperContent.Children.Add(new VerticalStackLayout
-            {
-                Children =
-                {
-                    content
-                },
-                HorizontalOptions = LayoutOptions.Center,
-                VerticalOptions = LayoutOptions.Center
-            });
-            OverlayLayer.InputTransparent = true;
-            OverlayLayer.IsVisible = false;
+            await ShowAFullscreenPopupInBottom(WindowSize.Height * 0.75, content);
             return;
         }
-
-
-        OverlayLayer.IsVisible = true;
 
         if (!SettingsManager.IsSettingExists("PreferredPopupMode"))
         {
@@ -2383,6 +2406,18 @@ public partial class DraftPage : ContentPage
                 case "dialog":
                     {
                         await ShowACenteredPopup(WindowSize.Height / 1.5, WindowSize.Width / 2, content);
+                        break;
+                    }
+                case "window":
+                    {
+                        var w = new MultiWindowItem
+                        {
+                            Content = content,
+                            Title = "",
+                            IsNavigationVisible = false
+                        };
+                        MainMultiWindowView.AddWindow(w);
+                        await w.OpenInNewWindow();
                         break;
                     }
                 case "clip":
@@ -2629,21 +2664,6 @@ public partial class DraftPage : ContentPage
 
     public async Task HidePopup()
     {
-#if iDevices
-        if (OrigionalUIContent is not null)
-        {
-            MainUpperContent.Children.Clear();
-            MainUpperContent.Children.Add(OrigionalUIContent);
-            OrigionalUIContent = null;
-        }
-        else
-        {
-            if (await DisplayAlertAsync(Localized._Error, Localized.DraftPage_FailToProcess, Localized._Confirm, Localized._Cancel)) await Navigation.PopAsync();
-        }
-        return;
-#endif
-        //if (!isPopupShowing) return;
-
         if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
         {
             if (_currentCommunityToolkitPopup is not null)
@@ -3256,10 +3276,6 @@ public partial class DraftPage : ContentPage
     bool playbackDone = false;
     private async void PlayPauseButton_Clicked(object sender, EventArgs e)
     {
-#if ANDROID
-        await Toast.Make(new PlatformNotSupportedException().Message, ToastDuration.Long).Show();
-        return;
-#else
         isPlaying = !isPlaying;
         if (isPlaying)
         {
@@ -3290,7 +3306,7 @@ public partial class DraftPage : ContentPage
             await PauseLivePreview();
             SetStateOK();
         }
-#endif
+
 
     }
     MediaElement LivePreviewPlayer = new();
@@ -3440,6 +3456,15 @@ public partial class DraftPage : ContentPage
         {
             SetStateFail(Localized.DraftPage_CannotSave_Readonly);
         }
+        // If a clip moved or was resized, remove any transform clips that reference it.
+        try
+        {
+            if (e?.SourceId is not null && (e.Reason == ClipUpdateReason.ClipItselfMove || e.Reason == ClipUpdateReason.ClipResized))
+            {
+                RemoveTransformsReferencingClip(e.SourceId);
+            }
+        }
+        catch { }
         foreach (var item in Clips)
         {
             if (!item.Value.isInfiniteLength && item.Value.lengthInFrame > item.Value.maxFrameCount)

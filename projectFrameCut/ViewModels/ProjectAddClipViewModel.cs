@@ -344,7 +344,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         );
 
         element.ClipType = ClipMode.TextClip;
-        element.SourcePath = text;
         element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
         element.isInfiniteLength = true;
         element.maxFrameCount = 0;

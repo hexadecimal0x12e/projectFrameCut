@@ -74,23 +74,25 @@
 
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.10" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.30" />
+		<PackageReference Include="Microsoft.Maui.Controls.Compatibility" Version="10.0.30" />
+		<PackageReference Include="Microsoft.Maui.Controls.Xaml" Version="10.0.30" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="13.0.0" />
-		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="7.0.0" />
-		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
+		<PackageReference Include="CommunityToolkit.Maui.MediaElement" Version="8.0.0" />
 
-		<Reference Include="..\projectFrameCut\Resources\Assembly\*.dll"/>
-		
+		<PackageReference Include="TinyPinyin.Net" Version="1.0.0" />
 		<PackageReference Include="Microsoft.Extensions.AI" Version="10.3.0" />
 		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
 		<PackageReference Include="OpenAI" Version="2.8.0" />
+
+		<Reference Include="..\projectFrameCut\Resources\Assembly\*.dll"/>
 
 	</ItemGroup>
 
 
 	<ItemGroup>
-		<MauiXaml Include="..\projectFrameCut\**\*.xaml" Exclude="..\projectFrameCut\bin\**;..\projectFrameCut\obj\**;..\projectFrameCut\Platforms\**;..\projectFrameCut\App.xaml;..\projectFrameCut\AppShell*.xaml" Link="SharedPages\%(RecursiveDir)%(Filename)%(Extension)" />
-		<Compile Include="..\projectFrameCut\**\*.xaml.cs" Exclude="..\projectFrameCut\bin\**;..\projectFrameCut\obj\**;..\projectFrameCut\Platforms\**;..\projectFrameCut\App.xaml.cs;..\projectFrameCut\AppShell*.xaml.cs" Link="SharedPages\%(RecursiveDir)%(Filename)%(Extension)">
+		<MauiXaml Include="..\projectFrameCut\**\*.xaml" Exclude="..\projectFrameCut\bin\**;..\projectFrameCut\obj\**;..\projectFrameCut\Platforms\**;..\projectFrameCut\App*.xaml;..\projectFrameCut\AppShell*.xaml" Link="SharedPages\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut\**\*.xaml.cs" Exclude="..\projectFrameCut\bin\**;..\projectFrameCut\obj\**;..\projectFrameCut\Platforms\**;..\projectFrameCut\App*.xaml.cs;..\projectFrameCut\AppShell*.xaml.cs" Link="SharedPages\%(RecursiveDir)%(Filename)%(Extension)">
 			<DependentUpon>%(Filename).xaml</DependentUpon>
 		</Compile>
 
