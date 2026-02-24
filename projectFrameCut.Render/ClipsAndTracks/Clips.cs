@@ -405,9 +405,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
             // Additional: DPI for font rasterization (nullable, uses default when null)
             public float? dpi { get; init; } = null;
 
+            // Use in UI only, not for rendering
             public bool ShouldInSubtrack { get; set; } = false;
+            public string StyleId { get; set; } = "";
+            public string? SampleText { get; set; } = null;
 
-            public TextClipEntry() 
+            public TextClipEntry()
             {
 
             }

@@ -1,11 +1,13 @@
 using CommunityToolkit.Maui.Core;
 using projectFrameCut.APIClient;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
+using projectFrameCut.Setting.SettingPages;
 using projectFrameCut.Shared;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -155,6 +157,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ICommand AddTextClipCommand { get; set; }
     public ICommand AddSolidColorClipCommand { get; set; }
     public ICommand AddTextClipWithStyleCommand { get; set; }
+    public ICommand GenerateTextPreviewCommand { get; set; }
     public ICommand AddSubTitleClipCommand { get; set; }
     public ICommand AddAlternativeSourceClipCommand { get; set; }
     public ICommand AddAssetClipCommand { get; set; }
@@ -173,6 +176,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         AddSolidColorClipCommand = new Command(async () => await AddSolidColorClip());
         AddTextClipWithStyleCommand = new Command<TextStyleItemViewModel?>(async (style) => await AddTextClipWithStyle(style));
+        GenerateTextPreviewCommand = new Command(async () => InitializeTextStyles(string.IsNullOrWhiteSpace(TextToAdd) ? null : TextToAdd));
         AddAlternativeSourceClipCommand = new Command(async () => await AddAlternativeSourceClip());
         AddAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddAssetClip(asset));
         AddReuseableAssetClipCommand = new Command<AssetItemViewModel>(async (asset) => await AddReuseableAssetClip(asset));
@@ -196,7 +200,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         RegisterCommands();
         await LoadAssets();
         LoadTransforms();
-        InitializeDefaultTextStyles();
+        InitializeTextStyles();
     }
 
     private async Task LoadAssets()
@@ -346,11 +350,28 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         element.maxFrameCount = 0;
         element.ExtraData = new();
 
+        var textLang = TextHelper.DetectTextLanguage(text);
+        var fontOverride = style.ActualTemplate.fontFamily;
+        if (style.ActualTemplate.fontFamily == "Arial")
+        {
+            if (textLang != TextHelper.TextLanguage.English)
+            {
+                fontOverride = textLang switch
+                {
+                    TextHelper.TextLanguage.Chinese => Localized._LocaleId_ == "zh-TW" ? "Noto Sans TC" : "Noto Sans SC",
+                    TextHelper.TextLanguage.Japanese => "Noto Sans JP",
+                    TextHelper.TextLanguage.Korean => "Noto Sans KR",
+                    TextHelper.TextLanguage.Arabic => "HarmonyOS Sans Naskh Arabic",
+                    _ => "Noto Sans"
+                };
+            }
+        }
+
         if (style != null)
         {
             element.ExtraData["TextEntries"] = new List<TextClip.TextClipEntry>
             {
-                style.ActualTemplate with { text = text }
+                style.ActualTemplate with { text = text, fontFamily = fontOverride }
             };
 
         }
@@ -359,62 +380,78 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         TextToAdd = "";
     }
 
-    private void InitializeDefaultTextStyles()
+    private void InitializeTextStyles(string? previewText = null)
     {
+
         AvailableTextStyles.Clear();
-        AvailableTextStyles.Add(new TextStyleItemViewModel
+        try
         {
-            Id = "default",
-            Name = "Default",
-            SampleText = "Normal",
-            FontSize = 36,
-            FontColor = Colors.White.ToHex(),
-            ActualTemplate = new TextClip.TextClipEntry
+            Dictionary<string, TextClip.TextClipEntry> template = new();
+            EditSettingPage.LoadTextTemplates(ref template);
+            foreach (var item in template)
             {
-                r = 65535,
-                g = 65535,
-                b = 65535,
-                a = null,
-                fontFamily = "Arial",
-                fontSize = 36
+                AvailableTextStyles.Add(new TextStyleItemViewModel
+                {
+                    Id = item.Key,
+                    Name = item.Key,
+                    SampleText = previewText ?? item.Value.SampleText ?? item.Key,
+                    ActualTemplate = item.Value
+                });
             }
-        });
-        AvailableTextStyles.Add(new TextStyleItemViewModel
+        }
+        catch (Exception ex)
         {
-            Id = "title",
-            Name = "Title",
-            SampleText = "Title",
-            FontSize = 64,
-            FontColor = Colors.White.ToHex(),
-            ActualTemplate = new TextClip.TextClipEntry
+            Log(ex, "Load user text templates", this);
+            AvailableTextStyles.Add(new TextStyleItemViewModel
             {
-                r = 65535,
-                g = 65535,
-                b = 65535,
-                a = null,
-                fontFamily = "Arial",
-                fontSize = 64
-            }
-        });
-        AvailableTextStyles.Add(new TextStyleItemViewModel
-        {
-            Id = "subtitle",
-            Name = "Subtitle",
-            SampleText = "Subtitle",
-            FontSize = 32,
-            FontColor = Colors.White.ToHex(),
-            ShouldInSubtrack = true,
-            ActualTemplate = new TextClip.TextClipEntry
+                Id = "default",
+                Name = "Default",
+                SampleText = "Normal",
+                ActualTemplate = new TextClip.TextClipEntry
+                {
+                    r = 65535,
+                    g = 65535,
+                    b = 65535,
+                    a = null,
+                    fontFamily = "Arial",
+                    fontSize = 36
+                }
+            });
+            AvailableTextStyles.Add(new TextStyleItemViewModel
             {
-                r = 65535,
-                g = 65535,
-                b = 65535,
-                a = null,
-                fontFamily = "Arial",
-                fontSize = 32,
+                Id = "title",
+                Name = "Title",
+                SampleText = "Title",
+                ActualTemplate = new TextClip.TextClipEntry
+                {
+                    r = 65535,
+                    g = 65535,
+                    b = 65535,
+                    a = null,
+                    fontFamily = "Arial",
+                    fontSize = 64
+                }
+            });
+            AvailableTextStyles.Add(new TextStyleItemViewModel
+            {
+                Id = "subtitle",
+                Name = "Subtitle",
+                SampleText = "Subtitle",
                 ShouldInSubtrack = true,
-            }
-        });
+                ActualTemplate = new TextClip.TextClipEntry
+                {
+                    r = 65535,
+                    g = 65535,
+                    b = 65535,
+                    a = null,
+                    fontFamily = "Arial",
+                    fontSize = 32,
+                    ShouldInSubtrack = true,
+                }
+            });
+        }
+
+
 
         SelectedTextStyle = AvailableTextStyles.FirstOrDefault();
 
@@ -997,9 +1034,29 @@ public class TextStyleItemViewModel
     public required string Name { get; set; } = string.Empty;
     public required string SampleText { get; set; } = string.Empty;
     public required TextClip.TextClipEntry ActualTemplate { get; set; } = null;
-    public int FontSize { get; set; } = 36;
-    public string? FontColor { get; set; }
-    public FontAttributes FontAttribute { get; set; } = FontAttributes.None;
+    public ImageSource PreviewSource
+    {
+        get
+        {
+            var sample = SampleText ?? "AaBbYyZz";
+            TextClip t = new TextClip
+            {
+                Id = Id,
+                Name = Id,
+                TextEntries = new List<TextClip.TextClipEntry>
+                {
+                    ActualTemplate with { text = sample }
+                }
+            };
+
+            var fs = ActualTemplate.fontSize > 0 ? ActualTemplate.fontSize : 36;
+            var imgHeight = Math.Clamp((int)(fs * 1.2) + 4, 24, 200);
+            var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
+
+            var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true);
+            return img.ToImageSource();
+        }
+    }
     public bool ShouldInSubtrack { get; set; } = false;
 }
 

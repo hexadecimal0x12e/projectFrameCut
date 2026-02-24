@@ -217,6 +217,7 @@ public class InternalPluginBase : IPluginBase
 
     bool IPluginBase.OnLoaded(out string FailedReason)
     {
+        TextClip.GetFont(); //build font cache
         FailedReason = "";
         return true;
     }

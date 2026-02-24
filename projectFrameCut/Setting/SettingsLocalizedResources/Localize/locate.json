@@ -1699,6 +1699,150 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView",
+        "Value": "\u0027\u6DFB\u52A0\u0027\u89C6\u56FE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Subtitle",
+        "Value": "\u914D\u7F6E\u0027\u6DFB\u52A0\u0027\u89C6\u56FE\u7684\u9996\u9009\u9879",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_DefaultOrderOption",
+        "Value": "\u9ED8\u8BA4\u6392\u5E8F\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template",
+        "Value": "\u0027\u6DFB\u52A0\u0027\u89C6\u56FE - \u6587\u672C\u6A21\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add",
+        "Value": "\u6DFB\u52A0\u6A21\u677F...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_TemplateItem",
+        "Value": "\u6A21\u677F\u300C{id}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Configure",
+        "Value": "\u914D\u7F6E\u6A21\u677F\u300C{id}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset",
+        "Value": "\u91CD\u7F6E\u6587\u672C\u6A21\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset_Warn",
+        "Value": "\u4F60\u786E\u8BA4\u8981\u8FD9\u4E48\u505A\u5417\uFF1F\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF0C\u6240\u6709\u4F60\u6DFB\u52A0\u7684\u6A21\u677F\u5C06\u4F1A\u88AB\u6C38\u4E45\u5220\u9664\uFF01\r\u5728\u4E0B\u9762\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u6B64\u64CD\u4F5C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201Cyes\u201D\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import",
+        "Value": "\u5BFC\u51FA\u4F60\u7684\u6A21\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Export",
+        "Value": "\u4ECE\u6587\u4EF6\u5BFC\u5165\u6A21\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_Exists",
+        "Value": "\u5DF2\u6709\u4E00\u4E2A\u76F8\u540C\u540D\u79F0\u7684\u6A21\u677F\u5B58\u5728\u3002\u8BF7\u6362\u4E00\u4E2A\u540D\u79F0\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_InputName",
+        "Value": "\u4E3A\u65B0\u7684\u6A21\u677F\u8F93\u5165\u540D\u5B57",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import_Warn",
+        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF0C\u5DF2\u6709\u7684\u6A21\u677F ({templates}) \u5C06\u4F1A\u88AB\u8986\u76D6\uFF01\r\u5728\u4E0B\u9762\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u6B64\u64CD\u4F5C\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "templates"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "templates",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201Cyes\u201D\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
+        "HasValidationErrors": false
       }
     ],
     "en-US": [
@@ -3561,6 +3705,162 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView",
+        "Value": "Unset localization item:Edit_AddView()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Subtitle",
+        "Value": "Unset localization item:Edit_AddView_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_DefaultOrderOption",
+        "Value": "Unset localization item:Edit_AddView_DefaultOrderOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template",
+        "Value": "Unset localization item:Edit_AddView_Text_Template()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_TemplateItem",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_TemplateItem(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Configure",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Configure(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset_Warn",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Import()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Export",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Export()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_Exists",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_Exists()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_InputName",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_InputName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import_Warn",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Import_Warn(string templates)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "templates"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "templates",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -5422,6 +5722,162 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView",
+        "Value": "Unset localization item:Edit_AddView()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Subtitle",
+        "Value": "Unset localization item:Edit_AddView_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_DefaultOrderOption",
+        "Value": "Unset localization item:Edit_AddView_DefaultOrderOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template",
+        "Value": "Unset localization item:Edit_AddView_Text_Template()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_TemplateItem",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_TemplateItem(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Configure",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Configure(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset_Warn",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Import()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Export",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Export()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_Exists",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_Exists()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_InputName",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_InputName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import_Warn",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Import_Warn(string templates)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "templates"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "templates",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -7286,6 +7742,162 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView",
+        "Value": "Unset localization item:Edit_AddView()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Subtitle",
+        "Value": "Unset localization item:Edit_AddView_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_DefaultOrderOption",
+        "Value": "Unset localization item:Edit_AddView_DefaultOrderOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template",
+        "Value": "Unset localization item:Edit_AddView_Text_Template()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_TemplateItem",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_TemplateItem(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Configure",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Configure(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset_Warn",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Import()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Export",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Export()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_Exists",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_Exists()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_InputName",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_InputName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import_Warn",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Import_Warn(string templates)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "templates"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "templates",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -9148,6 +9760,162 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView",
+        "Value": "Unset localization item:Edit_AddView()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Subtitle",
+        "Value": "Unset localization item:Edit_AddView_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_DefaultOrderOption",
+        "Value": "Unset localization item:Edit_AddView_DefaultOrderOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template",
+        "Value": "Unset localization item:Edit_AddView_Text_Template()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_TemplateItem",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_TemplateItem(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Configure",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Configure(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset_Warn",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Import()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Export",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Export()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_Exists",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_Exists()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_InputName",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_InputName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import_Warn",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Import_Warn(string templates)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "templates"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "templates",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -11012,6 +11780,162 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView",
+        "Value": "Unset localization item:Edit_AddView()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Subtitle",
+        "Value": "Unset localization item:Edit_AddView_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_DefaultOrderOption",
+        "Value": "Unset localization item:Edit_AddView_DefaultOrderOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template",
+        "Value": "Unset localization item:Edit_AddView_Text_Template()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_TemplateItem",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_TemplateItem(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Configure",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Configure(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset_Warn",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Import()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Export",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Export()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_Exists",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_Exists()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_InputName",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_InputName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import_Warn",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Import_Warn(string templates)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "templates"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "templates",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -12874,6 +13798,162 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u7559 NavigationView \u548C Shell \u4E0D\u8BD1\uFF0C\u4EE5\u7B26\u5408\u6280\u672F\u672F\u8BED\u60EF\u4F8B\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView",
+        "Value": "Unset localization item:Edit_AddView()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Subtitle",
+        "Value": "Unset localization item:Edit_AddView_Subtitle()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_DefaultOrderOption",
+        "Value": "Unset localization item:Edit_AddView_DefaultOrderOption()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template",
+        "Value": "Unset localization item:Edit_AddView_Text_Template()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_TemplateItem",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_TemplateItem(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Configure",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Configure(string id)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "id"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "id",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Reset_Warn",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Reset_Warn()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Import()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Export",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Export()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_Exists",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_Exists()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Add_InputName",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Add_InputName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_AddView_Text_Template_Import_Warn",
+        "Value": "Unset localization item:Edit_AddView_Text_Template_Import_Warn(string templates)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "templates"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "templates",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]

@@ -294,9 +294,21 @@
                         Margin="8,8,8,4"
                         StrokeThickness="0"
                         StrokeShape="RoundRectangle 6">
-                    <Label Text="{l:Localized Key=DraftPage_AddClipView_AddText_SelectStyle}"
-                           FontSize="12"
-                           TextColor="{AppThemeBinding Light=#1A5276, Dark=#85C1E9}"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="{l:Localized Key=DraftPage_AddClipView_AddText_SelectStyle}"
+                               FontSize="18"
+                               TextColor="{AppThemeBinding Light=#1A5276, Dark=#85C1E9}"
+                               VerticalOptions="Center"
+                               HorizontalOptions="Start" />
+                        <Button x:Name="ApplyTextToAllButton"
+                                Text="{l:Localized Key=AssetPage_ShowPreview}"
+                                Command="{Binding GenerateTextPreviewCommand}"
+                                HorizontalOptions="End"
+                                VerticalOptions="Center"
+                                Margin="8,0,0,0"
+                                WidthRequest="120"
+                                HeightRequest="34" />
+                    </Grid>
                 </Border>
                 <CollectionView Grid.Row="2"
                                 ItemsSource="{Binding FilteredAvailableTextStyles}"
@@ -323,14 +335,7 @@
                                         CommandParameter="{Binding .}"/>
                                 </Border.GestureRecognizers>
                                 <Grid Padding="8">
-                                    <Label Text="{Binding SampleText}"
-                                           FontSize="{Binding FontSize}"
-                                           TextColor="{Binding FontColor}"
-                                           FontAttributes="{Binding FontAttribute}"
-                                           HorizontalOptions="Center"
-                                           VerticalOptions="Center"
-                                           LineBreakMode="TailTruncation"
-                                           MaxLines="2"/>
+                                    <Image Source="{Binding PreviewSource}"/>
                                 </Grid>
                             </Border>
                         </DataTemplate>

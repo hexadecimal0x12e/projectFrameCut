@@ -89,11 +89,11 @@ namespace projectFrameCut.DraftStuff
                 Header = Localized.MainSettingsPage_Tab_General,
                 Content = BuildGeneralTab(clip, handler)
             });
-            if(clip.ClipType == ClipMode.TextClip || clip.ClipType == ClipMode.SubtitleClip)
+            if (clip.ClipType == ClipMode.TextClip || clip.ClipType == ClipMode.SubtitleClip)
             {
                 t.TabItems.Add(new TabbedViewItem
                 {
-                    Header ="Text",// PPLocalizedResources.Tabs_Effect,
+                    Header =  PPLocalizedResources.TextOption_TabTitle,
                     Content = await BuildTextOptionTab(clip, handler)
                 });
             }
@@ -217,12 +217,13 @@ namespace projectFrameCut.DraftStuff
                 return layout;
             }, "clipColor", currentColorHex)
             .AddSeparator(null)
-            .AddText(new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 20))
-            .AddEntry("placeX", PPLocalizedResources.General_LocationX, valX.ToString(), "0", null, default)
-            .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
-            .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
-            .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default)
-            ;
+            .AppendWhen(clip.ClipType != ClipMode.TextClip && clip.ClipType != ClipMode.SubtitleClip,
+            (c) => c.AddText(new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 20))
+                    .AddEntry("placeX", PPLocalizedResources.General_LocationX, valX.ToString(), "0", null, default)
+                    .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
+                    .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
+                    .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default));
+            
 
 
             ppb.PropertyChanged += async (s, e) =>
@@ -364,10 +365,340 @@ namespace projectFrameCut.DraftStuff
             return ppb.BuildWithScrollView();
         }
 
+        #endregion
+
+        #region text
+
+        public static View BuildTextEntryUI(projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry e, int idx, string[] fonts,
+            Action<int, projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry> onChanged,
+            Action<int> onRemove,
+            bool canDeleteEntry = true)
+        {
+            Label SecLabel(string t) => new Label
+            {
+                Text = t,
+                FontSize = 10,
+                TextColor = Colors.White,
+                FontAttributes = FontAttributes.Bold,
+                Margin = new Thickness(0, 6, 0, 2)
+            };
+            BoxView Divider() => new BoxView
+            {
+                HeightRequest = 1,
+                Color = Colors.White.WithAlpha(0.06f),
+                Margin = new Thickness(0, 4)
+            };
+
+            var stack = new VerticalStackLayout { Spacing = 4 };
+
+            var headerGrid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto)
+                }
+            };
+            headerGrid.Add(new Label
+            {
+                Text = $"Entry {idx + 1}",
+                FontAttributes = FontAttributes.Bold,
+                FontSize = 13,
+                TextColor = Color.FromArgb("#A8B8CC"),
+                VerticalOptions = LayoutOptions.Center
+            }, 0, 0);
+            var removeBtn = new Button
+            {
+                Text = "✕",
+                WidthRequest = 28,
+                HeightRequest = 28,
+                Padding = 0,
+                BackgroundColor = Colors.Transparent,
+                TextColor = Color.FromArgb("#FF6060"),
+                FontSize = 13,
+                HorizontalOptions = LayoutOptions.End,
+                VerticalOptions = LayoutOptions.Center,
+                IsVisible = canDeleteEntry
+            };
+            removeBtn.Clicked += (s, ev) => { onRemove?.Invoke(idx); };
+            headerGrid.Add(removeBtn, 1, 0);
+            stack.Children.Add(headerGrid);
+            stack.Children.Add(Divider());
+
+            // CONTENT
+            stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Content));
+            var editor = new Editor
+            {
+                Text = e.text,
+                AutoSize = EditorAutoSizeOption.TextChanges,
+                MinimumHeightRequest = 64,
+                Placeholder = "Enter text…"
+            };
+            editor.Unfocused += (s, ev) => { onChanged?.Invoke(idx, e with { text = editor.Text }); };
+            stack.Children.Add(editor);
+
+            // POSITION
+            stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Position));
+            var posGrid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star)
+                },
+                ColumnSpacing = 6
+            };
+            var xEntry = new Entry { Text = e.x.ToString(), Placeholder = "0" };
+            var yEntry = new Entry { Text = e.y.ToString(), Placeholder = "0" };
+            xEntry.Unfocused += (s, ev) => { if (int.TryParse(xEntry.Text, out var nx)) onChanged?.Invoke(idx, e with { x = nx }); };
+            yEntry.Unfocused += (s, ev) => { if (int.TryParse(yEntry.Text, out var ny)) onChanged?.Invoke(idx, e with { y = ny }); };
+            posGrid.Add(new Label { Text = "X", VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 0, 0);
+            posGrid.Add(xEntry, 1, 0);
+            posGrid.Add(new Label { Text = "Y", VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 2, 0);
+            posGrid.Add(yEntry, 3, 0);
+            stack.Children.Add(posGrid);
+
+            // FONT
+            stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Font));
+            var fontGrid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(new GridLength(72))
+                },
+                ColumnSpacing = 6
+            };
+            var fontPicker = new Picker { Title = PPLocalizedResources.TextOption_Font, ItemsSource = fonts, SelectedItem = fonts.Contains(e.fontFamily) ? e.fontFamily : fonts.FirstOrDefault() };
+            fontPicker.SelectedIndexChanged += (s, ev) => 
+            {
+                if (fontPicker.SelectedItem is string sf) onChanged?.Invoke(idx, e with { fontFamily = sf });
+            };
+            var sizeEntry = new Entry { Text = e.fontSize.ToString(), Placeholder = "24" };
+            sizeEntry.Unfocused += (s, ev) => { if (float.TryParse(sizeEntry.Text, out var ns)) onChanged?.Invoke(idx, e with { fontSize = ns }); };
+            fontGrid.Add(fontPicker, 0, 0);
+            fontGrid.Add(new Label { Text = PPLocalizedResources.TextOption_Size, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 1, 0);
+            fontGrid.Add(sizeEntry, 2, 0);
+            stack.Children.Add(fontGrid);
+
+            var stylePicker = new Picker { Title = PPLocalizedResources.TextOption_Style, ItemsSource = new[] { PPLocalizedResources.TextOption_Style_Regular, PPLocalizedResources.TextOption_Style_Bold, PPLocalizedResources.TextOption_Style_Italic, PPLocalizedResources.TextOption_Style_BoldItalic }, SelectedItem = e.fontStyle switch { SixLabors.Fonts.FontStyle.Regular => PPLocalizedResources.TextOption_Style_Regular, SixLabors.Fonts.FontStyle.Bold => PPLocalizedResources.TextOption_Style_Bold, SixLabors.Fonts.FontStyle.Italic => PPLocalizedResources.TextOption_Style_Italic, SixLabors.Fonts.FontStyle.BoldItalic => PPLocalizedResources.TextOption_Style_BoldItalic, _ => PPLocalizedResources.TextOption_Style_Regular, } };
+            stylePicker.SelectedIndexChanged += (s, ev) =>
+            {
+                if (stylePicker.SelectedItem is string sel)
+                {
+                    var fs = sel switch
+                    {
+                        var v when v == PPLocalizedResources.TextOption_Style_Bold => SixLabors.Fonts.FontStyle.Bold,
+                        var v when v == PPLocalizedResources.TextOption_Style_Italic => SixLabors.Fonts.FontStyle.Italic,
+                        var v when v == PPLocalizedResources.TextOption_Style_BoldItalic => SixLabors.Fonts.FontStyle.BoldItalic,
+                        _ => SixLabors.Fonts.FontStyle.Regular,
+                    };
+                    onChanged?.Invoke(idx, e with { fontStyle = fs });
+                }
+            };
+            stack.Children.Add(stylePicker);
+
+            // TEXT COLOR
+            stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Color));
+            var colorSwatch = new Border
+            {
+                WidthRequest = 32,
+                HeightRequest = 32,
+                StrokeShape = new RoundRectangle { CornerRadius = 6 },
+                Stroke = Colors.White.WithAlpha(0.12f),
+                VerticalOptions = LayoutOptions.Center
+            };
+            try { colorSwatch.Background = new SolidColorBrush(Color.FromRgba(e.r / 65535.0, e.g / 65535.0, e.b / 65535.0, e.a ?? 1f)); } catch { }
+            var colorEntry = new Entry { Text = $"#{((int)Math.Round(e.r / 257.0)):X2}{((int)Math.Round(e.g / 257.0)):X2}{((int)Math.Round(e.b / 257.0)):X2}" };
+            colorEntry.Unfocused += (s, ev) =>
+            {
+                try
+                {
+                    var c = Color.FromArgb(colorEntry.Text);
+                    ushort r = (ushort)Math.Round(c.Red * 65535);
+                    ushort g = (ushort)Math.Round(c.Green * 65535);
+                    ushort b = (ushort)Math.Round(c.Blue * 65535);
+                    float a = (float)c.Alpha;
+                    var updated = e with { r = r, g = g, b = b, a = a };
+                    colorSwatch.Background = new SolidColorBrush(c);
+                    onChanged?.Invoke(idx, updated);
+                }
+                catch { }
+            };
+            var colorRow = new Grid
+            {
+                ColumnDefinitions = { new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star) },
+                ColumnSpacing = 8
+            };
+            colorRow.Add(colorSwatch, 0, 0);
+            colorRow.Add(colorEntry, 1, 0);
+            stack.Children.Add(colorRow);
+
+            // ALIGNMENT
+            stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Alignment));
+            var alignGrid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(new GridLength(80))
+                },
+                ColumnSpacing = 6
+            };
+            var hAlignPicker = new Picker { Title = PPLocalizedResources.TextOption_HorizonOption, ItemsSource = new[] { PPLocalizedResources.TextOption_HorizonOption_Left, PPLocalizedResources.TextOption_HorizonOption_Center, PPLocalizedResources.TextOption_HorizonOption_Right }, SelectedItem = e.horizontalAlignment switch { SixLabors.Fonts.HorizontalAlignment.Left => PPLocalizedResources.TextOption_HorizonOption_Left, SixLabors.Fonts.HorizontalAlignment.Center => PPLocalizedResources.TextOption_HorizonOption_Center, SixLabors.Fonts.HorizontalAlignment.Right => PPLocalizedResources.TextOption_HorizonOption_Right, _ => PPLocalizedResources.TextOption_HorizonOption_Left, } };
+            hAlignPicker.SelectedIndexChanged += (s, ev) =>
+            {
+                if (hAlignPicker.SelectedItem is string sel)
+                {
+                    SixLabors.Fonts.HorizontalAlignment ha = sel switch
+                    {
+                        var v when v == PPLocalizedResources.TextOption_HorizonOption_Center => SixLabors.Fonts.HorizontalAlignment.Center,
+                        var v when v == PPLocalizedResources.TextOption_HorizonOption_Right => SixLabors.Fonts.HorizontalAlignment.Right,
+                        _ => SixLabors.Fonts.HorizontalAlignment.Left,
+                    };
+                    onChanged?.Invoke(idx, e with { horizontalAlignment = ha });
+                }
+            };
+            var vAlignPicker = new Picker { Title = PPLocalizedResources.TextOption_VerticalOption, ItemsSource = new[] { PPLocalizedResources.TextOption_VerticalOption_Top, PPLocalizedResources.TextOption_VerticalOption_Center, PPLocalizedResources.TextOption_VerticalOption_Bottom }, SelectedItem = e.verticalAlignment switch { SixLabors.Fonts.VerticalAlignment.Top => PPLocalizedResources.TextOption_VerticalOption_Top, SixLabors.Fonts.VerticalAlignment.Center => PPLocalizedResources.TextOption_VerticalOption_Center, SixLabors.Fonts.VerticalAlignment.Bottom => PPLocalizedResources.TextOption_VerticalOption_Bottom, _ => PPLocalizedResources.TextOption_VerticalOption_Top, } };
+            vAlignPicker.SelectedIndexChanged += (s, ev) =>
+            {
+                if (vAlignPicker.SelectedItem is string sel)
+                {
+                    SixLabors.Fonts.VerticalAlignment va = sel switch
+                    {
+                       var v when v == PPLocalizedResources.TextOption_VerticalOption_Center => SixLabors.Fonts.VerticalAlignment.Center,
+                        var v when v == PPLocalizedResources.TextOption_VerticalOption_Bottom => SixLabors.Fonts.VerticalAlignment.Bottom,
+                        _ => SixLabors.Fonts.VerticalAlignment.Top,
+                    };
+                    onChanged?.Invoke(idx, e with { verticalAlignment = va });
+                }
+            };
+            var wrapEntry = new Entry { Text = e.wrappingWidth?.ToString() ?? string.Empty, Placeholder = PPLocalizedResources.TextOption_WrapW_Hint };
+            wrapEntry.Unfocused += (s, ev) =>
+            {
+                if (float.TryParse(wrapEntry.Text, out var w)) onChanged?.Invoke(idx, e with { wrappingWidth = w });
+                else onChanged?.Invoke(idx, e with { wrappingWidth = null });
+            };
+            alignGrid.Add(hAlignPicker, 0, 0);
+            alignGrid.Add(vAlignPicker, 1, 0);
+            alignGrid.Add(new Label { Text = PPLocalizedResources.TextOption_WrapW, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 2, 0);
+            alignGrid.Add(wrapEntry, 3, 0);
+            stack.Children.Add(alignGrid);
+
+            // TYPOGRAPHY
+            stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Typography));
+            var kerningSwitch = new Switch { IsToggled = e.applyKerning, VerticalOptions = LayoutOptions.Center };
+            kerningSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { applyKerning = kerningSwitch.IsToggled }); };
+            var lineSpacingEntry = new Entry { Text = e.lineSpacing.ToString() };
+            lineSpacingEntry.Unfocused += (s, ev) => { if (float.TryParse(lineSpacingEntry.Text, out var ls)) onChanged?.Invoke(idx, e with { lineSpacing = ls }); };
+            var typRow = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(new GridLength(80))
+                },
+                ColumnSpacing = 8
+            };
+            typRow.Add(new Label { Text = PPLocalizedResources.TextOption_Kerning, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 0, 0);
+            typRow.Add(kerningSwitch, 1, 0);
+            typRow.Add(new Label { Text = PPLocalizedResources.TextOption_LineSpacing, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White, HorizontalOptions = LayoutOptions.End }, 2, 0);
+            typRow.Add(lineSpacingEntry, 3, 0);
+            stack.Children.Add(typRow);
+
+            var rotEntry = new Entry { Text = e.rotation.ToString(), Placeholder = "0" };
+            rotEntry.Unfocused += (s, ev) => { if (float.TryParse(rotEntry.Text, out var r)) onChanged?.Invoke(idx, e with { rotation = r }); };
+            var dpiEntry = new Entry { Text = e.dpi?.ToString() ?? string.Empty, Placeholder = "auto" };
+            dpiEntry.Unfocused += (s, ev) =>
+            {
+                if (float.TryParse(dpiEntry.Text, out var d)) onChanged?.Invoke(idx, e with { dpi = d });
+                else onChanged?.Invoke(idx, e with { dpi = null });
+            };
+            var rotDpiGrid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star)
+                },
+                ColumnSpacing = 6
+            };
+            rotDpiGrid.Add(new Label { Text = PPLocalizedResources.TextOption_Rotation, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 0, 0);
+            rotDpiGrid.Add(rotEntry, 1, 0);
+            rotDpiGrid.Add(new Label { Text = "DPI", VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 2, 0);
+            rotDpiGrid.Add(dpiEntry, 3, 0);
+            stack.Children.Add(rotDpiGrid);
+
+            // STROKE
+            stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Stroke));
+            var strokeWidthEntry = new Entry { Text = e.strokeWidth?.ToString() ?? string.Empty, Placeholder = PPLocalizedResources.TextOption_Stroke_Hint, MinimumWidthRequest = 150 };
+            strokeWidthEntry.Unfocused += (s, ev) =>
+            {
+                if (float.TryParse(strokeWidthEntry.Text, out var sw)) onChanged?.Invoke(idx, e with { strokeWidth = sw });
+                else onChanged?.Invoke(idx, e with { strokeWidth = null });
+            };
+            var strokeSwatch = new Border
+            {
+                WidthRequest = 32,
+                HeightRequest = 32,
+                StrokeShape = new RoundRectangle { CornerRadius = 6 },
+                Stroke = Colors.White.WithAlpha(0.12f),
+                VerticalOptions = LayoutOptions.Center
+            };
+            try { strokeSwatch.Background = new SolidColorBrush(Color.FromRgba(e.strokeR / 65535.0, e.strokeG / 65535.0, e.strokeB / 65535.0, 1.0)); } catch { }
+            var strokeEntry = new Entry { Text = $"#{((int)Math.Round(e.strokeR / 257.0)):X2}{((int)Math.Round(e.strokeG / 257.0)):X2}{((int)Math.Round(e.strokeB / 257.0)):X2}" };
+            strokeEntry.Unfocused += (s, ev) =>
+            {
+                try
+                {
+                    var c = Color.FromArgb(strokeEntry.Text);
+                    ushort r = (ushort)Math.Round(c.Red * 65535);
+                    ushort g = (ushort)Math.Round(c.Green * 65535);
+                    ushort b = (ushort)Math.Round(c.Blue * 65535);
+                    var updated = e with { strokeR = r, strokeG = g, strokeB = b };
+                    strokeSwatch.Background = new SolidColorBrush(c);
+                    onChanged?.Invoke(idx, updated);
+                }
+                catch { }
+            };
+            var strokeGrid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star)
+                },
+                ColumnSpacing = 8
+            };
+            strokeGrid.Add(strokeWidthEntry, 0, 0);
+            strokeGrid.Add(strokeSwatch, 1, 0);
+            strokeGrid.Add(strokeEntry, 2, 0);
+            stack.Children.Add(strokeGrid);
+
+            var border = new Border
+            {
+                Stroke = Colors.White.WithAlpha(0.10f),
+                StrokeShape = new RoundRectangle { CornerRadius = 10 },
+                Padding = new Thickness(12, 10),
+                Background = new SolidColorBrush(Color.FromArgb("#0FFFFFFF")),
+                Content = stack
+            };
+            return border;
+        }
+
+
         private async Task<View> BuildTextOptionTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
-            PropertyPanelBuilder ppb = new();
-
             // Ensure ExtraData exists
             clip.ExtraData ??= new Dictionary<string, object>();
 
@@ -413,7 +744,7 @@ namespace projectFrameCut.DraftStuff
             void UpdateStoredEntries()
             {
                 clip.ExtraData["TextEntries"] = entries;
-                handler?.Invoke(ppb, new PropertyPanelPropertyChangedEventArgs("TextEntries", entries, entries));
+                handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", entries, entries));
             }
 
             void RebuildEntriesUI()
@@ -423,333 +754,10 @@ namespace projectFrameCut.DraftStuff
                 {
                     int idx = i;
                     var e = entries[idx];
-
-                    // ── helpers ──────────────────────────────────────────────
-                    Label SecLabel(string t) => new Label
-                    {
-                        Text = t,
-                        FontSize = 10,
-                        FontAttributes = FontAttributes.Bold,
-                        TextColor = Color.FromArgb("#7A8799"),
-                        Margin = new Thickness(0, 6, 0, 2)
-                    };
-                    BoxView Divider() => new BoxView
-                    {
-                        HeightRequest = 1,
-                        Color = Colors.White.WithAlpha(0.06f),
-                        Margin = new Thickness(0, 4)
-                    };
-
-                    // ── card stack ───────────────────────────────────────────
-                    var stack = new VerticalStackLayout { Spacing = 4 };
-
-                    // header: "Entry N" + remove button
-                    var headerGrid = new Grid
-                    {
-                        ColumnDefinitions =
-                        {
-                            new ColumnDefinition(GridLength.Star),
-                            new ColumnDefinition(GridLength.Auto)
-                        }
-                    };
-                    headerGrid.Add(new Label
-                    {
-                        Text = $"Entry {idx + 1}",
-                        FontAttributes = FontAttributes.Bold,
-                        FontSize = 13,
-                        TextColor = Color.FromArgb("#A8B8CC"),
-                        VerticalOptions = LayoutOptions.Center
-                    }, 0, 0);
-                    var removeBtn = new Button
-                    {
-                        Text = "✕",
-                        WidthRequest = 28,
-                        HeightRequest = 28,
-                        Padding = 0,
-                        BackgroundColor = Colors.Transparent,
-                        TextColor = Color.FromArgb("#FF6060"),
-                        FontSize = 13,
-                        HorizontalOptions = LayoutOptions.End,
-                        VerticalOptions = LayoutOptions.Center
-                    };
-                    removeBtn.Clicked += (s, ev) => { entries.RemoveAt(idx); UpdateStoredEntries(); RebuildEntriesUI(); };
-                    headerGrid.Add(removeBtn, 1, 0);
-                    stack.Children.Add(headerGrid);
-                    stack.Children.Add(Divider());
-
-                    // ── CONTENT ──────────────────────────────────────────────
-                    stack.Children.Add(SecLabel("CONTENT"));
-                    var editor = new Editor
-                    {
-                        Text = e.text,
-                        AutoSize = EditorAutoSizeOption.TextChanges,
-                        MinimumHeightRequest = 64,
-                        Placeholder = "Enter text…"
-                    };
-                    editor.Unfocused += (s, ev) => { entries[idx] = entries[idx] with { text = editor.Text }; UpdateStoredEntries(); };
-                    stack.Children.Add(editor);
-
-                    // ── POSITION ─────────────────────────────────────────────
-                    stack.Children.Add(SecLabel("POSITION"));
-                    var posGrid = new Grid
-                    {
-                        ColumnDefinitions =
-                        {
-                            new ColumnDefinition(GridLength.Auto),
-                            new ColumnDefinition(GridLength.Star),
-                            new ColumnDefinition(GridLength.Auto),
-                            new ColumnDefinition(GridLength.Star)
-                        },
-                        ColumnSpacing = 6
-                    };
-                    var xEntry = new Entry { Text = e.x.ToString(), Placeholder = "0" };
-                    var yEntry = new Entry { Text = e.y.ToString(), Placeholder = "0" };
-                    xEntry.Unfocused += (s, ev) => { if (int.TryParse(xEntry.Text, out var nx)) { entries[idx] = entries[idx] with { x = nx }; UpdateStoredEntries(); } };
-                    yEntry.Unfocused += (s, ev) => { if (int.TryParse(yEntry.Text, out var ny)) { entries[idx] = entries[idx] with { y = ny }; UpdateStoredEntries(); } };
-                    posGrid.Add(new Label { Text = "X", VerticalOptions = LayoutOptions.Center, TextColor = Color.FromArgb("#7A8799") }, 0, 0);
-                    posGrid.Add(xEntry, 1, 0);
-                    posGrid.Add(new Label { Text = "Y", VerticalOptions = LayoutOptions.Center, TextColor = Color.FromArgb("#7A8799") }, 2, 0);
-                    posGrid.Add(yEntry, 3, 0);
-                    stack.Children.Add(posGrid);
-
-                    // ── FONT ─────────────────────────────────────────────────
-                    stack.Children.Add(SecLabel("FONT"));
-                    var fontGrid = new Grid
-                    {
-                        ColumnDefinitions =
-                        {
-                            new ColumnDefinition(GridLength.Star),
-                            new ColumnDefinition(GridLength.Auto),
-                            new ColumnDefinition(new GridLength(72))
-                        },
-                        ColumnSpacing = 6
-                    };
-                    var fontPicker = new Picker { Title = "Font", ItemsSource = fonts, SelectedItem = fonts.Contains(e.fontFamily) ? e.fontFamily : fonts.FirstOrDefault() };
-                    fontPicker.SelectedIndexChanged += (s, ev) => { if (fontPicker.SelectedItem is string sf) { entries[idx] = entries[idx] with { fontFamily = sf }; UpdateStoredEntries(); } };
-                    var sizeEntry = new Entry { Text = e.fontSize.ToString(), Placeholder = "24" };
-                    sizeEntry.Unfocused += (s, ev) => { if (float.TryParse(sizeEntry.Text, out var ns)) { entries[idx] = entries[idx] with { fontSize = ns }; UpdateStoredEntries(); } };
-                    fontGrid.Add(fontPicker, 0, 0);
-                    fontGrid.Add(new Label { Text = "Size", VerticalOptions = LayoutOptions.Center, TextColor = Color.FromArgb("#7A8799") }, 1, 0);
-                    fontGrid.Add(sizeEntry, 2, 0);
-                    stack.Children.Add(fontGrid);
-
-                    var stylePicker = new Picker { Title = "Style", ItemsSource = new[] { "Regular", "Bold", "Italic", "BoldItalic" }, SelectedItem = e.fontStyle.ToString() };
-                    stylePicker.SelectedIndexChanged += (s, ev) =>
-                    {
-                        if (stylePicker.SelectedItem is string sel)
-                        {
-                            var fs = sel switch
-                            {
-                                "Bold" => SixLabors.Fonts.FontStyle.Bold,
-                                "Italic" => SixLabors.Fonts.FontStyle.Italic,
-                                "BoldItalic" => SixLabors.Fonts.FontStyle.BoldItalic,
-                                _ => SixLabors.Fonts.FontStyle.Regular,
-                            };
-                            entries[idx] = entries[idx] with { fontStyle = fs };
-                            UpdateStoredEntries();
-                        }
-                    };
-                    stack.Children.Add(stylePicker);
-
-                    // ── TEXT COLOR ───────────────────────────────────────────
-                    stack.Children.Add(SecLabel("TEXT COLOR"));
-                    var colorSwatch = new Border
-                    {
-                        WidthRequest = 32,
-                        HeightRequest = 32,
-                        StrokeShape = new RoundRectangle { CornerRadius = 6 },
-                        Stroke = Colors.White.WithAlpha(0.12f),
-                        VerticalOptions = LayoutOptions.Center
-                    };
-                    try { colorSwatch.Background = new SolidColorBrush(Color.FromRgba(e.r / 65535.0, e.g / 65535.0, e.b / 65535.0, e.a ?? 1f)); } catch { }
-                    var colorEntry = new Entry { Text = $"#{((int)Math.Round(e.r / 257.0)):X2}{((int)Math.Round(e.g / 257.0)):X2}{((int)Math.Round(e.b / 257.0)):X2}" };
-                    colorEntry.Unfocused += (s, ev) =>
-                    {
-                        try
-                        {
-                            var c = Color.FromArgb(colorEntry.Text);
-                            ushort r = (ushort)Math.Round(c.Red * 65535);
-                            ushort g = (ushort)Math.Round(c.Green * 65535);
-                            ushort b = (ushort)Math.Round(c.Blue * 65535);
-                            float a = (float)c.Alpha;
-                            entries[idx] = entries[idx] with { r = r, g = g, b = b, a = a };
-                            colorSwatch.Background = new SolidColorBrush(c);
-                            UpdateStoredEntries();
-                        }
-                        catch { }
-                    };
-                    var colorRow = new Grid
-                    {
-                        ColumnDefinitions = { new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star) },
-                        ColumnSpacing = 8
-                    };
-                    colorRow.Add(colorSwatch, 0, 0);
-                    colorRow.Add(colorEntry, 1, 0);
-                    stack.Children.Add(colorRow);
-
-                    // ── ALIGNMENT ────────────────────────────────────────────
-                    stack.Children.Add(SecLabel("ALIGNMENT"));
-                    var alignGrid = new Grid
-                    {
-                        ColumnDefinitions =
-                        {
-                            new ColumnDefinition(GridLength.Star),
-                            new ColumnDefinition(GridLength.Star),
-                            new ColumnDefinition(GridLength.Auto),
-                            new ColumnDefinition(new GridLength(80))
-                        },
-                        ColumnSpacing = 6
-                    };
-                    var hAlignPicker = new Picker { Title = "H Align", ItemsSource = new[] { "Left", "Center", "Right" }, SelectedItem = e.horizontalAlignment.ToString() };
-                    hAlignPicker.SelectedIndexChanged += (s, ev) =>
-                    {
-                        if (hAlignPicker.SelectedItem is string sel)
-                        {
-                            SixLabors.Fonts.HorizontalAlignment ha = sel switch
-                            {
-                                "Center" => SixLabors.Fonts.HorizontalAlignment.Center,
-                                "Right" => SixLabors.Fonts.HorizontalAlignment.Right,
-                                _ => SixLabors.Fonts.HorizontalAlignment.Left,
-                            };
-                            entries[idx] = entries[idx] with { horizontalAlignment = ha };
-                            UpdateStoredEntries();
-                        }
-                    };
-                    var vAlignPicker = new Picker { Title = "V Align", ItemsSource = new[] { "Top", "Center", "Bottom" }, SelectedItem = e.verticalAlignment.ToString() };
-                    vAlignPicker.SelectedIndexChanged += (s, ev) =>
-                    {
-                        if (vAlignPicker.SelectedItem is string sel)
-                        {
-                            SixLabors.Fonts.VerticalAlignment va = sel switch
-                            {
-                                "Center" => SixLabors.Fonts.VerticalAlignment.Center,
-                                "Bottom" => SixLabors.Fonts.VerticalAlignment.Bottom,
-                                _ => SixLabors.Fonts.VerticalAlignment.Top,
-                            };
-                            entries[idx] = entries[idx] with { verticalAlignment = va };
-                            UpdateStoredEntries();
-                        }
-                    };
-                    var wrapEntry = new Entry { Text = e.wrappingWidth?.ToString() ?? string.Empty, Placeholder = "∞" };
-                    wrapEntry.Unfocused += (s, ev) =>
-                    {
-                        if (float.TryParse(wrapEntry.Text, out var w)) entries[idx] = entries[idx] with { wrappingWidth = w };
-                        else entries[idx] = entries[idx] with { wrappingWidth = null };
-                        UpdateStoredEntries();
-                    };
-                    alignGrid.Add(hAlignPicker, 0, 0);
-                    alignGrid.Add(vAlignPicker, 1, 0);
-                    alignGrid.Add(new Label { Text = "Wrap W", VerticalOptions = LayoutOptions.Center, TextColor = Color.FromArgb("#7A8799") }, 2, 0);
-                    alignGrid.Add(wrapEntry, 3, 0);
-                    stack.Children.Add(alignGrid);
-
-                    // ── TYPOGRAPHY ───────────────────────────────────────────
-                    stack.Children.Add(SecLabel("TYPOGRAPHY"));
-                    var kerningSwitch = new Switch { IsToggled = e.applyKerning, VerticalOptions = LayoutOptions.Center };
-                    kerningSwitch.Toggled += (s, ev) => { entries[idx] = entries[idx] with { applyKerning = kerningSwitch.IsToggled }; UpdateStoredEntries(); };
-                    var lineSpacingEntry = new Entry { Text = e.lineSpacing.ToString() };
-                    lineSpacingEntry.Unfocused += (s, ev) => { if (float.TryParse(lineSpacingEntry.Text, out var ls)) { entries[idx] = entries[idx] with { lineSpacing = ls }; UpdateStoredEntries(); } };
-                    var typRow = new Grid
-                    {
-                        ColumnDefinitions =
-                        {
-                            new ColumnDefinition(GridLength.Auto),
-                            new ColumnDefinition(GridLength.Auto),
-                            new ColumnDefinition(GridLength.Star),
-                            new ColumnDefinition(new GridLength(80))
-                        },
-                        ColumnSpacing = 8
-                    };
-                    typRow.Add(new Label { Text = "Kerning", VerticalOptions = LayoutOptions.Center, TextColor = Color.FromArgb("#7A8799") }, 0, 0);
-                    typRow.Add(kerningSwitch, 1, 0);
-                    typRow.Add(new Label { Text = "Line Spacing", VerticalOptions = LayoutOptions.Center, TextColor = Color.FromArgb("#7A8799"), HorizontalOptions = LayoutOptions.End }, 2, 0);
-                    typRow.Add(lineSpacingEntry, 3, 0);
-                    stack.Children.Add(typRow);
-
-                    var rotEntry = new Entry { Text = e.rotation.ToString(), Placeholder = "0" };
-                    rotEntry.Unfocused += (s, ev) => { if (float.TryParse(rotEntry.Text, out var r)) { entries[idx] = entries[idx] with { rotation = r }; UpdateStoredEntries(); } };
-                    var dpiEntry = new Entry { Text = e.dpi?.ToString() ?? string.Empty, Placeholder = "auto" };
-                    dpiEntry.Unfocused += (s, ev) =>
-                    {
-                        if (float.TryParse(dpiEntry.Text, out var d)) entries[idx] = entries[idx] with { dpi = d };
-                        else entries[idx] = entries[idx] with { dpi = null };
-                        UpdateStoredEntries();
-                    };
-                    var rotDpiGrid = new Grid
-                    {
-                        ColumnDefinitions =
-                        {
-                            new ColumnDefinition(GridLength.Auto),
-                            new ColumnDefinition(GridLength.Star),
-                            new ColumnDefinition(GridLength.Auto),
-                            new ColumnDefinition(GridLength.Star)
-                        },
-                        ColumnSpacing = 6
-                    };
-                    rotDpiGrid.Add(new Label { Text = "Rotation", VerticalOptions = LayoutOptions.Center, TextColor = Color.FromArgb("#7A8799") }, 0, 0);
-                    rotDpiGrid.Add(rotEntry, 1, 0);
-                    rotDpiGrid.Add(new Label { Text = "DPI", VerticalOptions = LayoutOptions.Center, TextColor = Color.FromArgb("#7A8799") }, 2, 0);
-                    rotDpiGrid.Add(dpiEntry, 3, 0);
-                    stack.Children.Add(rotDpiGrid);
-
-                    // ── STROKE ───────────────────────────────────────────────
-                    stack.Children.Add(SecLabel("STROKE"));
-                    var strokeWidthEntry = new Entry { Text = e.strokeWidth?.ToString() ?? string.Empty, Placeholder = "none" };
-                    strokeWidthEntry.Unfocused += (s, ev) =>
-                    {
-                        if (float.TryParse(strokeWidthEntry.Text, out var sw)) entries[idx] = entries[idx] with { strokeWidth = sw };
-                        else entries[idx] = entries[idx] with { strokeWidth = null };
-                        UpdateStoredEntries();
-                    };
-                    var strokeSwatch = new Border
-                    {
-                        WidthRequest = 32,
-                        HeightRequest = 32,
-                        StrokeShape = new RoundRectangle { CornerRadius = 6 },
-                        Stroke = Colors.White.WithAlpha(0.12f),
-                        VerticalOptions = LayoutOptions.Center
-                    };
-                    try { strokeSwatch.Background = new SolidColorBrush(Color.FromRgba(e.strokeR / 65535.0, e.strokeG / 65535.0, e.strokeB / 65535.0, 1.0)); } catch { }
-                    var strokeEntry = new Entry { Text = $"#{((int)Math.Round(e.strokeR / 257.0)):X2}{((int)Math.Round(e.strokeG / 257.0)):X2}{((int)Math.Round(e.strokeB / 257.0)):X2}" };
-                    strokeEntry.Unfocused += (s, ev) =>
-                    {
-                        try
-                        {
-                            var c = Color.FromArgb(strokeEntry.Text);
-                            ushort r = (ushort)Math.Round(c.Red * 65535);
-                            ushort g = (ushort)Math.Round(c.Green * 65535);
-                            ushort b = (ushort)Math.Round(c.Blue * 65535);
-                            entries[idx] = entries[idx] with { strokeR = r, strokeG = g, strokeB = b };
-                            strokeSwatch.Background = new SolidColorBrush(c);
-                            UpdateStoredEntries();
-                        }
-                        catch { }
-                    };
-                    var strokeGrid = new Grid
-                    {
-                        ColumnDefinitions =
-                        {
-                            new ColumnDefinition(new GridLength(80)),
-                            new ColumnDefinition(GridLength.Auto),
-                            new ColumnDefinition(GridLength.Star)
-                        },
-                        ColumnSpacing = 8
-                    };
-                    strokeGrid.Add(strokeWidthEntry, 0, 0);
-                    strokeGrid.Add(strokeSwatch, 1, 0);
-                    strokeGrid.Add(strokeEntry, 2, 0);
-                    stack.Children.Add(strokeGrid);
-
-                    // ── card border ──────────────────────────────────────────
-                    var border = new Border
-                    {
-                        Stroke = Colors.White.WithAlpha(0.10f),
-                        StrokeShape = new RoundRectangle { CornerRadius = 10 },
-                        Padding = new Thickness(12, 10),
-                        Background = new SolidColorBrush(Color.FromArgb("#0FFFFFFF")),
-                        Content = stack
-                    };
-                    entriesContainer.Children.Add(border);
+                    var view = BuildTextEntryUI(e, idx, fonts,
+                        (id, newE) => { entries[id] = newE; UpdateStoredEntries(); },
+                        (id) => { entries.RemoveAt(id); UpdateStoredEntries(); RebuildEntriesUI(); });
+                    entriesContainer.Children.Add(view);
                 }
             }
 
@@ -758,10 +766,8 @@ namespace projectFrameCut.DraftStuff
             // Add/Insert controls
             var addBtn = new Button
             {
-                Text = "+ Add Text Entry",
+                Text = PPLocalizedResources.TextOption_AddAEntry,
                 HorizontalOptions = LayoutOptions.Fill,
-                BackgroundColor = Color.FromArgb("#1A5FBF").WithAlpha(0.18f),
-                TextColor = Color.FromArgb("#5B9FFF"),
                 CornerRadius = 8,
                 FontAttributes = FontAttributes.Bold,
                 Margin = new Thickness(0, 4, 0, 0)
@@ -785,20 +791,26 @@ namespace projectFrameCut.DraftStuff
                 RebuildEntriesUI();
             };
 
-            var panel = new VerticalStackLayout { Spacing = 10, Padding = new Thickness(0, 2) };
-            panel.Children.Add(new Label
+            entriesContainer.Children.Add(addBtn);
+
+            var grid = new Grid
             {
-                Text = "Text Entries",
-                FontAttributes = FontAttributes.Bold,
-                FontSize = 15,
-                TextColor = Color.FromArgb("#C8D4E8")
-            });
-            panel.Children.Add(entriesContainer);
-            panel.Children.Add(addBtn);
+                RowDefinitions =
+                {
+                    new RowDefinition(GridLength.Auto),
+                    new RowDefinition(GridLength.Star)
+                },
+                Padding = 8
+            };
 
-            ppb.AddCustomChild(panel);
+            var scroll = new ScrollView
+            {
+                Content = entriesContainer,
+                VerticalOptions = LayoutOptions.Start
+            };
+            grid.Add(scroll, 0, 1);
 
-            return ppb.BuildWithScrollView();
+            return grid;
         }
         #endregion
 

@@ -4301,7 +4301,11 @@ public partial class DraftPage : ContentPage
         catch (Exception ex)
         {
             Log(ex, "Save on exit", this);
-            await (App.Current?.Windows?[0].Page?.DisplayAlertAsync(Localized._Error, Localized.DraftPage_CannotSave_Exception(ex), Localized._OK) ?? Task.CompletedTask);
+            try
+            {
+                await (App.Current?.Windows?[0].Page?.DisplayAlertAsync(Localized._Error, Localized.DraftPage_CannotSave_Exception(ex), Localized._OK) ?? Task.CompletedTask);
+            }
+            catch { }
         }
 
     }

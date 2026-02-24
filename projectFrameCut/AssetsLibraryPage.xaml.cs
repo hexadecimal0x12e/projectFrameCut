@@ -44,6 +44,14 @@ public partial class AssetsLibraryPage : ContentPage
         instance = this;    
         SourcePicker.ItemsSource = new string[] { OperatingSystem.IsWindows() ? Environment.MachineName : "Your devices",/* Localized.AssetPage_AddASource */};
         SourcePicker.SelectedIndex = 0;
+
+        var orderOpt = SettingsManager.GetSetting("Edit_AddView_DefaultOrderOption", "date");
+        OrderOptionPicker.SelectedIndex = orderOpt switch
+        {
+            "date" => 0,
+            "name" => 1,
+            _ => 0
+        };
     }
 
     private void OnCollectionViewSizeChanged(object sender, EventArgs e)
