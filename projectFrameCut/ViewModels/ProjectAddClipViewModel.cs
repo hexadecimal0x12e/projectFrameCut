@@ -1,5 +1,6 @@
 using CommunityToolkit.Maui.Core;
 using projectFrameCut.APIClient;
+using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
@@ -14,6 +15,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using projectFrameCut.Render.Rendering;
 
 namespace projectFrameCut.ViewModels;
 
@@ -69,6 +71,9 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         get => _draftPage.SelectedClip != null;
     }
+
+    public bool IsSideDetermined { get; private set; } = false;
+
 
 
     // 文本样式支持
@@ -165,6 +170,21 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public ICommand AddTransformClipCommand { get; set; }
     public ICommand AddTransformClipInLeftCommand { get; set; }
     public ICommand AddTransformClipInRightCommand { get; set; }
+    public ICommand GenerateTransformPreviewCommand { get; set; }
+    public ICommand SelectTransformForPreviewCommand { get; set; }
+
+    public TransformItemViewModel? SelectedTransformForPreview
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    }
 
     // 绘图命令
     public ICommand DrawingContentUndoCommand { get; set; }
@@ -183,6 +203,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         AddTransformClipCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, false, false));
         AddTransformClipInLeftCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, true, false));
         AddTransformClipInRightCommand = new Command<TransformItemViewModel>(async (t) => await AddTransformClip(t, false, true));
+        GenerateTransformPreviewCommand = new Command<TransformItemViewModel?>(async (t) => await GenerateTransformPreviewAsync(t ?? SelectedTransformForPreview));
+        SelectTransformForPreviewCommand = new Command<TransformItemViewModel?>(t => SelectedTransformForPreview = t);
 
         DrawingContentUndoCommand = new Command(DrawingUndo);
         DrawingContentRedoCommand = new Command(DrawingRedo);
@@ -476,7 +498,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         AvailableTransforms.Clear();
         var localizedNames = TransformServices.GetLocalizedTransformNames();
-        var sideDetermined = _draftPage._transformMenuActivatedHandle == "left" || _draftPage._transformMenuActivatedHandle == "right";
+        IsSideDetermined = _draftPage._transformMenuActivatedHandle == "left" || _draftPage._transformMenuActivatedHandle == "right";
         var applicableToLeft = _draftPage.FindNeighbors(_draftPage?.SelectedClip).left is not null;
         var applicableToRight = _draftPage.FindNeighbors(_draftPage?.SelectedClip).right is not null;
         foreach (var kvp in localizedNames)
@@ -485,7 +507,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 TypeKey = kvp.Key,
                 DisplayName = kvp.Value,
-                IsSideDetermined = sideDetermined,
+                IsSideDetermined = IsSideDetermined,
                 IsApplicableToLeft = applicableToLeft,
                 IsApplicableToRight = applicableToRight,
                 IsDraftSelectedAnyClip = IsDraftSelectedAnyClip
@@ -515,6 +537,111 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             _draftPage.AddTransformBetweenSelected(transform.TypeKey, _draftPage.SelectedClip, left, right);
         }
         ClipAdded?.Invoke(this, EventArgs.Empty);
+    }
+
+    private async Task GenerateTransformPreviewAsync(TransformItemViewModel? transform)
+    {
+        if (transform is null || transform.IsGeneratingPreview) return;
+        transform.IsGeneratingPreview = true;
+        try
+        {
+            var factories = TransformServices.GetAvailableTransforms();
+            if (!factories.TryGetValue(transform.TypeKey, out var factory)) return;
+
+            var previewDir = Path.Combine(FileSystem.CacheDirectory, "TransformPreviews");
+            Directory.CreateDirectory(previewDir);
+            var videoPath = Path.Combine(previewDir, $"{transform.TypeKey}.mp4");
+
+            if (File.Exists(videoPath)) File.Delete(videoPath);
+
+            const int previewW = 320, previewH = 180, fps = 24, frameCount = 48;
+
+            await Task.Run(() =>
+            {
+                // Detect a suitable encoder
+                string codec;
+                if (VideoWriter.DetectCodec("libx264")) codec = "libx264";
+                else if (VideoWriter.DetectCodec("mpeg4")) codec = "mpeg4";
+                else return; // No encoder available
+
+                // Create two solid-color stub clips so ITransform.Previous / Next are never null.
+                // Previous: dark blue (left/outgoing clip), Next: dark red (right/incoming clip).
+                var prevId = Guid.NewGuid();
+                var nextId = Guid.NewGuid();
+                var prevClip = new SolidColorClip
+                {
+                    Id = prevId.ToString(),
+                    Name = "_preview_prev",
+                    StartFrame = 0,
+                    Duration = (uint)frameCount,
+                    FrameTime = 1f / fps,
+                    SecondPerFrameRatio = 1f,
+                    R = 0x2A00,
+                    G = 0x5200,
+                    B = 0x8C00,
+                };
+                var nextClip = new SolidColorClip
+                {
+                    Id = nextId.ToString(),
+                    Name = "_preview_next",
+                    StartFrame = (uint)frameCount,
+                    Duration = (uint)frameCount,
+                    FrameTime = 1f / fps,
+                    SecondPerFrameRatio = 1f,
+                    R = 0x8C00,
+                    G = 0x2A00,
+                    B = 0x2A00,
+                };
+
+                var t = factory(prevId, nextId);
+                try
+                {
+                    t.Init();
+
+                    using var writer = new VideoWriter
+                    {
+                        Width = previewW,
+                        Height = previewH,
+                        FramePerSecond = fps,
+                        OutputPath = videoPath,
+                        CodecName = codec,
+                        PixelFormat = "AV_PIX_FMT_YUV420P"
+                    };
+                    writer.Initialize();
+
+                    for (uint i = 0; i < frameCount; i++)
+                    {
+                        double progress = (double)i / Math.Max(1, frameCount - 1);
+                        using var frame = TransformProcessing.ProcessTransform(prevClip, nextClip, t, previewW, previewH, i);
+                        writer.Append(frame);
+                    }
+
+                    writer.Finish();
+                }
+                finally
+                {
+                    if (t is IDisposable disposable)
+                        disposable.Dispose();
+                    prevClip.Dispose();
+                    nextClip.Dispose();
+                }
+            });
+
+
+            if (File.Exists(videoPath))
+            {
+                transform.PreviewVideoPath = videoPath;
+
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"GenerateTransformPreview for {transform.TypeKey}", this);
+        }
+        finally
+        {
+            transform.IsGeneratingPreview = false;
+        }
     }
 
     #endregion
@@ -1017,14 +1144,52 @@ public class AssetItemViewModel
     public Brush BackgroundBrush { get; set; } = new SolidColorBrush(Colors.CornflowerBlue);
 }
 
-public class TransformItemViewModel
+public class TransformItemViewModel : INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
     public string TypeKey { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public bool IsApplicableToLeft { get; set; } = false;
     public bool IsApplicableToRight { get; set; } = false;
     public bool IsSideDetermined { get; set; } = false;
     public bool IsDraftSelectedAnyClip { get; set; } = false;
+
+    private string? _previewVideoPath;
+    /// <summary>Path to the locally-cached preview MP4 for this transform.</summary>
+    public string? PreviewVideoPath
+    {
+        get => _previewVideoPath;
+        set
+        {
+            if (_previewVideoPath != value)
+            {
+                _previewVideoPath = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsPreviewReady));
+            }
+        }
+    }
+
+    /// <summary>True once a preview video has been cached for this transform.</summary>
+    public bool IsPreviewReady => !string.IsNullOrEmpty(_previewVideoPath);
+
+    private bool _isGeneratingPreview;
+    /// <summary>True while the preview is being rendered in the background.</summary>
+    public bool IsGeneratingPreview
+    {
+        get => _isGeneratingPreview;
+        set
+        {
+            if (_isGeneratingPreview != value)
+            {
+                _isGeneratingPreview = value;
+                OnPropertyChanged();
+            }
+        }
+    }
 }
 
 public class TextStyleItemViewModel

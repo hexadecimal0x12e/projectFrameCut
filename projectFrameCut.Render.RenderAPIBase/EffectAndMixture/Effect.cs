@@ -34,9 +34,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// For compatibility consideration, the default implementation of this property will check the Is***Effect properties to determine the EffectType. 
         /// It's best to override this property to provide a specific EffectType because of <b>this feature may be removed in the future</b>.
         /// </remarks>
-#pragma warning disable CS0618
-        public virtual EffectType TypeOfEffect { get => IsBindableArgsEffect ? EffectType.BindableEffect : IsContinuousEffect ? EffectType.ContinuousEffect : IsNormalEffect ? EffectType.NormalEffect : throw new NotSupportedException($"The effect {TypeName} has an unspecified EffectType. Either set Is***Effect, or override property TypeOfEffect."); }
-#pragma warning restore CS0618
+        public virtual EffectType TypeOfEffect => EffectType.NormalEffect;
 
         /// <summary>
         /// Get how this effect is implemented.

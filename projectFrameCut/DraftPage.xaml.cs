@@ -500,6 +500,7 @@ public partial class DraftPage : ContentPage
         if (UseCompactLayout ?? (DeviceInfo.Idiom == DeviceIdiom.Phone))
         {
             MainMultiWindowView.CloseWindow(PropertiesSubwindow);
+            MainMultiWindowView.CloseWindow(AssisstantSubWindow);
             PreviewSubwindow.IsTitleBarVisible = false;
             PreviewSubwindow.IsResizable = false;
             PreviewSubwindow.Maximize();
@@ -1095,8 +1096,13 @@ public partial class DraftPage : ContentPage
     private void UnSelectTapGesture_Tapped(object? sender, TappedEventArgs e)
     {
         if (_selected is null) return;
-        _selected.Clip.Background = _selectedOrigColor ?? new SolidColorBrush(Colors.CornflowerBlue);
         _selected = null;
+        UnselectClip(_selected);
+    }
+
+    public void UnselectClip(ClipElementUI? clip)
+    {
+        clip?.Clip?.Background = _selectedOrigColor ?? new SolidColorBrush(Colors.CornflowerBlue);
         SetStatusText(Localized.DraftPage_EverythingFine);
         ClipEditor.SetClip(null, null);
         SetTimelineScrollEnabled(true);
@@ -1527,6 +1533,7 @@ public partial class DraftPage : ContentPage
 
     private void DeleteAClip(ClipElementUI? clip = null)
     {
+        UnselectClip(clip);
         clip ??= _selected;
         if (clip is null) return;
         if (clip.origTrack is null) return;
@@ -1559,6 +1566,9 @@ public partial class DraftPage : ContentPage
         if (next is not null) Guid.TryParse(next.Id, out nextGuid);
 
         var transform = factory(prevGuid, nextGuid);
+        transform.BindedLeftClip = prevGuid;
+        transform.BindedRightClip = nextGuid;
+        transform.Duration = PixelToFrame(width);
         try
         {
             transform?.Init();
@@ -3025,8 +3035,10 @@ public partial class DraftPage : ContentPage
         {
             MainMultiWindowView.CloseWindow(window);
         }
-        if (UpperContent.Children[0] is Grid previewGrid && PreviewAreaHeight > 100)
+        if (UpperContent.Children[0] is Grid previewGrid)
         {
+            previewGrid.HeightRequest = 250;
+            ClipEditor?.HeightRequest = 240;
             previewGrid.ColumnDefinitions.Clear();
             previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -3456,15 +3468,7 @@ public partial class DraftPage : ContentPage
         {
             SetStateFail(Localized.DraftPage_CannotSave_Readonly);
         }
-        // If a clip moved or was resized, remove any transform clips that reference it.
-        try
-        {
-            if (e?.SourceId is not null && (e.Reason == ClipUpdateReason.ClipItselfMove || e.Reason == ClipUpdateReason.ClipResized))
-            {
-                RemoveTransformsReferencingClip(e.SourceId);
-            }
-        }
-        catch { }
+        
         foreach (var item in Clips)
         {
             if (!item.Value.isInfiniteLength && item.Value.lengthInFrame > item.Value.maxFrameCount)

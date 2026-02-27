@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Render.Compose;
+﻿using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -23,6 +24,8 @@ namespace projectFrameCut.Render.Rendering
 
 
         public IClip[]? Clips;
+        Dictionary<Guid, IClip> IndexedClipList = new();
+
         public uint Duration;
         public uint StartFrame = 0;
         public VideoBuilder? builder;
@@ -346,7 +349,7 @@ namespace projectFrameCut.Render.Rendering
         {
             ArgumentNullException.ThrowIfNull(builder, nameof(builder));
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
-
+            
             _renderTotalStopwatch.Restart();
             Log("[Renderer] BlockWrite enabled: switching to single-threaded, synchronous render.", "info");
 
@@ -472,6 +475,7 @@ namespace projectFrameCut.Render.Rendering
         {
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
             Stopwatch sw = new();
+
             int throttleThreshold = IsAndroid ? MaxThreads : MaxThreads * 4;
 
             foreach (var idx in ClipNeedForFrame.Keys.OrderBy(x => x))
@@ -492,7 +496,26 @@ namespace projectFrameCut.Render.Rendering
 
                     if (ClipNeedForFrame[idx].Contains(item, clipEquabilityComparer))
                     {
-                        var frame = item.GetFrame(idx, _width, _height, true);
+                        IPicture frame = null!;
+                        if (item.ClipType == ClipMode.TransformClip && item is TransformContainer c)
+                        {
+                            if (c.Transform is not ITransform t) throw new NullReferenceException($"Transform for clip {c.Id} is null");
+                            IClip? rightClip = null;
+
+                            if (t.TransformType != TransformType.OneInputSingleFrameTransform)
+                                if (!IndexedClipList.TryGetValue(t.BindedRightClip, out rightClip)) throw new NullReferenceException($"Transform {t.Name}({t.TypeName})'s left input for clip {c.Id} is null");
+
+                            if (!IndexedClipList.TryGetValue(t.BindedLeftClip, out IClip? leftClip)) throw new NullReferenceException($"Transform {t.Name}({t.TypeName})'s left input for clip {c.Id} is null");
+
+
+                            frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, _width, _height, idx);
+
+
+                        }
+                        else
+                        {
+                            frame = item.GetFrame(idx, _width, _height, true);
+                        }
                         if (frame != null)
                         {
                             if (Use16Bit && frame.bitPerPixel != IPicture.PicturePixelMode.UShortPicture)
@@ -538,12 +561,9 @@ namespace projectFrameCut.Render.Rendering
             {
                 RenderAFrameInternal(
                     targetFrame,
-                    token,
                     [],
-                    logEmptyFrame: true,
-                    recordPrepareElapsed: false,
-                    stopBeforeAppendInBlank: true,
-                    usedFrames: null);
+                    null,
+                    token);
                 return;
             }
             var framesToRender = new List<(IClip Clip, IPicture? Frame)>(ClipsNeed.Length);
@@ -567,12 +587,9 @@ namespace projectFrameCut.Render.Rendering
 
             RenderAFrameInternal(
                 targetFrame,
-                token,
                 framesToRender,
-                logEmptyFrame: true,
-                recordPrepareElapsed: false,
-                stopBeforeAppendInBlank: true,
-                usedFrames: null);
+                null,
+                token);
 
             if (token.IsCancellationRequested) return;
 
@@ -615,7 +632,26 @@ namespace projectFrameCut.Render.Rendering
             var framesToRender = new List<(IClip Clip, IPicture? Frame)>(clipsNeed.Count);
             foreach (var clip in clipsNeed)
             {
-                var frame = clip.GetFrame(targetFrame, _width, _height, true);
+                IPicture frame = null!;
+                if (clip.ClipType == ClipMode.TransformClip && clip is TransformContainer c)
+                {
+                    if (c.Transform == null)
+                        c.ReInit();
+                    if (c.Transform is not ITransform t) throw new NullReferenceException($"Transform for clip {c.Id} is null");
+                    IClip? rightClip = null;
+
+                    if (t.TransformType != TransformType.OneInputSingleFrameTransform)
+                        if (!IndexedClipList.TryGetValue(t.BindedRightClip, out rightClip)) throw new NullReferenceException($"Transform {t.Name}({t.TypeName})'s left input for clip {c.Id} is null");
+
+                    if (!IndexedClipList.TryGetValue(t.BindedLeftClip, out IClip? leftClip)) throw new NullReferenceException($"Transform {t.Name}({t.TypeName})'s left input for clip {c.Id} is null");
+
+
+                    frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, _width, _height, targetFrame);
+                }
+                else
+                {
+                    frame = clip.GetFrame(targetFrame, _width, _height, true);
+                }
                 if (frame == null)
                 {
                     Log($"[Render] WARN: Frame {targetFrame} not found for clip {clip.Id}.");
@@ -635,15 +671,13 @@ namespace projectFrameCut.Render.Rendering
                 framesToRender.Add((clip, frame));
             }
             EachElapsedForPreparing.Add(prep.Elapsed);
+            FramePrepareElapsed[targetFrame] = prep.Elapsed;
 
             RenderAFrameInternal(
                 targetFrame,
-                token,
                 framesToRender,
-                logEmptyFrame: false,
-                recordPrepareElapsed: true,
-                stopBeforeAppendInBlank: false,
-                usedFrames: usedFrames);
+                usedFrames: usedFrames,
+                token);
 
             if (token.IsCancellationRequested) return;
 
@@ -655,12 +689,9 @@ namespace projectFrameCut.Render.Rendering
 
         private void RenderAFrameInternal(
             uint targetFrame,
-            CancellationToken token,
             List<(IClip Clip, IPicture? Frame)> clipsNeed,
-            bool logEmptyFrame,
-            bool recordPrepareElapsed,
-            bool stopBeforeAppendInBlank,
-            List<IPicture>? usedFrames)
+            List<IPicture>? usedFrames,
+            CancellationToken token)
         {
             Stopwatch sw = Stopwatch.StartNew();
             IPicture result = null!;
@@ -685,64 +716,81 @@ namespace projectFrameCut.Render.Rendering
                     var clipLock = _clipEffectLocks.GetOrAdd(clip.Id, _ => new object());
                     lock (clipLock)
                     {
-                    List<IPictureProcessStep> steps = new();
-                    bool lastIsProcessStep = false, effectsChanged = false;
-                    var effectCopy = effects.ToList();
-                    foreach (var item in effects)
-                    {
-                        var computer = GetOrCreateComputer(item.NeedComputer);
-                        if (item.YieldProcessStep != lastIsProcessStep)
+                        List<IPictureProcessStep> steps = new();
+                        bool lastIsProcessStep = false, effectsChanged = false;
+                        var effectCopy = effects.ToList();
+                        foreach (var item in effects)
                         {
-                            frame = PictureProcesser.Process(steps, frame, _ppb);
-                            steps.Clear();
-                        }
-
-                        switch (item.TypeOfEffect)
-                        {
-                            case EffectType.NormalEffect:
-                                EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer, _width, _height);
-                                continue;
-                            case EffectType.ContinuousEffect:
-                                if (item is not IContinuousEffect c) goto notdefined;
-                                EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c, _width, _height);
-                                continue;
-                            case EffectType.BindableEffect:
-                                if (item is not IBindableArgumentEffect b) goto notdefined;
-                                continue;
-                            default:
-                                goto notdefined;
-                        }
-
-
-                    notdefined:
-                        Log($"[Render] Effect {item.Name} of clip {clip.Id} has an not static defined type.", "warn");
-                        if (item is IBindableArgumentEffect be)
-                        {
-                            if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, steps, ref lastIsProcessStep, be, computer, _width, _height))
+                            var computer = GetOrCreateComputer(item.NeedComputer);
+                            if (item.YieldProcessStep != lastIsProcessStep)
                             {
-                                effectCopy.Remove(item);
-                                effectsChanged = true;
+                                frame = PictureProcesser.Process(steps, frame, _ppb);
+                                steps.Clear();
+                            }
+
+                            try
+                            {
+                                switch (item.TypeOfEffect)
+                                {
+                                    case EffectType.NormalEffect:
+                                        EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer, _width, _height);
+                                        continue;
+                                    case EffectType.ContinuousEffect:
+                                        if (item is not IContinuousEffect c) goto notdefined;
+                                        EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c, _width, _height);
+                                        continue;
+                                    case EffectType.BindableEffect:
+                                        if (item is not IBindableArgumentEffect b) goto notdefined;
+                                        continue;
+                                    default:
+                                        goto notdefined;
+                                }
+                            }
+                            catch (NotSupportedException)
+                            {
+                                goto notdefined;
+                            }
+                            catch (InvalidOperationException)
+                            {
+                                goto notdefined;
+                            }
+                            catch (Exception ex)
+                            {
+                                Log(ex, $"Processing effect {item?.Name} ({item?.Id}) of clip {clip.Id}", this);
+                                throw;
+                            }
+
+
+
+                        notdefined:
+                            Log($"[Render] Effect {item.Name} of clip {clip.Id} has an not static defined type.", "warn");
+                            if (item is IBindableArgumentEffect be)
+                            {
+                                if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, steps, ref lastIsProcessStep, be, computer, _width, _height))
+                                {
+                                    effectCopy.Remove(item);
+                                    effectsChanged = true;
+                                }
+                            }
+                            else if (item is IContinuousEffect c)
+                            {
+                                EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c, _width, _height);
+                            }
+                            else
+                            {
+                                EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer, _width, _height);
                             }
                         }
-                        else if (item is IContinuousEffect c)
-                        {
-                            EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c, _width, _height);
-                        }
-                        else
-                        {
-                            EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer, _width, _height);
-                        }
-                    }
 
-                    if (steps.ListAny())
-                    {
-                        frame = PictureProcesser.Process(steps, frame, _ppb);
-                    }
+                        if (steps.ListAny())
+                        {
+                            frame = PictureProcesser.Process(steps, frame, _ppb);
+                        }
 
-                    if (effectsChanged)
-                    {
-                        EffectCache[clip.Id] = effectCopy.OrderBy(c => c.Index).ToArray();
-                    }
+                        if (effectsChanged)
+                        {
+                            EffectCache[clip.Id] = effectCopy.OrderBy(c => c.Index).ToArray();
+                        }
                     } // end lock (clipLock)
                 }
 
@@ -793,7 +841,7 @@ namespace projectFrameCut.Render.Rendering
             if (LogState) Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}, dirty time {FrameDirtyTime[targetFrame]}");
             EachElapsed.Add(sw.Elapsed);
             FrameRenderElapsed[targetFrame] = sw.Elapsed;
-            if (recordPrepareElapsed) FramePrepareElapsed.TryAdd(targetFrame, TimeSpan.Zero);
+            FramePrepareElapsed.TryAdd(targetFrame, TimeSpan.Zero);
         }
 
         private void InitializeRenderCaches()
@@ -810,14 +858,13 @@ namespace projectFrameCut.Render.Rendering
                         throw new InvalidDataException("A effect can't both yield process step, and use a computer.");
                 }
                 Log($"[Preparer] Cached {effectInstances.Length} effects for clip {item.Id} ({string.Join(", ", effectInstances.Select(c => $"{c.TypeName}:'{c.Name}'"))})");
-                if (item is Render.ClipsAndTracks.TransformContainer c)
-                {
-                    c.Transform?.Previous = Clips?.FirstOrDefault(clip => clip.Id == c.Transform?.PreviousClipId.ToString());
-                    c.Transform?.Next = Clips?.FirstOrDefault(clip => clip.Id == c.Transform?.NextClipId.ToString());
-                }
+
             }
 
             mixComputer = GetOrCreateComputer(OverlayMixture.ComputerId) ?? throw new NullReferenceException("Can't create computer for global mixer.");
+
+            IndexedClipList = Clips.ToDictionary(c => Guid.TryParse(c.Id, out var result) ? result : throw new InvalidDataException($"Clip {c.Name}({c.Id}) has an invalid Id. Id should be an GUID."));
+
         }
 
         private void InvokeProgress()

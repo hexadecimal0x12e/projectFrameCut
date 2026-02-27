@@ -80,5 +80,28 @@ namespace projectFrameCut.Shared
         Custom5,
     }
 
+    public enum TransformType
+    {
+        /// <summary>
+        /// Represents a transform with two input, 
+        /// and get only the last frame of left and first frame of right one.
+        /// </summary>
+        SingleFrameTransform,
+        /// <summary>
+        /// Represents a transform with only one input, 
+        /// which usually is the last frame of binded clip.
+        /// </summary>
+        OneInputSingleFrameTransform,
+        /// <summary>
+        /// Represents a transform with two input, 
+        /// Continuously get the frame from two sources and render it by the progress.
+        /// </summary>
+        ContinuousTransform,
+        /// <summary>
+        /// To do in future.
+        /// </summary>
+        AudioTransform
+    }
+
     public record struct AcceleratorInfo(uint index, string name, string Type);
 }

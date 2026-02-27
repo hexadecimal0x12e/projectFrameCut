@@ -182,20 +182,31 @@
         </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddTransform}" Tag="Transform" x:Name="TransformTab" x:FieldModifier="public">
             <Grid RowDefinitions="Auto,*">
-                <!-- 提示：需先选中片段 -->
                 <Border Grid.Row="0"
                         BackgroundColor="{AppThemeBinding Light=#E8F4FD, Dark=#1A3A5C}"
                         Padding="12,8"
                         Margin="8,8,8,4"
                         StrokeThickness="0"
-                        IsVisible="{Binding IsDraftSelectedAnyClip,Converter={toolkit:InvertedBoolConverter}}"
                         StrokeShape="RoundRectangle 6">
-                    <Label Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_NoTargetClip}"
+                    <Grid>
+                        <Label
+                           IsVisible="{Binding IsDraftSelectedAnyClip,Converter={toolkit:InvertedBoolConverter}}"
+                           Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_NoTargetClip}"
                            FontSize="12"
                            TextColor="{AppThemeBinding Light=#1A5276, Dark=#85C1E9}"/>
+                        <Button IsVisible="{x:OnIdiom Phone=true, Default=false}"
+                                IsEnabled="{Binding IsDraftSelectedAnyClip}"
+                                Background="{Binding IsSideDetermined, Converter={StaticResource IsValidConverter}}"
+                                Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_RenderPreview}"              
+                                Command="{Binding GenerateTransformPreviewCommand}"
+                                HorizontalOptions="{Binding IsDraftSelectedAnyClip, Converter={toolkit:BoolToObjectConverter FalseObject=End, TrueObject=Start}}"
+                                VerticalOptions="Center"
+                                Margin="8,0,0,0"
+                                WidthRequest="120"
+                                HeightRequest="34" />
+                    </Grid>
                 </Border>
 
-                <!-- 转场列表 -->
                 <CollectionView Grid.Row="1"
                                 ItemsSource="{Binding FilteredAvailableTransforms}"
                                 SelectionMode="None"
@@ -212,12 +223,29 @@
                                     HeightRequest="160" 
                                     WidthRequest="180"
                                     StrokeShape="RoundRectangle 8">
+                                <Border.GestureRecognizers>
+                                    <PointerGestureRecognizer
+                                        PointerEnteredCommand="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ProjectAddClipViewModel}}, Path=GenerateTransformPreviewCommand}"
+                                        PointerEnteredCommandParameter="{Binding .}"/>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ProjectAddClipViewModel}}, Path=SelectTransformForPreviewCommand}"
+                                        CommandParameter="{Binding .}"/>
+                                </Border.GestureRecognizers>
                                 <Grid RowDefinitions="*,Auto,Auto">
-                                    <Image Grid.Row="0"
-                                           Source="" 
+                                    <toolkit:MediaElement Grid.Row="0"
+                                           Source="{Binding PreviewVideoPath}"
                                            Aspect="AspectFit" 
                                            Margin="4"
-                                           IsVisible="False"/>
+                                           ShouldAutoPlay="True"
+                                           ShouldLoopPlayback="True"
+                                           ShouldMute="True"
+                                           ShouldShowPlaybackControls="False"
+                                           IsVisible="{Binding IsPreviewReady}"/>
+                                    <ActivityIndicator Grid.Row="0"
+                                           IsRunning="{Binding IsGeneratingPreview}"
+                                           IsVisible="{Binding IsGeneratingPreview}"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"/>
 
                                     <Grid Grid.Row="2" 
                                           BackgroundColor="{AppThemeBinding Light=#E0E0E0, Dark=#333333}" 

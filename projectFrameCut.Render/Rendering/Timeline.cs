@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Render.Compose;
+﻿using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -40,7 +41,36 @@ namespace projectFrameCut.Render.Rendering
 
                         //throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
-                    var frame = clip.GetFrame(targetFrame, targetWidth, targetHeight, true);
+                    IPicture frame = null!;
+                    if (clip is TransformContainer c)
+                    {
+                        if (c.Transform == null) c.ReInit();
+                        var t = c.Transform;
+                        if (t == null)
+                        {
+                            Log($"[Timeline] WARN: Transform for clip {c.Id} is null; skipping transform for frame {targetFrame}");
+                            frame = null;
+                        }
+                        else
+                        {
+                            var leftClip = video.FirstOrDefault(cc => cc.Id == t.BindedLeftClip.ToString());
+                            var rightClip = video.FirstOrDefault(cc => cc.Id == t.BindedRightClip.ToString());
+                            if (leftClip == null || rightClip == null)
+                            {
+                                Log($"[Timeline] WARN: Transform inputs not found for transform {c.Id}. Skipping frame {targetFrame}");
+                                frame = null;
+                            }
+                            else
+                            {
+                                frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, targetWidth, targetHeight, targetFrame);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        frame = clip.GetFrame(targetFrame, targetWidth, targetHeight, true);
+                    }
+                    
                     if (frame is not null)
                     {
                         result.Add(new OneFrame(targetFrame, clip, frame));

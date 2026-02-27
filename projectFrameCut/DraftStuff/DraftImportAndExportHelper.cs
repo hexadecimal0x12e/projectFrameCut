@@ -345,14 +345,6 @@ namespace projectFrameCut.DraftStuff
                 clipsList.Add(clipInstance);
 
             }
-            foreach (var item in clipsList)
-            {
-                if (item is Render.ClipsAndTracks.TransformContainer c)
-                {
-                    c.Transform?.Previous = clipsList.FirstOrDefault(clip => clip.Id == c.Transform?.PreviousClipId.ToString());
-                    c.Transform?.Next = clipsList.FirstOrDefault(clip => clip.Id == c.Transform?.NextClipId.ToString());
-                }
-            }
             return clipsList.ToArray();
         }
 

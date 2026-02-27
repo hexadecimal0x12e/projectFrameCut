@@ -45,12 +45,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize = false)
         {
-            ArgumentNullException.ThrowIfNull(Transform, nameof(Transform));
-            ArgumentNullException.ThrowIfNull(Transform.Previous, nameof(Transform.Previous));
-            ArgumentNullException.ThrowIfNull(Transform.Next, nameof(Transform.Next));
-            var idx = EffectHelper.GetContinuesEffectProgress(frameIndex, 0, (int)Duration);
-            var comp = PluginManager.CreateComputer(Transform.NeedComputer);
-            return Transform.GetFrame(idx, comp, targetWidth, targetHeight);
+            throw new NotSupportedException("Use TransformProcesser.");
         }
 
         public void ReInit()
