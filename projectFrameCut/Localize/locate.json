@@ -170,6 +170,33 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "AboutAppData_BasicData",
+        "Value": "\u8FD9\u662FprojectFrameCut\u7684\u5E94\u7528\u7A0B\u5E8F\u5185\u90E8\u6570\u636E\u3002\r\u968F\u610F\u4FEE\u6539\u8FD9\u4E9B\u6587\u4EF6\u53EF\u80FD\u5BFC\u81F4\u610F\u6599\u4EE5\u5916\u7684\u884C\u4E3A\uFF0C\u8BF7\u8C28\u614E\u5BF9\u5F85\u4ED6\u4EEC\u3002\r\u5176\u4E2D\uFF0C\r- Plugins \u6587\u4EF6\u5939\u662F\u4F60\u7684\u63D2\u4EF6\u7684\u672C\u4F53\u548C\u6570\u636E\u76EE\u5F55\u3002\r- Plugins.json \u6587\u4EF6\u662F\u4F60\u7684\u63D2\u4EF6\u914D\u7F6E\u6587\u4EF6\u3002\u5220\u9664\u4ED6\u4EEC\u7B49\u540C\u4E8E\u7981\u7528\u4F7F\u7528\u7684\u63D2\u4EF6\u3002\r- logging \u662F\u65E5\u5FD7\u76EE\u5F55\uFF0C\u4F60\u53EF\u4EE5\u6E05\u7406\u4ED6\u4EEC\uFF0C\u4F46\u662F\u9891\u7E41\u7684\u6E05\u7406\u65E5\u5FD7\u53EF\u80FD\u4F1A\u5BFC\u81F4\u8DDF\u8E2A\u4E4B\u524D\u53D1\u751F\u7684\u95EE\u9898\u53D8\u5F97\u56F0\u96BE\u3002\r- settings.json\u3001 settings_a.json \u548C settings_b.json \u662F\u4F60\u7684\u8BBE\u7F6E\u3002\u8BF7\u4E0D\u8981\u4FEE\u6539\u4ED6\u4EEC\uFF0C\u5426\u5219\u8FD9\u4F1A\u5BFC\u81F4\u4F60\u7684\u914D\u7F6E\u4E22\u5931\u3002\r- ai_settings_text.json\u3001ai_settings_image.json\u548Cai_settings_video.json \u662F\u4F60\u914D\u7F6E\u7684AI\u6A21\u578B\u7684API\u8BBE\u7F6E\uFF0C\u5220\u9664\u4ED6\u4EEC\u4F1A\u5BFC\u81F4\u4F60\u7684\u914D\u7F6E\u4E22\u5931\u3002\r- TextTemplates.json \u662F\u4F60\u914D\u7F6E\u7684\u6587\u672C\u6A21\u677F\uFF0C\u5220\u9664\u4E4B\u540E\u4F1A\u81EA\u52A8\u91CD\u65B0\u751F\u6210\u3002\r- EffectImplement.json \u662F\u4F60\u914D\u7F6E\u7684\u6548\u679C\u5B9E\u73B0\u5668\uFF0C\u5220\u9664\u4E4B\u540E\u4F1A\u81EA\u52A8\u91CD\u65B0\u751F\u6210\u3002\r- JapaneseDictionary\u3001EBWebView \u548C diag \u662F\u4E00\u4E9B\u7EC4\u4EF6\u6240\u4F7F\u7528\u7684\u4E34\u65F6\u6587\u4EF6\uFF0C\u4F60\u53EF\u4EE5\u5220\u9664\u4ED6\u4EEC\uFF0C\u4ED6\u4EEC\u662F\u6309\u9700\u751F\u6210\u7684\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1projectFrameCut\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57\r\u4FDD\u6301\u6240\u6709\u7684\u6587\u4EF6\u5939\u540D\u5B57\u76F8\u540C\uFF0C\u786E\u4FDD\u7528\u8BCD\u4E0D\u4F1A\u8FC7\u4E8E\u6DF1\u5EA6\u5BFC\u81F4\u666E\u901A\u7528\u6237\u770B\u4E0D\u61C2\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_NotWindows",
+        "Value": "\u8FD9\u662FprojectFrameCut\u7684\u4E3B\u6570\u636E\u76EE\u5F55\u3002\r\u5176\u4E2D\uFF0C\r- My Assets \u662F\u4F60\u7684\u7D20\u6750\u3002\r- My Drafts \u662F\u4F60\u7684\u9879\u76EE\u6570\u636E\u3002\r- Remote Assets \u662F\u4ECE\u8FDC\u7A0B\u670D\u52A1\u5668\u4E0A\u83B7\u53D6\u7684\u7D20\u6750\u3002\u4F60\u53EF\u4EE5\u5B89\u5168\u7684\u6E05\u7406\u4ED6\u4EEC\uFF0C\u4F46\u662F\u4F60\u9700\u8981\u5728\u6E32\u67D3\u6240\u6709\u7528\u5230\u4ED6\u4EEC\u7684\u9879\u76EE\u4E4B\u524D\u91CD\u65B0\u4E0B\u8F7D\u3002\r- RenderCheckpoint \u548C RenderCache \u662F\u6E32\u67D3\u8FC7\u7A0B\u4E2D\u7684\u4E34\u65F6\u6570\u636E\u76EE\u5F55\uFF0C\u4F60\u53EF\u4EE5\u5B89\u5168\u7684\u6E05\u7406\u4ED6\u4EEC\u3002\r- AppData \u662F\u5E94\u7528\u7A0B\u5E8F\u5185\u90E8\u6570\u636E\uFF0C\u8BF7\u8C28\u614E\u5BF9\u5F85\u4ED6\u4EEC\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1projectFrameCut\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57\r\u4FDD\u6301\u6240\u6709\u7684\u6587\u4EF6\u5939\u540D\u5B57\u76F8\u540C\uFF0C\u786E\u4FDD\u7528\u8BCD\u4E0D\u4F1A\u8FC7\u4E8E\u6DF1\u5EA6\u5BFC\u81F4\u666E\u901A\u7528\u6237\u770B\u4E0D\u61C2\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_Windows",
+        "Value": "\u8FD9\u662FprojectFrameCut\u7684\u7528\u6237\u6570\u636E\u76EE\u5F55\u3002\r\u5176\u4E2D\uFF0C\r- My Assets \u662F\u4F60\u7684\u7D20\u6750\u3002\r- My Drafts \u662F\u4F60\u7684\u9879\u76EE\u6570\u636E\u3002\r- Remote Assets \u662F\u4ECE\u8FDC\u7A0B\u670D\u52A1\u5668\u4E0A\u83B7\u53D6\u7684\u7D20\u6750\u3002\u4F60\u53EF\u4EE5\u5B89\u5168\u7684\u6E05\u7406\u4ED6\u4EEC\uFF0C\u4F46\u662F\u4F60\u9700\u8981\u5728\u6E32\u67D3\u6240\u6709\u7528\u5230\u4ED6\u4EEC\u7684\u9879\u76EE\u4E4B\u524D\u91CD\u65B0\u4E0B\u8F7D\u3002\r- RenderCheckpoint \u548C RenderCache \u662F\u6E32\u67D3\u8FC7\u7A0B\u4E2D\u7684\u4E34\u65F6\u6570\u636E\u76EE\u5F55\uFF0C\u4F60\u53EF\u4EE5\u5B89\u5168\u7684\u6E05\u7406\u4ED6\u4EEC\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1projectFrameCut\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57\r\u4FDD\u6301\u6240\u6709\u7684\u6587\u4EF6\u5939\u540D\u5B57\u76F8\u540C\uFF0C\u786E\u4FDD\u7528\u8BCD\u4E0D\u4F1A\u8FC7\u4E8E\u6DF1\u5EA6\u5BFC\u81F4\u666E\u901A\u7528\u6237\u770B\u4E0D\u61C2\u3002",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "AIAssistant_ChatView_ChatFail_Cancelled",
         "Value": "\uFF08\u8BF7\u6C42\u5DF2\u88AB\u53D6\u6D88\u3002\uFF09",
         "Mode": "ConstString",
@@ -198,6 +225,22 @@
       {
         "Id": "AIAssistant_ChatView_ChatFail_NoContent",
         "Value": "\u5F88\u62B1\u6B49\uFF0C\u6A21\u578B\u6CA1\u6709\u8FD4\u56DE\u5185\u5BB9\u3002\u8BF7\u518D\u8BD5\u4E00\u6B21\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Me",
+        "Value": "\u6211",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_MissingConfig",
+        "Value": "\u8BF7\u524D\u5F80\u8BBE\u7F6E-AI\u670D\u52A1\u914D\u7F6E\u804A\u5929\u6A21\u578B\u4E4B\u540E\uFF0C\u518D\u6765\u548C\u6211\u804A\u5929\u5427\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -698,6 +741,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_AddClipView_AddText_PreviewInput",
+        "Value": "\u9884\u89C8\u8F93\u5165",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ResetInput",
+        "Value": "\u91CD\u7F6E\u8F93\u5165",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_AddClipView_AddText_SelectStyle",
         "Value": "\u63D0\u793A\uFF1A\u5728\u8F93\u5165\u6587\u672C\u4E4B\u540E\uFF0C\u53CC\u51FB\u4E0B\u9762\u4EFB\u610F\u4E00\u4E2A\u4F60\u559C\u6B22\u7684\u6587\u672C\u6837\u5F0F\u6765\u6DFB\u52A0\u5B83\u3002",
         "Mode": "ConstString",
@@ -756,6 +815,38 @@
       {
         "Id": "DraftPage_AddClipView_AddTransform_NoTargetClip",
         "Value": "\u4F60\u9700\u8981\u9009\u4E2D\u4E00\u4E2A\u7247\u6BB5\uFF0C\u6216\u8005\u76F4\u63A5\u53CC\u51FB\u5B83\u7684\u628A\u624B\uFF0C\u6765\u8BA9\u6211\u4EEC\u77E5\u9053\u4F60\u8981\u6DFB\u52A0\u7684\u76EE\u6807\u7247\u6BB5\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Generate",
+        "Value": "\u751F\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_InputPlaceholder",
+        "Value": "\u8F93\u5165\u63D0\u793A\u8BCD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Type_Image",
+        "Value": "\u751F\u6210\u56FE\u7247",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Type_Video",
+        "Value": "\u751F\u6210\u89C6\u9891",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2161,6 +2252,40 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "HomePage_IncompatibleVersionError",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C\u4F60\u7684\u9879\u76EE\u300C{projectName}\u300D\u6240\u4F7F\u7528\u7684 {AppBrand} \u7248\u672C ({sourceVersion}) \u4E0D\u88AB\u8FD9\u4E2A\u7248\u672C\u7684 {AppBrand} ({targetVersion}) \u652F\u6301\u3002\r\u8BF7\u8003\u8651\u66F4\u65B0\u4F60\u7684 {AppBrand}\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "HomePage_InitPlugin_Fail",
         "Value": "\u521D\u59CB\u5316\u63D2\u4EF6{name}\u7684\u65F6\u5019\u51FA\u73B0\u4E86{_ExceptionTemplate(ex)}\u3002\u662F\u5426\u7EE7\u7EED\uFF1F",
         "Mode": "InterpolationString",
@@ -2272,6 +2397,32 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_MissingPlugin",
+        "Value": "\u4F60\u7684\u9879\u76EE\u300C{projectName}\u300D\u6240\u4F7F\u7528\u7684\u63D2\u4EF6 {plugins} \u5F53\u524D\u4E0D\u5B58\u5728\uFF0C\u6216\u8005\u5DF2\u88AB\u7981\u7528\u3002\r\u7EE7\u7EED\u52A0\u8F7D\u53EF\u80FD\u4F1A\u9047\u5230\u4E00\u4E9B\u95EE\u9898\uFF0C\u8981\u7EE7\u7EED\u5417\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "projectName"
+          },
+          {
+            "Key": "string",
+            "Value": "plugins"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "projectName",
+            "Value": ""
+          },
+          {
+            "Key": "plugins",
+            "Value": ""
+          }
+        ],
         "HasValidationErrors": false
       },
       {
@@ -2538,6 +2689,74 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "HomePage_VersionTooNew",
+        "Value": "\u4F60\u7684\u9879\u76EE\u300C{projectName}\u300D\u6240\u4F7F\u7528\u7684 {AppBrand} \u7248\u672C ({targetVersion}) \u6BD4\u5F53\u524D\u7684\u7248\u672C ({sourceVersion })\u66F4\u65B0\u3002\r\u4F60\u53EF\u80FD\u4F1A\u9047\u5230\u4E00\u4E9B\u517C\u5BB9\u6027\u95EE\u9898\uFF0C\u8981\u7EE7\u7EED\u5417\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_VersionTooOld",
+        "Value": "\u4F60\u7684\u9879\u76EE\u300C{projectName}\u300D\u6240\u4F7F\u7528\u7684 {AppBrand} \u7248\u672C ({targetVersion}) \u6BD4\u5F53\u524D\u7684\u7248\u672C ({sourceVersion}) \u66F4\u65E7\u3002\r\u7EE7\u7EED\u52A0\u8F7D\u4F1A\u81EA\u52A8\u5347\u7EA7\u9879\u76EE\uFF0C\u4F60\u786E\u8BA4\u8981\u7EE7\u7EED\u5417\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "HomePage_Welcome",
         "Value": "DateTime.Now.Hour switch\r{\r\u003E= 5 and \u003C 12 =\u003E \u0022\u65E9\u4E0A\u597D\uFF0C\u0022,\r\u003E= 12 and \u003C 18 =\u003E \u0022\u4E0B\u5348\u597D\uFF0C\u0022,\r\u003E= 18 and \u003C 22 =\u003E \u0022\u508D\u665A\u597D\uFF0C\u0022,\r_ =\u003E \u0022\u665A\u4E0A\u597D\uFF0C\u0022,\r} \u002B WelcomeMessage ",
         "Mode": "RawExpression",
@@ -2618,6 +2837,14 @@
       {
         "Id": "MainSettingsPage_Tab_Advanced",
         "Value": "\u9AD8\u7EA7\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_AI",
+        "Value": "AI\u670D\u52A1",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3099,22 +3326,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftPage_AddClipView_AddText_PreviewInput",
-        "Value": "\u9884\u89C8\u8F93\u5165",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftPage_AddClipView_AddText_ResetInput",
-        "Value": "\u91CD\u7F6E\u8F93\u5165",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
         "HasValidationErrors": false
       }
     ],
@@ -4697,7 +4908,7 @@
       },
       {
         "Id": "_ProcessingWithProg",
-        "Value": "Processing, {n:p2} complete",
+        "Value": "Unset localization item:_ProcessingWithProg",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -6317,7 +6528,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddPicture",
-        "Value": "Pictures \u0026 Stickers",
+        "Value": "Insert Picture and Sticker",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6398,128 +6609,350 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_NoTargetClip",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_NoTargetClip()",
+        "Value": "You need to select a clip, or directly double-click its handle, so we know which target clip you want to add.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight()",
+        "Value": "No adjacent clip on the right side of the selected clip.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft()",
+        "Value": "There is no adjacent clip to the left of the selected clip.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInLeft",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInLeft()",
+        "Value": "Add this transition on the left side",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInRight",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInRight()",
+        "Value": "Add this transition at the right edge",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInSelectedDirection",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInSelectedDirection()",
+        "Value": "Add this transition to the left/right side of the selected handle",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_InputPlaceholder",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_InputPlaceholder()",
+        "Value": "Enter the text you want to add here,\r\nthen double-click any text style you like below to add it.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_SelectStyle",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_SelectStyle()",
+        "Value": "Tip: After entering text, double-click any style you like below to add it.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_DrawHere",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_DrawHere()",
+        "Value": "Tip: You can draw content below.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_SelectColor",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_SelectColor()",
+        "Value": "Pen Color",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_Search",
-        "Value": "Unset localization item:DraftPage_AddClipView_Search()",
+        "Value": "Search content on this page",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_NoContent",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Value": "The canvas is empty. Please draw something first before trying.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_PreviewInput",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_PreviewInput()",
+        "Value": "Preview Input",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_ResetInput",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_ResetInput()",
+        "Value": "Reset Input",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_AI",
+        "Value": "AI Services",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_NotWindows",
+        "Value": "This is the main data directory for projectFrameCut.\r\nWithin it,\r\n- My Assets are your materials.\r\n- My Drafts are your project data.\r\n- Remote Assets are materials retrieved from remote servers. You can safely clean them up, but you need to re-download them before rendering any projects that use them.\r\n- RenderCheckpoint and RenderCache are temporary data directories during the rendering process; you can safely clean them up.\r\n- AppData is internal application data; please handle them with caution.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_Windows",
+        "Value": "This is the user data directory for projectFrameCut.\rHere,\r- My Assets are your assets.\r- My Drafts are your project data.\r- Remote Assets are assets retrieved from the remote server. You can safely clean them up, but you need to re-download them before rendering any projects that use them.\r- RenderCheckpoint and RenderCache are temporary data directories during the rendering process, which you can safely clean up.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_BasicData",
+        "Value": "This is the internal application data of projectFrameCut.\r\nModifying these files arbitrarily may lead to unexpected behavior; please treat them with caution.\r\nAmong them,\r\n- The Plugins folder contains the plugin binaries and data directories.\r\n- The Plugins.json file is your plugin configuration file. Deleting them is equivalent to disabling the corresponding plugins.\r\n- logging is the log directory. You can clean it, but frequent log cleanup may make it difficult to trace previously occurred issues.\r\n- settings.json, settings_a.json, and settings_b.json are your settings. Please do not modify them, otherwise your configuration may be lost.\r\n- ai_settings_text.json, ai_settings_image.json, and ai_settings_video.json are your configured AI model API settings. Deleting them will cause your configuration to be lost.\r\n- TextTemplates.json contains your configured text templates. It will be regenerated automatically after deletion.\r\n- EffectImplement.json holds your configured effect implementations. It will be regenerated automatically after deletion.\r\n- JapaneseDictionary, EBWebView, and diag are temporary files used by some components. You can delete them; they are generated on demand.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_InputPlaceholder",
+        "Value": "Enter prompt keywords",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Placeholder text for the input field where users can type keywords to guide AI-generated content.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Type_Video",
+        "Value": "Generate Video",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Type_Image",
+        "Value": "Generate Image",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Generate",
+        "Value": "Generate",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_MissingConfig",
+        "Value": "Please go to Settings - AI Service Configuration to set up a chat model first, then come back to chat with me.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Me",
+        "Value": "Me",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_VersionTooNew",
+        "Value": "The version of {AppBrand} ({targetVersion}) used by your project \u0022{projectName}\u0022 is newer than the current version ({sourceVersion}).\r\nYou may encounter some compatibility issues. Continue?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_VersionTooOld",
+        "Value": "The version of {AppBrand} ({targetVersion}) used by your project \u0022{projectName}\u0022 is older than the current version ({sourceVersion}).\r\nContinuing to load will automatically upgrade the project. Are you sure you want to continue?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_MissingPlugin",
+        "Value": "The plugins {plugins} used by your project \u0022{projectName}\u0022 are currently missing or disabled.\rContinuing to load may cause some issues. Continue anyway?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "projectName"
+          },
+          {
+            "Key": "string",
+            "Value": "plugins"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "projectName",
+            "Value": ""
+          },
+          {
+            "Key": "plugins",
+            "Value": ""
+          }
+        ],
+        "Comment": "Warning message about missing or disabled plugins, asking user if they want to continue loading the project",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_IncompatibleVersionError",
+        "Value": "We\u0027re sorry, the {AppBrand} version ({sourceVersion}) used by your project \u0022{projectName}\u0022 is not supported by this version of {AppBrand} ({targetVersion}).\rPlease consider updating your {AppBrand}.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -8102,7 +8535,7 @@
       },
       {
         "Id": "_ProcessingWithProg",
-        "Value": "\u8655\u7406\u4E2D\uFF0C\u5DF2\u5B8C\u6210 {n:p2}",
+        "Value": "Unset localization item:_ProcessingWithProg",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -9721,7 +10154,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddPicture",
-        "Value": "\u5716\u7247\u548C\u8CBC\u7D19",
+        "Value": "\u63D2\u5716\u548C\u8CBC\u7D19",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9802,128 +10235,350 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_NoTargetClip",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_NoTargetClip()",
+        "Value": "\u60A8\u9700\u8981\u9078\u4E2D\u4E00\u500B\u7247\u6BB5\uFF0C\u6216\u8005\u76F4\u63A5\u96D9\u64CA\u5B83\u7684\u63A7\u9EDE\uFF0C\u4EE5\u4FBF\u6211\u5011\u77E5\u9053\u60A8\u8981\u6DFB\u52A0\u7684\u76EE\u6A19\u7247\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight()",
+        "Value": "\u9078\u4E2D\u7247\u6BB5\u7684\u53F3\u908A\u6C92\u6709\u76F8\u9130\u7684\u7247\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft()",
+        "Value": "\u9078\u4E2D\u7684\u7247\u6BB5\u5DE6\u908A\u6C92\u6709\u76F8\u9130\u7684\u7247\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInLeft",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInLeft()",
+        "Value": "\u5728\u5DE6\u908A\u6DFB\u52A0\u9019\u500B\u8F49\u5834",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInRight",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInRight()",
+        "Value": "\u5728\u53F3\u5074\u908A\u7DE3\u52A0\u5165\u6B64\u8F49\u5834",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInSelectedDirection",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInSelectedDirection()",
+        "Value": "\u5728\u9078\u4E2D\u7684\u628A\u624B\u5DE6\u908A/\u53F3\u908A\u6DFB\u52A0\u9019\u500B\u8F49\u5834",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_InputPlaceholder",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_InputPlaceholder()",
+        "Value": "\u5728\u9019\u88E1\u8F38\u5165\u4F60\u60F3\u8981\u6DFB\u52A0\u7684\u6587\u5B57\uFF0C\r\u7136\u5F8C\u96D9\u64CA\u4E0B\u9762\u4EFB\u610F\u4E00\u500B\u4F60\u559C\u6B61\u7684\u6587\u5B57\u6A23\u5F0F\u4F86\u6DFB\u52A0\u5B83\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_SelectStyle",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_SelectStyle()",
+        "Value": "\u63D0\u793A\uFF1A\u5728\u8F38\u5165\u6587\u5B57\u4E4B\u5F8C\uFF0C\u96D9\u64CA\u4E0B\u9762\u4EFB\u610F\u4E00\u500B\u4F60\u559C\u6B61\u7684\u6587\u5B57\u6A23\u5F0F\u4F86\u6DFB\u52A0\u5B83\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_DrawHere",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_DrawHere()",
+        "Value": "\u63D0\u793A\uFF1A\u4F60\u53EF\u4EE5\u5728\u4E0B\u9762\u7E6A\u88FD\u5167\u5BB9\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_SelectColor",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_SelectColor()",
+        "Value": "\u756B\u7B46\u984F\u8272",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_Search",
-        "Value": "Unset localization item:DraftPage_AddClipView_Search()",
+        "Value": "\u641C\u5C0B\u6B64\u9801\u9762\u4E2D\u7684\u5167\u5BB9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_NoContent",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Value": "\u756B\u5E03\u662F\u7A7A\u7684\uFF0C\u8ACB\u5148\u756B\u5169\u7B46\u518D\u8A66\u8A66\u5427\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_PreviewInput",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_PreviewInput()",
+        "Value": "\u9810\u89BD\u8F38\u5165",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_ResetInput",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_ResetInput()",
+        "Value": "\u91CD\u8A2D\u8F38\u5165",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_AI",
+        "Value": "AI\u670D\u52D9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_NotWindows",
+        "Value": "\u9019\u662FprojectFrameCut\u7684\u4E3B\u8CC7\u6599\u76EE\u9304\u3002\r\u5176\u4E2D\uFF0C\r- My Assets \u662F\u4F60\u7684\u7D20\u6750\u3002\r- My Drafts \u662F\u4F60\u7684\u5C08\u6848\u8CC7\u6599\u3002\r- Remote Assets \u662F\u5F9E\u9060\u7AEF\u4F3A\u670D\u5668\u4E0A\u7372\u53D6\u7684\u7D20\u6750\u3002\u4F60\u53EF\u4EE5\u5B89\u5168\u5730\u6E05\u7406\u5B83\u5011\uFF0C\u4F46\u662F\u4F60\u9700\u8981\u6E32\u67D3\u6240\u6709\u7528\u5230\u5B83\u5011\u7684\u5C08\u6848\u4E4B\u524D\u91CD\u65B0\u4E0B\u8F09\u3002\r- RenderCheckpoint \u548C RenderCache \u662F\u6E32\u67D3\u904E\u7A0B\u4E2D\u7684\u81E8\u6642\u8CC7\u6599\u76EE\u9304\uFF0C\u4F60\u53EF\u4EE5\u5B89\u5168\u5730\u6E05\u7406\u5B83\u5011\u3002\r- AppData \u662F\u61C9\u7528\u7A0B\u5F0F\u5167\u90E8\u8CC7\u6599\uFF0C\u8ACB\u8B39\u614E\u5C0D\u5F85\u5B83\u5011\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_Windows",
+        "Value": "\u9019\u662F projectFrameCut \u7684\u4F7F\u7528\u8005\u8CC7\u6599\u76EE\u9304\u3002\r\u5176\u4E2D\uFF0C\r- My Assets \u662F\u60A8\u7684\u7D20\u6750\u3002\r- My Drafts \u662F\u60A8\u7684\u5C08\u6848\u8CC7\u6599\u3002\r- Remote Assets \u662F\u5F9E\u9060\u7AEF\u4F3A\u670D\u5668\u4E0A\u53D6\u5F97\u7684\u7D20\u6750\u3002\u60A8\u53EF\u4EE5\u5B89\u5168\u5730\u6E05\u7406\u5B83\u5011\uFF0C\u4F46\u662F\u60A8\u9700\u8981\u5728\u6E32\u67D3\u6240\u6709\u7528\u5230\u5B83\u5011\u7684\u5C08\u6848\u4E4B\u524D\u91CD\u65B0\u4E0B\u8F09\u3002\r- RenderCheckpoint \u548C RenderCache \u662F\u6E32\u67D3\u904E\u7A0B\u4E2D\u7684\u66AB\u5B58\u8CC7\u6599\u76EE\u9304\uFF0C\u60A8\u53EF\u4EE5\u5B89\u5168\u5730\u6E05\u7406\u5B83\u5011\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_BasicData",
+        "Value": "\u9019\u662F projectFrameCut \u7684\u61C9\u7528\u7A0B\u5F0F\u5167\u90E8\u8CC7\u6599\u3002\n\u96A8\u610F\u4FEE\u6539\u9019\u4E9B\u6A94\u6848\u53EF\u80FD\u5C0E\u81F4\u610F\u6599\u4E4B\u5916\u7684\u884C\u70BA\uFF0C\u8ACB\u8B39\u614E\u5C0D\u5F85\u5B83\u5011\u3002\n\u5176\u4E2D\uFF0C\n- Plugins \u8CC7\u6599\u593E\u662F\u4F60\u7684\u5916\u639B\u7A0B\u5F0F\u7684\u672C\u9AD4\u548C\u8CC7\u6599\u76EE\u9304\u3002\n- Plugins.json \u6A94\u6848\u662F\u4F60\u7684\u5916\u639B\u7A0B\u5F0F\u8A2D\u5B9A\u6A94\u3002\u522A\u9664\u5B83\u5011\u7B49\u540C\u65BC\u505C\u7528\u4F7F\u7528\u7684\u5916\u639B\u7A0B\u5F0F\u3002\n- logging \u662F\u65E5\u8A8C\u76EE\u9304\uFF0C\u4F60\u53EF\u4EE5\u6E05\u7406\u5B83\u5011\uFF0C\u4F46\u983B\u7E41\u6E05\u7406\u65E5\u8A8C\u53EF\u80FD\u5C0E\u81F4\u8FFD\u8E64\u4E4B\u524D\u767C\u751F\u7684\u554F\u984C\u8B8A\u5F97\u56F0\u96E3\u3002\n- settings.json\u3001settings_a.json \u548C settings_b.json \u662F\u4F60\u7684\u8A2D\u5B9A\u3002\u8ACB\u4E0D\u8981\u4FEE\u6539\u5B83\u5011\uFF0C\u5426\u5247\u9019\u6703\u5C0E\u81F4\u4F60\u7684\u8A2D\u5B9A\u907A\u5931\u3002\n- ai_settings_text.json\u3001ai_settings_image.json \u548C ai_settings_video.json \u662F\u4F60\u8A2D\u5B9A\u7684 AI \u6A21\u578B\u7684 API \u8A2D\u5B9A\uFF0C\u522A\u9664\u5B83\u5011\u6703\u5C0E\u81F4\u4F60\u7684\u8A2D\u5B9A\u907A\u5931\u3002\n- TextTemplates.json \u662F\u4F60\u8A2D\u5B9A\u7684\u6587\u5B57\u7BC4\u672C\uFF0C\u522A\u9664\u4E4B\u5F8C\u6703\u81EA\u52D5\u91CD\u65B0\u7522\u751F\u3002\n- EffectImplement.json \u662F\u4F60\u8A2D\u5B9A\u7684\u6548\u679C\u5BE6\u4F5C\u5668\uFF0C\u522A\u9664\u4E4B\u5F8C\u6703\u81EA\u52D5\u91CD\u65B0\u7522\u751F\u3002\n- JapaneseDictionary\u3001EBWebView \u548C diag \u662F\u4E00\u4E9B\u5143\u4EF6\u6240\u4F7F\u7528\u7684\u66AB\u5B58\u6A94\u6848\uFF0C\u4F60\u53EF\u4EE5\u522A\u9664\u5B83\u5011\uFF0C\u5B83\u5011\u662F\u6309\u9700\u7522\u751F\u7684\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_InputPlaceholder",
+        "Value": "\u8F38\u5165\u63D0\u793A\u8A5E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Type_Video",
+        "Value": "\u7522\u751F\u5F71\u7247",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Type_Image",
+        "Value": "\u751F\u6210\u5716\u7247",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Generate",
+        "Value": "\u751F\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_MissingConfig",
+        "Value": "\u8ACB\u524D\u5F80\u8A2D\u5B9A-AI\u670D\u52D9\u914D\u7F6E\u804A\u5929\u6A21\u578B\u4E4B\u5F8C\uFF0C\u518D\u4F86\u548C\u6211\u804A\u5929\u5427\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Me",
+        "Value": "\u6211",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_VersionTooNew",
+        "Value": "\u4F60\u7684\u5C08\u6848\u300E{projectName}\u300F\u6240\u4F7F\u7528\u7684 {AppBrand} \u7248\u672C ({targetVersion}) \u6BD4\u76EE\u524D\u7684\u7248\u672C ({sourceVersion}) \u66F4\u65B0\u3002\r\n\u4F60\u53EF\u80FD\u6703\u9047\u5230\u4E00\u4E9B\u76F8\u5BB9\u6027\u554F\u984C\uFF0C\u8981\u7E7C\u7E8C\u55CE\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_VersionTooOld",
+        "Value": "\u4F60\u7684\u5C08\u6848\u300E{projectName}\u300F\u6240\u4F7F\u7528\u7684 {AppBrand} \u7248\u672C ({targetVersion}) \u6BD4\u76EE\u524D\u7684\u7248\u672C ({sourceVersion}) \u8F03\u820A\u3002\r\u7E7C\u7E8C\u8F09\u5165\u6703\u81EA\u52D5\u5347\u7D1A\u5C08\u6848\uFF0C\u4F60\u78BA\u5B9A\u8981\u7E7C\u7E8C\u55CE\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_MissingPlugin",
+        "Value": "\u4F60\u7684\u5C08\u6848\u300E{projectName}\u300F\u6240\u4F7F\u7528\u7684\u5916\u639B {plugins} \u76EE\u524D\u4E0D\u5B58\u5728\uFF0C\u6216\u8005\u5DF2\u505C\u7528\u3002\r\u7E7C\u7E8C\u8F09\u5165\u53EF\u80FD\u6703\u9047\u5230\u4E00\u4E9B\u554F\u984C\uFF0C\u8981\u7E7C\u7E8C\u55CE\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "projectName"
+          },
+          {
+            "Key": "string",
+            "Value": "plugins"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "projectName",
+            "Value": ""
+          },
+          {
+            "Key": "plugins",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_IncompatibleVersionError",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C\u4F60\u7684\u5C08\u6848\u300C{projectName}\u300D\u6240\u4F7F\u7528\u7684 {AppBrand} \u7248\u672C ({sourceVersion}) \u4E0D\u88AB\u9019\u500B\u7248\u672C\u7684 {AppBrand} ({targetVersion}) \u652F\u63F4\u3002\r\u8ACB\u8003\u616E\u66F4\u65B0\u4F60\u7684 {AppBrand}\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -11511,7 +12166,7 @@
       },
       {
         "Id": "_ProcessingWithProg",
-        "Value": "\u51E6\u7406\u4E2D\u3001\u5B8C\u4E86\u7387 {n:p2}",
+        "Value": "Unset localization item:_ProcessingWithProg",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -13212,128 +13867,350 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_NoTargetClip",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_NoTargetClip()",
+        "Value": "\u30AF\u30EA\u30C3\u30D7\u3092\u9078\u629E\u3059\u308B\u304B\u3001\u305D\u306E\u30CF\u30F3\u30C9\u30EB\u3092\u76F4\u63A5\u30C0\u30D6\u30EB\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u3001\u8FFD\u52A0\u5148\u306E\u30BF\u30FC\u30B2\u30C3\u30C8\u30AF\u30EA\u30C3\u30D7\u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight()",
+        "Value": "\u9078\u629E\u3057\u305F\u30AF\u30EA\u30C3\u30D7\u306E\u53F3\u5074\u306B\u306F\u96A3\u63A5\u3059\u308B\u30AF\u30EA\u30C3\u30D7\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft()",
+        "Value": "\u9078\u629E\u3055\u308C\u305F\u30AF\u30EA\u30C3\u30D7\u306E\u5DE6\u5074\u306B\u306F\u96A3\u63A5\u3059\u308B\u30AF\u30EA\u30C3\u30D7\u304C\u3042\u308A\u307E\u305B\u3093\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInLeft",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInLeft()",
+        "Value": "\u5DE6\u5074\u306B\u3053\u306E\u30C8\u30E9\u30F3\u30B8\u30B7\u30E7\u30F3\u3092\u8FFD\u52A0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInRight",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInRight()",
+        "Value": "\u53F3\u5074\u306B\u3053\u306E\u8EE2\u63DB\u5834\u3092\u8FFD\u52A0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInSelectedDirection",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInSelectedDirection()",
+        "Value": "\u9078\u629E\u3057\u305F\u30CF\u30F3\u30C9\u30EB\u306E\u5DE6\u5074/\u53F3\u5074\u306B\u3053\u306E\u30C8\u30E9\u30F3\u30B8\u30B7\u30E7\u30F3\u3092\u8FFD\u52A0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_InputPlaceholder",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_InputPlaceholder()",
+        "Value": "\u3053\u3053\u306B\u8FFD\u52A0\u3057\u305F\u3044\u30C6\u30AD\u30B9\u30C8\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002\r\u305D\u306E\u5F8C\u3001\u4E0B\u306E\u597D\u304D\u306A\u30C6\u30AD\u30B9\u30C8\u30B9\u30BF\u30A4\u30EB\u3092\u30C0\u30D6\u30EB\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u8FFD\u52A0\u3057\u307E\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_SelectStyle",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_SelectStyle()",
+        "Value": "\u30D2\u30F3\u30C8\uFF1A\u30C6\u30AD\u30B9\u30C8\u3092\u5165\u529B\u3057\u305F\u5F8C\u3001\u4E0B\u306E\u4EFB\u610F\u306E\u597D\u304D\u306A\u30C6\u30AD\u30B9\u30C8\u30B9\u30BF\u30A4\u30EB\u3092\u30C0\u30D6\u30EB\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u8FFD\u52A0\u3057\u307E\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_DrawHere",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_DrawHere()",
+        "Value": "\u30D2\u30F3\u30C8\uFF1A\u4EE5\u4E0B\u306E\u30A8\u30EA\u30A2\u306B\u63CF\u753B\u3067\u304D\u307E\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_SelectColor",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_SelectColor()",
+        "Value": "\u30DA\u30F3\u306E\u8272",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_Search",
-        "Value": "Unset localization item:DraftPage_AddClipView_Search()",
+        "Value": "\u3053\u306E\u30DA\u30FC\u30B8\u306E\u5185\u5BB9\u3092\u691C\u7D22",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_NoContent",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Value": "\u30AD\u30E3\u30F3\u30D0\u30B9\u304C\u7A7A\u3067\u3059\u3002\u307E\u305A\u4F55\u304B\u63CF\u3044\u3066\u304B\u3089\u8A66\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_PreviewInput",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_PreviewInput()",
+        "Value": "\u30D7\u30EC\u30D3\u30E5\u30FC\u5165\u529B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_ResetInput",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_ResetInput()",
+        "Value": "\u5165\u529B\u3092\u30EA\u30BB\u30C3\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_AI",
+        "Value": "AI\u30B5\u30FC\u30D3\u30B9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_NotWindows",
+        "Value": "\u3053\u308C\u306FprojectFrameCut\u306E\u30E1\u30A4\u30F3\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u3067\u3059\u3002\r\n\u305D\u306E\u4E2D\u306B\u306F\u3001\r\n- My Assets\uFF1A\u3042\u306A\u305F\u306E\u7D20\u6750\u3067\u3059\u3002\r\n- My Drafts\uFF1A\u3042\u306A\u305F\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u30C7\u30FC\u30BF\u3067\u3059\u3002\r\n- Remote Assets\uFF1A\u30EA\u30E2\u30FC\u30C8\u30B5\u30FC\u30D0\u30FC\u304B\u3089\u53D6\u5F97\u3057\u305F\u7D20\u6750\u3067\u3059\u3002\u5B89\u5168\u306B\u524A\u9664\u3067\u304D\u307E\u3059\u304C\u3001\u305D\u308C\u3089\u3092\u4F7F\u7528\u3057\u3066\u3044\u308B\u3059\u3079\u3066\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3092\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u3059\u308B\u524D\u306B\u3001\u518D\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9\u304C\u5FC5\u8981\u3067\u3059\u3002\r\n- RenderCheckpoint \u3068 RenderCache\uFF1A\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30D7\u30ED\u30BB\u30B9\u4E2D\u306E\u4E00\u6642\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u3067\u3059\u3002\u5B89\u5168\u306B\u524A\u9664\u3067\u304D\u307E\u3059\u3002\r\n- AppData\uFF1A\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u5185\u90E8\u30C7\u30FC\u30BF\u3067\u3059\u3002\u53D6\u308A\u6271\u3044\u306B\u306F\u6CE8\u610F\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u8F6F\u4EF6\u540D\u79F0\u548C\u6587\u4EF6\u5939\u540D\u79F0\u5DF2\u6309\u6307\u793A\u4FDD\u7559\u539F\u6587\u3002\u7FFB\u8BD1\u529B\u6C42\u6E05\u6670\u6613\u61C2\uFF0C\u7B26\u5408\u8F6F\u4EF6\u754C\u9762\u8BF4\u660E\u7684\u6587\u4F53\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_Windows",
+        "Value": "\u3053\u308C\u306FprojectFrameCut\u306E\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u3067\u3059\u3002\r\n\u305D\u306E\u4E2D\u3067\u3001\r\n- My Assets \u306F\u3042\u306A\u305F\u306E\u7D20\u6750\u3067\u3059\u3002\r\n- My Drafts \u306F\u3042\u306A\u305F\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u30C7\u30FC\u30BF\u3067\u3059\u3002\r\n- Remote Assets \u306F\u30EA\u30E2\u30FC\u30C8\u30B5\u30FC\u30D0\u30FC\u304B\u3089\u53D6\u5F97\u3057\u305F\u7D20\u6750\u3067\u3059\u3002\u5B89\u5168\u306B\u524A\u9664\u3067\u304D\u307E\u3059\u304C\u3001\u305D\u308C\u3089\u3092\u4F7F\u7528\u3057\u3066\u3044\u308B\u3059\u3079\u3066\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3092\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u3059\u308B\u524D\u306B\u518D\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9\u3059\u308B\u5FC5\u8981\u304C\u3042\u308A\u307E\u3059\u3002\r\n- RenderCheckpoint \u3068 RenderCache \u306F\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u30D7\u30ED\u30BB\u30B9\u4E2D\u306E\u4E00\u6642\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u3067\u3001\u5B89\u5168\u306B\u524A\u9664\u3067\u304D\u307E\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_BasicData",
+        "Value": "\u3053\u308C\u306FprojectFrameCut\u306E\u30A2\u30D7\u30EA\u30B1\u30FC\u30B7\u30E7\u30F3\u30C7\u30FC\u30BF\u3067\u3059\u3002\r\u3053\u308C\u3089\u306E\u30D5\u30A1\u30A4\u30EB\u3092\u7121\u65AD\u3067\u5909\u66F4\u3059\u308B\u3068\u3001\u4E88\u671F\u3057\u306A\u3044\u52D5\u4F5C\u3092\u5F15\u304D\u8D77\u3053\u3059\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u306E\u3067\u3001\u53D6\u308A\u6271\u3044\u306B\u306F\u5341\u5206\u3054\u6CE8\u610F\u304F\u3060\u3055\u3044\u3002\r\r- Plugins\u30D5\u30A9\u30EB\u30C0\u306F\u3001\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u672C\u4F53\u3068\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u3067\u3059\u3002\r- Plugins.json\u30D5\u30A1\u30A4\u30EB\u306F\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u8A2D\u5B9A\u30D5\u30A1\u30A4\u30EB\u3067\u3059\u3002\u3053\u308C\u3089\u3092\u524A\u9664\u3059\u308B\u3068\u3001\u8A72\u5F53\u30D7\u30E9\u30B0\u30A4\u30F3\u304C\u7121\u52B9\u5316\u3055\u308C\u307E\u3059\u3002\r- logging\u306F\u30ED\u30B0\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u3067\u3059\u3002\u524A\u9664\u306F\u53EF\u80FD\u3067\u3059\u304C\u3001\u983B\u7E41\u306B\u30ED\u30B0\u3092\u6D88\u53BB\u3059\u308B\u3068\u3001\u904E\u53BB\u306B\u767A\u751F\u3057\u305F\u554F\u984C\u306E\u8FFD\u8DE1\u304C\u56F0\u96E3\u306B\u306A\u308B\u5834\u5408\u304C\u3042\u308A\u307E\u3059\u3002\r- settings.json\u3001settings_a.json\u3001settings_b.json\u306F\u8A2D\u5B9A\u30D5\u30A1\u30A4\u30EB\u3067\u3059\u3002\u5909\u66F4\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002\u5909\u66F4\u3059\u308B\u3068\u8A2D\u5B9A\u304C\u5931\u308F\u308C\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u3002\r- ai_settings_text.json\u3001ai_settings_image.json\u3001ai_settings_video.json\u306F\u3001\u8A2D\u5B9A\u3057\u305FAI\u30E2\u30C7\u30EB\u306EAPI\u8A2D\u5B9A\u30D5\u30A1\u30A4\u30EB\u3067\u3059\u3002\u524A\u9664\u3059\u308B\u3068\u8A2D\u5B9A\u304C\u5931\u308F\u308C\u307E\u3059\u3002\r- TextTemplates.json\u306F\u8A2D\u5B9A\u3057\u305F\u30C6\u30AD\u30B9\u30C8\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u3067\u3059\u3002\u524A\u9664\u5F8C\u306F\u81EA\u52D5\u7684\u306B\u518D\u751F\u6210\u3055\u308C\u307E\u3059\u3002\r- EffectImplement.json\u306F\u8A2D\u5B9A\u3057\u305F\u30A8\u30D5\u30A7\u30AF\u30C8\u5B9F\u88C5\u30D5\u30A1\u30A4\u30EB\u3067\u3059\u3002\u524A\u9664\u5F8C\u306F\u81EA\u52D5\u7684\u306B\u518D\u751F\u6210\u3055\u308C\u307E\u3059\u3002\r- JapaneseDictionary\u3001EBWebView\u3001diag\u306F\u4E00\u90E8\u306E\u30B3\u30F3\u30DD\u30FC\u30CD\u30F3\u30C8\u3067\u4F7F\u7528\u3055\u308C\u308B\u4E00\u6642\u30D5\u30A1\u30A4\u30EB\u3067\u3059\u3002\u5FC5\u8981\u306B\u5FDC\u3058\u3066\u751F\u6210\u3055\u308C\u308B\u305F\u3081\u3001\u524A\u9664\u53EF\u80FD\u3067\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "projectFrameCut\u306F\u30BD\u30D5\u30C8\u30A6\u30A7\u30A2\u540D\u306E\u305F\u3081\u7FFB\u8A33\u3057\u306A\u3044\u3002\u5168\u3066\u306E\u30D5\u30A9\u30EB\u30C0\u540D\u306F\u539F\u6587\u306E\u307E\u307E\u4FDD\u6301\u3057\u3001\u5C02\u9580\u7528\u8A9E\u3092\u907F\u3051\u3066\u4E00\u822C\u7684\u306A\u30E6\u30FC\u30B6\u30FC\u304C\u7406\u89E3\u3067\u304D\u308B\u8868\u73FE\u3092\u4F7F\u7528\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_InputPlaceholder",
+        "Value": "\u30D7\u30ED\u30F3\u30D7\u30C8\u30EF\u30FC\u30C9\u3092\u5165\u529B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Type_Video",
+        "Value": "\u52D5\u753B\u3092\u751F\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Type_Image",
+        "Value": "\u753B\u50CF\u3092\u751F\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Generate",
+        "Value": "\u751F\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_MissingConfig",
+        "Value": "\u8A2D\u5B9A\u2192AI\u30B5\u30FC\u30D3\u30B9\u8A2D\u5B9A\u3067\u30C1\u30E3\u30C3\u30C8\u30E2\u30C7\u30EB\u3092\u8A2D\u5B9A\u3057\u3066\u304B\u3089\u3001\u307E\u305F\u79C1\u3068\u304A\u8A71\u3057\u3057\u307E\u3057\u3087\u3046\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Me",
+        "Value": "\u79C1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_VersionTooNew",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u300C{projectName}\u300D\u3067\u4F7F\u7528\u3055\u308C\u3066\u3044\u308B {AppBrand} \u306E\u30D0\u30FC\u30B8\u30E7\u30F3 ({targetVersion}) \u306F\u3001\u73FE\u5728\u306E\u30D0\u30FC\u30B8\u30E7\u30F3 ({sourceVersion}) \u3088\u308A\u65B0\u3057\u3044\u3067\u3059\u3002\r\n\u4E92\u63DB\u6027\u306E\u554F\u984C\u304C\u767A\u751F\u3059\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u304C\u3001\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_VersionTooOld",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u300C{projectName}\u300D\u3067\u4F7F\u7528\u3055\u308C\u3066\u3044\u308B {AppBrand} \u306E\u30D0\u30FC\u30B8\u30E7\u30F3 ({targetVersion}) \u306F\u3001\u73FE\u5728\u306E\u30D0\u30FC\u30B8\u30E7\u30F3 ({sourceVersion}) \u3088\u308A\u53E4\u304F\u306A\u3063\u3066\u3044\u307E\u3059\u3002\r\n\u7D9A\u884C\u3059\u308B\u3068\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u304C\u81EA\u52D5\u7684\u306B\u30A2\u30C3\u30D7\u30B0\u30EC\u30FC\u30C9\u3055\u308C\u307E\u3059\u304C\u3001\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u9879\u76EE\u7248\u672C\u8FC7\u65E7\uFF0C\u8BE2\u95EE\u7528\u6237\u662F\u5426\u7EE7\u7EED\u52A0\u8F7D\u5E76\u81EA\u52A8\u5347\u7EA7\u7684\u786E\u8BA4\u63D0\u793A\u3002\u4F7F\u7528\u4E86\u793C\u8C8C\u7684\u786E\u8BA4\u53E5\u5F0F\u300C\u301C\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F\u300D\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_MissingPlugin",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u300C{projectName}\u300D\u3067\u4F7F\u7528\u3055\u308C\u3066\u3044\u308B\u30D7\u30E9\u30B0\u30A4\u30F3 {plugins} \u306F\u73FE\u5728\u5B58\u5728\u3057\u306A\u3044\u304B\u3001\u7121\u52B9\u5316\u3055\u308C\u3066\u3044\u307E\u3059\u3002\r\n\u7D9A\u3051\u3066\u8AAD\u307F\u8FBC\u3080\u3068\u554F\u984C\u304C\u767A\u751F\u3059\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059\u304C\u3001\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "projectName"
+          },
+          {
+            "Key": "string",
+            "Value": "plugins"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "projectName",
+            "Value": ""
+          },
+          {
+            "Key": "plugins",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_IncompatibleVersionError",
+        "Value": "\u7533\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093\u3002\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u300C{projectName}\u300D\u3067\u4F7F\u7528\u3055\u308C\u3066\u3044\u308B {AppBrand} \u306E\u30D0\u30FC\u30B8\u30E7\u30F3 ({sourceVersion}) \u306F\u3001\u3053\u306E\u30D0\u30FC\u30B8\u30E7\u30F3\u306E {AppBrand} ({targetVersion}) \u3067\u306F\u30B5\u30DD\u30FC\u30C8\u3055\u308C\u3066\u3044\u307E\u305B\u3093\u3002\r\n{AppBrand} \u306E\u66F4\u65B0\u3092\u3054\u691C\u8A0E\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -14921,7 +15798,7 @@
       },
       {
         "Id": "_ProcessingWithProg",
-        "Value": "\uCC98\uB9AC \uC911, {n:p2} \uC644\uB8CC",
+        "Value": "Unset localization item:_ProcessingWithProg",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -16541,7 +17418,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddPicture",
-        "Value": "\uC0AC\uC9C4 \uBC0F \uC2A4\uD2F0\uCEE4",
+        "Value": "\uADF8\uB9BC \uBC0F \uC2A4\uD2F0\uCEE4 \uCD94\uAC00",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16622,128 +17499,350 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_NoTargetClip",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_NoTargetClip()",
+        "Value": "\uB300\uC0C1 \uD074\uB9BD\uC744 \uCD94\uAC00\uD558\uB824\uB294 \uD074\uB9BD\uC744 \uC120\uD0DD\uD558\uAC70\uB098, \uD574\uB2F9 \uD578\uB4E4\uC744 \uB354\uBE14\uD074\uB9AD\uD558\uC5EC \uC54C\uB824\uC8FC\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight()",
+        "Value": "\uC120\uD0DD\uD55C \uD074\uB9BD\uC758 \uC624\uB978\uCABD\uC5D0 \uC778\uC811\uD55C \uD074\uB9BD\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft()",
+        "Value": "\uC120\uD0DD\uD55C \uD074\uB9BD\uC758 \uC67C\uCABD\uC5D0 \uC778\uC811\uD55C \uD074\uB9BD\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInLeft",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInLeft()",
+        "Value": "\uC67C\uCABD\uC5D0 \uC774 \uC804\uD658 \uCD94\uAC00",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInRight",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInRight()",
+        "Value": "\uC624\uB978\uCABD \uAC00\uC7A5\uC790\uB9AC\uC5D0 \uC774 \uC804\uD658 \uCD94\uAC00",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInSelectedDirection",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInSelectedDirection()",
+        "Value": "\uC120\uD0DD\uB41C \uC190\uC7A1\uC774 \uC67C\uCABD/\uC624\uB978\uCABD\uC5D0 \uC774 \uC804\uD658 \uCD94\uAC00",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_InputPlaceholder",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_InputPlaceholder()",
+        "Value": "\uC5EC\uAE30\uC5D0 \uCD94\uAC00\uD558\uB824\uB294 \uD14D\uC2A4\uD2B8\uB97C \uC785\uB825\uD558\uC138\uC694.\r\uADF8\uB7F0 \uB2E4\uC74C \uC544\uB798 \uC6D0\uD558\uB294 \uD14D\uC2A4\uD2B8 \uC2A4\uD0C0\uC77C\uC744 \uB354\uBE14\uD074\uB9AD\uD558\uC5EC \uCD94\uAC00\uD558\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_SelectStyle",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_SelectStyle()",
+        "Value": "\u63D0\u793A\uFF1A\uD14D\uC2A4\uD2B8\uB97C \uC785\uB825\uD55C \uD6C4, \uC544\uB798 \uC6D0\uD558\uB294 \uD14D\uC2A4\uD2B8 \uC2A4\uD0C0\uC77C\uC744 \uB354\uBE14 \uD074\uB9AD\uD558\uC5EC \uCD94\uAC00\uD558\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_DrawHere",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_DrawHere()",
+        "Value": "\uCC38\uACE0: \uC544\uB798\uC5D0 \uB0B4\uC6A9\uC744 \uADF8\uB9B4 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_SelectColor",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_SelectColor()",
+        "Value": "\uD39C \uC0C9\uC0C1",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_Search",
-        "Value": "Unset localization item:DraftPage_AddClipView_Search()",
+        "Value": "\uC774 \uD398\uC774\uC9C0\uC5D0\uC11C \uB0B4\uC6A9 \uAC80\uC0C9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_NoContent",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Value": "\uC2A4\uCF00\uCE58\uAC00 \uBE44\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uBA3C\uC800 \uBA87 \uBC88 \uADF8\uB824\uBCF4\uC2E0 \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_PreviewInput",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_PreviewInput()",
+        "Value": "\uC785\uB825 \uBBF8\uB9AC\uBCF4\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_ResetInput",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_ResetInput()",
+        "Value": "\uC785\uB825 \uCD08\uAE30\uD654",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_AI",
+        "Value": "AI \uC11C\uBE44\uC2A4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_NotWindows",
+        "Value": "\uC774\uAC83\uC740 projectFrameCut\uC758 \uBA54\uC778 \uB370\uC774\uD130 \uB514\uB809\uD1A0\uB9AC\uC785\uB2C8\uB2E4.\r\uC5EC\uAE30\uC11C,\r- My Assets\uB294 \uB2F9\uC2E0\uC758 \uC18C\uC7AC\uC785\uB2C8\uB2E4.\r- My Drafts\uB294 \uB2F9\uC2E0\uC758 \uD504\uB85C\uC81D\uD2B8 \uB370\uC774\uD130\uC785\uB2C8\uB2E4.\r- Remote Assets\uB294 \uC6D0\uACA9 \uC11C\uBC84\uC5D0\uC11C \uAC00\uC838\uC628 \uC18C\uC7AC\uC785\uB2C8\uB2E4. \uC548\uC804\uD558\uAC8C \uC815\uB9AC\uD560 \uC218 \uC788\uC9C0\uB9CC, \uC774\uB4E4\uC744 \uC0AC\uC6A9\uD55C \uBAA8\uB4E0 \uD504\uB85C\uC81D\uD2B8\uB97C \uB80C\uB354\uB9C1\uD558\uAE30 \uC804\uC5D0 \uB2E4\uC2DC \uB2E4\uC6B4\uB85C\uB4DC\uD574\uC57C \uD569\uB2C8\uB2E4.\r- RenderCheckpoint\uC640 RenderCache\uB294 \uB80C\uB354\uB9C1 \uACFC\uC815 \uC911\uC758 \uC784\uC2DC \uB370\uC774\uD130 \uB514\uB809\uD1A0\uB9AC\uB85C, \uC548\uC804\uD558\uAC8C \uC815\uB9AC\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r- AppData\uB294 \uC560\uD50C\uB9AC\uCF00\uC774\uC158 \uB0B4\uBD80 \uB370\uC774\uD130\uC774\uBBC0\uB85C, \uC8FC\uC758\uD574\uC11C \uB2E4\uB8E8\uC5B4\uC57C \uD569\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_Windows",
+        "Value": "\uC774\uAC83\uC740 projectFrameCut\uC758 \uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uB514\uB809\uD1A0\uB9AC\uC785\uB2C8\uB2E4.\r\uC5EC\uAE30\uC11C,\r- My Assets\uB294 \uB2F9\uC2E0\uC758 \uC18C\uC7AC\uC785\uB2C8\uB2E4.\r- My Drafts\uB294 \uB2F9\uC2E0\uC758 \uD504\uB85C\uC81D\uD2B8 \uB370\uC774\uD130\uC785\uB2C8\uB2E4.\r- Remote Assets\uB294 \uC6D0\uACA9 \uC11C\uBC84\uC5D0\uC11C \uAC00\uC838\uC628 \uC18C\uC7AC\uC785\uB2C8\uB2E4. \uC548\uC804\uD558\uAC8C \uC815\uB9AC\uD560 \uC218 \uC788\uC9C0\uB9CC, \uC774\uB4E4\uC744 \uC0AC\uC6A9\uD558\uB294 \uBAA8\uB4E0 \uD504\uB85C\uC81D\uD2B8\uB97C \uB80C\uB354\uB9C1\uD558\uAE30 \uC804\uC5D0 \uB2E4\uC2DC \uB2E4\uC6B4\uB85C\uB4DC\uD574\uC57C \uD569\uB2C8\uB2E4.\r- RenderCheckpoint\uC640 RenderCache\uB294 \uB80C\uB354\uB9C1 \uACFC\uC815 \uC911\uC758 \uC784\uC2DC \uB370\uC774\uD130 \uB514\uB809\uD1A0\uB9AC\uB85C, \uC548\uC804\uD558\uAC8C \uC815\uB9AC\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_BasicData",
+        "Value": "\uC774\uAC83\uC740 projectFrameCut \uC560\uD50C\uB9AC\uCF00\uC774\uC158\uC758 \uB0B4\uBD80 \uB370\uC774\uD130\uC785\uB2C8\uB2E4.\r\n\uC774 \uD30C\uC77C\uB4E4\uC744 \uC784\uC758\uB85C \uC218\uC815\uD558\uBA74 \uC608\uC0C1\uCE58 \uBABB\uD55C \uB3D9\uC791\uC774 \uBC1C\uC0DD\uD560 \uC218 \uC788\uC73C\uB2C8 \uC8FC\uC758\uD558\uC5EC \uB2E4\uB8E8\uC2ED\uC2DC\uC624.\r\n\uC5EC\uAE30\uC11C,\r\n- Plugins \uD3F4\uB354\uB294 \uC5EC\uB7EC\uBD84\uC758 \uD50C\uB7EC\uADF8\uC778 \uBCF8\uCCB4\uC640 \uB370\uC774\uD130 \uB514\uB809\uD1A0\uB9AC\uC785\uB2C8\uB2E4.\r\n- Plugins.json \uD30C\uC77C\uC740 \uC5EC\uB7EC\uBD84\uC758 \uD50C\uB7EC\uADF8\uC778 \uC124\uC815 \uD30C\uC77C\uC785\uB2C8\uB2E4. \uC774\uB4E4\uC744 \uC0AD\uC81C\uD558\uBA74 \uC0AC\uC6A9 \uC911\uC778 \uD50C\uB7EC\uADF8\uC778\uC774 \uBE44\uD65C\uC131\uD654\uB429\uB2C8\uB2E4.\r\n- logging\uC740 \uB85C\uADF8 \uB514\uB809\uD1A0\uB9AC\uB85C, \uC815\uB9AC\uD560 \uC218 \uC788\uC9C0\uB9CC \uB85C\uADF8\uB97C \uC790\uC8FC \uC815\uB9AC\uD558\uBA74 \uC774\uC804\uC5D0 \uBC1C\uC0DD\uD55C \uBB38\uC81C\uB97C \uCD94\uC801\uD558\uAE30 \uC5B4\uB824\uC6CC\uC9C8 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r\n- settings.json, settings_a.json \uBC0F settings_b.json\uC740 \uC5EC\uB7EC\uBD84\uC758 \uC124\uC815\uC785\uB2C8\uB2E4. \uC774\uB4E4\uC744 \uC218\uC815\uD558\uC9C0 \uB9C8\uC2ED\uC2DC\uC624. \uADF8\uB807\uC9C0 \uC54A\uC73C\uBA74 \uC124\uC815\uC774 \uC190\uC2E4\uB420 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r\n- ai_settings_text.json, ai_settings_image.json \uBC0F ai_settings_video.json\uC740 \uAD6C\uC131\uD55C AI \uBAA8\uB378\uC758 API \uC124\uC815\uC73C\uB85C, \uC0AD\uC81C\uD558\uBA74 \uC124\uC815\uC774 \uC190\uC2E4\uB429\uB2C8\uB2E4.\r\n- TextTemplates.json\uC740 \uAD6C\uC131\uD55C \uD14D\uC2A4\uD2B8 \uD15C\uD50C\uB9BF\uC73C\uB85C, \uC0AD\uC81C \uD6C4 \uC790\uB3D9\uC73C\uB85C \uC7AC\uC0DD\uC131\uB429\uB2C8\uB2E4.\r\n- EffectImplement.json\uC740 \uAD6C\uC131\uD55C \uD6A8\uACFC \uAD6C\uD604\uAE30\uB85C, \uC0AD\uC81C \uD6C4 \uC790\uB3D9\uC73C\uB85C \uC7AC\uC0DD\uC131\uB429\uB2C8\uB2E4.\r\n- JapaneseDictionary, EBWebView \uBC0F diag\uC740 \uC77C\uBD80 \uAD6C\uC131 \uC694\uC18C\uC5D0\uC11C \uC0AC\uC6A9\uB418\uB294 \uC784\uC2DC \uD30C\uC77C\uB85C, \uC0AD\uC81C\uD560 \uC218 \uC788\uC73C\uBA70 \uD544\uC694\uC5D0 \uB530\uB77C \uC0DD\uC131\uB429\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_InputPlaceholder",
+        "Value": "\uD504\uB86C\uD504\uD2B8 \uC785\uB825",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Type_Video",
+        "Value": "\uB3D9\uC601\uC0C1 \uC0DD\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Type_Image",
+        "Value": "\uC774\uBBF8\uC9C0 \uC0DD\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Generate",
+        "Value": "\uC0DD\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_MissingConfig",
+        "Value": "\uC124\uC815 - AI \uC11C\uBE44\uC2A4 \uAD6C\uC131\uC5D0\uC11C \uCC44\uD305 \uBAA8\uB378\uC744 \uBA3C\uC800 \uC124\uC815\uD55C \uD6C4, \uC800\uC640 \uB300\uD654\uD574 \uC8FC\uC138\uC694.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Me",
+        "Value": "\uB098",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_VersionTooNew",
+        "Value": "\uADC0\uD558\uC758 \uD504\uB85C\uC81D\uD2B8 \u300E{projectName}\u300F\uC5D0\uC11C \uC0AC\uC6A9 \uC911\uC778 {AppBrand} \uBC84\uC804({targetVersion})\uC774 \uD604\uC7AC \uBC84\uC804({sourceVersion})\uBCF4\uB2E4 \uB354 \uCD5C\uC2E0\uC785\uB2C8\uB2E4.\r\uD638\uD658\uC131 \uBB38\uC81C\uAC00 \uBC1C\uC0DD\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_VersionTooOld",
+        "Value": "\uADC0\uD558\uC758 \uD504\uB85C\uC81D\uD2B8 \u0027{projectName}\u0027\uC5D0\uC11C \uC0AC\uC6A9 \uC911\uC778 {AppBrand} \uBC84\uC804({targetVersion})\uC740 \uD604\uC7AC \uBC84\uC804({sourceVersion})\uBCF4\uB2E4 \uB0AE\uC2B5\uB2C8\uB2E4.\r\n\uACC4\uC18D \uB85C\uB4DC\uD558\uBA74 \uD504\uB85C\uC81D\uD2B8\uAC00 \uC790\uB3D9\uC73C\uB85C \uC5C5\uADF8\uB808\uC774\uB4DC\uB429\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_MissingPlugin",
+        "Value": "\uADC0\uD558\uC758 \uD504\uB85C\uC81D\uD2B8 \u0022{projectName}\u0022\uC5D0\uC11C \uC0AC\uC6A9 \uC911\uC778 \uD50C\uB7EC\uADF8\uC778 {plugins}(\uC774)\uAC00 \uD604\uC7AC \uC874\uC7AC\uD558\uC9C0 \uC54A\uAC70\uB098 \uBE44\uD65C\uC131\uD654\uB418\uC5C8\uC2B5\uB2C8\uB2E4.\r\uACC4\uC18D \uB85C\uB4DC\uD558\uBA74 \uC77C\uBD80 \uBB38\uC81C\uAC00 \uBC1C\uC0DD\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "projectName"
+          },
+          {
+            "Key": "string",
+            "Value": "plugins"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "projectName",
+            "Value": ""
+          },
+          {
+            "Key": "plugins",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_IncompatibleVersionError",
+        "Value": "\uC8C4\uC1A1\uD569\uB2C8\uB2E4. \uADC0\uD558\uC758 \uD504\uB85C\uC81D\uD2B8 \u0027{projectName}\u0027\uC5D0\uC11C \uC0AC\uC6A9 \uC911\uC778 {AppBrand} \uBC84\uC804({sourceVersion})\uC740 \uC774 \uBC84\uC804\uC758 {AppBrand}({targetVersion})\uC5D0\uC11C \uC9C0\uC6D0\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.\r\n{AppBrand}\uB97C \uC5C5\uB370\uC774\uD2B8\uD574 \uC8FC\uC2DC\uAE30 \uBC14\uB78D\uB2C8\uB2E4.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -18326,7 +19425,7 @@
       },
       {
         "Id": "_ProcessingWithProg",
-        "Value": "Traitement en cours, {n:p2} termin\u00E9",
+        "Value": "Unset localization item:_ProcessingWithProg",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -20027,128 +21126,350 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_NoTargetClip",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_NoTargetClip()",
+        "Value": "Vous devez s\u00E9lectionner un clip ou double-cliquer sur sa poign\u00E9e pour que nous sachions sur quel clip cible vous souhaitez ajouter la transformation.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight()",
+        "Value": "Il n\u0027y a pas de clip adjacent \u00E0 droite du clip s\u00E9lectionn\u00E9.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft()",
+        "Value": "Il n\u0027y a pas de clip adjacent \u00E0 gauche du clip s\u00E9lectionn\u00E9.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInLeft",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInLeft()",
+        "Value": "Ajouter cette transition \u00E0 gauche",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInRight",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInRight()",
+        "Value": "Ajouter cette transformation sur le c\u00F4t\u00E9 droit",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInSelectedDirection",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInSelectedDirection()",
+        "Value": "Ajouter cette transition \u00E0 gauche/droite de la poign\u00E9e s\u00E9lectionn\u00E9e",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_InputPlaceholder",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_InputPlaceholder()",
+        "Value": "Saisissez ici le texte que vous souhaitez ajouter,\rpuis double-cliquez sur l\u0027un des styles de texte ci-dessous que vous aimez pour l\u0027ajouter.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_SelectStyle",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_SelectStyle()",
+        "Value": "Indication : Apr\u00E8s avoir saisi le texte, double-cliquez sur n\u0027importe quel style de texte que vous aimez ci-dessous pour l\u0027ajouter.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_DrawHere",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_DrawHere()",
+        "Value": "Indication : Vous pouvez dessiner ci-dessous.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_SelectColor",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_SelectColor()",
+        "Value": "Couleur du crayon",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_Search",
-        "Value": "Unset localization item:DraftPage_AddClipView_Search()",
+        "Value": "Rechercher dans le contenu de cette page",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_NoContent",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Value": "Le canevas est vide, dessinez d\u0027abord quelques traits avant d\u0027essayer.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_PreviewInput",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_PreviewInput()",
+        "Value": "Aper\u00E7u de la saisie",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_ResetInput",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_ResetInput()",
+        "Value": "R\u00E9initialiser la saisie",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_AI",
+        "Value": "Services d\u0027IA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_NotWindows",
+        "Value": "Ceci est le r\u00E9pertoire principal des donn\u00E9es de projectFrameCut.\r\nParmi ceux-ci,\r\n- My Assets sont vos ressources.\r\n- My Drafts sont vos donn\u00E9es de projet.\r\n- Remote Assets sont les ressources obtenues depuis le serveur distant. Vous pouvez les nettoyer en toute s\u00E9curit\u00E9, mais vous devrez les ret\u00E9l\u00E9charger avant de rendre tous les projets qui les utilisent.\r\n- RenderCheckpoint et RenderCache sont des r\u00E9pertoires de donn\u00E9es temporaires pendant le processus de rendu, vous pouvez les nettoyer en toute s\u00E9curit\u00E9.\r\n- AppData contient les donn\u00E9es internes de l\u0027application, veuillez les manipuler avec prudence.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_Windows",
+        "Value": "Ceci est le r\u00E9pertoire des donn\u00E9es utilisateur de projectFrameCut.\r\nIl contient :\r\n- My Assets : vos ressources.\r\n- My Drafts : vos donn\u00E9es de projet.\r\n- Remote Assets : les ressources obtenues depuis le serveur distant. Vous pouvez les supprimer en toute s\u00E9curit\u00E9, mais vous devrez les ret\u00E9l\u00E9charger avant de rendre tout projet qui les utilise.\r\n- RenderCheckpoint et RenderCache : des r\u00E9pertoires de donn\u00E9es temporaires g\u00E9n\u00E9r\u00E9s pendant le rendu. Vous pouvez les supprimer en toute s\u00E9curit\u00E9.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_BasicData",
+        "Value": "Ce sont les donn\u00E9es internes de l\u0027application projectFrameCut.\rModifier ces fichiers arbitrairement peut entra\u00EEner des comportements inattendus, veuillez les manipuler avec prudence.\rParmi eux,\r- Le dossier Plugins est le r\u00E9pertoire principal et de donn\u00E9es de vos plugins.\r- Le fichier Plugins.json est votre fichier de configuration des plugins. Les supprimer \u00E9quivaut \u00E0 d\u00E9sactiver les plugins correspondants.\r- logging est le r\u00E9pertoire des journaux. Vous pouvez les nettoyer, mais un nettoyage trop fr\u00E9quent peut rendre difficile le suivi des probl\u00E8mes ant\u00E9rieurs.\r- settings.json, settings_a.json et settings_b.json sont vos param\u00E8tres. Veuillez ne pas les modifier, sinon vos configurations seront perdues.\r- ai_settings_text.json, ai_settings_image.json et ai_settings_video.json sont vos param\u00E8tres d\u0027API pour les mod\u00E8les d\u0027IA configur\u00E9s. Les supprimer entra\u00EEnera la perte de vos configurations.\r- TextTemplates.json est votre mod\u00E8le de texte configur\u00E9. Il sera r\u00E9g\u00E9n\u00E9r\u00E9 automatiquement apr\u00E8s suppression.\r- EffectImplement.json est votre impl\u00E9mentation d\u0027effets configur\u00E9e. Elle sera r\u00E9g\u00E9n\u00E9r\u00E9e automatiquement apr\u00E8s suppression.\r- JapaneseDictionary, EBWebView et diag sont des fichiers temporaires utilis\u00E9s par certains composants. Vous pouvez les supprimer, ils sont g\u00E9n\u00E9r\u00E9s \u00E0 la demande.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_InputPlaceholder",
+        "Value": "Saisir un mot-cl\u00E9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Type_Video",
+        "Value": "G\u00E9n\u00E9rer une vid\u00E9o",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Type_Image",
+        "Value": "G\u00E9n\u00E9rer une image",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Generate",
+        "Value": "G\u00E9n\u00E9rer",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_MissingConfig",
+        "Value": "Veuillez d\u0027abord configurer le mod\u00E8le de chat dans Param\u00E8tres \u2192 Configuration du service IA, puis revenez discuter avec moi !",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Me",
+        "Value": "Moi",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_VersionTooNew",
+        "Value": "La version ({targetVersion}) de {AppBrand} utilis\u00E9e par votre projet \u00AB {projectName} \u00BB est plus r\u00E9cente que la version actuelle ({sourceVersion}).\rVous pourriez rencontrer des probl\u00E8mes de compatibilit\u00E9. Voulez-vous continuer ?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_VersionTooOld",
+        "Value": "La version {AppBrand} ({targetVersion}) utilis\u00E9e par votre projet \u00AB {projectName} \u00BB est plus ancienne que la version actuelle ({sourceVersion}).\r\nContinuer le chargement mettra \u00E0 niveau le projet automatiquement. Voulez-vous continuer ?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "Message d\u0027avertissement demandant \u00E0 l\u0027utilisateur de confirmer le chargement d\u0027un projet utilisant une version obsol\u00E8te du logiciel, ce qui d\u00E9clenchera une mise \u00E0 niveau automatique.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_MissingPlugin",
+        "Value": "Les plugins {plugins} utilis\u00E9s par votre projet \u00AB\u202F{projectName}\u202F\u00BB n\u0027existent pas actuellement ou ont \u00E9t\u00E9 d\u00E9sactiv\u00E9s.\rLe chargement pourrait rencontrer des probl\u00E8mes. Voulez-vous continuer\u202F?",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "projectName"
+          },
+          {
+            "Key": "string",
+            "Value": "plugins"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "projectName",
+            "Value": ""
+          },
+          {
+            "Key": "plugins",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_IncompatibleVersionError",
+        "Value": "D\u00E9sol\u00E9, la version {sourceVersion} de {AppBrand} utilis\u00E9e par votre projet \u00AB {projectName} \u00BB n\u0027est pas prise en charge par cette version de {AppBrand} ({targetVersion}).\rVeuillez envisager de mettre \u00E0 jour votre {AppBrand}.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -21736,7 +23057,7 @@
       },
       {
         "Id": "_ProcessingWithProg",
-        "Value": "\u5904\u7406\u4E2D\uFF0C\u5DF2\u6BD5 {n:p2}",
+        "Value": "Unset localization item:_ProcessingWithProg",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -23356,11 +24677,11 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddPicture",
-        "Value": "\u56FE\u4E0E\u8D34\u753B",
+        "Value": "\u56FE\u8D34",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u539F\u610F\u4E3A\u63D2\u56FE\u548C\u8D34\u7EB8\uFF0C\u6587\u8A00\u6587\u7B80\u5316\u4E3A\u56FE\u8D34",
         "HasValidationErrors": false
       },
       {
@@ -23437,128 +24758,350 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_NoTargetClip",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_NoTargetClip()",
+        "Value": "\u6C5D\u9700\u62E9\u4E00\u7247\u6BB5\uFF0C\u6216\u53CC\u51FB\u5176\u67C4\uFF0C\u4EE5\u660E\u793A\u6240\u6B32\u6DFB\u4E4B\u76EE\u6807\u7247\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u6301\u539F\u610F\u6307\u5BFC\u7528\u6237\u9009\u62E9\u76EE\u6807\u7247\u6BB5",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInRight()",
+        "Value": "\u53F3\u65E0\u90BB\u6BB5\uFF0C\u4E0D\u53EF\u52A0\u7109\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_CannotAdd_NoClipInLeft()",
+        "Value": "\u6240\u9009\u7247\u6BB5\u4E4B\u5DE6\u4FA7\uFF0C\u65E0\u76F8\u90BB\u4E4B\u7247\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInLeft",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInLeft()",
+        "Value": "\u4E8E\u5DE6\u8FB9\u6DFB\u52A0\u6B64\u8F6C\u573A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInRight",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInRight()",
+        "Value": "\u4E8E\u53F3\u7F18\u6DFB\u6B64\u8FC7\u6E21",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddTransform_AddInSelectedDirection",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddTransform_AddInSelectedDirection()",
+        "Value": "\u4E8E\u6240\u9009\u628A\u67C4\u4E4B\u5DE6/\u53F3\u6DFB\u6B64\u8F6C\u573A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_InputPlaceholder",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_InputPlaceholder()",
+        "Value": "\u4E8E\u6B64\u8F93\u5165\u6B32\u6DFB\u4E4B\u6587\uFF1B\u590D\u51FB\u4E0B\u65B9\u6240\u559C\u6587\u5F0F\uFF0C\u5373\u53EF\u6DFB\u5165\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u6307\u5BFC\u7528\u6237\u4E8E\u8349\u7A3F\u9875\u6DFB\u52A0\u6587\u672C\u526A\u8F91\u4E4B\u64CD\u4F5C\u3002\u9996\u53E5\u8A00\u8F93\u5165\u4E4B\u5904\uFF0C\u6B21\u53E5\u8A00\u4EE5\u53CC\u51FB\u6837\u5F0F\u6DFB\u52A0\u4E4B\u6CD5\u3002\u8BD1\u6587\u529B\u6C42\u7B80\u53E4\uFF0C\u4EE5\u5408\u6587\u8A00\u4F53\u4F8B\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_SelectStyle",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_SelectStyle()",
+        "Value": "\u793A\uFF1A\u65E2\u5165\u6587\u540E\uFF0C\u53CC\u51FB\u4E0B\u5F0F\uFF0C\u62E9\u5C14\u6240\u597D\u8005\u4EE5\u6DFB\u4E4B\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_DrawHere",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_DrawHere()",
+        "Value": "\u793A\uFF1A\u53EF\u4E8E\u4E0B\u7ED8\u56FE\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u610F\u4E3A\u0027\u63D0\u793A\uFF1A\u53EF\u4EE5\u5728\u4E0B\u9762\u7ED8\u5236\u5185\u5BB9\u0027\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_SelectColor",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_SelectColor()",
+        "Value": "\u753B\u7B14\u989C\u8272",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_Search",
-        "Value": "Unset localization item:DraftPage_AddClipView_Search()",
+        "Value": "\u68C0\u7D22\u6B64\u9875\u5185\u5BB9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_NoContent",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddSketch_NoContent()",
+        "Value": "\u753B\u5E03\u662F\u7A7A\u7684\uFF0C\u8BF7\u5148\u753B\u4E24\u7B14\u518D\u8BD5\u8BD5\u5427\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_PreviewInput",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_PreviewInput()",
+        "Value": "\u9884\u89C2\u5165\u6587",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u9884\u89C8\u7528\u6237\u8F93\u5165\u4E4B\u5185\u5BB9",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_AddText_ResetInput",
-        "Value": "Unset localization item:DraftPage_AddClipView_AddText_ResetInput()",
+        "Value": "\u91CD\u7F6E\u8F93\u5165",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "MainSettingsPage_Tab_AI",
+        "Value": "AI\u4E4B\u52A1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_NotWindows",
+        "Value": "\u6B64\u4E43projectFrameCut\u4E4B\u4E3B\u6570\u636E\u76EE\u5F55\u4E5F\u3002\r\u5176\u5185\uFF0C\r- My Assets \u4E43\u5C14\u4E4B\u7D20\u6750\u3002\r- My Drafts \u4E43\u5C14\u4E4B\u9879\u76EE\u6570\u636E\u3002\r- Remote Assets \u4E43\u81EA\u8FDC\u7A0B\u670D\u52A1\u5668\u83B7\u53D6\u4E4B\u7D20\u6750\u3002\u5C14\u53EF\u5B89\u7136\u6E05\u7406\u4E4B\uFF0C\u7136\u987B\u4E8E\u6E32\u67D3\u6240\u6709\u7528\u53CA\u5176\u4E4B\u9879\u76EE\u524D\u91CD\u65B0\u4E0B\u8F7D\u3002\r- RenderCheckpoint \u4E0E RenderCache \u4E43\u6E32\u67D3\u8FC7\u7A0B\u4E2D\u4E4B\u4E34\u65F6\u6570\u636E\u76EE\u5F55\uFF0C\u5C14\u53EF\u5B89\u7136\u6E05\u7406\u4E4B\u3002\r- AppData \u4E43\u5E94\u7528\u7A0B\u5E8F\u5185\u90E8\u6570\u636E\uFF0C\u8BF7\u614E\u5F85\u4E4B\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5DF2\u6309\u8981\u6C42\u4FDD\u6301projectFrameCut\u53CA\u6240\u6709\u6587\u4EF6\u5939\u540D\u79F0\u4E0D\u53D8\uFF0C\u8BD1\u4E3A\u6587\u8A00\u6587\u4F46\u786E\u4FDD\u666E\u901A\u7528\u6237\u80FD\u7406\u89E3\u3002\u4F7F\u7528\u6587\u8A00\u53E5\u5F0F\u5982\u0027\u6B64\u4E43...\u4E5F\u0027\u3001\u0027\u5176\u5185\u0027\u3001\u0027\u5C14\u4E4B\u0027\u7B49\uFF0C\u6280\u672F\u63CF\u8FF0\u51C6\u786E\u65E0\u8BEF\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_Windows",
+        "Value": "\u6B64\u4E43 projectFrameCut \u4E4B\u7528\u6237\u6570\u636E\u76EE\u5F55\u4E5F\u3002\r\u5176\u4E0B\u8BF8\u9879\u5982\u5DE6\uFF1A\r- My Assets \u8005\uFF0C\u6C5D\u4E4B\u7D20\u6750\u4E5F\u3002\r- My Drafts \u8005\uFF0C\u6C5D\u4E4B\u9879\u76EE\u6570\u636E\u4E5F\u3002\r- Remote Assets \u8005\uFF0C\u53D6\u81EA\u8FDC\u7A0B\u670D\u52A1\u5668\u4E4B\u7D20\u6750\u4E5F\u3002\u6C5D\u53EF\u5B89\u7136\u6E05\u7406\u4E4B\uFF0C\u7136\u4E8E\u6E32\u67D3\u6240\u6709\u7528\u53CA\u5F7C\u7B49\u9879\u76EE\u4E4B\u524D\uFF0C\u987B\u91CD\u65B0\u4E0B\u8F7D\u3002\r- RenderCheckpoint \u4E0E RenderCache \u8005\uFF0C\u6E32\u67D3\u8FC7\u7A0B\u4E4B\u4E34\u65F6\u6570\u636E\u76EE\u5F55\u4E5F\uFF0C\u6C5D\u53EF\u5B89\u7136\u6E05\u7406\u4E4B\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u5DF2\u5C06\u6B63\u6587\u5185\u5BB9\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u6240\u6709\u6587\u4EF6\u5939\u540D\u79F0\u53CA\u8F6F\u4EF6\u540D\u5747\u6309\u6307\u793A\u4FDD\u7559\u539F\u6837\u3002\u8BD1\u6587\u529B\u6C42\u6587\u767D\u76F8\u95F4\uFF0C\u6E05\u6670\u6613\u61C2\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AboutAppData_BasicData",
+        "Value": "\u6B64\u4E43projectFrameCut\u5E94\u7528\u7A0B\u5E8F\u4E4B\u5185\u90E8\u6570\u636E\u4E5F\u3002\n\u968F\u610F\u4FEE\u6539\u6B64\u7B49\u6587\u4EF6\uFF0C\u6050\u81F4\u610F\u5916\u4E4B\u4E3E\uFF0C\u52A1\u8BF7\u614E\u800C\u5F85\u4E4B\u3002\n\u5176\u4E2D\uFF0C\n- Plugins \u6587\u4EF6\u5939\u4E43\u6C5D\u63D2\u4EF6\u4E4B\u672C\u4F53\u4E0E\u6570\u636E\u76EE\u5F55\u4E5F\u3002\n- Plugins.json \u6587\u4EF6\u4E43\u6C5D\u63D2\u4EF6\u4E4B\u914D\u7F6E\u6587\u4EF6\u4E5F\u3002\u5220\u9664\u4E4B\uFF0C\u5219\u7B49\u540C\u4E8E\u7981\u7528\u6240\u7528\u4E4B\u63D2\u4EF6\u3002\n- logging \u4E3A\u65E5\u5FD7\u76EE\u5F55\uFF0C\u6C5D\u53EF\u6E05\u7406\u4E4B\uFF0C\u7136\u9891\u7E41\u6E05\u7406\u65E5\u5FD7\uFF0C\u6050\u4EE4\u8FFD\u8E2A\u5148\u524D\u53D1\u751F\u4E4B\u95EE\u9898\u53D8\u5F97\u56F0\u96BE\u3002\n- settings.json\u3001settings_a.json \u53CA settings_b.json \u4E43\u6C5D\u4E4B\u8BBE\u7F6E\u4E5F\u3002\u8BF7\u52FF\u4FEE\u6539\u4E4B\uFF0C\u5426\u5219\u5C06\u81F4\u6C5D\u4E4B\u914D\u7F6E\u4E22\u5931\u3002\n- ai_settings_text.json\u3001ai_settings_image.json \u4E0E ai_settings_video.json \u4E43\u6C5D\u914D\u7F6E\u4E4BAI\u6A21\u578BAPI\u8BBE\u7F6E\u4E5F\uFF0C\u5220\u9664\u4E4B\u5C06\u81F4\u6C5D\u4E4B\u914D\u7F6E\u4E22\u5931\u3002\n- TextTemplates.json \u4E43\u6C5D\u914D\u7F6E\u4E4B\u6587\u672C\u6A21\u677F\u4E5F\uFF0C\u5220\u9664\u4E4B\u540E\u5C06\u81EA\u52A8\u91CD\u65B0\u751F\u6210\u3002\n- EffectImplement.json \u4E43\u6C5D\u914D\u7F6E\u4E4B\u6548\u679C\u5B9E\u73B0\u5668\u4E5F\uFF0C\u5220\u9664\u4E4B\u540E\u5C06\u81EA\u52A8\u91CD\u65B0\u751F\u6210\u3002\n- JapaneseDictionary\u3001EBWebView \u53CA diag \u4E43\u67D0\u4E9B\u7EC4\u4EF6\u6240\u7528\u4E4B\u4E34\u65F6\u6587\u4EF6\u4E5F\uFF0C\u6C5D\u53EF\u5220\u9664\u4E4B\uFF0C\u5F7C\u7B49\u4E43\u6309\u9700\u751F\u6210\u8005\u4E5F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_InputPlaceholder",
+        "Value": "\u8F93\u5165\u63D0\u793A\u4E4B\u8BCD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Type_Video",
+        "Value": "\u751F\u6210\u89C6\u9891",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Type_Image",
+        "Value": "\u751F\u6210\u56FE\u7247",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AIGC_Generate",
+        "Value": "\u751F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_MissingConfig",
+        "Value": "\u8BF7\u5148\u5F80\u8BBE\u7F6E\u4E4B\u5904\uFF0C\u914D\u7F6EAI\u5BF9\u8C08\u6A21\u578B\uFF0C\u800C\u540E\u53EF\u4E0E\u543E\u8A00\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AIAssistant_ChatView_Me",
+        "Value": "\u543E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_VersionTooNew",
+        "Value": "\u6C5D\u4E4B\u9879\u76EE\u300E{projectName}\u300F\u6240\u7528\u4E4B{AppBrand}\u7248\u672C({targetVersion})\uFF0C\u8F83\u5F53\u524D\u4E4B\u7248\u672C({sourceVersion })\u4E3A\u65B0\u3002\r\u6216\u9047\u517C\u5BB9\u4E4B\u60A3\uFF0C\u6B32\u7EED\u4E4E\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_VersionTooOld",
+        "Value": "\u6C5D\u4E4B\u9879\u76EE\u300E{projectName}\u300F\u6240\u7528 {AppBrand} \u7248 ({targetVersion}) \u8F83\u4ECA\u7248 ({sourceVersion}) \u4E3A\u65E7\u3002\u7EED\u8F7D\u5C06\u81EA\u5347\u5176\u7EA7\uFF0C\u6C5D\u786E\u6B32\u7EED\u4E4E\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_MissingPlugin",
+        "Value": "\u541B\u4E4B\u9879\u76EE\u300E{projectName}\u300F\u6240\u7528\u63D2\u4EF6 {plugins}\uFF0C\u4ECA\u4E0D\u5B58\u6216\u5DF2\u7981\u7528\u3002\r\u7EED\u8F7D\u6216\u9047\u788D\uFF0C\u6B32\u7EED\u4E4E\uFF1F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "projectName"
+          },
+          {
+            "Key": "string",
+            "Value": "plugins"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "projectName",
+            "Value": ""
+          },
+          {
+            "Key": "plugins",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u5C06\u73B0\u4EE3\u4E2D\u6587\u7684\u63D2\u4EF6\u7F3A\u5931\u8B66\u544A\u7FFB\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u4FDD\u6301\u63D2\u503C\u53C2\u6570\u4E0D\u53D8\uFF0C\u4F7F\u7528\u5178\u96C5\u7B80\u6D01\u7684\u6587\u8A00\u8868\u8FBE\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_IncompatibleVersionError",
+        "Value": "\u9879\u76EE\u300E{projectName}\u300F\u6240\u7528\u4E4B {AppBrand} \u7248 ({sourceVersion})\uFF0C\u6B64\u7248 {AppBrand} ({targetVersion}) \u672A\u517C\u5BB9\u3002\u8BF7\u66F4\u65B0 {AppBrand}\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "targetVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "sourceVersion"
+          },
+          {
+            "Key": "string",
+            "Value": "projectName"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "targetVersion",
+            "Value": ""
+          },
+          {
+            "Key": "sourceVersion",
+            "Value": ""
+          },
+          {
+            "Key": "projectName",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u6301\u63D2\u503C\u53C2\u6570\u4E0D\u53D8\uFF0C\u7528\u8BED\u7B80\u6D01\u6587\u96C5\u3002",
         "HasValidationErrors": false
       }
     ]

@@ -4,11 +4,13 @@ using Microsoft.Extensions.AI;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Layouts;
 using Microsoft.Maui.Platform;
+using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
+using projectFrameCut.Asset;
 using projectFrameCut.Controls;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
@@ -93,7 +95,7 @@ namespace projectFrameCut.DraftStuff
             {
                 t.TabItems.Add(new TabbedViewItem
                 {
-                    Header =  PPLocalizedResources.TextOption_TabTitle,
+                    Header = PPLocalizedResources.TextOption_TabTitle,
                     Content = await BuildTextOptionTab(clip, handler)
                 });
             }
@@ -223,7 +225,7 @@ namespace projectFrameCut.DraftStuff
                     .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
                     .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
                     .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default));
-            
+
 
 
             ppb.PropertyChanged += async (s, e) =>
@@ -473,7 +475,7 @@ namespace projectFrameCut.DraftStuff
                 ColumnSpacing = 6
             };
             var fontPicker = new Picker { Title = PPLocalizedResources.TextOption_Font, ItemsSource = fonts, SelectedItem = fonts.Contains(e.fontFamily) ? e.fontFamily : fonts.FirstOrDefault() };
-            fontPicker.SelectedIndexChanged += (s, ev) => 
+            fontPicker.SelectedIndexChanged += (s, ev) =>
             {
                 if (fontPicker.SelectedItem is string sf) onChanged?.Invoke(idx, e with { fontFamily = sf });
             };
@@ -571,7 +573,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     SixLabors.Fonts.VerticalAlignment va = sel switch
                     {
-                       var v when v == PPLocalizedResources.TextOption_VerticalOption_Center => SixLabors.Fonts.VerticalAlignment.Center,
+                        var v when v == PPLocalizedResources.TextOption_VerticalOption_Center => SixLabors.Fonts.VerticalAlignment.Center,
                         var v when v == PPLocalizedResources.TextOption_VerticalOption_Bottom => SixLabors.Fonts.VerticalAlignment.Bottom,
                         _ => SixLabors.Fonts.VerticalAlignment.Top,
                     };
@@ -1836,6 +1838,22 @@ namespace projectFrameCut.DraftStuff
 
         public Func<IEnumerable<AIFunction>>? BuildToolCalls(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
+            async Task GenerateImage(string Prompt, string NegativePrompt, ImageStyle Style = ImageStyle.Natural)
+            {
+                var rsp = await AIHelper.GenerateImageAsync(Prompt, new AIAssistance.ImageGenerationOptions { NegativePrompt = NegativePrompt, Quality = ImageQuality.High, Style = Style });
+                if (!rsp.Success) throw new InvalidOperationException($"Cannot generate image. {rsp.ErrorMessage}");
+                var img = new HttpClient().GetAsync(rsp.ImageUrl);
+                using var s = img.Result.Content.ReadAsStream();
+                var path = System.IO.Path.Combine(page.WorkingPath, "assets", $"AIGenerated-{Guid.NewGuid()}.png");
+                using var fs = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
+                s.CopyTo(fs);
+                fs.Dispose();
+                s.Dispose();
+                var a = AssetDatabase.Create(path, $"AIGenerated-{Prompt}", AssetType.Image);
+                page.CreateFromAsset(a, 0, InternalPluginBase.InternalPluginBaseID, path);
+
+            }
+
             List<AIFunction> toolCalls = new List<AIFunction>
             {
                 AIFunctionFactory.Create(() => DraftImportAndExportHelper.ExportFromDraftPage(page, false).Clips, "get_all_clips","Get all clips inside this project."),
@@ -1843,6 +1861,7 @@ namespace projectFrameCut.DraftStuff
                 AIFunctionFactory.Create((string Id, ClipDraftDTO Clip) => {page.Clips[Id] = DraftImportAndExportHelper.ConvertToElement(Clip); handler.Invoke(this, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));}, "set_clip_info","Set a specific clip's information."),
                 AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Select(c => c.Value.EffectProvider).FirstOrDefault(c => c.Keys.Contains(Type))?[Type]?.Invoke()?.GetInfo(), "get_effect_info","Get a specific effect's information."),
                 AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().Select(c => c.EffectBundleProvider).FirstOrDefault(c => c.ContainsKey(Type))?[Type]?.Invoke()?.GetEffectBundleItem(), "get_effect_bundle_info","Get a specific effect bundle's information."),
+                AIFunctionFactory.Create(GenerateImage, "create_an_AIGC_image","Add an AI generated image to the draft. Use param Prompt to define how the picture looks like and NegativePrompt to define what not in the picture. Use param Style to define the style of this image."),
                 //AIFunctionFactory.Create((string Type) => , "get_cliptype_detail_info","Set a specific's clip information.")
             };
 

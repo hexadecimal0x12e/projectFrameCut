@@ -23,6 +23,7 @@ using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.Render.Effect;
 using Microsoft.Maui.LifecycleEvents;
 using CommunityToolkit.Maui.Core;
+using projectFrameCut.AIAssistance;
 
 
 
@@ -97,14 +98,14 @@ namespace projectFrameCut
                     if (Path.Exists(userAccessblePath))
                     {
                         DataPath = userAccessblePath;
-                        BasicDataPath = userAccessblePath;
-                        loggingDir = Path.Combine(userAccessblePath, "logging");
+                        BasicDataPath = Path.Combine(userAccessblePath, "AppData"); 
+                        loggingDir = Path.Combine(userAccessblePath, "Logs");
                     }
                 }
                 catch //use the default path (/data/data/...)           
                 { }
 #elif WINDOWS
-                loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging"); //%localappdata%\hexadecimal0x12e\hexadecimal0x12e.projectFrameCut\Data
+                loggingDir = System.IO.Path.Combine(FileSystem.AppDataDirectory, "logging"); //%localappdata%\hexadecimal0x12e\hexadecimal0x12e.projectFrameCut\Data or <AppContainer Data>\LocalState
                 DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
                 if (Program.UserDataPathOverride != null || Program.BasicDataPathOverride != null)
                 {
@@ -183,14 +184,15 @@ namespace projectFrameCut
                         }
                     }
                     Log($"Settings inited. Count: {SettingsManager.Settings.Count}");
-                    if (SettingsManager.IsSettingExists("reset_Settings") && bool.TryParse(SettingsManager.GetSetting("reset_Settings", "true"), out var resetAll) ? resetAll : false)
+                    if (SettingsManager.IsBoolSettingTrue("reset_Settings"))
                     {
                         Log("Settings reset as requested by user.");
                         SettingsManager.Settings = null!;
                         SettingsManager.ToggleSaveSignal();
+                        Preferences.Clear();
                     }
 
-                    MyLoggerExtensions.LoggingDiagnosticInfo = bool.TryParse(SettingsManager.GetSetting("LogDiagnostics", "False"), out var diagLog) ? diagLog : false;
+                    MyLoggerExtensions.LoggingDiagnosticInfo = SettingsManager.IsBoolSettingTrue("LogDiagnostics");
                 }
                 else
                 {
@@ -293,20 +295,50 @@ namespace projectFrameCut
                     Directory.CreateDirectory(Path.Combine(DataPath, item));
                 }
 
-                if (!File.Exists(Path.Combine(DataPath, "My Assets", "@WARNING.txt")))
+                try
                 {
-                    File.WriteAllText(Path.Combine(DataPath, "My Assets", "@WARNING.txt"),
-                        """
+
+                    if (!File.Exists(Path.Combine(DataPath, "My Assets", "@WARNING.txt")))
+                    {
+                        File.WriteAllText(Path.Combine(DataPath, "My Assets", "@WARNING.txt"),
+                            """
                         WARNING: Do not modify or delete any files in this folder manually, or your assets may be corrupted!
                         """);
+                    }
+                    if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "database.json")))
+                    {
+                        AssetDatabase.Initialize("{}");
+                    }
+                    else
+                    {
+                        AssetDatabase.Initialize(File.ReadAllText(Path.Combine(DataPath, "My Assets", ".database", "database.json")));
+                    }
                 }
-                if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "database.json")))
+                catch (Exception ex)
                 {
-                    AssetDatabase.Initialize("{}");
+                    Log(ex, "Init Asset library", CreateMauiApp);
+
                 }
-                else
+
+                try
                 {
-                    AssetDatabase.Initialize(File.ReadAllText(Path.Combine(DataPath, "My Assets", ".database", "database.json")));
+
+                    if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_text.json")))
+                    {
+                        AIHelper.CurrentOption = JsonSerializer.Deserialize<AIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_text.json"))) ?? new AIOption { Provider = "OpenAI" };
+                    }
+                    if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_image.json")))
+                    {
+                        AIHelper.CurrentImageOption = JsonSerializer.Deserialize<AIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_image.json"))) ?? new AIOption { Provider = "OpenAI" };
+                    }
+                    if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json")))
+                    {
+                        AIHelper.CurrentVideoOption = JsonSerializer.Deserialize<VideoGenAIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json"))) ?? new VideoGenAIOption { Provider = "OpenAI" };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Init AI Config", CreateMauiApp);
                 }
             }
             catch (Exception ex)
@@ -560,6 +592,20 @@ namespace projectFrameCut
                 }
                 try
                 {
+                    if (!File.Exists(Path.Combine(DataPath, $"{Localized.MainSettingsPage_Tab_About}.txt")))
+                    {
+                        File.WriteAllText(Path.Combine(DataPath, $"{Localized.MainSettingsPage_Tab_About}.txt"),OperatingSystem.IsWindows() ? Localized.AboutAppData_Windows : Localized.AboutAppData_NotWindows);
+                    }
+
+                    if (!File.Exists(Path.Combine(BasicDataPath, $"{Localized.MainSettingsPage_Tab_About}.txt")))
+                    {
+                        File.WriteAllText(Path.Combine(BasicDataPath, $"{Localized.MainSettingsPage_Tab_About}.txt"), Localized.AboutAppData_BasicData);
+                    }
+                }
+                catch { }
+
+                try
+                {
                     MessagingServices.Init();
                 }
                 catch (Exception ex)
@@ -572,17 +618,18 @@ namespace projectFrameCut
                     PluginManager.InitGlobalGetter();
                     var internalBase = new InternalApplicationPluginBase();
                     (internalBase as IApplicationPluginBase).OnApplicationPluginLoaded();
-                    List<IPluginBase> plugins = new() { internalBase };
+                    List<IPluginBase> plugins = new() 
+                    { 
+                        internalBase,
 #if ANDROID
-                    plugins.Add(new OpenGLPlugin());
+                        new OpenGLPlugin(),
 #elif WINDOWS
-                    plugins.Add(new ILGPUPlugin());
-#elif iDevices
-
+                        new ILGPUPlugin(),
 #endif
+                    };
                     try
                     {
-                        if (Environment.GetCommandLineArgs().Contains("--forceLoadPlugins") || (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine") && !File.Exists(Path.Combine(BasicDataPath, "noplugin.flag"))))
+                        if (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine") && !File.Exists(Path.Combine(BasicDataPath, "noplugin.flag")))
                         {
                             plugins.AddRange(PluginService.LoadUserPlugins());
 #if WINDOWS
@@ -612,13 +659,14 @@ namespace projectFrameCut
                         {
                             PluginManager.Init([new InternalPluginBase()]);
                             PluginService.FailedLoadPlugin.Add("<No plugin ID available>", $"Plugin engine fail to init. ({ex})");
-
                         }
                     }
                     catch (Exception ex1)
                     {
                         Log(ex1, "try load internal plugin", CreateMauiApp);
+#pragma warning disable CS0618 
                         Crash(new InvalidOperationException($"FATAL: The pluginBase cannot be loaded. projectFrameCut can't work without PluginEngine. \r\n{ex} \r\n{ex1}", new AggregateException(ex, ex1)));
+#pragma warning restore CS0618
                     }
                 }
 

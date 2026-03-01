@@ -16,6 +16,10 @@ using projectFrameCut.Render.RenderAPIBase.Plugins;
 
 using projectFrameCut.Services;
 using projectFrameCut.Asset;
+using Microsoft.Maui.Controls.PlatformConfiguration;
+using projectFrameCut.AIAssistance;
+
+
 
 
 
@@ -78,11 +82,21 @@ namespace projectFrameCut
 #elif MACCATALYST
                 DataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "projectFrameCut");
 #endif
-
+                string loggingDir = "";
                 try
                 {
                     Directory.CreateDirectory(DataPath);
-                    BasicDataPath = DataPath;
+                    if (Path.Exists(DataPath))
+                    {
+                        BasicDataPath = Path.Combine(DataPath, "AppData");
+                        loggingDir = Path.Combine(DataPath, "Logs");
+                    }
+                    LogWriter = new StreamWriter(System.IO.Path.Combine(loggingDir, $"log-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log"), append: true)
+                    {
+                        AutoFlush = true
+                    };
+
+                    MyLoggerExtensions.OnLog += MyLoggerExtensions_OnLog;
                 }
                 catch (Exception ex)
                 {
@@ -172,20 +186,50 @@ namespace projectFrameCut
                     Directory.CreateDirectory(Path.Combine(DataPath, item));
                 }
 
-                if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "@WARNING.txt")))
+                try
                 {
-                    File.WriteAllText(Path.Combine(DataPath, "My Assets", ".database", "@WARNING.txt"),
-                        """
-                        WARNING: Do not modify or delete any files in this folder manually, or your asset database may be corrupted!
+
+                    if (!File.Exists(Path.Combine(DataPath, "My Assets", "@WARNING.txt")))
+                    {
+                        File.WriteAllText(Path.Combine(DataPath, "My Assets", "@WARNING.txt"),
+                            """
+                        WARNING: Do not modify or delete any files in this folder manually, or your assets may be corrupted!
                         """);
+                    }
+                    if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "database.json")))
+                    {
+                        AssetDatabase.Initialize("{}");
+                    }
+                    else
+                    {
+                        AssetDatabase.Initialize(File.ReadAllText(Path.Combine(DataPath, "My Assets", ".database", "database.json")));
+                    }
                 }
-                if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "database.json")))
+                catch (Exception ex)
                 {
-                    AssetDatabase.Initialize("{}");
+                    Log(ex, "Init Asset library", CreateMauiApp);
+
                 }
-                else
+
+                try
                 {
-                    AssetDatabase.Initialize(File.ReadAllText(Path.Combine(DataPath, "My Assets", ".database", "database.json")));
+
+                    if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_text.json")))
+                    {
+                        AIHelper.CurrentOption = JsonSerializer.Deserialize<AIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_text.json"))) ?? new AIOption { Provider = "OpenAI" };
+                    }
+                    if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_image.json")))
+                    {
+                        AIHelper.CurrentImageOption = JsonSerializer.Deserialize<AIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_image.json"))) ?? new AIOption { Provider = "OpenAI" };
+                    }
+                    if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json")))
+                    {
+                        AIHelper.CurrentVideoOption = JsonSerializer.Deserialize<AIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json"))) ?? new AIOption { Provider = "OpenAI" };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Init AI Config", CreateMauiApp);
                 }
             }
             catch (Exception ex)
@@ -206,8 +250,8 @@ namespace projectFrameCut
                        {
                            options.SetShouldEnableSnackbarOnWindows(true);
                        })
-#if IOS15_0_OR_GREATER 
-                       .UseMauiCommunityToolkitMediaElement();
+#if IOS15_0_OR_GREATER || MACCATALYST15_0_OR_GREATER
+                       .UseMauiCommunityToolkitMediaElement(false);
 #else
 ;
 #endif

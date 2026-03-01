@@ -4,8 +4,8 @@ namespace projectFrameCut.DraftStuff;
 
 public partial class ProjectAddClipView : ContentView
 {
-    private readonly ProjectAddClipViewModel _viewModel;
-    private readonly DraftPage _page;
+    private readonly ProjectAddClipViewModel _viewModel = null!;
+    private readonly DraftPage _page = null!;
 
     public ProjectAddClipView(ref DraftPage draftPage)
     {
@@ -71,6 +71,14 @@ public partial class ProjectAddClipView : ContentView
     {
         add => _viewModel.ClipAdded += value;
         remove => _viewModel.ClipAdded -= value;
+    }
+
+    private void OnAIContentTypeChanged(object? sender, CheckedChangedEventArgs e)
+    {
+        if (e.Value && sender is RadioButton radioButton)
+        {
+            _viewModel.AIContentType = radioButton.Value?.ToString() ?? "Image";
+        }
     }
 
 }

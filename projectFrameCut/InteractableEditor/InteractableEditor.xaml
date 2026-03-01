@@ -4,30 +4,31 @@
              x:Class="InteractableEditor.InteractableEditor"
              BackgroundColor="Transparent"
              InputTransparent="False">
-    <AbsoluteLayout x:Name="EditorCanvas" BackgroundColor="Transparent" InputTransparent="False">
+    <AbsoluteLayout x:Name="EditorCanvas" BackgroundColor="Transparent" InputTransparent="False" ZIndex="100">
         <Border x:Name="ClipVisual"
                 Stroke="Yellow"
                 StrokeThickness="2"
                 BackgroundColor="#33FFFF00"
                 InputTransparent="False"
+                ZIndex="101"
                 AbsoluteLayout.LayoutFlags="None">
 
         </Border>
 
         <!-- Resize Handles -->
-        <BoxView x:Name="HandleTL" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" AbsoluteLayout.LayoutFlags="None">
+        <BoxView x:Name="HandleTL" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" ZIndex="102" AbsoluteLayout.LayoutFlags="None">
 
         </BoxView>
 
-        <BoxView x:Name="HandleTR" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" AbsoluteLayout.LayoutFlags="None">
+        <BoxView x:Name="HandleTR" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" ZIndex="102" AbsoluteLayout.LayoutFlags="None">
 
         </BoxView>
 
-        <BoxView x:Name="HandleBL" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" AbsoluteLayout.LayoutFlags="None">
+        <BoxView x:Name="HandleBL" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" ZIndex="102" AbsoluteLayout.LayoutFlags="None">
 
         </BoxView>
 
-        <BoxView x:Name="HandleBR" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" AbsoluteLayout.LayoutFlags="None">
+        <BoxView x:Name="HandleBR" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" ZIndex="102" AbsoluteLayout.LayoutFlags="None">
 
         </BoxView>
         

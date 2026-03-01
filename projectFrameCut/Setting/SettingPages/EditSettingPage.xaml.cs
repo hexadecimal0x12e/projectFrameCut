@@ -384,13 +384,7 @@ public partial class EditSettingPage : ContentPage
                         WriteSetting("Edit_ProxyOption", mode);
                         return;
                     }
-                case "Edit_AddView_DefaultOrderOption":
-                    {
-                        var mode = OrderOptionStringMapping.FirstOrDefault(k => k.Key == args.Value as string,
-                                                 new KeyValuePair<string, string>(Localized.AssetPage_OrderBy_AddDate, "date")).Value;
-                        WriteSetting("Edit_AddView_DefaultOrderOption", mode);
-                        return;
-                    }
+
                 case "TextTemplates":
                     {
                         File.WriteAllText(Path.Combine(MauiProgram.BasicDataPath, "TextTemplates.json"), System.Text.Json.JsonSerializer.Serialize(TextTemplates));

@@ -49,7 +49,18 @@ namespace InteractableEditor
         protected override void OnSizeAllocated(double width, double height)
         {
             base.OnSizeAllocated(width, height);
-            UpdateCanvasSize(width, height);
+            
+            // 在 MultiWindowItem 中需要考虑容器的布局影响
+            var (offsetX, offsetY) = GetContainerOffset();
+            double adjustedHeight = height;
+            
+            // 如果在 MultiWindowItem 中，需要减去标题栏的高度影响
+            if (offsetY > 0)
+            {
+                // 这里不需要调整 height，因为 OnSizeAllocated 给出的已经是内容区域的尺寸
+            }
+            
+            UpdateCanvasSize(width, adjustedHeight);
         }
 
         public void Init(Action updateCallback, double videoWidth, double videoHeight)
@@ -139,6 +150,9 @@ namespace InteractableEditor
             }
 
             UpdateVisuals();
+            
+            // 确保手势识别器在新的容器环境中正确工作
+            RefreshGestureRecognizers();
         }
 
         private void InitGestures()
@@ -247,13 +261,19 @@ namespace InteractableEditor
             {
                 case GestureStatus.Started:
                     GetCurrentRect(out _startX, out _startY, out _startW, out _startH);
+                    // 调试输出初始位置
+                    System.Diagnostics.Debug.WriteLine($"Pan Started: StartX={_startX}, StartY={_startY}");
                     break;
                 case GestureStatus.Running:
                     Rect renderRect = GetRenderRect();
                     double scale = renderRect.Width / _videoWidth;
 
+                    // 简化坐标计算，直接使用手势的相对偏移
                     double newVisualX = _startX + e.TotalX / scale;
                     double newVisualY = _startY + e.TotalY / scale;
+                    
+                    // 调试信息（可以在发布版本中删除）
+                    System.Diagnostics.Debug.WriteLine($"Pan Running: TotalX={e.TotalX}, TotalY={e.TotalY}, Scale={scale}, NewX={newVisualX}, NewY={newVisualY}");
 
                     if (_isTextClip)
                     {
@@ -283,13 +303,18 @@ namespace InteractableEditor
             {
                 case GestureStatus.Started:
                     GetCurrentRect(out _startX, out _startY, out _startW, out _startH);
+                    System.Diagnostics.Debug.WriteLine($"Resize Started: StartX={_startX}, StartY={_startY}, StartW={_startW}, StartH={_startH}");
                     break;
                 case GestureStatus.Running:
                     Rect renderRect = GetRenderRect();
                     double scale = renderRect.Width / _videoWidth;
 
+                    // 简化坐标计算，直接使用手势的相对偏移
                     double dx = e.TotalX / scale;
                     double dy = e.TotalY / scale;
+                    
+                    // 调试信息（可以在发布版本中删除）
+                    System.Diagnostics.Debug.WriteLine($"Resize Running: TotalX={e.TotalX}, TotalY={e.TotalY}, Scale={scale}, DX={dx}, DY={dy}");
 
                     double newX = _startX, newY = _startY, newW = _startW, newH = _startH;
 
@@ -520,6 +545,114 @@ namespace InteractableEditor
                         RelativeHeight = relH
                     };
                 }
+            }
+        }
+
+        /// <summary>
+        /// 获取相对于父容器的坐标偏移量，用于处理在 MultiWindowItem 中的坐标转换
+        /// </summary>
+        private (double offsetX, double offsetY) GetContainerOffset()
+        {
+            try
+            {
+                // 检查是否在 MultiWindowItem 中
+                var parent = this.Parent;
+                while (parent != null)
+                {
+                    if (parent.GetType().Name == "MultiWindowItem")
+                    {
+                        // 通过实际测量获取更准确的偏移
+                        return GetActualContainerOffset(parent as View);
+                    }
+                    parent = (parent as Element)?.Parent;
+                }
+                return (0, 0);
+            }
+            catch
+            {
+                return (0, 0);
+            }
+        }
+        
+        /// <summary>
+        /// 通过实际测量获取容器偏移
+        /// </summary>
+        private (double offsetX, double offsetY) GetActualContainerOffset(View? container)
+        {
+            if (container == null) return (0, 0);
+            
+            try
+            {
+                // MultiWindowItem 的布局结构：Grid(Padding=5) -> Border -> Grid(RowDefinitions="32, *")
+                // 标题栏在第0行，内容在第1行
+                // 所以实际偏移应该包括：外层Grid的Padding(5) + 标题栏高度(32) + Border的边框等
+                
+                // 更保守的估算：5(padding) + 32(title) + 1(border) + 一些额外的间距
+                return (5, 38);
+            }
+            catch
+            {
+                return (0, 32); // 回退到之前的估计值
+            }
+        }
+
+        /// <summary>
+        /// 强制更新手势识别器以避免与父容器的手势冲突
+        /// </summary>
+        public void RefreshGestureRecognizers()
+        {
+            // 临时移除手势识别器
+            ClipVisual.GestureRecognizers.Clear();
+            HandleTL.GestureRecognizers.Clear();
+            HandleTR.GestureRecognizers.Clear();
+            HandleBL.GestureRecognizers.Clear();
+            HandleBR.GestureRecognizers.Clear();
+            
+            // 重新初始化
+            InitGestures();
+        }
+        
+        /// <summary>
+        /// 调试方法：获取当前控件在屏幕上的实际位置
+        /// </summary>
+        public (double x, double y) GetScreenPosition()
+        {
+            try
+            {
+                // 使用 MAUI 的实际可用属性
+                System.Diagnostics.Debug.WriteLine($"InteractableEditor - X: {this.X}, Y: {this.Y}, Width: {this.Width}, Height: {this.Height}");
+                
+                // 尝试获取相对于窗口的位置
+                var parent = this.Parent;
+                double totalOffsetX = this.X;
+                double totalOffsetY = this.Y;
+                
+                while (parent != null)
+                {
+                    if (parent is View view)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Parent {parent.GetType().Name} - X: {view.X}, Y: {view.Y}, Width: {view.Width}, Height: {view.Height}");
+                        
+                        totalOffsetX += view.X;
+                        totalOffsetY += view.Y;
+                        
+                        if (parent.GetType().Name == "MultiWindowItem")
+                        {
+                            // 找到了 MultiWindowItem，记录其位置信息
+                            System.Diagnostics.Debug.WriteLine($"Found MultiWindowItem at: X={view.X}, Y={view.Y}, W={view.Width}, H={view.Height}");
+                            break;
+                        }
+                    }
+                    parent = (parent as Element)?.Parent;
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"Total calculated offset: X={totalOffsetX}, Y={totalOffsetY}");
+                return (totalOffsetX, totalOffsetY);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetScreenPosition error: {ex.Message}");
+                return (0, 0);
             }
         }
     }

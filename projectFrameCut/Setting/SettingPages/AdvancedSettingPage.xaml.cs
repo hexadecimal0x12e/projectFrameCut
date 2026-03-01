@@ -14,9 +14,20 @@ namespace projectFrameCut.Setting.SettingPages;
 
 public partial class AdvancedSettingPage : ContentPage
 {
+    private Dictionary<string, string> overrideOpts;
 
     public AdvancedSettingPage()
     {
+        overrideOpts = new Dictionary<string, string>
+        {
+            {"default", SettingLocalizedResources.General_Language_OverrideCulture_DontOverride},
+            {"zh-CN", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
+                    (__ISimpleLocalizerBase_zh_CN__._LocateDisplayName) },
+            {"ja-JP", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
+                    (__ISimpleLocalizerBase_ja_JP__._LocateDisplayName) },
+            {"ko-KR", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
+                    (__ISimpleLocalizerBase_ko_KR__._LocateDisplayName) },
+        };
         BuildPPB();
     }
 
@@ -102,6 +113,7 @@ public partial class AdvancedSettingPage : ContentPage
         .AddSwitch("ui_ForceUseShell", SettingLocalizedResources.Advanced_UseMAUIShell, SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
         .AddSeparator()
         .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
+        .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts[GetSetting("OverrideCulture", "default")], null)
         .AddSeparator()
         .AddText(SettingLocalizedResources.Advanced_ExportPlugin, fontSize: 20)
         .AddPicker("exportPlugin", SettingLocalizedResources.Advanced_ExportPlugin_Select, projectFrameCut.Render.Plugin.PluginManager.LoadedPlugins.Select(c => c.Key).ToArray(), "Pick a plugin here")
@@ -295,6 +307,23 @@ public partial class AdvancedSettingPage : ContentPage
                         failReason = localizedPluginBrokenReason ?? $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
                     }
                     await DisplayAlertAsync(Localized._Error, $"failed\r\n({failReason ?? "unknown"})", Localized._OK);
+                }
+                else if (e.Id == "OverrideCulture")
+                {
+                    var DispName = e.Value?.ToString() ?? "default";
+                    if(DispName == SettingLocalizedResources.General_Language_OverrideCulture_DontOverride)
+                    {
+                        Settings.Remove("OverrideCulture", out _);
+                        ToggleSaveSignal();
+                    }
+                    else
+                    {
+                        var overrideLocate = overrideOpts.First(p => p.Value == DispName).Key;
+                        WriteSetting("OverrideCulture", overrideLocate);
+                    }
+
+                    await MainSettingsPage.RebootApp(this);
+
                 }
                 return;
             }

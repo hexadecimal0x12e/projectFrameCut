@@ -38,8 +38,8 @@ using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using CommunityToolkit.Maui.Alerts;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using ITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
-
-
+using projectFrameCut.Render.RenderAPIBase.Plugins;
+using System.Reflection;
 
 
 
@@ -91,56 +91,6 @@ public partial class DraftPage : ContentPage
 
     public static JsonSerializerOptions DraftJSONOption => savingOpts;
     #endregion
-
-    // Remove transform clips that reference a given clip id (either as prev or next)
-    private void RemoveTransformsReferencingClip(string clipId)
-    {
-        if (string.IsNullOrWhiteSpace(clipId)) return;
-
-        var transformKeys = Clips.Where(kv => kv.Value != null && kv.Value.ClipType == ClipMode.TransformClip)
-            .Where(kv =>
-            {
-                try
-                {
-                    var ed = kv.Value.ExtraData;
-                    if (ed == null) return false;
-                    if (ed.TryGetValue("transformPrevId", out var p) && p?.ToString() == clipId) return true;
-                    if (ed.TryGetValue("transformNextId", out var n) && n?.ToString() == clipId) return true;
-                }
-                catch { }
-                return false;
-            })
-            .Select(kv => kv.Key)
-            .ToList();
-
-        foreach (var key in transformKeys)
-        {
-            if (Clips.TryRemove(key, out var removed))
-            {
-                try
-                {
-                    if (removed?.Clip != null)
-                    {
-                        // remove visual from overlay if present
-                        try { OverlayLayer?.Children.Remove(removed.Clip); } catch { }
-                        // also remove from its track container
-                        if (removed.origTrack is int tr && Tracks.TryGetValue(tr, out var tlayout))
-                        {
-                            try { tlayout.Children.Remove(removed.Clip); } catch { }
-                        }
-                        else
-                        {
-                            foreach (var t in Tracks.Values.ToList())
-                                try { t.Children.Remove(removed.Clip); } catch { }
-                        }
-                    }
-                }
-                catch { }
-                LogDiagnostic($"transform clip {key} removed because it referenced {clipId}.");
-                SetStatusText(Localized.DraftPage_Removed);
-            }
-        }
-    }
 
     #region members
 
@@ -1554,7 +1504,7 @@ public partial class DraftPage : ContentPage
 
     #endregion
 
-    #region add transform to neighbors
+    #region transform
     private void AddTransformClip(
         ClipElementUI prev, ClipElementUI next,
         string typeName, Func<Guid, Guid, ITransform> factory,
@@ -1717,6 +1667,56 @@ public partial class DraftPage : ContentPage
         }
         AddTransformBetweenSelected(type, _transformMenuActivatedCenterClip ?? _selected, _transformMenuActivatedHandle == "left", _transformMenuActivatedHandle == "right");
     }
+
+    private void RemoveTransformsReferencingClip(string clipId)
+    {
+        if (string.IsNullOrWhiteSpace(clipId)) return;
+
+        var transformKeys = Clips.Where(kv => kv.Value != null && kv.Value.ClipType == ClipMode.TransformClip)
+            .Where(kv =>
+            {
+                try
+                {
+                    var ed = kv.Value.ExtraData;
+                    if (ed == null) return false;
+                    if (ed.TryGetValue("transformPrevId", out var p) && p?.ToString() == clipId) return true;
+                    if (ed.TryGetValue("transformNextId", out var n) && n?.ToString() == clipId) return true;
+                }
+                catch { }
+                return false;
+            })
+            .Select(kv => kv.Key)
+            .ToList();
+
+        foreach (var key in transformKeys)
+        {
+            if (Clips.TryRemove(key, out var removed))
+            {
+                try
+                {
+                    if (removed?.Clip != null)
+                    {
+                        // remove visual from overlay if present
+                        try { OverlayLayer?.Children.Remove(removed.Clip); } catch { }
+                        // also remove from its track container
+                        if (removed.origTrack is int tr && Tracks.TryGetValue(tr, out var tlayout))
+                        {
+                            try { tlayout.Children.Remove(removed.Clip); } catch { }
+                        }
+                        else
+                        {
+                            foreach (var t in Tracks.Values.ToList())
+                                try { t.Children.Remove(removed.Clip); } catch { }
+                        }
+                    }
+                }
+                catch { }
+                LogDiagnostic($"transform clip {key} removed because it referenced {clipId}.");
+                SetStatusText(Localized.DraftPage_Removed);
+            }
+        }
+    }
+
 
     #endregion
 
@@ -2362,11 +2362,6 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region popup
-#pragma warning disable CS0414 //this stuff only need on iDevices, because of OverlayLayer can't handle any input...... 
-    private IView? OrigionalUIContent = null;
-#pragma warning restore CS0414
-
-
     private async Task ShowCommunityToolkitPopup(CommunityToolkit.Maui.Views.Popup popup)
     {
         try
@@ -3745,6 +3740,16 @@ public partial class DraftPage : ContentPage
 
         ProjectDuration = draft.Duration;
         ProjectInfo.LastChanged = DateTime.Now;
+        ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
+        ProjectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
+        ProjectInfo.PluginUsed = 
+            draft.Clips.OfType<ClipDraftDTO>()
+                       .Select(c => c.FromPlugin)
+                       .Concat(draft.Clips.OfType<ClipDraftDTO>().SelectMany(c => c.Effects?.Select(eff => eff.FromPlugin) ?? []))
+                       .Concat(draft.Clips.OfType<ClipDraftDTO>().SelectMany(c => c.EffectBundles?.Select(eff => eff.FromPlugin) ?? []))
+                       .Where(c => !c.StartsWith("projectFrameCut.Render."))
+                       .Distinct().ToList();
+
         saveLocker.Enter();
         try
         {

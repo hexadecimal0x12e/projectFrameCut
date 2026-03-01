@@ -23,6 +23,13 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// Name of the project.
         /// </summary>
         public string? ProjectName { get; set; }
+
+        public int LastOpenAPIBaseVersion { get; set; } = 0;
+
+        public string LastOpenAppVersion { get; set; } = "0.0.0.0";
+
+        public List<string> PluginUsed { get; set; } = new List<string>();
+
         /// <summary>
         /// The relative width of the draft.
         /// </summary>

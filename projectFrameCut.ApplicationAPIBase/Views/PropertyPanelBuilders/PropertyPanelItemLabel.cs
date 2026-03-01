@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 {
+    [DebuggerNonUserCode()]
     public class SingleLineLabel(string text, int fontsize = 14, FontAttributes fontAttributes = FontAttributes.None, Color? TextColor = null) : PropertyPanelItemLabel
     {
         public override View LabelConfigure()
@@ -16,6 +18,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         public static implicit operator SingleLineLabel(string text) => new SingleLineLabel(text);
     }
 
+    [DebuggerNonUserCode()]
     public class TitleAndDescriptionLineLabel(string title, string description, int titleFontSize = 25, int contentFontSize = 14) : PropertyPanelItemLabel
     {
         public override View LabelConfigure() => new VerticalStackLayout
@@ -28,6 +31,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         };
     }
 
+    [DebuggerNonUserCode()]
     public class PropertyPanelItemLabel
     {
         private View? _view;

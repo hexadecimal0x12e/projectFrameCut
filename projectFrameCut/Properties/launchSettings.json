@@ -2,7 +2,7 @@
   "profiles": {
     "Windows Machine": {
       "commandName": "MsixPackage",
-      "commandLineArgs": "--noSplash \"D:\\code\\playground\\projectFrameCut\\My Drafts\\transform test.pjfc\\project.pjfc\"",
+      "commandLineArgs": "--noSplash",
       "nativeDebugging": false
     }
   }

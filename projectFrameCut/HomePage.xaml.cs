@@ -22,6 +22,8 @@ using Microsoft.Maui.Platform;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using System.Globalization;
+using System.Reflection;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 
 
 #if WINDOWS
@@ -65,7 +67,7 @@ public partial class HomePage : ContentPage
             await ShowManyAlertsAsync();
             HasAlreadyLaunchedFromFile = true;
             await LaunchFromFile();
-        
+
             try
             {
                 var defaultWidthOfCont = SettingsManager.GetSetting("ui_defaultWidthOfContent", "-1");
@@ -369,7 +371,7 @@ public partial class HomePage : ContentPage
         bool cancelled = false;
         if (!Directory.Exists(draftSourcePath))
         {
-            await DisplayAlertAsync(Localized._Warn, "Draft not found.", Localized._OK);
+            await Dispatcher.DispatchAsync(async () => await DisplayAlertAsync(Localized._Warn, "Draft not found.", Localized._OK));
             return;
         }
         DraftPage? page = null;
@@ -404,35 +406,37 @@ public partial class HomePage : ContentPage
         }
         catch { }
         */
-        Content = new VerticalStackLayout
-        {
-            HorizontalOptions = LayoutOptions.Center,
-            VerticalOptions = LayoutOptions.Center,
-            Children =
+        await Dispatcher.DispatchAsync(
+            async () =>
+            Content = new VerticalStackLayout
             {
-                new ActivityIndicator
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center,
+                Children =
                 {
-                    IsRunning = true
-                },
-                new Label
-                {
-                    Text = Localized.LandingPage_TakingToDraft(title),
-                    HorizontalTextAlignment = Microsoft.Maui.TextAlignment.Center,
-                    Margin = new Microsoft.Maui.Thickness(0.0, 8.0, 0.0, 8.0)
-                },
-                cancelButton,
-                /*
-                new Label
-                {
-                    Text = doyouknowText,
-                    TextColor = Colors.Gray,
-                    HorizontalTextAlignment = Microsoft.Maui.TextAlignment.Center,
-                    Margin = new Microsoft.Maui.Thickness(0.0, 12.0, 0.0, 0.0),
-                    FontSize = 24
-                },
-                */
-            }
-        };
+                    new ActivityIndicator
+                    {
+                        IsRunning = true
+                    },
+                    new Label
+                    {
+                        Text = Localized.LandingPage_TakingToDraft(title),
+                        HorizontalTextAlignment = Microsoft.Maui.TextAlignment.Center,
+                        Margin = new Microsoft.Maui.Thickness(0.0, 8.0, 0.0, 8.0)
+                    },
+                    cancelButton,
+                    /*
+                    new Label
+                    {
+                        Text = doyouknowText,
+                        TextColor = Colors.Gray,
+                        HorizontalTextAlignment = Microsoft.Maui.TextAlignment.Center,
+                        Margin = new Microsoft.Maui.Thickness(0.0, 12.0, 0.0, 0.0),
+                        FontSize = 24
+                    },
+                    */
+                }
+            });
         ProjectJSONStructure project = new();
         try
         {
@@ -446,16 +450,22 @@ public partial class HomePage : ContentPage
             }
             else
             {
-                await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
-                Content = origContent;
+                await Dispatcher.DispatchAsync(async () => await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK));
+                await Dispatcher.DispatchAsync(async () => Content = origContent);
                 return;
             }
         }
         catch (Exception ex)
         {
             Log(ex, "get project info", this);
-            await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n({ex.Message})", Localized._OK);
-            Content = origContent;
+            await Dispatcher.DispatchAsync(async () => await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n({ex.Message})", Localized._OK));
+            await Dispatcher.DispatchAsync(async () => Content = origContent);
+            return;
+        }
+
+        if (!await CheckProjectVersionCompatibility(project))
+        {
+            await Dispatcher.DispatchAsync(async () => Content = origContent);
             return;
         }
 
@@ -656,25 +666,27 @@ public partial class HomePage : ContentPage
                     {
                         try
                         {
-                            page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.ProjectName ?? "?", isReadonly);
-                            page.ProjectName = project?.ProjectName ?? "?";
-                            page.IsReadonly = isReadonly;
-                            page.Denoise = SettingsManager.IsBoolSettingTrue("Edit_Denoise");
-                            page.PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "right");
-                            page.MaximumSaveSlot = int.TryParse(SettingsManager.GetSetting("Edit_MaximumSaveSlot"), out var slotCount) ? slotCount : 10;
-                            page.AlwaysShowToolbarBtns = SettingsManager.IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons");
-                            page.ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole");
-                            page.LiveVideoPreviewBufferLength = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), out var bufferLen) ? bufferLen : 240;
-                            page.LivePreviewResolutionFactor = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), out var resolutionFactor) ? resolutionFactor : 8;
                             var resolution = SettingsManager.GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720");
-                            page.DefaultPreviewWidth = int.TryParse(resolution.Split('x', 2)[0], out var w) ? w : 1280;
-                            page.DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720;
-                            page.ProxyOption = SettingsManager.GetSetting("Edit_ProxyOption", "none");
-                            page.AutoSavePreviewAreaHeight = SettingsManager.IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave");
-                            page.LockScrollViewAfterSelection = SettingsManager.IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection", true);
-                            page.UseCommunityToolkitPopupInsteadOfOverlayLayer = SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer");
-                            page.PreviewAreaHeight = double.TryParse(SettingsManager.GetSetting("Edit_UpperContentHeight", "250"), out var upperHeight) ? upperHeight : 250d;
-                            page.UseCompactLayout = overrideLayoutOption ?? DeviceInfo.Idiom == DeviceIdiom.Phone;
+                            page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.ProjectName ?? "?", isReadonly)
+                            {
+                                ProjectName = project?.ProjectName ?? "?",
+                                IsReadonly = isReadonly,
+                                Denoise = SettingsManager.IsBoolSettingTrue("Edit_Denoise"),
+                                PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "right"),
+                                MaximumSaveSlot = int.TryParse(SettingsManager.GetSetting("Edit_MaximumSaveSlot"), out var slotCount) ? slotCount : 10,
+                                AlwaysShowToolbarBtns = SettingsManager.IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons"),
+                                ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole"),
+                                LiveVideoPreviewBufferLength = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), out var bufferLen) ? bufferLen : 240,
+                                LivePreviewResolutionFactor = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), out var resolutionFactor) ? resolutionFactor : 8,
+                                DefaultPreviewWidth = int.TryParse(resolution.Split('x', 2)[0], out var w) ? w : 1280,
+                                DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720,
+                                ProxyOption = SettingsManager.GetSetting("Edit_ProxyOption", "none"),
+                                AutoSavePreviewAreaHeight = SettingsManager.IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave"),
+                                LockScrollViewAfterSelection = SettingsManager.IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection", true),
+                                UseCommunityToolkitPopupInsteadOfOverlayLayer = SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer"),
+                                PreviewAreaHeight = double.TryParse(SettingsManager.GetSetting("Edit_UpperContentHeight", "250"), out var upperHeight) ? upperHeight : 250d,
+                                UseCompactLayout = overrideLayoutOption ?? DeviceInfo.Idiom == DeviceIdiom.Phone
+                            };
 #if WINDOWS
                             Context context = Context.CreateDefault();
                             var devices = context.Devices.ToList();
@@ -699,8 +711,6 @@ public partial class HomePage : ContentPage
                         }
                     }
                 }
-
-                await page.PostInit();
 
                 foreach (var item in PluginManager.LoadedPlugins)
                 {
@@ -759,6 +769,7 @@ public partial class HomePage : ContentPage
                 });
             }
         });
+
         initTimer.Stop();
         LogDiagnostic($"Initialize project {project?.ProjectName} cost {initTimer.ElapsedMilliseconds} ms.");
         if (initTimer.Elapsed.TotalSeconds < 2) await Task.Delay(2000 - (int)initTimer.Elapsed.TotalMilliseconds);
@@ -772,7 +783,7 @@ public partial class HomePage : ContentPage
                 {
                     try
                     {
-                        App.Current?.Windows?.First()?.Title = $"{Localized.AppBrand} - {project.ProjectName}";
+                        App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {project.ProjectName}";
                         AppShell.instance.HideNavView();
                         Shell.SetTabBarIsVisible(page, false);
                         Shell.SetNavBarIsVisible(page, true);
@@ -1313,6 +1324,84 @@ public partial class HomePage : ContentPage
     {
         var path = await FileSystemService.PickFileAsync();
         if (!string.IsNullOrWhiteSpace(path)) await ImportDraft(path);
+    }
+
+    private async Task<bool> CheckProjectVersionCompatibility(ProjectJSONStructure project)
+    {
+        try
+        {
+            var currentAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version;
+            var currentAPIVersion = IPluginBase.CurrentPluginAPIVersion;
+            var plugins = PluginManager.LoadedPlugins.Select(p => p.Key);
+            if (project.LastOpenAPIBaseVersion != 0)
+            {
+                if (project.LastOpenAPIBaseVersion > currentAPIVersion)
+                {
+                    await DisplayAlertAsync(
+                            Localized._Error,
+                            Localized.HomePage_IncompatibleVersionError($"API v{project.LastOpenAPIBaseVersion}", $"API v{currentAPIVersion}", project?.ProjectName ?? "Project"),
+                            Localized._OK
+                            );
+                    return false;
+                }
+                else if (project.LastOpenAPIBaseVersion < currentAPIVersion)
+                {
+                    return await DisplayAlertAsync(
+                            Localized._Error,
+                            Localized.HomePage_VersionTooOld($"API v{project.LastOpenAPIBaseVersion}", $"API v{currentAPIVersion}", project?.ProjectName ?? "Project"),
+                            Localized._OK,
+                            Localized._Cancel
+                            );
+                }
+            }
+
+            if (!string.IsNullOrEmpty(project?.LastOpenAppVersion) &&
+                currentAppVersion != null &&
+                Version.TryParse(project.LastOpenAppVersion, out var projectVersion))
+            {
+                var projVerStr = projectVersion.ToString();
+                if (projVerStr == "0.0.0.0") projVerStr = "Unknown";
+                if (projectVersion > currentAppVersion)
+                {
+                    return await DisplayAlertAsync(
+                        Localized._Warn,
+                        Localized.HomePage_VersionTooNew(projVerStr, currentAppVersion.ToString(), project?.ProjectName ?? "Project"),
+                        Localized._OK,
+                        Localized._Cancel
+                    );
+                }
+                else if (projectVersion < currentAppVersion)
+                {
+                    return await DisplayAlertAsync(
+                         Localized._Info,
+                         Localized.HomePage_VersionTooOld(projVerStr, currentAppVersion.ToString(), project?.ProjectName ?? "Project"),
+                         Localized._OK,
+                         Localized._Cancel);
+                }
+            }
+
+            if (project?.PluginUsed != null && project.PluginUsed.Any())
+            {
+
+                var unsupportedPlugins = project.PluginUsed.Where(p => !plugins.Contains(p)).ToList();
+                if (unsupportedPlugins.Any())
+                {
+                    return await DisplayAlertAsync(
+                        Localized._Warn,
+                        Localized.HomePage_MissingPlugin(project?.ProjectName ?? "Project", string.Join(", ", unsupportedPlugins)),
+                        Localized._OK,
+                        Localized._Cancel);
+                }
+
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "version compatibility check", this);
+            return true;
+        }
     }
 
     private void ContentPage_Appearing(object sender, EventArgs e)

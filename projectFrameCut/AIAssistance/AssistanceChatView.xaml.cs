@@ -94,7 +94,7 @@ public partial class AssistanceChatView : ContentView
         {
             Sender = "AI",
             Message = _chatClient is null
-                ? "你好，我是 AI 助手。请先配置 OpenAI Key（设置键 ai_OpenAIApiKey 或环境变量 OPENAI_API_KEY）。"
+                ? Localized.AIAssistant_ChatView_MissingConfig
                 : Localized.AIAssistant_ChatView_WelcomeText,
             IsUser = false,
         });
@@ -132,7 +132,7 @@ public partial class AssistanceChatView : ContentView
 
         _messages.Add(new ChatMessageItem
         {
-            Sender = "我",
+            Sender = Localized.AIAssistant_ChatView_Me,
             Message = input,
             IsUser = true,
         });
@@ -153,13 +153,13 @@ public partial class AssistanceChatView : ContentView
         {
             if (_chatClient is null)
             {
-                assistantText = "未检测到可用 AI 客户端。请配置 ai_OpenAIApiKey 或 OPENAI_API_KEY。";
+                assistantText = Localized.AIAssistant_ChatView_MissingConfig;
             }
             else
             {
                 streamingItem = new ChatMessageItem
                 {
-                    Sender = "AI",
+                    Sender = "Assistant P",
                     Message = "",
                     IsUser = false,
                 };
@@ -1285,22 +1285,13 @@ public partial class AssistanceChatView : ContentView
 
     private static IChatClient? CreateChatClient()
     {
-        string apiKey = "";
-#if DEBUG
-        if (File.Exists(Path.Combine(AppContext.BaseDirectory, "openai.apikey.txt")))
-        {
-            apiKey = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "openai.apikey.txt"))[0];
-        }
-#else
-
-#endif
-        if (string.IsNullOrWhiteSpace(apiKey))
+        string apiKey = AIHelper.CurrentOption.Key;
+        string model = AIHelper.CurrentOption.Model;
+        string endpoint = AIHelper.CurrentOption.BaseAddress;
+        if(string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(model) ||  string.IsNullOrEmpty(endpoint))
         {
             return null;
         }
-
-        string model = "qwen3-max";// ReadConfig("ai_OpenAIModel", "OPENAI_MODEL", "gpt-4o-mini");
-        string endpoint = "https://dashscope.aliyuncs.com/compatible-mode/v1";// ReadConfig("ai_OpenAIEndpoint", "OPENAI_ENDPOINT");
 
         OpenAIChatClient chatClient;
         if (Uri.TryCreate(endpoint, UriKind.Absolute, out var endpointUri))
@@ -1327,17 +1318,6 @@ public partial class AssistanceChatView : ContentView
                 invoker.MaximumIterationsPerRequest = 8;
             })
             .Build();
-    }
-
-    private static string ReadConfig(string settingKey, string envKey, string defaultValue = "")
-    {
-        string? envValue = Environment.GetEnvironmentVariable(envKey);
-        if (!string.IsNullOrWhiteSpace(envValue))
-        {
-            return envValue.Trim();
-        }
-
-        return defaultValue;
     }
 
     private void Messages_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)

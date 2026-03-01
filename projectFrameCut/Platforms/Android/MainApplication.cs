@@ -18,7 +18,7 @@ namespace projectFrameCut.Platforms.Android
             var extFilesDir = GetExternalFilesDir(null);
             if (extFilesDir != null)
             {
-                loggingDir = System.IO.Path.Combine(extFilesDir.AbsolutePath, "..", "logging");
+                loggingDir = System.IO.Path.Combine(extFilesDir.AbsolutePath, "..", "Logs");
             }
             if (loggingDir is not null) Directory.CreateDirectory(loggingDir);
             // use https://github.com/Kyant0/Fishnet to capture Android crashes

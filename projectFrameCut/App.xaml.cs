@@ -3,6 +3,10 @@ using projectFrameCut.Services;
 using System.Globalization;
 using Microsoft.Maui.Handlers;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using ResourceDictionary = Microsoft.Maui.Controls.ResourceDictionary;
+using Application = Microsoft.Maui.Controls.Application;
+
+
 
 
 
@@ -94,9 +98,35 @@ namespace projectFrameCut
 
         protected override Microsoft.Maui.Controls.Window CreateWindow(IActivationState? activationState)
         {
+            var stylePath = Path.Combine(MauiProgram.DataPath, "style.xaml");
+            var colorPath = Path.Combine(MauiProgram.DataPath, "color.xaml");
+            try
+            {
+                if (File.Exists(stylePath) && File.Exists(colorPath) && !SettingsManager.IsBoolSettingTrue("ui_DisableUserStyle"))
+                {
+                    var styleXAML = File.ReadAllText(stylePath);
+                    var colorXAML = File.ReadAllText(colorPath);
+                    var resourceDictionary = new ResourceDictionary();
+                    var colorResourceDictionary = new ResourceDictionary();
+
+                    var loadedStyle = Microsoft.Maui.Controls.Xaml.Extensions.LoadFromXaml(resourceDictionary, styleXAML) as ResourceDictionary;
+                    var loadedColor = Microsoft.Maui.Controls.Xaml.Extensions.LoadFromXaml(colorResourceDictionary, colorXAML) as ResourceDictionary;
+
+                    if (Application.Current != null)
+                    {
+                        Application.Current.Resources.MergedDictionaries.Clear();
+                        Application.Current.Resources.MergedDictionaries.Add(loadedColor);
+                        Application.Current.Resources.MergedDictionaries.Add(loadedStyle);
+                        Log("Applied user style.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Apply user style", this);
+            }
 #if WINDOWS
-            
-            if (OperatingSystem.IsWindows() && (CultureInfo.CurrentCulture.TextInfo.IsRightToLeft ||  SettingsManager.IsBoolSettingTrue("ui_ForceUseShell")))
+            if (CultureInfo.CurrentCulture.TextInfo.IsRightToLeft || SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
             {
                 var shell = new AppShell(false);
                 var mauiWindow = new Microsoft.Maui.Controls.Window(shell);

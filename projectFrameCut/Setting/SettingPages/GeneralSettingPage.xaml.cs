@@ -21,7 +21,7 @@ public partial class GeneralSettingPage : ContentPage
     public PropertyPanelBuilder rootPPB;
     private string[] locates;
     private Dictionary<string, string> overrideOpts, themeOpts;
-    private Dictionary<string, string> locateDisplayNameMapping = new(), FFmpegProviderDisplayNameMapping = new();
+    private Dictionary<string, string> locateDisplayNameMapping = new(), FFmpegProviderDisplayNameMapping = new(), OrderOptionStringMapping = new();
     public GeneralSettingPage()
     {
         Title = Localized.MainSettingsPage_Tab_General;
@@ -43,21 +43,19 @@ public partial class GeneralSettingPage : ContentPage
     {
         Content = new VerticalStackLayout();
         Title = Localized.MainSettingsPage_Tab_General;
-        overrideOpts = new Dictionary<string, string>
-        {
-            {"default", SettingLocalizedResources.General_Language_OverrideCulture_DontOverride},
-            {"zh-CN", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
-                    (ISimpleLocalizerBase.GetMapping()["zh-CN"]._LocateDisplayName) },
-            {"ja-JP", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
-                    (ISimpleLocalizerBase.GetMapping()["ja-JP"]._LocateDisplayName) },
-            {"ko-KR", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
-                    (ISimpleLocalizerBase.GetMapping()["ko-KR"]._LocateDisplayName) },
-        };
+
         themeOpts = new Dictionary<string, string>
         {
             { "default", SettingLocalizedResources.GeneralUI_DefaultTheme_OSDefault },
             { "dark", SettingLocalizedResources.GeneralUI_DefaultTheme_Dark },
             { "light",SettingLocalizedResources.GeneralUI_DefaultTheme_Bright }
+        };
+
+        OrderOptionStringMapping = new Dictionary<string, string>
+        {
+            { Localized.AssetPage_OrderBy_AddDate, "date" },
+            { Localized.AssetPage_OrderBy_Name, "name" },
+
         };
         if (!SettingsManager.IsSettingExists("render_EnableScreenSaver"))
         {
@@ -71,15 +69,14 @@ public partial class GeneralSettingPage : ContentPage
         rootPPB = new();
         rootPPB
             .AddPicker("locate", SettingLocalizedResources.General_Language, locates, currentLocate != "default" ? Localized._LocateDisplayName : $"{Localized._Default} / Default", null)
-#if WINDOWS
-            //.AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts[GetSetting("OverrideCulture", "default")], null)
-#endif
+
             .AddSeparator()
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.GeneralUI_Title, SettingLocalizedResources.GeneralUI_Subtitle))
 #if !WINDOWS
             .AddPicker("ui_defaultTheme", SettingLocalizedResources.GeneralUI_DefaultTheme, themeOpts.Values.ToArray(), themeOpts[GetSetting("ui_defaultTheme", "default")])
 #endif
             .AddSlider("ui_defaultWidthOfContent", SettingLocalizedResources.GeneralUI_DefaultWidthOfContent, 1, 10, PropertyPanelBuilder.DefaultWidthOfContent)
+            .AddPicker("Edit_AddView_DefaultOrderOption", SettingLocalizedResources.Edit_AddView_DefaultOrderOption, OrderOptionStringMapping.Keys.ToArray(), OrderOptionStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_AddView_DefaultOrderOption", "date"), new KeyValuePair<string, string>(Localized.AssetPage_OrderBy_AddDate, "date")).Key, null)
             .AddSwitch("render_EnableScreenSaver", SettingLocalizedResources.Render_EnableScreenSaver, IsBoolSettingTrue("render_EnableScreenSaver"), null)
             .AddButton("setUISafeZone", SettingLocalizedResources.GeneralUI_SetupSafeZone)
             .AddSeparator()
@@ -322,13 +319,12 @@ public partial class GeneralSettingPage : ContentPage
                         needReboot = true;
                         goto done;
                     }
-                case "OverrideCulture":
+                case "Edit_AddView_DefaultOrderOption":
                     {
-                        var DispName = args.Value?.ToString() ?? "default";
-                        var overrideLocate = overrideOpts.First(p => p.Value == DispName).Key;
-                        WriteSetting("OverrideCulture", overrideLocate);
-                        needReboot = true;
-                        goto done;
+                        var mode = OrderOptionStringMapping.FirstOrDefault(k => k.Key == args.Value as string,
+                                                 new KeyValuePair<string, string>(Localized.AssetPage_OrderBy_AddDate, "date")).Value;
+                        WriteSetting("Edit_AddView_DefaultOrderOption", mode);
+                        return;
                     }
                 case "ui_defaultWidthOfContent":
                     if (args.Value is double d)

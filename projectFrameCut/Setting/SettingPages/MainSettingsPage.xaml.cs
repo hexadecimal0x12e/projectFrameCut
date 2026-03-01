@@ -64,6 +64,10 @@ namespace projectFrameCut
         {
             await NavigateAsync(new RemoteFeedSettingPage());
         }
+        private async void OnAISettingClicked(object sender, EventArgs e)
+        {
+            await NavigateAsync(new AISettingPage());
+        }
         private async void OnRenderSettingClicked(object sender, EventArgs e)
         {
             await NavigateAsync(new RenderSettingPage());
