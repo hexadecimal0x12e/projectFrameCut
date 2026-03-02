@@ -60,6 +60,9 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         [JsonIgnore]
         public Dictionary<string, string> ParametersType { get; }
 
+        /// <summary>
+        /// Override this method to do some init jobs before use.
+        /// </summary>
         public virtual void Init() { }
 
     }

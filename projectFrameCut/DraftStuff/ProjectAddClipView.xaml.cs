@@ -35,6 +35,7 @@ public partial class ProjectAddClipView : ContentView
         switch (e.Tag)
         {
             case "LocalAssets":
+            case "AIGC":
             case "SharedAssets":
                 {
                     OrderOptionPicker.IsVisible = true;
@@ -49,6 +50,7 @@ public partial class ProjectAddClipView : ContentView
         switch (e.Tag)
         {
             case "Sketch":
+            case "AIGC":
             case "More":
                 {
                     SearchInputEntry.IsVisible = false;

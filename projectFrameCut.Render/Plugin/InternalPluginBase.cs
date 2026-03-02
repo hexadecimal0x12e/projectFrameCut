@@ -204,6 +204,7 @@ public class InternalPluginBase : IPluginBase
         return typeName switch
         {
             "Crossfade" => element.Deserialize<CrossfadeTransform>() ?? throw new NullReferenceException("Failed to deserialize CrossfadeTransform."),
+            "ExternalSourceTransform" => element.Deserialize<ExternalSourceTransform>() ?? throw new NullReferenceException("Failed to deserialize ExternalSourceTransform."),
             _ => throw new NotSupportedException($"Unknown or unsupported transform type '{typeName}'.")
         };
     }
@@ -217,7 +218,14 @@ public class InternalPluginBase : IPluginBase
 
     bool IPluginBase.OnLoaded(out string FailedReason)
     {
-        TextClip.GetFont(); //build font cache
+        try
+        {
+            TextClip.GetFont(); //build font cache
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Init Fone cache", this);
+        }
         FailedReason = "";
         return true;
     }

@@ -622,7 +622,7 @@ namespace projectFrameCut.Services
             catch (Exception ex)
             {
                 Log(ex, "Load userplugin", asb);
-                throw ex;
+                throw;
 
             }
         }

@@ -19,6 +19,7 @@ using projectFrameCut.Render.Rendering;
 using projectFrameCut.AIAssistance;
 using IPicture = projectFrameCut.Shared.IPicture;
 using Microsoft.Maui.Storage;
+using projectFrameCut.Render.Transform;
 
 namespace projectFrameCut.ViewModels;
 
@@ -31,14 +32,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         RegisterCommands();
 
         _ = Task.Run(async () => await Refresh());
-        _draftPage.SelectedClipChanged += (s, e) =>
-        {
-            OnPropertyChanged(nameof(IsDraftSelectedAnyClip));
-            OnPropertyChanged(nameof(CanGenerateAITransition));
-            OnPropertyChanged(nameof(LeftClipName));
-            OnPropertyChanged(nameof(RightClipName));
-            LoadTransforms();
-        };
+        _draftPage.SelectedClipChanged += async (s, e) => await Refresh();
     }
 
     private readonly DraftPage _draftPage;
@@ -125,6 +119,19 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     } = "16:9"; // 默认16:9比例
 
+    public string AIImageStyle
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    } = Localized.DraftPage_AddClipView_AIGC_ImageStyle_Natural;
+
     public bool IsGeneratingAIContent
     {
         get;
@@ -133,6 +140,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             if (field != value)
             {
                 field = value;
+                _draftPage?.IsPopupClosableByTapBackground = !field;
                 OnPropertyChanged();
             }
         }
@@ -173,6 +181,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             if (field != value)
             {
                 field = value;
+                _draftPage?.IsPopupClosableByTapBackground = !field;
                 OnPropertyChanged();
             }
         }
@@ -185,27 +194,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             if (_draftPage?.SelectedClip == null) return false;
             var (left, right) = _draftPage.FindNeighbors(_draftPage.SelectedClip);
-            return left != null && right != null;
-        }
-    }
-
-    public string LeftClipName
-    {
-        get
-        {
-            if (_draftPage?.SelectedClip == null) return "未选择";
-            var (left, _) = _draftPage.FindNeighbors(_draftPage.SelectedClip);
-            return left?.DisplayName ?? "无左侧片段";
-        }
-    }
-
-    public string RightClipName
-    {
-        get
-        {
-            if (_draftPage?.SelectedClip == null) return "未选择";
-            var (_, right) = _draftPage.FindNeighbors(_draftPage.SelectedClip);
-            return right?.DisplayName ?? "无右侧片段";
+            return left != null || right != null;
         }
     }
 
@@ -214,9 +203,66 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         get => _draftPage.SelectedClip != null;
     }
 
-    public bool IsSideDetermined { get; private set; } = false;
+    public bool IsSideDetermined
+    {
+        get;
+        private set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    }
 
+    public bool IsApplicableToLeft
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+    public bool IsApplicableToRight
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    }
 
+    public string TransformAddHint
+    {
+        get
+        {
+            var neighbors = _draftPage.FindNeighbors(_draftPage.SelectedClip);
+
+            if (IsSideDetermined)
+            {
+                return Localized.DraftPage_AddClipView_AddTransform_AddToTargetClipTipSideDetermined_WithNameHint(neighbors.left?.DisplayName ?? "Left", neighbors.right?.DisplayName ?? "Right");
+            }
+            else
+            {
+                return Localized.DraftPage_AddClipView_AddTransform_AddToTargetClipTip_WithNameHint(neighbors.left?.DisplayName ?? "Left", _draftPage?.SelectedClip?.DisplayName ?? "Center", neighbors.right?.DisplayName ?? "Right");
+
+            }
+        }
+    }
+
+    public string TransformAddHintText =>
+        IsDraftSelectedAnyClip
+            ? TransformAddHint
+            : Localized.DraftPage_AddClipView_AddTransform_NoTargetClip;
 
     // 文本样式支持
     public TextStyleItemViewModel? SelectedTextStyle
@@ -357,7 +403,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         GenerateAIContentCommand = new Command(async () => await GenerateAIContent());
 
         // AI转场生成命令
-        GenerateAITransitionCommand = new Command(async () => await GenerateAITransition());
+        GenerateAITransitionCommand = new Command(async (d) => await GenerateAITransition(d));
     }
     #endregion
 
@@ -371,6 +417,16 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         await LoadAssets();
         LoadTransforms();
         InitializeTextStyles();
+        var neighbors = _draftPage.FindNeighbors(_draftPage.SelectedClip);
+        IsApplicableToLeft = neighbors.left != null;
+        IsApplicableToRight = neighbors.right != null;
+        OnPropertyChanged(nameof(IsDraftSelectedAnyClip));
+        OnPropertyChanged(nameof(IsApplicableToLeft));
+        OnPropertyChanged(nameof(IsApplicableToRight));
+        OnPropertyChanged(nameof(CanGenerateAITransition));
+        OnPropertyChanged(nameof(TransformAddHint));
+        OnPropertyChanged(nameof(TransformAddHintText));
+        LoadTransforms();
     }
 
     private async Task LoadAssets()
@@ -1267,7 +1323,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             await _draftPage.DisplayAlertAsync(
                 Localized._Error,
-                "请输入生成提示词",
+                "Please input prompt.",
                 Localized._OK);
             return;
         }
@@ -1295,7 +1351,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             Logger.Log(ex, "Generate AI content", this);
             await _draftPage.DisplayAlertAsync(
                 Localized._Error,
-                $"AI 内容生成失败: {ex.Message}",
+                $"{SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse}{Environment.NewLine}({Localized._ExceptionTemplate(ex)})",
                 Localized._OK);
         }
         finally
@@ -1308,12 +1364,26 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         try
         {
+            // 根据比例设定解析宽高（复用视频比例解析逻辑）
+            var (width, height) = ParseVideoRatio(AIVideoRatio);
+
+            // 将 UI 风格字符串映射到 ImageStyle 枚举
+            var imageStyle = AIImageStyle switch
+            {
+                var t when t == Localized.DraftPage_AddClipView_AIGC_ImageStyle_Natural => ImageStyle.Natural,
+                var t when t == Localized.DraftPage_AddClipView_AIGC_ImageStyle_Vivid => ImageStyle.Vivid,
+                var t when t == Localized.DraftPage_AddClipView_AIGC_ImageStyle_Anime => ImageStyle.Anime,
+                var t when t == Localized.DraftPage_AddClipView_AIGC_ImageStyle_Photography => ImageStyle.Photography,
+                var t when t == Localized.DraftPage_AddClipView_AIGC_ImageStyle_TradidtionalPainting => ImageStyle.TradidtionalPainting,
+                _ => ImageStyle.Natural 
+            };
+
             // 创建图片生成选项
             var options = new ImageGenerationOptions
             {
-                Width = 1024,
-                Height = 1024,
-                Style = ImageStyle.Natural,
+                Width = width,
+                Height = height,
+                Style = imageStyle,
                 Quality = ImageQuality.Standard
             };
 
@@ -1324,27 +1394,28 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 await _draftPage.DisplayAlertAsync(
                     Localized._Error,
-                    result.ErrorMessage ?? "图片生成失败",
+                    result.ErrorMessage ?? SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse,
                     Localized._OK);
                 return;
             }
 
-            if (string.IsNullOrEmpty(result.ImageUrl))
+            if (string.IsNullOrWhiteSpace(result.ImageUrl))
             {
+                Log("No image URL returned from AI generation.", "error");
                 await _draftPage.DisplayAlertAsync(
                     Localized._Error,
-                    "未收到生成的图片URL",
+                    SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse,
                     Localized._OK);
                 return;
             }
 
             // 下载图片到本地
-            var localImagePath = await DownloadImageToLocal(result.ImageUrl, AIPrompt);
-            if (string.IsNullOrEmpty(localImagePath))
+            var localImagePath = await DownloadRemoteResourcesToLocal(result.ImageUrl, "png", "AIGenerated-{0}");
+            if (string.IsNullOrWhiteSpace(localImagePath))
             {
                 await _draftPage.DisplayAlertAsync(
                     Localized._Error,
-                    "下载生成的图片失败",
+                    $"{SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse}{Environment.NewLine}(Cannot download result.)",
                     Localized._OK);
                 return;
             }
@@ -1365,43 +1436,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task<string?> DownloadImageToLocal(string imageUrl, string prompt)
-    {
-        try
-        {
-            var aiImagesDir = Path.Combine(_draftPage.WorkingPath, "assets");
-            Directory.CreateDirectory(aiImagesDir);
-
-            var safeFileName = string.Join("_", prompt.Take(30).ToArray())
-                .Replace(" ", "_")
-                .Replace("\n", "")
-                .Replace("\r", "")
-                + "_" + Guid.NewGuid().ToString("N")[..8] + ".png";
-
-            // 移除文件名中的非法字符
-            var invalidChars = Path.GetInvalidFileNameChars();
-            safeFileName = string.Join("_", safeFileName.Split(invalidChars));
-
-            var localPath = Path.Combine(aiImagesDir, safeFileName);
-
-            using var client = new HttpClient();
-            var imageBytes = await client.GetByteArrayAsync(imageUrl);
-            await File.WriteAllBytesAsync(localPath, imageBytes);
-
-            return localPath;
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Download AI generated image", this);
-            return null;
-        }
-    }
 
     private async Task AddAIGeneratedImageToTimeline(string imagePath, string prompt)
     {
         try
         {
-            // 默认图片显示3秒（90帧）
             const uint defaultFrames = 90u;
             var trackIndex = _draftPage.Tracks.Keys
                 .Where(k => k < DraftPage.SubTrackOffset)
@@ -1430,8 +1469,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             element.maxFrameCount = defaultFrames;
             element.ExtraData = new Dictionary<string, object>
             {
+                ["IsAI"] = true,
                 ["AIPrompt"] = prompt,
-                ["GeneratedAt"] = DateTime.Now
+                ["GeneratedAt"] = DateTime.Now,
+                ["ImageRatio"] = AIVideoRatio,
+                ["ImageStyle"] = AIImageStyle
             };
         }
         catch (Exception ex)
@@ -1445,10 +1487,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         try
         {
-            // 解析比例
             var (width, height) = ParseVideoRatio(AIVideoRatio);
 
-            // 创建视频生成选项
             var options = new VideoGenerationOptions
             {
                 Width = width,
@@ -1458,45 +1498,41 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 Watermark = false
             };
 
-            // 调用AI生成视频
             var result = await AIHelper.GenerateVideoAsync(AIPrompt, options);
 
             if (!result.Success)
             {
                 await _draftPage.DisplayAlertAsync(
                     Localized._Error,
-                    result.ErrorMessage ?? "视频生成失败",
+                    result.ErrorMessage ?? SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse,
                     Localized._OK);
                 return;
             }
 
-            if (string.IsNullOrEmpty(result.VideoUrl))
+            if (string.IsNullOrWhiteSpace(result.VideoUrl))
+            {
+                Log("No VideoUri provided.", "error");
+                await _draftPage.DisplayAlertAsync(
+                    Localized._Error,
+                    SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse,
+                    Localized._OK);
+                return;
+            }
+
+            var localVideoPath = await DownloadRemoteResourcesToLocal(result.VideoUrl, "mp4", "AIGenerated-{0}");
+            if (string.IsNullOrWhiteSpace(localVideoPath))
             {
                 await _draftPage.DisplayAlertAsync(
                     Localized._Error,
-                    "未收到生成的视频URL",
+                    $"{SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse}{Environment.NewLine}(Cannot download result.)",
                     Localized._OK);
                 return;
             }
 
-            // 下载视频到本地
-            var localVideoPath = await DownloadVideoToLocal(result.VideoUrl, AIPrompt);
-            if (string.IsNullOrEmpty(localVideoPath))
-            {
-                await _draftPage.DisplayAlertAsync(
-                    Localized._Error,
-                    "下载生成的视频失败",
-                    Localized._OK);
-                return;
-            }
-
-            // 添加视频到时间轴
             await AddAIGeneratedVideoToTimeline(localVideoPath, AIPrompt);
 
-            // 清空输入
             AIPrompt = "";
 
-            // 通知添加成功
             ClipAdded?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
@@ -1519,45 +1555,20 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         };
     }
 
-    private async Task<string?> DownloadVideoToLocal(string videoUrl, string prompt)
-    {
-        try
-        {
-            var aiVideosDir = Path.Combine(_draftPage.WorkingPath, "assets");
-            Directory.CreateDirectory(aiVideosDir);
-
-            var safeFileName = string.Join("_", prompt.Take(30).ToArray())
-                .Replace(" ", "_")
-                .Replace("\n", "")
-                .Replace("\r", "")
-                + "_" + Guid.NewGuid().ToString("N")[..8] + ".mp4";
-
-            // 移除文件名中的非法字符
-            var invalidChars = Path.GetInvalidFileNameChars();
-            safeFileName = string.Join("_", safeFileName.Split(invalidChars));
-
-            var localPath = Path.Combine(aiVideosDir, safeFileName);
-
-            using var client = new HttpClient();
-            var videoBytes = await client.GetByteArrayAsync(videoUrl);
-            await File.WriteAllBytesAsync(localPath, videoBytes);
-
-            return localPath;
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Download AI generated video", this);
-            return null;
-        }
-    }
 
     private async Task AddAIGeneratedVideoToTimeline(string videoPath, string prompt)
     {
         try
         {
-            // 获取视频时长（帧数）
-            var frameRate = 30; // 假设30fps
+            var frameRate = 30;
             var totalFrames = (uint)(AIVideoDuration * frameRate);
+            try
+            {
+                var src = PluginManager.CreateVideoSource(videoPath);
+                frameRate = (int)src.Fps;
+                totalFrames = (uint)(src.TotalFrames);
+            }
+            catch { }
 
             var trackIndex = _draftPage.Tracks.Keys
                 .Where(k => k < DraftPage.SubTrackOffset)
@@ -1586,6 +1597,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             element.maxFrameCount = totalFrames;
             element.ExtraData = new Dictionary<string, object>
             {
+                ["IsAI"] = true,
                 ["AIPrompt"] = prompt,
                 ["GeneratedAt"] = DateTime.Now,
                 ["VideoDuration"] = AIVideoDuration,
@@ -1603,25 +1615,35 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     #region AI Transition Generation
 
-    private async Task GenerateAITransition()
+    private async Task GenerateAITransition(object direction)
     {
-        // 验证是否有选中的Clip和相邻Clip
-        var selectedClip = _draftPage?.SelectedClip;
-        if (selectedClip == null)
+        if (direction is not string directionStr) directionStr = "";
+
+        bool left = directionStr == "left";
+        bool right = directionStr == "right";
+        if (!left && !right && !string.IsNullOrWhiteSpace(_draftPage._transformMenuActivatedHandle))
         {
-            await _draftPage!.DisplayAlertAsync(
+            left = _draftPage._transformMenuActivatedHandle == "left";
+            right = _draftPage._transformMenuActivatedHandle == "right";
+        }
+        if (!left && !right)
+        {
+            await _draftPage.DisplayAlertAsync(
                 Localized._Error,
-                "请先在时间轴上选择一个片段",
+                "Invalid transition direction.",
                 Localized._OK);
             return;
         }
 
+        // 验证是否有选中的Clip和相邻Clip
+        var selectedClip = _draftPage?.SelectedClip;
         var (leftClip, rightClip) = _draftPage!.FindNeighbors(selectedClip);
-        if (leftClip == null || rightClip == null)
+
+        if (selectedClip == null)
         {
-            await _draftPage.DisplayAlertAsync(
+            await _draftPage!.DisplayAlertAsync(
                 Localized._Error,
-                "选中的片段必须有左右相邻的片段才能生成转场",
+                Localized.DraftPage_PropertyPanel_SelectToContinue,
                 Localized._OK);
             return;
         }
@@ -1630,21 +1652,20 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             await _draftPage.DisplayAlertAsync(
                 Localized._Error,
-                "请输入转场描述",
+                "Please input prompt",
                 Localized._OK);
             return;
         }
 
         if (IsGeneratingAITransition)
         {
-            return; // 防止重复触发
+            return;
         }
 
         IsGeneratingAITransition = true;
 
         try
         {
-            // 转换持续时间（转场时长转换为秒）
             var durationInSeconds = AITransitionDuration switch
             {
                 0 => 1,  // 1秒
@@ -1653,21 +1674,39 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 3 => 5,  // 5秒
                 _ => 2   // 默认2秒
             };
+            IPicture? firstFrame = null!, lastFrame = null!;
 
-            // 获取左右片段的首尾帧
-            var firstFrame = await GetClipLastFrame(leftClip);
-            var lastFrame = await GetClipFirstFrame(rightClip);
+            if (left && !right)
+            {
+                if (leftClip is null || selectedClip is null) return;
+                firstFrame = await GetClipLastFrame(leftClip);
+                lastFrame = await GetClipFirstFrame(selectedClip);
+            }
+            else if (!left && right)
+            {
+                if (rightClip is null || selectedClip is null) return;
+                firstFrame = await GetClipLastFrame(selectedClip);
+                lastFrame = await GetClipFirstFrame(rightClip);
+
+            }
+            else
+            {
+                await _draftPage.DisplayAlertAsync(
+                Localized._Error,
+                "Invalid transition direction.",
+                Localized._OK);
+                return;
+            }
 
             if (firstFrame == null || lastFrame == null)
             {
                 await _draftPage.DisplayAlertAsync(
                     Localized._Error,
-                    "无法从相邻片段中获取首尾帧",
+                    "Cannot read frames.",
                     Localized._OK);
                 return;
             }
 
-            // 创建视频生成选项
             var options = new VideoGenerationOptions
             {
                 Width = 1280,
@@ -1677,7 +1716,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 Watermark = false
             };
 
-            // 调用AI生成转场视频
             var result = await AIHelper.GenerateVideoFromFramesAsync(
                 firstFrame,
                 lastFrame,
@@ -1688,51 +1726,55 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 await _draftPage.DisplayAlertAsync(
                     Localized._Error,
-                    result.ErrorMessage ?? "AI转场生成失败",
+                    result.ErrorMessage ?? SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse,
                     Localized._OK);
                 return;
             }
 
             if (string.IsNullOrEmpty(result.VideoUrl))
             {
+                Log("No video provided.", "Error");
                 await _draftPage.DisplayAlertAsync(
                     Localized._Error,
-                    "未收到生成的转场视频URL",
+                   SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse,
                     Localized._OK);
                 return;
             }
 
-            // 下载转场视频到本地
-            var localVideoPath = await DownloadTransitionVideoToLocal(result.VideoUrl, AITransitionPrompt);
+            var localVideoPath = await DownloadRemoteResourcesToLocal(result.VideoUrl, "mp4", "AIGeneratedTransform-{0}");
             if (string.IsNullOrEmpty(localVideoPath))
             {
                 await _draftPage.DisplayAlertAsync(
                     Localized._Error,
-                    "下载生成的转场视频失败",
+                    $"{SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse}{Environment.NewLine}(Cannot download result.)",
                     Localized._OK);
                 return;
             }
 
-            // 在选中的片段和右边片段之间添加转场
-            await AddAITransitionBetweenClips(localVideoPath, AITransitionPrompt, durationInSeconds, selectedClip, rightClip);
 
-            // 清空输入
+
+            _draftPage.AddTransformBetweenSelected((a, b) => new ExternalSourceTransform
+            {
+                BindedLeftClip = a,
+                BindedRightClip = b,
+                Parameters = new Dictionary<string, object>
+                {
+                    ["SourcePath"] = localVideoPath,
+                }
+            }, selectedClip, left, right, (c) => c.ExtraData["IsAI"] = true);
+
+
             AITransitionPrompt = "";
 
-            // 通知添加成功
             ClipAdded?.Invoke(this, EventArgs.Empty);
-
-            await _draftPage.DisplayAlertAsync(
-                "成功",
-                "AI转场已生成并添加到时间轴",
-                Localized._OK);
+            LoadTransforms();
         }
         catch (Exception ex)
         {
             Logger.Log(ex, "Generate AI transition", this);
             await _draftPage.DisplayAlertAsync(
                 Localized._Error,
-                $"AI转场生成失败: {ex.Message}",
+                $"{SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse}{Environment.NewLine}({Localized._ExceptionTemplate(ex)})",
                 Localized._OK);
         }
         finally
@@ -1752,7 +1794,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             // 获取片段的最后一帧
             var lastFrameIndex = clipData.Duration > 0 ? clipData.Duration - 1 : 0;
             var frame = clipData.GetFrameRelativeToStartPointOfSource(lastFrameIndex, 1280, 720, false);
-            
+
             return frame;
         }
         catch (Exception ex)
@@ -1766,13 +1808,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         try
         {
-            // 将ClipElementUI转换为IClip以获取帧数据
             var clipData = ConvertClipElementToIClip(clipElement);
             if (clipData == null) return null;
 
-            // 获取片段的第一帧
             var frame = clipData.GetFrameRelativeToStartPointOfSource(0, 1280, 720, false);
-            
+
             return frame;
         }
         catch (Exception ex)
@@ -1789,7 +1829,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             // 导出单个Clip的数据
             var draftData = DraftImportAndExportHelper.ExportFromDraftPage(_draftPage, true);
             var clips = DraftImportAndExportHelper.JSONToIClips(draftData);
-            
+
             // 根据ID查找对应的IClip
             return clips.FirstOrDefault(c => c.Id == clipElement.Id);
         }
@@ -1800,73 +1840,15 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task AddAITransitionBetweenClips(string videoPath, string prompt, int durationInSeconds, ClipElementUI leftClip, ClipElementUI rightClip)
+    private async Task<string?> DownloadRemoteResourcesToLocal(string videoUrl, string extension = "", string format = "remote-{0}")
     {
         try
         {
-            // 获取视频时长（帧数）
-            var frameRate = (int)_draftPage.ProjectInfo.TargetFrameRate;
-            var totalFrames = (uint)(durationInSeconds * frameRate);
-            
-            // 获取左右片段的轨道信息
-            var trackIndex = leftClip.origTrack ?? 0;
-            
-            // 计算转场的插入位置（左片段的结束位置）
-            var leftBorder = leftClip.Clip;
-            var leftEndX = leftBorder.TranslationX + (leftBorder.WidthRequest > 0 ? leftBorder.WidthRequest : leftClip.origLength);
-            
-            var element = _draftPage.CreateAndAddClip(
-                startX: leftEndX,
-                width: _draftPage.FrameToPixel(totalFrames),
-                trackIndex: trackIndex,
-                id: null,
-                labelText: $"AI转场: {string.Join("", prompt.Take(20).ToArray())}",
-                background: new SolidColorBrush(Colors.Magenta),
-                resolveOverlap: true,
-                relativeStart: 0,
-                maxFrames: totalFrames
-            );
+            var aiVideosDir = Path.Combine(_draftPage.WorkingPath, "assets");
+            Directory.CreateDirectory(aiVideosDir);
 
-            element.ClipType = ClipMode.VideoClip;
-            element.SourcePath = videoPath;
-            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-            element.isInfiniteLength = false;
-            element.maxFrameCount = totalFrames;
-            element.ExtraData = new Dictionary<string, object>
-            {
-                ["AIGenerated"] = true,
-                ["AIPrompt"] = prompt,
-                ["TransitionType"] = "AITransition",
-                ["LeftClipId"] = leftClip.Id,
-                ["RightClipId"] = rightClip.Id
-            };
-        }
-        catch (Exception ex)
-        {
-            Logger.Log(ex, "Add AI transition between clips", this);
-            throw;
-        }
-    }
-
-    private async Task<string?> DownloadTransitionVideoToLocal(string videoUrl, string prompt)
-    {
-        try
-        {
-            var aiTransitionsDir = Path.Combine(_draftPage.WorkingPath, "assets");
-
-            Directory.CreateDirectory(aiTransitionsDir);
-
-            var safeFileName = string.Join("_", prompt.Take(30).ToArray())
-                .Replace(" ", "_")
-                .Replace("\n", "")
-                .Replace("\r", "")
-                + "_" + Guid.NewGuid().ToString("N")[..8] + ".mp4";
-            
-            // 移除文件名中的非法字符
-            var invalidChars = Path.GetInvalidFileNameChars();
-            safeFileName = string.Join("_", safeFileName.Split(invalidChars));
-            
-            var localPath = Path.Combine(aiTransitionsDir, safeFileName);
+            var safeFileName = Path.ChangeExtension(string.Format(format, Guid.NewGuid()), extension);
+            var localPath = Path.Combine(aiVideosDir, safeFileName);
 
             using var client = new HttpClient();
             var videoBytes = await client.GetByteArrayAsync(videoUrl);
@@ -1876,16 +1858,17 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            Logger.Log(ex, "Download AI generated transition video", this);
+            Logger.Log(ex, "Download remote stuff", this);
             return null;
         }
     }
+
 
     #endregion
 
 }
 
-#region vm
+#region child vm
 
 public class AssetItemViewModel
 {

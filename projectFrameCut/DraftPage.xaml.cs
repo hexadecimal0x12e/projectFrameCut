@@ -144,6 +144,7 @@ public partial class DraftPage : ContentPage
     public InteractableEditor.InteractableEditor ClipEditor;
     public AIAssistance.AssistanceChatSessionsView ChatSessionsView = new();
     public ProjectAddClipView AddClipView = null!;
+    public bool IsPopupClosableByTapBackground { get; set; } = true;
 
     public ProjectJSONStructure ProjectInfo { get; set; } = new();
     public ConcurrentDictionary<string, ClipElementUI> Clips = new();
@@ -1029,7 +1030,6 @@ public partial class DraftPage : ContentPage
                     {
                         IsReadOnly = false,
                         Text = JsonSerializer.Serialize(clip, savingOpts),
-                        HeightRequest = 300
                     };
                     var wd = new MultiWindowItem
                     {
@@ -1507,8 +1507,9 @@ public partial class DraftPage : ContentPage
     #region transform
     private void AddTransformClip(
         ClipElementUI prev, ClipElementUI next,
-        string typeName, Func<Guid, Guid, ITransform> factory,
-        double startX, double width, int TrackId)
+        Func<Guid, Guid, ITransform> factory,
+        double startX, double width, int TrackId,
+        Action<ClipElementUI>? ElementSetter = null)
     {
         Guid prevGuid = Guid.Empty;
         Guid nextGuid = Guid.Empty;
@@ -1535,10 +1536,10 @@ public partial class DraftPage : ContentPage
 
         elem.ClipType = ClipMode.TransformClip;
         elem.FromPlugin = InternalPluginBase.InternalPluginBaseID;
-        elem.TypeName = typeName;
+        elem.TypeName = transform.TypeName;
         elem.ExtraData["transformPrevId"] = prev?.Id ?? string.Empty;
         elem.ExtraData["transformNextId"] = next?.Id ?? string.Empty;
-        elem.ExtraData["transformTypeName"] = typeName;
+        elem.ExtraData["transformTypeName"] = transform.TypeName;
         // Persist the transform instance so it can be re-created when the project is loaded.
         try
         {
@@ -1582,8 +1583,8 @@ public partial class DraftPage : ContentPage
                 next.lengthInFrame = PixelToFrame(newNextWidth);
                 OnClipChanged?.Invoke(next.Id, new ClipUpdateEventArgs { SourceId = next.Id, Reason = ClipUpdateReason.ClipResized });
             }
+            ElementSetter?.Invoke(elem);
 
-            // Recompute adjacency and timeline width
             _ = UpdateAdjacencyForTrack();
             UpdateTimelineWidth();
         }
@@ -1592,19 +1593,22 @@ public partial class DraftPage : ContentPage
             Log(ex, $"adjust neighbors for transform {elem.Id}", this);
         }
 
-        LogDiagnostic($"Transform '{typeName}' clip added between '{prev?.Id ?? "none"}' and '{next?.Id ?? "none"}'.");
+        LogDiagnostic($"Transform '{transform.TypeName}' clip added between '{prev?.Id ?? "none"}' and '{next?.Id ?? "none"}'.");
     }
 
-
     public bool AddTransformBetweenSelected(string typeKey, ClipElementUI? center, bool left, bool right)
+         => center is not null
+            && TransformServices.GetAvailableTransforms().TryGetValue(typeKey, out var factory)
+            && AddTransformBetweenSelected(factory, center, left, right);
+
+    public bool AddTransformBetweenSelected(Func<Guid, Guid, ITransform> transformFactory, ClipElementUI center, bool left, bool right, Action<ClipElementUI>? ElementSetter = null)
     {
-        if (center is null) return false;
+        ArgumentNullException.ThrowIfNull(center, nameof(center));
         if (left && right) throw new InvalidOperationException("Cannot add a transform in both direction.");
-        var transforms = TransformServices.GetAvailableTransforms();
-        if (!transforms.TryGetValue(typeKey, out var factory)) return false;
+        if (!left && !right) throw new InvalidOperationException("Cannot add a transform in neither direction.");
 
         var (leftNeighbor, rightNeighbor) = FindNeighbors(center);
-
+        if ((left && leftNeighbor is null) || (right && rightNeighbor is null)) return false;
 
         const double TransformVisualWidth = 40.0;
 
@@ -1616,7 +1620,7 @@ public partial class DraftPage : ContentPage
         if (left)
         {
             double posX = selectedLeft - TransformVisualWidth / 2.0;
-            AddTransformClip(leftNeighbor, center, typeKey, factory, posX, TransformVisualWidth, center.origTrack ?? 0);
+            AddTransformClip(leftNeighbor, center, transformFactory, posX, TransformVisualWidth, center.origTrack ?? 0, ElementSetter);
             SetStatusText(Localized.DraftPage_TransformAdded(leftNeighbor?.DisplayName ?? "left", center?.DisplayName ?? "right"));
             _ = UpdateAdjacencyForTrack(center.origTrack ?? 0);
             return true;
@@ -1624,7 +1628,7 @@ public partial class DraftPage : ContentPage
         else if (right)
         {
             double posX = selectedRight - TransformVisualWidth / 2.0;
-            AddTransformClip(center, rightNeighbor, typeKey, factory, posX, TransformVisualWidth, center.origTrack ?? 0);
+            AddTransformClip(center, rightNeighbor, transformFactory, posX, TransformVisualWidth, center.origTrack ?? 0, ElementSetter);
             SetStatusText(Localized.DraftPage_TransformAdded(center?.DisplayName ?? "left", rightNeighbor?.DisplayName ?? "right"));
             _ = UpdateAdjacencyForTrack(center.origTrack ?? 0);
             return true;
@@ -2667,8 +2671,9 @@ public partial class DraftPage : ContentPage
         catch { }
     }
 
-    public async Task HidePopup()
+    public async Task HidePopup(bool force = false)
     {
+        if (!force && !IsPopupClosableByTapBackground) return;
         if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
         {
             if (_currentCommunityToolkitPopup is not null)
@@ -3463,7 +3468,7 @@ public partial class DraftPage : ContentPage
         {
             SetStateFail(Localized.DraftPage_CannotSave_Readonly);
         }
-        
+
         foreach (var item in Clips)
         {
             if (!item.Value.isInfiniteLength && item.Value.lengthInFrame > item.Value.maxFrameCount)
@@ -3742,7 +3747,7 @@ public partial class DraftPage : ContentPage
         ProjectInfo.LastChanged = DateTime.Now;
         ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
         ProjectInfo.LastOpenAppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
-        ProjectInfo.PluginUsed = 
+        ProjectInfo.PluginUsed =
             draft.Clips.OfType<ClipDraftDTO>()
                        .Select(c => c.FromPlugin)
                        .Concat(draft.Clips.OfType<ClipDraftDTO>().SelectMany(c => c.Effects?.Select(eff => eff.FromPlugin) ?? []))

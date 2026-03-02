@@ -929,7 +929,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 await DisplayAlertAsync(b._Error, b.MultiWindowView_PopOut_NotSupport, b._OK);
             }
-            if (OperatingSystem.IsIOS())
+            if (OperatingSystem.IsIOS() && !OperatingSystem.IsIOSVersionAtLeast(26, 0)) //in iPadOS 26 every iPad get multi-window support
             {
                 if (DeviceInfo.Idiom != DeviceIdiom.Tablet)
                 {
@@ -954,12 +954,12 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                         }
                     default:
                         {
-                            if(generationNumber >= 14) isStageManagerSupport = true;
+                            if (generationNumber >= 14) isStageManagerSupport = true;
                             break;
                         }
                 }
 
-                if(!isStageManagerSupport || !OperatingSystem.IsIOSVersionAtLeast(16, 4))
+                if (!isStageManagerSupport || !OperatingSystem.IsIOSVersionAtLeast(16, 4))
                 {
                     if (!Preferences.Default.Get("MultiWindowView_StageManagerUnsupportedWarn_NotPromptAgain", false))
                     {
@@ -1111,7 +1111,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
                         {
                             new HorizontalStackLayout
                             {
-                                Children = 
+                                Children =
                                 {
                                     backbtn,
                                     fwdbtn,
@@ -1207,7 +1207,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             }
         }
 
-#endregion
+        #endregion
 
         #region Navigation Methods
 

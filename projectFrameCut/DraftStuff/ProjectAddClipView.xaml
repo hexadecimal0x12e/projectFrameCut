@@ -196,42 +196,60 @@
                         Text="{Binding AIPrompt, Mode=TwoWay}"
                         BackgroundColor="{AppThemeBinding Dark=Black,Light=White}"
                         Margin="0,0,4,0"/>
-                        
-                <!-- 内容类型和视频参数设置 -->
+
                 <Grid RowDefinitions="Auto,Auto" Margin="0,8,0,0">
-                    <!-- 第一行：内容类型选择 -->
+                    <Grid.Resources>
+                        <converters:EqualConverter x:Key="EqualConverterImage" ComparisonValue="Image"/>
+                    </Grid.Resources>
                     <HorizontalStackLayout Grid.Row="0" Spacing="20" HorizontalOptions="Start" Margin="0,0,0,8">
                         <RadioButton Content="{l:Localized Key=DraftPage_AddClipView_AIGC_Type_Video}" 
                                      GroupName="AIContentType" 
                                      Value="Video"
                                      CheckedChanged="OnAIContentTypeChanged"/>
                         <RadioButton Content="{l:Localized Key=DraftPage_AddClipView_AIGC_Type_Image}" 
+                                     Margin="8,0,0,0"
                                      GroupName="AIContentType"
                                      Value="Image"
                                      IsChecked="True"
                                      CheckedChanged="OnAIContentTypeChanged"/>
                     </HorizontalStackLayout>
-                    
-                    <!-- 第二行：视频参数设置（仅在选择视频时显示） -->
-                    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,*" 
-                          IsVisible="{Binding AIContentType, Converter={StaticResource EqualConverter}}"
-                          Margin="0,0,0,8">
-                        <Label Grid.Column="0" Text="时长:" VerticalOptions="Center" Margin="0,0,8,0"/>
+
+                    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,*" Margin="0,0,0,8">
+                        <Label Grid.Column="0" Text="{l:Localized Key=DraftPage_AddClipView_AIGC_Duration}" VerticalOptions="Center" Margin="0,0,8,0"
+                               IsVisible="{Binding AIContentType, Converter={StaticResource EqualConverter}}"/>
                         <Picker Grid.Column="1" 
                                 SelectedIndex="{Binding AIVideoDuration, Converter={StaticResource IntToIndexConverter}}"
                                 WidthRequest="100" 
                                 Margin="0,0,20,0"
-                                BackgroundColor="Gray">
+                                BackgroundColor="Gray"
+                                IsVisible="{Binding AIContentType, Converter={StaticResource EqualConverter}}">
                             <Picker.Items>
-                                <x:String>3秒</x:String>
-                                <x:String>5秒</x:String>
-                                <x:String>10秒</x:String>
-                                <x:String>15秒</x:String>
-                                <x:String>20秒</x:String>
+                                <x:String>3</x:String>
+                                <x:String>5</x:String>
+                                <x:String>10</x:String>
+                                <x:String>15</x:String>
+                                <x:String>20</x:String>
                             </Picker.Items>
                         </Picker>
-                        
-                        <Label Grid.Column="2" Text="比例:" VerticalOptions="Center" Margin="0,0,8,0"/>
+
+                        <Label Grid.Column="0" Text="{l:Localized Key=DraftPage_AddClipView_AIGC_ImageStyle}" VerticalOptions="Center" Margin="0,0,8,0"
+                               IsVisible="{Binding AIContentType, Converter={StaticResource EqualConverterImage}}"/>
+                        <Picker Grid.Column="1" 
+                                SelectedItem="{Binding AIImageStyle, Mode=TwoWay}"
+                                WidthRequest="100" 
+                                Margin="0,0,20,0"
+                                BackgroundColor="Gray"
+                                IsVisible="{Binding AIContentType, Converter={StaticResource EqualConverterImage}}">
+                            <Picker.Items>
+                                <l:Localized Key="DraftPage_AddClipView_AIGC_ImageStyle_Natural"/>
+                                <l:Localized Key="DraftPage_AddClipView_AIGC_ImageStyle_Vivid"/>
+                                <l:Localized Key="DraftPage_AddClipView_AIGC_ImageStyle_Anime"/>
+                                <l:Localized Key="DraftPage_AddClipView_AIGC_ImageStyle_Photography"/>
+                                <l:Localized Key="DraftPage_AddClipView_AIGC_ImageStyle_TradidtionalPainting"/>
+                            </Picker.Items>
+                        </Picker>
+
+                        <Label Grid.Column="2" Text="{l:Localized Key=DraftPage_AddClipView_AIGC_Ratio}" VerticalOptions="Center" Margin="0,0,8,0"/>
                         <Picker Grid.Column="3" 
                                 SelectedItem="{Binding AIVideoRatio, Mode=TwoWay}"
                                 WidthRequest="100"
@@ -246,8 +264,7 @@
                         </Picker>
                     </Grid>
                 </Grid>
-                
-                <!-- 生成按钮 -->
+
                 <Grid Margin="0,8,0,0">
                     <HorizontalStackLayout HorizontalOptions="End">
                         <ActivityIndicator IsVisible="{Binding IsGeneratingAIContent}"
@@ -257,7 +274,7 @@
                                          Margin="0,0,8,0"/>
                         <Button HorizontalOptions="End" 
                                 BackgroundColor="{Binding AIPrompt, Converter={StaticResource IsStringValidConverter}}" 
-                                Text="{Binding IsGeneratingAIContent, Converter={toolkit:BoolToObjectConverter TrueObject=生成中..., FalseObject={l:Localized Key=DraftPage_AddClipView_AIGC_Generate}}}"
+                                Text="{Binding IsGeneratingAIContent, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_AddClipView_AIGC_Generating}, FalseObject={l:Localized Key=DraftPage_AddClipView_AIGC_Generate}}}"
                                 IsEnabled="{Binding IsGeneratingAIContent, Converter={toolkit:InvertedBoolConverter}}"
                                 Command="{Binding GenerateAIContentCommand}" />
                     </HorizontalStackLayout>
@@ -266,7 +283,6 @@
         </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddTransform}" Tag="Transform" x:Name="TransformTab" x:FieldModifier="public">
             <Grid RowDefinitions="Auto,Auto,*">
-                <!-- AI转场生成区域 -->
                 <Border Grid.Row="0"
                         BackgroundColor="{AppThemeBinding Light=#FFF8E1, Dark=#3E2723}"
                         Padding="12,8"
@@ -275,118 +291,104 @@
                         StrokeShape="RoundRectangle 6"
                         IsVisible="{Binding CanGenerateAITransition}">
                     <VerticalStackLayout Spacing="8">
-                        <Label Text="🎬 AI智能转场"
+                        <Label Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_AITransform}"
                                FontSize="16"
                                FontAttributes="Bold"
                                TextColor="{AppThemeBinding Light=#FF6F00, Dark=#FFB74D}"/>
-                        
-                        <!-- Clip信息显示 -->
-                        <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="8">
-                            <Border Grid.Column="0"
-                                    BackgroundColor="{AppThemeBinding Light=White, Dark=#424242}"
-                                    StrokeThickness="1"
-                                    Stroke="{AppThemeBinding Light=#E0E0E0, Dark=#616161}"
-                                    StrokeShape="RoundRectangle 4"
-                                    HeightRequest="60"
-                                    Padding="8">
-                                <VerticalStackLayout>
-                                    <Label Text="左侧片段"
-                                           FontSize="10"
-                                           FontAttributes="Bold"
-                                           TextColor="{AppThemeBinding Light=#757575, Dark=#BDBDBD}"/>
-                                    <Label Text="{Binding LeftClipName}"
-                                           FontSize="12"
-                                           LineBreakMode="TailTruncation"/>
-                                </VerticalStackLayout>
-                            </Border>
-                            
-                            <Label Grid.Column="1"
-                                   Text="➤"
-                                   FontSize="20"
-                                   VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light=#FF6F00, Dark=#FFB74D}"/>
-                            
-                            <Border Grid.Column="2"
-                                    BackgroundColor="{AppThemeBinding Light=White, Dark=#424242}"
-                                    StrokeThickness="1"
-                                    Stroke="{AppThemeBinding Light=#E0E0E0, Dark=#616161}"
-                                    StrokeShape="RoundRectangle 4"
-                                    HeightRequest="60"
-                                    Padding="8">
-                                <VerticalStackLayout>
-                                    <Label Text="右侧片段"
-                                           FontSize="10"
-                                           FontAttributes="Bold"
-                                           TextColor="{AppThemeBinding Light=#757575, Dark=#BDBDBD}"/>
-                                    <Label Text="{Binding RightClipName}"
-                                           FontSize="12"
-                                           LineBreakMode="TailTruncation"/>
-                                </VerticalStackLayout>
-                            </Border>
-                        </Grid>
-                        
-                        <!-- 提示词输入 -->
-                        <Entry Placeholder="描述转场效果，例如：淡入淡出，缓慢推拉，创意切换等..."
+                        <Entry IsEnabled="True"
+                               Placeholder="{l:Localized Key=DraftPage_AddClipView_AIGC_InputPlaceholder}"
                                Text="{Binding AITransitionPrompt, Mode=TwoWay}"
                                BackgroundColor="{AppThemeBinding Light=White, Dark=#424242}"
                                PlaceholderColor="{AppThemeBinding Light=#757575, Dark=#BDBDBD}"
                                FontSize="14"/>
-                        
-                        <!-- 生成按钮区域 -->
-                        <Grid ColumnDefinitions="*,Auto">
+
+                        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding IsGeneratingAITransition, Converter={toolkit:InvertedBoolConverter}}" >
                             <HorizontalStackLayout Grid.Column="0" Spacing="8">
-                                <Label Text="时长:"
+                                <Label Text="{l:Localized Key=DraftPage_AddClipView_AIGC_Duration}"
                                        VerticalOptions="Center"
                                        FontSize="12"/>
                                 <Picker SelectedIndex="{Binding AITransitionDuration, Converter={StaticResource IntToIndexConverter}}"
                                         WidthRequest="80"
                                         BackgroundColor="Gray">
                                     <Picker.Items>
-                                        <x:String>1秒</x:String>
-                                        <x:String>2秒</x:String>
-                                        <x:String>3秒</x:String>
-                                        <x:String>5秒</x:String>
+                                        <x:String>1</x:String>
+                                        <x:String>2</x:String>
+                                        <x:String>3</x:String>
+                                        <x:String>5</x:String>
                                     </Picker.Items>
                                 </Picker>
                             </HorizontalStackLayout>
-                            
+
                             <HorizontalStackLayout Grid.Column="1" Spacing="8">
                                 <ActivityIndicator IsVisible="{Binding IsGeneratingAITransition}"
                                                  IsRunning="{Binding IsGeneratingAITransition}"
                                                  WidthRequest="20"
                                                  HeightRequest="20"/>
-                                <Button Text="{Binding IsGeneratingAITransition, Converter={toolkit:BoolToObjectConverter TrueObject=生成中..., FalseObject=生成AI转场}}"
+                                <HorizontalStackLayout HorizontalOptions="End" IsEnabled="{Binding IsDraftSelectedAnyClip}">
+                                    <Button HorizontalOptions="End"
+                                            Text="{Binding IsGeneratingAIContent, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_AddClipView_AIGC_GeneratingLong}, FalseObject=➕}}"                                   
+                                            ToolTipProperties.Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_AddInSelectedDirection}"
+                                            FontSize="14"
+                                            Padding="4"
+                                            WidthRequest="40"
+                                            HeightRequest="36"
+                                            CornerRadius="4"
+                                            IsVisible="{Binding IsSideDetermined}"
+                                            Command="{Binding GenerateAITransitionCommand}"
+                                            CommandParameter="auto"/>
+
+                                    <Button HorizontalOptions="End"
+                                            Text="{Binding IsGeneratingAIContent, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_AddClipView_AIGC_GeneratingLong}, FalseObject=👈}}"                                                                        
+                                            ToolTipProperties.Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_AddInLeft}"
+                                            FontSize="14"
+                                            Padding="4"
+                                            WidthRequest="40"
+                                            HeightRequest="36"
+                                            CornerRadius="4"
+                                            IsVisible="{Binding IsSideDetermined, Converter={toolkit:InvertedBoolConverter}}"
+                                            IsEnabled="{Binding IsApplicableToLeft}"
+                                            Background="{Binding IsApplicableToLeft, Converter={StaticResource IsValidConverter}}"
+                                            Command="{Binding GenerateAITransitionCommand}"
+                                            CommandParameter="left"/>
+
+                                    <Button HorizontalOptions="End"
+                                            Text="{Binding IsGeneratingAIContent, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_AddClipView_AIGC_GeneratingLong}, FalseObject=👉}}"                                                                           
+                                            ToolTipProperties.Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_AddInRight}"
+                                            FontSize="14"
+                                            Padding="4"
+                                            WidthRequest="40"
+                                            HeightRequest="36"
+                                            CornerRadius="4"
+                                            Margin="8,0,0,0"
+                                            IsVisible="{Binding IsSideDetermined, Converter={toolkit:InvertedBoolConverter}}"
+                                            IsEnabled="{Binding IsApplicableToRight}"
+                                            Background="{Binding IsApplicableToRight, Converter={StaticResource IsValidConverter}}"
+                                            Command="{Binding GenerateAITransitionCommand}"
+                                            CommandParameter="right"/>
+                                </HorizontalStackLayout>
+                               <!-- <Button 
                                         BackgroundColor="{Binding AITransitionPrompt, Converter={StaticResource IsStringValidConverter}}"
                                         IsEnabled="{Binding IsGeneratingAITransition, Converter={toolkit:InvertedBoolConverter}}"
                                         Command="{Binding GenerateAITransitionCommand}"
                                         FontSize="12"
                                         WidthRequest="100"
-                                        HeightRequest="32"/>
+                                        HeightRequest="32"/> -->
                             </HorizontalStackLayout>
                         </Grid>
-                        
-                        <!-- 提示信息 -->
-                        <Label Text="💡 请先在时间轴上选择需要添加转场的片段"
-                               IsVisible="{Binding CanGenerateAITransition, Converter={toolkit:InvertedBoolConverter}}"
-                               FontSize="12"
-                               TextColor="{AppThemeBinding Light=#FF8F00, Dark=#FFB74D}"
-                               HorizontalTextAlignment="Center"/>
                     </VerticalStackLayout>
                 </Border>
-                
-                <!-- 传统转场预览区域 -->
+
                 <Border Grid.Row="1"
+                        IsEnabled="{Binding IsGeneratingAITransition, Converter={toolkit:InvertedBoolConverter}}"
                         BackgroundColor="{AppThemeBinding Light=#E8F4FD, Dark=#1A3A5C}"
                         Padding="12,8"
                         Margin="8,8,8,4"
                         StrokeThickness="0"
                         StrokeShape="RoundRectangle 6">
                     <Grid>
-                        <Label
-                           IsVisible="{Binding IsDraftSelectedAnyClip,Converter={toolkit:InvertedBoolConverter}}"
-                           Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_NoTargetClip}"
-                           FontSize="12"
-                           TextColor="{AppThemeBinding Light=#1A5276, Dark=#85C1E9}"/>
+                        <Label Text="{Binding TransformAddHintText}"
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=#1A5276, Dark=#85C1E9}"/>
                         <Button IsVisible="{x:OnIdiom Phone=true, Default=false}"
                                 IsEnabled="{Binding IsDraftSelectedAnyClip}"
                                 Background="{Binding IsSideDetermined, Converter={StaticResource IsValidConverter}}"
