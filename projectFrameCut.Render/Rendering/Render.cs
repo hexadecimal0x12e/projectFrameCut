@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -25,6 +26,7 @@ namespace projectFrameCut.Render.Rendering
 
         public IClip[]? Clips;
         Dictionary<Guid, IClip> IndexedClipList = new();
+        Dictionary<string, bool> IsClipGeneratedByAI = new();
 
         public uint Duration;
         public uint StartFrame = 0;
@@ -518,6 +520,10 @@ namespace projectFrameCut.Render.Rendering
                         }
                         if (frame != null)
                         {
+                            if (IsClipGeneratedByAI.TryGetValue(item.Id, out var aiMark) && aiMark)
+                            {
+                                frame = EffectProcessing.ProcessAIWatermark(frame, null);
+                            }
                             if (Use16Bit && frame.bitPerPixel != IPicture.PicturePixelMode.UShortPicture)
                             {
                                 frame = frame.ToBitPerPixel(IPicture.PicturePixelMode.UShortPicture);
@@ -658,7 +664,11 @@ namespace projectFrameCut.Render.Rendering
                     framesToRender.Add((clip, null));
                     continue;
                 }
+                if(IsClipGeneratedByAI.TryGetValue(clip.Id, out var aiMark) && aiMark)
+                {
+                    frame = EffectProcessing.ProcessAIWatermark(frame, null);
 
+                }
                 if (Use16Bit && frame.bitPerPixel != IPicture.PicturePixelMode.UShortPicture)
                 {
                     frame = frame.ToBitPerPixel(IPicture.PicturePixelMode.UShortPicture);
@@ -849,6 +859,14 @@ namespace projectFrameCut.Render.Rendering
             EffectCache.Clear();
             foreach (var item in Clips ?? Array.Empty<IClip>())
             {
+                bool isAI = false;
+                if (item.ExtraData.TryGetValue("IsAI", out var aiMark))
+                {
+                    if (aiMark is bool) isAI = (bool)aiMark;
+                    else if (aiMark is string s && bool.TryParse(s, out var parsed)) isAI = parsed;
+                    else if (aiMark is JsonElement je && je.ValueKind == JsonValueKind.True) isAI = true;
+                }
+                if (isAI) IsClipGeneratedByAI.TryAdd(item.Id, isAI);
                 if (!item.Effects.ArrayAny()) continue;
                 var effectInstances = EffectHelper.GetEffectsInstances(item.Effects);
                 EffectCache.AddOrUpdate(item.Id, effectInstances, (_, _) => effectInstances);
@@ -857,6 +875,7 @@ namespace projectFrameCut.Render.Rendering
                     if (effect.YieldProcessStep == true && effect.NeedComputer is not null)
                         throw new InvalidDataException("A effect can't both yield process step, and use a computer.");
                 }
+
                 Log($"[Preparer] Cached {effectInstances.Length} effects for clip {item.Id} ({string.Join(", ", effectInstances.Select(c => $"{c.TypeName}:'{c.Name}'"))})");
 
             }

@@ -48,6 +48,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; init; }
         public string? FilePath { get; set; }
         public bool NeedFilePath => true;
+        public Dictionary<string, object> ExtraData { get; set; }
+
 
         public ISoundTrack SoundTrack { get; set; }
         public TrackMode TrackType => TrackMode.NormalTrack;

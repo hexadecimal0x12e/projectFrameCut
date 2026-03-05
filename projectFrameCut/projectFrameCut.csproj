@@ -297,5 +297,9 @@
 		<MauiImage Include="Resources\Raw\Images\unknown_music.png" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="AIAssistance\AgentSystem\" />
+	</ItemGroup>
+
 
 </Project>

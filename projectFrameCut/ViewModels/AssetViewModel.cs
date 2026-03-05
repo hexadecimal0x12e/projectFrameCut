@@ -1,5 +1,6 @@
 ﻿using Microsoft.Maui.Controls;
 using Microsoft.Maui.Storage;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Asset;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
@@ -99,15 +100,15 @@ namespace projectFrameCut.ViewModels
             }
             else
             {
-                var inputPron = (await TextHelper.GetHowToPronuce(SearchText, default)).ToLower();
-                var inputPronInLocate = ((await TextHelper.GetHowToPronuce(SearchText, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
+                var inputPron = (await TextServices.GetHowToPronuce(SearchText, default)).ToLower();
+                var inputPronInLocate = ((await TextServices.GetHowToPronuce(SearchText, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
                 var searchLower = SearchText.ToLower();
 
 
                 foreach (var asset in _allAssets)
                 {
-                    var assetPron = (await TextHelper.GetHowToPronuce(asset.Name, default)).ToLower();
-                    var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
+                    var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
+                    var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
                     if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                     {
                         filtered.Add(asset);

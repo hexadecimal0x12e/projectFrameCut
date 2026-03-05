@@ -521,6 +521,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "TextOption_Advanced_Collapsed",
+        "Value": "\u9AD8\u7EA7 \u25BC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Advanced_Expanded",
+        "Value": "\u6536\u8D77 \u25B2",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "TextOption_Alignment",
         "Value": "\u5E03\u5C40",
         "Mode": "ConstString",
@@ -633,6 +649,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "TextOption_Stroke_Hint",
+        "Value": "\u7C97\u7EC6 (px)\uFF0C\u7559\u7A7A\u6765\u7981\u7528",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "TextOption_Style",
         "Value": "\u6837\u5F0F",
         "Mode": "ConstString",
@@ -667,6 +691,14 @@
       {
         "Id": "TextOption_Style_Regular",
         "Value": "\u5E38\u89C4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_TabTitle",
+        "Value": "\u6587\u672C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -737,19 +769,29 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "TextOption_Stroke_Hint",
-        "Value": "\u7C97\u7EC6 (px)\uFF0C\u7559\u7A7A\u6765\u7981\u7528",
+        "Id": "TextOption_Content_Placeholder",
+        "Value": "\u8BF7\u8F93\u5165\u6587\u672C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
       },
       {
-        "Id": "TextOption_TabTitle",
-        "Value": "\u6587\u672C",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
+        "Id": "TextOption_EntryTitle",
+        "Value": "\u6587\u672C #{i}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          }
+        ],
         "HasValidationErrors": false
       }
     ],
@@ -1575,6 +1617,50 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Advanced_Collapsed",
+        "Value": "Advanced \u25BC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Advanced_Expanded",
+        "Value": "Less \u25B2",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Content_Placeholder",
+        "Value": "Unset localization item:TextOption_Content_Placeholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_EntryTitle",
+        "Value": "Unset localization item:TextOption_EntryTitle(int i)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -2403,6 +2489,52 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Advanced_Collapsed",
+        "Value": "Unset localization item:TextOption_Advanced_Collapsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Advanced_Expanded",
+        "Value": "Unset localization item:TextOption_Advanced_Expanded()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Content_Placeholder",
+        "Value": "Unset localization item:TextOption_Content_Placeholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_EntryTitle",
+        "Value": "Unset localization item:TextOption_EntryTitle(int i)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ja-JP": [
@@ -3227,6 +3359,52 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Advanced_Collapsed",
+        "Value": "Unset localization item:TextOption_Advanced_Collapsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Advanced_Expanded",
+        "Value": "Unset localization item:TextOption_Advanced_Expanded()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Content_Placeholder",
+        "Value": "Unset localization item:TextOption_Content_Placeholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_EntryTitle",
+        "Value": "Unset localization item:TextOption_EntryTitle(int i)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -4055,6 +4233,52 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Advanced_Collapsed",
+        "Value": "Unset localization item:TextOption_Advanced_Collapsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Advanced_Expanded",
+        "Value": "Unset localization item:TextOption_Advanced_Expanded()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Content_Placeholder",
+        "Value": "Unset localization item:TextOption_Content_Placeholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_EntryTitle",
+        "Value": "Unset localization item:TextOption_EntryTitle(int i)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -4879,6 +5103,52 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Advanced_Collapsed",
+        "Value": "Unset localization item:TextOption_Advanced_Collapsed()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Advanced_Expanded",
+        "Value": "Unset localization item:TextOption_Advanced_Expanded()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_Content_Placeholder",
+        "Value": "Unset localization item:TextOption_Content_Placeholder()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_EntryTitle",
+        "Value": "Unset localization item:TextOption_EntryTitle(int i)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }

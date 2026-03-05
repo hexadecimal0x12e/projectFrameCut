@@ -74,7 +74,7 @@
 
 
 
-你可以使用工具'get\_selected\_clip\_info'来获取当前用户选中的Clip，如果工具不存在则代表用户没有选中任何Clip。
+你可以使用工具'get\_selected\_clip\_info'来获取当前用户选中的Clip。
 
 使用工具'set\_clip\_info'来覆盖/添加某一个Clip，方法是把Clip和Id作为参数传入ToolCall参数里。
 

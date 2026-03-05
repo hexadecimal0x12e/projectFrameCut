@@ -45,6 +45,7 @@ public partial class HomePage : ContentPage
     private string _lastSelectedItemName = string.Empty;
 
     public static bool HasAlreadyLaunchedFromFile = false;
+    private static bool IsFontLoaded = false;
 
 
     public HomePage()
@@ -89,7 +90,16 @@ public partial class HomePage : ContentPage
 
             }
             catch { }
-
+            if (!IsFontLoaded)
+            {
+                var t = new Thread(TextServices.LoadFonts)
+                {
+                    Priority = ThreadPriority.BelowNormal,
+                    IsBackground = true
+                };
+                t.Start();
+                IsFontLoaded = true;
+            }
 #if WINDOWS
             try
             {
@@ -107,6 +117,7 @@ public partial class HomePage : ContentPage
 
             }
             catch { }
+
 
 
 #endif
@@ -473,6 +484,10 @@ public partial class HomePage : ContentPage
         {
             try
             {
+                while (!MauiProgram.IsAppReady)
+                {
+                    await Task.Delay(500);
+                }
                 if (!Directory.Exists(draftSourcePath))
                 {
                     throw new DirectoryNotFoundException("Working path not found: " + draftSourcePath);
@@ -888,7 +903,7 @@ public partial class HomePage : ContentPage
             SettingsManager.WriteSetting("AIGeneratedTranslatePromptReaded", "true");
         }
 
-        if (AdminHelper.IsRunningAsAdministrator())
+        if (AdminServices.IsRunningAsAdministrator())
         {
             await DisplayAlertAsync(Localized._Warn, Localized.HomePage_AdminWarn(), Localized._OK);
         }

@@ -20,6 +20,7 @@ using projectFrameCut.AIAssistance;
 using IPicture = projectFrameCut.Shared.IPicture;
 using Microsoft.Maui.Storage;
 using projectFrameCut.Render.Transform;
+using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
 
 namespace projectFrameCut.ViewModels;
 
@@ -577,18 +578,18 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         element.maxFrameCount = 0;
         element.ExtraData = new();
 
-        var textLang = TextHelper.DetectTextLanguage(text);
+        var textLang = DetectTextLanguage(text);
         var fontOverride = style.ActualTemplate.fontFamily;
         if (style.ActualTemplate.fontFamily == "Arial")
         {
-            if (textLang != TextHelper.TextLanguage.English)
+            if (textLang != TextLanguage.English)
             {
                 fontOverride = textLang switch
                 {
-                    TextHelper.TextLanguage.Chinese => Localized._LocaleId_ == "zh-TW" ? "Noto Sans TC" : "Noto Sans SC",
-                    TextHelper.TextLanguage.Japanese => "Noto Sans JP",
-                    TextHelper.TextLanguage.Korean => "Noto Sans KR",
-                    TextHelper.TextLanguage.Arabic => "HarmonyOS Sans Naskh Arabic",
+                    TextLanguage.Chinese => Localized._LocaleId_ == "zh-TW" ? "Noto Sans TC" : "Noto Sans SC",
+                    TextLanguage.Japanese => "Noto Sans JP",
+                    TextLanguage.Korean => "Noto Sans KR",
+                    TextLanguage.Arabic => "HarmonyOS Sans Naskh Arabic",
                     _ => "Noto Sans"
                 };
             }
@@ -596,7 +597,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
         if (style != null)
         {
-            element.ExtraData["TextEntries"] = new List<TextClip.TextClipEntry>
+            element.ExtraData["TextEntries"] = new List<TextClipEntry>
             {
                 style.ActualTemplate with { text = text, fontFamily = fontOverride }
             };
@@ -613,7 +614,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         AvailableTextStyles.Clear();
         try
         {
-            Dictionary<string, TextClip.TextClipEntry> template = new();
+            Dictionary<string, TextClipEntry> template = new();
             EditSettingPage.LoadTextTemplates(ref template);
             foreach (var item in template)
             {
@@ -634,7 +635,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 Id = "default",
                 Name = "Default",
                 SampleText = "Normal",
-                ActualTemplate = new TextClip.TextClipEntry
+                ActualTemplate = new TextClipEntry
                 {
                     r = 65535,
                     g = 65535,
@@ -649,7 +650,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 Id = "title",
                 Name = "Title",
                 SampleText = "Title",
-                ActualTemplate = new TextClip.TextClipEntry
+                ActualTemplate = new TextClipEntry
                 {
                     r = 65535,
                     g = 65535,
@@ -665,7 +666,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 Name = "Subtitle",
                 SampleText = "Subtitle",
                 ShouldInSubtrack = true,
-                ActualTemplate = new TextClip.TextClipEntry
+                ActualTemplate = new TextClipEntry
                 {
                     r = 65535,
                     g = 65535,
@@ -873,14 +874,14 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
         else
         {
-            var inputPron = (await TextHelper.GetHowToPronuce(SearchText, default)).ToLower();
-            var inputPronInLocate = ((await TextHelper.GetHowToPronuce(SearchText, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
+            var inputPron = (await TextServices.GetHowToPronuce(SearchText, default)).ToLower();
+            var inputPronInLocate = ((await TextServices.GetHowToPronuce(SearchText, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
             // 过滤素材
             var searchLower = SearchText.ToLower();
             foreach (var asset in LocalAssets)
             {
-                var assetPron = (await TextHelper.GetHowToPronuce(asset.Name, default)).ToLower();
-                var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
+                var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
+                var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
                 if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
                     localFiltered.Add(asset);
@@ -888,8 +889,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
             foreach (var asset in SharedAssets)
             {
-                var assetPron = (await TextHelper.GetHowToPronuce(asset.Name, default)).ToLower();
-                var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
+                var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
+                var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
                 if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
                     sharedFiltered.Add(asset);
@@ -897,8 +898,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
             foreach (var asset in ReuseableAssets)
             {
-                var assetPron = (await TextHelper.GetHowToPronuce(asset.Name, default)).ToLower();
-                var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
+                var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
+                var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
                 if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
                     reuseableFiltered.Add(asset);
@@ -1757,10 +1758,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 BindedLeftClip = a,
                 BindedRightClip = b,
-                Parameters = new Dictionary<string, object>
-                {
-                    ["SourcePath"] = localVideoPath,
-                }
+                SourcePath = localVideoPath
             }, selectedClip, left, right, (c) => c.ExtraData["IsAI"] = true);
 
 
@@ -1954,7 +1952,7 @@ public class TextStyleItemViewModel
     public required string Id { get; set; } = string.Empty;
     public required string Name { get; set; } = string.Empty;
     public required string SampleText { get; set; } = string.Empty;
-    public required TextClip.TextClipEntry ActualTemplate { get; set; } = default!;
+    public required TextClipEntry ActualTemplate { get; set; } = default!;
     public ImageSource PreviewSource
     {
         get
@@ -1964,7 +1962,7 @@ public class TextStyleItemViewModel
             {
                 Id = Id,
                 Name = Id,
-                TextEntries = new List<TextClip.TextClipEntry>
+                TextEntries = new List<TextClipEntry>
                 {
                     ActualTemplate with { text = sample }
                 }

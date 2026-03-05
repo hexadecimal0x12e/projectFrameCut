@@ -3491,6 +3491,22 @@
         "ArgsComment": [],
         "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_YourAsset",
+        "Value": "\u4F60\u7684\u7D20\u6750",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_System",
+        "Value": "\u7CFB\u7EDF\u5B57\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
       }
     ],
     "en-US": [
@@ -7297,6 +7313,24 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_YourAsset",
+        "Value": "Unset localization item:TextServices_FontCatagory_YourAsset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_System",
+        "Value": "Unset localization item:TextServices_FontCatagory_System()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -11101,6 +11135,24 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_YourAsset",
+        "Value": "Unset localization item:TextServices_FontCatagory_YourAsset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_System",
+        "Value": "Unset localization item:TextServices_FontCatagory_System()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -14913,6 +14965,24 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_YourAsset",
+        "Value": "Unset localization item:TextServices_FontCatagory_YourAsset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_System",
+        "Value": "Unset localization item:TextServices_FontCatagory_System()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -18724,6 +18794,24 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_YourAsset",
+        "Value": "Unset localization item:TextServices_FontCatagory_YourAsset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_System",
+        "Value": "Unset localization item:TextServices_FontCatagory_System()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -22529,6 +22617,24 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_YourAsset",
+        "Value": "Unset localization item:TextServices_FontCatagory_YourAsset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_System",
+        "Value": "Unset localization item:TextServices_FontCatagory_System()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -26340,6 +26446,24 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_YourAsset",
+        "Value": "Unset localization item:TextServices_FontCatagory_YourAsset()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_System",
+        "Value": "Unset localization item:TextServices_FontCatagory_System()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]

@@ -119,7 +119,7 @@ public partial class DraftPage : ContentPage
     private bool SnapEnabled = true;
 
 
-    PanDeNoise Xdenoiser = new(), Ydenoiser = new();
+    DenoiseHelper Xdenoiser = new(), Ydenoiser = new();
 
     private double _playbackStartFrame = 0;
     private string? _nextPlaybackPath = null, _lastPlaybackPath = null;
@@ -4026,19 +4026,18 @@ public partial class DraftPage : ContentPage
 
     private async void ShowMoreOptionsMenu(object? sender, EventArgs e)
     {
-        Dictionary<string, ICommand?> actionsPair = new Dictionary<string, ICommand?>
+        Dictionary<string, (ICommand? command, object? argument)> actionsPair = MenuBarItems
+            .SelectMany(menuBarItem =>
+                menuBarItem.OfType<MenuFlyoutItem>()
+                    .Where(item => item.Command != null)
+                    .Select(item => (
+                        Key: $"{menuBarItem.Text} \u203a {item.Text}",
+                        Value: ((ICommand?)item.Command, (object?)item.CommandParameter)
+                    ))
+            )
+            .ToDictionary(x => x.Key, x => x.Value);
+        Dictionary<string, ICommand?> debugActionsPair = new Dictionary<string, ICommand?>
         {
-            {"DraftPage_GoRender",GoRenderCommand  },
-            {"DraftPage_MenuBar_Project_Save", SaveCommand },
-            //{"DraftPage_MenuBar_Project_Share",null },
-            //{"DraftPage_MenuBar_Project_Cooperate",null },
-            {"DraftPage_MenuBar_Edit_Spilt", SpiltCommand },
-            {"DraftPage_MenuBar_Edit_DeleteClip", DeleteCommand },
-            {"DraftPage_MenuBar_Edit_Undo", UndoCommand },
-            {"DraftPage_MenuBar_Edit_Redo", RedoCommand },
-            {"_Settings", SettingsCommand },
-            {"DraftPage_MenuBar_Jobs_ManageJobs", ManageJobsCommand },
-#if DEBUG
             {
                 "Debug_CreatePopup" ,new Command(async () =>
                 {
@@ -4089,16 +4088,19 @@ public partial class DraftPage : ContentPage
                     GC.Collect();
                 })
             }
-#endif
                 };
+        //List<string> verbs = [];
+        //if (SettingsManager.IsBoolSettingTrue("DeveloperMode")) verbs.AddRange(debugActionsPair.Keys);
 
-        var localizedActionPair = actionsPair.ToDictionary(kv => Localized.DynamicLookup(kv.Key, kv.Key), kv => kv.Value);
+        var option = await DisplayActionSheetAsync(Localized._Info, Localized._Cancel, null, actionsPair.Keys.ToArray());
 
-        var option = await DisplayActionSheetAsync(Localized._Info, Localized._Cancel, null, localizedActionPair.Keys.ToArray());
-
-        if (localizedActionPair.TryGetValue(option, out var cmd))
+        if (actionsPair.TryGetValue(option, out var cmd))
         {
-            cmd?.Execute(null);
+            cmd.command?.Execute(cmd.argument);
+        }
+        if(debugActionsPair.TryGetValue(option,out var dbgCmd))
+        {
+            dbgCmd.Execute(null!);
         }
     }
 

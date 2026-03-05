@@ -29,6 +29,11 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using Color = Microsoft.Maui.Graphics.Color;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.Render.ClipsAndTracks;
+using System.Text.Encodings.Web;
+using System.Text.Json.Serialization.Metadata;
+
+
 
 
 #if ANDROID
@@ -53,8 +58,25 @@ public partial class TestPage : ContentPage
 #if WINDOWS
         MultiWindowItem.ContextMenuProviderGetter = new(() => new WindowsContextMenuBuilder());
 #endif
+        TextPicker.PreviewRenderer = TextServices.RenderFontPreviewAsync;
 
+        TextClip.GetFont(true);
+        _ = LoadFontPickerAsync();
+
+        TextPicker.SelectedFontChanged += async (s, e) =>
+        {
+            await DisplayAlertAsync(Title, JsonSerializer.Serialize(e.InnerItem, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, }), "ok");
+
+        };
     }
+
+    private async Task LoadFontPickerAsync()
+    {
+        var items = TextHelper.BuildSystemFontItems(preferredLocale: null);
+        TextPicker.FontsSource = items;
+        TextPicker.Title = $"Fonts ({items.Count})";
+    }
+
 
     private void TestPage_Loaded(object? sender, EventArgs e)
     {
@@ -78,7 +100,7 @@ public partial class TestPage : ContentPage
 
     private ConcurrentStack<double> DraggingX = new(), DenoisedX = new();
     private double _origX = 0;
-    private PanDeNoise denoise = new();
+    private DenoiseHelper denoise = new();
 
     private async void G_PanUpdated(object? sender, PanUpdatedEventArgs e)
     {
@@ -628,123 +650,54 @@ public partial class TestPage : ContentPage
 
     #endregion
 
-    #region PropertyPanelBuilder test
-    PropertyPanelBuilder ppb = new();
-    private void AddPPBButton_Clicked(object sender, EventArgs e)
+    #region render
+    private void TestPlaceButton_Clicked(object sender, EventArgs e)
     {
-        ppb = new PropertyPanelBuilder()
+        Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
+        PlaceEffect_ImageSharp p = new()
         {
-            DefaultPadding = new Thickness(PPBPaddingSlider.Value),
-            WidthOfContent = SettingsManager.GetSettingAs<int>("ui_defaultWidthOfContent", 1) // PPBRatioSlider.Value
-        }
-        .AddText(new TitleAndDescriptionLineLabel("ppb Test", "a example of PropertyPanelBuilder", 32))
-        .AddText("This is a test", fontSize: 16, fontAttributes: FontAttributes.Bold)
-        .AddEntry("testEntry", "Test Entry:", "text", "Enter something...", EntrySeter: (entry) =>
-        {
-            entry.WidthRequest = 200;
-        })
-        .AddSlider("testSlider", "Test Slider:", 0, 100, 50)
-        .AddSeparator(null)
-        .AddCheckbox("testCheckbox", "Test Checkbox:", false)
-        .AddSwitch("testSwitch", "Test Switch:", true)
-        .AddSeparator(null)
-        .AddButton("testButton", "Click me!")
-        .AddCustomChild("pick a date", (c) =>
-        {
-            var picker = new DatePicker
-            {
-                WidthRequest = 200,
-                Date = DateTime.Now,
-            };
-            picker.DateSelected += (s, e) => c(e.NewDate.ToString() ?? "unknown");
-            return picker;
-        }, "testDatePicker", DateTime.Now.ToString("G"))
-        .AddSeparator()
-        .AddIconTitleDescriptionCard("icon test", "This is an icon title description card.", "This is a longer description for the icon title description card to demonstrate how it looks like in the panel.", "icon_add", 48, 48)
-        .AddCustomChild(new Rectangle
-        {
-            WidthRequest = 100,
-            HeightRequest = 500,
-            Fill = Colors.Green
-        })
-        .ListenToChanges(async (s, e) =>
-        {
-            await DisplayAlert("Property Changed", $"Property '{e.Id}' changed from '{e.OriginValue}' to '{e.Value}'", "OK");
-        });
-        PpbTestGrid.Content = ppb.Build();
-
-
-    }
-
-    private void PPBPaddingSlider_ValueChanged(object sender, ValueChangedEventArgs e)
-    {
-        ppb.DefaultPadding = e.NewValue;
-        PpbTestGrid.Content = ppb.Build();
-    }
-
-    private async void ExportPPBDataButton_Clicked(object sender, EventArgs e)
-    {
-        await DisplayAlert("Info", JsonSerializer.Serialize(ppb.Properties), "ok");
-    }
-    #endregion
-
-    #region runtime
-    private async void TestCrashButton_Clicked(object sender, EventArgs e)
-    {
-        var type = await DisplayActionSheetAsync("Choose a favour you'd like", "Cancel", "Environment.FailFast", "Native(null pointer)", "Managed(NullReferenceException)");
-        switch (type)
-        {
-            case "Native(null pointer)":
-#if ANDROID
-                throw new Java.Lang.NullPointerException("test crash from native code");
-#elif iDevices
-
-#elif WINDOWS
-                IntPtr ptr = IntPtr.Zero;
-                Marshal.WriteInt32(ptr, 42);
-#endif
-                break;
-            case "Managed(NullReferenceException)":
-                throw new NullReferenceException("test crash");
-            case "Environment.FailFast":
-                Environment.FailFast("test crash");
-                break;
-        }
-
-
-    }
-
-    private async void WinUIDiagTestBtn_Clicked(object sender, EventArgs e)
-    {
-#if WINDOWS
-        Microsoft.UI.Xaml.Controls.ContentDialog diag = new Microsoft.UI.Xaml.Controls.ContentDialog
-        {
-            Title = "WinUI ContentDialog Test",
-            Content = "This is a test of WinUI ContentDialog in .NET MAUI.",
-            CloseButtonText = "Close",
-            PrimaryButtonText = "Primary",
-            SecondaryButtonText = "Secondary"
+            StartX = 50,
+            StartY = 120
         };
-
-        var services = Application.Current?.Handler?.MauiContext?.Services;
-        var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
-        if (dialogueHelper != null)
+        var result = p.Render(src, null, 2560, 1440);
+        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
         {
-            var r = await dialogueHelper.ShowContentDialogue(diag);
-            await DisplayAlert(Title, $"You selected {r}", "ok");
-        }
-#endif
+            MemoryStream ms = new();
+            result.SaveToSixLaborsImage().SaveAsPng(ms);
+            ms.Position = 0;
+            return ms;
+        });
+
+
+
     }
-    #endregion
 
-
-    #region misc
-
-    private void MetalRenderStartButton_Clicked(object sender, EventArgs e)
+    private async void TestPlaceAndResizeButton_Clicked(object sender, EventArgs e)
     {
-
+        Picture8bpp src = new Picture8bpp(await FileSystemService.PickFileAsync());
+        PlaceEffect_ImageSharp p = new()
+        {
+            StartX = 250,
+            StartY = 180
+        };
+        ResizeEffect_ImageSharp r = new()
+        {
+            Height = 300,
+            Width = 1000,
+            PreserveAspectRatio = false
+        };
+        var resized = r.Render(src, null, 2560, 1440);
+        var placed = p.Render(resized, null, 2560, 1440);
+        Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
+        var final = OverlayMixture.Mix(canvas, placed, PluginManager.CreateComputer(OverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+        {
+            MemoryStream ms = new();
+            final.SaveToSixLaborsImage().SaveAsPng(ms);
+            ms.Position = 0;
+            return ms;
+        });
     }
-
 
     private async void TestFFmpegButton_Clicked(object sender, EventArgs e)
     {
@@ -864,37 +817,115 @@ public partial class TestPage : ContentPage
             });
         });
     }
+    #endregion
 
-    private async void TestOrderButton_Clicked(object sender, EventArgs e)
+    #region PropertyPanelBuilder test
+    PropertyPanelBuilder ppb = new();
+    private void AddPPBButton_Clicked(object sender, EventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(InputEditor.Text)) return;
-        var lines = InputEditor.Text.Split(["\r", "\n", "\r\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var loc = string.IsNullOrWhiteSpace(LocateInputer.Text) ? Localized._LocaleId_ : LocateInputer.Text.Trim();
-        var ordered = lines.OrderBy(async a => await TextHelper.GetPronounceForOrdering(a, loc)).GroupBy(TextHelper.DetectTextLanguage).OrderByDescending(g => g.Count()).SelectMany(c => c).ToList();
-        InputEditor.Text = string.Join(Environment.NewLine, ordered);
-        TestOrderButton.Text = "Order done";
+        ppb = new PropertyPanelBuilder()
+        {
+            DefaultPadding = new Thickness(PPBPaddingSlider.Value),
+            WidthOfContent = SettingsManager.GetSettingAs<int>("ui_defaultWidthOfContent", 1) // PPBRatioSlider.Value
+        }
+        .AddText(new TitleAndDescriptionLineLabel("ppb Test", "a example of PropertyPanelBuilder", 32))
+        .AddText("This is a test", fontSize: 16, fontAttributes: FontAttributes.Bold)
+        .AddEntry("testEntry", "Test Entry:", "text", "Enter something...", EntrySeter: (entry) =>
+        {
+            entry.WidthRequest = 200;
+        })
+        .AddSlider("testSlider", "Test Slider:", 0, 100, 50)
+        .AddSeparator(null)
+        .AddCheckbox("testCheckbox", "Test Checkbox:", false)
+        .AddSwitch("testSwitch", "Test Switch:", true)
+        .AddSeparator(null)
+        .AddButton("testButton", "Click me!")
+        .AddCustomChild("pick a date", (c) =>
+        {
+            var picker = new DatePicker
+            {
+                WidthRequest = 200,
+                Date = DateTime.Now,
+            };
+            picker.DateSelected += (s, e) => c(e.NewDate.ToString() ?? "unknown");
+            return picker;
+        }, "testDatePicker", DateTime.Now.ToString("G"))
+        .AddSeparator()
+        .AddIconTitleDescriptionCard("icon test", "This is an icon title description card.", "This is a longer description for the icon title description card to demonstrate how it looks like in the panel.", "icon_add", 48, 48)
+        .AddCustomChild(new Rectangle
+        {
+            WidthRequest = 100,
+            HeightRequest = 500,
+            Fill = Colors.Green
+        })
+        .ListenToChanges(async (s, e) =>
+        {
+            await DisplayAlert("Property Changed", $"Property '{e.Id}' changed from '{e.OriginValue}' to '{e.Value}'", "OK");
+        });
+        PpbTestGrid.Content = ppb.Build();
+
 
     }
 
-    private async void LoginTestButton_Clicked(object sender, EventArgs e)
+    private void PPBPaddingSlider_ValueChanged(object sender, ValueChangedEventArgs e)
     {
-        AuthService.Logout();
-
-        if (AuthService.IsLoggedIn)
-        {
-            // 已登录，显示用户信息或登出
-            var user = await AuthService.GetCurrentUserAsync();
-            await DisplayAlertAsync("已登录", $"当前用户: {user.UserName}", "确定");
-        }
-        else
-        {
-            // 未登录，打开登录页面
-            await Navigation.PushAsync(new LoginPage());
-        }
+        ppb.DefaultPadding = e.NewValue;
+        PpbTestGrid.Content = ppb.Build();
     }
 
-    private int windowCount = 0;
+    private async void ExportPPBDataButton_Clicked(object sender, EventArgs e)
+    {
+        await DisplayAlert("Info", JsonSerializer.Serialize(ppb.Properties), "ok");
+    }
+    #endregion
 
+    #region runtime
+    private async void TestCrashButton_Clicked(object sender, EventArgs e)
+    {
+        var type = await DisplayActionSheetAsync("Choose a favour you'd like", "Cancel", "Environment.FailFast", "Native(null pointer)", "Managed(NullReferenceException)");
+        switch (type)
+        {
+            case "Native(null pointer)":
+#if ANDROID
+                throw new Java.Lang.NullPointerException("test crash from native code");
+#elif iDevices
+
+#elif WINDOWS
+                IntPtr ptr = IntPtr.Zero;
+                Marshal.WriteInt32(ptr, 42);
+#endif
+                break;
+            case "Managed(NullReferenceException)":
+                throw new NullReferenceException("test crash");
+            case "Environment.FailFast":
+                Environment.FailFast("test crash");
+                break;
+        }
+
+
+    }
+
+    private async void WinUIDiagTestBtn_Clicked(object sender, EventArgs e)
+    {
+#if WINDOWS
+        Microsoft.UI.Xaml.Controls.ContentDialog diag = new Microsoft.UI.Xaml.Controls.ContentDialog
+        {
+            Title = "WinUI ContentDialog Test",
+            Content = "This is a test of WinUI ContentDialog in .NET MAUI.",
+            CloseButtonText = "Close",
+            PrimaryButtonText = "Primary",
+            SecondaryButtonText = "Secondary"
+        };
+
+        var services = Application.Current?.Handler?.MauiContext?.Services;
+        var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
+        if (dialogueHelper != null)
+        {
+            var r = await dialogueHelper.ShowContentDialogue(diag);
+            await DisplayAlert(Title, $"You selected {r}", "ok");
+        }
+#endif
+    }
 
 
     private void OpenTestWindowButton_Clicked(object sender, EventArgs e)
@@ -916,12 +947,12 @@ public partial class TestPage : ContentPage
                     new Button { Text = "Front", Command = new Command(() => item.NavigateTo(makeWindowContent(level+1, item)) )},
                     new Button {Text = "Prompt", Command = new Command(async () =>
                     {
-                        var result = await item.DisplayAlertAsync("Action", TextHelper.DummyString, "yes", "no");
+                        var result = await item.DisplayAlertAsync("Action", "ok?", "yes", "no");
                         await DisplayAlertAsync(Title, result.ToString(), "ok");
                     })},
                     new Button {Text = "ActionSheet", Command = new Command(async () =>
                     {
-                        var result = await item.DisplayActionSheetAsync("Options", "no", "destruct", TextHelper.DummyStrings);
+                        var result = await item.DisplayActionSheetAsync("Options", "no", "destruct", TextServices.DummyStrings);
                         await DisplayAlertAsync(Title, result?.ToString() ?? "null input, may user cancelled.", "ok");
                     })},
                     new Button {Text = "Input", Command = new Command(async () =>
@@ -949,53 +980,65 @@ public partial class TestPage : ContentPage
         myMultiWindowView.AddWindow(myWindow);
     }
 
-    private void TestPlaceButton_Clicked(object sender, EventArgs e)
+    #endregion
+
+    #region text
+
+    private async void TestOrderButton_Clicked(object sender, EventArgs e)
     {
-        Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
-        PlaceEffect_ImageSharp p = new()
-        {
-            StartX = 50,
-            StartY = 120
-        };
-        var result = p.Render(src, null, 2560, 1440);
-        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
-        {
-            MemoryStream ms = new();
-            result.SaveToSixLaborsImage().SaveAsPng(ms);
-            ms.Position = 0;
-            return ms;
-        });
-
-
+        if (string.IsNullOrWhiteSpace(InputEditor.Text)) return;
+        var lines = InputEditor.Text.Split(["\r", "\n", "\r\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var loc = string.IsNullOrWhiteSpace(LocateInputer.Text) ? Localized._LocaleId_ : LocateInputer.Text.Trim();
+        var ordered = lines.OrderBy(async a => await TextServices.GetPronounceForOrdering(a, loc)).GroupBy(TextHelper.DetectTextLanguage).OrderByDescending(g => g.Count()).SelectMany(c => c).ToList();
+        InputEditor.Text = string.Join(Environment.NewLine, ordered);
+        TestOrderButton.Text = "Order done";
 
     }
 
-    private async void TestPlaceAndResizeButton_Clicked(object sender, EventArgs e)
+    private async void TestFontPropReaderButton_Clicked(object sender, EventArgs e)
     {
-        Picture8bpp src = new Picture8bpp(await FileSystemService.PickFileAsync());
-        PlaceEffect_ImageSharp p = new()
+        var info = TextHelper.ReadFontFileInfo(@"C:\Windows\Fonts\msyhbd.ttc");
+        await DisplayAlertAsync(Title, JsonSerializer.Serialize(info, new JsonSerializerOptions
         {
-            StartX = 250,
-            StartY = 180
-        };
-        ResizeEffect_ImageSharp r = new()
-        {
-            Height = 300,
-            Width = 1000,
-            PreserveAspectRatio = false
-        };
-        var resized = r.Render(src, null, 2560, 1440);
-        var placed = p.Render(resized, null, 2560, 1440);
-        Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        var final = OverlayMixture.Mix(canvas, placed, PluginManager.CreateComputer(OverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
-        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
-        {
-            MemoryStream ms = new();
-            final.SaveToSixLaborsImage().SaveAsPng(ms);
-            ms.Position = 0;
-            return ms;
-        });
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        }), "ok");
     }
+    #endregion
+
+    #region misc
+
+    private void MetalRenderStartButton_Clicked(object sender, EventArgs e)
+    {
+
+    }
+
+
+
+
+
+
+    private async void LoginTestButton_Clicked(object sender, EventArgs e)
+    {
+        AuthService.Logout();
+
+        if (AuthService.IsLoggedIn)
+        {
+            // 已登录，显示用户信息或登出
+            var user = await AuthService.GetCurrentUserAsync();
+            await DisplayAlertAsync("已登录", $"当前用户: {user.UserName}", "确定");
+        }
+        else
+        {
+            // 未登录，打开登录页面
+            await Navigation.PushAsync(new LoginPage());
+        }
+    }
+
+    private int windowCount = 0;
+
+
+
 
     #endregion
 

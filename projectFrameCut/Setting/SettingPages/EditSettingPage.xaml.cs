@@ -9,6 +9,8 @@ using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.ViewModels;
 using System.Globalization;
 using static SettingManager.SettingsManager;
+using projectFrameCut.Shared;
+using projectFrameCut.Services;
 
 public partial class EditSettingPage : ContentPage
 {
@@ -35,7 +37,7 @@ public partial class EditSettingPage : ContentPage
 
     };
 
-    Dictionary<string, TextClip.TextClipEntry> TextTemplates = new();
+    Dictionary<string, TextClipEntry> TextTemplates = new();
 
     static string[] resolutions = ["640x480", "1280x720", "1920x1080", "2560x1440", "3840x2160"];
 
@@ -59,7 +61,7 @@ public partial class EditSettingPage : ContentPage
                 return;
             }
 
-            var entry = new TextClip.TextClipEntry
+            var entry = new TextClipEntry
             {
                 StyleId = name,
                 r = 65535,
@@ -85,11 +87,8 @@ public partial class EditSettingPage : ContentPage
         if (!TextTemplates.TryGetValue(styleId, out var entry))
             return;
 
-        // Provide at least the current font as available font list
-        var fonts = TextClip.GetFont().Families.Select(c => c.Name);
-
         // Build editor UI
-        var editorView = ClipInfoBuilder.BuildTextEntryUI(entry with { text = entry.SampleText ?? "AaBbYyZz" }, 0, fonts.ToArray(),
+        var editorView = ClipInfoBuilder.BuildTextEntryUI(entry with { text = entry.SampleText ?? "AaBbYyZz" }, 0, TextServices.LoadedFonts.Select(C => C.Value),
             (idx, updated) =>
             {
                 // keep template key unchanged
@@ -106,7 +105,25 @@ public partial class EditSettingPage : ContentPage
                     PropertyPanelPropertyChangedEventArgs.CreateAndInvoke(rootPPB, "TextTemplates", null);
                 }
             },
-            false);
+            false,
+            (v) =>
+            {
+                Dispatcher.Dispatch(() =>
+                {
+                    Navigation.PushAsync(new ContentPage
+                    {
+                        Title = LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources.TextOption_Font,
+                        Content = v
+                    });
+                });
+            },
+            () =>
+            {
+                Dispatcher.Dispatch(() =>
+                {
+                    Navigation.PopAsync();
+                });
+            });
 
         var saveBtn = new Button { Text = Localized._Confirm };
         var closeBtn = new Button { Text = Localized._Cancel, BackgroundColor = Color.FromRgba("FF9999FF"), TextColor = Colors.Black };
@@ -115,11 +132,7 @@ public partial class EditSettingPage : ContentPage
 
         var content = new VerticalStackLayout { Spacing = 8, Padding = new Thickness(12), Children = { editorView, btnRow } };
 
-        var popupPage = new ContentPage
-        {
-            Title = styleId,
-            Content = new Border { Content = content, Padding = new Thickness(8), Stroke = Colors.Gray }
-        };
+
 
         saveBtn.Clicked += async (s, e) =>
         {
@@ -134,6 +147,11 @@ public partial class EditSettingPage : ContentPage
 
         try
         {
+            var popupPage = new ContentPage
+            {
+                Title = styleId,
+                Content = new ScrollView { Content = content }
+            };
             await Dispatcher.DispatchAsync(async () =>
             {
                 await Navigation.PushAsync(popupPage);
@@ -145,7 +163,7 @@ public partial class EditSettingPage : ContentPage
         }
     }
 
-    public static void LoadTextTemplates(ref Dictionary<string, TextClip.TextClipEntry> TextTemplates)
+    public static void LoadTextTemplates(ref Dictionary<string, TextClipEntry> TextTemplates)
     {
 
         var templatePath = Path.Combine(MauiProgram.BasicDataPath, "TextTemplates.json");
@@ -154,7 +172,7 @@ public partial class EditSettingPage : ContentPage
             try
             {
                 var json = File.ReadAllText(templatePath);
-                var t = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, TextClip.TextClipEntry>>(json) ?? new();
+                var t = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, TextClipEntry>>(json) ?? new();
                 foreach (var item in t)
                 {
                     TextTemplates.Add(item.Key, item.Value);
@@ -167,9 +185,9 @@ public partial class EditSettingPage : ContentPage
         }
         if (TextTemplates.Count == 0)
         {
-            var defaultTemplates = new List<TextClip.TextClipEntry>
+            var defaultTemplates = new List<TextClipEntry>
             {
-                new TextClip.TextClipEntry
+                new TextClipEntry
                 {
                     StyleId = "Default",
                     r = 65535,
@@ -179,7 +197,7 @@ public partial class EditSettingPage : ContentPage
                     fontFamily = "Arial",
                     fontSize = 20
                 },
-                new TextClip.TextClipEntry
+                new TextClipEntry
                 {
                     StyleId = "Title",
                     r = 65535,
@@ -189,7 +207,7 @@ public partial class EditSettingPage : ContentPage
                     fontFamily = "Arial",
                     fontSize = 64
                 },
-                new TextClip.TextClipEntry
+                new TextClipEntry
                 {
                     StyleId = "Subtitle",
                     r = 65535,
@@ -212,7 +230,7 @@ public partial class EditSettingPage : ContentPage
 
         rootPPB = new();
         rootPPB.AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_EditorPreference, SettingLocalizedResources.Edit_EditorPreference_Subtitle))
-            .AppendWhen(DeviceInfo.Idiom != DeviceIdiom.Phone,c => c.AddPicker("Edit_PreferredPopupMode",
+            .AppendWhen(DeviceInfo.Idiom != DeviceIdiom.Phone, c => c.AddPicker("Edit_PreferredPopupMode",
                 SettingLocalizedResources.Edit_PreferredPopupMode, ModeStringMapping.Keys.ToArray(),
                 ModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreferredPopupMode", "right"), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_PreferredPopupMode_Right, "right")).Key))
             .AddSwitch("Edit_UpperContentHeight_AutoSave", SettingLocalizedResources.Edit_UpperContentHeight_AutoSave, IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave"), null)
@@ -239,7 +257,7 @@ public partial class EditSettingPage : ContentPage
                         {
                             Id = s.StyleId,
                             Name = s.StyleId,
-                            TextEntries = new List<TextClip.TextClipEntry>
+                            TextEntries = new List<TextClipEntry>
                             {
                                 e.Value with { text = sample }
                             }
@@ -277,7 +295,7 @@ public partial class EditSettingPage : ContentPage
                         using var json = await (f?.OpenReadAsync() ?? new(() => Stream.Null));
                         using var sr = new StreamReader(json ?? Stream.Null);
                         var text = await sr.ReadToEndAsync();
-                        var importedTemplates = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, TextClip.TextClipEntry>>(text);
+                        var importedTemplates = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, TextClipEntry>>(text);
                         if (importedTemplates != null)
                         {
                             var exists = importedTemplates.Where(k => TextTemplates.ContainsKey(k.Key));

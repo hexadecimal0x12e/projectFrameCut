@@ -210,6 +210,11 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         public void ReInit();
 
+        /// <summary>
+        /// The ExtraData/Metadata from the <see cref="projectFrameCut.Render.RenderAPIBase.Project.ClipDraftDTO.MetaData"/>
+        /// </summary>
+        public Dictionary<string,object> ExtraData { get; set; }
+
 
     }
 

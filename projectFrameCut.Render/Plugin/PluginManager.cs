@@ -2,6 +2,7 @@
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using System;
@@ -166,7 +167,9 @@ namespace projectFrameCut.Render.Plugin
 
             if (PluginManager.LoadedPlugins.TryGetValue(type, out var plugin))
             {
-                return plugin.ClipCreator(source);
+                var clip = plugin.ClipCreator(source);
+                clip.ExtraData = source.Deserialize<ClipDraftDTO>()?.MetaData ?? new();
+                return clip;
             }
             else
             {

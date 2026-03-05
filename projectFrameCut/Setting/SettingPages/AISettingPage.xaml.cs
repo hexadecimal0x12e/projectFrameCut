@@ -51,7 +51,6 @@ namespace projectFrameCut.Setting.SettingPages
             {
                 Text = Localized._Save,
                 HorizontalOptions = LayoutOptions.Fill,
-                TextColor = Colors.White,
                 Margin = new(8, 0, 8, 8)
             };
 
@@ -64,11 +63,22 @@ namespace projectFrameCut.Setting.SettingPages
                 });
             };
 
+            Button showAllModelsButton = new Button
+            {
+                Text = SettingLocalizedResources.AISetting_ShowAllModel,
+                HorizontalOptions = LayoutOptions.Fill,
+                Margin = new(8, 0, 8, 8)
+            };
+
+            showAllModelsButton.Clicked += async (s, e) =>
+            {
+                await ShowAllModelsMenu();
+            };
+
             Button refreshButton = new Button
             {
                 Text = SettingLocalizedResources._Refresh,
                 HorizontalOptions = LayoutOptions.Fill,
-                TextColor = Colors.White,
                 Margin = new(8, 0, 8, 8),
             };
             //PPB will auto refresh when the entry unfocused
@@ -102,6 +112,7 @@ namespace projectFrameCut.Setting.SettingPages
                     v,
                     new PropertyPanelBuilder().AddSeparator().Build(),
                     saveButton,
+                    showAllModelsButton,
                     refreshButton,
                     busyIndicator
                 },
@@ -117,12 +128,9 @@ namespace projectFrameCut.Setting.SettingPages
 
         private async Task<View> BuildTextOption()
         {
-            string[] models = [];
+            // Get built-in models first
+            string[] models = showAllModelButtonClicked ? await AIHelper.GetModels(CurrentOption.BaseAddress, CurrentOption.Key) : AIHelper.GetBuiltInModels(CurrentOption.Provider, "text");
 
-            if (!string.IsNullOrWhiteSpace(CurrentOption.BaseAddress) && !string.IsNullOrWhiteSpace(CurrentOption.Key))
-            {
-                models = await AIHelper.GetModels(CurrentOption.BaseAddress, CurrentOption.Key);
-            }
             var ppb = new PropertyPanelBuilder();
             return ppb
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.AISetting_ChatModel_Title, SettingLocalizedResources.AISetting_ChatModel_SubTitle))
@@ -132,24 +140,18 @@ namespace projectFrameCut.Setting.SettingPages
                 {
                     entry.IsPassword = true;
                 })
-                .AppendWhen(models.Any(), c => c.AddPicker("AI_Model", SettingLocalizedResources.AISetting_Model, models, CurrentOption.Model), c => c.AddPicker("AI_Model", SettingLocalizedResources.AISetting_Model, new[] { SettingLocalizedResources.AISetting_Model_Unknown }, SettingLocalizedResources.AISetting_Model_Unknown, c => c.IsEnabled = false))
-                .AddButton(SettingLocalizedResources.AISetting_Test, async (s, e) => await TestTextModelConnection())
+                .AppendWhen((() => alreadyShowAllOption, c => c.AddEntry("AI_Model", SettingLocalizedResources.AISetting_Model, CurrentOption.Model, "")),
+                            (models.Any, c => c.AddPicker("AI_Model", SettingLocalizedResources.AISetting_Model, models, CurrentOption.Model)),
+                            (() => !models.Any(), c => c.AddPicker("AI_Model", SettingLocalizedResources.AISetting_Model, new[] { SettingLocalizedResources.AISetting_Model_Unknown }, SettingLocalizedResources.AISetting_Model_Unknown, c => c.IsEnabled = false))).AddButton(SettingLocalizedResources.AISetting_Test, async (s, e) => await TestTextModelConnection())
                 .ListenToChanges((_, e) => OnPropertyChanged(e, ref CurrentOption, GetDefaultTextModelBaseAddress))
                 .Build();
         }
 
         private async Task<View> BuildImageOption()
         {
-            string[] models = [];
+            // Get built-in models first
+            string[] models = showAllModelButtonClicked ? await AIHelper.GetModels(GetDefaultTextModelBaseAddress(CurrentImageOption.Provider, CurrentImageOption.BaseAddress), CurrentOption.Key) : AIHelper.GetBuiltInModels(CurrentImageOption.Provider, "image");
 
-            if (CurrentImageOption.Provider == "Qwen (WanX)")
-            {
-                models = Enum.GetNames<WanxModel>();
-            }
-            else if (!string.IsNullOrWhiteSpace(CurrentImageOption.BaseAddress) && !string.IsNullOrWhiteSpace(CurrentImageOption.Key))
-            {
-                models = await AIHelper.GetModels(GetDefaultTextModelBaseAddress(CurrentImageOption.Provider, CurrentImageOption.BaseAddress), CurrentImageOption.Key);
-            }
             var ppb = new PropertyPanelBuilder();
             return ppb
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.AISetting_ImageModel_Title, SettingLocalizedResources.AISetting_ImageModel_SubTitle))
@@ -159,27 +161,22 @@ namespace projectFrameCut.Setting.SettingPages
                 {
                     entry.IsPassword = true;
                 })
-                .AppendWhen(models.Any(), c => c.AddPicker("AI_Model", SettingLocalizedResources.AISetting_Model, models, CurrentImageOption.Model), c => c.AddPicker("AI_Model", SettingLocalizedResources.AISetting_Model, new[] { SettingLocalizedResources.AISetting_Model_Unknown }, SettingLocalizedResources.AISetting_Model_Unknown, c => c.IsEnabled = false))
+                .AppendWhen((() => alreadyShowAllOption, c => c.AddEntry("AI_Model", SettingLocalizedResources.AISetting_Model, CurrentImageOption.Model, "")), 
+                            (models.Any, c => c.AddPicker("AI_Model", SettingLocalizedResources.AISetting_Model, models, CurrentImageOption.Model)), 
+                            (() => !models.Any(), c => c.AddPicker("AI_Model", SettingLocalizedResources.AISetting_Model, new[] { SettingLocalizedResources.AISetting_Model_Unknown }, SettingLocalizedResources.AISetting_Model_Unknown, c => c.IsEnabled = false)))
                 .AddButton(SettingLocalizedResources.AISetting_Test, async (s, e) => await TestImageModelConnection())
                 .ListenToChanges((_, e) => OnPropertyChanged(e, ref CurrentImageOption, GetDefaultImageModelBaseAddress))
                 .Build();
         }
         private async Task<View> BuildVideoOption()
         {
-            string[] Text2VideoModels = CurrentImageOption.Provider switch
-            {
-                "Sora (OpenAI)" => [],
-                "Doubao" => [],
-                "Qwen" => ["wan2.6-t2v", "wan2.6-t2v-preview"],
-                _ => []
-            };
-            string[] Image2VideoModels = CurrentImageOption.Provider switch
-            {
-                "Sora (OpenAI)" => [],
-                "Doubao" => [],
-                "Qwen" => ["wan2.2-kf2v-flash"],
-                _ => []
-            };
+            // Get built-in models from configuration
+            var videoModels = showAllModelButtonClicked ? await AIHelper.GetModels(GetDefaultTextModelBaseAddress(CurrentVideoOption.Provider, CurrentVideoOption.BaseAddress), CurrentOption.Key) : AIHelper.GetBuiltInModels(CurrentVideoOption.Provider, "video");
+
+            // Split models into Text2Video and Image2Video based on model naming patterns
+            string[] Text2VideoModels = videoModels.Where(m => m.Contains("t2v", StringComparison.OrdinalIgnoreCase)).ToArray();
+            string[] Image2VideoModels = videoModels.Where(m => m.Contains("i2v") || m.Contains("kf2v", StringComparison.OrdinalIgnoreCase)).ToArray();
+
             var ppb = new PropertyPanelBuilder();
             return ppb
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.AISetting_VideoModel_Title, SettingLocalizedResources.AISetting_VideoModel_SubTitle))
@@ -189,9 +186,10 @@ namespace projectFrameCut.Setting.SettingPages
                 {
                     entry.IsPassword = true;
                 })
-                .AppendWhen(CurrentVideoOption.Provider != "Custom", c => c.AddPicker("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model_TextToVideo, Text2VideoModels, CurrentVideoOption.Text2VideoModel), c => c.AddEntry("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model, CurrentVideoOption.Text2VideoModel, ""))
 
-                .AppendWhen(CurrentVideoOption.Provider != "Custom", c => c.AddPicker("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model_ImageToVideo, Image2VideoModels, CurrentVideoOption.Image2VideoModel), c => c.AddEntry("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model, CurrentVideoOption.Image2VideoModel, ""))
+                .AppendWhen(!alreadyShowAllOption && CurrentVideoOption.Provider != "Custom" && Text2VideoModels.Any(), c => c.AddPicker("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model_TextToVideo, Text2VideoModels, CurrentVideoOption.Text2VideoModel), c => c.AddEntry("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model, CurrentVideoOption.Text2VideoModel, ""))
+
+                .AppendWhen(!alreadyShowAllOption && CurrentVideoOption.Provider != "Custom" && Image2VideoModels.Any(), c => c.AddPicker("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model_ImageToVideo, Image2VideoModels, CurrentVideoOption.Image2VideoModel), c => c.AddEntry("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model, CurrentVideoOption.Image2VideoModel, ""))
 
                 .AddButton(SettingLocalizedResources.AISetting_Test, async (s, e) => await TestVideoModelConnection())
                 .ListenToChanges((_, e) =>
@@ -417,7 +415,7 @@ namespace projectFrameCut.Setting.SettingPages
                         GenerateAudio = true,
 
                     },
-                    o); 
+                    o);
                 if (rsp.Success && rsp.VideoUrl is not null)
                 {
                     if (await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.AISetting_Test_Done(rsp.VideoUrl), SettingLocalizedResources.AISetting_Test_ViewResult, Localized._OK))
@@ -450,5 +448,23 @@ namespace projectFrameCut.Setting.SettingPages
             AIHelper.CurrentImageOption = CurrentImageOption;
             AIHelper.CurrentVideoOption = CurrentVideoOption;
         }
+
+        bool showAllModelButtonClicked = false;
+        bool alreadyShowAllOption = false;
+
+        private async Task ShowAllModelsMenu()
+        {
+            if (showAllModelButtonClicked)
+            {
+                alreadyShowAllOption = true;
+                BuildPPB();
+                return;
+            }
+            showAllModelButtonClicked = true;
+            BuildPPB();
+
+
+        }
+
     }
 }

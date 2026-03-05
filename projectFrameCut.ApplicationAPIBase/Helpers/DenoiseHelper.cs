@@ -9,7 +9,7 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
     /// <summary>
     /// Do denoise on a pan event.
     /// </summary>
-    public class PanDeNoise
+    public class DenoiseHelper
     {
         // Simple exponential moving average to smooth pan input without introducing a bias offset.
         // Alpha in range (0,1]: smaller alpha -> stronger smoothing (more lag), larger alpha -> more responsive.
@@ -18,7 +18,7 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         private double _smoothed = 0.0;
         private bool _hasValue = false;
 
-        public PanDeNoise() { }
+        public DenoiseHelper() { }
 
         public void Reset()
         {

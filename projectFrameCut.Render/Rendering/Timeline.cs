@@ -70,9 +70,17 @@ namespace projectFrameCut.Render.Rendering
                     {
                         frame = clip.GetFrame(targetFrame, targetWidth, targetHeight, true);
                     }
-                    
+                    bool isAI = false;
+                    if (clip.ExtraData.TryGetValue("IsAI", out var aiMark))
+                    {
+                        if (aiMark is bool) isAI = (bool)aiMark;
+                        else if (aiMark is string s && bool.TryParse(s, out var parsed)) isAI = parsed;
+                        else if (aiMark is JsonElement je && je.ValueKind == JsonValueKind.True) isAI = true;
+                    }
+
                     if (frame is not null)
                     {
+                        if (isAI) frame = EffectProcessing.ProcessAIWatermark(frame, null);
                         result.Add(new OneFrame(targetFrame, clip, frame));
                     }
                 }

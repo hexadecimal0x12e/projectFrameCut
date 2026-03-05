@@ -764,26 +764,31 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         }
 
         /// <summary>
-        /// Appends child items conditionally.
+        /// add the first item which condition is true, and skip the rest. If all conditions are false, do nothing.
         /// </summary>
         public PropertyPanelBuilder AppendWhen(params (Func<bool> condition, Action<PropertyPanelBuilder> onTrue)[] conditions)
         {
             foreach (var (condition, onTrue) in conditions)
             {
-                if (condition()) onTrue(this);
+                if (condition())
+                {
+                    onTrue(this);
+                    return this;
+                }
             }
             return this;
         }
 
+
         /// <summary>
-        /// Appends child items conditionally.
+        /// Appends all conditionally. For each condition, if it's true, execute the corresponding onTrue action; otherwise, execute the onFalse action.
         /// </summary>
-        public PropertyPanelBuilder AppendWhen(params (Func<bool> condition, Action<PropertyPanelBuilder> onTrue, Action<PropertyPanelBuilder> onFalse)[] conditions)
+        public PropertyPanelBuilder AppendWhen(params (Func<bool> condition, Action<PropertyPanelBuilder>? onTrue, Action<PropertyPanelBuilder>? onFalse)[] conditions)
         {
             foreach (var (condition, onTrue, onFalse) in conditions)
             {
-                if (condition()) onTrue(this);
-                else onFalse(this);
+                if (condition()) onTrue?.Invoke(this);
+                else onFalse?.Invoke(this);
             }
             return this;
         }

@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <!-- Main app theme for Android. Ensures no native ActionBar and normal status bar handling -->
-  <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+  <!-- Theme.Material3 is required since newer Material Components (shipped with net10.0-android36)
+       now enforce M3 TextAppearance attributes in NavigationBarView / BottomNavigationView. -->
+  <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
     <!-- remove native title bar so MAUI controls layout correctly -->
     <item name="android:windowNoTitle">true</item>
     <item name="windowNoTitle">true</item>

@@ -43,6 +43,7 @@ using Java.Lang;
 using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
+using System.Text.RegularExpressions;
 #endif
 
 
@@ -98,7 +99,7 @@ namespace projectFrameCut
                     if (Path.Exists(userAccessblePath))
                     {
                         DataPath = userAccessblePath;
-                        BasicDataPath = Path.Combine(userAccessblePath, "AppData"); 
+                        BasicDataPath = Path.Combine(userAccessblePath, "AppData");
                         loggingDir = Path.Combine(userAccessblePath, "Logs");
                     }
                 }
@@ -154,6 +155,9 @@ namespace projectFrameCut
                 $"                  cmdline: {Environment.CommandLine}");
             Log("Copyright (c) hexadecimal0x12e 2025-2026, and thanks to other open-source code's authors.");
             Log($"BasicDataPath:{BasicDataPath}, DataPath:{DataPath}");
+
+
+
             try
             {
                 if (File.Exists(Path.Combine(BasicDataPath, "settings.json")))
@@ -207,31 +211,6 @@ namespace projectFrameCut
                     SettingsManager.ToggleSaveSignal();
                 }
 
-                try
-                {
-                    if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json")))
-                    {
-                        string json = File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json"));
-                        try
-                        {
-                            var dict = JsonSerializer.Deserialize<Dictionary<string, EffectImplementType>>(json);
-                            if (dict != null)
-                            {
-                                EffectHelper.DefaultImplementsType = dict;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Log(ex, "read effectImplement", CreateMauiApp);
-                            EffectHelper.DefaultImplementsType = new();
-                        }
-                    }
-                    else
-                    {
-                        EffectHelper.DefaultImplementsType = new();
-                    }
-                }
-                catch { }
             }
             catch (Exception ex)
             {
@@ -254,15 +233,70 @@ namespace projectFrameCut
 
 
             }
+            var locate = SettingsManager.GetSetting("locate", "default");
+            try
+            {
+                if (locate == "default")
+                {
+                    if (Thread.CurrentThread.CurrentCulture.Name.StartsWith("en"))
+                    {
+                        locate = "en-US";
+                    }
+                    else
+                    {
+                        locate = Thread.CurrentThread.CurrentCulture.Name;
+                    }
+                }
+
+                Localized = SimpleLocalizer.Init(locate);
+                SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+                SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+                projectFrameCut.ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(Localized._LocaleId_, out var apiloc) ? apiloc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+                PluginManager.CurrentLocale = Localized._LocaleId_;
+                PluginManager.ExtenedLocalizationGetter = new((k) =>
+                {
+                    var r = Localized.DynamicLookup(k, "!!!NULL!!!");
+                    return r == "!!!NULL!!!" ? null : r;
+                });
+
+
+                Log($"Culture:{Thread.CurrentThread.CurrentCulture}, locate:{Localized._LocaleId_}, {Localized.WelcomeMessage}");
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "init localization", CreateMauiApp);
+                SimpleLocalizer.IsFallbackMatched = true;
+                Localized = ISimpleLocalizerBase.GetMapping().First().Value;
+                SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+                LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+                PluginManager.CurrentLocale = "en-US";
+                PluginManager.ExtenedLocalizationGetter = new((k) => ISimpleLocalizerBase.GetMapping().First().Value.DynamicLookup(k));
+            }
+
+            var backgroundInitThread = new Thread(BackgroundInit)
+            {
+                Name = "BackgroundInit",
+                IsBackground = true,
+                Priority = ThreadPriority.BelowNormal // 降低优先级，避免抢占主线程CPU资源
+            };
+
+            // 1. 让它用Task延迟启动，至少让当前主线程把 app.Build() 跑完，甚至窗口实例化完毕
+            Task.Run(async () =>
+            {
+                await Task.Delay(1000); 
+                backgroundInitThread.Start();
+            });
 #if WINDOWS
             try
             {
                 if (SettingsManager.IsBoolSettingTrue("DedicatedLogWindow") && !Program.LogWindowShowing)
                 {
-                    Thread logThread = new Thread(Helper.HelperProgram.LogMain);
-                    logThread.Name = "LogWindow thread";
-                    logThread.Priority = ThreadPriority.Highest;
-                    logThread.IsBackground = false;
+                    Thread logThread = new Thread(Helper.HelperProgram.LogMain)
+                    {
+                        Name = "LogWindow thread",
+                        Priority = ThreadPriority.Highest,
+                        IsBackground = false
+                    };
                     logThread.Start();
                     Program.LogWindowShowing = true;
                     Log($"Logger window started.");
@@ -295,57 +329,12 @@ namespace projectFrameCut
                     Directory.CreateDirectory(Path.Combine(DataPath, item));
                 }
 
-                try
-                {
-
-                    if (!File.Exists(Path.Combine(DataPath, "My Assets", "@WARNING.txt")))
-                    {
-                        File.WriteAllText(Path.Combine(DataPath, "My Assets", "@WARNING.txt"),
-                            """
-                        WARNING: Do not modify or delete any files in this folder manually, or your assets may be corrupted!
-                        """);
-                    }
-                    if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "database.json")))
-                    {
-                        AssetDatabase.Initialize("{}");
-                    }
-                    else
-                    {
-                        AssetDatabase.Initialize(File.ReadAllText(Path.Combine(DataPath, "My Assets", ".database", "database.json")));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, "Init Asset library", CreateMauiApp);
-
-                }
-
-                try
-                {
-
-                    if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_text.json")))
-                    {
-                        AIHelper.CurrentOption = JsonSerializer.Deserialize<AIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_text.json"))) ?? new AIOption { Provider = "OpenAI" };
-                    }
-                    if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_image.json")))
-                    {
-                        AIHelper.CurrentImageOption = JsonSerializer.Deserialize<AIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_image.json"))) ?? new AIOption { Provider = "OpenAI" };
-                    }
-                    if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json")))
-                    {
-                        AIHelper.CurrentVideoOption = JsonSerializer.Deserialize<VideoGenAIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json"))) ?? new VideoGenAIOption { Provider = "OpenAI" };
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, "Init AI Config", CreateMauiApp);
-                }
             }
             catch (Exception ex)
             {
                 Log(ex, "setup user data dir", CreateMauiApp);
 #if ANDROID
-                Android.Util.Log.Wtf("projectFrameCut", $"Failed to init the settings because of a {ex.GetType().Name} exception:{ex.Message}");
+                Android.Util.Log.Wtf("projectFrameCut", $"Failed to init the userdata because of a {ex.GetType().Name} exception:{ex.Message}");
 #elif WINDOWS
                 _ = WinUI.App.MessageBox(new nint(0), $"CRITICAL error: projectFrameCut cannot init the UserData directory because of a {ex.GetType().Name} exception:{ex.Message}\r\nYou may found your options disappeared.\r\nTry reset the data directory.", "projectFrameCut", 0U);
 #endif
@@ -364,8 +353,12 @@ namespace projectFrameCut
                        .UseMauiCommunityToolkitMediaElement(isAndroidForegroundServiceEnabled: false, static options =>
                        {
                            options.SetDefaultAndroidViewType(AndroidViewType.TextureView);
-                       });
+                       })
 #endif
+                       .ConfigureEssentials(essentials =>
+                       {
+                           essentials.UseVersionTracking();
+                       });
 #pragma warning restore CA1416
                 LogLevel logLevel = LogLevel.Information;
                 if (Debugger.IsAttached || SettingsManager.IsBoolSettingTrue("LogDiagnostics"))
@@ -458,7 +451,7 @@ namespace projectFrameCut
                                 if (w is not null)
                                 {
                                     w?.Page?.Navigation?.PopToRootAsync();
-                                    if(w?.Page is HomePage h)
+                                    if (w?.Page is HomePage h)
                                     {
                                         await h.LaunchFromFile();
                                     }
@@ -473,7 +466,6 @@ namespace projectFrameCut
 
                 try
                 {
-                    var locate = SettingsManager.GetSetting("locate", "default");
 #if !ANDROID
                     CultureInfo culture = CultureInfo.CurrentCulture;
 #else
@@ -481,17 +473,7 @@ namespace projectFrameCut
 #endif
 
                     Log($"OS default current culture: {culture.Name}, locate defined in settings:{locate} ");
-                    if (locate == "default")
-                    {
-                        if (culture.Name.StartsWith("en"))
-                        {
-                            locate = "en-US";
-                        }
-                        else
-                        {
-                            locate = culture.Name;
-                        }
-                    }
+
                     try
                     {
                         var cul = CultureInfo.GetCultures(CultureTypes.NeutralCultures);
@@ -536,65 +518,32 @@ namespace projectFrameCut
                     {
                         Log(ex, "init culture");
                     }
-
-                    Localized = SimpleLocalizer.Init(locate);
-                    SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
-                    SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
-                    PluginManager.CurrentLocale = Localized._LocaleId_;
-                    PluginManager.ExtenedLocalizationGetter = new((k) =>
-                    {
-                        var r = Localized.DynamicLookup(k, "!!!NULL!!!");
-                        return r == "!!!NULL!!!" ? null : r;
-                    });
-
-                    try
-                    {
-                        if (!SettingsManager.IsSettingExists("UseSystemFont")) ConfigFontFromCulture(builder, culture);
-                    }
-                    catch
-                    {
-                        builder.ConfigureFonts(fonts =>
-                        {
-                            fonts.AddFont("HarmonyOS_Sans_Regular.ttf", "Font_Regular");
-                            fonts.AddFont("HarmonyOS_Sans_Bold.ttf", "Font_Semibold");
-                        });
-                    }
-
                     if (SettingsManager.IsSettingExists("OverrideCulture") && SettingsManager.GetSetting("OverrideCulture", "default") != "default") //resolve IME not work when locate isn't them
                     {
                         culture = CultureInfo.CreateSpecificCulture(SettingsManager.GetSetting("OverrideCulture"));
-                    }
-                    if (locate != "default")
-                    {
-                        Thread.CurrentThread.CurrentCulture = culture;
-                        Thread.CurrentThread.CurrentUICulture = culture;
-                        CultureInfo.DefaultThreadCurrentCulture = culture;
-                        CultureInfo.DefaultThreadCurrentUICulture = culture;
-                    }
 
-
-                    Log($"Culture:{Thread.CurrentThread.CurrentCulture}, locate:{Localized._LocaleId_}, {Localized.WelcomeMessage}");
+                    }
+                    Thread.CurrentThread.CurrentCulture = culture;
+                    Thread.CurrentThread.CurrentUICulture = culture;
+                    CultureInfo.DefaultThreadCurrentCulture = culture;
+                    CultureInfo.DefaultThreadCurrentUICulture = culture;
+                    if (!SettingsManager.IsBoolSettingTrue("UseSystemFont")) ConfigFontFromCulture(builder, culture);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Log(ex, "init localization", CreateMauiApp);
-                    SimpleLocalizer.IsFallbackMatched = true;
-                    Localized = ISimpleLocalizerBase.GetMapping().First().Value;
-                    SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().First().Value;
-                    LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
-                    PluginManager.CurrentLocale = "en-US";
-                    PluginManager.ExtenedLocalizationGetter = new((k) => ISimpleLocalizerBase.GetMapping().First().Value.DynamicLookup(k));
                     builder.ConfigureFonts(fonts =>
                     {
                         fonts.AddFont("HarmonyOS_Sans_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_Bold.ttf", "Font_Semibold");
                     });
                 }
+
+
                 try
                 {
                     if (!File.Exists(Path.Combine(DataPath, $"{Localized.MainSettingsPage_Tab_About}.txt")))
                     {
-                        File.WriteAllText(Path.Combine(DataPath, $"{Localized.MainSettingsPage_Tab_About}.txt"),OperatingSystem.IsWindows() ? Localized.AboutAppData_Windows : Localized.AboutAppData_NotWindows);
+                        File.WriteAllText(Path.Combine(DataPath, $"{Localized.MainSettingsPage_Tab_About}.txt"), OperatingSystem.IsWindows() ? Localized.AboutAppData_Windows : Localized.AboutAppData_NotWindows);
                     }
 
                     if (!File.Exists(Path.Combine(BasicDataPath, $"{Localized.MainSettingsPage_Tab_About}.txt")))
@@ -604,121 +553,6 @@ namespace projectFrameCut
                 }
                 catch { }
 
-                try
-                {
-                    MessagingServices.Init();
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, "init messaging service", CreateMauiApp);
-                }
-
-                try
-                {
-                    PluginManager.InitGlobalGetter();
-                    var internalBase = new InternalApplicationPluginBase();
-                    (internalBase as IApplicationPluginBase).OnApplicationPluginLoaded();
-                    List<IPluginBase> plugins = new() 
-                    { 
-                        internalBase,
-#if ANDROID
-                        new OpenGLPlugin(),
-#elif WINDOWS
-                        new ILGPUPlugin(),
-#endif
-                    };
-                    try
-                    {
-                        if (!AdminHelper.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine") && !File.Exists(Path.Combine(BasicDataPath, "noplugin.flag")))
-                        {
-                            plugins.AddRange(PluginService.LoadUserPlugins());
-#if WINDOWS
-                            Helper.HelperProgram.ResetPluginLoadingStat();
-#endif
-                        }
-                        else
-                        {
-                            if (AdminHelper.IsRunningAsAdministrator()) Log("Running as administrator, skip load user plugins for security reason.", "warn");
-                            else Log("User disabled the plugin engine.");
-                            PluginService.FailedLoadPlugin.Add("<No plugin ID available>", AdminHelper.IsRunningAsAdministrator() ? Localized.PluginEngine_DisabledBecauseAdmin : Localized.PluginEngine_DisabledBecauseUserDisabled);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Log(ex, "load user plugins", CreateMauiApp);
-                    }
-
-                    PluginManager.Init(plugins);
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, "Load plugins", CreateMauiApp);
-                    try
-                    {
-                        if (!PluginManager.Inited)
-                        {
-                            PluginManager.Init([new InternalPluginBase()]);
-                            PluginService.FailedLoadPlugin.Add("<No plugin ID available>", $"Plugin engine fail to init. ({ex})");
-                        }
-                    }
-                    catch (Exception ex1)
-                    {
-                        Log(ex1, "try load internal plugin", CreateMauiApp);
-#pragma warning disable CS0618 
-                        Crash(new InvalidOperationException($"FATAL: The pluginBase cannot be loaded. projectFrameCut can't work without PluginEngine. \r\n{ex} \r\n{ex1}", new AggregateException(ex, ex1)));
-#pragma warning restore CS0618
-                    }
-                }
-
-                try
-                {
-                    string? nativeLibDirOverride = null;
-                    try
-                    {
-                        if (SettingsManager.IsBoolSettingTrue("PluginProvidedFFmpeg_Enable"))
-                        {
-#if WINDOWS
-                            var pluginId = SettingsManager.GetSetting("PluginProvidedFFmpeg_PluginID", "");
-                            if (!PluginManager.LoadedPlugins.TryGetValue(pluginId, out var value))
-                            {
-                                Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} is not loaded.");
-                            }
-                            else
-                            {
-                                var ffmpegPath = Path.Combine(BasicDataPath, "Plugins", value.PluginID, "FFmpeg", "windows");
-                                if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
-                                {
-                                    Log($"Using FFmpeg libraries provided by plugin {pluginId}, path:{ffmpegPath}");
-                                    nativeLibDirOverride = ffmpegPath;
-                                }
-                                else
-                                {
-                                    Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} provided invalid path:{ffmpegPath}");
-                                }
-                            }
-#elif ANDROID
-                            nativeLibDirOverride = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
-#endif
-                        }
-                    }
-                    catch { }
-#if ANDROID
-                    FFmpegRoot = nativeLibDirOverride ?? Android.App.Application.Context.ApplicationInfo?.NativeLibraryDir;
-                    JavaSystem.LoadLibrary("c");
-#elif WINDOWS
-                    FFmpegRoot = nativeLibDirOverride ?? Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
-#endif
-                    ffmpeg.RootPath = FFmpegRoot;
-                    Log($"FFmpeg library root path: {ffmpeg.RootPath}");
-                    FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
-                    FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize();
-                    Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, "init ffmpeg", CreateMauiApp);
-                    ffmpegFailMessage = ex.Message;
-                }
 
 
                 Log("Everything ready!");
@@ -739,7 +573,217 @@ namespace projectFrameCut
             }
         }
 
+
+
+        private static void BackgroundInit()
+        {
+            Log("Start background init...");
+
+
+            try
+            {
+                PluginManager.InitGlobalGetter();
+                var internalBase = new InternalApplicationPluginBase();
+                internalBase.locateId = SettingsManager.GetSetting("locate", "default");
+                (internalBase as IApplicationPluginBase).OnApplicationPluginLoaded();
+                List<IPluginBase> plugins = new()
+                    {
+                        internalBase,
+#if ANDROID
+                        new OpenGLPlugin(),
+#elif WINDOWS
+                        new ILGPUPlugin(),
+#endif
+                    };
+                try
+                {
+                    if (!AdminServices.IsRunningAsAdministrator() && !Environment.GetCommandLineArgs().Contains("--disablePlugins") && !SettingsManager.IsBoolSettingTrue("DisablePluginEngine") && !File.Exists(Path.Combine(BasicDataPath, "noplugin.flag")))
+                    {
+                        plugins.AddRange(PluginService.LoadUserPlugins());
+#if WINDOWS
+                        Helper.HelperProgram.ResetPluginLoadingStat();
+#endif
+                    }
+                    else
+                    {
+                        if (AdminServices.IsRunningAsAdministrator()) Log("Running as administrator, skip load user plugins for security reason.", "warn");
+                        else Log("User disabled the plugin engine.");
+                        PluginService.FailedLoadPlugin.Add("<No plugin ID available>", AdminServices.IsRunningAsAdministrator() ? Localized.PluginEngine_DisabledBecauseAdmin : Localized.PluginEngine_DisabledBecauseUserDisabled);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "load user plugins", CreateMauiApp);
+                }
+
+                PluginManager.Init(plugins);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Load plugins", CreateMauiApp);
+                try
+                {
+                    if (!PluginManager.Inited)
+                    {
+                        PluginManager.Init([new InternalPluginBase()]);
+                        PluginService.FailedLoadPlugin.Add("<No plugin ID available>", $"Plugin engine fail to init. ({ex})");
+                    }
+                }
+                catch (Exception ex1)
+                {
+                    Log(ex1, "try load internal plugin", CreateMauiApp);
+#pragma warning disable CS0618
+                    Crash(new InvalidOperationException($"FATAL: The pluginBase cannot be loaded. projectFrameCut can't work without PluginEngine. \r\n{ex} \r\n{ex1}", new AggregateException(ex, ex1)));
+#pragma warning restore CS0618
+                }
+            }
+
+            try
+            {
+                string? nativeLibDirOverride = null;
+                try
+                {
+                    if (SettingsManager.IsBoolSettingTrue("PluginProvidedFFmpeg_Enable"))
+                    {
+#if WINDOWS
+                        var pluginId = SettingsManager.GetSetting("PluginProvidedFFmpeg_PluginID", "");
+                        if (!PluginManager.LoadedPlugins.TryGetValue(pluginId, out var value))
+                        {
+                            Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} is not loaded.");
+                        }
+                        else
+                        {
+                            var ffmpegPath = Path.Combine(BasicDataPath, "Plugins", value.PluginID, "FFmpeg", "windows");
+                            if (!string.IsNullOrWhiteSpace(ffmpegPath) && Directory.Exists(ffmpegPath))
+                            {
+                                Log($"Using FFmpeg libraries provided by plugin {pluginId}, path:{ffmpegPath}");
+                                nativeLibDirOverride = ffmpegPath;
+                            }
+                            else
+                            {
+                                Log($"PluginProvidedFFmpeg_Enable is true, but plugin {pluginId} provided invalid path:{ffmpegPath}");
+                            }
+                        }
+#elif ANDROID
+                        nativeLibDirOverride = Path.Combine(FileSystem.AppDataDirectory, "ffmpeg_plugin_libs");
+#endif
+                    }
+                }
+                catch { }
+#if ANDROID
+                FFmpegRoot = nativeLibDirOverride ?? Android.App.Application.Context.ApplicationInfo?.NativeLibraryDir;
+                JavaSystem.LoadLibrary("c");
+#elif WINDOWS
+                FFmpegRoot = nativeLibDirOverride ?? Path.Combine(AppContext.BaseDirectory, "FFmpeg", "8.x_internal");
+#endif
+                ffmpeg.RootPath = FFmpegRoot;
+                Log($"FFmpeg library root path: {ffmpeg.RootPath}");
+                FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
+                FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize();
+                Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "init ffmpeg", CreateMauiApp);
+                ffmpegFailMessage = ex.Message;
+            }
+
+            try
+            {
+
+                if (!File.Exists(Path.Combine(DataPath, "My Assets", "@WARNING.txt")))
+                {
+                    File.WriteAllText(Path.Combine(DataPath, "My Assets", "@WARNING.txt"),
+                        """
+                        WARNING: Do not modify or delete any files in this folder manually, or your assets may be corrupted!
+                        """);
+                }
+                if (!File.Exists(Path.Combine(DataPath, "My Assets", ".database", "database.json")))
+                {
+                    AssetDatabase.Initialize("{}");
+                }
+                else
+                {
+                    AssetDatabase.Initialize(File.ReadAllText(Path.Combine(DataPath, "My Assets", ".database", "database.json")));
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Init Asset library", CreateMauiApp);
+
+            }
+
+
+            try
+            {
+                if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json")))
+                {
+                    string json = File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "EffectImplement.json"));
+                    try
+                    {
+                        var dict = JsonSerializer.Deserialize<Dictionary<string, EffectImplementType>>(json);
+                        if (dict != null)
+                        {
+                            EffectHelper.DefaultImplementsType = dict;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(ex, "read effectImplement", CreateMauiApp);
+                        EffectHelper.DefaultImplementsType = new();
+                    }
+                }
+                else
+                {
+                    EffectHelper.DefaultImplementsType = new();
+                }
+            }
+            catch { }
+
+            try
+            {
+
+                if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_text.json")))
+                {
+                    AIHelper.CurrentOption = JsonSerializer.Deserialize<AIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_text.json"))) ?? new AIOption { Provider = "OpenAI" };
+                }
+                if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_image.json")))
+                {
+                    AIHelper.CurrentImageOption = JsonSerializer.Deserialize<AIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_image.json"))) ?? new AIOption { Provider = "OpenAI" };
+                }
+                if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json")))
+                {
+                    AIHelper.CurrentVideoOption = JsonSerializer.Deserialize<VideoGenAIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json"))) ?? new VideoGenAIOption { Provider = "OpenAI" };
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Init AI Config", CreateMauiApp);
+            }
+
+
+            try
+            {
+                MessagingServices.Init();
+
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "init services", CreateMauiApp);
+            }
+
+
+            Log("Background init completed.");
+
+
+
+            IsAppReady = true;
+        }
+
         public static string? ffmpegFailMessage = null;
+
+        public static bool IsAppReady { get; private set; } = false;
 
         private static object locker = new();
 

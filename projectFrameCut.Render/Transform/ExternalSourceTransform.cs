@@ -22,18 +22,14 @@ namespace projectFrameCut.Render.Transform
 
         public string? NeedComputer => null;
 
-        public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
-
-        public List<string> ParametersNeeded => ["SourcePath"];
-
-        public Dictionary<string, string> ParametersType => new Dictionary<string, string> { { "SourcePath", "string" } };
-
+        public string SourcePath { get; set; }
         [JsonIgnore]
         public IVideoSource source { get; set; }
 
         void ITransform.Init()
         {
-            source = PluginManager.CreateVideoSource(Parameters["SourcePath"] as string);
+            ArgumentException.ThrowIfNullOrWhiteSpace(SourcePath, nameof(SourcePath));
+            source = PluginManager.CreateVideoSource(SourcePath);
         }
 
         public IPicture GetFrame(IPicture left, IPicture right, double progress, IComputer? computer, int targetWidth, int targetHeight) => source.GetFrame((uint)(progress * source.TotalFrames), false).Resize(targetWidth, targetHeight, true);

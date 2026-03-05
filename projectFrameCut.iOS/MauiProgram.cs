@@ -45,6 +45,8 @@ namespace projectFrameCut
     {
         public static string DataPath { get; private set; }
 
+        public static bool IsAppReady { get; private set; } = true; //todo:background init
+
         public static string BasicDataPath { get; private set; }
         public static string FFmpegRoot { get; private set; }
         public static string? ffmpegFailMessage = null;

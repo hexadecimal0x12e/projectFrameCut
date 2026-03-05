@@ -32,6 +32,16 @@ using GridLength = Microsoft.Maui.GridLength;
 using GridUnitType = Microsoft.Maui.GridUnitType;
 using Switch = Microsoft.Maui.Controls.Switch;
 using Thickness = Microsoft.Maui.Thickness;
+using ContentView = Microsoft.Maui.Controls.ContentView;
+using TextAlignment = Microsoft.Maui.TextAlignment;
+using CornerRadius = Microsoft.Maui.CornerRadius;
+using projectFrameCut.ApplicationAPIBase.Views.Pickers;
+using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+
+
+
+
 
 
 
@@ -99,6 +109,11 @@ namespace projectFrameCut.DraftStuff
                     Content = await BuildTextOptionTab(clip, handler)
                 });
             }
+            t.TabItems.Add(new TabbedViewItem
+            {
+                Header = "时序",
+                Content = BuildTimingTab(clip, handler)
+            });
             t.TabItems.Add(new TabbedViewItem
             {
                 Header = PPLocalizedResources.Tabs_Effect,
@@ -371,10 +386,12 @@ namespace projectFrameCut.DraftStuff
 
         #region text
 
-        public static View BuildTextEntryUI(projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry e, int idx, string[] fonts,
-            Action<int, projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry> onChanged,
+        public static View BuildTextEntryUI(TextClipEntry e, int idx, IEnumerable<FontItem> fontItems,
+            Action<int, TextClipEntry> onChanged,
             Action<int> onRemove,
-            bool canDeleteEntry = true)
+            bool canDeleteEntry = true,
+            Action<FontPicker>? ShowPicker = null,
+            Action? HidePicker = null)
         {
             Label SecLabel(string t) => new Label
             {
@@ -403,7 +420,7 @@ namespace projectFrameCut.DraftStuff
             };
             headerGrid.Add(new Label
             {
-                Text = $"Entry {idx + 1}",
+                Text = PPLocalizedResources.TextOption_EntryTitle(idx + 1),
                 FontAttributes = FontAttributes.Bold,
                 FontSize = 13,
                 TextColor = Color.FromArgb("#A8B8CC"),
@@ -434,7 +451,7 @@ namespace projectFrameCut.DraftStuff
                 Text = e.text,
                 AutoSize = EditorAutoSizeOption.TextChanges,
                 MinimumHeightRequest = 64,
-                Placeholder = "Enter text…"
+                Placeholder = PPLocalizedResources.TextOption_Content_Placeholder
             };
             editor.Unfocused += (s, ev) => { onChanged?.Invoke(idx, e with { text = editor.Text }); };
             stack.Children.Add(editor);
@@ -464,6 +481,9 @@ namespace projectFrameCut.DraftStuff
 
             // FONT
             stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Font));
+            var fonts = fontItems.Select(x => x.FontName).ToList();
+            var currentFontName = fonts.Contains(e.fontFamily) ? e.fontFamily : fonts.FirstOrDefault() ?? string.Empty;
+
             var fontGrid = new Grid
             {
                 ColumnDefinitions =
@@ -474,17 +494,61 @@ namespace projectFrameCut.DraftStuff
                 },
                 ColumnSpacing = 6
             };
-            var fontPicker = new Picker { Title = PPLocalizedResources.TextOption_Font, ItemsSource = fonts, SelectedItem = fonts.Contains(e.fontFamily) ? e.fontFamily : fonts.FirstOrDefault() };
-            fontPicker.SelectedIndexChanged += (s, ev) =>
-            {
-                if (fontPicker.SelectedItem is string sf) onChanged?.Invoke(idx, e with { fontFamily = sf });
-            };
             var sizeEntry = new Entry { Text = e.fontSize.ToString(), Placeholder = "24" };
             sizeEntry.Unfocused += (s, ev) => { if (float.TryParse(sizeEntry.Text, out var ns)) onChanged?.Invoke(idx, e with { fontSize = ns }); };
-            fontGrid.Add(fontPicker, 0, 0);
             fontGrid.Add(new Label { Text = PPLocalizedResources.TextOption_Size, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 1, 0);
             fontGrid.Add(sizeEntry, 2, 0);
+
+            var fontSelectBtn = new Button
+            {
+                Text = currentFontName,
+                HorizontalOptions = LayoutOptions.Fill,
+                BackgroundColor = Color.FromArgb("#1AFFFFFF"),
+                TextColor = Colors.White,
+                FontSize = 13,
+                Padding = new Thickness(8, 4),
+                CornerRadius = 6
+            };
+
+            void FontChanged(object? sender, FontItem font)
+            {
+                if (font == null) return;
+                fontSelectBtn.Text = font.DisplayName;
+                HidePicker?.Invoke();
+                onChanged?.Invoke(idx, e with { fontFamily = font.FontName });
+            }
+            if (ShowPicker is not null)
+            {
+
+                var fontPickerControl = new projectFrameCut.ApplicationAPIBase.Views.Pickers.FontPicker
+                {
+                    FontsSource = fontItems,
+                    PreviewRenderer = TextServices.RenderFontPreviewAsync,
+                    Title = PPLocalizedResources.TextOption_Font
+                };
+
+                fontPickerControl.SelectedFontChanged += FontChanged;
+
+                fontSelectBtn.Clicked += (s, ev) =>
+                {
+                    ShowPicker?.Invoke(fontPickerControl);
+                };
+
+                fontGrid.Add(fontSelectBtn, 0, 0);
+            }
+            else
+            {
+                var picker = new Picker { ItemsSource = fonts, SelectedIndex = Array.IndexOf(fonts.ToArray(), e.fontFamily) };
+                picker.SelectedIndexChanged += (s, e) =>
+                {
+                    FontChanged(null, fontItems.FirstOrDefault(c => c.FontName == picker.SelectedItem as string, null));
+                };
+                fontGrid.Add(picker, 0, 0);
+
+            }
+
             stack.Children.Add(fontGrid);
+
 
             var stylePicker = new Picker { Title = PPLocalizedResources.TextOption_Style, ItemsSource = new[] { PPLocalizedResources.TextOption_Style_Regular, PPLocalizedResources.TextOption_Style_Bold, PPLocalizedResources.TextOption_Style_Italic, PPLocalizedResources.TextOption_Style_BoldItalic }, SelectedItem = e.fontStyle switch { SixLabors.Fonts.FontStyle.Regular => PPLocalizedResources.TextOption_Style_Regular, SixLabors.Fonts.FontStyle.Bold => PPLocalizedResources.TextOption_Style_Bold, SixLabors.Fonts.FontStyle.Italic => PPLocalizedResources.TextOption_Style_Italic, SixLabors.Fonts.FontStyle.BoldItalic => PPLocalizedResources.TextOption_Style_BoldItalic, _ => PPLocalizedResources.TextOption_Style_Regular, } };
             stylePicker.SelectedIndexChanged += (s, ev) =>
@@ -539,8 +603,11 @@ namespace projectFrameCut.DraftStuff
             colorRow.Add(colorEntry, 1, 0);
             stack.Children.Add(colorRow);
 
+            // ADVANCED (collapsible): ALIGNMENT + TYPOGRAPHY + STROKE
+            var advancedStack = new VerticalStackLayout { Spacing = 4, IsVisible = false };
+
             // ALIGNMENT
-            stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Alignment));
+            advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Alignment));
             var alignGrid = new Grid
             {
                 ColumnDefinitions =
@@ -590,10 +657,10 @@ namespace projectFrameCut.DraftStuff
             alignGrid.Add(vAlignPicker, 1, 0);
             alignGrid.Add(new Label { Text = PPLocalizedResources.TextOption_WrapW, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 2, 0);
             alignGrid.Add(wrapEntry, 3, 0);
-            stack.Children.Add(alignGrid);
+            advancedStack.Children.Add(alignGrid);
 
             // TYPOGRAPHY
-            stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Typography));
+            advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Typography));
             var kerningSwitch = new Switch { IsToggled = e.applyKerning, VerticalOptions = LayoutOptions.Center };
             kerningSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { applyKerning = kerningSwitch.IsToggled }); };
             var lineSpacingEntry = new Entry { Text = e.lineSpacing.ToString() };
@@ -613,7 +680,7 @@ namespace projectFrameCut.DraftStuff
             typRow.Add(kerningSwitch, 1, 0);
             typRow.Add(new Label { Text = PPLocalizedResources.TextOption_LineSpacing, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White, HorizontalOptions = LayoutOptions.End }, 2, 0);
             typRow.Add(lineSpacingEntry, 3, 0);
-            stack.Children.Add(typRow);
+            advancedStack.Children.Add(typRow);
 
             var rotEntry = new Entry { Text = e.rotation.ToString(), Placeholder = "0" };
             rotEntry.Unfocused += (s, ev) => { if (float.TryParse(rotEntry.Text, out var r)) onChanged?.Invoke(idx, e with { rotation = r }); };
@@ -638,10 +705,10 @@ namespace projectFrameCut.DraftStuff
             rotDpiGrid.Add(rotEntry, 1, 0);
             rotDpiGrid.Add(new Label { Text = "DPI", VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 2, 0);
             rotDpiGrid.Add(dpiEntry, 3, 0);
-            stack.Children.Add(rotDpiGrid);
+            advancedStack.Children.Add(rotDpiGrid);
 
             // STROKE
-            stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Stroke));
+            advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Stroke));
             var strokeWidthEntry = new Entry { Text = e.strokeWidth?.ToString() ?? string.Empty, Placeholder = PPLocalizedResources.TextOption_Stroke_Hint, MinimumWidthRequest = 150 };
             strokeWidthEntry.Unfocused += (s, ev) =>
             {
@@ -685,7 +752,28 @@ namespace projectFrameCut.DraftStuff
             strokeGrid.Add(strokeWidthEntry, 0, 0);
             strokeGrid.Add(strokeSwatch, 1, 0);
             strokeGrid.Add(strokeEntry, 2, 0);
-            stack.Children.Add(strokeGrid);
+            advancedStack.Children.Add(strokeGrid);
+
+            // Advanced toggle button
+            var advancedToggleBtn = new Button
+            {
+                Text = PPLocalizedResources.TextOption_Advanced_Collapsed,
+                HorizontalOptions = LayoutOptions.Fill,
+                BackgroundColor = Colors.Transparent,
+                TextColor = Color.FromArgb("#A8B8CC"),
+                FontSize = 11,
+                Padding = new Thickness(0, 4),
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            advancedToggleBtn.Clicked += (s, ev) =>
+            {
+                advancedStack.IsVisible = !advancedStack.IsVisible;
+                advancedToggleBtn.Text = advancedStack.IsVisible
+                    ? PPLocalizedResources.TextOption_Advanced_Expanded
+                    : PPLocalizedResources.TextOption_Advanced_Collapsed;
+            };
+            stack.Children.Add(advancedToggleBtn);
+            stack.Children.Add(advancedStack);
 
             var border = new Border
             {
@@ -705,25 +793,25 @@ namespace projectFrameCut.DraftStuff
             clip.ExtraData ??= new Dictionary<string, object>();
 
             // Load or normalize TextEntries from ExtraData
-            List<projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry>? entries = null;
+            List<TextClipEntry>? entries = null;
             if (clip.ExtraData.TryGetValue("TextEntries", out var entriesObj))
             {
-                if (entriesObj is List<projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry> list)
+                if (entriesObj is List<TextClipEntry> list)
                 {
                     entries = list;
                 }
                 else if (entriesObj is JsonElement je)
                 {
-                    try { entries = JsonSerializer.Deserialize<List<projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry>>(je); }
+                    try { entries = JsonSerializer.Deserialize<List<TextClipEntry>>(je); }
                     catch { entries = null; }
                 }
             }
 
             if (entries == null)
             {
-                entries = new List<projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry>
+                entries = new List<TextClipEntry>
                 {
-                    new projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry
+                    new TextClipEntry
                     {
                         text = "",
                         x = 0,
@@ -739,7 +827,7 @@ namespace projectFrameCut.DraftStuff
                 clip.ExtraData["TextEntries"] = entries;
             }
 
-            var fonts = projectFrameCut.Render.ClipsAndTracks.TextClip.GetFont().Families.Select(f => f.Name).ToArray();
+            var fonts = TextServices.LoadedFonts.Select(c => c.Value);
 
             var entriesContainer = new VerticalStackLayout { Spacing = 8 };
 
@@ -758,7 +846,22 @@ namespace projectFrameCut.DraftStuff
                     var e = entries[idx];
                     var view = BuildTextEntryUI(e, idx, fonts,
                         (id, newE) => { entries[id] = newE; UpdateStoredEntries(); },
-                        (id) => { entries.RemoveAt(id); UpdateStoredEntries(); RebuildEntriesUI(); });
+                        (id) => { entries.RemoveAt(id); UpdateStoredEntries(); RebuildEntriesUI(); },
+                        entries.Count > 1,
+                        (pickerView) =>
+                        {
+                            page.Dispatcher.Dispatch(async () =>
+                            {
+                                await page.ShowAPopup(pickerView, mode: "dialog");
+                            });
+                        },
+                        () =>
+                        {
+                            page.Dispatcher.Dispatch(async () =>
+                            {
+                                await page.HidePopup();
+                            });
+                        });
                     entriesContainer.Children.Add(view);
                 }
             }
@@ -776,8 +879,8 @@ namespace projectFrameCut.DraftStuff
             };
             addBtn.Clicked += (s, e) =>
             {
-                var defFont = fonts.FirstOrDefault() ?? "Arial";
-                entries.Add(new projectFrameCut.Render.ClipsAndTracks.TextClip.TextClipEntry
+                var defFont = fonts.FirstOrDefault()?.InnerItem.EnglishName ?? "Arial";
+                entries.Add(new TextClipEntry
                 {
                     text = "",
                     x = 0,
@@ -1836,6 +1939,169 @@ namespace projectFrameCut.DraftStuff
             return panel;
         }
 
+        private View BuildTimingTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            float fps = page.ProjectInfo.TargetFrameRate;
+            var stack = new VerticalStackLayout { Spacing = 8, Padding = new Thickness(8) };
+
+            stack.Children.Add(new Label
+            {
+                Text = "时序 / 裁切",
+                FontSize = 20,
+                FontAttributes = FontAttributes.Bold,
+                TextColor = Colors.White,
+                Margin = new Thickness(0, 0, 0, 4)
+            });
+
+            string srcInfo = clip.isInfiniteLength
+                ? "源时长: 无限"
+                : $"源时长: {clip.maxFrameCount} 帧 ({clip.maxFrameCount / fps:F2}s)  |  帧率: {fps} fps";
+            stack.Children.Add(new Label
+            {
+                Text = srcInfo,
+                FontSize = 12,
+                TextColor = Color.FromArgb("#AAAAAA"),
+                Margin = new Thickness(0, 0, 0, 8)
+            });
+
+            if (!clip.isInfiniteLength && clip.maxFrameCount > 0)
+            {
+                // ── 有限长度：使用范围滑块 ──────────────────────────────────────
+                uint safeStart = Math.Min(clip.relativeStartFrame, clip.maxFrameCount > 0 ? clip.maxFrameCount - 1 : 0);
+                uint safeLen = clip.lengthInFrame > 0
+                    ? Math.Min(clip.lengthInFrame, clip.maxFrameCount - safeStart)
+                    : Math.Max(1u, clip.maxFrameCount - safeStart);
+
+                string? thumbPath = null;
+                if (!string.IsNullOrEmpty(clip.SourcePath))
+                {
+                    if (clip.SourcePath.StartsWith("$") && page.Assets.TryGetValue(clip.SourcePath.Substring(1), out var assetObj))
+                    {
+                        thumbPath = assetObj.ThumbnailPath;
+                    }
+                    else
+                    {
+                        thumbPath = clip.SourcePath;
+                    }
+                }
+
+                var rangeSlider = new ClipRangeSlider
+                {
+                    Maximum = clip.maxFrameCount,
+                    LowerValue = safeStart,
+                    UpperValue = safeStart + safeLen,
+                    ThumbnailPath = thumbPath,
+                    Margin = new Thickness(10, 20, 10, 20)
+                };
+
+                var infoLabel = new Label
+                {
+                    Text = $"起始帧: {safeStart} 帧 ({safeStart / fps:F2}s)   时长: {safeLen} 帧 ({safeLen / fps:F2}s)",
+                    TextColor = Colors.White,
+                    FontSize = 12,
+                    HorizontalOptions = LayoutOptions.Center
+                };
+
+                rangeSlider.ValuesChanged += (s, e) =>
+                {
+                    uint newStart = (uint)Math.Round(rangeSlider.LowerValue);
+                    uint newEnd = (uint)Math.Round(rangeSlider.UpperValue);
+                    uint newLen = newEnd - newStart;
+                    if (newLen < 1) newLen = 1;
+                    infoLabel.Text = $"起始帧: {newStart} 帧 ({newStart / fps:F2}s)   时长: {newLen} 帧 ({newLen / fps:F2}s)";
+                };
+
+                rangeSlider.DragCompleted += (s, e) =>
+                {
+                    uint newStart = (uint)Math.Round(rangeSlider.LowerValue);
+                    uint newEnd = (uint)Math.Round(rangeSlider.UpperValue);
+                    uint newLen = newEnd - newStart;
+                    if (newLen < 1) newLen = 1;
+
+                    clip.relativeStartFrame = newStart;
+                    clip.lengthInFrame = newLen;
+
+                    double newPx = page.FrameToPixel(newLen);
+                    clip.Clip.WidthRequest = newPx;
+                    clip.origLength = newPx;
+
+                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("relativeStartFrame", newStart, newStart));
+                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("lengthInFrame", newLen, newLen));
+                };
+
+                stack.Children.Add(rangeSlider);
+                stack.Children.Add(infoLabel);
+            }
+            else
+            {
+                // ── 无限长度：使用文本框手动输入 ────────────────────────────
+                stack.Children.Add(new Label
+                {
+                    Text = "该素材为无限长度，请手动输入片段时长（单位：帧）",
+                    FontSize = 12,
+                    TextColor = Color.FromArgb("#AAAAAA")
+                });
+
+                uint initFrames = clip.lengthInFrame > 0
+                    ? clip.lengthInFrame
+                    : page.PixelToFrame(clip.origLength > 0 ? clip.origLength : 300d);
+
+                stack.Children.Add(new Label
+                {
+                    Text = "片段时长（帧）",
+                    FontSize = 13,
+                    TextColor = Colors.White,
+                    Margin = new Thickness(0, 12, 0, 0)
+                });
+
+                var lengthEntry = new Entry
+                {
+                    Text = initFrames.ToString(),
+                    Keyboard = Keyboard.Numeric,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    Placeholder = "输入帧数，例如 300"
+                };
+
+                // 实时秒数提示
+                var secHintLabel = new Label
+                {
+                    Text = fps > 0 ? $"≈ {initFrames / fps:F2}s" : string.Empty,
+                    FontSize = 11,
+                    TextColor = Color.FromArgb("#AAAAAA")
+                };
+                lengthEntry.TextChanged += (s, e) =>
+                {
+                    secHintLabel.Text = uint.TryParse(lengthEntry.Text, out var previewFrames) && fps > 0
+                        ? $"≈ {previewFrames / fps:F2}s"
+                        : string.Empty;
+                };
+
+                var applyBtn = new Button
+                {
+                    Text = "应用",
+                    HorizontalOptions = LayoutOptions.End,
+                    Margin = new Thickness(0, 6, 0, 0)
+                };
+                applyBtn.Clicked += (s, e) =>
+                {
+                    if (uint.TryParse(lengthEntry.Text, out var newLen) && newLen > 0)
+                    {
+                        clip.lengthInFrame = newLen;
+                        double newPx = page.FrameToPixel(newLen);
+                        clip.Clip.WidthRequest = newPx;
+                        clip.origLength = newPx;
+                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("lengthInFrame", newLen, newLen));
+                    }
+                };
+
+                stack.Children.Add(lengthEntry);
+                stack.Children.Add(secHintLabel);
+                stack.Children.Add(applyBtn);
+            }
+
+            return new ScrollView { Content = stack };
+        }
+
         public Func<IEnumerable<AIFunction>>? BuildToolCalls(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             async Task GenerateImage(string Prompt, string NegativePrompt, ImageStyle Style = ImageStyle.Natural)
@@ -1922,6 +2188,163 @@ namespace projectFrameCut.DraftStuff
                     Thumbnail = null,
                     VideoThumbnail = null
                 };
+            }
+        }
+
+        private class ClipRangeSlider : ContentView
+        {
+            public double Maximum { get; set; }
+            private double _lowerValue;
+            public double LowerValue
+            {
+                get => _lowerValue;
+                set { _lowerValue = value; UpdateLayout(); }
+            }
+
+            private double _upperValue;
+            public double UpperValue
+            {
+                get => _upperValue;
+                set { _upperValue = value; UpdateLayout(); }
+            }
+
+            private string? _thumbnailPath;
+            public string? ThumbnailPath
+            {
+                get => _thumbnailPath;
+                set { _thumbnailPath = value; RebuildThumbnails(); }
+            }
+
+            public event EventHandler ValuesChanged;
+            public event EventHandler DragCompleted;
+
+            AbsoluteLayout _layout;
+            Border _track;
+            HorizontalStackLayout _thumbnailLayout;
+            Border _leftMask;
+            Border _rightMask;
+            Border _leftThumb;
+            Border _rightThumb;
+            Border _middleRegion;
+            double _trackWidth;
+
+            public ClipRangeSlider()
+            {
+                HeightRequest = 60;
+                MinimumWidthRequest = 100;
+                _layout = new AbsoluteLayout();
+
+                _track = new Border { BackgroundColor = Color.FromArgb("#888888"), StrokeShape = new RoundRectangle { CornerRadius = 8 }, StrokeThickness = 0 };
+                _thumbnailLayout = new HorizontalStackLayout { Spacing = 0 };
+                _track.Content = _thumbnailLayout;
+
+                _leftMask = new Border { BackgroundColor = Color.FromRgba(0, 0, 0, 150), StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(8, 0, 8, 0) }, StrokeThickness = 0, InputTransparent = true };
+                _rightMask = new Border { BackgroundColor = Color.FromRgba(0, 0, 0, 150), StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(0, 8, 0, 8) }, StrokeThickness = 0, InputTransparent = true };
+
+                _middleRegion = new Border { BackgroundColor = Colors.Transparent, StrokeThickness = 0 };
+
+                _leftThumb = CreateThumb();
+                _rightThumb = CreateThumb();
+
+                _layout.Children.Add(_track);
+                _layout.Children.Add(_middleRegion);
+                _layout.Children.Add(_leftMask);
+                _layout.Children.Add(_rightMask);
+                _layout.Children.Add(_leftThumb);
+                _layout.Children.Add(_rightThumb);
+
+                Content = _layout;
+
+                SizeChanged += (s, e) => { _trackWidth = Width; RebuildThumbnails(); UpdateLayout(); };
+
+                AddPanGesture(_leftThumb, 0);
+                AddPanGesture(_rightThumb, 1);
+                AddPanGesture(_middleRegion, 2);
+            }
+
+            void RebuildThumbnails()
+            {
+                _thumbnailLayout.Children.Clear();
+                if (string.IsNullOrEmpty(_thumbnailPath) || _trackWidth <= 0) return;
+
+                int n = (int)Math.Ceiling(_trackWidth / 40.0) + 1;
+                for (int i = 0; i < n; i++)
+                {
+                    _thumbnailLayout.Children.Add(new Image { Source = _thumbnailPath, Aspect = Aspect.AspectFill, HeightRequest = 40, WidthRequest = 40 });
+                }
+            }
+
+            Border CreateThumb()
+            {
+                return new Border
+                {
+                    WidthRequest = 16,
+                    HeightRequest = 60,
+                    BackgroundColor = Colors.Transparent,
+                    Stroke = Colors.White,
+                    StrokeThickness = 2,
+                    StrokeShape = new RoundRectangle { CornerRadius = 2 }
+                };
+            }
+
+            void AddPanGesture(View thumb, int type)
+            {
+                var pan = new PanGestureRecognizer();
+                double initialLowerValue = 0;
+                double initialUpperValue = 0;
+                pan.PanUpdated += (s, e) =>
+                {
+                    if (e.StatusType == GestureStatus.Started)
+                    {
+                        initialLowerValue = _lowerValue;
+                        initialUpperValue = _upperValue;
+                    }
+                    else if (e.StatusType == GestureStatus.Running)
+                    {
+                        double deltaVal = (e.TotalX / _trackWidth) * Maximum;
+
+                        if (type == 0) // Min
+                        {
+                            _lowerValue = Math.Clamp(initialLowerValue + deltaVal, 0, _upperValue - 1);
+                        }
+                        else if (type == 1) // Max
+                        {
+                            _upperValue = Math.Clamp(initialUpperValue + deltaVal, _lowerValue + 1, Maximum);
+                        }
+                        else if (type == 2) // Middle
+                        {
+                            double length = initialUpperValue - initialLowerValue;
+                            double newLower = Math.Clamp(initialLowerValue + deltaVal, 0, Maximum - length);
+                            _lowerValue = newLower;
+                            _upperValue = newLower + length;
+                        }
+                        UpdateLayout();
+                        ValuesChanged?.Invoke(this, EventArgs.Empty);
+                    }
+                    else if (e.StatusType == GestureStatus.Completed || e.StatusType == GestureStatus.Canceled)
+                    {
+                        DragCompleted?.Invoke(this, EventArgs.Empty);
+                    }
+                };
+                thumb.GestureRecognizers.Add(pan);
+            }
+
+            void UpdateLayout()
+            {
+                if (_trackWidth <= 0 || Maximum <= 0) return;
+
+                double minX = (_lowerValue / Maximum) * _trackWidth;
+                double maxX = (_upperValue / Maximum) * _trackWidth;
+
+                AbsoluteLayout.SetLayoutBounds(_track, new Rect(0, 10, _trackWidth, 40));
+
+                AbsoluteLayout.SetLayoutBounds(_leftMask, new Rect(0, 10, minX, 40));
+                AbsoluteLayout.SetLayoutBounds(_rightMask, new Rect(maxX, 10, Math.Max(0, _trackWidth - maxX), 40));
+
+                AbsoluteLayout.SetLayoutBounds(_middleRegion, new Rect(minX, 10, Math.Max(0, maxX - minX), 40));
+
+                AbsoluteLayout.SetLayoutBounds(_leftThumb, new Rect(minX - 8, 0, 16, 60));
+                AbsoluteLayout.SetLayoutBounds(_rightThumb, new Rect(maxX - 8, 0, 16, 60));
             }
         }
 

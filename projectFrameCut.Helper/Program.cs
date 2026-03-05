@@ -142,6 +142,7 @@ namespace projectFrameCut.Helper
                 splash?.Close();
             }));
             SplashShowing = false;
+            splash = null;
         }
         public static void CloseLog()
         {

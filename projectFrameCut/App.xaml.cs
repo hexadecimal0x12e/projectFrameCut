@@ -93,6 +93,7 @@ namespace projectFrameCut
 
 #if WINDOWS
         public static NavigationView MainNavView;
+        public static Microsoft.UI.Xaml.Window NativeWindow;
         public static NavigationViewItem homeItem, assetItem, debugItem, settingItem;
 #endif
 
@@ -163,6 +164,7 @@ namespace projectFrameCut
             var platformView = mauiWindow.Handler?.PlatformView;
             if (platformView is Microsoft.UI.Xaml.Window nativeWindow)
             {
+                NativeWindow = nativeWindow;
                 var uiApp = Microsoft.UI.Xaml.Application.Current;
                 if (uiApp != null)
                 {
@@ -266,9 +268,15 @@ namespace projectFrameCut
             }
         }
 
-        public static void HideNavBar()
+        public static async void HideNavBar()
         {
             MainNavView?.IsPaneVisible = false;
+            await Task.Delay(50);
+            if (NativeWindow != null)
+            {
+                NativeWindow.Content.InvalidateMeasure();
+                NativeWindow.Content.InvalidateArrange();
+            }
 
         }
         public static async Task ShowNavBar()
@@ -277,12 +285,17 @@ namespace projectFrameCut
                 MainNavView.IsPaneVisible = true;
 
             await Task.Delay(50);
-            var appWindow = Current?.Windows[0];
-            if (appWindow != null)
+            //var appWindow = Current?.Windows[0];
+            //if (appWindow != null)
+            //{
+            //    appWindow.Width = appWindow.Width - 8; //avoid the contents go inside navigation bar
+            //    await Task.Delay(50);
+            //    appWindow.Width = appWindow.Width + 8;
+            //}
+            if (NativeWindow != null)
             {
-                appWindow.Width = appWindow.Width - 8; //avoid the contents go inside navigation bar
-                await Task.Delay(50);
-                appWindow.Width = appWindow.Width + 8;
+                NativeWindow.Content.InvalidateMeasure();
+                NativeWindow.Content.InvalidateArrange();
             }
         }
 

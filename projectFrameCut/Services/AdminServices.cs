@@ -10,7 +10,7 @@ using Java.Lang;
 #endif
 namespace projectFrameCut.Services
 {
-    public static class AdminHelper
+    public static class AdminServices
     {
         private static bool? isAdmin = null;
 

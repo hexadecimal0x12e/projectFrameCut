@@ -34,6 +34,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
+        public Dictionary<string, object> ExtraData { get; set; }
+
         public bool NeedFilePath => true;
 
         [System.Text.Json.Serialization.JsonIgnore]
@@ -80,6 +82,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
         public string? FilePath { get; set; } = string.Empty;
         public bool NeedFilePath => true;
+        public Dictionary<string, object> ExtraData { get; set; }
 
         public bool Use16bpp = false;
 
@@ -152,6 +155,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
         public bool NeedFilePath => false;
+        public Dictionary<string, object> ExtraData { get; set; }
 
         public string BindedSoundTrack { get; init; } = "";
 
@@ -208,6 +212,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
         public bool NeedFilePath => false;
+        public Dictionary<string, object> ExtraData { get; set; }
 
         public string BindedSoundTrack { get; init; } = "";
 
@@ -365,69 +370,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             return fontsCache;
 
         }
-
-        public record TextClipEntry
-        {
-            // Core text
-            [JsonInclude] public string text;
-            [JsonInclude] public int x;
-            [JsonInclude] public int y;
-
-            // Font
-            [JsonInclude] public string fontFamily;
-            [JsonInclude] public float fontSize;
-            public FontStyle fontStyle { get; init; } = FontStyle.Regular;
-
-            // Fill color (0..65535 each)
-            [JsonInclude] public ushort r;
-            [JsonInclude] public ushort g;
-            [JsonInclude] public ushort b;
-            [JsonInclude] public float? a;
-
-            // Alignment and wrapping
-            public HorizontalAlignment horizontalAlignment { get; init; } = HorizontalAlignment.Left;
-            public VerticalAlignment verticalAlignment { get; init; } = VerticalAlignment.Top;
-            public float? wrappingWidth { get; init; } = null; // when set, enables wrapping within this width
-
-            // Layout and metrics
-            public bool applyKerning { get; init; } = true;
-            public float lineSpacing { get; init; } = 1.0f; // multiplier for line height
-
-            // Appearance
-            public float rotation { get; init; } = 0f; // degrees clockwise
-
-            // Stroke / outline (optional)
-            public float? strokeWidth { get; init; } = null;
-            public ushort strokeR { get; init; } = 0;
-            public ushort strokeG { get; init; } = 0;
-            public ushort strokeB { get; init; } = 0;
-
-            // Additional: DPI for font rasterization (nullable, uses default when null)
-            public float? dpi { get; init; } = null;
-
-            // Use in UI only, not for rendering
-            public bool ShouldInSubtrack { get; set; } = false;
-            public string StyleId { get; set; } = "";
-            public string? SampleText { get; set; } = null;
-
-            public TextClipEntry()
-            {
-
-            }
-
-            public TextClipEntry(string text, int x, int y, string fontFamily, float fontSize, ushort r, ushort g, ushort b, float? a = null)//compactable to older versions
-            {
-                this.text = text ?? throw new ArgumentNullException(nameof(text));
-                this.x = x;
-                this.y = y;
-                this.fontFamily = fontFamily ?? throw new ArgumentNullException(nameof(fontFamily));
-                this.fontSize = fontSize;
-                this.r = r;
-                this.g = g;
-                this.b = b;
-                this.a = a;
-            }
-        }
+        
     }
 
     public class MarkingClip : IClip
@@ -451,6 +394,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
         public string? FilePath { get; set; }
+        public Dictionary<string, object> ExtraData { get; set; }
 
         public bool NeedFilePath => false;
 

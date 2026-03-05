@@ -20,25 +20,7 @@ namespace projectFrameCut
             HintLabel.Text = SettingLocalizedResources.General_SelectAPageToGo;
             string channelStr = "";
 #if WINDOWS
-            try
-            {
-                var pfn = WinUI.App.GetPackageFamilyName();
-                var channel = pfn switch
-                {
-                    "hexadecimal0x12e.projectFrameCutCommunity_f91nmrsqwpk6y" => "Community",
-                    "0xeeeeeeeeeeee.projectFrameCutCommunity_f91nmrsqwpk6y" => "Community MS Store",
-                    "hexadecimal0x12e.projectFrameCut_f91nmrsqwpk6y" => "Standard",
-                    "0xeeeeeeeeeeee.projectFrameCut_f91nmrsqwpk6y" => "MS Store",
-                    _ => "Non-official build"
-                };
-                channelStr = $" ({channel} channel)";
-
-            }
-            catch
-            {
-
-            }
-
+            channelStr = $" ({Helper.HelperProgram.AppChannel} channel)";
 #endif
             VersionLabel.Text = $"{Localized.AppBrand} v{Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}{channelStr}";
             CopyrightText.Text += DateTime.Now.Year.ToString();
@@ -160,7 +142,7 @@ Clear-Host;Start-Process "{{path}}";exit
         private async void TapGestureRecognizer_Tapped(object sender, TappedEventArgs e)
         {
             count++;
-            if(count >= 20)
+            if (count >= 20)
             {
                 count = 0;
                 await NavigateAsync(new AdvancedSettingPage());

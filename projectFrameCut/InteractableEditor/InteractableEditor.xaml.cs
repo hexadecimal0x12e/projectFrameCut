@@ -100,8 +100,8 @@ namespace InteractableEditor
             _isTextClip = clip.ClipType == ClipMode.TextClip;
             if (_isTextClip && clip.ExtraData.TryGetValue("TextEntries", out var entriesObj))
             {
-                List<TextClip.TextClipEntry>? entries = null;
-                if (entriesObj is List<TextClip.TextClipEntry> list)
+                List<TextClipEntry>? entries = null;
+                if (entriesObj is List<TextClipEntry> list)
                 {
                     entries = list;
                 }
@@ -109,7 +109,7 @@ namespace InteractableEditor
                 {
                     try
                     {
-                        entries = JsonSerializer.Deserialize<List<TextClip.TextClipEntry>>(je);
+                        entries = JsonSerializer.Deserialize<List<TextClipEntry>>(je);
                     }
                     catch { }
                 }
@@ -134,7 +134,7 @@ namespace InteractableEditor
                     _baseRect = new Rect(entry.x, entry.y, w, h);
 
                     // Normalize storage to a mutable, strongly-typed list to simplify later edits.
-                    if (entriesObj is not List<TextClip.TextClipEntry>)
+                    if (entriesObj is not List<TextClipEntry>)
                     {
                         clip.ExtraData["TextEntries"] = entries;
                     }
@@ -400,14 +400,14 @@ namespace InteractableEditor
             }
         }
 
-        private bool TryGetTextEntry(out TextClip.TextClipEntry? entry)
+        private bool TryGetTextEntry(out TextClipEntry? entry)
         {
             entry = null;
             if (_currentClip == null) return false;
             if (!_currentClip.ExtraData.TryGetValue("TextEntries", out var entriesObj)) return false;
 
-            List<TextClip.TextClipEntry>? entries = null;
-            if (entriesObj is List<TextClip.TextClipEntry> list)
+            List<TextClipEntry>? entries = null;
+            if (entriesObj is List<TextClipEntry> list)
             {
                 entries = list;
             }
@@ -415,7 +415,7 @@ namespace InteractableEditor
             {
                 try
                 {
-                    entries = JsonSerializer.Deserialize<List<TextClip.TextClipEntry>>(je);
+                    entries = JsonSerializer.Deserialize<List<TextClipEntry>>(je);
                 }
                 catch
                 {
@@ -435,7 +435,7 @@ namespace InteractableEditor
         {
             if (_currentClip == null) return;
             if (!_currentClip.ExtraData.TryGetValue("TextEntries", out var entriesObj)) return;
-            if (entriesObj is not List<TextClip.TextClipEntry> entries || entries.Count == 0) return;
+            if (entriesObj is not List<TextClipEntry> entries || entries.Count == 0) return;
 
             double w = _baseRect.Width > 0 ? _baseRect.Width : MinSize;
             double h = _baseRect.Height > 0 ? _baseRect.Height : MinSize;

@@ -29,19 +29,35 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
         public string? FilePath { get; set; }
+        public Dictionary<string, object> ExtraData { get; set; }
 
         public bool NeedFilePath => false;
 
         public JsonElement? TransformElement { get; set; } = null;
 
         [JsonIgnore]
-        public ITransform? Transform { get; set { field = value; TransformElement = JsonSerializer.SerializeToElement(value); } }
+        public ITransform? Transform
+        {
+            get
+            {
+                if (field is null && TransformElement is JsonElement e)
+                {
+                    field = PluginManager.CreateTransform(e);
+                }
+                return field;
+            }
+            set 
+            { 
+                field = value; 
+                TransformElement = JsonSerializer.SerializeToElement(value); 
+            }
+        }
 
         public void Dispose()
         {
         }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex) => throw new NotSupportedException("This clip requires a target frame size.");
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex) => throw new NotSupportedException("Use TransformProcesser.");
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize = false)
         {
@@ -53,33 +69,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
             if (TransformElement is JsonElement e)
             {
                 Transform = PluginManager.CreateTransform(e);
-            }
-            // If parameters were deserialized as JsonElement, convert them to their actual types
-            if (Transform is not null && Transform.Parameters is Dictionary<string, object> paramDict &&
-                Transform.ParametersType is Dictionary<string, string> typeDict && paramDict.Count > 0 && typeDict.Count > 0)
-            {
-                bool needConvert = false;
-                foreach (var v in paramDict.Values)
-                {
-                    if (v is JsonElement)
-                    {
-                        needConvert = true;
-                        break;
-                    }
-                }
-
-                if (needConvert)
-                {
-                    try
-                    {
-                        var converted = EffectArgsHelper.ConvertElementDictToObjectDict(paramDict, Transform.ParametersType);
-                        Transform.Parameters = converted;
-                    }
-                    catch
-                    {
-                        // swallow exceptions to avoid breaking re-init; leave original parameters if conversion fails
-                    }
-                }
             }
 
             Transform?.Init();

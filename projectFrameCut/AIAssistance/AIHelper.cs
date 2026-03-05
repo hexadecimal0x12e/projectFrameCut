@@ -75,6 +75,21 @@ namespace projectFrameCut.AIAssistance
             }
         }
 
+        /// <summary>
+        /// Gets the built-in model list for a specific provider and model type
+        /// </summary>
+        public static string[] GetBuiltInModels(string provider, string modelType = "text")
+        {
+            var config = ModelConfig.GetBuiltInConfig();
+            
+            return modelType switch
+            {
+                "image" => config.GetImageModels(provider).ToArray(),
+                "video" => config.GetVideoModels(provider).ToArray(),
+                _ => config.GetTextModels(provider).ToArray()
+            };
+        }
+
         public static async Task<ImageGenerationResult> GenerateImageAsync(string prompt, ImageGenerationOptions? options = null, AIOption? option = null)
         {
             try

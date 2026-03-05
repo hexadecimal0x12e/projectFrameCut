@@ -21,12 +21,12 @@ namespace projectFrameCut.WinUI
         public static string? BasicDataPathOverride { get; private set; } = null;
         public static string? UserDataPathOverride { get; private set; } = null;
 
-        private const string AppVersionStage = "alpha";
-
         [STAThread] //avoid failed to initialize COM library error, cause a lot of issue like IME not work at all...
         public static void Main(string[] args)
         {
             System.Threading.Thread.CurrentThread.Name = "App Main thread";
+            Debug.WriteLine($"projectFrameCut {Assembly.GetExecutingAssembly().GetName().Version}");
+            Debug.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
             try
             {
                 if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041, 0))
@@ -45,9 +45,9 @@ namespace projectFrameCut.WinUI
                     }
                     return;
                 }
-                if (!args.Any(c => c.StartsWith("--noSplash")))
+                try
                 {
-                    try
+                    if (WinUI.App.IsPackaged())
                     {
                         var pfn = WinUI.App.GetPackageFamilyName();
                         projectFrameCut.Helper.HelperProgram.AppChannel = pfn switch
@@ -58,12 +58,21 @@ namespace projectFrameCut.WinUI
                             "0xeeeeeeeeeeee.projectFrameCut_f91nmrsqwpk6y" => "MS Store",
                             _ => "Non-official build"
                         };
-
                     }
-                    catch
+                    else
                     {
-
+                        projectFrameCut.Helper.HelperProgram.AppChannel = "Portable";
                     }
+                    projectFrameCut.Helper.HelperProgram.AppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
+
+
+                }
+                catch
+                {
+
+                }   
+                if (!args.Any(c => c.StartsWith("--noSplash")))
+                {
                     var splash = new Thread(projectFrameCut.Helper.HelperProgram.SplashMain);
                     splash.Priority = ThreadPriority.Highest;
                     splash.IsBackground = false;
@@ -109,13 +118,6 @@ namespace projectFrameCut.WinUI
             catch
             {
 
-            }
-            try
-            {
-                projectFrameCut.Helper.HelperProgram.AppVersion = $"{AppVersionStage} {Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}";
-            }
-            catch
-            {
             }
             try
             {

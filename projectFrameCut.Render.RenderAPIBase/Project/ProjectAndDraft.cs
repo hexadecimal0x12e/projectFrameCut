@@ -23,13 +23,18 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// Name of the project.
         /// </summary>
         public string? ProjectName { get; set; }
-
+        /// <summary>
+        /// Determine the version of APIBase while the draft is saved.
+        /// </summary>
         public int LastOpenAPIBaseVersion { get; set; } = 0;
-
+        /// <summary>
+        /// Determine the version of Application while the draft is saved.
+        /// </summary>
         public string LastOpenAppVersion { get; set; } = "0.0.0.0";
-
+        /// <summary>
+        /// Determine what plugins used in this project.
+        /// </summary>
         public List<string> PluginUsed { get; set; } = new List<string>();
-
         /// <summary>
         /// The relative width of the draft.
         /// </summary>

@@ -33,9 +33,11 @@ namespace projectFrameCut.ApplicationPluginBase
             return null;
         }
 
+        internal string locateId = "en-US";
+
         void IApplicationPluginBase.OnApplicationPluginLoaded()
         {
-            ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+            ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(locateId, out var loc) ? loc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
         }
 
 

@@ -45,22 +45,6 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 
 
         /// <summary>
-        /// Parameters of the transform.
-        /// </summary>
-        public Dictionary<string, object> Parameters { get; set; }
-
-        /// <summary>
-        /// Indicates which parameters are needed for this transform.
-        /// </summary>
-        [JsonIgnore]
-        public List<string> ParametersNeeded { get; }
-        /// <summary>
-        /// Indicates the type of each parameter.
-        /// </summary>
-        [JsonIgnore]
-        public Dictionary<string, string> ParametersType { get; }
-
-        /// <summary>
         /// Override this method to do some init jobs before use.
         /// </summary>
         public virtual void Init() { }

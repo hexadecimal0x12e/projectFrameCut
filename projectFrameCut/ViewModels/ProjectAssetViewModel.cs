@@ -6,6 +6,7 @@ using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Services;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 
 namespace projectFrameCut.Asset;
 
@@ -152,14 +153,14 @@ public class ProjectAssetViewModel : INotifyPropertyChanged
         }
         else
         {
-            var inputPron = (await TextHelper.GetHowToPronuce(SearchText, default)).ToLower();
-            var inputPronInLocate = ((await TextHelper.GetHowToPronuce(SearchText, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
+            var inputPron = (await TextServices.GetHowToPronuce(SearchText, default)).ToLower();
+            var inputPronInLocate = ((await TextServices.GetHowToPronuce(SearchText, TextHelper.FromLanguageCode(Localized._LocaleId_)))).ToLower();
             // 过滤素材
             var searchLower = SearchText.ToLower();
             foreach (var asset in LocalAssets)
             {
-                var assetPron = (await TextHelper.GetHowToPronuce(asset.Name, default)).ToLower();
-                var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
+                var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
+                var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
                 if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate)|| assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
                     localFiltered.Add(asset);
@@ -167,8 +168,8 @@ public class ProjectAssetViewModel : INotifyPropertyChanged
             }
             foreach (var asset in SharedAssets)
             {
-                var assetPron = (await TextHelper.GetHowToPronuce(asset.Name, default)).ToLower();
-                var assetPronInLocate = (await TextHelper.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
+                var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
+                var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
                 if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
                     sharedFiltered.Add(asset);

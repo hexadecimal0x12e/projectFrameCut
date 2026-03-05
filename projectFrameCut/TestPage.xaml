@@ -2,6 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:v="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;assembly=projectFrameCut.ApplicationAPIBase"
+             xmlns:p="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.Pickers;assembly=projectFrameCut.ApplicationAPIBase"
              x:Class="projectFrameCut.TestPage"
              Title="TestPage">
     <ScrollView Orientation="Vertical">
@@ -93,6 +94,14 @@
             </Border>
             <VerticalStackLayout HeightRequest="250" >
             </VerticalStackLayout>
+
+            <Border StrokeThickness="4">
+                <VerticalStackLayout>
+                    <Label Text="Font picker test"/>
+                    <p:FontPicker x:Name="TextPicker" Title="test123"/>
+                    <Button x:Name="TestFontPropReaderButton" Text="Test read property" Clicked="TestFontPropReaderButton_Clicked"/>
+                </VerticalStackLayout>
+            </Border>
 
             <Image x:Name="ResultImage" Aspect="AspectFit" HeightRequest="300" WidthRequest="300"/>
 
