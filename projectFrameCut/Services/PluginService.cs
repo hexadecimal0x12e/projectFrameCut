@@ -169,13 +169,15 @@ namespace projectFrameCut.Services
                                         }
                                     }
 
+
                                     try
                                     {
-                                        static void removeLangDependence(string key)
+                                        void removeLangDependence(string key)
                                         {
                                             if (Directory.GetFiles(key).Length == 1 && Path.GetFileName(Directory.GetFiles(key)[0]) == "Microsoft.Maui.Controls.resources.dll")
                                             {
                                                 Directory.Delete(key, true);
+                                                htbDict.Remove(key);
                                                 Log($"Deleted directory {key}.");
                                             }
                                         }
@@ -469,9 +471,9 @@ namespace projectFrameCut.Services
                         return null;
                     }
 
-                    if(plugin is IApplicationPluginBase apb)
+                    if (plugin is IApplicationPluginBase apb)
                     {
-                        if(apb.AppLevelPluginAPIVersion != IApplicationPluginBase.CurrentAppLevelPluginAPIVersion)
+                        if (apb.AppLevelPluginAPIVersion != IApplicationPluginBase.CurrentAppLevelPluginAPIVersion)
                         {
                             string? localizedFailReason = null;
                             try
@@ -581,8 +583,8 @@ namespace projectFrameCut.Services
                 {
                     throw new EntryPointNotFoundException($"No suitable PluginLoader class found. Do you forget to add it?");
                 }
-                var ver = ldr.GetField("PluginAPIVersion", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
-                if(ver is not null && ver is int apiVer)
+                var ver = ldr.GetMethod("get_PluginAPIVersion", BindingFlags.Public | BindingFlags.Static)?.Invoke(null, null);
+                if (ver is int apiVer)
                 {
                     if (apiVer != PluginAPIVersion)
                     {
@@ -597,6 +599,21 @@ namespace projectFrameCut.Services
                         throw new FeatureNotSupportedException(failReason);
                     }
                 }
+                else
+                {
+                    Log($"Plugin has no version defined in LoaderClass.", "error");
+
+                    string? localizedFailReason = null;
+                    try
+                    {
+                        localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
+                    }
+                    catch { }
+                    var failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
+                    throw new FeatureNotSupportedException(failReason);
+                }
+
+
 
                 var ldrMethod = ldr.GetMethod("CreateInstance");
                 var pluginObj = ldrMethod?.Invoke(null, [Localized._LocaleId_, workingPath]);
@@ -614,7 +631,7 @@ namespace projectFrameCut.Services
                         var failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
                         throw new FeatureNotSupportedException(failReason);
                     }
-                    
+
                     return plugin;
                 }
                 return null;

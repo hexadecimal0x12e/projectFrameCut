@@ -31,10 +31,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         /// <remarks>
         /// It's for replacing properties <see cref="IsNormalEffect"/>, <see cref="IsContinuousEffect"/> and <see cref="IsBindableArgsEffect"/> and so on, to make it more extendable for future effect types.
-        /// For compatibility consideration, the default implementation of this property will check the Is***Effect properties to determine the EffectType. 
-        /// It's best to override this property to provide a specific EffectType because of <b>this feature may be removed in the future</b>.
         /// </remarks>
-        public virtual EffectType TypeOfEffect => EffectType.NormalEffect;
+        public virtual EffectType TypeOfEffect => EffectType.NotSpecified;
 
         /// <summary>
         /// Get how this effect is implemented.
@@ -101,27 +99,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public IEffect WithParameters(Dictionary<string, object> parameters);
 
         /// <summary>
-        /// Render the effect on the source picture to produce a new picture with the target width and height.
-        /// </summary>
-        /// <param name="source"></param>
-        /// <param name="computer"></param>
-        /// <param name="targetWidth"></param>
-        /// <param name="targetHeight"></param>
-        /// <returns>the processed frame</returns>
-        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight);
-
-        /// <summary>
-        /// Generate some process step instead of rendering the picture directly.
-        /// Throw a <see cref="NotImplementedException"/> if this effect does not support yielding process step.
-        /// </summary>
-        /// <param name="source"></param>
-        /// <param name="computer"></param>
-        /// <param name="targetWidth"></param>
-        /// <param name="targetHeight"></param>
-        /// <returns>the processed frame</returns>
-        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight);
-
-        /// <summary>
         /// If you'd like to initialize the effect before use, override it.
         /// </summary>
         public virtual void Initialize()
@@ -162,6 +139,32 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// DO NOT set this property manually. EffectGroup will do this.
         /// </remarks>
         public string? BindedEffectGroupID { get; set; }
+    }
+
+    public interface INormalEffect : IEffect
+    {
+        EffectType IEffect.TypeOfEffect => EffectType.NormalEffect;
+
+        /// <summary>
+        /// Render the effect on the source picture to produce a new picture with the target width and height.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="computer"></param>
+        /// <param name="targetWidth"></param>
+        /// <param name="targetHeight"></param>
+        /// <returns>the processed frame</returns>
+        public IPicture Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight);
+
+        /// <summary>
+        /// Generate some process step instead of rendering the picture directly.
+        /// Throw a <see cref="NotImplementedException"/> if this effect does not support yielding process step.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="computer"></param>
+        /// <param name="targetWidth"></param>
+        /// <param name="targetHeight"></param>
+        /// <returns>the processed frame</returns>
+        public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight);
     }
 
 

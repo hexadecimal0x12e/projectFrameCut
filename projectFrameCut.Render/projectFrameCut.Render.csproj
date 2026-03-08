@@ -58,6 +58,7 @@
 
   <ItemGroup>
     <Folder Include="TemplateSystem\" />
+    <Folder Include="Audio\" />
   </ItemGroup>
 
 

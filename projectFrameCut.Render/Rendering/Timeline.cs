@@ -153,9 +153,13 @@ namespace projectFrameCut.Render.Rendering
                         {
                             _ = EffectProcessing.ProcessBindableArgsEffect(frameIndex, ref effected, ref bindableEffectResultCache, bindableEffectResultCache2, srcFrame.ParentClip, steps, ref lastIsProcessStep, b, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight); //single frame render, no need to remove
                         }
+                        else if(effect is INormalEffect n)
+                        {
+                            EffectProcessing.ProcessEffect(ref effected, steps, ref lastIsProcessStep, n, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                        }
                         else
                         {
-                            EffectProcessing.ProcessEffect(ref effected, steps, ref lastIsProcessStep, effect, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                            throw new NotSupportedException($"The effect Type {effect.TypeOfEffect} {effect.TypeName} of clip {srcFrame.ParentClip.Id} is not supported. Effect ID: {effect.Id}");
                         }
                         if (AfterEffect is not null)
                         {

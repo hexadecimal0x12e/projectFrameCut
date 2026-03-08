@@ -351,7 +351,7 @@ namespace projectFrameCut.Render.Rendering
         {
             ArgumentNullException.ThrowIfNull(builder, nameof(builder));
             ArgumentNullException.ThrowIfNull(Clips, nameof(Clips));
-            
+
             _renderTotalStopwatch.Restart();
             Log("[Renderer] BlockWrite enabled: switching to single-threaded, synchronous render.", "info");
 
@@ -664,7 +664,7 @@ namespace projectFrameCut.Render.Rendering
                     framesToRender.Add((clip, null));
                     continue;
                 }
-                if(IsClipGeneratedByAI.TryGetValue(clip.Id, out var aiMark) && aiMark)
+                if (IsClipGeneratedByAI.TryGetValue(clip.Id, out var aiMark) && aiMark)
                 {
                     frame = EffectProcessing.ProcessAIWatermark(frame, null);
 
@@ -743,7 +743,8 @@ namespace projectFrameCut.Render.Rendering
                                 switch (item.TypeOfEffect)
                                 {
                                     case EffectType.NormalEffect:
-                                        EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer, _width, _height);
+                                        if (item is not INormalEffect e) goto notdefined;
+                                        EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, e, computer, _width, _height);
                                         continue;
                                     case EffectType.ContinuousEffect:
                                         if (item is not IContinuousEffect c) goto notdefined;
@@ -786,11 +787,17 @@ namespace projectFrameCut.Render.Rendering
                             {
                                 EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c, _width, _height);
                             }
+                            else if (item is INormalEffect n)
+                            {
+                                EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, n, computer, _width, _height);
+                            }
                             else
                             {
-                                EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, item, computer, _width, _height);
+                                throw new NotSupportedException($"The effect Type {item.TypeOfEffect} {item.TypeName} of clip {clip.Id} is not supported. Effect ID: {item.Id}");
                             }
+
                         }
+
 
                         if (steps.ListAny())
                         {
@@ -818,8 +825,8 @@ namespace projectFrameCut.Render.Rendering
                     var temp = OverlayMixture.Mix(result, frame, threadMixComputer, _ppb).Resize(_width, _height, false);
                     result.Dispose();  // dispose previous merged result
                     result = temp;     // result is now a new allocation, safe to pass to builder
-                    // Dispose the original clip frame now that it has been merged.
-                    // In sync mode usedFrames tracks these for deferred disposal, skip here to avoid double-dispose.
+                                       // Dispose the original clip frame now that it has been merged.
+                                       // In sync mode usedFrames tracks these for deferred disposal, skip here to avoid double-dispose.
                     if (usedFrames is null)
                         try { frame.Dispose(); } catch { }
                 }

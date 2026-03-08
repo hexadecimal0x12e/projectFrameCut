@@ -677,6 +677,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_AddClipView_AddFromAlternativeSrc",
+        "Value": "\u4ECE\u5916\u90E8\u6765\u6E90\u6DFB\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_AddClipView_AddMore",
         "Value": "\u5176\u4ED6",
         "Mode": "ConstString",
@@ -725,6 +733,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_AddClipView_AddSolidColorClip",
+        "Value": "\u6DFB\u52A0\u4E00\u4E2A\u7EAF\u8272\u5757",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_AddClipView_AddText",
         "Value": "\u6587\u672C\u548C\u5B57\u5E55",
         "Mode": "ConstString",
@@ -759,6 +775,14 @@
       {
         "Id": "DraftPage_AddClipView_AddText_SelectStyle",
         "Value": "\u63D0\u793A\uFF1A\u5728\u8F93\u5165\u6587\u672C\u4E4B\u540E\uFF0C\u53CC\u51FB\u4E0B\u9762\u4EFB\u610F\u4E00\u4E2A\u4F60\u559C\u6B22\u7684\u6587\u672C\u6837\u5F0F\u6765\u6DFB\u52A0\u5B83\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ShouldInSubtrack",
+        "Value": "\u6DFB\u52A0\u5230\u8F85\u8F68\u9053",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2245,6 +2269,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "HomePage_CreateAProject_InvalidName",
+        "Value": "\u9879\u76EE\u540D\u79F0\u4E2D\u542B\u6709\u4E0D\u5408\u6CD5\u7684\u5B57\u7B26\u3002\r\u8BF7\u6362\u4E00\u4E2A\u540D\u79F0\u6CA1\u6709\u6807\u70B9\u7B26\u53F7\u7684\u540D\u79F0\u518D\u8BD5\u4E00\u6B21\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "HomePage_DraftLoadFail",
         "Value": "\u5F88\u62B1\u6B49\uFF0C\u6211\u4EEC\u65E0\u6CD5\u52A0\u8F7D\u4F60\u7684\u9879\u76EE\uFF0C\u56E0\u4E3A{_ExceptionTemplate(ex)}\u3002\r\u5982\u679C\u4F60\u9700\u8981\u4E86\u89E3\u66F4\u591A\uFF0C\u53EF\u4EE5\u67E5\u770B\u65E5\u5FD7\u3002",
         "Mode": "InterpolationString",
@@ -2707,6 +2739,25 @@
             "Value": ""
           }
         ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Delete_Confirm2Input",
+        "Value": "\u4F60\u786E\u8BA4\u8981\u6C38\u4E45\u5220\u9664\u9879\u76EE\u300C{name}\u300D\u5417\uFF1F\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF0C\u8FD9\u4E2A\u9879\u76EE\u6240\u4F7F\u7528\u7684\u7D20\u6750\u548C\u6A21\u677F\u5C06\u4F1A\u6C38\u4E45\u6D88\u5931\uFF01\r\r\u5728\u4E0B\u9762\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u4F60\u7684\u64CD\u4F5C\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u2018yes\u2019\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u5185\u5BB9\u3002",
         "HasValidationErrors": false
       },
       {
@@ -3476,6 +3527,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "TextServices_FontCatagory_System",
+        "Value": "\u7CFB\u7EDF\u5B57\u4F53",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextServices_FontCatagory_YourAsset",
+        "Value": "\u4F60\u7684\u7D20\u6750",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "UserDataManagePage_Title",
         "Value": "\u7528\u6237\u6570\u636E\u7BA1\u7406",
         "Mode": "ConstString",
@@ -3490,22 +3557,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "TextServices_FontCatagory_YourAsset",
-        "Value": "\u4F60\u7684\u7D20\u6750",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "TextServices_FontCatagory_System",
-        "Value": "\u7CFB\u7EDF\u5B57\u4F53",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
         "HasValidationErrors": false
       }
     ],
@@ -7316,20 +7367,75 @@
       },
       {
         "Id": "TextServices_FontCatagory_YourAsset",
-        "Value": "Unset localization item:TextServices_FontCatagory_YourAsset()",
+        "Value": "Your Assets",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextServices_FontCatagory_System",
-        "Value": "Unset localization item:TextServices_FontCatagory_System()",
+        "Value": "System Fonts",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ShouldInSubtrack",
+        "Value": "Add to Sub-track",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Delete_Confirm2Input",
+        "Value": "Are you sure you want to permanently delete the project \u0022{name}\u0022?\r\nThis action cannot be undone, and all assets and templates used in this project will be permanently lost!\r\n\r\nType \u0022yes\u0022 below to confirm your action.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_CreateAProject_InvalidName",
+        "Value": "The project name contains invalid characters.\r\nPlease try another name without punctuation marks.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSolidColorClip",
+        "Value": "Add a solid color clip",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddFromAlternativeSrc",
+        "Value": "Add from external source",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -11139,20 +11245,75 @@
       },
       {
         "Id": "TextServices_FontCatagory_YourAsset",
-        "Value": "Unset localization item:TextServices_FontCatagory_YourAsset()",
+        "Value": "\u4F60\u7684\u7D20\u6750",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextServices_FontCatagory_System",
-        "Value": "Unset localization item:TextServices_FontCatagory_System()",
+        "Value": "\u7CFB\u7D71\u5B57\u578B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ShouldInSubtrack",
+        "Value": "\u65B0\u589E\u81F3\u8F14\u52A9\u8ECC\u9053",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Delete_Confirm2Input",
+        "Value": "\u4F60\u78BA\u5B9A\u8981\u6C38\u4E45\u522A\u9664\u5C08\u6848\u300C{name}\u300D\u55CE\uFF1F\r\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\uFF0C\u9019\u500B\u5C08\u6848\u6240\u4F7F\u7528\u7684\u7D20\u6750\u548C\u6A21\u677F\u5C07\u6703\u6C38\u4E45\u6D88\u5931\uFF01\r\r\u8ACB\u5728\u4E0B\u65B9\u8F38\u5165\u300Cyes\u300D\u4F86\u78BA\u8A8D\u4F60\u7684\u64CD\u4F5C\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6CE8\u610F\uFF1A\u4FDD\u7559\u539F\u6587\u4E2D\u7684 \u0027yes\u0027 \u4E0D\u7FFB\u8B6F\uFF0C\u56E0\u70BA\u9019\u662F\u7528\u6236\u9700\u8981\u8F38\u5165\u7684\u78BA\u8A8D\u5B57\u4E32\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_CreateAProject_InvalidName",
+        "Value": "\u5C08\u6848\u540D\u7A31\u5305\u542B\u4E0D\u5408\u6CD5\u7684\u5B57\u5143\u3002\r\u8ACB\u66F4\u63DB\u4E00\u500B\u4E0D\u542B\u6A19\u9EDE\u7B26\u865F\u7684\u540D\u7A31\uFF0C\u518D\u8A66\u4E00\u6B21\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSolidColorClip",
+        "Value": "\u65B0\u589E\u4E00\u500B\u7D14\u8272\u7247\u6BB5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddFromAlternativeSrc",
+        "Value": "\u5F9E\u5916\u90E8\u4F86\u6E90\u65B0\u589E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -14968,20 +15129,75 @@
       },
       {
         "Id": "TextServices_FontCatagory_YourAsset",
-        "Value": "Unset localization item:TextServices_FontCatagory_YourAsset()",
+        "Value": "\u3042\u306A\u305F\u306E\u30A2\u30BB\u30C3\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextServices_FontCatagory_System",
-        "Value": "Unset localization item:TextServices_FontCatagory_System()",
+        "Value": "\u30B7\u30B9\u30C6\u30E0\u30D5\u30A9\u30F3\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ShouldInSubtrack",
+        "Value": "\u30B5\u30D6\u30C8\u30E9\u30C3\u30AF\u306B\u8FFD\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Delete_Confirm2Input",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u300C{name}\u300D\u3092\u5B8C\u5168\u306B\u524A\u9664\u3057\u3066\u3082\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F\r\u3053\u306E\u64CD\u4F5C\u306F\u5143\u306B\u623B\u305B\u307E\u305B\u3093\u3002\u3053\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u3067\u4F7F\u7528\u3055\u308C\u3066\u3044\u308B\u7D20\u6750\u3068\u30C6\u30F3\u30D7\u30EC\u30FC\u30C8\u306F\u6C38\u4E45\u306B\u5931\u308F\u308C\u307E\u3059\uFF01\r\r\u4EE5\u4E0B\u306E\u5165\u529B\u6B04\u306B\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u64CD\u4F5C\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u30E6\u30FC\u30B6\u30FC\u304C\u5165\u529B\u3059\u308B\u5FC5\u8981\u304C\u3042\u308B\u305F\u3081\u3001\u0027yes\u0027 \u306F\u7FFB\u8A33\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_CreateAProject_InvalidName",
+        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u540D\u306B\u7121\u52B9\u306A\u6587\u5B57\u304C\u542B\u307E\u308C\u3066\u3044\u307E\u3059\u3002\r\n\u53E5\u8AAD\u70B9\u3092\u542B\u307E\u306A\u3044\u540D\u524D\u3067\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSolidColorClip",
+        "Value": "\u5358\u8272\u30AF\u30EA\u30C3\u30D7\u3092\u8FFD\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddFromAlternativeSrc",
+        "Value": "\u5916\u90E8\u30BD\u30FC\u30B9\u304B\u3089\u8FFD\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -18797,20 +19013,75 @@
       },
       {
         "Id": "TextServices_FontCatagory_YourAsset",
-        "Value": "Unset localization item:TextServices_FontCatagory_YourAsset()",
+        "Value": "\uB0B4 \uC5D0\uC14B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextServices_FontCatagory_System",
-        "Value": "Unset localization item:TextServices_FontCatagory_System()",
+        "Value": "\uC2DC\uC2A4\uD15C \uAE00\uAF34",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ShouldInSubtrack",
+        "Value": "\uBCF4\uC870 \uD2B8\uB799\uC5D0 \uCD94\uAC00",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Delete_Confirm2Input",
+        "Value": "\uD504\uB85C\uC81D\uD2B8 \u0027{name}\u0027\uC744(\uB97C) \uC601\uAD6C\uC801\uC73C\uB85C \uC0AD\uC81C\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?\r\n\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC73C\uBA70, \uC774 \uD504\uB85C\uC81D\uD2B8\uC5D0\uC11C \uC0AC\uC6A9\uB41C \uC18C\uC7AC\uC640 \uD15C\uD50C\uB9BF\uC740 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AC\uB77C\uC9D1\uB2C8\uB2E4!\r\n\r\n\uC544\uB798\uC5D0 \u0027yes\u0027\uB97C \uC785\uB825\uD558\uC5EC \uC791\uC5C5\uC744 \uD655\uC778\uD558\uC138\uC694.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "\uC0AC\uC6A9\uC790\uAC00 \uC785\uB825\uD574\uC57C \uD558\uB294 \u0027yes\u0027\uB294 \uBC88\uC5ED\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_CreateAProject_InvalidName",
+        "Value": "\uD504\uB85C\uC81D\uD2B8 \uC774\uB984\uC5D0 \uC720\uD6A8\uD558\uC9C0 \uC54A\uC740 \uBB38\uC790\uAC00 \uD3EC\uD568\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.\r\n\uD2B9\uC218 \uBB38\uC790\uB97C \uD3EC\uD568\uD558\uC9C0 \uC54A\uC740 \uB2E4\uB978 \uC774\uB984\uC73C\uB85C \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSolidColorClip",
+        "Value": "\uB2E8\uC0C9 \uD074\uB9BD \uCD94\uAC00",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddFromAlternativeSrc",
+        "Value": "\uC678\uBD80 \uC18C\uC2A4\uC5D0\uC11C \uCD94\uAC00",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -22621,20 +22892,75 @@
       },
       {
         "Id": "TextServices_FontCatagory_YourAsset",
-        "Value": "Unset localization item:TextServices_FontCatagory_YourAsset()",
+        "Value": "Vos ressources",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextServices_FontCatagory_System",
-        "Value": "Unset localization item:TextServices_FontCatagory_System()",
+        "Value": "Polices syst\u00E8me",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ShouldInSubtrack",
+        "Value": "Ajouter \u00E0 la piste secondaire",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Delete_Confirm2Input",
+        "Value": "\u00CAtes-vous s\u00FBr de vouloir supprimer d\u00E9finitivement le projet \u00AB\u202F{name}\u202F\u00BB\u202F?\r\nCette action est irr\u00E9versible. Tous les mat\u00E9riaux et mod\u00E8les utilis\u00E9s par ce projet dispara\u00EEtront d\u00E9finitivement\u202F!\r\n\r\nVeuillez saisir \u00AB\u202Fyes\u202F\u00BB ci-dessous pour confirmer votre action.",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_CreateAProject_InvalidName",
+        "Value": "Le nom du projet contient des caract\u00E8res non valides.\rEssayez \u00E0 nouveau avec un nom sans caract\u00E8res de ponctuation.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSolidColorClip",
+        "Value": "Ajouter un bloc de couleur unie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddFromAlternativeSrc",
+        "Value": "Ajouter depuis une source externe",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -26450,20 +26776,75 @@
       },
       {
         "Id": "TextServices_FontCatagory_YourAsset",
-        "Value": "Unset localization item:TextServices_FontCatagory_YourAsset()",
+        "Value": "\u4F60\u7684\u7D20\u6750",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextServices_FontCatagory_System",
-        "Value": "Unset localization item:TextServices_FontCatagory_System()",
+        "Value": "\u7CFB\u7EDF\u5B57\u4F53",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddText_ShouldInSubtrack",
+        "Value": "\u52A0\u4E8E\u8F85\u8F68",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_Delete_Confirm2Input",
+        "Value": "\u6C5D\u786E\u6B32\u6C38\u5220\u9879\u76EE\u300C{name}\u300D\u4E4E\uFF1F\r\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\uFF0C\u8BE5\u9879\u76EE\u4E4B\u7D20\u6750\u6A21\u677F\u5C06\u6C38\u901D\uFF01\r\r\u4E8E\u4E0B\u65B9\u8F93\u5165\u201Cyes\u201D\u4EE5\u786E\u8BA4\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u7559\u0027yes\u0027\u4E0D\u8BD1\u5982\u5907\u6CE8\u6240\u793A\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_CreateAProject_InvalidName",
+        "Value": "\u5DE5\u9879\u540D\u5185\u542B\u975E\u6CD5\u4E4B\u5B57\u3002\r\u8BF7\u6613\u4E00\u540D\u65E0\u70B9\u5212\u8005\u518D\u8BD5\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u63D0\u793A\u7528\u6237\u6240\u8F93\u5165\u7684\u9879\u76EE\u540D\u79F0\u5305\u542B\u4E0D\u88AB\u5141\u8BB8\u7684\u5B57\u7B26\uFF0C\u5E76\u5EFA\u8BAE\u66F4\u6362\u4E3A\u4E0D\u542B\u6807\u70B9\u7B26\u53F7\u7684\u540D\u79F0\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddSolidColorClip",
+        "Value": "\u589E\u4E00\u7EAF\u8272\u4E4B\u5757",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_AddFromAlternativeSrc",
+        "Value": "\u81EA\u5916\u90E8\u6765\u6E90\u6DFB\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]

@@ -49,6 +49,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string? FilePath { get; set; }
         public bool NeedFilePath => true;
         public Dictionary<string, object> ExtraData { get; set; }
+        public bool ExtendToWholeDraft { get; set; }
 
 
         public ISoundTrack SoundTrack { get; set; }

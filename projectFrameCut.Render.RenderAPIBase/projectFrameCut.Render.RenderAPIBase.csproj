@@ -37,4 +37,8 @@
     <Using Include="projectFrameCut.Shared" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Audio\" />
+  </ItemGroup>
+
 </Project>

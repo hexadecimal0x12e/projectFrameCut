@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class BlurEffect_ImageSharp : IEffect
+    public class BlurEffect_ImageSharp : INormalEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }

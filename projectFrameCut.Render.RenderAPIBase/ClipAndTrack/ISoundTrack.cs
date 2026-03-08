@@ -8,6 +8,7 @@ using System.Text;
 
 namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 {
+    [Obsolete("Consider to migrate to AudioSample system. This interface will be removed in future version.", false)]
     public interface ISoundTrack
     {
         /// <summary>

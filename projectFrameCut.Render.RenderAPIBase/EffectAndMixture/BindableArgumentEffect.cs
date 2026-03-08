@@ -33,16 +33,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
         EffectType IEffect.TypeOfEffect => EffectType.BindableEffect;
 
-
-        IPicture IEffect.Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
-        {
-            throw new InvalidOperationException($"Cast this {TypeName} to IBindableArgumentEffect, and call the specific method.");
-        }
-
-        IPictureProcessStep IEffect.GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            throw new InvalidOperationException($"Cast this {TypeName} to IBindableArgumentEffect, and call the specific method.");
-        }
     }
 
     public interface IBindableArgumentEffectNoInputValueProvider : IBindableArgumentEffect
@@ -153,6 +143,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight);
     }
+
     public interface IBindableArgumentEffectManyInputResultGenerator : IBindableArgumentEffect
     {
         BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.ManyInputResultGenerator;

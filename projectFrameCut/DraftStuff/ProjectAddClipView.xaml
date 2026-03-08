@@ -4,6 +4,7 @@
              x:Class="projectFrameCut.DraftStuff.ProjectAddClipView"
              xmlns:viewmodels="clr-namespace:projectFrameCut.ViewModels"
              xmlns:tv="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.TabbedView;assembly=projectFrameCut.ApplicationAPIBase"
+             xmlns:basePickers="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.Pickers;assembly=projectFrameCut.ApplicationAPIBase"
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:converters="clr-namespace:projectFrameCut.Converters"
@@ -33,14 +34,13 @@
                         <l:Localized Key="AssetPage_OrderBy_Name"/>
                     </Picker.Items>
                 </Picker>
-                <Entry Placeholder="{l:Localized Key=DraftPage_AddClipView_Search}" 
+                <SearchBar Placeholder="{l:Localized Key=DraftPage_AddClipView_Search}" 
                        x:Name="SearchInputEntry"
                        Text="{Binding SearchText}"
                        PlaceholderColor="White" 
                        BackgroundColor="Gray" 
                        WidthRequest="250" 
-                       Margin="0,-7,-5,0"
-                       ClearButtonVisibility="WhileEditing" />
+                       Margin="0,-7,-5,0" />
             </HorizontalStackLayout>
         </tv:TabbedView.HeaderRightContent>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}" Tag="LocalAssets" x:Name="LocalAssetsTab" x:FieldModifier="public">
@@ -366,7 +366,7 @@
                                             Command="{Binding GenerateAITransitionCommand}"
                                             CommandParameter="right"/>
                                 </HorizontalStackLayout>
-                               <!-- <Button 
+                                <!-- <Button 
                                         BackgroundColor="{Binding AITransitionPrompt, Converter={StaticResource IsStringValidConverter}}"
                                         IsEnabled="{Binding IsGeneratingAITransition, Converter={toolkit:InvertedBoolConverter}}"
                                         Command="{Binding GenerateAITransitionCommand}"
@@ -536,17 +536,22 @@
                                TextColor="{AppThemeBinding Light=#1A5276, Dark=#85C1E9}"
                                VerticalOptions="Center"
                                HorizontalOptions="Start" />
-                        <Button x:Name="ApplyTextToAllButton"
-                                Text="{Binding TextToAdd, Converter = 
-                                        {converters:StringNullOrWhitespaceSelectionConventor 
-                                            NormalText={l:Localized Key=DraftPage_AddClipView_AddText_PreviewInput}, 
-                                            NullOrWhitespaceOrEmptyText={l:Localized Key=DraftPage_AddClipView_AddText_ResetInput}}}"              
-                                Command="{Binding GenerateTextPreviewCommand}"
-                                HorizontalOptions="End"
-                                VerticalOptions="Center"
-                                Margin="8,0,0,0"
-                                WidthRequest="120"
-                                HeightRequest="34" />
+                        <HorizontalStackLayout HorizontalOptions="End">
+                            <Button x:Name="ApplyTextToAllButton"
+                                    Text="{Binding TextToAdd, Converter = 
+                                            {converters:StringNullOrWhitespaceSelectionConventor 
+                                                NormalText={l:Localized Key=DraftPage_AddClipView_AddText_PreviewInput}, 
+                                                NullOrWhitespaceOrEmptyText={l:Localized Key=DraftPage_AddClipView_AddText_ResetInput}}}"              
+                                    Command="{Binding GenerateTextPreviewCommand}"
+                                    HorizontalOptions="End"
+                                    VerticalOptions="Center"
+                                    Margin="8,0,0,0"
+                                    WidthRequest="120"
+                                    HeightRequest="34" />
+                            <CheckBox IsChecked="{Binding TextClipInSubTrack}" VerticalOptions="Center" Margin="8,0,0,0" />
+                            <Label Text="{l:Localized Key=DraftPage_AddClipView_AddText_ShouldInSubtrack}" VerticalOptions="Center" Margin="-4,0,8,0" />
+                        </HorizontalStackLayout>
+
                     </Grid>
                 </Border>
                 <CollectionView Grid.Row="2"
@@ -590,12 +595,12 @@
                 </CollectionView>
             </Grid>
         </tv:TabbedViewItem>
-        <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddPicture}" Tag="Picture" x:Name="AddPictureTab" x:FieldModifier="public">
+        <!-- <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddPicture}" Tag="Picture" x:Name="AddPictureTab" x:FieldModifier="public" >
             <Button Text="➕" 
                     BackgroundColor="Green"
                     WidthRequest="50"
                     HeightRequest="50"/>
-        </tv:TabbedViewItem>
+        </tv:TabbedViewItem> -->
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddSketch}" Tag="Sketch" x:Name="AddSketchTab" x:FieldModifier="public">
             <Grid RowDefinitions="Auto,*">
                 <Border Grid.Row="0"
@@ -635,121 +640,8 @@
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddMore}" Tag="More" x:Name="AddMoreTab" x:FieldModifier="public">
             <ScrollView Orientation="Horizontal">
                 <VerticalStackLayout Spacing="10" Padding="10">
-
-
-                    <!-- 创建文本片段 -->
-                    <HorizontalStackLayout Spacing="10" Margin="0,5">
-                        <Border WidthRequest="120" HeightRequest="67.5" StrokeThickness="0">
-                            <Label Text="📝" 
-                       FontSize="40"
-                       HorizontalOptions="Center"
-                       VerticalOptions="Center"/>
-                        </Border>
-
-                        <Border BackgroundColor="MediumPurple"
-                    StrokeThickness="1"
-                    Stroke="Gray"
-                    Padding="10,5"
-                    WidthRequest="200"
-                    HeightRequest="60"
-                    StrokeShape="RoundRectangle 5">
-                            <Label Text="Create a text clip" 
-                       VerticalOptions="Center"
-                       LineBreakMode="TailTruncation"/>
-                        </Border>
-
-
-                    </HorizontalStackLayout>
-
-                    <!-- 创建纯色片段 -->
-                    <HorizontalStackLayout Spacing="10" Margin="0,5">
-                        <Border WidthRequest="120" HeightRequest="67.5" StrokeThickness="0">
-                            <Label Text="🎨" 
-                       FontSize="40"
-                       HorizontalOptions="Center"
-                       VerticalOptions="Center"/>
-                        </Border>
-
-                        <Border BackgroundColor="Blue"
-                    StrokeThickness="1"
-                    Stroke="Gray"
-                    Padding="10,5"
-                    WidthRequest="200"
-                    HeightRequest="60"
-                    StrokeShape="RoundRectangle 5">
-                            <Label Text="Create a solid color clip" 
-                       VerticalOptions="Center"
-                       LineBreakMode="TailTruncation"/>
-                        </Border>
-
-                        <Button Text="➕" 
-                    BackgroundColor="Green"
-                    WidthRequest="50"
-                    HeightRequest="50"
-                    Command="{Binding AddSolidColorClipCommand}"/>
-                    </HorizontalStackLayout>
-
-                    <!-- 创建字幕 -->
-                    <HorizontalStackLayout Spacing="10" Margin="0,5">
-                        <Border WidthRequest="120" HeightRequest="67.5" StrokeThickness="0">
-                            <Label Text="💬" 
-                       FontSize="40"
-                       HorizontalOptions="Center"
-                       VerticalOptions="Center"/>
-                        </Border>
-
-                        <Border BackgroundColor="Yellow"
-                    StrokeThickness="1"
-                    Stroke="Gray"
-                    Padding="10,5"
-                    WidthRequest="200"
-                    HeightRequest="60"
-                    StrokeShape="RoundRectangle 5">
-                            <Label Text="Create some subtitle" 
-                       VerticalOptions="Center"
-                       LineBreakMode="TailTruncation"/>
-                        </Border>
-
-                        <Button Text="➕" 
-                    BackgroundColor="Green"
-                    WidthRequest="50"
-                    HeightRequest="50"
-                    Command="{Binding AddSubTitleClipCommand}"/>
-                    </HorizontalStackLayout>
-
-                    <!-- 从其他源添加 -->
-                    <HorizontalStackLayout Spacing="10" Margin="0,5">
-                        <Border WidthRequest="120" HeightRequest="67.5" StrokeThickness="0">
-                            <Label Text="🔗" 
-                       FontSize="40"
-                       HorizontalOptions="Center"
-                       VerticalOptions="Center"/>
-                        </Border>
-
-                        <Border BackgroundColor="MediumPurple"
-                    StrokeThickness="1"
-                    Stroke="Gray"
-                    Padding="10,5"
-                    WidthRequest="200"
-                    HeightRequest="60"
-                    StrokeShape="RoundRectangle 5">
-                            <Label Text="Add from another source" 
-                       VerticalOptions="Center"
-                       LineBreakMode="TailTruncation"/>
-                        </Border>
-
-                        <Button Text="➕" 
-                    BackgroundColor="Green"
-                    WidthRequest="50"
-                    HeightRequest="50"
-                    Command="{Binding AddAlternativeSourceClipCommand}"/>
-                    </HorizontalStackLayout>
-
-                    <!-- 底部占位 -->
-                    <BoxView WidthRequest="50" 
-                 HeightRequest="250" 
-                 Color="Transparent"/>
-
+                    <Button Text="{l:Localized Key=DraftPage_AddClipView_AddSolidColorClip}" Command="{Binding AddSolidColorClipCommand}"/>
+                    <Button Text="{l:Localized Key=DraftPage_AddClipView_AddFromAlternativeSrc}" Command="{Binding AddAlternativeSourceClipCommand}"/>
                 </VerticalStackLayout>
             </ScrollView>
         </tv:TabbedViewItem>

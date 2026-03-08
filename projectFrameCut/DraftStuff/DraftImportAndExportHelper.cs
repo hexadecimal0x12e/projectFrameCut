@@ -19,10 +19,11 @@ namespace projectFrameCut.DraftStuff
 {
     internal static class DraftImportAndExportHelper
     {
-        public static ClipDraftDTO ExportClipElementFromDraftPage(projectFrameCut.DraftPage page, ClipElementUI element, bool wrapSoundtrackAsClip = true)
+        [return: NotNullIfNotNull(nameof(page))]
+        [return: NotNullIfNotNull(nameof(element))]
+        public static ClipDraftDTO ExportClipElementFromDraftPage(projectFrameCut.DraftPage? page, ClipElementUI? element, bool wrapSoundtrackAsClip = true)
         {
-            if (page == null) throw new ArgumentNullException(nameof(page));
-            if (element == null) throw new ArgumentNullException(nameof(element));
+            if (page == null || element == null) return null!;
 
             if (!TryFindElementBorder(page, element, out var border, out var trackIndex))
             {

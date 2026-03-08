@@ -8,23 +8,14 @@ using System.Linq;
 using System.Text;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using static projectFrameCut.ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources;
+using projectFrameCut.Shared;
 
 namespace projectFrameCut.ApplicationAPIBase.Helpers
 {
     public static class TextHelper
     {
         #region language
-        public enum TextLanguage
-        {
-            Unknown,
-            English,
-            Chinese,
-            Japanese,
-            Korean,
-            Russian,
-            Thai,
-            Arabic
-        }
+
 
         /// <summary>
         /// 从语言代码转换为 TextLanguage 枚举
@@ -748,7 +739,7 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
             });
 
             // 合并结果并按显示名称排序
-            var result = tmpResult.OrderBy(c => c.DisplayName).ToList();
+            var result = tmpResult.ToList();
             return result;
         }
 

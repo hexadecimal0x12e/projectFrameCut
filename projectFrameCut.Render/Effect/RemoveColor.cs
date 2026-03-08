@@ -8,7 +8,7 @@ using projectFrameCut.Shared;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class RemoveColorEffect_HwAccel : IEffect
+    public class RemoveColorEffect_HwAccel : INormalEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }

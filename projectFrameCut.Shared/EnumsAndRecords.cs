@@ -108,6 +108,18 @@ namespace projectFrameCut.Shared
         AudioTransform
     }
 
+    public enum TextLanguage
+    {
+        Unknown,
+        English,
+        Chinese,
+        Japanese,
+        Korean,
+        Russian,
+        Thai,
+        Arabic
+    }
+
     public record TextClipEntry
     {
         // Core text
@@ -119,6 +131,8 @@ namespace projectFrameCut.Shared
         public string fontFamily { get; set; }
         public float fontSize { get; set; }
         public FontStyle fontStyle { get; init; } = FontStyle.Regular;
+        public bool UseVerticalLayout { get; set; } = false;
+        public bool KeepNonCJKTextAsHorizontal { get; set; } = false;
 
         // Fill color (0..65535 each)
         public ushort r { get; set; }
@@ -151,6 +165,7 @@ namespace projectFrameCut.Shared
         public bool ShouldInSubtrack { get; set; } = false;
         public string StyleId { get; set; } = "";
         public string? SampleText { get; set; } = null;
+        public TextLanguage Language { get; set; } = TextLanguage.Unknown;
 
         public TextClipEntry()
         {
@@ -168,6 +183,36 @@ namespace projectFrameCut.Shared
             this.g = g;
             this.b = b;
             this.a = a;
+        }
+
+        public static string LocalizeLanguageName(TextLanguage language)
+        {
+            return language switch
+            {
+                TextLanguage.English => "English",
+                TextLanguage.Chinese => "中文",
+                TextLanguage.Japanese => "日本語",
+                TextLanguage.Korean => "한국어",
+                TextLanguage.Russian => "Русский",
+                TextLanguage.Thai => "ไทย",
+                TextLanguage.Arabic => "العربية",
+                _ => "?"
+            };
+        }
+
+        public static TextLanguage FromLocaliedString(string input)
+        {
+            return input switch
+            {
+                "English" => TextLanguage.English,
+                "中文" => TextLanguage.Chinese,
+                "日本語" => TextLanguage.Japanese,
+                "한국어" => TextLanguage.Korean,
+                "Русский" => TextLanguage.Russian,
+                "ไทย" => TextLanguage.Thai,
+                "العربية" => TextLanguage.Arabic,
+                _ => TextLanguage.Unknown
+            };
         }
     }
 

@@ -10,7 +10,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class ResizeEffect_ImageSharp : IEffect
+    public class ResizeEffect_ImageSharp : INormalEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -182,7 +182,7 @@ namespace projectFrameCut.Render.Effect
         };
     }
 
-    public class ResizeEffect_HwAccel : IEffect
+    public class ResizeEffect_HwAccel : INormalEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -367,7 +367,7 @@ namespace projectFrameCut.Render.Effect
         }
     }
 
-    public class ResizeEffect_IPicture : IEffect
+    public class ResizeEffect_IPicture : INormalEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }

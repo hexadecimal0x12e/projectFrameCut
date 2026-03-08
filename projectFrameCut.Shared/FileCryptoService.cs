@@ -1,10 +1,12 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace projectFrameCut.Shared
 {
+    [DebuggerNonUserCode()]
     public static class FileCryptoService
     {
         // 12-byte nonce and 16-byte tag are standard for AES-GCM

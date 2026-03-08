@@ -33,9 +33,10 @@ public partial class AssistanceChatView : ContentView
     {
     }
 
-    public AssistanceChatView(Guid? sessionId)
+    public AssistanceChatView(Guid? sessionId, Func<IEnumerable<AIFunction>>? aIFunctionsFactory = null)
     {
         InitializeComponent();
+        ToolCallFactories = aIFunctionsFactory;
         AIChatHistoryView.ItemsSource = _messages;
         _messages.CollectionChanged += Messages_CollectionChanged;
         _chatClient = CreateChatClient();
@@ -1288,7 +1289,7 @@ public partial class AssistanceChatView : ContentView
         string apiKey = AIHelper.CurrentOption.Key;
         string model = AIHelper.CurrentOption.Model;
         string endpoint = AIHelper.CurrentOption.BaseAddress;
-        if(string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(model) ||  string.IsNullOrEmpty(endpoint))
+        if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(model) || string.IsNullOrEmpty(endpoint))
         {
             return null;
         }

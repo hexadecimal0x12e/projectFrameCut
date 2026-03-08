@@ -13,6 +13,9 @@ public partial class AssistanceChatSessionsView : ContentView
 
     public AssistanceChatView? Current = null;
 
+    public Func<IEnumerable<AIFunction>>? GlobalToolCallFactories;
+
+
     public AssistanceChatSessionsView()
     {
         InitializeComponent();
@@ -26,6 +29,7 @@ public partial class AssistanceChatSessionsView : ContentView
                 if (view.Next is AssistanceChatView v)
                 {
                     Current = v;
+                    v.ToolCallFactories = GlobalToolCallFactories;
                 }
             };
         }
@@ -71,7 +75,7 @@ public partial class AssistanceChatSessionsView : ContentView
 
     private void NavigateToSession(Guid sessionId)
     {
-        var s = new AssistanceChatView(sessionId);
+        var s = new AssistanceChatView(sessionId, GlobalToolCallFactories);
         Current = s;
         if (GetHostWindow() is MultiWindowItem host)
         {

@@ -111,7 +111,7 @@ namespace projectFrameCut.DraftStuff
             }
             t.TabItems.Add(new TabbedViewItem
             {
-                Header = "时序",
+                Header = PPLocalizedResources.Tabs_Timing,
                 Content = BuildTimingTab(clip, handler)
             });
             t.TabItems.Add(new TabbedViewItem
@@ -127,12 +127,15 @@ namespace projectFrameCut.DraftStuff
                     Content = BuildClassicEffectTab(clip, handler)
                 });
             }
-
-            t.TabItems.Add(new TabbedViewItem
+            if (!clip.isInfiniteLength)
             {
-                Header = PPLocalizedResources.Tabs_SpeedRatio,
-                Content = BuildSpeedAndRatioTab(clip, handler)
-            });
+                t.TabItems.Add(new TabbedViewItem
+                {
+                    Header = PPLocalizedResources.Tabs_SpeedRatio,
+                    Content = BuildSpeedAndRatioTab(clip, handler)
+                });
+            }
+
             return t;
         }
 
@@ -522,7 +525,9 @@ namespace projectFrameCut.DraftStuff
 
                 var fontPickerControl = new projectFrameCut.ApplicationAPIBase.Views.Pickers.FontPicker
                 {
-                    FontsSource = fontItems,
+                    FontsSource = fontItems.GroupBy(c => TextHelper.DetectTextLanguage(c.DisplayName))
+                                           .OrderByDescending(g => g.Count())
+                                           .SelectMany(c => c),
                     PreviewRenderer = TextServices.RenderFontPreviewAsync,
                     Title = PPLocalizedResources.TextOption_Font
                 };
@@ -607,6 +612,17 @@ namespace projectFrameCut.DraftStuff
             var advancedStack = new VerticalStackLayout { Spacing = 4, IsVisible = false };
 
             // ALIGNMENT
+            advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_LangType));
+            var langTypePicker = new Picker
+            {
+                ItemsSource = Enum.GetValues<TextLanguage>().Select(TextClipEntry.LocalizeLanguageName).ToArray(),
+                SelectedItem = e.Language
+            };
+            langTypePicker.SelectedIndexChanged += (s, ev) =>
+            {
+                onChanged?.Invoke(idx, e with { Language = TextClipEntry.FromLocaliedString(langTypePicker.SelectedItem as string ?? "?") });
+            };
+            advancedStack.Children.Add(langTypePicker);
             advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Alignment));
             var alignGrid = new Grid
             {
@@ -659,8 +675,28 @@ namespace projectFrameCut.DraftStuff
             alignGrid.Add(wrapEntry, 3, 0);
             advancedStack.Children.Add(alignGrid);
 
+            
             // TYPOGRAPHY
             advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Typography));
+            var verticalLayoutSwitch = new Switch { IsToggled = e.UseVerticalLayout, VerticalOptions = LayoutOptions.Center };
+            verticalLayoutSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { UseVerticalLayout = verticalLayoutSwitch.IsToggled }); };
+            var keepNonCJKHorizontalSwitch = new Switch { IsToggled = e.KeepNonCJKTextAsHorizontal, VerticalOptions = LayoutOptions.Center };
+            keepNonCJKHorizontalSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { KeepNonCJKTextAsHorizontal = keepNonCJKHorizontalSwitch.IsToggled }); };
+            var verticalLayoutGrid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto)
+                },
+                ColumnSpacing = 8,
+                RowSpacing = 8
+            };
+            verticalLayoutGrid.Add(new Label { Text = PPLocalizedResources.TextOption_UseVerticalLayout, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 0, 0);
+            verticalLayoutGrid.Add(verticalLayoutSwitch, 1, 0);
+            verticalLayoutGrid.Add(new Label { Text = PPLocalizedResources.TextOption_KeepNonCJKHorizontal, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 0, 1);
+            verticalLayoutGrid.Add(keepNonCJKHorizontalSwitch, 1, 1);
+            advancedStack.Children.Add(verticalLayoutGrid);
             var kerningSwitch = new Switch { IsToggled = e.applyKerning, VerticalOptions = LayoutOptions.Center };
             kerningSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { applyKerning = kerningSwitch.IsToggled }); };
             var lineSpacingEntry = new Entry { Text = e.lineSpacing.ToString() };
@@ -1944,18 +1980,9 @@ namespace projectFrameCut.DraftStuff
             float fps = page.ProjectInfo.TargetFrameRate;
             var stack = new VerticalStackLayout { Spacing = 8, Padding = new Thickness(8) };
 
-            stack.Children.Add(new Label
-            {
-                Text = "时序 / 裁切",
-                FontSize = 20,
-                FontAttributes = FontAttributes.Bold,
-                TextColor = Colors.White,
-                Margin = new Thickness(0, 0, 0, 4)
-            });
-
             string srcInfo = clip.isInfiniteLength
-                ? "源时长: 无限"
-                : $"源时长: {clip.maxFrameCount} 帧 ({clip.maxFrameCount / fps:F2}s)  |  帧率: {fps} fps";
+                ? PPLocalizedResources.Timing_InfLength
+                : PPLocalizedResources.Timing_LengthInfo(clip.maxFrameCount, fps);
             stack.Children.Add(new Label
             {
                 Text = srcInfo,
@@ -1996,7 +2023,7 @@ namespace projectFrameCut.DraftStuff
 
                 var infoLabel = new Label
                 {
-                    Text = $"起始帧: {safeStart} 帧 ({safeStart / fps:F2}s)   时长: {safeLen} 帧 ({safeLen / fps:F2}s)",
+                    Text = PPLocalizedResources.Timing_LengthInfo_Start(safeStart, safeLen, fps),
                     TextColor = Colors.White,
                     FontSize = 12,
                     HorizontalOptions = LayoutOptions.Center
@@ -2008,7 +2035,7 @@ namespace projectFrameCut.DraftStuff
                     uint newEnd = (uint)Math.Round(rangeSlider.UpperValue);
                     uint newLen = newEnd - newStart;
                     if (newLen < 1) newLen = 1;
-                    infoLabel.Text = $"起始帧: {newStart} 帧 ({newStart / fps:F2}s)   时长: {newLen} 帧 ({newLen / fps:F2}s)";
+                    infoLabel.Text = PPLocalizedResources.Timing_LengthInfo_Start(safeStart, safeLen, fps);
                 };
 
                 rangeSlider.DragCompleted += (s, e) =>
@@ -2035,20 +2062,13 @@ namespace projectFrameCut.DraftStuff
             else
             {
                 // ── 无限长度：使用文本框手动输入 ────────────────────────────
-                stack.Children.Add(new Label
-                {
-                    Text = "该素材为无限长度，请手动输入片段时长（单位：帧）",
-                    FontSize = 12,
-                    TextColor = Color.FromArgb("#AAAAAA")
-                });
-
                 uint initFrames = clip.lengthInFrame > 0
                     ? clip.lengthInFrame
                     : page.PixelToFrame(clip.origLength > 0 ? clip.origLength : 300d);
 
                 stack.Children.Add(new Label
                 {
-                    Text = "片段时长（帧）",
+                    Text = PPLocalizedResources.Timing_InfLength_Input,
                     FontSize = 13,
                     TextColor = Colors.White,
                     Margin = new Thickness(0, 12, 0, 0)
@@ -2059,7 +2079,7 @@ namespace projectFrameCut.DraftStuff
                     Text = initFrames.ToString(),
                     Keyboard = Keyboard.Numeric,
                     HorizontalOptions = LayoutOptions.Fill,
-                    Placeholder = "输入帧数，例如 300"
+                    Placeholder = "42"
                 };
 
                 // 实时秒数提示
@@ -2078,7 +2098,7 @@ namespace projectFrameCut.DraftStuff
 
                 var applyBtn = new Button
                 {
-                    Text = "应用",
+                    Text = Localized._Apply,
                     HorizontalOptions = LayoutOptions.End,
                     Margin = new Thickness(0, 6, 0, 0)
                 };
@@ -2102,37 +2122,7 @@ namespace projectFrameCut.DraftStuff
             return new ScrollView { Content = stack };
         }
 
-        public Func<IEnumerable<AIFunction>>? BuildToolCalls(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
-        {
-            async Task GenerateImage(string Prompt, string NegativePrompt, ImageStyle Style = ImageStyle.Natural)
-            {
-                var rsp = await AIHelper.GenerateImageAsync(Prompt, new AIAssistance.ImageGenerationOptions { NegativePrompt = NegativePrompt, Quality = ImageQuality.High, Style = Style });
-                if (!rsp.Success) throw new InvalidOperationException($"Cannot generate image. {rsp.ErrorMessage}");
-                var img = new HttpClient().GetAsync(rsp.ImageUrl);
-                using var s = img.Result.Content.ReadAsStream();
-                var path = System.IO.Path.Combine(page.WorkingPath, "assets", $"AIGenerated-{Guid.NewGuid()}.png");
-                using var fs = new FileStream(path, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
-                s.CopyTo(fs);
-                fs.Dispose();
-                s.Dispose();
-                var a = AssetDatabase.Create(path, $"AIGenerated-{Prompt}", AssetType.Image);
-                page.CreateFromAsset(a, 0, InternalPluginBase.InternalPluginBaseID, path);
 
-            }
-
-            List<AIFunction> toolCalls = new List<AIFunction>
-            {
-                AIFunctionFactory.Create(() => DraftImportAndExportHelper.ExportFromDraftPage(page, false).Clips, "get_all_clips","Get all clips inside this project."),
-                AIFunctionFactory.Create(() => DraftImportAndExportHelper.ExportClipElementFromDraftPage(page, clip, false), "get_selected_clip_info","Get the clip selected by the user's info."),
-                AIFunctionFactory.Create((string Id, ClipDraftDTO Clip) => {page.Clips[Id] = DraftImportAndExportHelper.ConvertToElement(Clip); handler.Invoke(this, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));}, "set_clip_info","Set a specific clip's information."),
-                AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Select(c => c.Value.EffectProvider).FirstOrDefault(c => c.Keys.Contains(Type))?[Type]?.Invoke()?.GetInfo(), "get_effect_info","Get a specific effect's information."),
-                AIFunctionFactory.Create((string Type) => PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>().Select(c => c.EffectBundleProvider).FirstOrDefault(c => c.ContainsKey(Type))?[Type]?.Invoke()?.GetEffectBundleItem(), "get_effect_bundle_info","Get a specific effect bundle's information."),
-                AIFunctionFactory.Create(GenerateImage, "create_an_AIGC_image","Add an AI generated image to the draft. Use param Prompt to define how the picture looks like and NegativePrompt to define what not in the picture. Use param Style to define the style of this image."),
-                //AIFunctionFactory.Create((string Type) => , "get_cliptype_detail_info","Set a specific's clip information.")
-            };
-
-            return new(() => toolCalls);
-        }
 
         private class DummyEffectBundle : IEffectBundle
         {

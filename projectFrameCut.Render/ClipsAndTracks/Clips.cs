@@ -35,6 +35,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
         public Dictionary<string, object> ExtraData { get; set; }
+        public bool ExtendToWholeDraft { get; set; }
 
         public bool NeedFilePath => true;
 
@@ -83,6 +84,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string? FilePath { get; set; } = string.Empty;
         public bool NeedFilePath => true;
         public Dictionary<string, object> ExtraData { get; set; }
+        public bool ExtendToWholeDraft { get; set; }
 
         public bool Use16bpp = false;
 
@@ -156,6 +158,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; init; }
         public bool NeedFilePath => false;
         public Dictionary<string, object> ExtraData { get; set; }
+        public bool ExtendToWholeDraft { get; set; }
 
         public string BindedSoundTrack { get; init; } = "";
 
@@ -213,6 +216,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; init; }
         public bool NeedFilePath => false;
         public Dictionary<string, object> ExtraData { get; set; }
+        public bool ExtendToWholeDraft { get; set; }
 
         public string BindedSoundTrack { get; init; } = "";
 
@@ -277,8 +281,27 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     pen = Pens.Solid(strokeColor, entry.strokeWidth!.Value);
                 }
 
+                // Vertical CJK layout: draw char-by-char in a column.
+                if (entry.UseVerticalLayout)
+                {
+                    if (Math.Abs(entry.rotation) > 0.0001f)
+                    {
+                        using var textLayer = new Image<Rgba64>(targetWidth, targetHeight);
+                        DrawVerticalText(textLayer, entry, font, brush, pen, hasStroke);
+                        var transformBuilder = new AffineTransformBuilder()
+                            .AppendTranslation(new Vector2(-entry.x, -entry.y))
+                            .AppendRotationDegrees(entry.rotation)
+                            .AppendTranslation(new Vector2(entry.x, entry.y));
+                        textLayer.Mutate(ctx => ctx.Transform(transformBuilder));
+                        canvas.Mutate(ctx => ctx.DrawImage(textLayer, 1f));
+                    }
+                    else
+                    {
+                        DrawVerticalText(canvas, entry, font, brush, pen, hasStroke);
+                    }
+                }
                 // If rotation is specified, draw to a temp layer then rotate it around the entry origin.
-                if (Math.Abs(entry.rotation) > 0.0001f)
+                else if (Math.Abs(entry.rotation) > 0.0001f)
                 {
                     using var textLayer = new Image<Rgba64>(targetWidth, targetHeight);
                     textLayer.Mutate(ctx =>
@@ -370,6 +393,99 @@ namespace projectFrameCut.Render.ClipsAndTracks
             return fontsCache;
 
         }
+
+        /// <summary>
+        /// Returns true for characters in CJK Unified Ideographs, Hiragana, Katakana,
+        /// Hangul, Bopomofo and related blocks that are naturally square in vertical layout.
+        /// </summary>
+        private static bool IsCjkCharacter(char c)
+        {
+            return (c >= '\u2E80' && c <= '\u2EFF') ||  // CJK Radicals Supplement
+                   (c >= '\u2F00' && c <= '\u2FDF') ||  // Kangxi Radicals
+                   (c >= '\u3000' && c <= '\u303F') ||  // CJK Symbols and Punctuation
+                   (c >= '\u3040' && c <= '\u309F') ||  // Hiragana
+                   (c >= '\u30A0' && c <= '\u30FF') ||  // Katakana
+                   (c >= '\u3100' && c <= '\u312F') ||  // Bopomofo
+                   (c >= '\u3200' && c <= '\u32FF') ||  // Enclosed CJK Letters and Months
+                   (c >= '\u3300' && c <= '\u33FF') ||  // CJK Compatibility
+                   (c >= '\u3400' && c <= '\u4DBF') ||  // CJK Extension A
+                   (c >= '\u4E00' && c <= '\u9FFF') ||  // CJK Unified Ideographs
+                   (c >= '\uAC00' && c <= '\uD7AF') ||  // Hangul Syllables
+                   (c >= '\uF900' && c <= '\uFAFF') ||  // CJK Compatibility Ideographs
+                   (c >= '\uFE30' && c <= '\uFE4F') ||  // CJK Compatibility Forms
+                   (c >= '\uFF00' && c <= '\uFFEF');    // Halfwidth and Fullwidth Forms
+        }
+
+        /// <summary>
+        /// Renders <paramref name="entry"/> text as a vertical column onto <paramref name="canvas"/>.
+        /// CJK characters are drawn upright and stacked. Non-CJK characters are either kept
+        /// horizontal (<see cref="TextClipEntry.KeepNonCJKTextAsHorizontal"/> = true) or
+        /// rotated 90° CW to stand upright in the column (= false).
+        /// </summary>
+        private static void DrawVerticalText(
+            Image<Rgba64> canvas,
+            TextClipEntry entry,
+            Font font,
+            Brush brush,
+            SolidPen? pen,
+            bool hasStroke)
+        {
+            float dpi = entry.dpi ?? 72f;
+            // Pixel height of one em at the given DPI.
+            float emSize = entry.fontSize * (dpi / 72f);
+            float charAdvance = emSize * entry.lineSpacing;
+            float currentY = entry.y;
+
+            foreach (char c in entry.text)
+            {
+                if (c == '\n' || c == '\r') continue;
+
+                bool isCjk = IsCjkCharacter(c);
+                // Non-CJK chars that should stand upright need a 90° CW rotation.
+                bool needsRotation = !isCjk && !entry.KeepNonCJKTextAsHorizontal;
+
+                var charOpts = new RichTextOptions(font)
+                {
+                    KerningMode = entry.applyKerning ? KerningMode.Standard : KerningMode.None,
+                    Dpi = dpi,
+                    Origin = new PointF(entry.x, currentY),
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    VerticalAlignment = VerticalAlignment.Top,
+                };
+
+                if (needsRotation)
+                {
+                    // Render on a full-size layer then rotate 90° CW around the cell centre.
+                    using var charLayer = new Image<Rgba64>(canvas.Width, canvas.Height);
+                    charLayer.Mutate(ctx =>
+                    {
+                        if (hasStroke)
+                            ctx.DrawText(charOpts, c.ToString(), brush, pen!);
+                        else
+                            ctx.DrawText(charOpts, c.ToString(), brush);
+                    });
+                    float halfCell = emSize / 2f;
+                    var transformBuilder = new AffineTransformBuilder()
+                        .AppendTranslation(new Vector2(-(entry.x + halfCell), -(currentY + halfCell)))
+                        .AppendRotationDegrees(90f)
+                        .AppendTranslation(new Vector2(entry.x + halfCell, currentY + halfCell));
+                    charLayer.Mutate(ctx => ctx.Transform(transformBuilder));
+                    canvas.Mutate(ctx => ctx.DrawImage(charLayer, 1f));
+                }
+                else
+                {
+                    canvas.Mutate(ctx =>
+                    {
+                        if (hasStroke)
+                            ctx.DrawText(charOpts, c.ToString(), brush, pen!);
+                        else
+                            ctx.DrawText(charOpts, c.ToString(), brush);
+                    });
+                }
+
+                currentY += charAdvance;
+            }
+        }
         
     }
 
@@ -395,6 +511,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; init; }
         public string? FilePath { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
+        public bool ExtendToWholeDraft { get; set; }
+
 
         public bool NeedFilePath => false;
 

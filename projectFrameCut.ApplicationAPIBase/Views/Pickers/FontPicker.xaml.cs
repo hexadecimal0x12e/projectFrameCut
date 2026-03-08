@@ -1,6 +1,7 @@
 using SixLabors.Fonts;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
 
@@ -87,6 +88,7 @@ public partial class FontPicker : ContentView
 
     private ObservableCollection<FontItem> _filteredFonts;
     private CancellationTokenSource _scrollDebounce;
+    private CancellationTokenSource? _cacheDebounce;
     private int _firstVisibleIndex;
     private int _lastVisibleIndex;
     private double _lastKnownCVHeight = -1;
@@ -231,6 +233,7 @@ public partial class FontPicker : ContentView
         FontCollectionView.ItemsSource = _filteredFonts;
 
         // 列表刷新后，渲染初始可视区域
+        ScheduleCachedPreviewApply(debounceMs: 0);
         ScheduleRender(debounceMs: 150);
     }
 
@@ -253,7 +256,73 @@ public partial class FontPicker : ContentView
         }
 
         // 滚动期间取消上一次待渲染任务，等待滚动完全静止后再渲染
+        ScheduleCachedPreviewApply(debounceMs: 80);
         ScheduleRender(debounceMs: 300);
+    }
+
+    private void ScheduleCachedPreviewApply(int debounceMs)
+    {
+        _cacheDebounce?.Cancel();
+        _cacheDebounce?.Dispose();
+        _cacheDebounce = new CancellationTokenSource();
+        var token = _cacheDebounce.Token;
+
+        Task.Delay(debounceMs, token).ContinueWith(t =>
+        {
+            if (t.IsCanceled) return;
+            ApplyCachedPreviewForVisibleItems();
+        }, TaskScheduler.Default);
+    }
+
+    private void ApplyCachedPreviewForVisibleItems()
+    {
+        if (_filteredFonts == null || _filteredFonts.Count == 0)
+            return;
+
+        var (first, last) = GetVisibleRange();
+        var updates = new List<(FontItem item, string path)>();
+
+        for (int i = first; i <= last; i++)
+        {
+            var item = _filteredFonts[i];
+            if (item.PreviewImageSource != null || string.IsNullOrWhiteSpace(item.FontName))
+                continue;
+
+            var cachePath = Path.Combine(FileSystem.CacheDirectory, "FontCache", $"{item.FontName}.png");
+            if (File.Exists(cachePath))
+                updates.Add((item, cachePath));
+        }
+
+        if (updates.Count == 0)
+            return;
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            foreach (var (item, path) in updates)
+            {
+                if (item.PreviewImageSource == null)
+                    item.PreviewImageSource = ImageSource.FromFile(path);
+            }
+        });
+    }
+
+    private (int first, int last) GetVisibleRange()
+    {
+        var first = Math.Max(0, _firstVisibleIndex);
+        int last;
+
+        if (_lastVisibleIndex > first)
+        {
+            last = Math.Min(_filteredFonts.Count - 1, _lastVisibleIndex);
+        }
+        else
+        {
+            var estimatedVisible = (int)Math.Ceiling(FontCollectionView.Height / 72.0);
+            estimatedVisible = Math.Max(estimatedVisible, 8);
+            last = Math.Min(_filteredFonts.Count - 1, first + estimatedVisible);
+        }
+
+        return (first, last);
     }
 
     private void ScheduleRender(int debounceMs)
@@ -275,20 +344,7 @@ public partial class FontPicker : ContentView
         if (PreviewRenderer == null || _filteredFonts == null || _filteredFonts.Count == 0)
             return;
 
-        var first = Math.Max(0, _firstVisibleIndex);
-        // 若还没有发生过任何滚动，_lastVisibleIndex 为 0；
-        // 用估算：CollectionView 高度 / 单项平均高度（约 60dp），至少渲染首屏可见条目
-        int last;
-        if (_lastVisibleIndex > first)
-        {
-            last = Math.Min(_filteredFonts.Count - 1, _lastVisibleIndex);
-        }
-        else
-        {
-            var estimatedVisible = (int)Math.Ceiling(FontCollectionView.Height / 72.0);
-            estimatedVisible = Math.Max(estimatedVisible, 8); // 最少保底 8 项
-            last = Math.Min(_filteredFonts.Count - 1, first + estimatedVisible);
-        }
+        var (first, last) = GetVisibleRange();
 
         for (int i = first; i <= last; i++)
         {

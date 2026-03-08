@@ -30,6 +30,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; init; }
         public string? FilePath { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
+        public bool ExtendToWholeDraft { get; set; }
 
         public bool NeedFilePath => false;
 

@@ -75,6 +75,16 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         public float SecondPerFrameRatio { get; init; }
 
         /// <summary>
+        /// Set which this clip should be extended to the whole draft. 
+        /// </summary>
+        /// <remarks>
+        /// If this property is true, the system will ignore the StartFrame and Duration properties, and treat this clip as if it starts at frame 0 and ends at the last frame of the draft. 
+        /// Also when this property is true, the system will always place this clip at the top.
+        /// This option is only available to clips in SubTrack (<see cref="LayerIndex"/> >= 10000).
+        /// </remarks>
+        public bool ExtendToWholeDraft { get; set; }
+
+        /// <summary>
         /// Get the mixture mode applied to this clip.
         /// </summary>
         [Obsolete("We have no plan on custom type of mixturing, so it won't work and it'll be removed in future.")]

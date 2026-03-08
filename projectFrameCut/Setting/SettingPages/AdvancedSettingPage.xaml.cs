@@ -113,7 +113,7 @@ public partial class AdvancedSettingPage : ContentPage
         .AddSwitch("ui_ForceUseShell", SettingLocalizedResources.Advanced_UseMAUIShell, SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
         .AddSeparator()
         .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
-        .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts[GetSetting("OverrideCulture", "default")], null)
+        .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts.ReverseLookup(GetSetting("OverrideCulture", "default")), null)
         .AddSeparator()
         .AddText(SettingLocalizedResources.Advanced_ExportPlugin, fontSize: 20)
         .AddPicker("exportPlugin", SettingLocalizedResources.Advanced_ExportPlugin_Select, projectFrameCut.Render.Plugin.PluginManager.LoadedPlugins.Select(c => c.Key).ToArray(), "Pick a plugin here")
@@ -318,7 +318,7 @@ public partial class AdvancedSettingPage : ContentPage
                     }
                     else
                     {
-                        var overrideLocate = overrideOpts.First(p => p.Value == DispName).Key;
+                        var overrideLocate = overrideOpts[DispName];
                         WriteSetting("OverrideCulture", overrideLocate);
                     }
 

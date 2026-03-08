@@ -513,6 +513,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Tabs_Timing",
+        "Value": "\u65F6\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "TextOption_AddAEntry",
         "Value": "\u6DFB\u52A0\u4E00\u4E2A\u6587\u672C",
         "Mode": "ConstString",
@@ -561,6 +569,32 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "TextOption_Content_Placeholder",
+        "Value": "\u8BF7\u8F93\u5165\u6587\u672C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_EntryTitle",
+        "Value": "\u6587\u672C #{i}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "i"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "i",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "TextOption_Font",
         "Value": "\u5B57\u4F53",
         "Mode": "ConstString",
@@ -601,8 +635,24 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "TextOption_KeepNonCJKHorizontal",
+        "Value": "\u4FDD\u6301\u975ECJK\u6587\u672C\u6C34\u5E73",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "TextOption_Kerning",
         "Value": "\u81EA\u9002\u5E94\u5B57\u8DDD",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_LangType",
+        "Value": "\u6587\u672C\u8BED\u79CD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -721,6 +771,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "TextOption_UseVerticalLayout",
+        "Value": "\u542F\u7528\u7AD6\u6392\u5E03\u5C40",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "TextOption_VerticalOption",
         "Value": "\u5782\u76F4\u5E03\u5C40",
         "Mode": "ConstString",
@@ -769,26 +827,76 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "TextOption_Content_Placeholder",
-        "Value": "\u8BF7\u8F93\u5165\u6587\u672C",
+        "Id": "Timing_InfLength",
+        "Value": "\u8FD9\u662F\u4E00\u4E2A\u65E0\u9650\u957F\u5EA6\u7684\u7247\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
       },
       {
-        "Id": "TextOption_EntryTitle",
-        "Value": "\u6587\u672C #{i}",
+        "Id": "Timing_InfLength_Input",
+        "Value": "\u8F93\u5165\u4E00\u4E2A\u957F\u5EA6\uFF08\u5E27\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_LengthInfo",
+        "Value": "\u6E90\u65F6\u957F: {maxFrameCount} \u5E27 ({maxFrameCount / fps:F2}s)  |  \u5E27\u7387: {fps} fps",
         "Mode": "InterpolationString",
         "Args": [
           {
-            "Key": "int",
-            "Value": "i"
+            "Key": "uint",
+            "Value": "maxFrameCount"
+          },
+          {
+            "Key": "float",
+            "Value": "fps"
           }
         ],
         "ArgsComment": [
           {
-            "Key": "i",
+            "Key": "maxFrameCount",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_LengthInfo_Start",
+        "Value": "\u8D77\u59CB\u5E27: #{safeStart} | {safeStart / fps:F2}s   \u65F6\u957F: {safeLen} \u5E27 | {safeLen / fps:F2}s",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "safeStart"
+          },
+          {
+            "Key": "uint",
+            "Value": "safeLen"
+          },
+          {
+            "Key": "float",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "safeStart",
+            "Value": ""
+          },
+          {
+            "Key": "safeLen",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
             "Value": ""
           }
         ],
@@ -1541,7 +1649,7 @@
       },
       {
         "Id": "TextOption_Kerning",
-        "Value": "Kerning",
+        "Value": "Auto kerning",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1586,38 +1694,38 @@
       },
       {
         "Id": "TextOption_WrapW",
-        "Value": "Unset localization item:TextOption_WrapW()",
+        "Value": "Maximum Line Length",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_WrapW_Hint",
-        "Value": "Unset localization item:TextOption_WrapW_Hint()",
+        "Value": "Unrestricted",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Stroke_Hint",
-        "Value": "Unset localization item:TextOption_Stroke_Hint()",
+        "Value": "Thickness (px), leave empty to disable",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_TabTitle",
-        "Value": "Unset localization item:TextOption_TabTitle()",
+        "Value": "Text",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
@@ -1626,28 +1734,30 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Advanced_Expanded",
-        "Value": "Less \u25B2",
+        "Value": "Collapse \u25B2",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Button text to collapse an expanded advanced options section. The triangle symbol indicates upward direction/collapse.",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Content_Placeholder",
-        "Value": "Unset localization item:TextOption_Content_Placeholder()",
+        "Value": "Please enter text",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_EntryTitle",
-        "Value": "Unset localization item:TextOption_EntryTitle(int i)",
+        "Value": "Text #{i}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1661,7 +1771,123 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Timing",
+        "Value": "Timing",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_InfLength",
+        "Value": "This is an infinite-length segment.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_LengthInfo",
+        "Value": "Source duration: {maxFrameCount} frames ({maxFrameCount / fps:F2}s)  |  Frame rate: {fps} fps",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "maxFrameCount"
+          },
+          {
+            "Key": "float",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "maxFrameCount",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_LengthInfo_Start",
+        "Value": "Start frame: #{safeStart} | {safeStart / fps:F2}s   Duration: {safeLen} frames | {safeLen / fps:F2}s",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "safeStart"
+          },
+          {
+            "Key": "uint",
+            "Value": "safeLen"
+          },
+          {
+            "Key": "float",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "safeStart",
+            "Value": ""
+          },
+          {
+            "Key": "safeLen",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_InfLength_Input",
+        "Value": "Enter a length (frames)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_LangType",
+        "Value": "Text Language Type",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_UseVerticalLayout",
+        "Value": "Enable vertical layout",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_KeepNonCJKHorizontal",
+        "Value": "Keep non-CJK text horizontal",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -2411,7 +2637,7 @@
       },
       {
         "Id": "TextOption_Kerning",
-        "Value": "\u5B57\u8DDD",
+        "Value": "\u81EA\u9069\u61C9\u5B57\u8DDD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2456,70 +2682,70 @@
       },
       {
         "Id": "TextOption_WrapW",
-        "Value": "Unset localization item:TextOption_WrapW()",
+        "Value": "\u6700\u5927\u884C\u9577\u5EA6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_WrapW_Hint",
-        "Value": "Unset localization item:TextOption_WrapW_Hint()",
+        "Value": "\u7121\u9650\u5236",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Stroke_Hint",
-        "Value": "Unset localization item:TextOption_Stroke_Hint()",
+        "Value": "\u7C97\u7D30 (px)\uFF0C\u7559\u7A7A\u4F86\u505C\u7528",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_TabTitle",
-        "Value": "Unset localization item:TextOption_TabTitle()",
+        "Value": "\u6587\u5B57",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Advanced_Collapsed",
-        "Value": "Unset localization item:TextOption_Advanced_Collapsed()",
+        "Value": "\u9032\u968E \u25BC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Advanced_Expanded",
-        "Value": "Unset localization item:TextOption_Advanced_Expanded()",
+        "Value": "\u6536\u8D77 \u25B2",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Content_Placeholder",
-        "Value": "Unset localization item:TextOption_Content_Placeholder()",
+        "Value": "\u8ACB\u8F38\u5165\u6587\u5B57",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_EntryTitle",
-        "Value": "Unset localization item:TextOption_EntryTitle(int i)",
+        "Value": "\u6587\u5B57 #{i}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -2533,7 +2759,123 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Timing",
+        "Value": "\u6642\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_InfLength",
+        "Value": "\u9019\u662F\u4E00\u500B\u7121\u9650\u9577\u5EA6\u7684\u7247\u6BB5\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_LengthInfo",
+        "Value": "\u539F\u59CB\u9577\u5EA6: {maxFrameCount} \u5E40 ({maxFrameCount / fps:F2}s)  |  \u5E40\u7387: {fps} fps",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "maxFrameCount"
+          },
+          {
+            "Key": "float",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "maxFrameCount",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_LengthInfo_Start",
+        "Value": "\u958B\u59CB\u5E40: #{safeStart} | {safeStart / fps:F2}s   \u6642\u9577: {safeLen} \u5E40 | {safeLen / fps:F2}s",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "safeStart"
+          },
+          {
+            "Key": "uint",
+            "Value": "safeLen"
+          },
+          {
+            "Key": "float",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "safeStart",
+            "Value": ""
+          },
+          {
+            "Key": "safeLen",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_InfLength_Input",
+        "Value": "\u8F38\u5165\u4E00\u500B\u9577\u5EA6\uFF08\u5E40\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_LangType",
+        "Value": "\u6587\u5B57\u8A9E\u7A2E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_UseVerticalLayout",
+        "Value": "\u555F\u7528\u8C4E\u6392\u7248\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_KeepNonCJKHorizontal",
+        "Value": "\u4FDD\u6301\u975ECJK\u6587\u672C\u6C34\u5E73",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -3283,7 +3625,7 @@
       },
       {
         "Id": "TextOption_Kerning",
-        "Value": "\u5B57\u9593",
+        "Value": "\u30AB\u30FC\u30CB\u30F3\u30B0\u81EA\u52D5\u8ABF\u6574",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3328,70 +3670,70 @@
       },
       {
         "Id": "TextOption_WrapW",
-        "Value": "Unset localization item:TextOption_WrapW()",
+        "Value": "\u6700\u5927\u884C\u5E45",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_WrapW_Hint",
-        "Value": "Unset localization item:TextOption_WrapW_Hint()",
+        "Value": "\u7121\u5236\u9650",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Stroke_Hint",
-        "Value": "Unset localization item:TextOption_Stroke_Hint()",
+        "Value": "\u592A\u3055 (px)\u3002\u7A7A\u6B04\u3067\u7121\u52B9\u5316",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_TabTitle",
-        "Value": "Unset localization item:TextOption_TabTitle()",
+        "Value": "\u30C6\u30AD\u30B9\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Advanced_Collapsed",
-        "Value": "Unset localization item:TextOption_Advanced_Collapsed()",
+        "Value": "\u8A73\u7D30 \u25BC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Advanced_Expanded",
-        "Value": "Unset localization item:TextOption_Advanced_Expanded()",
+        "Value": "\u6298\u308A\u305F\u305F\u3080 \u25B2",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Content_Placeholder",
-        "Value": "Unset localization item:TextOption_Content_Placeholder()",
+        "Value": "\u30C6\u30AD\u30B9\u30C8\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_EntryTitle",
-        "Value": "Unset localization item:TextOption_EntryTitle(int i)",
+        "Value": "\u30C6\u30AD\u30B9\u30C8 #{i}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3405,7 +3747,123 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Timing",
+        "Value": "\u30BF\u30A4\u30DF\u30F3\u30B0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_InfLength",
+        "Value": "\u3053\u308C\u306F\u7121\u9650\u306E\u9577\u3055\u306E\u30BB\u30B0\u30E1\u30F3\u30C8\u3067\u3059\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_LengthInfo",
+        "Value": "\u30BD\u30FC\u30B9\u9577: {maxFrameCount} \u30D5\u30EC\u30FC\u30E0 ({maxFrameCount / fps:F2}s) | \u30D5\u30EC\u30FC\u30E0\u30EC\u30FC\u30C8: {fps} fps",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "maxFrameCount"
+          },
+          {
+            "Key": "float",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "maxFrameCount",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_LengthInfo_Start",
+        "Value": "\u958B\u59CB\u30D5\u30EC\u30FC\u30E0: #{safeStart} | {safeStart / fps:F2}\u79D2   \u9577\u3055: {safeLen} \u30D5\u30EC\u30FC\u30E0 | {safeLen / fps:F2}\u79D2",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "safeStart"
+          },
+          {
+            "Key": "uint",
+            "Value": "safeLen"
+          },
+          {
+            "Key": "float",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "safeStart",
+            "Value": ""
+          },
+          {
+            "Key": "safeLen",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_InfLength_Input",
+        "Value": "\u9577\u3055\u3092\u5165\u529B\uFF08\u30D5\u30EC\u30FC\u30E0\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_LangType",
+        "Value": "\u30C6\u30AD\u30B9\u30C8\u8A00\u8A9E\u7A2E\u5225",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_UseVerticalLayout",
+        "Value": "\u7E26\u30EC\u30A4\u30A2\u30A6\u30C8\u3092\u4F7F\u7528\u3059\u308B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_KeepNonCJKHorizontal",
+        "Value": "\u975ECJK\u30C6\u30AD\u30B9\u30C8\u3092\u6C34\u5E73\u65B9\u5411\u306B\u7DAD\u6301",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -4155,7 +4613,7 @@
       },
       {
         "Id": "TextOption_Kerning",
-        "Value": "\uC790\uAC04",
+        "Value": "\uC790\uB3D9 \uC790\uAC04",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4200,70 +4658,70 @@
       },
       {
         "Id": "TextOption_WrapW",
-        "Value": "Unset localization item:TextOption_WrapW()",
+        "Value": "\uCD5C\uB300 \uC904 \uAE38\uC774",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_WrapW_Hint",
-        "Value": "Unset localization item:TextOption_WrapW_Hint()",
+        "Value": "\uC81C\uD55C \uC5C6\uC74C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Stroke_Hint",
-        "Value": "Unset localization item:TextOption_Stroke_Hint()",
+        "Value": "\uAD75\uAE30 (px), \uBE44\uC6CC\uB450\uBA74 \uBE44\uD65C\uC131\uD654",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u63CF\u8FB9\u7C97\u7EC6\u8BBE\u7F6E\u63D0\u793A\uFF0C\u5355\u4F4D\u50CF\u7D20\uFF0C\u7559\u7A7A\u8868\u793A\u7981\u7528",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_TabTitle",
-        "Value": "Unset localization item:TextOption_TabTitle()",
+        "Value": "\uD14D\uC2A4\uD2B8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Advanced_Collapsed",
-        "Value": "Unset localization item:TextOption_Advanced_Collapsed()",
+        "Value": "\uACE0\uAE09 \u25BD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Advanced_Expanded",
-        "Value": "Unset localization item:TextOption_Advanced_Expanded()",
+        "Value": "\uC811\uAE30 \u25B2",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Content_Placeholder",
-        "Value": "Unset localization item:TextOption_Content_Placeholder()",
+        "Value": "\uD14D\uC2A4\uD2B8\uB97C \uC785\uB825\uD558\uC138\uC694",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_EntryTitle",
-        "Value": "Unset localization item:TextOption_EntryTitle(int i)",
+        "Value": "\uD14D\uC2A4\uD2B8 #{i}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -4277,7 +4735,123 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Timing",
+        "Value": "\uD0C0\uC774\uBC0D",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_InfLength",
+        "Value": "\uC774\uAC83\uC740 \uBB34\uD55C \uAE38\uC774\uC758 \uD074\uB9BD\uC785\uB2C8\uB2E4.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_LengthInfo",
+        "Value": "\uC18C\uC2A4 \uAE38\uC774: {maxFrameCount}\uD504\uB808\uC784 ({maxFrameCount / fps:F2}\uCD08)  |  \uD504\uB808\uC784\uB960: {fps} fps",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "maxFrameCount"
+          },
+          {
+            "Key": "float",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "maxFrameCount",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_LengthInfo_Start",
+        "Value": "\uC2DC\uC791 \uD504\uB808\uC784: #{safeStart} | {safeStart / fps:F2}\uCD08   \uAE38\uC774: {safeLen} \uD504\uB808\uC784 | {safeLen / fps:F2}\uCD08",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "safeStart"
+          },
+          {
+            "Key": "uint",
+            "Value": "safeLen"
+          },
+          {
+            "Key": "float",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "safeStart",
+            "Value": ""
+          },
+          {
+            "Key": "safeLen",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_InfLength_Input",
+        "Value": "\uAE38\uC774 \uC785\uB825 (\uD504\uB808\uC784)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_LangType",
+        "Value": "\uD14D\uC2A4\uD2B8 \uC5B8\uC5B4",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_UseVerticalLayout",
+        "Value": "\uC138\uB85C \uB808\uC774\uC544\uC6C3 \uC0AC\uC6A9",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_KeepNonCJKHorizontal",
+        "Value": "\uBE44CJK \uD14D\uC2A4\uD2B8 \uC218\uD3C9 \uC720\uC9C0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -5027,7 +5601,7 @@
       },
       {
         "Id": "TextOption_Kerning",
-        "Value": "Interlettrage",
+        "Value": "Cr\u00E9nage automatique",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5072,70 +5646,70 @@
       },
       {
         "Id": "TextOption_WrapW",
-        "Value": "Unset localization item:TextOption_WrapW()",
+        "Value": "Longueur maximale de ligne",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_WrapW_Hint",
-        "Value": "Unset localization item:TextOption_WrapW_Hint()",
+        "Value": "Illimit\u00E9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Stroke_Hint",
-        "Value": "Unset localization item:TextOption_Stroke_Hint()",
+        "Value": "\u00C9paisseur (px), laisser vide pour d\u00E9sactiver",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_TabTitle",
-        "Value": "Unset localization item:TextOption_TabTitle()",
+        "Value": "Texte",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Advanced_Collapsed",
-        "Value": "Unset localization item:TextOption_Advanced_Collapsed()",
+        "Value": "Avanc\u00E9 \u25BC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Advanced_Expanded",
-        "Value": "Unset localization item:TextOption_Advanced_Expanded()",
+        "Value": "R\u00E9duire \u25B2",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_Content_Placeholder",
-        "Value": "Unset localization item:TextOption_Content_Placeholder()",
+        "Value": "Veuillez saisir du texte",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "TextOption_EntryTitle",
-        "Value": "Unset localization item:TextOption_EntryTitle(int i)",
+        "Value": "Texte #{i}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -5149,7 +5723,123 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Tabs_Timing",
+        "Value": "Chronologie",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_InfLength",
+        "Value": "C\u0027est un fragment de longueur infinie.",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_LengthInfo",
+        "Value": "Dur\u00E9e : {maxFrameCount} images ({maxFrameCount / fps:F2} s) | Taux d\u0027images : {fps} ips",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "maxFrameCount"
+          },
+          {
+            "Key": "float",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "maxFrameCount",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_LengthInfo_Start",
+        "Value": "Image de d\u00E9part : #{safeStart} | {safeStart / fps:F2}s   Dur\u00E9e : {safeLen} images | {safeLen / fps:F2}s",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "uint",
+            "Value": "safeStart"
+          },
+          {
+            "Key": "uint",
+            "Value": "safeLen"
+          },
+          {
+            "Key": "float",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "safeStart",
+            "Value": ""
+          },
+          {
+            "Key": "safeLen",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_InfLength_Input",
+        "Value": "Entrez une dur\u00E9e (en trames)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_LangType",
+        "Value": "Langue du texte",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_UseVerticalLayout",
+        "Value": "Activer la disposition verticale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TextOption_KeepNonCJKHorizontal",
+        "Value": "Conserver le texte non-CJK \u00E0 l\u0027horizontale",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]

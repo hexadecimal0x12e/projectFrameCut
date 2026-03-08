@@ -295,6 +295,11 @@ public partial class HomePage : ContentPage
             await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
             return;
         }
+        if (Path.GetInvalidPathChars().Any(projName.Contains))
+        {
+            await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+            return;
+        }
         Directory.CreateDirectory(draftSourcePath);
         var ProjectInfo = new ProjectJSONStructure
         {
@@ -505,6 +510,7 @@ public partial class HomePage : ContentPage
                 {
                     File.Move(Path.Combine(draftSourcePath, "project.json"), Path.Combine(draftSourcePath, "project.pjfc"));
                 }
+                if (!project.NormallyExited) goto recover;
                 List<AssetItem> assets;
                 DraftStructureJSON timeline;
                 try
@@ -977,43 +983,15 @@ public partial class HomePage : ContentPage
 
     private async Task DeleteProject(ProjectsViewModel pvm)
     {
-
         try
         {
             var confirm0 = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm0(pvm.Name), Localized._Confirm, Localized._Cancel);
             if (!confirm0) return;
             var confirm1 = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm1(pvm.Name), Localized._Confirm, Localized._Cancel);
             if (!confirm1) return;
-#if WINDOWS
-            bool confirm2 = false;
-            Microsoft.UI.Xaml.Controls.ContentDialog lastDiag = new Microsoft.UI.Xaml.Controls.ContentDialog
-            {
-                Title = Localized._Warn,
-                Content = Localized.HomePage_ProjectContextMenu_Delete_Confirm2(pvm.Name),
-                PrimaryButtonText = Localized.HomePage_ProjectContextMenu_Delete_Confirm3(pvm.Name),
-                CloseButtonText = Localized._Cancel,
-                PrimaryButtonStyle = new Microsoft.UI.Xaml.Style(typeof(Microsoft.UI.Xaml.Controls.Button))
-                {
-                    Setters =
-                    {
-                        new Microsoft.UI.Xaml.Setter(
-                            Microsoft.UI.Xaml.Controls.Control.BackgroundProperty,
-                            Microsoft.UI.Xaml.Application.Current.Resources["SystemFillColorCriticalBackgroundBrush"]
-                        )
-                    }
-                }
-            };
-            var services = Application.Current?.Handler?.MauiContext?.Services;
-            var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
-            if (dialogueHelper != null)
-            {
-                var result = await dialogueHelper.ShowContentDialogue(lastDiag);
-                confirm2 = result == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary;
-            }
-#else
-            var confirm2 = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm2(pvm.Name), Localized.HomePage_ProjectContextMenu_Delete_Confirm3(pvm.Name), Localized._Cancel);
-#endif
-            if (!confirm2) return;
+            var confirm2 = await DisplayPromptAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm2Input(pvm.Name), Localized._Confirm, Localized._Cancel, "no");
+
+            if (confirm2 != "yes") return;
 
             if (Directory.Exists(pvm._projectPath))
             {
@@ -1125,6 +1103,11 @@ public partial class HomePage : ContentPage
         if (Directory.Exists(newPath))
         {
             await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
+            return;
+        }
+        if (Path.GetInvalidPathChars().Any(projName.Contains))
+        {
+            await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
             return;
         }
         Directory.Move(vmItem._projectPath, newPath);
@@ -1331,7 +1314,8 @@ public partial class HomePage : ContentPage
     {
         foreach (var item in await FileDropHelper.GetFilePathsFromDrop(e))
         {
-            await ImportDraft(item);
+            if (Path.GetExtension(item) == ".pjfc")
+                await ImportDraft(item);
         }
     }
 

@@ -21,6 +21,7 @@ using IPicture = projectFrameCut.Shared.IPicture;
 using Microsoft.Maui.Storage;
 using projectFrameCut.Render.Transform;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
+using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 
 namespace projectFrameCut.ViewModels;
 
@@ -274,6 +275,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             if (field != value)
             {
                 field = value;
+                TextClipInSubTrack = value?.ShouldInSubtrack ?? false;
                 OnPropertyChanged();
             }
         }
@@ -291,6 +293,19 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
         }
     } = string.Empty;
+
+    public bool TextClipInSubTrack
+    {
+        get;
+        set
+        {
+            if(field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    }
 
     // 绘图颜色与线宽
     public Color DrawingPenColor
@@ -542,7 +557,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
 
         int trackIndex = 0;
-        if (style.ShouldInSubtrack)
+        if (TextClipInSubTrack)
         {
             trackIndex = _draftPage.Tracks.Keys.Where(k => k >= DraftPage.SubTrackOffset).DefaultIfEmpty(DraftPage.SubTrackOffset).Max();
             if (!_draftPage.Tracks.ContainsKey(trackIndex))
@@ -1128,48 +1143,42 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             _draftPage.AddATrack(trackIndex);
         }
 
-        ushort R = 65535, G = 65535, B = 65535, A = 65535;
-#if WINDOWS
-        var picker = new Microsoft.UI.Xaml.Controls.ColorPicker
+        ushort R = 65535, G = 65535, B = 65535;
+        float A = 1f;
+
+        var picker = new ColorPicker();
+
+        var tcs = new TaskCompletionSource();
+
+        var view = new ScrollView
         {
-            ColorSpectrumShape = Microsoft.UI.Xaml.Controls.ColorSpectrumShape.Ring,
-            IsMoreButtonVisible = true,
-            IsColorSliderVisible = true,
-            IsColorChannelTextInputVisible = true,
-            IsHexInputVisible = true,
-            IsAlphaEnabled = true,
-            IsAlphaSliderVisible = true,
-            IsAlphaTextInputVisible = true,
+            Content = new VerticalStackLayout
+            {
+                Children =
+                {
+                    picker,
+                    new Button
+                    {
+                        Text = Localized._Confirm,
+                        Command = new Command(() => tcs.SetResult())
+                    }
+                }
+            }
         };
-        Microsoft.UI.Xaml.Controls.ContentDialog diag = new Microsoft.UI.Xaml.Controls.ContentDialog
-        {
-            Title = "Pick a color",
-            Content = picker,
-            CloseButtonText = Localized._Cancel,
-            PrimaryButtonText = Localized._OK,
-        };
 
-        var services = Microsoft.Maui.Controls.Application.Current?.Handler?.MauiContext?.Services;
-        var dialogueHelper = services?.GetService(typeof(projectFrameCut.Platforms.Windows.IDialogueHelper)) as projectFrameCut.Platforms.Windows.IDialogueHelper;
-        if (dialogueHelper != null)
-        {
-            var r = await dialogueHelper.ShowContentDialogue(diag);
-            var color = picker.Color;
-            R = (ushort)(color.R * 257);
-            G = (ushort)(color.G * 257);
-            B = (ushort)(color.B * 257);
-            A = (ushort)(color.A * 257);
-        }
-#endif
-
-
+        await _draftPage.ShowAPopup(view, null, null, "dialog");
+        await tcs.Task;
+        R = (ushort)(picker.SelectedColor.Red * ushort.MaxValue);
+        G = (ushort)(picker.SelectedColor.Green * ushort.MaxValue);
+        B = (ushort)(picker.SelectedColor.Blue * ushort.MaxValue);
+        A = picker.SelectedColor.Alpha;
 
         var element = _draftPage.CreateAndAddClip(
             startX: 0,
             width: _draftPage.FrameToPixel(90),
             trackIndex: trackIndex,
             id: null,
-            labelText: $"#{R / 257:X2}{G / 257:X2}{B / 257:X2}{A / 257:X2}",
+            labelText: $"#{R / 257:X2}{G / 257:X2}{B / 257:X2}{(int)(A * 255):X2}",
             background: new SolidColorBrush(Colors.MediumPurple),
             resolveOverlap: true,
             relativeStart: 0,
@@ -1376,7 +1385,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 var t when t == Localized.DraftPage_AddClipView_AIGC_ImageStyle_Anime => ImageStyle.Anime,
                 var t when t == Localized.DraftPage_AddClipView_AIGC_ImageStyle_Photography => ImageStyle.Photography,
                 var t when t == Localized.DraftPage_AddClipView_AIGC_ImageStyle_TradidtionalPainting => ImageStyle.TradidtionalPainting,
-                _ => ImageStyle.Natural 
+                _ => ImageStyle.Natural
             };
 
             // 创建图片生成选项
@@ -1747,7 +1756,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             {
                 await _draftPage.DisplayAlertAsync(
                     Localized._Error,
-                    $"{SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse}{Environment.NewLine}(Cannot download result.)",
+                    $"{SettingsManager.SettingLocalizedResources.AISetting_Test_ErrorResponse}{Environment.NewLine}(Cannot download result)",
                     Localized._OK);
                 return;
             }
@@ -1838,7 +1847,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task<string?> DownloadRemoteResourcesToLocal(string videoUrl, string extension = "", string format = "remote-{0}")
+    private async Task<string?> DownloadRemoteResourcesToLocal(string videoUrl, string extension, string format = "remote-{0}")
     {
         try
         {

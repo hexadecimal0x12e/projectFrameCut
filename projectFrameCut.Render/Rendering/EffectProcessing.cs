@@ -32,7 +32,7 @@ namespace projectFrameCut.Render.Rendering
             throw new KeyNotFoundException($"Cached value with key '{key}' not found in either frame-local or global cache.");
         }
 
-        public static void ProcessEffect(ref IPicture frame, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, IEffect item, IComputer? computer, int width, int height)
+        public static void ProcessEffect(ref IPicture frame, List<IPictureProcessStep> steps, ref bool lastIsProcessStep, INormalEffect item, IComputer? computer, int width, int height)
         {
             if (item.YieldProcessStep)
             {

@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class PlaceEffect_ImageSharp : IEffect
+    public class PlaceEffect_ImageSharp : INormalEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }

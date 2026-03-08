@@ -55,6 +55,7 @@ public class DraftSettingPage
         {
             var key = await parent.DisplayPromptAsync(Localized._Info, Localized.DraftSettingPage_Advanced_UserDefinedProperties_Add_InputKey, Localized._Confirm, Localized._Cancel);
             ppb.AddEntry($"CustomOption,{key}", key, "", Localized.DraftSettingPage_Advanced_UserDefinedProperties_KeepBlankToRemove, null, default);
+            if (string.IsNullOrWhiteSpace(key)) return;
             parent.ProjectInfo.UserDefinedProperties.Add(key, "");
             tabView.SelectedItem.Content = BuildAdvancedTab();
         });

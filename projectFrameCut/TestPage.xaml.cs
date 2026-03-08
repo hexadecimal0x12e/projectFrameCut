@@ -70,13 +70,6 @@ public partial class TestPage : ContentPage
         };
     }
 
-    private async Task LoadFontPickerAsync()
-    {
-        var items = TextHelper.BuildSystemFontItems(preferredLocale: null);
-        TextPicker.FontsSource = items;
-        TextPicker.Title = $"Fonts ({items.Count})";
-    }
-
 
     private void TestPage_Loaded(object? sender, EventArgs e)
     {
@@ -983,6 +976,14 @@ public partial class TestPage : ContentPage
     #endregion
 
     #region text
+
+    private async Task LoadFontPickerAsync()
+    {
+        var items = TextHelper.BuildSystemFontItems(preferredLocale: null);
+        var ordered = await items.OrderByPronounceAsync(c => c.DisplayName);
+        TextPicker.FontsSource = ordered;
+        TextPicker.Title = $"Fonts ({ordered.Count()})";
+    }
 
     private async void TestOrderButton_Clicked(object sender, EventArgs e)
     {

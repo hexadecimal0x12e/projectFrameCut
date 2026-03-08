@@ -234,6 +234,7 @@ public partial class DraftPage : ContentPage
         infoBuilder = new ClipInfoBuilder(this);
         var page = this;
         AddClipView = new ProjectAddClipView(ref page);
+        ChatSessionsView.GlobalToolCallFactories = AIAssistance.AITools.BuildToolCalls(ref page, OnClipPropertiesChanged);
 
 
     }
@@ -257,6 +258,7 @@ public partial class DraftPage : ContentPage
         var page = this;
         infoBuilder = new ClipInfoBuilder(this);
         ChatSessionsView = new AIAssistance.AssistanceChatSessionsView();
+        ChatSessionsView.GlobalToolCallFactories = AIAssistance.AITools.BuildToolCalls(ref page, OnClipPropertiesChanged);
         AddClipView = new ProjectAddClipView(ref page);
         WorkingPath = workingDir;
         TrackCalculator.HeightPerTrack = ClipHeight;
@@ -1848,7 +1850,6 @@ public partial class DraftPage : ContentPage
         }
         try
         {
-            ChatSessionsView.Current?.ToolCallFactories = infoBuilder.BuildToolCalls(clip, OnClipPropertiesChanged);
         }
         catch (Exception ex)
         {
@@ -4031,7 +4032,7 @@ public partial class DraftPage : ContentPage
                 menuBarItem.OfType<MenuFlyoutItem>()
                     .Where(item => item.Command != null)
                     .Select(item => (
-                        Key: $"{menuBarItem.Text} \u203a {item.Text}",
+                        Key: $"{menuBarItem.Text} -> {item.Text}",
                         Value: ((ICommand?)item.Command, (object?)item.CommandParameter)
                     ))
             )
@@ -4092,13 +4093,15 @@ public partial class DraftPage : ContentPage
         //List<string> verbs = [];
         //if (SettingsManager.IsBoolSettingTrue("DeveloperMode")) verbs.AddRange(debugActionsPair.Keys);
 
-        var option = await DisplayActionSheetAsync(Localized._Info, Localized._Cancel, null, actionsPair.Keys.ToArray());
+        var option = await DisplayActionSheetAsync(Localized._Info, Localized._Cancel, null, actionsPair.Keys.Concat(SettingsManager.IsBoolSettingTrue("DeveloperMode") ? debugActionsPair.Keys : new List<string>()).ToArray());
+
+        if (string.IsNullOrWhiteSpace(option)) return;
 
         if (actionsPair.TryGetValue(option, out var cmd))
         {
             cmd.command?.Execute(cmd.argument);
         }
-        if(debugActionsPair.TryGetValue(option,out var dbgCmd))
+        if (debugActionsPair.TryGetValue(option, out var dbgCmd))
         {
             dbgCmd.Execute(null!);
         }

@@ -186,23 +186,37 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 
     }
 
-    public class OverlayComputer : IComputer
+    public class OverlayComputer : IComputer  
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
         public string SupportedEffectOrMixture => "Overlay";
 
         public object[] Compute(object[] args)
         {
-            // args: [A, B, aAlpha, bAlpha, outputBpp]
+            // args: [A, B, aAlpha, bAlpha, outputBpp, basePixels]
             var A = args[0] as float[];
             var B = args[1] as float[];
             var aAlpha = args.Length > 2 ? (args[2] as float[]) : null;
             var bAlpha = args.Length > 3 ? (args[3] as float[]) : null;
             var outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
+            var actualPixels = args.Length > 5 ? Convert.ToInt32(args[5]) : A?.Length ?? 0;
 
-            // Ensure inputs are not null
-            if (aAlpha == null) aAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
-            if (bAlpha == null) bAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
+            // A and B may be larger than actualPixels due to ArrayPool.Rent
+            // Trim them to the actual size to match alpha arrays
+            float[] trimmedA = new float[actualPixels];
+            float[] trimmedB = new float[actualPixels];
+            Array.Copy(A!, 0, trimmedA, 0, actualPixels);
+            Array.Copy(B!, 0, trimmedB, 0, actualPixels);
+
+            // Ensure alpha arrays match the actual pixel count
+            if (aAlpha == null) aAlpha = Enumerable.Repeat(1f, actualPixels).ToArray();
+            if (bAlpha == null) bAlpha = Enumerable.Repeat(1f, actualPixels).ToArray();
+            
+            // Validate all arrays have the same length
+            if (aAlpha.Length != actualPixels || bAlpha.Length != actualPixels)
+            {
+                throw new InvalidDataException($"Alpha array length mismatch: aAlpha={aAlpha.Length}, bAlpha={bAlpha.Length}, expected={actualPixels}");
+            }
 
             using (ShaderLibrary.locker.EnterScope())
             {
@@ -219,8 +233,37 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                         JobID = "OverlayComputer",
                         OutputElementType = GLComputeView.OutputElementType.Float32
                     };
+                    
+                    // Wait for Handler to be created/attached
+                    var handlerReadyTcs = new TaskCompletionSource<NativeGLSurfaceViewHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    void OnHandlerChanged(object? sender, EventArgs e)
+                    {
+                        if (accelerator.Handler is NativeGLSurfaceViewHandler handler)
+                        {
+                            accelerator.HandlerChanged -= OnHandlerChanged;
+                            handlerReadyTcs.TrySetResult(handler);
+                        }
+                    }
+                    accelerator.HandlerChanged += OnHandlerChanged;
+                    
                     ComputerHelper.AddGLViewHandler?.Invoke(accelerator);
-                    var handler = accelerator.Handler as NativeGLSurfaceViewHandler;
+                    
+                    // Check if handler is already set (in case HandlerChanged fired before we subscribed)
+                    if (accelerator.Handler is NativeGLSurfaceViewHandler existingHandler)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        handlerReadyTcs.TrySetResult(existingHandler);
+                    }
+                    
+                    // Wait for handler with timeout
+                    var handlerWaitTask = handlerReadyTcs.Task;
+                    if (await Task.WhenAny(handlerWaitTask, Task.Delay(TimeSpan.FromSeconds(10))) != handlerWaitTask)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        throw new TimeoutException("Handler creation timed out after 10 seconds.");
+                    }
+                    var handler = await handlerWaitTask;
+                    
                     if (handler?.PlatformView is not GLComputeView glView)
                         throw new InvalidOperationException("Accelerator is not ready or not attached.");
 
@@ -248,7 +291,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                         accelerator.ShaderSource = ShaderLibrary.ShaderColorSrc;
                         accelerator.OutputElementType = GLComputeView.OutputElementType.Float32;
                     }
-                    accelerator.Inputs = new float[][] { aAlpha, A, bAlpha, B };
+                    accelerator.Inputs = new float[][] { aAlpha, trimmedA, bAlpha, trimmedB };
                     NativeGLSurfaceViewHandler.MapInputs(handler, accelerator);
 
                     var colorResult = await glView.RunComputeAsync(accelerator.OutputElementType);
@@ -310,7 +353,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
         public object[] Compute(object[] args)
         {
 
-            // args: [aR, aG, aB, sourceA, [toRemoveR], [toRemoveG], [toRemoveB], [range]]
+            // args: [aR, aG, aB, sourceA, [toRemoveR], [toRemoveG], [toRemoveB], [range], [actualPixels]]
             var aR = args[0] as float[];
             var aG = args[1] as float[];
             var aB = args[2] as float[];
@@ -320,6 +363,12 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             var toRemoveG = (ushort)args[5];
             var toRemoveB = (ushort)args[6];
             var range = (ushort)args[7];
+            
+            // Validate all input arrays have the same length
+            if (aR!.Length != aG!.Length || aR.Length != aB!.Length || aR.Length != sourceA!.Length)
+            {
+                throw new InvalidDataException($"Input array length mismatch: aR={aR.Length}, aG={aG.Length}, aB={aB.Length}, sourceA={sourceA.Length}");
+            }
 
             int lowR = Math.Max(0, toRemoveR - range);
             int highR = Math.Min(65535, toRemoveR + range);
@@ -368,8 +417,37 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                         JobID = "RemoveColorComputer",
                         OutputElementType = GLComputeView.OutputElementType.Float32
                     };
+                    
+                    // Wait for Handler to be created/attached
+                    var handlerReadyTcs = new TaskCompletionSource<NativeGLSurfaceViewHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    void OnHandlerChanged(object? sender, EventArgs e)
+                    {
+                        if (accelerator.Handler is NativeGLSurfaceViewHandler handler)
+                        {
+                            accelerator.HandlerChanged -= OnHandlerChanged;
+                            handlerReadyTcs.TrySetResult(handler);
+                        }
+                    }
+                    accelerator.HandlerChanged += OnHandlerChanged;
+                    
                     ComputerHelper.AddGLViewHandler?.Invoke(accelerator);
-                    var handler = accelerator.Handler as NativeGLSurfaceViewHandler;
+                    
+                    // Check if handler is already set (in case HandlerChanged fired before we subscribed)
+                    if (accelerator.Handler is NativeGLSurfaceViewHandler existingHandler)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        handlerReadyTcs.TrySetResult(existingHandler);
+                    }
+                    
+                    // Wait for handler with timeout
+                    var handlerWaitTask = handlerReadyTcs.Task;
+                    if (await Task.WhenAny(handlerWaitTask, Task.Delay(TimeSpan.FromSeconds(10))) != handlerWaitTask)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        throw new TimeoutException("Handler creation timed out after 10 seconds.");
+                    }
+                    var handler = await handlerWaitTask;
+                    
                     if (handler?.PlatformView is not GLComputeView glView)
                         throw new InvalidOperationException("Accelerator is not ready or not attached.");
 
