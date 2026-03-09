@@ -34,9 +34,10 @@ namespace projectFrameCut.StandaloneRender
             if (!args.Contains("--nolog"))
             {
                 MyLoggerExtensions.OnLog += (m, l) => Console.WriteLine($"[{l}] {m}");
-                Console.WriteLine($"projectFrameCut.StandaloneRender - {Assembly.GetExecutingAssembly().GetName().Version}");
+                Console.WriteLine($"projectFrameCut.StandaloneRender v{Assembly.GetExecutingAssembly().GetName().Version}");
+                Console.Write(GetInfo());
                 Console.WriteLine($"Copyright hexadecimal0x12e 2025-2026.");
-                Console.WriteLine(GetInfo());
+
             }
             if (args.Contains("--logDiagnostic"))
             {
@@ -160,6 +161,7 @@ namespace projectFrameCut.StandaloneRender
                     return 0;
 
                 case "about":
+                    Console.WriteLine("---");
                     Console.WriteLine(GetInfo(true));
                     return 0;
                 default:
@@ -653,9 +655,8 @@ namespace projectFrameCut.StandaloneRender
                 baseHash = !baseType.IsDynamic && Path.Exists(baseType.Location) ? HashServices.ComputeFileHash(baseType.Location) : "unknown";
             }
             catch { baseHash = "unknown"; }
-            builder.AppendLine($"APIBase Version: {IPluginBase.CurrentPluginAPIVersion}");
-            builder.AppendLine($"Render: version {renderType.GetName().Version}, hash:{renderHash}");
-            builder.AppendLine($"APIBase: version {baseType.GetName().Version}, hash:{baseHash}");
+            builder.AppendLine($"BaseAPI Definition: V{IPluginBase.CurrentPluginAPIVersion}({baseType.GetName().Version}), hash:{baseHash}");
+            builder.AppendLine($"Core render library: v{renderType.GetName().Version}, hash:{renderHash}");
             if (all)
             {
                 List<string> printedAsb = new();

@@ -590,6 +590,10 @@ public partial class DraftPage : ContentPage
         elem.sourceSecondPerFrame = asset.SecondPerFrame;
         elem.SecondPerFrameRatio = 1f;
         elem.ExtraData = new();
+        if (asset.IsAIGenerated)
+        {
+            elem.ExtraData["IsAI"] = true;
+        }
         return elem;
     }
 
@@ -1532,7 +1536,7 @@ public partial class DraftPage : ContentPage
             startX: startX + 3,
             width: width - 3,
             trackIndex: TrackId,
-            labelText: "",
+            labelText: transform?.Name ?? $"Transform:{transform?.TypeName}",
             background: new SolidColorBrush(Color.FromArgb("#AA33BBFF")),
             resolveOverlap: true);
 
@@ -1545,7 +1549,8 @@ public partial class DraftPage : ContentPage
         // Persist the transform instance so it can be re-created when the project is loaded.
         try
         {
-            elem.ExtraData["TransformElement"] = System.Text.Json.JsonSerializer.SerializeToElement(transform);
+            // Serialize using runtime type to preserve concrete properties (e.g. ExternalSourceTransform.SourcePath).
+            elem.ExtraData["TransformElement"] = System.Text.Json.JsonSerializer.SerializeToElement(transform, transform.GetType());
         }
         catch { }
         elem.LeftHandle.IsVisible = false;
@@ -3879,7 +3884,7 @@ public partial class DraftPage : ContentPage
     {
         SetStateBusy();
         await Save(true);
-        await HidePopup();
+        await HidePopup(true);
         UnSelectTapGesture_Tapped(sender, null!);
         UpdateTimelineWidth();
         SetTimelineScrollEnabled(true);

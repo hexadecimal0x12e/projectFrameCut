@@ -299,7 +299,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         get;
         set
         {
-            if(field != value)
+            if (field != value)
             {
                 field = value;
                 OnPropertyChanged();
@@ -1419,9 +1419,9 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 return;
             }
 
-            // 下载图片到本地
-            var localImagePath = await DownloadRemoteResourcesToLocal(result.ImageUrl, "png", "AIGenerated-{0}");
-            if (string.IsNullOrWhiteSpace(localImagePath))
+            // 下载图片到本地并添加到素材库
+            var asset = await DownloadRemoteResourcesToLocal(_draftPage, result.ImageUrl, "png", "AIGenerated-{0}");
+            if (asset == null)
             {
                 await _draftPage.DisplayAlertAsync(
                     Localized._Error,
@@ -1431,13 +1431,14 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
 
             // 添加图片到时间轴
-            await AddAIGeneratedImageToTimeline(localImagePath, AIPrompt);
+            await AddAIGeneratedImageToTimeline(asset.Path, AIPrompt);
 
             // 清空输入
             AIPrompt = "";
 
             // 通知添加成功
             ClipAdded?.Invoke(this, EventArgs.Empty);
+            await _draftPage.HidePopup(true);
         }
         catch (Exception ex)
         {
@@ -1529,8 +1530,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 return;
             }
 
-            var localVideoPath = await DownloadRemoteResourcesToLocal(result.VideoUrl, "mp4", "AIGenerated-{0}");
-            if (string.IsNullOrWhiteSpace(localVideoPath))
+            var asset = await DownloadRemoteResourcesToLocal(_draftPage, result.VideoUrl, "mp4", "AIGenerated-{0}");
+            if (asset == null)
             {
                 await _draftPage.DisplayAlertAsync(
                     Localized._Error,
@@ -1539,11 +1540,12 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 return;
             }
 
-            await AddAIGeneratedVideoToTimeline(localVideoPath, AIPrompt);
+            await AddAIGeneratedVideoToTimeline(asset.Path, AIPrompt);
 
             AIPrompt = "";
 
             ClipAdded?.Invoke(this, EventArgs.Empty);
+            await _draftPage.HidePopup(true);
         }
         catch (Exception ex)
         {
@@ -1751,8 +1753,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 return;
             }
 
-            var localVideoPath = await DownloadRemoteResourcesToLocal(result.VideoUrl, "mp4", "AIGeneratedTransform-{0}");
-            if (string.IsNullOrEmpty(localVideoPath))
+            var asset = await DownloadRemoteResourcesToLocal(_draftPage, result.VideoUrl, "mp4", "AIGeneratedTransform-{0}");
+            if (asset == null)
             {
                 await _draftPage.DisplayAlertAsync(
                     Localized._Error,
@@ -1761,19 +1763,30 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(asset.Path))
+            {
+                await _draftPage.DisplayAlertAsync(
+                    Localized._Error,
+                    $"Asset downloaded but Path is empty! AssetId={asset.AssetId}",
+                    Localized._OK);
+                return;
+            }
 
+            var sourcePath = asset.Path; // 捕获到局部变量中
 
             _draftPage.AddTransformBetweenSelected((a, b) => new ExternalSourceTransform
             {
+                Name = "AITransform",
                 BindedLeftClip = a,
                 BindedRightClip = b,
-                SourcePath = localVideoPath
+                SourcePath = sourcePath
             }, selectedClip, left, right, (c) => c.ExtraData["IsAI"] = true);
 
 
             AITransitionPrompt = "";
 
             ClipAdded?.Invoke(this, EventArgs.Empty);
+            await _draftPage.HidePopup(true);
             LoadTransforms();
         }
         catch (Exception ex)
@@ -1847,25 +1860,76 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task<string?> DownloadRemoteResourcesToLocal(string videoUrl, string extension, string format = "remote-{0}")
+    public static async Task<AssetItem?> DownloadRemoteResourcesToLocal(DraftPage workingPage, string videoUrl, string extension, string prompt)
     {
         try
         {
-            var aiVideosDir = Path.Combine(_draftPage.WorkingPath, "assets");
+            var aiVideosDir = Path.Combine(workingPage.WorkingPath, "assets");
             Directory.CreateDirectory(aiVideosDir);
-
-            var safeFileName = Path.ChangeExtension(string.Format(format, Guid.NewGuid()), extension);
+            var id = Guid.NewGuid();
+            var safeFileName = Path.ChangeExtension($"AIGenerated-{id}.mp4", extension);
             var localPath = Path.Combine(aiVideosDir, safeFileName);
 
             using var client = new HttpClient();
             var videoBytes = await client.GetByteArrayAsync(videoUrl);
             await File.WriteAllBytesAsync(localPath, videoBytes);
 
-            return localPath;
+            var assetType = AssetItem.GetAssetType(localPath);
+            var item = new AssetItem
+            {
+                AssetId = id.ToString(),
+                Name = Path.GetFileNameWithoutExtension(safeFileName),
+                AssetType = assetType,
+                Path = localPath,
+                CreatedAt = DateTime.Now,
+                SecondPerFrame = -1,
+                FrameCount = 0,
+                IsAIGenerated = true
+            };
+
+            // 生成缩略图
+            var thumbnailsDir = Path.Combine(workingPage.WorkingPath, "assets", ".thumbnails");
+            Directory.CreateDirectory(thumbnailsDir);
+            var thumbnailPath = Path.Combine(thumbnailsDir, id.ToString() + ".png");
+
+            try
+            {
+                switch (assetType)
+                {
+                    case AssetType.Video:
+                        {
+                            var vid = PluginManager.CreateVideoSource(localPath);
+                            item.FrameCount = vid.TotalFrames;
+                            item.SecondPerFrame = (float)(1f / vid.Fps);
+                            vid.GetFrame(0U, false).SaveAsPng16bpp(thumbnailPath, null);
+                            item.ThumbnailPath = thumbnailPath;
+                            break;
+                        }
+                    case AssetType.Image:
+                        {
+                            // 图片直接使用原路径作为缩略图
+                            item.ThumbnailPath = localPath;
+                            break;
+                        }
+
+                    default:
+                        item.ThumbnailPath = null;
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(ex, $"Generate thumbnail for {safeFileName}");
+                item.ThumbnailPath = null;
+            }
+
+            workingPage.Assets.AddOrUpdate(id.ToString(), item, (key, existing) => item);
+
+            return item;
         }
         catch (Exception ex)
         {
-            Logger.Log(ex, "Download remote stuff", this);
+            Logger.Log(ex, "Download remote stuff");
             return null;
         }
     }

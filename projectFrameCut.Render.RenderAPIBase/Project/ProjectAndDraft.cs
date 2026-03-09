@@ -169,6 +169,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public DateTime CreatedAt { get; set; }
 
         public Guid CreatedBy { get; set; }
+        public bool IsAIGenerated { get; set; } = false;
+
 
         public int Width { get; set; }
         public int Height { get; set; }

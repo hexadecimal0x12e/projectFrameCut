@@ -25,7 +25,7 @@ public partial class GeneralSettingPage : ContentPage
     public GeneralSettingPage()
     {
         Title = Localized.MainSettingsPage_Tab_General;
-        locates = new List<string>([$"{Localized._Default} / Default"]).Concat(ISimpleLocalizerBase.GetMapping().Select(l => l.Value._LocateDisplayName)).ToArray();
+        locates = new List<string>([$"{Localized._Default} / Default", "English (US)"]).Concat(ISimpleLocalizerBase.GetMapping().Where(c => c.Key != "en-US").Select(l => l.Value._LocateDisplayName).OrderDescending()).ToArray();
         locateDisplayNameMapping = new(ISimpleLocalizerBase.GetMapping().ToDictionary(k => k.Value._LocateDisplayName, v => v.Key).Append(new KeyValuePair<string, string>("OS Default", "default")));
         FFmpegProviderDisplayNameMapping =
             new Dictionary<string, string>
@@ -75,7 +75,7 @@ public partial class GeneralSettingPage : ContentPage
 #if !WINDOWS
             .AddPicker("ui_defaultTheme", SettingLocalizedResources.GeneralUI_DefaultTheme, themeOpts.Values.ToArray(), themeOpts[GetSetting("ui_defaultTheme", "default")])
 #endif
-            .AddSlider("ui_defaultWidthOfContent", SettingLocalizedResources.GeneralUI_DefaultWidthOfContent, 1, 10, PropertyPanelBuilder.DefaultWidthOfContent)
+            .AddSlider("ui_defaultWidthOfContent", SettingLocalizedResources.GeneralUI_DefaultWidthOfContent, -10, 10, PropertyPanelBuilder.DefaultWidthOfContent)
             .AddPicker("Edit_AddView_DefaultOrderOption", SettingLocalizedResources.Edit_AddView_DefaultOrderOption, OrderOptionStringMapping.Keys.ToArray(), OrderOptionStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_AddView_DefaultOrderOption", "date"), new KeyValuePair<string, string>(Localized.AssetPage_OrderBy_AddDate, "date")).Key, null)
             .AddSwitch("render_EnableScreenSaver", SettingLocalizedResources.Render_EnableScreenSaver, IsBoolSettingTrue("render_EnableScreenSaver"), null)
             .AddButton("setUISafeZone", SettingLocalizedResources.GeneralUI_SetupSafeZone)
@@ -89,7 +89,7 @@ public partial class GeneralSettingPage : ContentPage
             .AddButton("userDataSelectButton", SettingLocalizedResources.General_UserData_SelectPath)
 #endif
             .AddButton("openUserDataButton", SettingLocalizedResources.General_UserData_Open(MauiProgram.DataPath))
-            .AddButton(SettingLocalizedResources.General_UserData_ManagePageOpen, async (s, e) => await Navigation.PushAsync(new UserDataManagePage()))
+            //.AddButton(SettingLocalizedResources.General_UserData_ManagePageOpen, async (s, e) => await Navigation.PushAsync(new UserDataManagePage())) //todo
 
             .ListenToChanges(SettingInvoker);
         Content = rootPPB.BuildWithScrollView();

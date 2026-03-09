@@ -249,6 +249,7 @@ namespace projectFrameCut.DraftStuff
                 ClipMode.AudioClip => new SolidColorBrush(Colors.Goldenrod),
                 ClipMode.SubtitleClip => new SolidColorBrush(Colors.SlateGray),
                 ClipMode.SolidColorClip => new SolidColorBrush(Colors.OrangeRed),
+                ClipMode.TransformClip => new SolidColorBrush(Colors.AliceBlue),
                 _ => new SolidColorBrush(Colors.Gray),
             };
         }

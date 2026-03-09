@@ -78,6 +78,23 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         private Guid instanceID;
         private bool vaild = true;
 
+        private ColumnDefinitionCollection CreateTwoColumnDefinitions()
+        {
+            double effective = WidthOfContent ?? DefaultWidthOfContent;
+            var cols = new ColumnDefinitionCollection();
+            if (effective >= 0)
+            {
+                cols.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                cols.Add(new ColumnDefinition { Width = new GridLength(effective, GridUnitType.Star) });
+            }
+            else
+            {
+                cols.Add(new ColumnDefinition { Width = new GridLength(Math.Abs(effective), GridUnitType.Star) });
+                cols.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            }
+            return cols;
+        }
+
         /// <summary>
         /// Adds a <seealso cref="Label"/> to the property panel.
         /// </summary>
@@ -148,11 +165,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 
             var grid = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent , GridUnitType.Star) }
-                },
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
                 RowDefinitions = new RowDefinitionCollection
                 {
                     new RowDefinition { Height = GridLength.Auto }
@@ -191,11 +204,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             CheckboxSetter?.Invoke(checkbox);
             var grid = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
-                },
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
                 RowDefinitions = new RowDefinitionCollection
                 {
                     new RowDefinition { Height = GridLength.Auto }
@@ -233,11 +242,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             SwitchSetter?.Invoke(swtch);
             var grid = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
-                },
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
                 RowDefinitions = new RowDefinitionCollection
                 {
                     new RowDefinition { Height = GridLength.Auto }
@@ -286,11 +291,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             PickerSetter?.Invoke(picker);
             var grid = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
-                },
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
                 RowDefinitions = new RowDefinitionCollection
                 {
                     new RowDefinition { Height = GridLength.Auto }
@@ -342,11 +343,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 
             var grid = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
-                },
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
                 RowDefinitions = new RowDefinitionCollection
                 {
                     new RowDefinition { Height = GridLength.Auto }
@@ -575,11 +572,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 
             var grid = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
-                },
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
                 RowDefinitions = new RowDefinitionCollection
                 {
                     new RowDefinition { Height = GridLength.Auto }
@@ -653,11 +646,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             var label = title.LabelConfigure();
             var grid = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
-                },
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
                 RowDefinitions = new RowDefinitionCollection
                 {
                     new RowDefinition { Height = GridLength.Auto }

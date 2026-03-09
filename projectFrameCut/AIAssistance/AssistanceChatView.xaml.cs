@@ -93,7 +93,7 @@ public partial class AssistanceChatView : ContentView
     {
         _messages.Add(new ChatMessageItem
         {
-            Sender = "AI",
+            Sender = "Assistant P",
             Message = _chatClient is null
                 ? Localized.AIAssistant_ChatView_MissingConfig
                 : Localized.AIAssistant_ChatView_WelcomeText,
@@ -225,7 +225,7 @@ public partial class AssistanceChatView : ContentView
         {
             _messages.Add(new ChatMessageItem
             {
-                Sender = "AI",
+                Sender = "Assistant P",
                 Message = assistantText,
                 IsUser = false,
             });
@@ -1284,7 +1284,7 @@ public partial class AssistanceChatView : ContentView
         MainThread.BeginInvokeOnMainThread(() => item.ToolCallsText = text);
     }
 
-    private static IChatClient? CreateChatClient()
+    public static IChatClient? CreateChatClient()
     {
         string apiKey = AIHelper.CurrentOption.Key;
         string model = AIHelper.CurrentOption.Model;

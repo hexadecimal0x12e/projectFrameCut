@@ -26,7 +26,7 @@ namespace projectFrameCut.Platforms.Android
                 Directory.CreateDirectory(loggingDir);
                 if (File.Exists(Path.Combine(extFilesDir.AbsolutePath, "..", "settings.json")))
                 {
-                    foreach(var f in Directory.GetFiles(extFilesDir.AbsolutePath, "*.json", SearchOption.TopDirectoryOnly) )
+                    foreach (var f in Directory.GetFiles(Path.Combine(extFilesDir.AbsolutePath, ".."), "*.json", SearchOption.TopDirectoryOnly))
                     {
                         try
                         {

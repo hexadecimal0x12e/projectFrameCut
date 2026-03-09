@@ -6,6 +6,9 @@ public partial class ProjectAddClipView : ContentView
 {
     private readonly ProjectAddClipViewModel _viewModel = null!;
     private readonly DraftPage _page = null!;
+    
+    private readonly int ItemSize = 180;
+    private readonly int ItemSpacing = 8;
 
     public ProjectAddClipView(ref DraftPage draftPage)
     {
@@ -80,6 +83,22 @@ public partial class ProjectAddClipView : ContentView
         if (e.Value && sender is RadioButton radioButton)
         {
             _viewModel.AIContentType = radioButton.Value?.ToString() ?? "Image";
+        }
+    }
+
+    private void OnCollectionViewSizeChanged(object sender, EventArgs e)
+    {
+        if (sender is CollectionView collectionView && collectionView.ItemsLayout is GridItemsLayout gridLayout)
+        {
+            var width = collectionView.Width;
+            if (width > 0)
+            {
+                var span = Math.Max(1, (int)((width + ItemSpacing) / (ItemSize + ItemSpacing)));
+                if (gridLayout.Span != span)
+                {
+                    gridLayout.Span = span;
+                }
+            }
         }
     }
 

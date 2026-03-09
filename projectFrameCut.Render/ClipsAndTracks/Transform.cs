@@ -50,7 +50,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             set 
             { 
                 field = value; 
-                TransformElement = JsonSerializer.SerializeToElement(value); 
+                TransformElement = value is null ? null : JsonSerializer.SerializeToElement(value, value.GetType()); 
             }
         }
 

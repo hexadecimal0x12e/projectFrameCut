@@ -65,6 +65,12 @@ public partial class HomePage : ContentPage
 
 #endif
             if (HasAlreadyLaunchedFromFile) return;
+            if (VersionTracking.Default.IsFirstLaunchEver || SettingsManager.IsBoolSettingTrue("ui_ShowWelcomePage"))
+            {
+                var p = new SetupPage();
+                await Navigation.PushAsync(p);
+                return;
+            }
             await ShowManyAlertsAsync();
             HasAlreadyLaunchedFromFile = true;
             await LaunchFromFile();
@@ -890,12 +896,12 @@ public partial class HomePage : ContentPage
             SimpleLocalizer.IsFallbackMatched = false;
         }
 
-        if (!SettingsManager.IsBoolSettingTrue("EULAagreed"))
-        {
-            var agree = await DisplayAlertAsync(Localized._Info, Localized.HomePage_AgreeEULA(), Localized._OK, Localized.HomePage_AgreeEULA_Disagree);
-            if (!agree) Environment.Exit(0);
-            SettingsManager.WriteSetting("EULAagreed", true.ToString());
-        }
+        //if (!SettingsManager.IsBoolSettingTrue("EULAagreed"))
+        //{
+        //    var agree = await DisplayAlertAsync(Localized._Info, Localized.HomePage_AgreeEULA(), Localized._OK, Localized.HomePage_AgreeEULA_Disagree);
+        //    if (!agree) Environment.Exit(0);
+        //    SettingsManager.WriteSetting("EULAagreed", true.ToString());
+        //}
 
         if (SettingsManager.IsBoolSettingTrue("_SettingFailLoad"))
         {

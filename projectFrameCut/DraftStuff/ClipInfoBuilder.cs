@@ -393,6 +393,7 @@ namespace projectFrameCut.DraftStuff
             Action<int, TextClipEntry> onChanged,
             Action<int> onRemove,
             bool canDeleteEntry = true,
+            bool showAllOptions = false,
             Action<FontPicker>? ShowPicker = null,
             Action? HidePicker = null)
         {
@@ -615,12 +616,12 @@ namespace projectFrameCut.DraftStuff
             advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_LangType));
             var langTypePicker = new Picker
             {
-                ItemsSource = Enum.GetValues<TextLanguage>().Select(TextClipEntry.LocalizeLanguageName).ToArray(),
-                SelectedItem = e.Language
+                ItemsSource = new string[] { PPLocalizedResources.TextOption_LangType_Auto }.Concat(Enum.GetValues<TextLanguage>().Skip(1).Select(TextClipEntry.LocalizeLanguageName)).ToList(),
+                SelectedItem = (int)e.Language
             };
             langTypePicker.SelectedIndexChanged += (s, ev) =>
             {
-                onChanged?.Invoke(idx, e with { Language = TextClipEntry.FromLocaliedString(langTypePicker.SelectedItem as string ?? "?") });
+                onChanged?.Invoke(idx, e with { Language = (TextLanguage)langTypePicker.SelectedIndex });
             };
             advancedStack.Children.Add(langTypePicker);
             advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Alignment));
@@ -675,28 +676,30 @@ namespace projectFrameCut.DraftStuff
             alignGrid.Add(wrapEntry, 3, 0);
             advancedStack.Children.Add(alignGrid);
 
-            
+
             // TYPOGRAPHY
             advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Typography));
             var verticalLayoutSwitch = new Switch { IsToggled = e.UseVerticalLayout, VerticalOptions = LayoutOptions.Center };
-            verticalLayoutSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { UseVerticalLayout = verticalLayoutSwitch.IsToggled }); };
-            var keepNonCJKHorizontalSwitch = new Switch { IsToggled = e.KeepNonCJKTextAsHorizontal, VerticalOptions = LayoutOptions.Center };
+            var keepNonCJKHorizontalSwitch = new Switch { IsToggled = e.KeepNonCJKTextAsHorizontal, VerticalOptions = LayoutOptions.Center, IsVisible = verticalLayoutSwitch.IsToggled };
+            var verticalLabel = new Label { Text = PPLocalizedResources.TextOption_UseVerticalLayout, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White };
+            var nonCJKHorizentalLabel = new Label { Text = PPLocalizedResources.TextOption_KeepNonCJKHorizontal, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White, IsVisible = verticalLayoutSwitch.IsToggled };
+
+            verticalLayoutSwitch.Toggled += (s, ev) => { keepNonCJKHorizontalSwitch.IsVisible = verticalLayoutSwitch.IsToggled; nonCJKHorizentalLabel.IsVisible = verticalLayoutSwitch.IsToggled; onChanged?.Invoke(idx, e with { UseVerticalLayout = verticalLayoutSwitch.IsToggled }); };
             keepNonCJKHorizontalSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { KeepNonCJKTextAsHorizontal = keepNonCJKHorizontalSwitch.IsToggled }); };
-            var verticalLayoutGrid = new Grid
+
+            var verticalLayoutGrid = new HorizontalStackLayout
             {
-                ColumnDefinitions =
+                Spacing = 8,
+                Children =
                 {
-                    new ColumnDefinition(GridLength.Star),
-                    new ColumnDefinition(GridLength.Auto)
-                },
-                ColumnSpacing = 8,
-                RowSpacing = 8
+                    verticalLabel,
+                    verticalLayoutSwitch,
+                    nonCJKHorizentalLabel,
+                    keepNonCJKHorizontalSwitch
+                }
             };
-            verticalLayoutGrid.Add(new Label { Text = PPLocalizedResources.TextOption_UseVerticalLayout, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 0, 0);
-            verticalLayoutGrid.Add(verticalLayoutSwitch, 1, 0);
-            verticalLayoutGrid.Add(new Label { Text = PPLocalizedResources.TextOption_KeepNonCJKHorizontal, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 0, 1);
-            verticalLayoutGrid.Add(keepNonCJKHorizontalSwitch, 1, 1);
             advancedStack.Children.Add(verticalLayoutGrid);
+
             var kerningSwitch = new Switch { IsToggled = e.applyKerning, VerticalOptions = LayoutOptions.Center };
             kerningSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { applyKerning = kerningSwitch.IsToggled }); };
             var lineSpacingEntry = new Entry { Text = e.lineSpacing.ToString() };
@@ -789,6 +792,26 @@ namespace projectFrameCut.DraftStuff
             strokeGrid.Add(strokeSwatch, 1, 0);
             strokeGrid.Add(strokeEntry, 2, 0);
             advancedStack.Children.Add(strokeGrid);
+
+            if (showAllOptions)
+            {
+                var subTrackSwitch = new Switch { IsToggled = e.ShouldInSubtrack, VerticalOptions = LayoutOptions.Center };
+                var subTrackLabel = new Label { Text = "Place in subtrack by default", VerticalOptions = LayoutOptions.Center, TextColor = Colors.White };
+                subTrackSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { ShouldInSubtrack = subTrackSwitch.IsToggled }); };
+                var subTrackGrid = new Grid
+                {
+                    ColumnDefinitions =
+                    {
+                        new ColumnDefinition(GridLength.Auto),
+                        new ColumnDefinition(GridLength.Auto),
+                        new ColumnDefinition(GridLength.Star)
+                    },
+                    ColumnSpacing = 8
+                };
+                subTrackGrid.Add(subTrackLabel, 0, 0);
+                subTrackGrid.Add(subTrackSwitch, 1, 0);
+                advancedStack.Children.Add(subTrackGrid);
+            }
 
             // Advanced toggle button
             var advancedToggleBtn = new Button
@@ -884,6 +907,7 @@ namespace projectFrameCut.DraftStuff
                         (id, newE) => { entries[id] = newE; UpdateStoredEntries(); },
                         (id) => { entries.RemoveAt(id); UpdateStoredEntries(); RebuildEntriesUI(); },
                         entries.Count > 1,
+                        false,
                         (pickerView) =>
                         {
                             page.Dispatcher.Dispatch(async () =>
@@ -913,15 +937,17 @@ namespace projectFrameCut.DraftStuff
                 FontAttributes = FontAttributes.Bold,
                 Margin = new Thickness(0, 4, 0, 0)
             };
-            addBtn.Clicked += (s, e) =>
+            addBtn.Clicked += async (s, e) =>
             {
-                var defFont = fonts.FirstOrDefault()?.InnerItem.EnglishName ?? "Arial";
-                entries.Add(new TextClipEntry
+                Dictionary<string, TextClipEntry> t = new();
+                Setting.SettingPages.EditSettingPage.LoadTextTemplates(ref t);
+                var picked = await page.DisplayActionSheetAsync(PPLocalizedResources.TextOption_AddAEntry, null, null, t.Keys.ToArray());
+                entries.Add(t[picked] ?? new TextClipEntry
                 {
                     text = "",
                     x = 0,
                     y = 0,
-                    fontFamily = defFont,
+                    fontFamily = "Arial",
                     fontSize = 24f,
                     r = 65535,
                     g = 65535,

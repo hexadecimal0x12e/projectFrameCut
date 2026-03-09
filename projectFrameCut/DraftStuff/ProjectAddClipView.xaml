@@ -44,9 +44,11 @@
             </HorizontalStackLayout>
         </tv:TabbedView.HeaderRightContent>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}" Tag="LocalAssets" x:Name="LocalAssetsTab" x:FieldModifier="public">
-            <CollectionView ItemsSource="{Binding FilteredLocalAssets}"
+            <CollectionView x:Name="LocalAssetsCollectionView"
+                            ItemsSource="{Binding FilteredLocalAssets}"
                             SelectionMode="None"
-                            Margin="8">
+                            Margin="8"
+                            SizeChanged="OnCollectionViewSizeChanged">
                 <CollectionView.ItemsLayout>
                     <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
                 </CollectionView.ItemsLayout>
@@ -115,9 +117,11 @@
             </CollectionView>
         </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_SharedAssets}" Tag="SharedAssets" x:Name="SharedAssetsTab" x:FieldModifier="public">
-            <CollectionView ItemsSource="{Binding FilteredSharedAssets}"
+            <CollectionView x:Name="SharedAssetsCollectionView"
+                            ItemsSource="{Binding FilteredSharedAssets}"
                             SelectionMode="None"
-                            Margin="8">
+                            Margin="8"
+                            SizeChanged="OnCollectionViewSizeChanged">
                 <CollectionView.ItemsLayout>
                     <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
                 </CollectionView.ItemsLayout>
@@ -213,6 +217,18 @@
                                      IsChecked="True"
                                      CheckedChanged="OnAIContentTypeChanged"/>
                     </HorizontalStackLayout>
+                    <HorizontalStackLayout Grid.Row="0" HorizontalOptions="End">
+                        <ActivityIndicator IsVisible="{Binding IsGeneratingAIContent}"
+                                           IsRunning="{Binding IsGeneratingAIContent}"
+                                           WidthRequest="24"
+                                           HeightRequest="24"
+                                           Margin="0,0,8,0"/>
+                        <Button HorizontalOptions="End" 
+                                BackgroundColor="{Binding AIPrompt, Converter={StaticResource IsStringValidConverter}}" 
+                                Text="{Binding IsGeneratingAIContent, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_AddClipView_AIGC_Generating}, FalseObject={l:Localized Key=DraftPage_AddClipView_AIGC_Generate}}}"
+                                IsEnabled="{Binding IsGeneratingAIContent, Converter={toolkit:InvertedBoolConverter}}"
+                                Command="{Binding GenerateAIContentCommand}" />
+                    </HorizontalStackLayout>
 
                     <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,*" Margin="0,0,0,8">
                         <Label Grid.Column="0" Text="{l:Localized Key=DraftPage_AddClipView_AIGC_Duration}" VerticalOptions="Center" Margin="0,0,8,0"
@@ -265,20 +281,7 @@
                     </Grid>
                 </Grid>
 
-                <Grid Margin="0,8,0,0">
-                    <HorizontalStackLayout HorizontalOptions="End">
-                        <ActivityIndicator IsVisible="{Binding IsGeneratingAIContent}"
-                                         IsRunning="{Binding IsGeneratingAIContent}"
-                                         WidthRequest="24"
-                                         HeightRequest="24"
-                                         Margin="0,0,8,0"/>
-                        <Button HorizontalOptions="End" 
-                                BackgroundColor="{Binding AIPrompt, Converter={StaticResource IsStringValidConverter}}" 
-                                Text="{Binding IsGeneratingAIContent, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_AddClipView_AIGC_Generating}, FalseObject={l:Localized Key=DraftPage_AddClipView_AIGC_Generate}}}"
-                                IsEnabled="{Binding IsGeneratingAIContent, Converter={toolkit:InvertedBoolConverter}}"
-                                Command="{Binding GenerateAIContentCommand}" />
-                    </HorizontalStackLayout>
-                </Grid>
+
             </VerticalStackLayout>
         </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddTransform}" Tag="Transform" x:Name="TransformTab" x:FieldModifier="public">
@@ -402,10 +405,12 @@
                     </Grid>
                 </Border>
 
-                <CollectionView Grid.Row="2"
+                <CollectionView x:Name="TransformCollectionView"
+                                Grid.Row="2"
                                 ItemsSource="{Binding FilteredAvailableTransforms}"
                                 SelectionMode="None"
-                                Margin="8">
+                                Margin="8"
+                                SizeChanged="OnCollectionViewSizeChanged">
                     <CollectionView.ItemsLayout>
                         <GridItemsLayout Orientation="Vertical" Span="3" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
                     </CollectionView.ItemsLayout>
@@ -554,11 +559,13 @@
 
                     </Grid>
                 </Border>
-                <CollectionView Grid.Row="2"
+                <CollectionView x:Name="TextStyleCollectionView"
+                                Grid.Row="2"
                                 ItemsSource="{Binding FilteredAvailableTextStyles}"
                                 SelectionMode="Single"
                                 SelectedItem="{Binding SelectedTextStyle, Mode=TwoWay}"
-                                Margin="8">
+                                Margin="8"
+                                SizeChanged="OnCollectionViewSizeChanged">
                     <CollectionView.ItemsLayout>
                         <GridItemsLayout Orientation="Vertical" Span="8" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
                     </CollectionView.ItemsLayout>

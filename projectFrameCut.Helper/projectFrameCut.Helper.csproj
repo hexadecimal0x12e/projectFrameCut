@@ -9,12 +9,12 @@
 		<ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
 		<ApplicationIcon>appicon.ico</ApplicationIcon>
 
-		<AssemblyVersion>1.0.0.0</AssemblyVersion>
-		<FileVersion>1.0.0.0</FileVersion>
+		<AssemblyVersion>2.0.0.0</AssemblyVersion>
+		<FileVersion>2.0.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
 		<Product>projectFrameCut Helper Program</Product>
 		<Description>projectFrameCut beta</Description>
-		<Copyright>Copyright (c) hexadecimal0x12e 2025</Copyright>
+		<Copyright>Copyright (c) hexadecimal0x12e 2025-2026</Copyright>
 		<PackageProjectUrl>hexadecimal0x12e.com</PackageProjectUrl>
 		<Title>projectFrameCut Helper Program</Title>
 		<PublishSingleFile>true</PublishSingleFile>

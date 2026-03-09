@@ -439,7 +439,7 @@ namespace projectFrameCut.Render.Rendering
                     if (token.IsCancellationRequested) return;
 
 
-                    if (item.StartFrame <= idx && item.Duration * item.SecondPerFrameRatio + item.StartFrame >= idx)
+                    if ((item.StartFrame <= idx && item.Duration * item.SecondPerFrameRatio + item.StartFrame >= idx) || (item.ExtendToWholeDraft && item.LayerIndex > SubTrackOffset))
                     {
                         found = true;
                         ClipNeedForFrame.AddOrUpdate(

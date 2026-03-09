@@ -231,7 +231,7 @@ projectFrameCut.StandaloneRender render \
 
 项目目录必须包含以下文件：
 
-- **`project.json`**: 项目配置文件
+- **`project.pjfc`或者`project.json`**: 项目配置文件
 - **`timeline.json`**: 时间线和片段信息
 - **`assets.json`**: 资产列表
 
