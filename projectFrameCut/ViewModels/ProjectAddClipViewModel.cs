@@ -451,7 +451,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         SharedAssets.Clear();
         ReuseableAssets.Clear();
 
-        foreach (var asset in _draftPage.Assets.Values.OrderBy(a => a.Name))
+        foreach (var asset in _draftPage.Assets.Values.Where(c => c.AssetType != AssetType.Font).OrderBy(a => a.Name))
         {
             LocalAssets.Add(new AssetItemViewModel
             {
@@ -466,7 +466,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             });
         }
 
-        foreach (var asset in AssetDatabase.Assets.Values.OrderBy(a => a.Name))
+        foreach (var asset in AssetDatabase.Assets.Values.Where(c => c.AssetType != AssetType.Font).OrderBy(a => a.Name))
         {
             SharedAssets.Add(new AssetItemViewModel
             {

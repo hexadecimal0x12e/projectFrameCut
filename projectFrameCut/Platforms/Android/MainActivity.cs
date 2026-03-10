@@ -10,7 +10,7 @@ using System;
 namespace projectFrameCut.Platforms.Android
 {
     [Activity(
-        Theme = "@style/AppTheme",
+        Theme = "@style/Maui.SplashTheme",
         MainLauncher = true,
         ResizeableActivity = true,
         LaunchMode = LaunchMode.Multiple,

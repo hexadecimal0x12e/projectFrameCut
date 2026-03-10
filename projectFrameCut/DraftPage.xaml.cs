@@ -3490,7 +3490,7 @@ public partial class DraftPage : ContentPage
 
         try
         {
-            previewer.UpdateDraft(d);
+            await previewer.UpdateDraft(d);
             SetStatusText(Localized.DraftPage_ChangesApplied);
             SetStateOK();
         }
@@ -3514,7 +3514,7 @@ public partial class DraftPage : ContentPage
         if (AlreadyDisappeared) return;
 
         var d = DraftImportAndExportHelper.ExportFromDraftPage(this);
-        previewer.UpdateDraft(d);
+        await previewer.UpdateDraft(d);
 
 
         var currentX = PlayheadLine.TranslationX - TrackHeadLayout.Width;

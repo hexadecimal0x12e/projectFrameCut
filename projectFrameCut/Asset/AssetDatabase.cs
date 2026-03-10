@@ -237,6 +237,12 @@ namespace projectFrameCut.Asset
                 case AssetType.Font:
                     {
                         TextServices.GenerateFontThumbnail(sourcePath).SaveAsPng8bpp(thumbnailPath, null);
+                        var t = new Thread(TextServices.LoadFonts)
+                        {
+                            Priority = ThreadPriority.BelowNormal,
+                            IsBackground = true
+                        };
+                        t.Start();
                         break;
                     }
                 case AssetType.Image:

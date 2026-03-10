@@ -535,7 +535,13 @@ public partial class RenderPage : ContentPage
             int parallelThreadCount = (int)MaxParallelThreadsCount.Value;
 
 #if ANDROID
-            ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
+            ComputerHelper.AddGLViewHandler = new((v) =>
+            {
+                ComputeView.Children.Clear();
+                v.WidthRequest = 50;
+                v.HeightRequest = 50;
+                ComputeView.Children.Add(v);
+            });
 #elif iDevices
 
 #elif WINDOWS
@@ -567,6 +573,7 @@ public partial class RenderPage : ContentPage
             if (!projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
 
 #endif
+            var blockwrite = SettingsManager.IsBoolSettingTrue("render_BlockWrite") || OperatingSystem.IsAndroid(); //on Android there is a issue on parallel rendering, use sync render as workaround
             var draftSrc = _draft ?? throw new NullReferenceException();
 
             Log($"Draft loaded: duration {draftSrc.Duration}, saved on {draftSrc.SavedAt}, {draftSrc.Clips.Length} clips.");
@@ -579,12 +586,17 @@ public partial class RenderPage : ContentPage
 
             var duration = Math.Max(draftSrc.Duration, draftSrc.AudioDuration);
 
-            var clips = DraftImportAndExportHelper.JSONToIClips(draftSrc).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
+            var clips = DraftImportAndExportHelper.JSONToIClips(draftSrc, false).Where(c => c.ClipType != ClipMode.AudioClip).ToArray();
 
             if (clips == null || clips.Length == 0)
             {
                 Log("ERROR: No clips in the whole draft.");
                 return;
+            }
+
+            foreach (var item in clips)
+            {
+                await Task.Run(item.ReInit);
             }
 
             SetSubProg("PrepareDraft");
@@ -601,7 +613,7 @@ public partial class RenderPage : ContentPage
                 DisposeFrameAfterEachWrite = true,
                 Duration = duration,
                 LogStat = false,
-                BlockWrite = SettingsManager.IsBoolSettingTrue("render_BlockWrite")
+                BlockWrite = blockwrite
             };
 
             Renderer renderer = new Renderer
@@ -664,7 +676,7 @@ public partial class RenderPage : ContentPage
             Log("Start render...");
 
             sw1.Restart();
-            if (SettingsManager.IsBoolSettingTrue("render_BlockWrite"))
+            if (blockwrite) 
             {
                 await Task.Run(async () => await renderer.GoRenderSync(_cts.Token));
                 Log($"Sync render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
@@ -682,7 +694,7 @@ public partial class RenderPage : ContentPage
             }
             if (_cts.IsCancellationRequested) return;
 
-            
+
             Log($"Releasing resources...");
 
             foreach (var item in clips)
@@ -731,7 +743,7 @@ public partial class RenderPage : ContentPage
         catch (Exception ex)
         {
             Log(ex, "Render", this);
-            await DisplayAlertAsync(Localized._Error, Localized.RenderPage_Fail(ex), Localized._OK);
+            throw;           
         }
 
 
@@ -876,7 +888,7 @@ public partial class RenderPage : ContentPage
 
     private async void MoreOptions_Clicked(object sender, EventArgs e)
     {
-        await Navigation.PushAsync(new Setting.SettingPages.RenderSettingPage());  
+        await Navigation.PushAsync(new Setting.SettingPages.RenderSettingPage());
     }
 
     private async void PerformPostRenderActionNowTestButton_Clicked(object sender, EventArgs e)

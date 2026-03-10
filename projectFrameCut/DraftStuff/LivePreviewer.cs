@@ -59,7 +59,7 @@ namespace projectFrameCut.LivePreview
             return pic;
         }
 
-        public void UpdateDraft(DraftStructureJSON json)
+        public async Task UpdateDraft(DraftStructureJSON json)
         {
             var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
 
@@ -100,7 +100,7 @@ namespace projectFrameCut.LivePreview
                         }
                     }
                 }
-                clipInstance.ReInit();
+                await Task.Run(clipInstance.ReInit);
                 clipsList.Add(clipInstance);
 
             }

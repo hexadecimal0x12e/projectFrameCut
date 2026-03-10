@@ -2,14 +2,7 @@
  <title>projectFrameCut</title>
  <g>
   <title>Layer 1</title>
-  <text xml:space="preserve" text-anchor="start" font-family="Noto Sans JP" font-size="200" id="svg_5" y="500" x="60" stroke-width="0" stroke="url(#svg_8)" fill="#000000">codename</text>
-  <text xml:space="preserve" text-anchor="start" font-family="Noto Sans JP" font-size="240" id="svg_6" y="1024" x="42.50002" stroke-width="0" stroke="#000" fill="#000000">'projectFrameCut'</text>
-  <text xml:space="preserve" text-anchor="start" font-family="Noto Sans JP" font-size="200" id="svg_15" y="2000" x="800" stroke-width="0" stroke="#000" fill="#000000">beta</text>
+  <text transform="matrix(1 0 0 1 0 0)" style="cursor: move;" fill="#000000" stroke="#000" stroke-width="0" x="83.38318" y="1129.14197" id="svg_6" font-size="240" font-family="Noto Sans JP" text-anchor="start" xml:space="preserve">projectFrameCut</text>
  </g>
- <defs>
-  <linearGradient y2="0" x2="1" y1="0" x1="0" id="svg_8">
-   <stop offset="0" stop-color="#ffd272"/>
-   <stop offset="1" stop-opacity="0.99609" stop-color="#ffffff"/>
-  </linearGradient>
- </defs>
+
 </svg>

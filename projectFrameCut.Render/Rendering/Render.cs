@@ -149,6 +149,17 @@ namespace projectFrameCut.Render.Rendering
             _width = builder.Width;
             _height = builder.Height;
 
+            InitializeRenderCaches();
+            if (ClipNeedForFrame.IsEmpty && BlankFrames.IsEmpty && Volatile.Read(ref TotalEnqueued) == 0)
+            {
+                PrepareRender(token);
+                if (token.IsCancellationRequested)
+                {
+                    ReleaseResources();
+                    return;
+                }
+            }
+
 
             running = true;
             if (LogStatToLogger)
@@ -191,7 +202,22 @@ namespace projectFrameCut.Render.Rendering
                 }.Start();
             }
 
-            Thread preparer = new(() => PrepareSource(token));
+            Thread preparer = new(() =>
+            {
+                try
+                {
+                    PrepareSource(token);
+                }
+                catch (Exception ex)
+                {
+                    Log($"Error preparing source frames: {ex}", "error");
+                    exceptions.Enqueue(ex);
+                }
+                finally
+                {
+                    PreparerFinished = true;
+                }
+            });
             preparer.Name = "Preparer thread";
             preparer.IsBackground = true;
             preparer.Start();
@@ -548,9 +574,6 @@ namespace projectFrameCut.Render.Rendering
 
             }
             Log($"[Preparer] All frames are ready.");
-
-            // mark preparer finished so main loop can complete when renders done
-            PreparerFinished = true;
         }
 
         private void RenderAFrame(uint targetFrame, CancellationToken token)

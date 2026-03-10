@@ -303,7 +303,7 @@ namespace projectFrameCut.DraftStuff
             };
         }
 
-        public static IClip[] JSONToIClips(DraftStructureJSON json)
+        public static IClip[] JSONToIClips(DraftStructureJSON json, bool InitAtLoad = true)
         {
             var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
 
@@ -342,7 +342,7 @@ namespace projectFrameCut.DraftStuff
                         throw;
                     }
                 }
-                clipInstance.ReInit();
+                if(InitAtLoad) clipInstance.ReInit();
                 clipsList.Add(clipInstance);
 
             }

@@ -156,8 +156,6 @@ namespace projectFrameCut
             Log("Copyright (c) hexadecimal0x12e 2025-2026, and thanks to other open-source code's authors.");
             Log($"BasicDataPath:{BasicDataPath}, DataPath:{DataPath}");
 
-
-
             try
             {
                 if (File.Exists(Path.Combine(BasicDataPath, "settings.json")))
@@ -234,56 +232,24 @@ namespace projectFrameCut
 
             }
             var locate = SettingsManager.GetSetting("locate", "default");
-            try
-            {
-                if (locate == "default")
-                {
-                    if (Thread.CurrentThread.CurrentCulture.Name.StartsWith("en"))
-                    {
-                        locate = "en-US";
-                    }
-                    else
-                    {
-                        locate = Thread.CurrentThread.CurrentCulture.Name;
-                    }
-                }
+#if !ANDROID
+            CultureInfo culture = CultureInfo.CurrentCulture;
+#else
+            CultureInfo culture = projectFrameCut.Platforms.Android.DeviceLocaleHelper.GetDeviceCultureInfo();
+#endif
+            InitLocate(ref locate, ref culture);
 
-                Localized = SimpleLocalizer.Init(locate);
-                SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
-                SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
-                projectFrameCut.ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(Localized._LocaleId_, out var apiloc) ? apiloc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
-                PluginManager.CurrentLocale = Localized._LocaleId_;
-                PluginManager.ExtenedLocalizationGetter = new((k) =>
-                {
-                    var r = Localized.DynamicLookup(k, "!!!NULL!!!");
-                    return r == "!!!NULL!!!" ? null : r;
-                });
-
-
-                Log($"Culture:{Thread.CurrentThread.CurrentCulture}, locate:{Localized._LocaleId_}, {Localized.WelcomeMessage}");
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "init localization", CreateMauiApp);
-                SimpleLocalizer.IsFallbackMatched = true;
-                Localized = ISimpleLocalizerBase.GetMapping().First().Value;
-                SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().First().Value;
-                LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
-                PluginManager.CurrentLocale = "en-US";
-                PluginManager.ExtenedLocalizationGetter = new((k) => ISimpleLocalizerBase.GetMapping().First().Value.DynamicLookup(k));
-            }
 
             var backgroundInitThread = new Thread(BackgroundInit)
             {
                 Name = "BackgroundInit",
                 IsBackground = true,
-                Priority = ThreadPriority.BelowNormal // 降低优先级，避免抢占主线程CPU资源
+                Priority = ThreadPriority.BelowNormal
             };
 
-            // 1. 让它用Task延迟启动，至少让当前主线程把 app.Build() 跑完，甚至窗口实例化完毕
             Task.Run(async () =>
             {
-                await Task.Delay(1000); 
+                await Task.Delay(1000);
                 backgroundInitThread.Start();
             });
 #if WINDOWS
@@ -382,33 +348,30 @@ namespace projectFrameCut
                     handlers.AddHandler<NativeGLSurfaceView, NativeGLSurfaceViewHandler>();
                 });
 
-                // Initialize Android compute helpers
-                projectFrameCut.Render.AndroidOpenGL.ComputerHelper.Init();
-
                 try
                 {
                     MyLoggerExtensions.OnLog += (msg, level) =>
-                                    {
-                                        switch (level.ToLower())
-                                        {
-                                            case "info":
-                                                Android.Util.Log.Info("projectFrameCut", msg);
-                                                break;
-                                            case "warning":
-                                            case "warn":
-                                                Android.Util.Log.Warn("projectFrameCut", msg);
-                                                break;
-                                            case "error":
-                                                Android.Util.Log.Error("projectFrameCut", msg);
-                                                break;
-                                            case "critical":
-                                                Android.Util.Log.Wtf("projectFrameCut", msg);
-                                                break;
-                                            default:
-                                                Android.Util.Log.Info($"projectFrameCut/{level}", msg);
-                                                break;
-                                        }
-                                    };
+                    {
+                        switch (level.ToLower())
+                        {
+                            case "info":
+                                Android.Util.Log.Info("projectFrameCut", msg);
+                                break;
+                            case "warning":
+                            case "warn":
+                                Android.Util.Log.Warn("projectFrameCut", msg);
+                                break;
+                            case "error":
+                                Android.Util.Log.Error("projectFrameCut", msg);
+                                break;
+                            case "critical":
+                                Android.Util.Log.Wtf("projectFrameCut", msg);
+                                break;
+                            default:
+                                Android.Util.Log.Info($"projectFrameCut/{level}", msg);
+                                break;
+                        }
+                    };
                 }
                 catch { } //this is not very important so just let it go
                 Preferences.Remove("LaunchedPJFCUri");
@@ -466,68 +429,7 @@ namespace projectFrameCut
 
                 try
                 {
-#if !ANDROID
-                    CultureInfo culture = CultureInfo.CurrentCulture;
-#else
-                    CultureInfo culture = projectFrameCut.Platforms.Android.DeviceLocaleHelper.GetDeviceCultureInfo();
-#endif
-
-                    Log($"OS default current culture: {culture.Name}, locate defined in settings:{locate} ");
-
-                    try
-                    {
-                        var cul = CultureInfo.GetCultures(CultureTypes.NeutralCultures);
-                        switch (locate)
-                        {
-                            case "zh-TW":
-                                {
-                                    if (!cul.Any((c) => CultureInfo.CreateSpecificCulture(c.Name).Name == "zh-TW"))
-                                    {
-                                        Log("zh-TW culture not found, fallback to zh-HK");
-                                        culture = CultureInfo.CreateSpecificCulture("zh-HK");
-                                    }
-                                    else
-                                    {
-                                        culture = CultureInfo.CreateSpecificCulture(locate);
-                                    }
-                                    break;
-                                }
-                            case "文言文":
-                                {
-                                    culture = CultureInfo.CreateSpecificCulture("zh-HK");
-                                    break;
-                                }
-                            default:
-                                {
-                                    if (!cul.Any((c) => CultureInfo.CreateSpecificCulture(c.Name).Name == locate))
-                                    {
-                                        Log($"{locate} culture not found, fallback to en-US");
-                                        culture = CultureInfo.CreateSpecificCulture("en-US");
-                                    }
-                                    else
-                                    {
-                                        culture = CultureInfo.CreateSpecificCulture(locate);
-                                    }
-                                    break;
-                                }
-
-                        }
-
-                    }
-                    catch (Exception ex)
-                    {
-                        Log(ex, "init culture");
-                    }
-                    if (SettingsManager.IsSettingExists("OverrideCulture") && SettingsManager.GetSetting("OverrideCulture", "default") != "default") //resolve IME not work when locate isn't them
-                    {
-                        culture = CultureInfo.CreateSpecificCulture(SettingsManager.GetSetting("OverrideCulture"));
-
-                    }
-                    Thread.CurrentThread.CurrentCulture = culture;
-                    Thread.CurrentThread.CurrentUICulture = culture;
-                    CultureInfo.DefaultThreadCurrentCulture = culture;
-                    CultureInfo.DefaultThreadCurrentUICulture = culture;
-                    if (!SettingsManager.IsBoolSettingTrue("UseSystemFont")) ConfigFontFromCulture(builder, culture);
+                    if (!SettingsManager.IsBoolSettingTrue("UseSystemFont")) ConfigFontFromCulture(builder, ReadCultureFromSetting(locate, culture));
                 }
                 catch
                 {
@@ -573,7 +475,115 @@ namespace projectFrameCut
             }
         }
 
+        public static void InitLocate(ref string locate, ref CultureInfo culture)
+        {
+            try
+            {
+                if (locate == "default")
+                {
+                    if (Thread.CurrentThread.CurrentCulture.Name.StartsWith("en"))
+                    {
+                        locate = "en-US";
+                    }
+                    else
+                    {
+                        locate = Thread.CurrentThread.CurrentCulture.Name;
+                    }
+                }
 
+                Localized = SimpleLocalizer.Init(locate);
+                SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+                SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+                projectFrameCut.ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(Localized._LocaleId_, out var apiloc) ? apiloc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+                PluginManager.CurrentLocale = Localized._LocaleId_;
+                PluginManager.ExtenedLocalizationGetter = new((k) =>
+                {
+                    var r = Localized.DynamicLookup(k, "!!!NULL!!!");
+                    return r == "!!!NULL!!!" ? null : r;
+                });
+
+
+
+                Log($"OS default current culture: {culture.Name}, locate defined in settings:{locate} ");
+
+                if (!NoOverrideCulture)
+                {
+                    culture = ReadCultureFromSetting(locate, culture);
+                    Thread.CurrentThread.CurrentCulture = culture;
+                    Thread.CurrentThread.CurrentUICulture = culture;
+                    CultureInfo.DefaultThreadCurrentCulture = culture;
+                    CultureInfo.DefaultThreadCurrentUICulture = culture;
+                }
+
+
+
+                Log($"Culture:{Thread.CurrentThread.CurrentCulture}, locate:{Localized._LocaleId_}, {Localized.WelcomeMessage}");
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "init localization", CreateMauiApp);
+                SimpleLocalizer.IsFallbackMatched = true;
+                Localized = ISimpleLocalizerBase.GetMapping().First().Value;
+                SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().First().Value;
+                LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
+                PluginManager.CurrentLocale = "en-US";
+                PluginManager.ExtenedLocalizationGetter = new((k) => ISimpleLocalizerBase.GetMapping().First().Value.DynamicLookup(k));
+            }
+        }
+
+        public static CultureInfo ReadCultureFromSetting(string locate, CultureInfo culture)
+        {
+            try
+            {
+                var cul = CultureInfo.GetCultures(CultureTypes.NeutralCultures);
+                switch (locate)
+                {
+                    case "zh-TW":
+                        {
+                            if (!cul.Any((c) => CultureInfo.CreateSpecificCulture(c.Name).Name == "zh-TW"))
+                            {
+                                Log("zh-TW culture not found, fallback to zh-HK");
+                                culture = CultureInfo.CreateSpecificCulture("zh-HK");
+                            }
+                            else
+                            {
+                                culture = CultureInfo.CreateSpecificCulture(locate);
+                            }
+                            break;
+                        }
+                    case "文言文":
+                        {
+                            culture = CultureInfo.CreateSpecificCulture("zh-HK");
+                            break;
+                        }
+                    default:
+                        {
+                            if (!cul.Any((c) => CultureInfo.CreateSpecificCulture(c.Name).Name == locate))
+                            {
+                                Log($"{locate} culture not found, fallback to en-US");
+                                culture = CultureInfo.CreateSpecificCulture("en-US");
+                            }
+                            else
+                            {
+                                culture = CultureInfo.CreateSpecificCulture(locate);
+                            }
+                            break;
+                        }
+
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "init culture");
+            }
+            if (SettingsManager.IsSettingExists("OverrideCulture") && SettingsManager.GetSetting("OverrideCulture", "default") != "default") //resolve IME not work when locate isn't them
+            {
+                culture = CultureInfo.CreateSpecificCulture(SettingsManager.GetSetting("OverrideCulture"));
+            }
+
+            return culture;
+        }
 
         private static void BackgroundInit()
         {
@@ -784,6 +794,7 @@ namespace projectFrameCut
         public static string? ffmpegFailMessage = null;
 
         public static bool IsAppReady { get; private set; } = false;
+        public static bool NoOverrideCulture { get; set; } = false;
 
         private static object locker = new();
 

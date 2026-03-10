@@ -45,7 +45,8 @@ public partial class HomePage : ContentPage
     private string _lastSelectedItemName = string.Empty;
 
     public static bool HasAlreadyLaunchedFromFile = false;
-    private static bool IsFontLoaded = false;
+    public static bool IsFontLoaded = false;
+    public static bool IsWelcomePageShown = false;
 
 
     public HomePage()
@@ -64,16 +65,20 @@ public partial class HomePage : ContentPage
             await projectFrameCut.WinUI.App.BringToForeground();
 
 #endif
-            if (HasAlreadyLaunchedFromFile) return;
-            if (VersionTracking.Default.IsFirstLaunchEver || SettingsManager.IsBoolSettingTrue("ui_ShowWelcomePage"))
+            if (VersionTracking.Default.IsFirstLaunchEver)
             {
+                SettingsManager.WriteSetting("ui_ShowWelcomePage", "True");
+            }
+            if (SettingsManager.IsBoolSettingTrue("ui_ShowWelcomePage") && !IsWelcomePageShown)
+            {
+                IsWelcomePageShown = true;
                 var p = new SetupPage();
                 await Navigation.PushAsync(p);
                 return;
             }
             await ShowManyAlertsAsync();
             HasAlreadyLaunchedFromFile = true;
-            await LaunchFromFile();
+            if (!HasAlreadyLaunchedFromFile) await LaunchFromFile();
 
             try
             {
@@ -134,6 +139,16 @@ public partial class HomePage : ContentPage
 
     public async Task LaunchFromFile()
     {
+        var origCont = Content;
+        Dispatcher.Dispatch(() =>
+        {
+            Content = new ActivityIndicator
+            {
+                IsRunning = true,
+                WidthRequest = 200,
+                HeightRequest = 200
+            };
+        });
         try
         {
             string path = "";
@@ -230,6 +245,13 @@ public partial class HomePage : ContentPage
         {
             Log(ex, "Launch from file", this);
             await DisplayAlertAsync(Localized._Error, "Cannot launch from file. Try again later.", Localized._OK);
+        }
+        finally
+        {
+            Dispatcher.Dispatch(() =>
+            {
+                Content = origCont;
+            });
         }
     }
 

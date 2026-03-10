@@ -27,20 +27,37 @@
 
     <tv:TabbedView x:Name="MainTabView" x:FieldModifier="public">
         <tv:TabbedView.HeaderRightContent>
-            <HorizontalStackLayout>
-                <Picker x:Name="OrderOptionPicker" WidthRequest="120" Margin="0,-6,5,0" BackgroundColor="Gray"  SelectedIndex="{Binding OrderOption}">
-                    <Picker.Items>
-                        <l:Localized Key="AssetPage_OrderBy_AddDate"/>
-                        <l:Localized Key="AssetPage_OrderBy_Name"/>
-                    </Picker.Items>
-                </Picker>
-                <SearchBar Placeholder="{l:Localized Key=DraftPage_AddClipView_Search}" 
-                       x:Name="SearchInputEntry"
-                       Text="{Binding SearchText}"
-                       PlaceholderColor="White" 
-                       BackgroundColor="Gray" 
-                       WidthRequest="250" 
-                       Margin="0,-7,-5,0" />
+            <HorizontalStackLayout Spacing="8" VerticalOptions="Center" Margin="0,2,0,2">
+                <Border StrokeShape="RoundRectangle 10"
+                        Stroke="{AppThemeBinding Light=#D1D5DB, Dark=#4B5563}"
+                        BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#2F3542}"
+                        Padding="8,0"
+                        HeightRequest="40">
+                    <Picker x:Name="OrderOptionPicker"
+                            WidthRequest="130"
+                            BackgroundColor="Transparent"
+                            TextColor="{AppThemeBinding Light=#111827, Dark=#F3F4F6}"
+                            SelectedIndex="{Binding OrderOption}">
+                        <Picker.Items>
+                            <l:Localized Key="AssetPage_OrderBy_AddDate"/>
+                            <l:Localized Key="AssetPage_OrderBy_Name"/>
+                        </Picker.Items>
+                    </Picker>
+                </Border>
+
+                <Border StrokeShape="RoundRectangle 10"
+                        Stroke="{AppThemeBinding Light=#D1D5DB, Dark=#4B5563}"
+                        BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#2F3542}"
+                        Padding="8,0"
+                        HeightRequest="40">
+                    <SearchBar Placeholder="{l:Localized Key=DraftPage_AddClipView_Search}"
+                               x:Name="SearchInputEntry"
+                               Text="{Binding SearchText}"
+                               PlaceholderColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}"
+                               TextColor="{AppThemeBinding Light=#111827, Dark=#F3F4F6}"
+                               BackgroundColor="Transparent"
+                               WidthRequest="250" />
+                </Border>
             </HorizontalStackLayout>
         </tv:TabbedView.HeaderRightContent>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}" Tag="LocalAssets" x:Name="LocalAssetsTab" x:FieldModifier="public">
@@ -79,7 +96,7 @@
                                     <Grid HorizontalOptions="Start" Padding="4" Grid.Column="0">
                                         <Label Text="{Binding Name}" 
                                                ToolTipProperties.Text="{Binding Name}"
-                                               Margin="2,0,0,0"
+                                               Margin="2,-4,0,0"
                                                LineBreakMode="TailTruncation" 
                                                FontSize="12" 
                                                MaxLines="1"
@@ -152,7 +169,7 @@
                                     <Grid HorizontalOptions="Start" Padding="4" Grid.Column="0">
                                         <Label Text="{Binding Name}" 
                                                ToolTipProperties.Text="{Binding Name}"
-                                               Margin="2,0,0,0"
+                                               Margin="2,-4,0,0"
                                                LineBreakMode="TailTruncation" 
                                                FontSize="12" 
                                                MaxLines="1"

@@ -7,6 +7,7 @@ using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Services;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.Shared;
 
 namespace projectFrameCut.Asset;
 
@@ -330,6 +331,8 @@ public class AssetItemViewModel : INotifyPropertyChanged
             OnPropertyChanged();
         }
     } = true;
+
+    public bool IsAddable => OriginalAsset != null && (OriginalAsset.AssetType == AssetType.Video || OriginalAsset.AssetType == AssetType.Image || OriginalAsset.AssetType == AssetType.Audio);
 
     public AssetItem OriginalAsset { get; set; }
 

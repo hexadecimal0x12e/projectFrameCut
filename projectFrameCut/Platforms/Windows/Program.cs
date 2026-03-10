@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -67,16 +68,17 @@ namespace projectFrameCut.WinUI
 
 
                 }
-                catch
+                catch (Exception ex)
                 {
-
-                }   
-                if (!args.Any(c => c.StartsWith("--noSplash")))
+                    Log(ex,"Read channel");
+                }
+                if(args.Length == 1)
                 {
-                    var splash = new Thread(projectFrameCut.Helper.HelperProgram.SplashMain);
-                    splash.Priority = ThreadPriority.Highest;
-                    splash.IsBackground = false;
-                    splash.Start();
+                    if (args[0].StartsWith("pjfc:"))
+                    {
+                        args = args[0].Substring(5).Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                        Log("Params read from protocol: " + string.Join(' ', args));
+                    }
                 }
                 if (args.Any(c => c.StartsWith("--overrideCulture")))
                 {
@@ -86,7 +88,16 @@ namespace projectFrameCut.WinUI
                     System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;
                     System.Threading.Thread.CurrentThread.CurrentCulture = culture;
                     System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+                    MauiProgram.NoOverrideCulture = true;
                 }
+                if (!args.Any(c => c.StartsWith("--noSplash")))
+                {
+                    var splash = new Thread(projectFrameCut.Helper.HelperProgram.SplashMain);
+                    splash.Priority = ThreadPriority.Highest;
+                    splash.IsBackground = false;
+                    splash.Start();
+                }
+
                 if (args.Any(c => c == "--log"))
                 {
                     Thread logThread = new Thread(Helper.HelperProgram.LogMain);
