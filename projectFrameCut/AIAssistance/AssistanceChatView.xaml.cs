@@ -1354,74 +1354,76 @@ public partial class AssistanceChatView : ContentView
         public string Arguments { get; init; }
     }
 
-    private sealed class ChatMessageItem : INotifyPropertyChanged
+}
+
+
+public sealed partial class ChatMessageItem : INotifyPropertyChanged
+{
+    public required string Sender { get; init; }
+
+    private string _message = string.Empty;
+
+    public string Message
     {
-        public required string Sender { get; init; }
-
-        private string _message = string.Empty;
-
-        public string Message
+        get => _message;
+        set
         {
-            get => _message;
-            set
+            if (_message == value)
             {
-                if (_message == value)
-                {
-                    return;
-                }
-
-                _message = value;
-                OnPropertyChanged();
+                return;
             }
+
+            _message = value;
+            OnPropertyChanged();
         }
+    }
 
-        private string _reasoningText = string.Empty;
+    private string _reasoningText = string.Empty;
 
-        public string ReasoningText
+    public string ReasoningText
+    {
+        get => _reasoningText;
+        set
         {
-            get => _reasoningText;
-            set
+            if (_reasoningText == value)
             {
-                if (_reasoningText == value)
-                {
-                    return;
-                }
-
-                _reasoningText = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(HasReasoning));
+                return;
             }
+
+            _reasoningText = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasReasoning));
         }
+    }
 
-        public bool HasReasoning => !string.IsNullOrWhiteSpace(_reasoningText);
+    public bool HasReasoning => !string.IsNullOrWhiteSpace(_reasoningText);
 
-        private string _toolCallsText = string.Empty;
+    private string _toolCallsText = string.Empty;
 
-        public string ToolCallsText
+    public string ToolCallsText
+    {
+        get => _toolCallsText;
+        set
         {
-            get => _toolCallsText;
-            set
+            if (_toolCallsText == value)
             {
-                if (_toolCallsText == value)
-                {
-                    return;
-                }
-
-                _toolCallsText = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(HasToolCalls));
+                return;
             }
+
+            _toolCallsText = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasToolCalls));
         }
+    }
 
-        public bool HasToolCalls => !string.IsNullOrWhiteSpace(_toolCallsText);
+    public bool HasToolCalls => !string.IsNullOrWhiteSpace(_toolCallsText);
 
-        public bool IsUser { get; init; }
+    public bool IsUser { get; init; }
 
-        public event PropertyChangedEventHandler? PropertyChanged;
+    public event PropertyChangedEventHandler? PropertyChanged;
 
-        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

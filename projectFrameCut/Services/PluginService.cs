@@ -358,7 +358,14 @@ namespace projectFrameCut.Services
                     pluginPem ??= TaskHelper.SyncWait(() => SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}"));
                     if (string.IsNullOrEmpty(pluginPem))
                     {
-                        throw new FileNotFoundException("Plugin PEM not found in secure storage", pluginID);
+                        string? localizedPluginBrokenReason = null;
+                        try
+                        {
+                            localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_SignMissing;
+                        }
+                        catch { }
+                        failReason = localizedPluginBrokenReason ?? "Plugin's signature is missing or corrupted. Try reinstall it.";
+                        return null;
                     }
 
                     if (!File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.enc")) || !File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.sig")) || !File.Exists(Path.Combine(pluginRoot, "hashtable.json.enc")))

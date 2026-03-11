@@ -152,65 +152,68 @@ public partial class AssistanceChatSessionsView : ContentView
         }
     }
 
-    private partial class SessionListItem : INotifyPropertyChanged
+   
+
+
+}
+
+
+public partial class SessionListItem : INotifyPropertyChanged
+{
+    public Guid SessionId { get; init; }
+
+    private string _title = string.Empty;
+    public string Title
     {
-        public Guid SessionId { get; init; }
-
-        private string _title = string.Empty;
-        public string Title
+        get => _title;
+        set
         {
-            get => _title;
-            set
+            if (_title == value)
             {
-                if (_title == value)
-                {
-                    return;
-                }
-
-                _title = value;
-                OnPropertyChanged();
+                return;
             }
-        }
 
-        private string _preview = string.Empty;
-        public string Preview
-        {
-            get => _preview;
-            set
-            {
-                if (_preview == value)
-                {
-                    return;
-                }
-
-                _preview = value;
-                OnPropertyChanged();
-            }
-        }
-
-        private string _updatedAtText = string.Empty;
-        public string UpdatedAtText
-        {
-            get => _updatedAtText;
-            set
-            {
-                if (_updatedAtText == value)
-                {
-                    return;
-                }
-
-                _updatedAtText = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            _title = value;
+            OnPropertyChanged();
         }
     }
 
+    private string _preview = string.Empty;
+    public string Preview
+    {
+        get => _preview;
+        set
+        {
+            if (_preview == value)
+            {
+                return;
+            }
 
+            _preview = value;
+            OnPropertyChanged();
+        }
+    }
+
+    private string _updatedAtText = string.Empty;
+    public string UpdatedAtText
+    {
+        get => _updatedAtText;
+        set
+        {
+            if (_updatedAtText == value)
+            {
+                return;
+            }
+
+            _updatedAtText = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }

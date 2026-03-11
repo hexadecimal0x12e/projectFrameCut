@@ -125,11 +125,11 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
             };
         }
 
-        [Obsolete("Consider to use TypeOfEffect instead. This property may be removed in the future.", false)]
+        [Obsolete("Use TypeOfEffect instead. In APIv3 this property is ignored, and it'll be removed in API v4.", false)]
         public bool IsNormalEffect => true;
-        [Obsolete("Consider to use TypeOfEffect instead. This property may be removed in the future.", false)]
+        [Obsolete("Use TypeOfEffect instead. In APIv3 this property is ignored, and it'll be removed in API v4.", false)]
         public bool IsContinuousEffect => false;
-        [Obsolete("Consider to use TypeOfEffect instead. This property may be removed in the future.", false)]
+        [Obsolete("Use TypeOfEffect instead. In APIv3 this property is ignored, and it'll be removed in API v4.", false)]
         public bool IsBindableArgsEffect => false;
 
         /// <summary>

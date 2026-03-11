@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ai="clr-namespace:projectFrameCut.AIAssistance"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:l="clr-namespace:LocalizedResources"
              x:Class="projectFrameCut.AIAssistance.AssistanceChatView">
@@ -11,7 +12,7 @@
                         Margin="0,0,0,4"
                         ItemSizingStrategy="MeasureAllItems">
             <CollectionView.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="ai:ChatMessageItem">
                     <Grid Padding="2">
                         <Border StrokeThickness="1"
                                 StrokeShape="RoundRectangle 10"

@@ -68,7 +68,7 @@ public partial class AdvancedSettingPage : ContentPage
             }
             else
             {
-                await DisplayAlert("Error", "Key and Value cannot be empty.", "OK");
+                await DisplayAlertAsync("Error", "Key and Value cannot be empty.", "OK");
             }
         };
 
@@ -250,7 +250,14 @@ public partial class AdvancedSettingPage : ContentPage
                             var pluginPem = await SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}");
                             if (string.IsNullOrEmpty(pluginPem))
                             {
-                                throw new FileNotFoundException("Plugin PEM not found in secure storage", pluginID);
+                                string? localizedPluginBrokenReason = null;
+                                try
+                                {
+                                    localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_SignMissing;
+                                }
+                                catch { }
+                                failReason = localizedPluginBrokenReason ?? "Plugin's signature is missing or corrupted. Try reinstall it.";
+                                throw new FileNotFoundException(failReason, pluginID);
                             }
 
                             if (!File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.enc")) || !File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.sig")) || !File.Exists(Path.Combine(pluginRoot, "hashtable.json.enc")))

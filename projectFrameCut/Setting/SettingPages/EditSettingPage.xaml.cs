@@ -430,7 +430,7 @@ public partial class EditSettingPage : ContentPage
         catch (Exception ex)
         {
             // 处理异常并通知用户
-            await DisplayAlert(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
+            await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }
 }

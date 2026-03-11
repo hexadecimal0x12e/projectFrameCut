@@ -358,7 +358,7 @@ public partial class RenderSettingPage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlert(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
+            await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }
 
