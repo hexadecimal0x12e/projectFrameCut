@@ -21,13 +21,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </remarks>
         public string? BindedArgumentProviderID { get; set; }
 
-        /// <summary>
-        /// Get the ID of this specific effect instance.
-        /// </summary>
-        /// <remarks>
-        /// DO NOT set this property manually. It will be set when the effect is created.
-        /// </remarks>
-        public string Id { get; set; }
 
         /// <summary>
         /// Override if you want to check whether the provided value is valid for processing.
@@ -38,16 +31,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         bool IEffect.IsContinuousEffect => false;
         bool IEffect.IsBindableArgsEffect => true;
 
+        EffectType IEffect.TypeOfEffect => EffectType.BindableEffect;
 
-        IPicture IEffect.Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
-        {
-            throw new InvalidOperationException($"Cast this {TypeName} to IBindableArgumentEffect, and call the specific method.");
-        }
-
-        IPictureProcessStep IEffect.GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            throw new InvalidOperationException($"Cast this {TypeName} to IBindableArgumentEffect, and call the specific method.");
-        }
     }
 
     public interface IBindableArgumentEffectNoInputValueProvider : IBindableArgumentEffect
@@ -158,6 +143,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         public IPictureProcessStep GenerateResultStep(object source, uint index, int targetWidth, int targetHeight);
     }
+
     public interface IBindableArgumentEffectManyInputResultGenerator : IBindableArgumentEffect
     {
         BindableArgumentEffectType IBindableArgumentEffect.EffectRole => BindableArgumentEffectType.ManyInputResultGenerator;
@@ -204,14 +190,5 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 
 
 
-    public enum BindableArgumentEffectType
-    {
-        ValueProvider,
-        NoInputValueProvider,
-        OneInputValueProcessor,
-        ManyInputValueProcessor,
-        OneInputResultGenerator,
-        ManyInputResultGenerator,
-        ContinuousResultGenerator,
-    }
+
 }

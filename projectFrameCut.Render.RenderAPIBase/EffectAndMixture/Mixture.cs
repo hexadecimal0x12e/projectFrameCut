@@ -5,6 +5,7 @@ using System.Text;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
+    [Obsolete("This interface is deprecated and may be removed in future versions. We have no plan on custom type of mixturing.")]
     public interface IMixture
     {
         /// <summary>
@@ -32,6 +33,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <param name="topPicture"></param>
         /// <param name="computer"></param>
         /// <returns>the mixed picture</returns>
-        public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer);
+        public IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB);
     }
 }

@@ -44,6 +44,14 @@ public partial class AssetsLibraryPage : ContentPage
         instance = this;    
         SourcePicker.ItemsSource = new string[] { OperatingSystem.IsWindows() ? Environment.MachineName : "Your devices",/* Localized.AssetPage_AddASource */};
         SourcePicker.SelectedIndex = 0;
+
+        var orderOpt = SettingsManager.GetSetting("Edit_AddView_DefaultOrderOption", "date");
+        OrderOptionPicker.SelectedIndex = orderOpt switch
+        {
+            "date" => 0,
+            "name" => 1,
+            _ => 0
+        };
     }
 
     private void OnCollectionViewSizeChanged(object sender, EventArgs e)
@@ -111,6 +119,7 @@ public partial class AssetsLibraryPage : ContentPage
     {
         if (sender is Microsoft.Maui.Controls.Border border && BindingContext is AssetViewModel vm)
         {
+            if (border.BindingContext is not AssetItem currentAsset) return;
 #if WINDOWS || MACCATALYST
             // Windows: Right-click to show context menu
             var tap = new TapGestureRecognizer { NumberOfTapsRequired = 1, Buttons = ButtonsMask.Secondary };
@@ -188,6 +197,7 @@ public partial class AssetsLibraryPage : ContentPage
 #endif
 
             ToolTipProperties.SetText(border, Localized.AssetPage_DoubleClickToPreview);
+            SemanticProperties.SetDescription(border, $"{currentAsset.Name} {currentAsset.DurationDisplay}");
         }
     }
 
@@ -195,7 +205,7 @@ public partial class AssetsLibraryPage : ContentPage
     {
         try
         {
-            if((OperatingSystem.IsAndroid() && (currentAsset.AssetType is AssetType.Video) || (currentAsset.AssetType is AssetType.Audio)) || (currentAsset.AssetType is AssetType.Font) || (currentAsset.AssetType is AssetType.Other))
+            if(/*(OperatingSystem.IsAndroid() && (currentAsset.AssetType is AssetType.Video) || (currentAsset.AssetType is AssetType.Audio)) ||*/ (currentAsset.AssetType is AssetType.Font) || (currentAsset.AssetType is AssetType.Other))
             {
                 if (!string.IsNullOrWhiteSpace(currentAsset.Path) && File.Exists(currentAsset.Path))
                 {

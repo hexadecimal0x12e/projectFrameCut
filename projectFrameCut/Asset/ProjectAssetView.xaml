@@ -85,6 +85,7 @@
                                                 Padding="4"
                                                 CornerRadius="4"
                                                 BackgroundColor="Green"
+                                                IsEnabled="{Binding IsAddable}"
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type local:ProjectAssetView}}, Path=BindingContext.AddToTrackCommand}"
                                                 CommandParameter="{Binding .}"/>
                                         <Button Grid.Column="1"

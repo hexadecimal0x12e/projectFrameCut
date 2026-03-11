@@ -78,6 +78,23 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         private Guid instanceID;
         private bool vaild = true;
 
+        private ColumnDefinitionCollection CreateTwoColumnDefinitions()
+        {
+            double effective = WidthOfContent ?? DefaultWidthOfContent;
+            var cols = new ColumnDefinitionCollection();
+            if (effective >= 0)
+            {
+                cols.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                cols.Add(new ColumnDefinition { Width = new GridLength(effective, GridUnitType.Star) });
+            }
+            else
+            {
+                cols.Add(new ColumnDefinition { Width = new GridLength(Math.Abs(effective), GridUnitType.Star) });
+                cols.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            }
+            return cols;
+        }
+
         /// <summary>
         /// Adds a <seealso cref="Label"/> to the property panel.
         /// </summary>
@@ -148,11 +165,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 
             var grid = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent , GridUnitType.Star) }
-                },
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
                 RowDefinitions = new RowDefinitionCollection
                 {
                     new RowDefinition { Height = GridLength.Auto }
@@ -191,11 +204,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             CheckboxSetter?.Invoke(checkbox);
             var grid = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
-                },
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
                 RowDefinitions = new RowDefinitionCollection
                 {
                     new RowDefinition { Height = GridLength.Auto }
@@ -233,11 +242,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             SwitchSetter?.Invoke(swtch);
             var grid = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
-                },
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
                 RowDefinitions = new RowDefinitionCollection
                 {
                     new RowDefinition { Height = GridLength.Auto }
@@ -286,11 +291,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             PickerSetter?.Invoke(picker);
             var grid = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
-                },
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
                 RowDefinitions = new RowDefinitionCollection
                 {
                     new RowDefinition { Height = GridLength.Auto }
@@ -342,11 +343,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 
             var grid = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
-                },
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
                 RowDefinitions = new RowDefinitionCollection
                 {
                     new RowDefinition { Height = GridLength.Auto }
@@ -575,11 +572,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
 
             var grid = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
-                },
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
                 RowDefinitions = new RowDefinitionCollection
                 {
                     new RowDefinition { Height = GridLength.Auto }
@@ -653,11 +646,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
             var label = title.LabelConfigure();
             var grid = new Grid
             {
-                ColumnDefinitions = new ColumnDefinitionCollection
-                {
-                    new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                    new ColumnDefinition { Width = new GridLength(WidthOfContent ?? DefaultWidthOfContent, GridUnitType.Star) }
-                },
+                ColumnDefinitions = CreateTwoColumnDefinitions(),
                 RowDefinitions = new RowDefinitionCollection
                 {
                     new RowDefinition { Height = GridLength.Auto }
@@ -764,26 +753,31 @@ namespace projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders
         }
 
         /// <summary>
-        /// Appends child items conditionally.
+        /// add the first item which condition is true, and skip the rest. If all conditions are false, do nothing.
         /// </summary>
         public PropertyPanelBuilder AppendWhen(params (Func<bool> condition, Action<PropertyPanelBuilder> onTrue)[] conditions)
         {
             foreach (var (condition, onTrue) in conditions)
             {
-                if (condition()) onTrue(this);
+                if (condition())
+                {
+                    onTrue(this);
+                    return this;
+                }
             }
             return this;
         }
 
+
         /// <summary>
-        /// Appends child items conditionally.
+        /// Appends all conditionally. For each condition, if it's true, execute the corresponding onTrue action; otherwise, execute the onFalse action.
         /// </summary>
-        public PropertyPanelBuilder AppendWhen(params (Func<bool> condition, Action<PropertyPanelBuilder> onTrue, Action<PropertyPanelBuilder> onFalse)[] conditions)
+        public PropertyPanelBuilder AppendWhen(params (Func<bool> condition, Action<PropertyPanelBuilder>? onTrue, Action<PropertyPanelBuilder>? onFalse)[] conditions)
         {
             foreach (var (condition, onTrue, onFalse) in conditions)
             {
-                if (condition()) onTrue(this);
-                else onFalse(this);
+                if (condition()) onTrue?.Invoke(this);
+                else onFalse?.Invoke(this);
             }
             return this;
         }

@@ -292,13 +292,13 @@ namespace projectFrameCut.Setting.SettingPages
 
                 if (await serverService.SaveServerAsync(server))
                 {
-                    await Shell.Current.CurrentPage.DisplayAlert("成功", "服务器配置已保存", "确定");
+                    await Shell.Current.CurrentPage.DisplayAlertAsync("成功", "服务器配置已保存", "确定");
                     RefreshServerList();
                     await Shell.Current.GoToAsync("..");
                 }
                 else
                 {
-                    await Shell.Current.CurrentPage.DisplayAlert("错误", "服务器名称和地址不能为空", "确定");
+                    await Shell.Current.CurrentPage.DisplayAlertAsync("错误", "服务器名称和地址不能为空", "确定");
                 }
             };
             buttonLayout.Add(saveBtn);
@@ -392,7 +392,7 @@ namespace projectFrameCut.Setting.SettingPages
 
                 if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
                 {
-                    await Shell.Current.CurrentPage.DisplayAlert("错误", "用户名和密码不能为空", "确定");
+                    await Shell.Current.CurrentPage.DisplayAlertAsync("错误", "用户名和密码不能为空", "确定");
                     return;
                 }
 
@@ -416,24 +416,24 @@ namespace projectFrameCut.Setting.SettingPages
         {
             try
             {
-                await Shell.Current.CurrentPage.DisplayAlert("提示", "正在登录...", "确定");
+                await Shell.Current.CurrentPage.DisplayAlertAsync("提示", "正在登录...", "确定");
 
                 var result = await serverService.LoginAsync(server.Id, userName, password);
 
                 if (result.Success)
                 {
-                    await Shell.Current.CurrentPage.DisplayAlert("成功", 
+                    await Shell.Current.CurrentPage.DisplayAlertAsync("成功", 
                         $"已成功登录，用户: {result.User?.UserName}", "确定");
                     RefreshServerList();
                 }
                 else
                 {
-                    await Shell.Current.CurrentPage.DisplayAlert("登录失败", result.Message, "确定");
+                    await Shell.Current.CurrentPage.DisplayAlertAsync("登录失败", result.Message, "确定");
                 }
             }
             catch (Exception ex)
             {
-                await Shell.Current.CurrentPage.DisplayAlert("错误", $"登录异常: {ex.Message}", "确定");
+                await Shell.Current.CurrentPage.DisplayAlertAsync("错误", $"登录异常: {ex.Message}", "确定");
             }
         }
 
@@ -441,30 +441,30 @@ namespace projectFrameCut.Setting.SettingPages
         {
             try
             {
-                await Shell.Current.CurrentPage.DisplayAlert("提示", $"正在使用 {provider} 登录...", "确定");
+                await Shell.Current.CurrentPage.DisplayAlertAsync("提示", $"正在使用 {provider} 登录...", "确定");
 
                 var result = await serverService.LoginWithOAuthAsync(server.Id, provider);
 
                 if (result.Success)
                 {
-                    await Shell.Current.CurrentPage.DisplayAlert("成功", 
+                    await Shell.Current.CurrentPage.DisplayAlertAsync("成功", 
                         $"已成功登录，用户: {result.User?.UserName}", "确定");
                     RefreshServerList();
                 }
                 else
                 {
-                    await Shell.Current.CurrentPage.DisplayAlert("登录失败", result.Message, "确定");
+                    await Shell.Current.CurrentPage.DisplayAlertAsync("登录失败", result.Message, "确定");
                 }
             }
             catch (Exception ex)
             {
-                await Shell.Current.CurrentPage.DisplayAlert("错误", $"登录异常: {ex.Message}", "确定");
+                await Shell.Current.CurrentPage.DisplayAlertAsync("错误", $"登录异常: {ex.Message}", "确定");
             }
         }
 
         private async Task LogoutAsync(RemoteServer server)
         {
-            var confirmed = await Shell.Current.CurrentPage.DisplayAlert("确认", 
+            var confirmed = await Shell.Current.CurrentPage.DisplayAlertAsync("确认", 
                 $"确定要从 {server.Name} 登出吗？", "确定", "取消");
 
             if (!confirmed)
@@ -473,18 +473,18 @@ namespace projectFrameCut.Setting.SettingPages
             try
             {
                 await serverService.LogoutAsync(server.Id);
-                await Shell.Current.CurrentPage.DisplayAlert("成功", "已登出", "确定");
+                await Shell.Current.CurrentPage.DisplayAlertAsync("成功", "已登出", "确定");
                 RefreshServerList();
             }
             catch (Exception ex)
             {
-                await Shell.Current.CurrentPage.DisplayAlert("错误", $"登出异常: {ex.Message}", "确定");
+                await Shell.Current.CurrentPage.DisplayAlertAsync("错误", $"登出异常: {ex.Message}", "确定");
             }
         }
 
         private async Task DeleteServerAsync(RemoteServer server)
         {
-            var confirmed = await Shell.Current.CurrentPage.DisplayAlert("确认删除", 
+            var confirmed = await Shell.Current.CurrentPage.DisplayAlertAsync("确认删除", 
                 $"确定要删除服务器 '{server.Name}' 吗？此操作无法撤销。", "删除", "取消");
 
             if (!confirmed)
@@ -493,12 +493,12 @@ namespace projectFrameCut.Setting.SettingPages
             try
             {
                 await serverService.DeleteServerAsync(server.Id);
-                await Shell.Current.CurrentPage.DisplayAlert("成功", "服务器已删除", "确定");
+                await Shell.Current.CurrentPage.DisplayAlertAsync("成功", "服务器已删除", "确定");
                 RefreshServerList();
             }
             catch (Exception ex)
             {
-                await Shell.Current.CurrentPage.DisplayAlert("错误", $"删除失败: {ex.Message}", "确定");
+                await Shell.Current.CurrentPage.DisplayAlertAsync("错误", $"删除失败: {ex.Message}", "确定");
             }
         }
 
@@ -506,7 +506,7 @@ namespace projectFrameCut.Setting.SettingPages
         {
             if (string.IsNullOrWhiteSpace(url))
             {
-                await Shell.Current.CurrentPage.DisplayAlert("错误", "请先输入服务器地址", "确定");
+                await Shell.Current.CurrentPage.DisplayAlertAsync("错误", "请先输入服务器地址", "确定");
                 return;
             }
 
@@ -515,16 +515,16 @@ namespace projectFrameCut.Setting.SettingPages
                 var isConnected = await serverService.VerifyServerConnectionAsync(url);
                 if (isConnected)
                 {
-                    await Shell.Current.CurrentPage.DisplayAlert("成功", "服务器连接正常", "确定");
+                    await Shell.Current.CurrentPage.DisplayAlertAsync("成功", "服务器连接正常", "确定");
                 }
                 else
                 {
-                    await Shell.Current.CurrentPage.DisplayAlert("失败", "无法连接到服务器", "确定");
+                    await Shell.Current.CurrentPage.DisplayAlertAsync("失败", "无法连接到服务器", "确定");
                 }
             }
             catch (Exception ex)
             {
-                await Shell.Current.CurrentPage.DisplayAlert("错误", $"测试失败: {ex.Message}", "确定");
+                await Shell.Current.CurrentPage.DisplayAlertAsync("错误", $"测试失败: {ex.Message}", "确定");
             }
         }
     }

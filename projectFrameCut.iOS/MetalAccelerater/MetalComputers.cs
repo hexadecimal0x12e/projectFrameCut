@@ -58,11 +58,12 @@ namespace projectFrameCut.MetalAccelerater
         {
             InitializePipeline();
 
-            // args: [A, B, aAlpha, bAlpha]
+            // args: [A, B, aAlpha, bAlpha, outputBpp]
             var A = (float[])args[0];
             var B = (float[])args[1];
-            var aAlpha = (float[])args[2];
-            var bAlpha = (float[])args[3];
+            var aAlpha = args.Length > 2 ? (args[2] as float[]) : null;
+            var bAlpha = args.Length > 3 ? (args[3] as float[]) : null;
+            var outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
 
             if (aAlpha == null) aAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
             if (bAlpha == null) bAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
@@ -110,13 +111,41 @@ namespace projectFrameCut.MetalAccelerater
             commandBuffer.Commit();
             commandBuffer.WaitUntilCompleted();
 
-            float[] resultColor = new float[count];
-            Marshal.Copy(cBuffer.Contents, resultColor, 0, count);
-
             float[] resultAlpha = new float[count];
             Marshal.Copy(cAlphaBuffer.Contents, resultAlpha, 0, count);
 
-            return new object[] { resultColor, resultAlpha };
+            if (outputBpp == 8)
+            {
+                float[] temp = new float[count];
+                Marshal.Copy(cBuffer.Contents, temp, 0, count);
+                var resultColor = new byte[count];
+                for (int i = 0; i < count; i++)
+                {
+                    float v = temp[i] / 257.0f;
+                    if (v < 0) v = 0;
+                    if (v > 255) v = 255;
+                    resultColor[i] = (byte)v;
+                }
+                return new object[] { resultColor, resultAlpha };
+            }
+            if (outputBpp == 16)
+            {
+                float[] temp = new float[count];
+                Marshal.Copy(cBuffer.Contents, temp, 0, count);
+                var resultColor = new ushort[count];
+                for (int i = 0; i < count; i++)
+                {
+                    float v = temp[i];
+                    if (v < 0) v = 0;
+                    if (v > 65535) v = 65535;
+                    resultColor[i] = (ushort)v;
+                }
+                return new object[] { resultColor, resultAlpha };
+            }
+
+            float[] resultColorF = new float[count];
+            Marshal.Copy(cBuffer.Contents, resultColorF, 0, count);
+            return new object[] { resultColorF, resultAlpha };
         }
 
         private IMTLBuffer CreateBuffer(IMTLDevice device, float[] data)

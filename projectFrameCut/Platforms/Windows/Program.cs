@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -21,12 +22,12 @@ namespace projectFrameCut.WinUI
         public static string? BasicDataPathOverride { get; private set; } = null;
         public static string? UserDataPathOverride { get; private set; } = null;
 
-        private const string AppVersionStage = "alpha";
-
         [STAThread] //avoid failed to initialize COM library error, cause a lot of issue like IME not work at all...
         public static void Main(string[] args)
         {
             System.Threading.Thread.CurrentThread.Name = "App Main thread";
+            Debug.WriteLine($"projectFrameCut {Assembly.GetExecutingAssembly().GetName().Version}");
+            Debug.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
             try
             {
                 if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041, 0))
@@ -35,7 +36,7 @@ namespace projectFrameCut.WinUI
                         "Sorry, projectFrameCut requires Windows 10 2004 / LTSC 2021 (build 19041) or higher to run.\r\nConsider upgrade your Windows system.",
                         "projectFrameCut",
                         0x10 | 0x4);
-                    if(opt == 6)
+                    if (opt == 6)
                     {
                         Process.Start(new ProcessStartInfo
                         {
@@ -45,6 +46,40 @@ namespace projectFrameCut.WinUI
                     }
                     return;
                 }
+                try
+                {
+                    if (WinUI.App.IsPackaged())
+                    {
+                        var pfn = WinUI.App.GetPackageFamilyName();
+                        projectFrameCut.Helper.HelperProgram.AppChannel = pfn switch
+                        {
+                            "hexadecimal0x12e.projectFrameCutCommunity_f91nmrsqwpk6y" => "Community",
+                            "0xeeeeeeeeeeee.projectFrameCutCommunity_f91nmrsqwpk6y" => "Community MS Store",
+                            "hexadecimal0x12e.projectFrameCut_f91nmrsqwpk6y" => "Standard",
+                            "0xeeeeeeeeeeee.projectFrameCut_f91nmrsqwpk6y" => "MS Store",
+                            _ => "Non-official build"
+                        };
+                    }
+                    else
+                    {
+                        projectFrameCut.Helper.HelperProgram.AppChannel = "Portable";
+                    }
+                    projectFrameCut.Helper.HelperProgram.AppVersion = Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown";
+
+
+                }
+                catch (Exception ex)
+                {
+                    Log(ex,"Read channel");
+                }
+                if(args.Length == 1)
+                {
+                    if (args[0].StartsWith("pjfc:"))
+                    {
+                        args = args[0].Substring(5).Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                        Log("Params read from protocol: " + string.Join(' ', args));
+                    }
+                }
                 if (args.Any(c => c.StartsWith("--overrideCulture")))
                 {
                     var overrideCulture = args.First(c => c.StartsWith("--overrideCulture")).Split('=')[1];
@@ -53,7 +88,16 @@ namespace projectFrameCut.WinUI
                     System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;
                     System.Threading.Thread.CurrentThread.CurrentCulture = culture;
                     System.Threading.Thread.CurrentThread.CurrentUICulture = culture;
+                    MauiProgram.NoOverrideCulture = true;
                 }
+                if (!args.Any(c => c.StartsWith("--noSplash")))
+                {
+                    var splash = new Thread(projectFrameCut.Helper.HelperProgram.SplashMain);
+                    splash.Priority = ThreadPriority.Highest;
+                    splash.IsBackground = false;
+                    splash.Start();
+                }
+
                 if (args.Any(c => c == "--log"))
                 {
                     Thread logThread = new Thread(Helper.HelperProgram.LogMain);
@@ -64,21 +108,21 @@ namespace projectFrameCut.WinUI
                     LogWindowShowing = true;
                     Log($"Logger window started.");
                 }
-                if(args.Any(c => c == "--consoleLog"))
+                if (args.Any(c => c == "--consoleLog"))
                 {
-                    MyLoggerExtensions.OnLog += (msg,level) =>
+                    MyLoggerExtensions.OnLog += (msg, level) =>
                     {
                         Console.WriteLine($"[{level}] {msg}");
                     };
                 }
                 if (args.Any(c => c.StartsWith("--basicUserData")))
                 {
-                    var userDataPath = args.First(c => c.StartsWith("--basicUserData")).Split('=',2)[1];
+                    var userDataPath = args.First(c => c.StartsWith("--basicUserData")).Split('=', 2)[1];
                     BasicDataPathOverride = userDataPath;
                 }
                 if (args.Any(c => c.StartsWith("--userData")))
                 {
-                    var userDataPath = args.First(c => c.StartsWith("--userData")).Split('=',2)[1];
+                    var userDataPath = args.First(c => c.StartsWith("--userData")).Split('=', 2)[1];
                     UserDataPathOverride = userDataPath;
                 }
             }
@@ -88,30 +132,31 @@ namespace projectFrameCut.WinUI
             }
             try
             {
-                projectFrameCut.Helper.HelperProgram.AppVersion = $"{AppVersionStage} {Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}";
-            }
-            catch
-            {
-            }
-            try
-            {
-                var splash = new Thread(projectFrameCut.Helper.HelperProgram.SplashMain);
-                splash.Priority = ThreadPriority.Highest;
-                splash.IsBackground = false;
-                splash.Start();
                 Log("Initializing application...");
                 WinRT.ComWrappersSupport.InitializeComWrappers();
                 Microsoft.UI.Xaml.Application.Start((p) =>
                 {
-                    var context = new Microsoft.UI.Dispatching.DispatcherQueueSynchronizationContext(
-                        Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
+                    var context = new Microsoft.UI.Dispatching.DispatcherQueueSynchronizationContext(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
                     SynchronizationContext.SetSynchronizationContext(context);
                     new App();
                 });
                 Log("Application exited.");
-                SettingsManager.FlushAndStopAsync().GetAwaiter().GetResult();
+                _ = SettingsManager.FlushAndStopAsync();
                 Helper.HelperProgram.Cleanup();
                 MauiProgram.LogWriter.Flush();
+                try
+                {
+                    foreach (var item in Render.Plugin.PluginManager.LoadedPlugins)
+                    {
+                        try
+                        {
+                            item.Value.OnClosing();
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+                Environment.Exit(0);
                 return;
             }
             catch (Exception ex)
@@ -175,7 +220,7 @@ If you want to help the development of this application, please consider to subm
                 string appInfo = $"Application: {Assembly.GetExecutingAssembly().GetName().FullName}";
                 try
                 {
-                    appInfo = $"Application: {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} Packaged:{MauiProgram.IsPackaged()}";
+                    appInfo = $"Application: {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} Packaged:{WinUI.App.IsPackaged()}";
                 }
                 catch { }
                 var content =

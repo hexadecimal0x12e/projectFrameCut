@@ -1,11 +1,14 @@
-﻿using System;
+﻿//most classes in this file are used for saving and reading draft/effect/clip, so you probably not excepted to use these classes while you're making plugin.
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 
 namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
 {
-
+    /// <summary>
+    /// Provide a unified way for calculate something with GPU.
+    /// </summary>
     public interface IComputer
     {
         /// <summary>
@@ -18,6 +21,8 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public string SupportedEffectOrMixture { get; }
         /// <summary>
         /// Compute the output based on the input arguments.
+        /// The <paramref name="args"/> can be any forms you'd like. No any limitations,
+        /// so please make sure to provide enough args in correct order for the computer to compute the result.
         /// </summary>
         /// <param name="args">Input data</param>
         /// <returns>output data</returns>

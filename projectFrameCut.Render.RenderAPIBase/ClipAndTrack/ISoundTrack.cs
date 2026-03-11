@@ -8,6 +8,7 @@ using System.Text;
 
 namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 {
+    [Obsolete("Consider to migrate to AudioSample system, a better Audio-processing PJFC-style system that support many PJFC features like IEffect. The old ISoundTrack system will be removed in future, at least in API v4.", false)]
     public interface ISoundTrack
     {
         /// <summary>

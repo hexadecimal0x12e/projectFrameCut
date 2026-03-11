@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace projectFrameCut.ApplicationAPIBase.Effect
 {
@@ -202,8 +203,12 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
     {
         public required string Name { get; set; }
         public required string Description { get; set; }
+        [JsonIgnore]
         public ImageSource? Thumbnail { get; set; }
+        [JsonIgnore]
         public MediaSource? VideoThumbnail { get; set; }
+
+        public EffectParameterInfo? Parameters { get; set; }
     }
 
     //public class EffectBundleData

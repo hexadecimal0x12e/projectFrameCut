@@ -27,13 +27,33 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </remarks>
         public string TypeName { get; }
         /// <summary>
+        /// Get which kind of effect is. 
+        /// </summary>
+        /// <remarks>
+        /// It's for replacing properties <see cref="IsNormalEffect"/>, <see cref="IsContinuousEffect"/> and <see cref="IsBindableArgsEffect"/> and so on, to make it more extendable for future effect types.
+        /// </remarks>
+        public virtual EffectType TypeOfEffect => EffectType.NotSpecified;
+
+        /// <summary>
         /// Get how this effect is implemented.
         /// </summary>
         public EffectImplementType ImplementType { get; }
+
         /// <summary>
         /// Name of this effect. Most for display purpose.
         /// </summary>
         public string Name { get; set; }
+
+        /// <summary>
+        /// Get the ID of this specific effect instance.
+        /// This is a <b>REQUIRED</b> property for any kind of <see cref="IBindableArgumentEffect"/>, but optional for others. 
+        /// </summary>
+        /// <remarks>
+        /// DO NOT set this property manually. It will be set when the effect is created.
+        /// If set, it should be a Guid.
+        /// </remarks>
+        public string Id { get; set; }
+
         /// <summary>
         /// Parameters of the effect.
         /// </summary>
@@ -79,6 +99,53 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public IEffect WithParameters(Dictionary<string, object> parameters);
 
         /// <summary>
+        /// If you'd like to initialize the effect before use, override it.
+        /// </summary>
+        public virtual void Initialize()
+        {
+        }
+
+        /// <summary>
+        /// Get the info of this effect. Used in MCP calling in agent.
+        /// </summary>
+        /// <remarks>
+        /// For UI Displaying purpose please use EffectBundle's GetDisplayInfo method instead.
+        /// </remarks>
+        /// <returns></returns>
+        public virtual EffectInfo GetInfo()
+        {
+            return new EffectInfo
+            {
+                FromPlugin = FromPlugin,
+                TypeName = TypeName,
+                Name = Name,
+                Description = "No description provided. Try guess it's purpose from TypeName.", // Description is not provided in IEffect, so we set it to a default string.
+                Parameters = Parameters.ToDictionary(kv => kv.Key, kv => new EffectParameterInfo { Name = kv.Key, ParameterType = kv.Value.GetType().FullName ?? "unknown", DefaultValue = null }),
+                EffectType = TypeOfEffect
+            };
+        }
+
+        [Obsolete("Use TypeOfEffect instead. In APIv3 this property is ignored, and it'll be removed in API v4.", false)]
+        public bool IsNormalEffect => true;
+        [Obsolete("Use TypeOfEffect instead. In APIv3 this property is ignored, and it'll be removed in API v4.", false)]
+        public bool IsContinuousEffect => false;
+        [Obsolete("Use TypeOfEffect instead. In APIv3 this property is ignored, and it'll be removed in API v4.", false)]
+        public bool IsBindableArgsEffect => false;
+
+        /// <summary>
+        /// Get the binded EffectGroup's ID
+        /// </summary>
+        /// <remarks>
+        /// DO NOT set this property manually. EffectGroup will do this.
+        /// </remarks>
+        public string? BindedEffectGroupID { get; set; }
+    }
+
+    public interface INormalEffect : IEffect
+    {
+        EffectType IEffect.TypeOfEffect => EffectType.NormalEffect;
+
+        /// <summary>
         /// Render the effect on the source picture to produce a new picture with the target width and height.
         /// </summary>
         /// <param name="source"></param>
@@ -98,38 +165,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <param name="targetHeight"></param>
         /// <returns>the processed frame</returns>
         public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight);
-
-        /// <summary>
-        /// If you'd like to initialize the effect before use, override it.
-        /// </summary>
-        public virtual void Initialize()
-        {
-        }
-
-        public bool IsNormalEffect => true;
-        public bool IsContinuousEffect => false;
-        public bool IsBindableArgsEffect => false;
-
-        /// <summary>
-        /// Get the binded EffectGroup's ID
-        /// </summary>
-        /// <remarks>
-        /// DO NOT set this property manually. EffectGroup will do this.
-        /// </remarks>
-        public string? BindedEffectGroupID { get; set; }
     }
 
-    public enum EffectImplementType
-    {
-        NotSpecified,
-        IPicture,
-        ImageSharp,
-        HwAcceleration,
-        Custom1,
-        Custom2,
-        Custom3,
-        Custom4,
-        Custom5,
 
-    }
 }

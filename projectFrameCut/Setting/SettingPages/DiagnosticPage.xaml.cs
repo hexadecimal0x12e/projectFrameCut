@@ -82,7 +82,7 @@ public partial class DiagnosticSettingPage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlert(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
+            await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }
 
@@ -196,8 +196,14 @@ public partial class DiagnosticSettingPage : ContentPage
     private string GetAppInfo()
     {
         bool IsPackaged = false;
+        string PackageName = "Unknown";
 #if WINDOWS
-        IsPackaged = MauiProgram.IsPackaged();
+        IsPackaged = WinUI.App.IsPackaged();
+        PackageName = WinUI.App.GetPackageFullName();
+#elif ANDROID
+        PackageName = Android.App.Application.Context.PackageName;
+#elif iDevices
+        PackageName = Foundation.NSBundle.MainBundle.BundleIdentifier ?? "Unknown";
 #endif
         string GetAssemblyInfo()
         {
@@ -212,7 +218,7 @@ public partial class DiagnosticSettingPage : ContentPage
                         continue;
                     }
                     printedAsb.Add(asb.FullName);
-                    var guid = asb.GetCustomAttribute<GuidAttribute>()?.Value ?? "unknown";
+                    var guid = asb.GetCustomAttribute<GuidAttribute>()?.Value ?? "none";
                     string asbHash = "";
                     try
                     {
@@ -255,7 +261,10 @@ public partial class DiagnosticSettingPage : ContentPage
             - AppDataPath: {MauiProgram.BasicDataPath}
             - UserDataPath: {MauiProgram.DataPath}
             {(OperatingSystem.IsWindows() ? $"- IsPackaged: {IsPackaged}" : "")}
-            CmdLine:{string.Join(' ', MauiProgram.CmdlineArgs)}
+            - Bundle Identifier / Package Name: {PackageName}
+
+            CmdLine:
+            {string.Join(' ', MauiProgram.CmdlineArgs)}
 
             Assembly: 
             {GetAssemblyInfo()}

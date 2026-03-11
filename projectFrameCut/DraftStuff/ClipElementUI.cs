@@ -1,5 +1,6 @@
 ﻿using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.Converters;
 using projectFrameCut.Render;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
@@ -14,7 +15,7 @@ using Path = System.IO.Path;
 
 namespace projectFrameCut.DraftStuff
 {
-    [DebuggerDisplay("{displayName}, {ClipType}")]
+    [DebuggerDisplay("{displayName}, {ClipType} ({Id})")]
     public class ClipElementUI
     {
         public required string Id { get; set; }
@@ -121,7 +122,7 @@ namespace projectFrameCut.DraftStuff
                 {
                     CornerRadius = 20,
                     BackgroundColor = Colors.White,
-                    StrokeThickness = 8
+                    StrokeThickness = 0
                 }
             };
 
@@ -214,7 +215,9 @@ namespace projectFrameCut.DraftStuff
             if (!string.IsNullOrWhiteSpace(element.DisplayName))
             {
                 ToolTipProperties.SetText(element.Clip, element.DisplayName);
+                SemanticProperties.SetDescription(element.Clip, $"{element.DisplayName}, {element.TypeName}");
             }
+            AutomationProperties.SetIsInAccessibleTree(element.Clip, true);
 
             return element;
         }
@@ -246,6 +249,7 @@ namespace projectFrameCut.DraftStuff
                 ClipMode.AudioClip => new SolidColorBrush(Colors.Goldenrod),
                 ClipMode.SubtitleClip => new SolidColorBrush(Colors.SlateGray),
                 ClipMode.SolidColorClip => new SolidColorBrush(Colors.OrangeRed),
+                ClipMode.TransformClip => new SolidColorBrush(Colors.AliceBlue),
                 _ => new SolidColorBrush(Colors.Gray),
             };
         }

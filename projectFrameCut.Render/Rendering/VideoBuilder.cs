@@ -94,8 +94,8 @@ namespace projectFrameCut.Render.Rendering
             builder.PixelFormat = fmt;
             builder.OutputPath = outputPath;
             builder.CodecName = encoder;
-            builder.Initialize();   
-            
+            builder.Initialize();
+
 
         }
 
@@ -103,11 +103,11 @@ namespace projectFrameCut.Render.Rendering
 
         public void Append(uint index, IPicture frame)
         {
-            if (frame == null) throw new ArgumentNullException(nameof(frame));
+            ArgumentNullException.ThrowIfNull(frame);
             if (frame.Width != Width || frame.Height != Height)
                 throw new ArgumentException($"The result ({frame.filePath})'s size {frame.Width}*{frame.Height} is different from original size ({Width}*{Height}). Please check the source.")
                 {
-                    Data = { { "PictureObject", frame }, { "ProcessStack", frame.ProcessStack } }
+                    Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
                 };
 
             if (index > Duration)
@@ -122,7 +122,7 @@ namespace projectFrameCut.Render.Rendering
                 {
                     throw new InvalidOperationException($"Frame #{index} has already been added.")
                     {
-                        Data = { { "PictureObject", frame }, { "ProcessStack", frame.ProcessStack } }
+                        Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
                     };
                 }
                 else
@@ -137,12 +137,12 @@ namespace projectFrameCut.Render.Rendering
 
             if (!BlockWrite)
             {
-                Cache.AddOrUpdate(index, frame, 
+                Cache.AddOrUpdate(index, frame,
                     (_, _) => throw new InvalidOperationException($"Frame #{index} has already been added.")
                     {
-                        Data = { { "PictureObject", frame }, { "ProcessStack", frame.ProcessStack } }
+                        Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
                     }
-                    );               
+                    );
             }
             else
             {
@@ -162,7 +162,6 @@ namespace projectFrameCut.Render.Rendering
         {
             if (Disposed) return;
             Disposed = true;
-            // Best-effort cleanup: if anything remains in cache, dispose it.
             try
             {
                 running = false;
@@ -175,15 +174,21 @@ namespace projectFrameCut.Render.Rendering
             }
             catch { }
             builder.Dispose();
+            GC.SuppressFinalize(this);
         }
 
         public Thread Build()
         {
+            if (BlockWrite)
+            {
+                Log($"[VideoWriter] Working in sync-writing mode.");
+                return new(() => { });
+            }
             return new Thread(() =>
             {
                 Log($"[VideoBuilder] Successfully started writer for {outputPath}");
 
-                while (running) 
+                while (running)
                 {
                     if (Cache.ContainsKey(index))
                     {

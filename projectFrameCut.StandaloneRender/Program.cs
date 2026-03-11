@@ -34,9 +34,10 @@ namespace projectFrameCut.StandaloneRender
             if (!args.Contains("--nolog"))
             {
                 MyLoggerExtensions.OnLog += (m, l) => Console.WriteLine($"[{l}] {m}");
-                Console.WriteLine($"projectFrameCut.StandaloneRender - {Assembly.GetExecutingAssembly().GetName().Version}");
+                Console.WriteLine($"projectFrameCut.StandaloneRender v{Assembly.GetExecutingAssembly().GetName().Version}");
+                Console.Write(GetInfo());
                 Console.WriteLine($"Copyright hexadecimal0x12e 2025-2026.");
-                Console.WriteLine(GetInfo());
+
             }
             if (args.Contains("--logDiagnostic"))
             {
@@ -160,6 +161,7 @@ namespace projectFrameCut.StandaloneRender
                     return 0;
 
                 case "about":
+                    Console.WriteLine("---");
                     Console.WriteLine(GetInfo(true));
                     return 0;
                 default:
@@ -415,18 +417,26 @@ namespace projectFrameCut.StandaloneRender
             {
                 blockWrite = false;
             }
+
+            bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
+            InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
+
             #endregion
 
             #region read draft
             ProjectJSONStructure project = new();
             DraftStructureJSON timeline = new();
-            if (File.Exists(Path.Combine(workingPath, "project.json")))
+            if (File.Exists(Path.Combine(workingPath, "project.pjfc")))
+            {
+                project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.pjfc")), savingOpts) ?? new();
+            }
+            else if (File.Exists(Path.Combine(workingPath, "project.json")))
             {
                 project = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(workingPath, "project.json")), savingOpts) ?? new();
             }
             else
             {
-                Log("ERROR: project.json not found in project directory.");
+                Log("ERROR: project.pjfc or project.json not found in project directory.");
                 return 1;
             }
 
@@ -484,7 +494,14 @@ namespace projectFrameCut.StandaloneRender
                 Stopwatch sw1 = new();
                 Log("Start render...");
                 sw1.Restart();
-                await renderer.GoRender(CancellationToken.None);
+                if (blockWrite)
+                {
+                    await renderer.GoRenderSync(CancellationToken.None);
+                }
+                else
+                {
+                    await renderer.GoRender(CancellationToken.None);
+                }
 
                 Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
 
@@ -638,9 +655,8 @@ namespace projectFrameCut.StandaloneRender
                 baseHash = !baseType.IsDynamic && Path.Exists(baseType.Location) ? HashServices.ComputeFileHash(baseType.Location) : "unknown";
             }
             catch { baseHash = "unknown"; }
-            builder.AppendLine($"APIBase Version: {IPluginBase.CurrentPluginAPIVersion}");
-            builder.AppendLine($"Render: version {renderType.GetName().Version}, hash:{renderHash}");
-            builder.AppendLine($"APIBase: version {baseType.GetName().Version}, hash:{baseHash}");
+            builder.AppendLine($"BaseAPI Definition: V{IPluginBase.CurrentPluginAPIVersion}({baseType.GetName().Version}), hash:{baseHash}");
+            builder.AppendLine($"Core render library: v{renderType.GetName().Version}, hash:{renderHash}");
             if (all)
             {
                 List<string> printedAsb = new();

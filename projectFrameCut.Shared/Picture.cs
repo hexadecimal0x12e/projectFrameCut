@@ -20,7 +20,7 @@ using Image = SixLabors.ImageSharp.Image;
 
 namespace projectFrameCut.Shared
 {
-
+    #region base
 
     /// <summary>
     /// This class is for placing Picture information and as a base of the actual picture (<see cref="IPicture{T}"/>).
@@ -83,6 +83,7 @@ namespace projectFrameCut.Shared
         /// <summary>
         /// Resize the picture. 
         /// </summary>
+        /// <param name="preserveAspect">Keep the source picture's aspect ratio while true.</param>
         IPicture Resize(int targetWidth, int targetHeight, bool preserveAspect = true);
         /// <summary>
         /// Convert this picture to the specified bits per pixel.
@@ -226,6 +227,10 @@ namespace projectFrameCut.Shared
         {
         }
     }
+
+    #endregion
+
+    #region 16bpp
 
     /// <summary>
     /// The projectFrameCut's 16-bit Picture structure. It's the base of everything you see in the final video.
@@ -517,6 +522,7 @@ namespace projectFrameCut.Shared
         [DebuggerNonUserCode()]
         public Picture16bpp Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
         {
+            var sw = Stopwatch.StartNew();
             if (targetWidth == Width && targetHeight == Height) return this;
             lock (this)
             {
@@ -625,7 +631,7 @@ namespace projectFrameCut.Shared
                 }
                 result.ProcessStack.Add(new PictureProcessStack
                 {
-                    OperationDisplayName = "Resize",
+                    OperationDisplayName = "Resize (IPicture)",
                     Operator = this.GetType(),
                     ProcessingFuncStackTrace = new(true),
                     Properties = new Dictionary<string, object>
@@ -636,6 +642,7 @@ namespace projectFrameCut.Shared
                         { "TargetHeight", targetHeight },
                         { "PreserveAspect", preserveAspect },
                     },
+                    Elapsed = sw.Elapsed
                 });
 
                 return result;
@@ -701,6 +708,7 @@ namespace projectFrameCut.Shared
                     disposedValue = true;
                 }
                 Disposed = disposedValue;
+
             }
         }
 
@@ -718,6 +726,7 @@ namespace projectFrameCut.Shared
             }
             else if (bitPerPixel == PicturePixelMode.BytePicture)
             {
+                var sw = Stopwatch.StartNew();
                 var pic = new Picture8bpp(Width, Height)
                 {
                     frameIndex = this.frameIndex,
@@ -744,9 +753,10 @@ namespace projectFrameCut.Shared
                 }
                 pic.ProcessStack.Add(new PictureProcessStack
                 {
-                    OperationDisplayName = "Convert to 8 bpp",
+                    OperationDisplayName = "Converted from 16bpp to 8bpp",
                     Operator = this.GetType(),
                     ProcessingFuncStackTrace = new StackTrace(true),
+                    Elapsed = sw.Elapsed
                 });
                 return pic;
             }
@@ -785,6 +795,10 @@ namespace projectFrameCut.Shared
 
         public string GetDiagnosticsInfo() => $"16BitPerPixel image, Size: {Width}*{Height}, avg R:{r.Average(Convert.ToDecimal)} G:{g.Average(Convert.ToDecimal)} B:{b.Average(Convert.ToDecimal)} A:{a?.Average(Convert.ToDecimal) ?? -1}";
     }
+
+    #endregion
+
+    #region 8bpp
 
     /// <summary>
     /// The projectFrameCut's 8-bit Picture structure.
@@ -1089,6 +1103,7 @@ namespace projectFrameCut.Shared
         [DebuggerNonUserCode()]
         public Picture8bpp Resize(int targetWidth, int targetHeight, bool preserveAspect = true)
         {
+            var sw = Stopwatch.StartNew();
             if (targetWidth == Width && targetHeight == Height) return this;
             lock (this)
             {
@@ -1198,7 +1213,7 @@ namespace projectFrameCut.Shared
                 }
                 result.ProcessStack.Add(new PictureProcessStack
                 {
-                    OperationDisplayName = "Resize",
+                    OperationDisplayName = "Resize (IPicture)",
                     Operator = this.GetType(),
                     ProcessingFuncStackTrace = new(true),
                     Properties = new Dictionary<string, object>
@@ -1209,6 +1224,7 @@ namespace projectFrameCut.Shared
                         { "TargetHeight", targetHeight },
                         { "PreserveAspect", preserveAspect },
                     },
+                    Elapsed = sw.Elapsed
                 });
                 return result;
             }
@@ -1273,7 +1289,6 @@ namespace projectFrameCut.Shared
                     disposedValue = true;
                 }
                 Disposed = disposedValue;
-
             }
         }
 
@@ -1291,13 +1306,15 @@ namespace projectFrameCut.Shared
             }
             else if (bitPerPixel == PicturePixelMode.UShortPicture)
             {
-                var pic = new Picture(Width, Height)
+                var sw = Stopwatch.StartNew();
+                var pic = new Picture16bpp(Width, Height)
                 {
                     frameIndex = this.frameIndex,
                     filePath = this.filePath,
                     hasAlphaChannel = this.hasAlphaChannel,
                     ProcessStack = this.ProcessStack
                 };
+
 
                 if (hasAlphaChannel && a != null)
                 {
@@ -1320,6 +1337,7 @@ namespace projectFrameCut.Shared
                     OperationDisplayName = "Converted from 8bpp to 16bpp",
                     Operator = this.GetType(),
                     ProcessingFuncStackTrace = new StackTrace(true),
+                    Elapsed = sw.Elapsed
                 });
                 return pic;
             }
@@ -1468,602 +1486,5 @@ namespace projectFrameCut.Shared
             GC.SuppressFinalize(this);
         }
     }
-
-
-
-    public static class PictureExtensions
-    {
-        public static IPicture DeepCopy(this IPicture source)
-        {
-            if (source is null) throw new ArgumentNullException(nameof(source));
-            if (source.Disposed is not null && source.Disposed.Value) throw new ObjectDisposedException(nameof(source));
-            lock (source)
-            {
-                int width = source.Width;
-                int height = source.Height;
-                int pixels = source.Pixels;
-
-                if (source.bitPerPixel == 16)
-                {
-                    // Prefer typed interface if available
-                    if (source is IPicture<ushort> s16)
-                    {
-                        if (s16.r == null || s16.g == null || s16.b == null)
-                            throw new InvalidOperationException("Source 16bpp picture has null channel buffers.");
-
-                        var dst = new Picture16bpp(width, height)
-                        {
-                            frameIndex = s16.frameIndex,
-                            filePath = s16.filePath,
-                            ProcessStack = s16.ProcessStack.Append(new PictureProcessStack
-                            {
-                                OperationDisplayName = "Deep copied",
-                                Operator = typeof(PictureExtensions),
-                                ProcessingFuncStackTrace = new StackTrace(true),
-                            }).ToList(),
-                            hasAlphaChannel = s16.hasAlphaChannel
-                        };
-
-                        // ensure destination arrays exist
-                        dst.r = new ushort[pixels];
-                        dst.g = new ushort[pixels];
-                        dst.b = new ushort[pixels];
-                        Array.Copy(s16.r, dst.r, pixels);
-                        Array.Copy(s16.g, dst.g, pixels);
-                        Array.Copy(s16.b, dst.b, pixels);
-
-                        if (s16.hasAlphaChannel && s16.a != null)
-                        {
-                            dst.a = new float[pixels];
-                            Array.Copy(s16.a, dst.a, pixels);
-                            dst.hasAlphaChannel = true;
-                        }
-                        else
-                        {
-                            dst.a = null;
-                            dst.hasAlphaChannel = false;
-                        }
-
-                        return dst;
-                    }
-                    else
-                    {
-                        // Fallback using GetSpecificChannel
-                        var rr = source.GetSpecificChannel(IPicture.ChannelId.Red) as ushort[] ?? throw new InvalidOperationException("Red channel missing for 16bpp picture.");
-                        var gg = source.GetSpecificChannel(IPicture.ChannelId.Green) as ushort[] ?? throw new InvalidOperationException("Green channel missing for 16bpp picture.");
-                        var bb = source.GetSpecificChannel(IPicture.ChannelId.Blue) as ushort[] ?? throw new InvalidOperationException("Blue channel missing for 16bpp picture.");
-                        var aa = source.hasAlphaChannel ? source.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
-
-                        if (rr.Length != pixels || gg.Length != pixels || bb.Length != pixels || (aa != null && aa.Length != pixels))
-                            throw new InvalidOperationException("Source channel buffer lengths do not match picture pixel count.");
-
-                        var dst = new Picture16bpp(width, height)
-                        {
-                            frameIndex = source.frameIndex,
-                            filePath = source.filePath,
-                            ProcessStack = source.ProcessStack.Append(new PictureProcessStack
-                            {
-                                OperationDisplayName = "Deep copied",
-                                Operator = typeof(PictureExtensions),
-                                ProcessingFuncStackTrace = new StackTrace(true),
-                            }).ToList(),
-                            hasAlphaChannel = source.hasAlphaChannel
-                        };
-
-                        dst.r = new ushort[pixels];
-                        dst.g = new ushort[pixels];
-                        dst.b = new ushort[pixels];
-                        Array.Copy(rr, dst.r, pixels);
-                        Array.Copy(gg, dst.g, pixels);
-                        Array.Copy(bb, dst.b, pixels);
-
-                        if (aa != null)
-                        {
-                            dst.a = new float[pixels];
-                            Array.Copy(aa, dst.a, pixels);
-                            dst.hasAlphaChannel = true;
-                        }
-                        else
-                        {
-                            dst.a = null;
-                            dst.hasAlphaChannel = false;
-                        }
-
-                        return dst;
-                    }
-                }
-                else if (source.bitPerPixel == 8)
-                {
-                    if (source is IPicture<byte> s8)
-                    {
-                        if (s8.r == null || s8.g == null || s8.b == null)
-                            throw new InvalidOperationException("Source 8bpp picture has null channel buffers.");
-
-                        var dst = new Picture8bpp(width, height)
-                        {
-                            frameIndex = s8.frameIndex,
-                            filePath = s8.filePath,
-                            ProcessStack = s8.ProcessStack.Append(new PictureProcessStack
-                            {
-                                OperationDisplayName = "Deep copied",
-                                Operator = typeof(PictureExtensions),
-                                ProcessingFuncStackTrace = new StackTrace(true),
-                            }).ToList(),
-                            hasAlphaChannel = s8.hasAlphaChannel
-                        };
-
-                        dst.r = new byte[pixels];
-                        dst.g = new byte[pixels];
-                        dst.b = new byte[pixels];
-                        Array.Copy(s8.r, dst.r, pixels);
-                        Array.Copy(s8.g, dst.g, pixels);
-                        Array.Copy(s8.b, dst.b, pixels);
-
-                        if (s8.hasAlphaChannel && s8.a != null)
-                        {
-                            dst.a = new float[pixels];
-                            Array.Copy(s8.a, dst.a, pixels);
-                            dst.hasAlphaChannel = true;
-                        }
-                        else
-                        {
-                            dst.a = null;
-                            dst.hasAlphaChannel = false;
-                        }
-
-                        return dst;
-                    }
-                    else
-                    {
-                        var rr = source.GetSpecificChannel(IPicture.ChannelId.Red) as byte[] ?? throw new InvalidOperationException("Red channel missing for 8bpp picture.");
-                        var gg = source.GetSpecificChannel(IPicture.ChannelId.Green) as byte[] ?? throw new InvalidOperationException("Green channel missing for 8bpp picture.");
-                        var bb = source.GetSpecificChannel(IPicture.ChannelId.Blue) as byte[] ?? throw new InvalidOperationException("Blue channel missing for 8bpp picture.");
-                        var aa = source.hasAlphaChannel ? source.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
-
-                        if (rr.Length != pixels || gg.Length != pixels || bb.Length != pixels || (aa != null && aa.Length != pixels))
-                            throw new InvalidOperationException("Source channel buffer lengths do not match picture pixel count.");
-
-                        var dst = new Picture8bpp(width, height)
-                        {
-                            frameIndex = source.frameIndex,
-                            filePath = source.filePath,
-                            ProcessStack = source.ProcessStack.Append(new PictureProcessStack
-                            {
-                                OperationDisplayName = "Deep copied",
-                                Operator = typeof(PictureExtensions),
-                                ProcessingFuncStackTrace = new StackTrace(true),
-                            }).ToList(),
-                            hasAlphaChannel = source.hasAlphaChannel
-                        };
-
-                        dst.r = new byte[pixels];
-                        dst.g = new byte[pixels];
-                        dst.b = new byte[pixels];
-                        Array.Copy(rr, dst.r, pixels);
-                        Array.Copy(gg, dst.g, pixels);
-                        Array.Copy(bb, dst.b, pixels);
-
-                        if (aa != null)
-                        {
-                            dst.a = new float[pixels];
-                            Array.Copy(aa, dst.a, pixels);
-                            dst.hasAlphaChannel = true;
-                        }
-                        else
-                        {
-                            dst.a = null;
-                            dst.hasAlphaChannel = false;
-                        }
-
-                        return dst;
-                    }
-                }
-                else
-                {
-                    throw new NotSupportedException("Only 8bpp and 16bpp images are supported for deep copy.");
-                }
-            }
-        }
-
-        static JsonSerializerOptions options = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
-            NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals
-        };
-
-        public static string FormatProcessStackForLog(IEnumerable<PictureProcessStack>? processStack, int maxFramesPerStep = 12)
-        {
-            if (processStack == null) return "(null)";
-
-            // Materialize once to avoid multiple enumeration and to preserve ordering.
-            var steps = processStack as IList<PictureProcessStack> ?? processStack.ToList();
-            if (steps.Count == 0) return "(empty)";
-
-            var sb = new StringBuilder(capacity: 512);
-            sb.AppendLine($"Steps: {steps.Count}");
-
-            for (int i = 0; i < steps.Count; i++)
-            {
-                AppendProcessStep(sb, steps[i], i + 1, maxFramesPerStep, indent: "");
-            }
-            return sb.ToString();
-        }
-
-        private static void AppendProcessStep(StringBuilder sb, PictureProcessStack step, int index, int maxFramesPerStep, string indent)
-        {
-            if (step == null)
-            {
-                sb.Append(indent).Append('#').Append(index).AppendLine(" <null>");
-                return;
-            }
-
-            sb.Append(indent).Append('#').Append(index).Append(' ')
-                .Append(step.OperationDisplayName ?? "(no name)");
-
-            if (step.Operator != null)
-            {
-                sb.Append("  [Operator: ").Append(step.Operator.FullName).Append(']');
-            }
-            if (step.Elapsed != null)
-            {
-                sb.AppendLine();
-                sb.Append(indent).Append("  Elapsed: ").Append(step.Elapsed);
-
-            }
-            sb.AppendLine();
-
-            if (step.StepUsed != null)
-            {
-                sb.Append(indent).Append("  Step: ").Append(step.StepUsed.GetType().FullName);
-                if (!string.IsNullOrWhiteSpace(step.StepUsed.Name)) sb.Append(" (\"").Append(step.StepUsed.Name).Append("\")");
-                sb.AppendLine();
-            }
-
-            if (step.Properties != null && step.Properties.Count > 0)
-            {
-                sb.Append(indent).AppendLine("  Properties:");
-                foreach (var kv in step.Properties.OrderBy(k => k.Key, StringComparer.Ordinal))
-                {
-                    sb.Append(indent).Append("    - ").Append(kv.Key).Append(": ").AppendLine(FormatPropertyValueForLog(kv.Value));
-                }
-            }
-
-            // Special-case overlay stacks to keep them readable.
-            if (step is OverlayedPictureProcessStack overlay)
-            {
-                if (overlay.TopSteps != null && overlay.TopSteps.Count > 0)
-                {
-                    sb.Append(indent).AppendLine("  TopSteps:");
-                    for (int i = 0; i < overlay.TopSteps.Count; i++)
-                    {
-                        AppendProcessStep(sb, overlay.TopSteps[i], i + 1, maxFramesPerStep, indent + "    ");
-                    }
-                }
-                if (overlay.BaseSteps != null && overlay.BaseSteps.Count > 0)
-                {
-                    sb.Append(indent).AppendLine("  BaseSteps:");
-                    for (int i = 0; i < overlay.BaseSteps.Count; i++)
-                    {
-                        AppendProcessStep(sb, overlay.BaseSteps[i], i + 1, maxFramesPerStep, indent + "    ");
-                    }
-                }
-            }
-
-            AppendStackTraceForLog(sb, step.ProcessingFuncStackTrace, maxFramesPerStep, indent);
-        }
-
-        private static void AppendStackTraceForLog(StringBuilder sb, StackTrace? trace, int maxFrames, string indent)
-        {
-            if (trace == null) return;
-            var frames = trace.GetFrames();
-            if (frames == null || frames.Length == 0) return;
-
-            sb.Append(indent).AppendLine("  CallStack:");
-
-            int take = Math.Min(frames.Length, Math.Max(0, maxFrames));
-            for (int i = 0; i < take; i++)
-            {
-                var frame = frames[i];
-                var method = frame.GetMethod();
-                string methodName = method == null
-                    ? "(unknown)"
-                    : $"{method.DeclaringType?.FullName}.{method.Name}";
-
-                string? file = frame.GetFileName();
-                int line = frame.GetFileLineNumber();
-                if (!string.IsNullOrWhiteSpace(file) && line > 0)
-                {
-                    sb.Append(indent).Append("    ").Append(i + 1).Append(". ").Append(methodName)
-                        .Append(" (").Append(System.IO.Path.GetFileName(file)).Append(':').Append(line).Append(")")
-                        .AppendLine();
-                }
-                else
-                {
-                    sb.Append(indent).Append("    ").Append(i + 1).Append(". ").Append(methodName).AppendLine();
-                }
-            }
-
-            if (frames.Length > take)
-            {
-                sb.Append(indent).Append("    ... ").Append(frames.Length - take).AppendLine(" more");
-            }
-        }
-
-        private static string FormatPropertyValueForLog(object? value)
-        {
-            if (value == null) return "(null)";
-            if (value is string s) return s;
-            if (value is Type t) return t.FullName ?? t.Name;
-            if (value is StackTrace st) return st.ToString();
-            if (value is Exception ex) return ex.ToString();
-
-            // Avoid huge dumps for common collections; show count + a short preview.
-            if (value is System.Collections.ICollection coll && value is not Array)
-            {
-                return $"{value.GetType().Name} (Count={coll.Count})";
-            }
-
-            try
-            {
-                // Best-effort JSON for anonymous/complex objects.
-                if (value is not ValueType)
-                {
-                    return JsonSerializer.Serialize(value, options);
-                }
-            }
-            catch
-            {
-                // ignore and fall back to ToString
-            }
-
-            return value.ToString() ?? value.GetType().FullName ?? "(unknown)";
-        }
-
-        public static void LogPicInfo(this IPicture<ushort> src)
-        {
-            Logger.LogDiagnostic($"16BitPerPixel image, Size: {src.Width}*{src.Height}, avg R:{src.r.Average(Convert.ToDecimal)} G:{src.g.Average(Convert.ToDecimal)} B:{src.b.Average(Convert.ToDecimal)} A:{src.a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{FormatProcessStackForLog(src.ProcessStack)}");
-        }
-        public static void LogPicInfo(this IPicture<byte> src)
-        {
-            Logger.LogDiagnostic($"8BitPerPixel image,Size: {src.Width}*{src.Height}, avg R:{src.r.Average(Convert.ToDecimal)} G:{src.g.Average(Convert.ToDecimal)} B:{src.b.Average(Convert.ToDecimal)} A:{src.a?.Average(Convert.ToDecimal) ?? -1}, \r\nProcessStack:\r\n{FormatProcessStackForLog(src.ProcessStack)}");
-        }
-
-        [DebuggerStepThrough()]
-        public static void SaveAsPng16bpp(this IPicture image, string path, IImageEncoder? imageEncoder = null) //compatibility
-            => SaveAsPng(image, path, 16, null, imageEncoder);
-
-        [DebuggerStepThrough()]
-        public static void SaveAsPng8bpp(this IPicture image, string path, IImageEncoder? imageEncoder = null)
-            => SaveAsPng(image, path, 8, null, imageEncoder);
-
-
-        [DebuggerStepThrough()]
-        public static void SaveAsPng(this IPicture image, string path, int resultPPB = 16, bool? saveAlpha = null, IImageEncoder? imageEncoder = null)
-        {
-            if (Debugger.IsAttached || MyLoggerExtensions.LoggingDiagnosticInfo)
-            {
-                if (image is Picture16bpp p1) p1.LogPicInfo();
-                else if (image is Picture8bpp p2) p2.LogPicInfo();
-                else Logger.LogDiagnostic("Unknown picture type, cannot get info.");
-            }
-            ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(path));
-            imageEncoder ??= DefaultEncoder;
-            image.SaveToSixLaborsImage(resultPPB, saveAlpha).Save(path, imageEncoder);
-        }
-
-        [DebuggerStepThrough()]
-        public static Image SaveToSixLaborsImage(this IPicture image, int resultPPB = 16, bool? saveAlpha = null, bool force = false)
-        {
-            lock (image)
-            {
-                IEnumerable<float>? aa = image.hasAlphaChannel ? image.GetSpecificChannel(IPicture.ChannelId.Alpha) as float[] : null;
-                bool alpha = saveAlpha ?? image.hasAlphaChannel && aa is not null;
-
-                Image result;
-                if (image.bitPerPixel == 16)
-                {
-                    var rr = image.GetSpecificChannel(IPicture.ChannelId.Red) as ushort[];
-                    var gg = image.GetSpecificChannel(IPicture.ChannelId.Green) as ushort[];
-                    var bb = image.GetSpecificChannel(IPicture.ChannelId.Blue) as ushort[];
-                    ArgumentNullException.ThrowIfNull(rr, nameof(IPicture<ushort>.r));
-                    ArgumentNullException.ThrowIfNull(gg, nameof(IPicture<ushort>.g));
-                    ArgumentNullException.ThrowIfNull(bb, nameof(IPicture<ushort>.b));
-                    if (alpha)
-                    {
-                        var alphaArray = (aa as float[]) ?? Enumerable.Repeat(1f, image.Pixels).ToArray();
-                        result = _SaveToInternal16bppWithAlpha(image, rr, gg, bb, alphaArray);
-                    }
-                    else
-                    {
-                        result = _SaveToInternal16bppWithNoAlpha(image, rr, gg, bb);
-                    }
-                }
-                else if (image.bitPerPixel == 8)
-                {
-                    var rr = image.GetSpecificChannel(IPicture.ChannelId.Red) as byte[];
-                    var gg = image.GetSpecificChannel(IPicture.ChannelId.Green) as byte[];
-                    var bb = image.GetSpecificChannel(IPicture.ChannelId.Blue) as byte[];
-                    ArgumentNullException.ThrowIfNull(rr, nameof(IPicture<byte>.r));
-                    ArgumentNullException.ThrowIfNull(gg, nameof(IPicture<byte>.g));
-                    ArgumentNullException.ThrowIfNull(bb, nameof(IPicture<byte>.b));
-                    if (alpha)
-                    {
-                        var alphaArray = (aa as float[]) ?? Enumerable.Repeat(1f, image.Pixels).ToArray();
-                        result = _SaveToInternal8bppWithAlpha(image, rr, gg, bb, alphaArray);
-                    }
-                    else
-                    {
-                        result = _SaveToInternal8bppWithNoAlpha(image, rr, gg, bb);
-                    }
-                }
-                else
-                {
-                    throw new NotSupportedException("Only 8bpp and 16bpp images are supported.");
-                }
-                return result;
-            }
-        }
-
-        private static IImageEncoder DefaultEncoder = new PngEncoder()
-        {
-            BitDepth = PngBitDepth.Bit16
-        };
-
-        [DebuggerStepThrough()]
-        private static Image _SaveToInternal16bppWithAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb, ReadOnlySpan<float> aa)
-        {
-            var result = new Image<Rgba64>(image.Width, image.Height);
-            int x = 0, y = 0;
-            for (int i = 0; i < image.Pixels; i++)
-            {
-                result[x, y] = new Rgba64
-                {
-                    R = rr[i],
-                    G = gg[i],
-                    B = bb[i],
-                    A = (ushort)(Math.Clamp(aa[i], 0f, 1f) * 65535f)
-                };
-                if (x == image.Width - 1)
-                {
-                    x = 0;
-                    y++;
-                }
-                else
-                {
-                    x++;
-                }
-            }
-            return result;
-        }
-        [DebuggerStepThrough()]
-        private static Image _SaveToInternal16bppWithNoAlpha(IPicture image, ushort[] rr, ushort[] gg, ushort[] bb)
-        {
-            var result = new Image<Rgb48>(image.Width, image.Height);
-            int x = 0, y = 0;
-            for (int i = 0; i < image.Pixels; i++)
-            {
-                result[x, y] = new Rgb48
-                {
-                    R = rr[i],
-                    G = gg[i],
-                    B = bb[i],
-                };
-                if (x == image.Width - 1)
-                {
-                    x = 0;
-                    y++;
-                }
-                else
-                {
-                    x++;
-                }
-            }
-            return result;
-        }
-        [DebuggerStepThrough()]
-        private static Image _SaveToInternal8bppWithAlpha(IPicture image, byte[] rr, byte[] gg, byte[] bb, ReadOnlySpan<float> aa)
-        {
-            var result = new Image<Rgba32>(image.Width, image.Height);
-            int x = 0, y = 0;
-            for (int i = 0; i < image.Pixels; i++)
-            {
-                result[x, y] = new Rgba32
-                {
-                    R = rr[i],
-                    G = gg[i],
-                    B = bb[i],
-                    A = (byte)(Math.Clamp(aa[i], 0f, 1f) * 255f)
-                };
-                if (x == image.Width - 1)
-                {
-                    x = 0;
-                    y++;
-                }
-                else
-                {
-                    x++;
-                }
-            }
-            return result;
-        }
-        [DebuggerStepThrough()]
-        private static Image _SaveToInternal8bppWithNoAlpha(IPicture image, byte[] rr, byte[] gg, byte[] bb)
-        {
-            var result = new Image<Rgb24>(image.Width, image.Height);
-            int x = 0, y = 0;
-            for (int i = 0; i < image.Pixels; i++)
-            {
-                result[x, y] = new Rgb24
-                {
-                    R = rr[i],
-                    G = gg[i],
-                    B = bb[i],
-                };
-                if (x == image.Width - 1)
-                {
-                    x = 0;
-                    y++;
-                }
-                else
-                {
-                    x++;
-                }
-            }
-            return result;
-        }
-
-        [DebuggerStepThrough()]
-        public static IPicture ToPJFCPicture(this Image source, int targetPPB)
-        {
-            return targetPPB switch
-            {
-                8 => new Picture8bpp(source),
-                16 => new Picture16bpp(source),
-                _ => throw new ArgumentOutOfRangeException(nameof(targetPPB), "Only 8bpp and 16bpp are supported."),
-            };
-        }
-
-
-        public static bool TryFromXYToArrayIndex(this IPicture reference, int x, int y, out int index)
-            => TryFromXYToArrayIndex(x, y, reference.Width, reference.Height, out index);
-
-        public static bool TryFromXYToArrayIndex(int x, int y, int width, int height, out int index)
-        {
-            if (x < 0 || x >= width || y < 0 || y >= height)
-            {
-                index = -1;
-                return false;
-            }
-            index = y * width + x;
-            return true;
-        }
-
-        public static Pixel<T> GetPixel<T>(this IPicture<T> source, int x, int y)
-        {
-            if (!TryFromXYToArrayIndex(x, y, source.Width, source.Height, out int idx))
-            {
-                if (x < 0 || x >= source.Width)
-                    throw new ArgumentOutOfRangeException(nameof(x), "x is out of bounds.");
-                if (y < 0 || y >= source.Height)
-                    throw new ArgumentOutOfRangeException(nameof(y), "y is out of bounds.");
-                throw new ArgumentOutOfRangeException("x or y", "x or y is out of bounds.");
-            }
-            return new Pixel<T>
-            {
-                r = source.r[idx],
-                g = source.g[idx],
-                b = source.b[idx],
-                a = (source.a != null) ? source.a[idx] : 1f
-            };
-        }
-
-        public struct Pixel<T>
-        {
-            public T r;
-            public T g;
-            public T b;
-            public float a;
-        }
-    }
+    #endregion
 }

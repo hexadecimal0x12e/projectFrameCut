@@ -2,6 +2,7 @@ using Microsoft.Maui.Controls;
 using projectFrameCut.Setting.SettingPages;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading.Tasks;
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
 
@@ -17,7 +18,11 @@ namespace projectFrameCut
 
             instance = this;
             HintLabel.Text = SettingLocalizedResources.General_SelectAPageToGo;
-            VersionLabel.Text = $"{Localized.AppBrand} v{AppInfo.VersionString}";
+            string channelStr = "";
+#if WINDOWS
+            channelStr = $" ({Helper.HelperProgram.AppChannel} channel)";
+#endif
+            VersionLabel.Text = $"{Localized.AppBrand} v{Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}{channelStr}";
             CopyrightText.Text += DateTime.Now.Year.ToString();
 #if iDevices && !DEBUG // no reflection in momo on ios, plugin can't work at all.
             PluginSettingButton.IsVisible = false; 
@@ -40,6 +45,10 @@ namespace projectFrameCut
         private async void OnRemoteFeedSettingClicked(object sender, EventArgs e)
         {
             await NavigateAsync(new RemoteFeedSettingPage());
+        }
+        private async void OnAISettingClicked(object sender, EventArgs e)
+        {
+            await NavigateAsync(new AISettingPage());
         }
         private async void OnRenderSettingClicked(object sender, EventArgs e)
         {
@@ -105,26 +114,18 @@ namespace projectFrameCut
                     Environment.Exit(0);
                 }
 #if WINDOWS
-                string path = "projectFrameCut_Protocol:";
-                if (!MauiProgram.IsPackaged())
-                {
-                    var exePath = Process.GetCurrentProcess().MainModule?.FileName;
-                    if (exePath != null)
-                    {
-                        path = exePath;
-                    }
-                }
+                string path = "pjfc:";
                 var script =
 $$"""
 
-Clear-Host;Write-Output "projectFrameCut is now rebooting, please wait for a while...";Start-Process "{{path}}";exit
+Clear-Host;Start-Process "{{path}}";exit
 
 """;
                 var proc = new Process();
                 proc.StartInfo.FileName = "powershell.exe";
                 proc.StartInfo.UseShellExecute = false;
                 proc.StartInfo.RedirectStandardInput = true;
-                proc.StartInfo.CreateNoWindow = false;
+                proc.StartInfo.CreateNoWindow = true;
                 proc.Start();
                 var procWriter = proc.StandardInput;
                 if (procWriter != null)
@@ -141,7 +142,7 @@ Clear-Host;Write-Output "projectFrameCut is now rebooting, please wait for a whi
         private async void TapGestureRecognizer_Tapped(object sender, TappedEventArgs e)
         {
             count++;
-            if(count >= 20)
+            if (count >= 20)
             {
                 count = 0;
                 await NavigateAsync(new AdvancedSettingPage());

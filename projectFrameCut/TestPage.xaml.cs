@@ -29,6 +29,11 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using Color = Microsoft.Maui.Graphics.Color;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.Render.ClipsAndTracks;
+using System.Text.Encodings.Web;
+using System.Text.Json.Serialization.Metadata;
+
+
 
 
 #if ANDROID
@@ -53,8 +58,18 @@ public partial class TestPage : ContentPage
 #if WINDOWS
         MultiWindowItem.ContextMenuProviderGetter = new(() => new WindowsContextMenuBuilder());
 #endif
+        TextPicker.PreviewRenderer = TextServices.RenderFontPreviewAsync;
 
+        TextClip.GetFont(true);
+        _ = LoadFontPickerAsync();
+
+        TextPicker.SelectedFontChanged += async (s, e) =>
+        {
+            await DisplayAlertAsync(Title, JsonSerializer.Serialize(e.InnerItem, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, }), "ok");
+
+        };
     }
+
 
     private void TestPage_Loaded(object? sender, EventArgs e)
     {
@@ -78,7 +93,7 @@ public partial class TestPage : ContentPage
 
     private ConcurrentStack<double> DraggingX = new(), DenoisedX = new();
     private double _origX = 0;
-    private PanDeNoise denoise = new();
+    private DenoiseHelper denoise = new();
 
     private async void G_PanUpdated(object? sender, PanUpdatedEventArgs e)
     {
@@ -237,7 +252,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = await platformView.RunComputeAsync();
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsA.TrySetResult(res);
                             }
                         }
@@ -313,7 +328,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = await platformView.RunComputeAsync();
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsR.TrySetResult(res);
                             }
                         }
@@ -395,7 +410,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = await platformView.RunComputeAsync();
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsG.TrySetResult(res);
                             }
                         }
@@ -477,7 +492,7 @@ public partial class TestPage : ContentPage
                                     await tcsSize.Task;
                                 }
 
-                                var res = await platformView.RunComputeAsync();
+                                var res = (float[])await platformView.RunComputeAsync(projectFrameCut.Render.AndroidOpenGL.Platforms.Android.GLComputeView.OutputElementType.Float32);
                                 tcsB.TrySetResult(res);
                             }
                         }
@@ -628,6 +643,175 @@ public partial class TestPage : ContentPage
 
     #endregion
 
+    #region render
+    private void TestPlaceButton_Clicked(object sender, EventArgs e)
+    {
+        Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
+        PlaceEffect_ImageSharp p = new()
+        {
+            StartX = 50,
+            StartY = 120
+        };
+        var result = p.Render(src, null, 2560, 1440);
+        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+        {
+            MemoryStream ms = new();
+            result.SaveToSixLaborsImage().SaveAsPng(ms);
+            ms.Position = 0;
+            return ms;
+        });
+
+
+
+    }
+
+    private async void TestPlaceAndResizeButton_Clicked(object sender, EventArgs e)
+    {
+        Picture8bpp src = new Picture8bpp(await FileSystemService.PickFileAsync());
+        PlaceEffect_ImageSharp p = new()
+        {
+            StartX = 250,
+            StartY = 180
+        };
+        ResizeEffect_ImageSharp r = new()
+        {
+            Height = 300,
+            Width = 1000,
+            PreserveAspectRatio = false
+        };
+        var resized = r.Render(src, null, 2560, 1440);
+        var placed = p.Render(resized, null, 2560, 1440);
+        Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
+        var final = OverlayMixture.Mix(canvas, placed, PluginManager.CreateComputer(OverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+        {
+            MemoryStream ms = new();
+            final.SaveToSixLaborsImage().SaveAsPng(ms);
+            ms.Position = 0;
+            return ms;
+        });
+    }
+
+    private async void TestFFmpegButton_Clicked(object sender, EventArgs e)
+    {
+
+        var vidFile = await DisplayPromptAsync("info", "input src path");
+        if (string.IsNullOrWhiteSpace(vidFile)) vidFile = await FileSystemService.PickFileAsync();
+        var src = PluginManager.CreateVideoSource(vidFile);
+        var frame = src.GetFrame(42U, false);
+        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+        {
+            MemoryStream ms = new();
+            frame.SaveToSixLaborsImage().SaveAsPng(ms);
+            ms.Position = 0;
+            return ms;
+        });
+
+    }
+
+    private void TestMixtureButton_Clicked(object sender, EventArgs e)
+    {
+        Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
+        PlaceEffect_ImageSharp p = new()
+        {
+            StartX = 50,
+            StartY = 120
+        };
+        var result = p.Render(src, null, 2560, 1440);
+        Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
+        var final = OverlayMixture.Mix(canvas, result, PluginManager.CreateComputer(OverlayMixture.ComputerId, false), Shared.IPicture.PicturePixelMode.BytePicture);
+        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
+        {
+            MemoryStream ms = new();
+            final.SaveToSixLaborsImage().SaveAsPng(ms);
+            ms.Position = 0;
+            return ms;
+        });
+    }
+
+    private void ContextMenuTestBtn_Clicked(object sender, EventArgs e)
+    {
+        void dialog(string msg) => Dispatcher.Dispatch(async () => await DisplayAlertAsync("info", msg, "ok"));
+#if WINDOWS
+        WindowsContextMenuBuilder b = new();
+        b.AddCommand("Command 1", () => dialog("You clicked 1")).AddSeparator().AddCommand("Command 2", () => dialog("You clicked 2")).AddCommand("command 3", async () =>
+        {
+            await Task.Delay(500);
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                var window = Microsoft.Maui.Controls.Application.Current?.Windows[0];
+                if (window?.Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow)
+                {
+                    var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(nativeWindow);
+                    WinUI.App.SetForegroundWindow(hwnd);
+                    WinUI.App.SetFocus(hwnd);
+                    WinUI.App.FlashWindow(hwnd, true);
+                }
+                WinUI.App.MessageBeep(0x00000040);
+            });
+        });
+        b.TryShow(ContextMenuTestBtn);
+#endif
+    }
+
+    private void MuxVideoTestBtn_Clicked(object sender, EventArgs e)
+    {
+        VideoAudioMuxer.MuxFromFiles(@"D:\code\playground\projectFrameCut\RenderCache\A Short Project 1_20260101_164404.mp4", @"D:\code\playground\projectFrameCut\RenderCache\A Short Project 1_20260101_164404.wav", @"D:\code\playground\projectFrameCut\output1.mp4", true);
+
+    }
+
+    private async void BenchmarkButton_Clicked(object sender, EventArgs e)
+    {
+
+#if ANDROID
+        Render.AndroidOpenGL.ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
+#elif iDevices
+
+#elif WINDOWS
+        var context = ILGPU.Context.CreateDefault();
+        var devices = context.Devices.ToList();
+        if (SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel"))
+        {
+            var accels = SettingsManager.GetSetting("accel_MultiDeviceID", "all");
+            if (accels == "all")
+            {
+                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
+            }
+            else
+            {
+                var accelList = accels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                            .Select(s => int.TryParse(s, out var id) ? id : -1)
+                            .Where(id => id >= 0)
+                            .ToList();
+                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
+            }
+
+        }
+        else
+        {
+            var accelId = SettingsManager.GetSetting("accel_DeviceId", "");
+            if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
+        }
+
+        if (!projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
+
+#endif
+        await Benchmarker.Start((d, etr) =>
+        {
+            string timeStr = "";
+            if (etr.TotalSeconds > 0)
+            {
+                timeStr = (etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss"));
+            }
+            Dispatcher.Dispatch(async () =>
+            {
+                BenchmarkButton.Text = Localized.RenderPage_Stat(d, timeStr);
+
+            });
+        });
+    }
+    #endregion
+
     #region PropertyPanelBuilder test
     PropertyPanelBuilder ppb = new();
     private void AddPPBButton_Clicked(object sender, EventArgs e)
@@ -735,8 +919,93 @@ public partial class TestPage : ContentPage
         }
 #endif
     }
+
+
+    private void OpenTestWindowButton_Clicked(object sender, EventArgs e)
+    {
+        View makeWindowContent(int level, MultiWindowItem item)
+        {
+            return new VerticalStackLayout
+            {
+                Children =
+                {
+                    new Label { Text = $"This window is in level {level + 1}\r\nA random number:{Random.Shared.Next()}" },
+                    new Button { Text = "Back", Command = new Command(() =>
+                    {
+                        if (item.CanGoBack)
+                        {
+                            item.GoBack();
+                        }
+                    })},
+                    new Button { Text = "Front", Command = new Command(() => item.NavigateTo(makeWindowContent(level+1, item)) )},
+                    new Button {Text = "Prompt", Command = new Command(async () =>
+                    {
+                        var result = await item.DisplayAlertAsync("Action", "ok?", "yes", "no");
+                        await DisplayAlertAsync(Title, result.ToString(), "ok");
+                    })},
+                    new Button {Text = "ActionSheet", Command = new Command(async () =>
+                    {
+                        var result = await item.DisplayActionSheetAsync("Options", "no", "destruct", TextServices.DummyStrings);
+                        await DisplayAlertAsync(Title, result?.ToString() ?? "null input, may user cancelled.", "ok");
+                    })},
+                    new Button {Text = "Input", Command = new Command(async () =>
+                    {
+                        var result = await item.DisplayPromptAsync("Action", "Input some text", "yes", "no");
+                        await DisplayAlertAsync(Title, result?.ToString() ?? "null input, may user cancelled.", "ok");
+                    })},
+                    new Button {Text = "DraftPage", Command = new Command(async () =>
+                    {
+                        item.Content = new DraftPage().Content;
+                    })}
+                }
+            };
+        }
+        var myWindow = new MultiWindowItem
+        {
+            WidthRequest = 400,
+            HeightRequest = 300,
+            IsPopOutVisible = true
+        };
+        myWindow.Content = makeWindowContent(0, myWindow);
+        myWindow.Title = $"Test Window {++windowCount}";
+
+
+        myMultiWindowView.AddWindow(myWindow);
+    }
+
     #endregion
 
+    #region text
+
+    private async Task LoadFontPickerAsync()
+    {
+        var items = TextHelper.BuildSystemFontItems(preferredLocale: null);
+        var ordered = await items.OrderByPronounceAsync(c => c.DisplayName);
+        TextPicker.FontsSource = ordered;
+        TextPicker.Title = $"Fonts ({ordered.Count()})";
+    }
+
+    private async void TestOrderButton_Clicked(object sender, EventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(InputEditor.Text)) return;
+        var lines = InputEditor.Text.Split(["\r", "\n", "\r\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var loc = string.IsNullOrWhiteSpace(LocateInputer.Text) ? Localized._LocaleId_ : LocateInputer.Text.Trim();
+        var ordered = lines.OrderBy(async a => await TextServices.GetPronounceForOrdering(a, loc)).GroupBy(TextHelper.DetectTextLanguage).OrderByDescending(g => g.Count()).SelectMany(c => c).ToList();
+        InputEditor.Text = string.Join(Environment.NewLine, ordered);
+        TestOrderButton.Text = "Order done";
+
+    }
+
+    private async void TestFontPropReaderButton_Clicked(object sender, EventArgs e)
+    {
+        var info = TextHelper.ReadFontFileInfo(@"C:\Windows\Fonts\msyhbd.ttc");
+        await DisplayAlertAsync(Title, JsonSerializer.Serialize(info, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        }), "ok");
+    }
+    #endregion
 
     #region misc
 
@@ -746,138 +1015,9 @@ public partial class TestPage : ContentPage
     }
 
 
-    private async void TestFFmpegButton_Clicked(object sender, EventArgs e)
-    {
 
-        var vidFile = await DisplayPromptAsync("info", "input src path");
-        if (string.IsNullOrWhiteSpace(vidFile)) vidFile = await FileSystemService.PickFileAsync();
-        var src = PluginManager.CreateVideoSource(vidFile);
-        var frame = src.GetFrame(42U, false);
-        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
-        {
-            MemoryStream ms = new();
-            frame.SaveToSixLaborsImage().SaveAsPng(ms);
-            ms.Position = 0;
-            return ms;
-        });
 
-    }
 
-    private void TestMixtureButton_Clicked(object sender, EventArgs e)
-    {
-        Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
-        PlaceEffect_ImageSharp p = new()
-        {
-            StartX = 50,
-            StartY = 120
-        };
-        var result = p.Render(src, null, 2560, 1440);
-        Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        OverlayMixture m = new()
-        {
-
-        };
-        var final = m.Mix(canvas, result, PluginManager.CreateComputer(m.ComputerId, false));
-        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
-        {
-            MemoryStream ms = new();
-            final.SaveToSixLaborsImage().SaveAsPng(ms);
-            ms.Position = 0;
-            return ms;
-        });
-    }
-
-    private void ContextMenuTestBtn_Clicked(object sender, EventArgs e)
-    {
-        void dialog(string msg) => Dispatcher.Dispatch(async () => await DisplayAlertAsync("info", msg, "ok"));
-#if WINDOWS
-        WindowsContextMenuBuilder b = new();
-        b.AddCommand("Command 1", () => dialog("You clicked 1")).AddSeparator().AddCommand("Command 2", () => dialog("You clicked 2")).AddCommand("command 3", async () =>
-        {
-            await Task.Delay(500);
-            await MainThread.InvokeOnMainThreadAsync(() =>
-            {
-                var window = Microsoft.Maui.Controls.Application.Current?.Windows[0];
-                if (window?.Handler?.PlatformView is Microsoft.UI.Xaml.Window nativeWindow)
-                {
-                    var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(nativeWindow);
-                    WinUI.App.SetForegroundWindow(hwnd);
-                    WinUI.App.SetFocus(hwnd);
-                    WinUI.App.FlashWindow(hwnd, true);
-                }
-                WinUI.App.MessageBeep(0x00000040);
-            });
-        });
-        b.TryShow(ContextMenuTestBtn);
-#endif
-    }
-
-    private void MuxVideoTestBtn_Clicked(object sender, EventArgs e)
-    {
-        VideoAudioMuxer.MuxFromFiles(@"D:\code\playground\projectFrameCut\RenderCache\A Short Project 1_20260101_164404.mp4", @"D:\code\playground\projectFrameCut\RenderCache\A Short Project 1_20260101_164404.wav", @"D:\code\playground\projectFrameCut\output1.mp4", true);
-
-    }
-
-    private async void BenchmarkButton_Clicked(object sender, EventArgs e)
-    {
-
-#if ANDROID
-        Render.AndroidOpenGL.ComputerHelper.AddGLViewHandler = ComputeView.Children.Add;
-#elif iDevices
-
-#elif WINDOWS
-        var context = ILGPU.Context.CreateDefault();
-        var devices = context.Devices.ToList();
-        if (SettingsManager.IsBoolSettingTrue("accel_enableMultiAccel"))
-        {
-            var accels = SettingsManager.GetSetting("accel_MultiDeviceID", "all");
-            if (accels == "all")
-            {
-                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Where(d => d.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU).Select(d => d.CreateAccelerator(context)).ToArray();
-            }
-            else
-            {
-                var accelList = accels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                            .Select(s => int.TryParse(s, out var id) ? id : -1)
-                            .Where(id => id >= 0)
-                            .ToList();
-                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = devices.Index().Where(d => accelList.Contains(d.Index)).Select(d => d.Item.CreateAccelerator(context)).ToArray();
-            }
-
-        }
-        else
-        {
-            var accelId = SettingsManager.GetSetting("accel_DeviceId", "");
-            if (int.TryParse(accelId, out var accelIdInt)) projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [devices[accelIdInt].CreateAccelerator(context)];
-        }
-
-        if (!projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators.ArrayAny()) throw new InvalidDataException("No valid ILGPU accelerators found.");
-
-#endif
-        await Benchmarker.Start((d, etr) =>
-        {
-            string timeStr = "";
-            if (etr.TotalSeconds > 0)
-            {
-                timeStr = (etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss"));
-            }
-            Dispatcher.Dispatch(async () =>
-            {
-                BenchmarkButton.Text = Localized.RenderPage_Stat(d, timeStr);
-
-            });
-        });
-    }
-
-    private async void TestOrderButton_Clicked(object sender, EventArgs e)
-    {
-        var lines = InputEditor.Text.Split(["\r", "\n", "\r\n"], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var loc = string.IsNullOrWhiteSpace(LocateInputer.Text) ? Localized._LocaleId_ : LocateInputer.Text.Trim();
-        var ordered = lines.OrderBy(async a => await TextHelper.GetPronounceForOrdering(a, loc)).GroupBy(TextHelper.DetectTextLanguage).OrderByDescending(g => g.Count()).SelectMany(c => c).ToList();
-        InputEditor.Text = string.Join(Environment.NewLine, ordered);
-        TestOrderButton.Text = "Order done";
-
-    }
 
     private async void LoginTestButton_Clicked(object sender, EventArgs e)
     {
@@ -900,105 +1040,6 @@ public partial class TestPage : ContentPage
 
 
 
-    private void OpenTestWindowButton_Clicked(object sender, EventArgs e)
-    {
-        View makeWindowContent(int level, MultiWindowItem item)
-        {
-            return new VerticalStackLayout
-            {
-                Children =
-                {
-                    new Label { Text = $"This window is in level {level + 1}\r\nA random number:{Random.Shared.Next()}" },
-                    new Button { Text = "Back", Command = new Command(() =>
-                    {
-                        if (item.CanGoBack)
-                        {
-                            item.GoBack();
-                        }
-                    })},
-                    new Button { Text = "Front", Command = new Command(() => item.NavigateTo(makeWindowContent(level+1, item)) )},
-                    new Button {Text = "Prompt", Command = new Command(async () =>
-                    {
-                        var result = await item.DisplayAlertAsync("Action", TextHelper.DummyString, "yes", "no");
-                        await DisplayAlertAsync(Title, result.ToString(), "ok");
-                    })},
-                    new Button {Text = "ActionSheet", Command = new Command(async () =>
-                    {
-                        var result = await item.DisplayActionSheetAsync("Options", "no", "destruct", TextHelper.DummyStrings);
-                        await DisplayAlertAsync(Title, result?.ToString() ?? "null input, may user cancelled.", "ok");
-                    })},
-                    new Button {Text = "Input", Command = new Command(async () =>
-                    {
-                        var result = await item.DisplayPromptAsync("Action", "Input some text", "yes", "no");
-                        await DisplayAlertAsync(Title, result?.ToString() ?? "null input, may user cancelled.", "ok");
-                    })}
-                }
-            };
-        }
-        var myWindow = new MultiWindowItem
-        {
-            WidthRequest = 400,
-            HeightRequest = 300,
-            IsPopOutVisible = true
-        };
-        myWindow.Content = makeWindowContent(0, myWindow);
-        myWindow.Title = $"Test Window {++windowCount}";
-
-
-        myMultiWindowView.AddWindow(myWindow);
-    }
-
-    private void TestPlaceButton_Clicked(object sender, EventArgs e)
-    {
-        Picture8bpp src = Picture8bpp.GenerateSolidColor(200, 300, 128, 128, 128, 1);
-        PlaceEffect_ImageSharp p = new()
-        {
-            StartX = 50,
-            StartY = 120
-        };
-        var result = p.Render(src, null, 2560, 1440);
-        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
-        {
-            MemoryStream ms = new();
-            result.SaveToSixLaborsImage().SaveAsPng(ms);
-            ms.Position = 0;
-            return ms;
-        });
-
-
-
-    }
-
-    private async void TestPlaceAndResizeButton_Clicked(object sender, EventArgs e)
-    {
-        Picture8bpp src = new Picture8bpp(await FileSystemService.PickFileAsync());
-        PlaceEffect_ImageSharp p = new()
-        {
-            StartX = 250,
-            StartY = 180
-        };
-        ResizeEffect_ImageSharp r = new()
-        {
-            Height = 300,
-            Width = 1000,
-            PreserveAspectRatio = false
-        };
-        var resized = r.Render(src, null, 2560, 1440);
-        var placed = p.Render(resized, null, 2560, 1440);
-        Picture8bpp canvas = Picture8bpp.GenerateSolidColor(2560, 1440, 64, 64, 64, 1);
-        OverlayMixture m = new()
-        {
-
-        };
-        var final = m.Mix(canvas, placed, PluginManager.CreateComputer(m.ComputerId, false));
-        PlaceResizeTestImage.Source = ImageSource.FromStream(() =>
-        {
-            MemoryStream ms = new();
-            final.SaveToSixLaborsImage().SaveAsPng(ms);
-            ms.Position = 0;
-            return ms;
-        });
-    }
 
     #endregion
 

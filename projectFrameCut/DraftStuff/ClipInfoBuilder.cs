@@ -1,22 +1,27 @@
 ﻿using CommunityToolkit.Maui.Extensions;
 using CommunityToolkit.Maui.Views;
+using Microsoft.Extensions.AI;
 using Microsoft.Maui.Controls.Shapes;
 using Microsoft.Maui.Layouts;
 using Microsoft.Maui.Platform;
+using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
+using projectFrameCut.Asset;
 using projectFrameCut.Controls;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -25,7 +30,19 @@ using DataTemplate = Microsoft.Maui.Controls.DataTemplate;
 using Environment = System.Environment;
 using GridLength = Microsoft.Maui.GridLength;
 using GridUnitType = Microsoft.Maui.GridUnitType;
+using Switch = Microsoft.Maui.Controls.Switch;
 using Thickness = Microsoft.Maui.Thickness;
+using ContentView = Microsoft.Maui.Controls.ContentView;
+using TextAlignment = Microsoft.Maui.TextAlignment;
+using CornerRadius = Microsoft.Maui.CornerRadius;
+using projectFrameCut.ApplicationAPIBase.Views.Pickers;
+using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+
+
+
+
+
 
 
 
@@ -46,6 +63,7 @@ namespace projectFrameCut.DraftStuff
 {
     public class ClipInfoBuilder
     {
+        #region init
         DraftPage page;
 
         static JsonSerializerOptions savingOpts = new() { WriteIndented = true, NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals };
@@ -83,6 +101,19 @@ namespace projectFrameCut.DraftStuff
                 Header = Localized.MainSettingsPage_Tab_General,
                 Content = BuildGeneralTab(clip, handler)
             });
+            if (clip.ClipType == ClipMode.TextClip || clip.ClipType == ClipMode.SubtitleClip)
+            {
+                t.TabItems.Add(new TabbedViewItem
+                {
+                    Header = PPLocalizedResources.TextOption_TabTitle,
+                    Content = await BuildTextOptionTab(clip, handler)
+                });
+            }
+            t.TabItems.Add(new TabbedViewItem
+            {
+                Header = PPLocalizedResources.Tabs_Timing,
+                Content = BuildTimingTab(clip, handler)
+            });
             t.TabItems.Add(new TabbedViewItem
             {
                 Header = PPLocalizedResources.Tabs_Effect,
@@ -96,16 +127,21 @@ namespace projectFrameCut.DraftStuff
                     Content = BuildClassicEffectTab(clip, handler)
                 });
             }
-
-            t.TabItems.Add(new TabbedViewItem
+            if (!clip.isInfiniteLength)
             {
-                Header = PPLocalizedResources.Tabs_SpeedRatio,
-                Content = BuildSpeedAndRatioTab(clip, handler)
-            });
+                t.TabItems.Add(new TabbedViewItem
+                {
+                    Header = PPLocalizedResources.Tabs_SpeedRatio,
+                    Content = BuildSpeedAndRatioTab(clip, handler)
+                });
+            }
+
             return t;
         }
 
+        #endregion
 
+        #region general
 
         public View BuildGeneralTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
@@ -201,12 +237,13 @@ namespace projectFrameCut.DraftStuff
                 return layout;
             }, "clipColor", currentColorHex)
             .AddSeparator(null)
-            .AddText(new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 20))
-            .AddEntry("placeX", PPLocalizedResources.General_LocationX, valX.ToString(), "0", null, default)
-            .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
-            .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
-            .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default)
-            ;
+            .AppendWhen(clip.ClipType != ClipMode.TextClip && clip.ClipType != ClipMode.SubtitleClip,
+            (c) => c.AddText(new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 20))
+                    .AddEntry("placeX", PPLocalizedResources.General_LocationX, valX.ToString(), "0", null, default)
+                    .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
+                    .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
+                    .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default));
+
 
 
             ppb.PropertyChanged += async (s, e) =>
@@ -348,6 +385,603 @@ namespace projectFrameCut.DraftStuff
             return ppb.BuildWithScrollView();
         }
 
+        #endregion
+
+        #region text
+
+        public static View BuildTextEntryUI(TextClipEntry e, int idx, IEnumerable<FontItem> fontItems,
+            Action<int, TextClipEntry> onChanged,
+            Action<int> onRemove,
+            bool canDeleteEntry = true,
+            bool showAllOptions = false,
+            Action<FontPicker>? ShowPicker = null,
+            Action? HidePicker = null)
+        {
+            Label SecLabel(string t) => new Label
+            {
+                Text = t,
+                FontSize = 10,
+                TextColor = Colors.White,
+                FontAttributes = FontAttributes.Bold,
+                Margin = new Thickness(0, 6, 0, 2)
+            };
+            BoxView Divider() => new BoxView
+            {
+                HeightRequest = 1,
+                Color = Colors.White.WithAlpha(0.06f),
+                Margin = new Thickness(0, 4)
+            };
+
+            var stack = new VerticalStackLayout { Spacing = 4 };
+
+            var headerGrid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto)
+                }
+            };
+            headerGrid.Add(new Label
+            {
+                Text = PPLocalizedResources.TextOption_EntryTitle(idx + 1),
+                FontAttributes = FontAttributes.Bold,
+                FontSize = 13,
+                TextColor = Color.FromArgb("#A8B8CC"),
+                VerticalOptions = LayoutOptions.Center
+            }, 0, 0);
+            var removeBtn = new Button
+            {
+                Text = "✕",
+                WidthRequest = 28,
+                HeightRequest = 28,
+                Padding = 0,
+                BackgroundColor = Colors.Transparent,
+                TextColor = Color.FromArgb("#FF6060"),
+                FontSize = 13,
+                HorizontalOptions = LayoutOptions.End,
+                VerticalOptions = LayoutOptions.Center,
+                IsVisible = canDeleteEntry
+            };
+            removeBtn.Clicked += (s, ev) => { onRemove?.Invoke(idx); };
+            headerGrid.Add(removeBtn, 1, 0);
+            stack.Children.Add(headerGrid);
+            stack.Children.Add(Divider());
+
+            // CONTENT
+            stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Content));
+            var editor = new Editor
+            {
+                Text = e.text,
+                AutoSize = EditorAutoSizeOption.TextChanges,
+                MinimumHeightRequest = 64,
+                Placeholder = PPLocalizedResources.TextOption_Content_Placeholder
+            };
+            editor.Unfocused += (s, ev) => { onChanged?.Invoke(idx, e with { text = editor.Text }); };
+            stack.Children.Add(editor);
+
+            // POSITION
+            stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Position));
+            var posGrid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star)
+                },
+                ColumnSpacing = 6
+            };
+            var xEntry = new Entry { Text = e.x.ToString(), Placeholder = "0" };
+            var yEntry = new Entry { Text = e.y.ToString(), Placeholder = "0" };
+            xEntry.Unfocused += (s, ev) => { if (int.TryParse(xEntry.Text, out var nx)) onChanged?.Invoke(idx, e with { x = nx }); };
+            yEntry.Unfocused += (s, ev) => { if (int.TryParse(yEntry.Text, out var ny)) onChanged?.Invoke(idx, e with { y = ny }); };
+            posGrid.Add(new Label { Text = "X", VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 0, 0);
+            posGrid.Add(xEntry, 1, 0);
+            posGrid.Add(new Label { Text = "Y", VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 2, 0);
+            posGrid.Add(yEntry, 3, 0);
+            stack.Children.Add(posGrid);
+
+            // FONT
+            stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Font));
+            var fonts = fontItems.Select(x => x.FontName).ToList();
+            var currentFontName = fonts.Contains(e.fontFamily) ? e.fontFamily : fonts.FirstOrDefault() ?? string.Empty;
+
+            var fontGrid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(new GridLength(72))
+                },
+                ColumnSpacing = 6
+            };
+            var sizeEntry = new Entry { Text = e.fontSize.ToString(), Placeholder = "24" };
+            sizeEntry.Unfocused += (s, ev) => { if (float.TryParse(sizeEntry.Text, out var ns)) onChanged?.Invoke(idx, e with { fontSize = ns }); };
+            fontGrid.Add(new Label { Text = PPLocalizedResources.TextOption_Size, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 1, 0);
+            fontGrid.Add(sizeEntry, 2, 0);
+
+            var fontSelectBtn = new Button
+            {
+                Text = currentFontName,
+                HorizontalOptions = LayoutOptions.Fill,
+                BackgroundColor = Color.FromArgb("#1AFFFFFF"),
+                TextColor = Colors.White,
+                FontSize = 13,
+                Padding = new Thickness(8, 4),
+                CornerRadius = 6
+            };
+
+            void FontChanged(object? sender, FontItem font)
+            {
+                if (font == null) return;
+                fontSelectBtn.Text = font.DisplayName;
+                HidePicker?.Invoke();
+                onChanged?.Invoke(idx, e with { fontFamily = font.FontName });
+            }
+            if (ShowPicker is not null)
+            {
+
+                var fontPickerControl = new projectFrameCut.ApplicationAPIBase.Views.Pickers.FontPicker
+                {
+                    FontsSource = fontItems.GroupBy(c => TextHelper.DetectTextLanguage(c.DisplayName))
+                                           .OrderByDescending(g => g.Count())
+                                           .SelectMany(c => c),
+                    PreviewRenderer = TextServices.RenderFontPreviewAsync,
+                    Title = PPLocalizedResources.TextOption_Font
+                };
+
+                fontPickerControl.SelectedFontChanged += FontChanged;
+
+                fontSelectBtn.Clicked += (s, ev) =>
+                {
+                    ShowPicker?.Invoke(fontPickerControl);
+                };
+
+                fontGrid.Add(fontSelectBtn, 0, 0);
+            }
+            else
+            {
+                var picker = new Picker { ItemsSource = fonts, SelectedIndex = Array.IndexOf(fonts.ToArray(), e.fontFamily) };
+                picker.SelectedIndexChanged += (s, e) =>
+                {
+                    FontChanged(null, fontItems.FirstOrDefault(c => c.FontName == picker.SelectedItem as string, null));
+                };
+                fontGrid.Add(picker, 0, 0);
+
+            }
+
+            stack.Children.Add(fontGrid);
+
+
+            var stylePicker = new Picker { Title = PPLocalizedResources.TextOption_Style, ItemsSource = new[] { PPLocalizedResources.TextOption_Style_Regular, PPLocalizedResources.TextOption_Style_Bold, PPLocalizedResources.TextOption_Style_Italic, PPLocalizedResources.TextOption_Style_BoldItalic }, SelectedItem = e.fontStyle switch { SixLabors.Fonts.FontStyle.Regular => PPLocalizedResources.TextOption_Style_Regular, SixLabors.Fonts.FontStyle.Bold => PPLocalizedResources.TextOption_Style_Bold, SixLabors.Fonts.FontStyle.Italic => PPLocalizedResources.TextOption_Style_Italic, SixLabors.Fonts.FontStyle.BoldItalic => PPLocalizedResources.TextOption_Style_BoldItalic, _ => PPLocalizedResources.TextOption_Style_Regular, } };
+            stylePicker.SelectedIndexChanged += (s, ev) =>
+            {
+                if (stylePicker.SelectedItem is string sel)
+                {
+                    var fs = sel switch
+                    {
+                        var v when v == PPLocalizedResources.TextOption_Style_Bold => SixLabors.Fonts.FontStyle.Bold,
+                        var v when v == PPLocalizedResources.TextOption_Style_Italic => SixLabors.Fonts.FontStyle.Italic,
+                        var v when v == PPLocalizedResources.TextOption_Style_BoldItalic => SixLabors.Fonts.FontStyle.BoldItalic,
+                        _ => SixLabors.Fonts.FontStyle.Regular,
+                    };
+                    onChanged?.Invoke(idx, e with { fontStyle = fs });
+                }
+            };
+            stack.Children.Add(stylePicker);
+
+            // TEXT COLOR
+            stack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Color));
+            var colorSwatch = new Border
+            {
+                WidthRequest = 32,
+                HeightRequest = 32,
+                StrokeShape = new RoundRectangle { CornerRadius = 6 },
+                Stroke = Colors.White.WithAlpha(0.12f),
+                VerticalOptions = LayoutOptions.Center
+            };
+            try { colorSwatch.Background = new SolidColorBrush(Color.FromRgba(e.r / 65535.0, e.g / 65535.0, e.b / 65535.0, e.a ?? 1f)); } catch { }
+            var colorEntry = new Entry { Text = $"#{((int)Math.Round(e.r / 257.0)):X2}{((int)Math.Round(e.g / 257.0)):X2}{((int)Math.Round(e.b / 257.0)):X2}" };
+            colorEntry.Unfocused += (s, ev) =>
+            {
+                try
+                {
+                    var c = Color.FromArgb(colorEntry.Text);
+                    ushort r = (ushort)Math.Round(c.Red * 65535);
+                    ushort g = (ushort)Math.Round(c.Green * 65535);
+                    ushort b = (ushort)Math.Round(c.Blue * 65535);
+                    float a = (float)c.Alpha;
+                    var updated = e with { r = r, g = g, b = b, a = a };
+                    colorSwatch.Background = new SolidColorBrush(c);
+                    onChanged?.Invoke(idx, updated);
+                }
+                catch { }
+            };
+            var colorRow = new Grid
+            {
+                ColumnDefinitions = { new ColumnDefinition(GridLength.Auto), new ColumnDefinition(GridLength.Star) },
+                ColumnSpacing = 8
+            };
+            colorRow.Add(colorSwatch, 0, 0);
+            colorRow.Add(colorEntry, 1, 0);
+            stack.Children.Add(colorRow);
+
+            // ADVANCED (collapsible): ALIGNMENT + TYPOGRAPHY + STROKE
+            var advancedStack = new VerticalStackLayout { Spacing = 4, IsVisible = false };
+
+            // ALIGNMENT
+            advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_LangType));
+            var langTypePicker = new Picker
+            {
+                ItemsSource = new string[] { PPLocalizedResources.TextOption_LangType_Auto }.Concat(Enum.GetValues<TextLanguage>().Skip(1).Select(TextClipEntry.LocalizeLanguageName)).ToList(),
+                SelectedItem = (int)e.Language
+            };
+            langTypePicker.SelectedIndexChanged += (s, ev) =>
+            {
+                onChanged?.Invoke(idx, e with { Language = (TextLanguage)langTypePicker.SelectedIndex });
+            };
+            advancedStack.Children.Add(langTypePicker);
+            advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Alignment));
+            var alignGrid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(new GridLength(80))
+                },
+                ColumnSpacing = 6
+            };
+            var hAlignPicker = new Picker { Title = PPLocalizedResources.TextOption_HorizonOption, ItemsSource = new[] { PPLocalizedResources.TextOption_HorizonOption_Left, PPLocalizedResources.TextOption_HorizonOption_Center, PPLocalizedResources.TextOption_HorizonOption_Right }, SelectedItem = e.horizontalAlignment switch { SixLabors.Fonts.HorizontalAlignment.Left => PPLocalizedResources.TextOption_HorizonOption_Left, SixLabors.Fonts.HorizontalAlignment.Center => PPLocalizedResources.TextOption_HorizonOption_Center, SixLabors.Fonts.HorizontalAlignment.Right => PPLocalizedResources.TextOption_HorizonOption_Right, _ => PPLocalizedResources.TextOption_HorizonOption_Left, } };
+            hAlignPicker.SelectedIndexChanged += (s, ev) =>
+            {
+                if (hAlignPicker.SelectedItem is string sel)
+                {
+                    SixLabors.Fonts.HorizontalAlignment ha = sel switch
+                    {
+                        var v when v == PPLocalizedResources.TextOption_HorizonOption_Center => SixLabors.Fonts.HorizontalAlignment.Center,
+                        var v when v == PPLocalizedResources.TextOption_HorizonOption_Right => SixLabors.Fonts.HorizontalAlignment.Right,
+                        _ => SixLabors.Fonts.HorizontalAlignment.Left,
+                    };
+                    onChanged?.Invoke(idx, e with { horizontalAlignment = ha });
+                }
+            };
+            var vAlignPicker = new Picker { Title = PPLocalizedResources.TextOption_VerticalOption, ItemsSource = new[] { PPLocalizedResources.TextOption_VerticalOption_Top, PPLocalizedResources.TextOption_VerticalOption_Center, PPLocalizedResources.TextOption_VerticalOption_Bottom }, SelectedItem = e.verticalAlignment switch { SixLabors.Fonts.VerticalAlignment.Top => PPLocalizedResources.TextOption_VerticalOption_Top, SixLabors.Fonts.VerticalAlignment.Center => PPLocalizedResources.TextOption_VerticalOption_Center, SixLabors.Fonts.VerticalAlignment.Bottom => PPLocalizedResources.TextOption_VerticalOption_Bottom, _ => PPLocalizedResources.TextOption_VerticalOption_Top, } };
+            vAlignPicker.SelectedIndexChanged += (s, ev) =>
+            {
+                if (vAlignPicker.SelectedItem is string sel)
+                {
+                    SixLabors.Fonts.VerticalAlignment va = sel switch
+                    {
+                        var v when v == PPLocalizedResources.TextOption_VerticalOption_Center => SixLabors.Fonts.VerticalAlignment.Center,
+                        var v when v == PPLocalizedResources.TextOption_VerticalOption_Bottom => SixLabors.Fonts.VerticalAlignment.Bottom,
+                        _ => SixLabors.Fonts.VerticalAlignment.Top,
+                    };
+                    onChanged?.Invoke(idx, e with { verticalAlignment = va });
+                }
+            };
+            var wrapEntry = new Entry { Text = e.wrappingWidth?.ToString() ?? string.Empty, Placeholder = PPLocalizedResources.TextOption_WrapW_Hint };
+            wrapEntry.Unfocused += (s, ev) =>
+            {
+                if (float.TryParse(wrapEntry.Text, out var w)) onChanged?.Invoke(idx, e with { wrappingWidth = w });
+                else onChanged?.Invoke(idx, e with { wrappingWidth = null });
+            };
+            alignGrid.Add(hAlignPicker, 0, 0);
+            alignGrid.Add(vAlignPicker, 1, 0);
+            alignGrid.Add(new Label { Text = PPLocalizedResources.TextOption_WrapW, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 2, 0);
+            alignGrid.Add(wrapEntry, 3, 0);
+            advancedStack.Children.Add(alignGrid);
+
+
+            // TYPOGRAPHY
+            advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Typography));
+            var verticalLayoutSwitch = new Switch { IsToggled = e.UseVerticalLayout, VerticalOptions = LayoutOptions.Center };
+            var keepNonCJKHorizontalSwitch = new Switch { IsToggled = e.KeepNonCJKTextAsHorizontal, VerticalOptions = LayoutOptions.Center, IsVisible = verticalLayoutSwitch.IsToggled };
+            var verticalLabel = new Label { Text = PPLocalizedResources.TextOption_UseVerticalLayout, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White };
+            var nonCJKHorizentalLabel = new Label { Text = PPLocalizedResources.TextOption_KeepNonCJKHorizontal, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White, IsVisible = verticalLayoutSwitch.IsToggled };
+
+            verticalLayoutSwitch.Toggled += (s, ev) => { keepNonCJKHorizontalSwitch.IsVisible = verticalLayoutSwitch.IsToggled; nonCJKHorizentalLabel.IsVisible = verticalLayoutSwitch.IsToggled; onChanged?.Invoke(idx, e with { UseVerticalLayout = verticalLayoutSwitch.IsToggled }); };
+            keepNonCJKHorizontalSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { KeepNonCJKTextAsHorizontal = keepNonCJKHorizontalSwitch.IsToggled }); };
+
+            var verticalLayoutGrid = new HorizontalStackLayout
+            {
+                Spacing = 8,
+                Children =
+                {
+                    verticalLabel,
+                    verticalLayoutSwitch,
+                    nonCJKHorizentalLabel,
+                    keepNonCJKHorizontalSwitch
+                }
+            };
+            advancedStack.Children.Add(verticalLayoutGrid);
+
+            var kerningSwitch = new Switch { IsToggled = e.applyKerning, VerticalOptions = LayoutOptions.Center };
+            kerningSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { applyKerning = kerningSwitch.IsToggled }); };
+            var lineSpacingEntry = new Entry { Text = e.lineSpacing.ToString() };
+            lineSpacingEntry.Unfocused += (s, ev) => { if (float.TryParse(lineSpacingEntry.Text, out var ls)) onChanged?.Invoke(idx, e with { lineSpacing = ls }); };
+            var typRow = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(new GridLength(80))
+                },
+                ColumnSpacing = 8
+            };
+            typRow.Add(new Label { Text = PPLocalizedResources.TextOption_Kerning, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 0, 0);
+            typRow.Add(kerningSwitch, 1, 0);
+            typRow.Add(new Label { Text = PPLocalizedResources.TextOption_LineSpacing, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White, HorizontalOptions = LayoutOptions.End }, 2, 0);
+            typRow.Add(lineSpacingEntry, 3, 0);
+            advancedStack.Children.Add(typRow);
+
+            var rotEntry = new Entry { Text = e.rotation.ToString(), Placeholder = "0" };
+            rotEntry.Unfocused += (s, ev) => { if (float.TryParse(rotEntry.Text, out var r)) onChanged?.Invoke(idx, e with { rotation = r }); };
+            var dpiEntry = new Entry { Text = e.dpi?.ToString() ?? string.Empty, Placeholder = "auto" };
+            dpiEntry.Unfocused += (s, ev) =>
+            {
+                if (float.TryParse(dpiEntry.Text, out var d)) onChanged?.Invoke(idx, e with { dpi = d });
+                else onChanged?.Invoke(idx, e with { dpi = null });
+            };
+            var rotDpiGrid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star)
+                },
+                ColumnSpacing = 6
+            };
+            rotDpiGrid.Add(new Label { Text = PPLocalizedResources.TextOption_Rotation, VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 0, 0);
+            rotDpiGrid.Add(rotEntry, 1, 0);
+            rotDpiGrid.Add(new Label { Text = "DPI", VerticalOptions = LayoutOptions.Center, TextColor = Colors.White }, 2, 0);
+            rotDpiGrid.Add(dpiEntry, 3, 0);
+            advancedStack.Children.Add(rotDpiGrid);
+
+            // STROKE
+            advancedStack.Children.Add(SecLabel(PPLocalizedResources.TextOption_Stroke));
+            var strokeWidthEntry = new Entry { Text = e.strokeWidth?.ToString() ?? string.Empty, Placeholder = PPLocalizedResources.TextOption_Stroke_Hint, MinimumWidthRequest = 150 };
+            strokeWidthEntry.Unfocused += (s, ev) =>
+            {
+                if (float.TryParse(strokeWidthEntry.Text, out var sw)) onChanged?.Invoke(idx, e with { strokeWidth = sw });
+                else onChanged?.Invoke(idx, e with { strokeWidth = null });
+            };
+            var strokeSwatch = new Border
+            {
+                WidthRequest = 32,
+                HeightRequest = 32,
+                StrokeShape = new RoundRectangle { CornerRadius = 6 },
+                Stroke = Colors.White.WithAlpha(0.12f),
+                VerticalOptions = LayoutOptions.Center
+            };
+            try { strokeSwatch.Background = new SolidColorBrush(Color.FromRgba(e.strokeR / 65535.0, e.strokeG / 65535.0, e.strokeB / 65535.0, 1.0)); } catch { }
+            var strokeEntry = new Entry { Text = $"#{((int)Math.Round(e.strokeR / 257.0)):X2}{((int)Math.Round(e.strokeG / 257.0)):X2}{((int)Math.Round(e.strokeB / 257.0)):X2}" };
+            strokeEntry.Unfocused += (s, ev) =>
+            {
+                try
+                {
+                    var c = Color.FromArgb(strokeEntry.Text);
+                    ushort r = (ushort)Math.Round(c.Red * 65535);
+                    ushort g = (ushort)Math.Round(c.Green * 65535);
+                    ushort b = (ushort)Math.Round(c.Blue * 65535);
+                    var updated = e with { strokeR = r, strokeG = g, strokeB = b };
+                    strokeSwatch.Background = new SolidColorBrush(c);
+                    onChanged?.Invoke(idx, updated);
+                }
+                catch { }
+            };
+            var strokeGrid = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Auto),
+                    new ColumnDefinition(GridLength.Star)
+                },
+                ColumnSpacing = 8
+            };
+            strokeGrid.Add(strokeWidthEntry, 0, 0);
+            strokeGrid.Add(strokeSwatch, 1, 0);
+            strokeGrid.Add(strokeEntry, 2, 0);
+            advancedStack.Children.Add(strokeGrid);
+
+            if (showAllOptions)
+            {
+                var subTrackSwitch = new Switch { IsToggled = e.ShouldInSubtrack, VerticalOptions = LayoutOptions.Center };
+                var subTrackLabel = new Label { Text = "Place in subtrack by default", VerticalOptions = LayoutOptions.Center, TextColor = Colors.White };
+                subTrackSwitch.Toggled += (s, ev) => { onChanged?.Invoke(idx, e with { ShouldInSubtrack = subTrackSwitch.IsToggled }); };
+                var subTrackGrid = new Grid
+                {
+                    ColumnDefinitions =
+                    {
+                        new ColumnDefinition(GridLength.Auto),
+                        new ColumnDefinition(GridLength.Auto),
+                        new ColumnDefinition(GridLength.Star)
+                    },
+                    ColumnSpacing = 8
+                };
+                subTrackGrid.Add(subTrackLabel, 0, 0);
+                subTrackGrid.Add(subTrackSwitch, 1, 0);
+                advancedStack.Children.Add(subTrackGrid);
+            }
+
+            // Advanced toggle button
+            var advancedToggleBtn = new Button
+            {
+                Text = PPLocalizedResources.TextOption_Advanced_Collapsed,
+                HorizontalOptions = LayoutOptions.Fill,
+                BackgroundColor = Colors.Transparent,
+                TextColor = Color.FromArgb("#A8B8CC"),
+                FontSize = 11,
+                Padding = new Thickness(0, 4),
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            advancedToggleBtn.Clicked += (s, ev) =>
+            {
+                advancedStack.IsVisible = !advancedStack.IsVisible;
+                advancedToggleBtn.Text = advancedStack.IsVisible
+                    ? PPLocalizedResources.TextOption_Advanced_Expanded
+                    : PPLocalizedResources.TextOption_Advanced_Collapsed;
+            };
+            stack.Children.Add(advancedToggleBtn);
+            stack.Children.Add(advancedStack);
+
+            var border = new Border
+            {
+                Stroke = Colors.White.WithAlpha(0.10f),
+                StrokeShape = new RoundRectangle { CornerRadius = 10 },
+                Padding = new Thickness(12, 10),
+                Background = new SolidColorBrush(Color.FromArgb("#0FFFFFFF")),
+                Content = stack
+            };
+            return border;
+        }
+
+
+        private async Task<View> BuildTextOptionTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            // Ensure ExtraData exists
+            clip.ExtraData ??= new Dictionary<string, object>();
+
+            // Load or normalize TextEntries from ExtraData
+            List<TextClipEntry>? entries = null;
+            if (clip.ExtraData.TryGetValue("TextEntries", out var entriesObj))
+            {
+                if (entriesObj is List<TextClipEntry> list)
+                {
+                    entries = list;
+                }
+                else if (entriesObj is JsonElement je)
+                {
+                    try { entries = JsonSerializer.Deserialize<List<TextClipEntry>>(je); }
+                    catch { entries = null; }
+                }
+            }
+
+            if (entries == null)
+            {
+                entries = new List<TextClipEntry>
+                {
+                    new TextClipEntry
+                    {
+                        text = "",
+                        x = 0,
+                        y = 0,
+                        fontFamily = projectFrameCut.Render.ClipsAndTracks.TextClip.GetFont().Families.FirstOrDefault().Name ?? "Arial",
+                        fontSize = 24f,
+                        r = 65535,
+                        g = 65535,
+                        b = 65535,
+                        a = 1f
+                    }
+                };
+                clip.ExtraData["TextEntries"] = entries;
+            }
+
+            var fonts = TextServices.LoadedFonts.Select(c => c.Value);
+
+            var entriesContainer = new VerticalStackLayout { Spacing = 8 };
+
+            void UpdateStoredEntries()
+            {
+                clip.ExtraData["TextEntries"] = entries;
+                handler?.Invoke(new(), new PropertyPanelPropertyChangedEventArgs("TextEntries", entries, entries));
+            }
+
+            void RebuildEntriesUI()
+            {
+                entriesContainer.Children.Clear();
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    int idx = i;
+                    var e = entries[idx];
+                    var view = BuildTextEntryUI(e, idx, fonts,
+                        (id, newE) => { entries[id] = newE; UpdateStoredEntries(); },
+                        (id) => { entries.RemoveAt(id); UpdateStoredEntries(); RebuildEntriesUI(); },
+                        entries.Count > 1,
+                        false,
+                        (pickerView) =>
+                        {
+                            page.Dispatcher.Dispatch(async () =>
+                            {
+                                await page.ShowAPopup(pickerView, mode: "dialog");
+                            });
+                        },
+                        () =>
+                        {
+                            page.Dispatcher.Dispatch(async () =>
+                            {
+                                await page.HidePopup();
+                            });
+                        });
+                    entriesContainer.Children.Add(view);
+                }
+            }
+
+            RebuildEntriesUI();
+
+            // Add/Insert controls
+            var addBtn = new Button
+            {
+                Text = PPLocalizedResources.TextOption_AddAEntry,
+                HorizontalOptions = LayoutOptions.Fill,
+                CornerRadius = 8,
+                FontAttributes = FontAttributes.Bold,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            addBtn.Clicked += async (s, e) =>
+            {
+                Dictionary<string, TextClipEntry> t = new();
+                Setting.SettingPages.EditSettingPage.LoadTextTemplates(ref t);
+                var picked = await page.DisplayActionSheetAsync(PPLocalizedResources.TextOption_AddAEntry, null, null, t.Keys.ToArray());
+                entries.Add(t[picked] ?? new TextClipEntry
+                {
+                    text = "",
+                    x = 0,
+                    y = 0,
+                    fontFamily = "Arial",
+                    fontSize = 24f,
+                    r = 65535,
+                    g = 65535,
+                    b = 65535,
+                    a = 1f
+                });
+                UpdateStoredEntries();
+                RebuildEntriesUI();
+            };
+
+            entriesContainer.Children.Add(addBtn);
+
+            var grid = new Grid
+            {
+                RowDefinitions =
+                {
+                    new RowDefinition(GridLength.Auto),
+                    new RowDefinition(GridLength.Star)
+                },
+                Padding = 8
+            };
+
+            var scroll = new ScrollView
+            {
+                Content = entriesContainer,
+                VerticalOptions = LayoutOptions.Start
+            };
+            grid.Add(scroll, 0, 1);
+
+            return grid;
+        }
+        #endregion
+
+        #region effect
         public static void RebuildAllEffects(ClipElementUI clip, bool diag = false)
         {
             var newEffects = clip.Effects ?? new();
@@ -388,6 +1022,7 @@ namespace projectFrameCut.DraftStuff
                             effect.Index = globalIndex++;
                             effect.BindedEffectGroupID = bundleData.Id.ToString();
                             string key = $"{bundleData.Id}_{i}";
+                            if (effect is not IBindableArgumentEffect) effect.Id = Guid.NewGuid().ToString();
                             newEffects[key] = effect;
                         }
                     }
@@ -1345,6 +1980,10 @@ namespace projectFrameCut.DraftStuff
             return frame;
         }
 
+        #endregion
+
+        #region misc
+
         private View BuildSpeedAndRatioTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             PropertyPanelBuilder ppb = new();
@@ -1361,6 +2000,155 @@ namespace projectFrameCut.DraftStuff
             var panel = ppb.BuildWithScrollView();
             return panel;
         }
+
+        private View BuildTimingTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            float fps = page.ProjectInfo.TargetFrameRate;
+            var stack = new VerticalStackLayout { Spacing = 8, Padding = new Thickness(8) };
+
+            string srcInfo = clip.isInfiniteLength
+                ? PPLocalizedResources.Timing_InfLength
+                : PPLocalizedResources.Timing_LengthInfo(clip.maxFrameCount, fps);
+            stack.Children.Add(new Label
+            {
+                Text = srcInfo,
+                FontSize = 12,
+                TextColor = Color.FromArgb("#AAAAAA"),
+                Margin = new Thickness(0, 0, 0, 8)
+            });
+
+            if (!clip.isInfiniteLength && clip.maxFrameCount > 0)
+            {
+                // ── 有限长度：使用范围滑块 ──────────────────────────────────────
+                uint safeStart = Math.Min(clip.relativeStartFrame, clip.maxFrameCount > 0 ? clip.maxFrameCount - 1 : 0);
+                uint safeLen = clip.lengthInFrame > 0
+                    ? Math.Min(clip.lengthInFrame, clip.maxFrameCount - safeStart)
+                    : Math.Max(1u, clip.maxFrameCount - safeStart);
+
+                string? thumbPath = null;
+                if (!string.IsNullOrEmpty(clip.SourcePath))
+                {
+                    if (clip.SourcePath.StartsWith("$") && page.Assets.TryGetValue(clip.SourcePath.Substring(1), out var assetObj))
+                    {
+                        thumbPath = assetObj.ThumbnailPath;
+                    }
+                    else
+                    {
+                        thumbPath = clip.SourcePath;
+                    }
+                }
+
+                var rangeSlider = new ClipRangeSlider
+                {
+                    Maximum = clip.maxFrameCount,
+                    LowerValue = safeStart,
+                    UpperValue = safeStart + safeLen,
+                    ThumbnailPath = thumbPath,
+                    Margin = new Thickness(10, 20, 10, 20)
+                };
+
+                var infoLabel = new Label
+                {
+                    Text = PPLocalizedResources.Timing_LengthInfo_Start(safeStart, safeLen, fps),
+                    TextColor = Colors.White,
+                    FontSize = 12,
+                    HorizontalOptions = LayoutOptions.Center
+                };
+
+                rangeSlider.ValuesChanged += (s, e) =>
+                {
+                    uint newStart = (uint)Math.Round(rangeSlider.LowerValue);
+                    uint newEnd = (uint)Math.Round(rangeSlider.UpperValue);
+                    uint newLen = newEnd - newStart;
+                    if (newLen < 1) newLen = 1;
+                    infoLabel.Text = PPLocalizedResources.Timing_LengthInfo_Start(safeStart, safeLen, fps);
+                };
+
+                rangeSlider.DragCompleted += (s, e) =>
+                {
+                    uint newStart = (uint)Math.Round(rangeSlider.LowerValue);
+                    uint newEnd = (uint)Math.Round(rangeSlider.UpperValue);
+                    uint newLen = newEnd - newStart;
+                    if (newLen < 1) newLen = 1;
+
+                    clip.relativeStartFrame = newStart;
+                    clip.lengthInFrame = newLen;
+
+                    double newPx = page.FrameToPixel(newLen);
+                    clip.Clip.WidthRequest = newPx;
+                    clip.origLength = newPx;
+
+                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("relativeStartFrame", newStart, newStart));
+                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("lengthInFrame", newLen, newLen));
+                };
+
+                stack.Children.Add(rangeSlider);
+                stack.Children.Add(infoLabel);
+            }
+            else
+            {
+                // ── 无限长度：使用文本框手动输入 ────────────────────────────
+                uint initFrames = clip.lengthInFrame > 0
+                    ? clip.lengthInFrame
+                    : page.PixelToFrame(clip.origLength > 0 ? clip.origLength : 300d);
+
+                stack.Children.Add(new Label
+                {
+                    Text = PPLocalizedResources.Timing_InfLength_Input,
+                    FontSize = 13,
+                    TextColor = Colors.White,
+                    Margin = new Thickness(0, 12, 0, 0)
+                });
+
+                var lengthEntry = new Entry
+                {
+                    Text = initFrames.ToString(),
+                    Keyboard = Keyboard.Numeric,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    Placeholder = "42"
+                };
+
+                // 实时秒数提示
+                var secHintLabel = new Label
+                {
+                    Text = fps > 0 ? $"≈ {initFrames / fps:F2}s" : string.Empty,
+                    FontSize = 11,
+                    TextColor = Color.FromArgb("#AAAAAA")
+                };
+                lengthEntry.TextChanged += (s, e) =>
+                {
+                    secHintLabel.Text = uint.TryParse(lengthEntry.Text, out var previewFrames) && fps > 0
+                        ? $"≈ {previewFrames / fps:F2}s"
+                        : string.Empty;
+                };
+
+                var applyBtn = new Button
+                {
+                    Text = Localized._Apply,
+                    HorizontalOptions = LayoutOptions.End,
+                    Margin = new Thickness(0, 6, 0, 0)
+                };
+                applyBtn.Clicked += (s, e) =>
+                {
+                    if (uint.TryParse(lengthEntry.Text, out var newLen) && newLen > 0)
+                    {
+                        clip.lengthInFrame = newLen;
+                        double newPx = page.FrameToPixel(newLen);
+                        clip.Clip.WidthRequest = newPx;
+                        clip.origLength = newPx;
+                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("lengthInFrame", newLen, newLen));
+                    }
+                };
+
+                stack.Children.Add(lengthEntry);
+                stack.Children.Add(secHintLabel);
+                stack.Children.Add(applyBtn);
+            }
+
+            return new ScrollView { Content = stack };
+        }
+
+
 
         private class DummyEffectBundle : IEffectBundle
         {
@@ -1418,5 +2206,164 @@ namespace projectFrameCut.DraftStuff
                 };
             }
         }
+
+        private class ClipRangeSlider : ContentView
+        {
+            public double Maximum { get; set; }
+            private double _lowerValue;
+            public double LowerValue
+            {
+                get => _lowerValue;
+                set { _lowerValue = value; UpdateLayout(); }
+            }
+
+            private double _upperValue;
+            public double UpperValue
+            {
+                get => _upperValue;
+                set { _upperValue = value; UpdateLayout(); }
+            }
+
+            private string? _thumbnailPath;
+            public string? ThumbnailPath
+            {
+                get => _thumbnailPath;
+                set { _thumbnailPath = value; RebuildThumbnails(); }
+            }
+
+            public event EventHandler ValuesChanged;
+            public event EventHandler DragCompleted;
+
+            AbsoluteLayout _layout;
+            Border _track;
+            HorizontalStackLayout _thumbnailLayout;
+            Border _leftMask;
+            Border _rightMask;
+            Border _leftThumb;
+            Border _rightThumb;
+            Border _middleRegion;
+            double _trackWidth;
+
+            public ClipRangeSlider()
+            {
+                HeightRequest = 60;
+                MinimumWidthRequest = 100;
+                _layout = new AbsoluteLayout();
+
+                _track = new Border { BackgroundColor = Color.FromArgb("#888888"), StrokeShape = new RoundRectangle { CornerRadius = 8 }, StrokeThickness = 0 };
+                _thumbnailLayout = new HorizontalStackLayout { Spacing = 0 };
+                _track.Content = _thumbnailLayout;
+
+                _leftMask = new Border { BackgroundColor = Color.FromRgba(0, 0, 0, 150), StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(8, 0, 8, 0) }, StrokeThickness = 0, InputTransparent = true };
+                _rightMask = new Border { BackgroundColor = Color.FromRgba(0, 0, 0, 150), StrokeShape = new RoundRectangle { CornerRadius = new CornerRadius(0, 8, 0, 8) }, StrokeThickness = 0, InputTransparent = true };
+
+                _middleRegion = new Border { BackgroundColor = Colors.Transparent, StrokeThickness = 0 };
+
+                _leftThumb = CreateThumb();
+                _rightThumb = CreateThumb();
+
+                _layout.Children.Add(_track);
+                _layout.Children.Add(_middleRegion);
+                _layout.Children.Add(_leftMask);
+                _layout.Children.Add(_rightMask);
+                _layout.Children.Add(_leftThumb);
+                _layout.Children.Add(_rightThumb);
+
+                Content = _layout;
+
+                SizeChanged += (s, e) => { _trackWidth = Width; RebuildThumbnails(); UpdateLayout(); };
+
+                AddPanGesture(_leftThumb, 0);
+                AddPanGesture(_rightThumb, 1);
+                AddPanGesture(_middleRegion, 2);
+            }
+
+            void RebuildThumbnails()
+            {
+                _thumbnailLayout.Children.Clear();
+                if (string.IsNullOrEmpty(_thumbnailPath) || _trackWidth <= 0) return;
+
+                int n = (int)Math.Ceiling(_trackWidth / 40.0) + 1;
+                for (int i = 0; i < n; i++)
+                {
+                    _thumbnailLayout.Children.Add(new Image { Source = _thumbnailPath, Aspect = Aspect.AspectFill, HeightRequest = 40, WidthRequest = 40 });
+                }
+            }
+
+            Border CreateThumb()
+            {
+                return new Border
+                {
+                    WidthRequest = 16,
+                    HeightRequest = 60,
+                    BackgroundColor = Colors.Transparent,
+                    Stroke = Colors.White,
+                    StrokeThickness = 2,
+                    StrokeShape = new RoundRectangle { CornerRadius = 2 }
+                };
+            }
+
+            void AddPanGesture(View thumb, int type)
+            {
+                var pan = new PanGestureRecognizer();
+                double initialLowerValue = 0;
+                double initialUpperValue = 0;
+                pan.PanUpdated += (s, e) =>
+                {
+                    if (e.StatusType == GestureStatus.Started)
+                    {
+                        initialLowerValue = _lowerValue;
+                        initialUpperValue = _upperValue;
+                    }
+                    else if (e.StatusType == GestureStatus.Running)
+                    {
+                        double deltaVal = (e.TotalX / _trackWidth) * Maximum;
+
+                        if (type == 0) // Min
+                        {
+                            _lowerValue = Math.Clamp(initialLowerValue + deltaVal, 0, _upperValue - 1);
+                        }
+                        else if (type == 1) // Max
+                        {
+                            _upperValue = Math.Clamp(initialUpperValue + deltaVal, _lowerValue + 1, Maximum);
+                        }
+                        else if (type == 2) // Middle
+                        {
+                            double length = initialUpperValue - initialLowerValue;
+                            double newLower = Math.Clamp(initialLowerValue + deltaVal, 0, Maximum - length);
+                            _lowerValue = newLower;
+                            _upperValue = newLower + length;
+                        }
+                        UpdateLayout();
+                        ValuesChanged?.Invoke(this, EventArgs.Empty);
+                    }
+                    else if (e.StatusType == GestureStatus.Completed || e.StatusType == GestureStatus.Canceled)
+                    {
+                        DragCompleted?.Invoke(this, EventArgs.Empty);
+                    }
+                };
+                thumb.GestureRecognizers.Add(pan);
+            }
+
+            void UpdateLayout()
+            {
+                if (_trackWidth <= 0 || Maximum <= 0) return;
+
+                double minX = (_lowerValue / Maximum) * _trackWidth;
+                double maxX = (_upperValue / Maximum) * _trackWidth;
+
+                AbsoluteLayout.SetLayoutBounds(_track, new Rect(0, 10, _trackWidth, 40));
+
+                AbsoluteLayout.SetLayoutBounds(_leftMask, new Rect(0, 10, minX, 40));
+                AbsoluteLayout.SetLayoutBounds(_rightMask, new Rect(maxX, 10, Math.Max(0, _trackWidth - maxX), 40));
+
+                AbsoluteLayout.SetLayoutBounds(_middleRegion, new Rect(minX, 10, Math.Max(0, maxX - minX), 40));
+
+                AbsoluteLayout.SetLayoutBounds(_leftThumb, new Rect(minX - 8, 0, 16, 60));
+                AbsoluteLayout.SetLayoutBounds(_rightThumb, new Rect(maxX - 8, 0, 16, 60));
+            }
+        }
+
+        #endregion
     }
 }

@@ -71,6 +71,8 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 
         public IMessagingService MessagingQueue { get; set; }
 
+        public Dictionary<string, Func<Guid, Guid, RenderAPIBase.ClipAndTrack.ITransform>> TransformProvider => new Dictionary<string, Func<Guid, Guid, RenderAPIBase.ClipAndTrack.ITransform>> { };
+
         public IClip ClipCreator(JsonElement element)
         {
             throw new NotImplementedException();

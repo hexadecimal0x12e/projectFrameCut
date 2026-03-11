@@ -24,6 +24,18 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// </summary>
         public string? ProjectName { get; set; }
         /// <summary>
+        /// Determine the version of APIBase while the draft is saved.
+        /// </summary>
+        public int LastOpenAPIBaseVersion { get; set; } = 0;
+        /// <summary>
+        /// Determine the version of Application while the draft is saved.
+        /// </summary>
+        public string LastOpenAppVersion { get; set; } = "0.0.0.0";
+        /// <summary>
+        /// Determine what plugins used in this project.
+        /// </summary>
+        public List<string> PluginUsed { get; set; } = new List<string>();
+        /// <summary>
         /// The relative width of the draft.
         /// </summary>
         public int RelativeWidth { get; set; } = 1920;
@@ -70,11 +82,11 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// <summary>
         /// All of the clips in the draft.
         /// </summary>
-        public object[] Clips { get; init; } = Array.Empty<object>();
+        public object[] Clips { get; set; } = Array.Empty<object>();
         /// <summary>
         /// All of the soundtracks in the draft.
         /// </summary>
-        public object[] SoundTracks { get; init; } = Array.Empty<object>();
+        public object[] SoundTracks { get; set; } = Array.Empty<object>();
 
 
         /// <summary>
@@ -141,6 +153,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     /// <summary>
     /// Represents an asset item in the project. 
     /// </summary>
+    [DebuggerDisplay("{Name}: {DurationDisplay}")]
     public class AssetItem
     {
         public string Name { get; set; } = string.Empty;
@@ -156,6 +169,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public DateTime CreatedAt { get; set; }
 
         public Guid CreatedBy { get; set; }
+        public bool IsAIGenerated { get; set; } = false;
+
 
         public int Width { get; set; }
         public int Height { get; set; }
@@ -235,6 +250,24 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
             };
         }
 
+        public override int GetHashCode() => Guid.TryParse(AssetId, out var guid) ? guid.GetHashCode() : AssetId?.GetHashCode() ?? base.GetHashCode();
+        public override bool Equals(object? obj) => obj is AssetItem other && AssetId != null && other.AssetId != null && AssetId == other.AssetId;
+        public override string ToString() => $"{Name}: {DurationDisplay}";
+    }
+
+    public class AssetItemComparer : IEqualityComparer<AssetItem>
+    {
+        public bool Equals(AssetItem? x, AssetItem? y)
+        {
+            return x?.AssetId != null && y?.AssetId != null && x.AssetId == y.AssetId;
+        }
+
+        public int GetHashCode([DisallowNull] AssetItem obj)
+        {
+#pragma warning disable CS8602 // already [DisallowNull]
+            return obj.GetHashCode();
+#pragma warning restore CS8602 // 
+        }
     }
 
 

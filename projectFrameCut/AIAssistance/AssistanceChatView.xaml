@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ai="clr-namespace:projectFrameCut.AIAssistance"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:l="clr-namespace:LocalizedResources"
+             x:Class="projectFrameCut.AIAssistance.AssistanceChatView">
+    <Grid RowDefinitions="*,Auto,Auto,Auto" RowSpacing="8" Padding="8">
+        <CollectionView Grid.Row="0"
+                        x:Name="AIChatHistoryView"
+                        SelectionMode="None"
+                        Margin="0,0,0,4"
+                        ItemSizingStrategy="MeasureAllItems">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="ai:ChatMessageItem">
+                    <Grid Padding="2">
+                        <Border StrokeThickness="1"
+                                StrokeShape="RoundRectangle 10"
+                                Padding="10,8"
+                                Margin="2"
+                                MaximumWidthRequest="560"
+                                HorizontalOptions="Start"
+                                BackgroundColor="Transparent">
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border" Binding="{Binding IsUser}" Value="True">
+                                    <Setter Property="HorizontalOptions" Value="End"/>
+                                </DataTrigger>
+                            </Border.Triggers>
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding Sender}"
+                                       FontAttributes="Bold"
+                                       FontSize="12"/>
+                                <Border StrokeThickness="1"
+                                        StrokeShape="RoundRectangle 8"
+                                        Padding="8,6"
+                                        IsVisible="False">
+                                    <Border.Triggers>
+                                        <DataTrigger TargetType="Border" Binding="{Binding HasReasoning}" Value="True">
+                                            <Setter Property="IsVisible" Value="True"/>
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <VerticalStackLayout Spacing="2">
+                                        <Label Text="{l:Localized Key=AIAssistant_ChatView_Thinking}"
+                                               FontSize="11"
+                                               FontAttributes="Bold"/>
+                                        <Label Text="{Binding ReasoningText}"
+                                               FontSize="12"
+                                               LineBreakMode="WordWrap"/>
+                                    </VerticalStackLayout>
+                                </Border>
+                                    <Border StrokeThickness="1"
+                                            StrokeShape="RoundRectangle 8"
+                                            Padding="8,6"
+                                            IsVisible="False">
+                                        <Border.Triggers>
+                                            <DataTrigger TargetType="Border" Binding="{Binding HasToolCalls}" Value="True">
+                                                <Setter Property="IsVisible" Value="True"/>
+                                            </DataTrigger>
+                                        </Border.Triggers>
+                                        <VerticalStackLayout Spacing="2">
+                                        <Label Text="{l:Localized Key=AIAssistant_ChatView_ToolCall}"
+                                                   FontSize="11"
+                                                   FontAttributes="Bold"/>
+                                            <Label Text="{Binding ToolCallsText}"
+                                                   FontSize="12"
+                                                   LineBreakMode="WordWrap"/>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                <Label Text="{Binding Message}"
+                                       LineBreakMode="WordWrap"/>
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+        <Grid Grid.Row="1">
+            <Label FontSize="12" TextColor="#80ffffff" HorizontalOptions="Center" Text="{l:Localized Key=AIAssistant_InfoGrayText}" />
+        </Grid>
+
+        
+        <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <Entry x:Name="AIInputButton"
+                   Grid.Column="0"
+                   HorizontalOptions="Fill"
+                   Placeholder="{l:Localized Key=AIAssistant_ChatView_SendHint}"
+                   ReturnType="Send"
+                   Completed="AIInputButton_Completed"/>
+            <Button Grid.Column="1"
+                    x:Name="AISendButton"
+                    HorizontalOptions="Center"
+                    Text="{l:Localized Key=AIAssistant_ChatView_Send}"
+                    Clicked="AISendButton_Clicked"/>
+
+
+        </Grid>
+    </Grid>
+</ContentView>

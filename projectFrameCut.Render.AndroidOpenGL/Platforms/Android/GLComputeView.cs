@@ -19,6 +19,12 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 {
     public class GLComputeView : GLSurfaceView, GLSurfaceView.IRenderer
     {
+        public enum OutputElementType
+        {
+            Float32,
+            UInt32
+        }
+
         string TAG = "GLComputeView[???]";
         int WORKGROUP_SIZE = 256;
 
@@ -30,8 +36,9 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
         private bool initialized = false;
         private string shaderSrc;
 
-        private TaskCompletionSource<float[]>? _tcs;
+        private TaskCompletionSource<Array>? _tcs;
         private TaskCompletionSource<bool> _readyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private OutputElementType outputElementType = OutputElementType.Float32;
 
         public GLComputeView(Context context, string glSource, params float[][] inputs) : base(context)
         {
@@ -106,11 +113,11 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
 
                 if (length <= 0)
                 {
-                    _tcs.TrySetResult(Array.Empty<float>());
+                    _tcs.TrySetResult(outputElementType == OutputElementType.UInt32 ? Array.Empty<uint>() : Array.Empty<float>());
                     return;
                 }
 
-                var result = RunComputeAndReadback();
+                var result = RunComputeAndReadback(outputElementType);
                 _tcs.TrySetResult(result);
             }
             catch (Exception ex)
@@ -124,15 +131,18 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
         }
 
 
-        public Task<float[]> RunComputeAsync()
+        public Task<Array> RunComputeAsync(OutputElementType outputType)
         {
             if (!initialized)
                 throw new InvalidOperationException("GL not initialized yet");
 
-            _tcs = new TaskCompletionSource<float[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            outputElementType = outputType;
+            _tcs = new TaskCompletionSource<Array>(TaskCreationOptions.RunContinuationsAsynchronously);
             RequestRender();
             return _tcs.Task;
         }
+
+        public Task<Array> RunComputeAsync() => RunComputeAsync(OutputElementType.Float32);
 
         private void InitCompute()
         {
@@ -200,7 +210,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     GLES31.GlBindBufferBase(GLES31.GlShaderStorageBuffer, i, inputBuffers[i]);
                 }
 
-                outputBuffer = CreateEmptySSBO(length);
+                outputBuffer = CreateEmptySSBO(length, outputElementType);
                 GLES31.GlBindBufferBase(GLES31.GlShaderStorageBuffer, 6, outputBuffer);
 
                 initialized = true;
@@ -295,46 +305,65 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             return buffer;
         }
 
-        private int CreateEmptySSBO(int lengthFloats)
+        private int CreateEmptySSBO(int lengthElements, OutputElementType outputType)
         {
             int[] buf = new int[1];
             GLES31.GlGenBuffers(1, buf, 0);
             int buffer = buf[0];
             GLES31.GlBindBuffer(GLES31.GlShaderStorageBuffer, buffer);
-            GLES31.GlBufferData(GLES31.GlShaderStorageBuffer, lengthFloats * sizeof(float), null, GLES31.GlDynamicCopy);
+            int elementSize = outputType == OutputElementType.UInt32 ? sizeof(uint) : sizeof(float);
+            GLES31.GlBufferData(GLES31.GlShaderStorageBuffer, lengthElements * elementSize, null, GLES31.GlDynamicCopy);
             GLES31.GlBindBuffer(GLES31.GlShaderStorageBuffer, 0);
             return buffer;
         }
 
-        private float[] RunComputeAndReadback()
+        private Array RunComputeAndReadback(OutputElementType outputType)
         {
             Logger.LogDiagnostic("Start computing...");
             GLES31.GlUseProgram(program);
             int numGroups = (length + WORKGROUP_SIZE - 1) / WORKGROUP_SIZE;
             if (numGroups <= 0)
-                return Array.Empty<float>();
+                return outputType == OutputElementType.UInt32 ? Array.Empty<uint>() : Array.Empty<float>();
 
             GLES31.GlDispatchCompute(numGroups, 1, 1);
             GLES31.GlMemoryBarrier(GLES31.GlShaderStorageBarrierBit | GLES31.GlBufferUpdateBarrierBit);
 
             GLES31.GlBindBuffer(GLES31.GlShaderStorageBuffer, outputBuffer);
+            int elementSize = outputType == OutputElementType.UInt32 ? sizeof(uint) : sizeof(float);
             var mapped = GLES30.GlMapBufferRange(GLES31.GlShaderStorageBuffer, 0,
-                length * sizeof(float), GLES30.GlMapReadBit);
+                length * elementSize, GLES30.GlMapReadBit);
             if (mapped == null)
                 throw new Exception("MapBufferRange failed");
 
             var bb = (ByteBuffer)mapped;
             bb.Order(ByteOrder.NativeOrder());
-            var fb = bb.AsFloatBuffer();
-            float[] result = new float[length];
-            fb.Get(result);
+            Array result;
+            if (outputType == OutputElementType.UInt32)
+            {
+                var ib = bb.AsIntBuffer();
+                int[] temp = new int[length];
+                ib.Get(temp);
+                var u = new uint[length];
+                for (int i = 0; i < length; i++)
+                {
+                    u[i] = unchecked((uint)temp[i]);
+                }
+                result = u;
+            }
+            else
+            {
+                var fb = bb.AsFloatBuffer();
+                float[] temp = new float[length];
+                fb.Get(temp);
+                result = temp;
+            }
 
             GLES30.GlUnmapBuffer(GLES31.GlShaderStorageBuffer);
             GLES31.GlBindBuffer(GLES31.GlShaderStorageBuffer, 0);
             return result;
         }
 
-        public void UpdateInputs(float[][] inputs, string src, string jobId, int worksize)
+        public void UpdateInputs(float[][] inputs, string src, string jobId, int worksize, OutputElementType outputType)
         {
             QueueEvent(() =>
             {
@@ -343,6 +372,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                 hostInputs = inputs;
                 length = hostInputs.Length > 0 ? hostInputs[0].Length : 0;
                 shaderSrc = src;
+                outputElementType = outputType;
 
                 if (!initialized)
                 {
@@ -392,6 +422,15 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             get => (int)GetValue(WorkGroupSizeProperty);
             set => SetValue(WorkGroupSizeProperty, value);
         }
+
+        public static readonly BindableProperty OutputElementTypeProperty =
+            BindableProperty.Create(nameof(OutputElementType), typeof(GLComputeView.OutputElementType), typeof(NativeGLSurfaceView), GLComputeView.OutputElementType.Float32);
+
+        public GLComputeView.OutputElementType OutputElementType
+        {
+            get => (GLComputeView.OutputElementType)GetValue(OutputElementTypeProperty);
+            set => SetValue(OutputElementTypeProperty, value);
+        }
     }
 
     public class NativeGLSurfaceViewHandler : ViewHandler<NativeGLSurfaceView, GLComputeView>
@@ -406,7 +445,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                 if (view.Inputs == null || view.Inputs.Length == 0 || view.Inputs.Length > 6)
                     throw new ArgumentOutOfRangeException("Must input 1-6 array(s).", nameof(view.Inputs));
 
-                handler.PlatformView.UpdateInputs(view.Inputs, view.ShaderSource, view.JobID, view.WorkGroupSize);
+                handler.PlatformView.UpdateInputs(view.Inputs, view.ShaderSource, view.JobID, view.WorkGroupSize, view.OutputElementType);
             }
         }
 
@@ -416,6 +455,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             [nameof(NativeGLSurfaceView.ShaderSource)] = MapInputs,
             [nameof(NativeGLSurfaceView.JobID)] = MapInputs,
             [nameof(NativeGLSurfaceView.WorkGroupSize)] = MapInputs,
+            [nameof(NativeGLSurfaceView.OutputElementType)] = MapInputs,
         };
 
         public NativeGLSurfaceViewHandler() : base(PropertyMapper)

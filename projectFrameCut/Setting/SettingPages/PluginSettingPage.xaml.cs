@@ -100,7 +100,6 @@ public partial class PluginSettingPage : ContentPage
             try
             {
                 var internalBase = new InternalApplicationPluginBase();
-                internalBase.MessagingQueue = MessagingServices.MessagingService;
                 List<IPluginBase> plugins =
                 [
                     internalBase,
@@ -131,6 +130,15 @@ public partial class PluginSettingPage : ContentPage
         drop.AllowDrop = true;
         drop.Drop += async (s, e) =>
         {
+            Dispatcher.Dispatch(() =>
+            {
+                Content = new ActivityIndicator
+                {
+                    IsRunning = true,
+                    WidthRequest = 200,
+                    HeightRequest = 200
+                };
+            });
             foreach (var item in await FileDropHelper.GetFilePathsFromDrop(e))
             {
                 await PluginService.AddAPlugin(item, this);
@@ -272,6 +280,15 @@ public partial class PluginSettingPage : ContentPage
 
                 if (result != null)
                 {
+                    Dispatcher.Dispatch(() =>
+                    {
+                        Content = new ActivityIndicator
+                        {
+                            IsRunning = true,
+                            WidthRequest = 200,
+                            HeightRequest = 200
+                        };
+                    });
                     await PluginService.AddAPlugin(result.FullPath, this);
                     BuildPPB();
                 }

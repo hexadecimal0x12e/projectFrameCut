@@ -1,4 +1,5 @@
 ﻿
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -33,7 +34,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         /// <param name="parameters"></param>
         /// <returns></returns>
-        public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null);
+        public virtual IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null) => Build(DefaultImplementType, parameters);
         /// <summary>
         /// Build the specified effect implementation type.
         /// </summary>
@@ -76,7 +77,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// </summary>
         /// <param name="parameters"></param>
         /// <returns></returns>
-        public IEffect BuildWithDefaultType(string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null);
+        public virtual IEffect BuildWithDefaultType(string? ID, string? BindedInputID, string[]? BindedInputIDs = null, Dictionary<string, object>? parameters = null) => Build(DefaultImplementType, ID, BindedInputID, BindedInputIDs, parameters);
 
         /// <summary>
         /// Build the specified effect implementation type.

@@ -1,5 +1,6 @@
 ﻿using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -23,16 +24,6 @@ namespace projectFrameCut.Render.Effect
             if (index < effect.StartPoint) return 0.0;
             if (index >= effect.EndPoint) return 1.0;
             return (double)(index - effect.StartPoint) / (effect.EndPoint - effect.StartPoint);
-        }
-
-        public static IEffect PickFromEffectCombinations(List<Func<IEffect>> EffectCombinations, EffectImplementType preferredType)
-        {
-            foreach (var item in EffectCombinations)
-            {
-                var instance = item();
-                if (instance.ImplementType == preferredType) return instance;
-            }
-            return EffectCombinations[0]();
         }
 
         public static Dictionary<string, EffectImplementType> DefaultImplementsType = new();

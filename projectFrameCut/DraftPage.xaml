@@ -85,15 +85,43 @@
                     <KeyboardAccelerator  Key="Right" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
+
+            
+        </MenuBarItem>
+
+        <MenuBarItem x:Name="ViewMenuBarItem" Text="{l:Localized Key=DraftPage_MenuBar_View}">
+            <MenuFlyoutItem Text="{l:Localized Key=AssetPage_ShowPreview}" Command="{Binding ManageWindowCommand}" CommandParameter="preview" />
+            <MenuFlyoutItem Text="{l:Localized Key=PropertyPanel}" Command="{Binding ManageWindowCommand}" CommandParameter="properties" />
+            <MenuFlyoutItem Text="{l:Localized Key=AIAssistant_ChatViewTitle}" Command="{Binding ManageWindowCommand}" CommandParameter="assistant" />
+            
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
+            
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_CloseAdditional}" Command="{Binding ManageWindowCommand}" CommandParameter="close-extra" >
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Shift', MacCatalyst='Command,Alt'}" 
+                                Key="W" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_CloseActive}" Command="{Binding ManageWindowCommand}" CommandParameter="active" >
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}" 
+                                Key="W" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_View_Reset}" Command="{Binding ResetMultiWindowViewCommand}"  >
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI='Ctrl,Shift', MacCatalyst='Command,Alt'}" 
+                                Key="R" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
 
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_ClosePopup}" Command="{Binding ClosePopupCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Key="{OnPlatform WinUI=Escape, MacCatalyst=UIKeyInputEscape}" />
                 </MenuFlyoutItem.KeyboardAccelerators>
+
             </MenuFlyoutItem>
-
-
         </MenuBarItem>
 
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs}">
@@ -148,6 +176,9 @@
                 </mw:MultiWindowItem>
                 <mw:MultiWindowItem x:Name="PropertiesSubwindow" Title="{l:Localized Key=PropertyPanel}" IsClosable="False" IsPopOutVisible="True" HorizontalOptions="Fill" VerticalOptions="Fill">
                     <Border x:Name="RightContentBorder" StrokeThickness="0" HorizontalOptions="Fill" VerticalOptions="Fill" />  
+                </mw:MultiWindowItem>
+                <mw:MultiWindowItem x:Name="AssisstantSubWindow" Title="Assistant P" HeightRequest="500" WidthRequest="400" IsPopOutVisible="True">
+                    
                 </mw:MultiWindowItem>
             </mw:MultiWindowView>
             

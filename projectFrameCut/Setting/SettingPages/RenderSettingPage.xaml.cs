@@ -158,14 +158,13 @@ public partial class RenderSettingPage : ContentPage
             }
         }
         catch (Exception ex) { Log(ex); }
-
+        finally { rootPPB.AddSeparator(); }
 #endif
 
 
         if (showMoreOpts)
         {
             rootPPB
-                .AddSeparator()
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AdvanceOpts, SettingLocalizedResources.Misc_DiagOptions_Subtitle))
                 .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.TryGetValue(int.Parse(GetSetting("render_GCOption", "0")), out var value) ? value : SettingLocalizedResources.Render_GCOption_LetCLRDoGC)
                 .AddSwitch("render_BlockWrite", SettingLocalizedResources.Render_BlockWrite, IsBoolSettingTrue("render_BlockWrite"), null);
@@ -173,7 +172,7 @@ public partial class RenderSettingPage : ContentPage
         }
         else
         {
-            rootPPB.AddSeparator().AddButton("showMoreOpts", SettingLocalizedResources.Render_AdvanceOpts_Show, null);
+            rootPPB.AddButton("showMoreOpts", SettingLocalizedResources.Render_AdvanceOpts_Show, null);
         }
 
         Content = rootPPB.ListenToChanges(SettingInvoker).BuildWithScrollView();
@@ -359,7 +358,7 @@ public partial class RenderSettingPage : ContentPage
         }
         catch (Exception ex)
         {
-            await DisplayAlert(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
+            await DisplayAlertAsync(Localized._Warn, Localized._ExceptionTemplate(ex), Localized._OK);
         }
     }
 

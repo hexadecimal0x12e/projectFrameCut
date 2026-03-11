@@ -1,5 +1,16 @@
 ﻿using Microsoft.Maui.Controls;
 using projectFrameCut.Services;
+using System.Globalization;
+using Microsoft.Maui.Handlers;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+using ResourceDictionary = Microsoft.Maui.Controls.ResourceDictionary;
+using Application = Microsoft.Maui.Controls.Application;
+
+
+
+
+
+
 
 
 
@@ -9,6 +20,8 @@ using projectFrameCut.WinUI;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Composition.SystemBackdrops;
+
 using System.Diagnostics;
 using Microsoft.UI.Windowing;
 using Microsoft.UI;
@@ -52,20 +65,6 @@ namespace projectFrameCut
             }
             catch { }
 
-            try
-            {
-                var uri = Microsoft.Maui.Storage.Preferences.Get("OpenedPjfcUri", (string?)null);
-                if (!string.IsNullOrWhiteSpace(uri))
-                {
-                    LaunchedPjfcUri = uri;
-                    // remove preference once read to avoid reprocessing
-                    Microsoft.Maui.Storage.Preferences.Remove("OpenedPjfcUri");
-                }
-            }
-            catch
-            {
-                // ignore if preferences fail
-            }
 #if WINDOWS
             AppDomain.CurrentDomain.UnhandledException += (s, e) =>
             {
@@ -75,49 +74,88 @@ namespace projectFrameCut
 
             };
 #endif
-            AppDomain.CurrentDomain.ProcessExit += (s, e) =>
-            {
-                Log("App is closing...");
-                try
-                {
-                    MauiProgram.LogWriter.Flush();
-                }
-                catch { }
-                try
-                {
-                    foreach (var item in Render.Plugin.PluginManager.LoadedPlugins)
-                    {
-                        try
-                        {
-                            item.Value.OnClosing();
-                        }
-                        catch { }
-                    }
-                }
-                catch { }
 
-            };
+        }
+
+        protected override async void OnAppLinkRequestReceived(Uri uri)
+        {
+            base.OnAppLinkRequestReceived(uri);
+
+            await Dispatcher.DispatchAsync(async () =>
+            {
+                HomePage.HasAlreadyLaunchedFromFile = false;
+                Preferences.Set("LaunchedPJFCUri", uri.ToString());
+                await Windows[0].Page!.Navigation.PopToRootAsync();
+
+            });
 
         }
 
 #if WINDOWS
         public static NavigationView MainNavView;
+        public static Microsoft.UI.Xaml.Window NativeWindow;
         public static NavigationViewItem homeItem, assetItem, debugItem, settingItem;
 #endif
 
         protected override Microsoft.Maui.Controls.Window CreateWindow(IActivationState? activationState)
         {
-            var mauiWindow = new Microsoft.Maui.Controls.Window(new AppShell());
-
-#if WINDOWS
-            mauiWindow.HandlerChanged += (s, e) =>
+            var stylePath = Path.Combine(MauiProgram.DataPath, "style.xaml");
+            var colorPath = Path.Combine(MauiProgram.DataPath, "color.xaml");
+            try
             {
-                MakeWindow(mauiWindow);
-            };
+                if (File.Exists(stylePath) && File.Exists(colorPath) && !SettingsManager.IsBoolSettingTrue("ui_DisableUserStyle"))
+                {
+                    var styleXAML = File.ReadAllText(stylePath);
+                    var colorXAML = File.ReadAllText(colorPath);
+                    var resourceDictionary = new ResourceDictionary();
+                    var colorResourceDictionary = new ResourceDictionary();
 
+                    var loadedStyle = Microsoft.Maui.Controls.Xaml.Extensions.LoadFromXaml(resourceDictionary, styleXAML) as ResourceDictionary;
+                    var loadedColor = Microsoft.Maui.Controls.Xaml.Extensions.LoadFromXaml(colorResourceDictionary, colorXAML) as ResourceDictionary;
+
+                    if (Application.Current != null)
+                    {
+                        Application.Current.Resources.MergedDictionaries.Clear();
+                        Application.Current.Resources.MergedDictionaries.Add(loadedColor);
+                        Application.Current.Resources.MergedDictionaries.Add(loadedStyle);
+                        Log("Applied user style.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Apply user style", this);
+            }
+#if WINDOWS
+            if (CultureInfo.CurrentCulture.TextInfo.IsRightToLeft || SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
+            {
+                var shell = new AppShell(false);
+                var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
+
+                shell.Items.Add(new ShellContent { Content = new HomePage(), Title = Localized.AppShell_ProjectsTab, Icon = ImageHelper.LoadFromAsset("icon_project"), Route = "home" });
+                shell.Items.Add(new ShellContent { Content = new AssetsLibraryPage(), Title = Localized.AppShell_AssetsTab, Icon = ImageHelper.LoadFromAsset("icon_asset"), Route = "assets" });
+                shell.Items.Add(new ShellContent { Content = new MainSettingsPage(), Title = Localized._Settings, Icon = ImageHelper.LoadFromAsset("icon_setting"), Route = "options" });
+                return mauiWindow;
+
+            }
+            else
+            {
+                var shell = new AppShell(true);
+                var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
+
+                mauiWindow.HandlerChanged += (s, e) =>
+                {
+                    MakeWindow(mauiWindow);
+                };
+                return mauiWindow;
+
+
+            }
+
+#else
+            return new Microsoft.Maui.Controls.Window(new AppShell());
 #endif
 
-            return mauiWindow;
         }
 
 #if WINDOWS
@@ -126,6 +164,7 @@ namespace projectFrameCut
             var platformView = mauiWindow.Handler?.PlatformView;
             if (platformView is Microsoft.UI.Xaml.Window nativeWindow)
             {
+                NativeWindow = nativeWindow;
                 var uiApp = Microsoft.UI.Xaml.Application.Current;
                 if (uiApp != null)
                 {
@@ -159,10 +198,9 @@ namespace projectFrameCut
                     CompactPaneLength = 48,
                     IsBackEnabled = true,
                     IsTitleBarAutoPaddingEnabled = true,
-                    IsSettingsVisible = false
+                    IsSettingsVisible = false,
                 };
                 MainNavView = nav;
-
 
                 homeItem = new NavigationViewItem { Content = Localized.AppShell_ProjectsTab, Tag = "HomePage", Height = 36, Padding = new(4) };
                 homeItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Folder };
@@ -230,9 +268,15 @@ namespace projectFrameCut
             }
         }
 
-        public static void HideNavBar()
+        public static async void HideNavBar()
         {
             MainNavView?.IsPaneVisible = false;
+            await Task.Delay(50);
+            if (NativeWindow != null)
+            {
+                NativeWindow.Content.InvalidateMeasure();
+                NativeWindow.Content.InvalidateArrange();
+            }
 
         }
         public static async Task ShowNavBar()
@@ -241,12 +285,17 @@ namespace projectFrameCut
                 MainNavView.IsPaneVisible = true;
 
             await Task.Delay(50);
-            var appWindow = Current?.Windows[0];
-            if (appWindow != null)
+            //var appWindow = Current?.Windows[0];
+            //if (appWindow != null)
+            //{
+            //    appWindow.Width = appWindow.Width - 8; //avoid the contents go inside navigation bar
+            //    await Task.Delay(50);
+            //    appWindow.Width = appWindow.Width + 8;
+            //}
+            if (NativeWindow != null)
             {
-                appWindow.Width = appWindow.Width - 8; //avoid the contents go inside navigation bar
-                await Task.Delay(50);
-                appWindow.Width = appWindow.Width + 8;
+                NativeWindow.Content.InvalidateMeasure();
+                NativeWindow.Content.InvalidateArrange();
             }
         }
 

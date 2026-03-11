@@ -1,6 +1,8 @@
-﻿using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+﻿using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.Sources;
 using projectFrameCut.Shared;
 using System;
@@ -9,6 +11,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Xml.Linq;
 
 namespace projectFrameCut.Render.Plugin
 {
@@ -164,7 +167,9 @@ namespace projectFrameCut.Render.Plugin
 
             if (PluginManager.LoadedPlugins.TryGetValue(type, out var plugin))
             {
-                return plugin.ClipCreator(source);
+                var clip = plugin.ClipCreator(source);
+                clip.ExtraData = source.Deserialize<ClipDraftDTO>()?.MetaData ?? new();
+                return clip;
             }
             else
             {
@@ -189,6 +194,22 @@ namespace projectFrameCut.Render.Plugin
             {
                 throw new ArgumentException($"Plugin not found: {pluginID}");
             }
+        }
+
+        public static ITransform CreateTransform(JsonElement source)
+        {
+            var plug = source.GetProperty("FromPlugin").GetString();
+            var type = source.GetProperty("TypeName").GetString();
+            if (string.IsNullOrEmpty(type) || string.IsNullOrEmpty(plug))
+            {
+                throw new ArgumentException("Invalid transform data.");
+            }
+
+            if (PluginManager.LoadedPlugins.TryGetValue(plug, out var plugin))
+            {
+                return plugin.TransformCreator(source);
+            }
+            throw new ArgumentException($"Plugin not found: {type}");
         }
 
         public static ISoundTrack CreateSoundTrack(JsonElement source)

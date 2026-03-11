@@ -46,6 +46,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public int? ResultBitPerPixel => 8;
 
         public bool EnableLock { get; set; } = false;
+        public bool StrictMode { get; set; }
         private Lock locker = new();
 
         public HttpDecoderContext(string url)

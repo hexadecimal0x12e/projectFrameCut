@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Render.Compose;
+﻿using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Compose;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
@@ -6,6 +7,7 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -35,17 +37,56 @@ namespace projectFrameCut.Render.Rendering
                 {
                     if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
-                        throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
+                        continue; //keep same behavior in Renderer
+
+                        //throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
-                    var frame = clip.GetFrame(targetFrame, targetWidth, targetHeight);
+                    IPicture frame = null!;
+                    if (clip is TransformContainer c)
+                    {
+                        if (c.Transform == null) c.ReInit();
+                        var t = c.Transform;
+                        if (t == null)
+                        {
+                            Log($"[Timeline] WARN: Transform for clip {c.Id} is null; skipping transform for frame {targetFrame}");
+                            frame = null;
+                        }
+                        else
+                        {
+                            var leftClip = video.FirstOrDefault(cc => cc.Id == t.BindedLeftClip.ToString());
+                            var rightClip = video.FirstOrDefault(cc => cc.Id == t.BindedRightClip.ToString());
+                            if (leftClip == null || rightClip == null)
+                            {
+                                Log($"[Timeline] WARN: Transform inputs not found for transform {c.Id}. Skipping frame {targetFrame}");
+                                frame = null;
+                            }
+                            else
+                            {
+                                frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, targetWidth, targetHeight, targetFrame);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        frame = clip.GetFrame(targetFrame, targetWidth, targetHeight, true);
+                    }
+                    bool isAI = false;
+                    if (clip.ExtraData.TryGetValue("IsAI", out var aiMark))
+                    {
+                        if (aiMark is bool) isAI = (bool)aiMark;
+                        else if (aiMark is string s && bool.TryParse(s, out var parsed)) isAI = parsed;
+                        else if (aiMark is JsonElement je && je.ValueKind == JsonValueKind.True) isAI = true;
+                    }
+
                     if (frame is not null)
                     {
+                        if (isAI) frame = EffectProcessing.ProcessAIWatermark(frame, null);
                         result.Add(new OneFrame(targetFrame, clip, frame));
                     }
                 }
             }
 
-            return result.OrderBy((c) => c.LayerIndex);
+            return result.OrderBy(x => x.LayerIndex >= Renderer.SubTrackOffset ? 1 : 0).ThenByDescending(x => x.LayerIndex).ThenByDescending(x => x.ParentClip.SubLayerIndex);
         }
 
         public static string GetFrameHash(IClip[] video, uint targetFrame)
@@ -53,11 +94,13 @@ namespace projectFrameCut.Render.Rendering
             List<OneFrame> result = new List<OneFrame>();
             foreach (var clip in video)
             {
-                if (clip.StartFrame <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame >= targetFrame)
+
+                if ((clip.StartFrame <= targetFrame && clip.Duration * clip.SecondPerFrameRatio + clip.StartFrame >= targetFrame) || (clip.ExtendToWholeDraft && clip.LayerIndex > Renderer.SubTrackOffset))
                 {
                     if (result.Any((c) => c.LayerIndex == clip.LayerIndex))
                     {
-                        throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
+                        continue; //keep same behavior in Renderer
+                        //throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
                     result.Add(new OneFrame(targetFrame, clip, null!));
                 }
@@ -75,11 +118,11 @@ namespace projectFrameCut.Render.Rendering
         }
 
 
-        public static IPicture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight, int targetPPB = 8)
+        public static IPicture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight, int targetPPB = 8, Action<IEffect, IPicture>? AfterEffect = null)
         {
             try
             {
-                IPicture result = Picture.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0);
+                IPicture? result = null;
                 ConcurrentDictionary<string, object> bindableEffectResultCache = new();
                 Dictionary<string, object> bindableEffectResultCache2 = new();
                 Dictionary<string, bool> producedValueTable = new();
@@ -111,9 +154,25 @@ namespace projectFrameCut.Render.Rendering
                         {
                             _ = EffectProcessing.ProcessBindableArgsEffect(frameIndex, ref effected, ref bindableEffectResultCache, bindableEffectResultCache2, srcFrame.ParentClip, steps, ref lastIsProcessStep, b, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight); //single frame render, no need to remove
                         }
+                        else if (effect is INormalEffect n)
+                        {
+                            EffectProcessing.ProcessEffect(ref effected, steps, ref lastIsProcessStep, n, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                        }
                         else
                         {
-                            EffectProcessing.ProcessEffect(ref effected, steps, ref lastIsProcessStep, effect, PluginManager.CreateComputer(effect.NeedComputer), targetWidth, targetHeight);
+                            throw new NotSupportedException($"The effect Type {effect.TypeOfEffect} {effect.TypeName} of clip {srcFrame.ParentClip.Id} is not supported. Effect ID: {effect.Id}");
+                        }
+                        if (AfterEffect is not null)
+                        {
+                            if (steps.Count > 0)
+                            {
+                                AfterEffect?.Invoke(effect, PictureProcesser.Process(steps, effected, targetPPB));
+                            }
+                            else
+                            {
+                                AfterEffect?.Invoke(effect, effected);
+
+                            }
                         }
 
 
@@ -123,12 +182,12 @@ namespace projectFrameCut.Render.Rendering
                         effected = PictureProcesser.Process(steps, effected, targetPPB);
                         steps.Clear();
                     }
-                    var mix = GetMixer(srcFrame.MixtureMode);
 
-                    result = MixtureCache.GetOrAdd(srcFrame!.MixtureMode, mix)
-                                    .Mix(result, effected,
-                                       mix.ComputerId is not null ? PluginManager.CreateComputer(mix.ComputerId) : null);
-
+                    if (result is null) result = effected;
+                    else
+                    {
+                        result = OverlayMixture.Mix(result, effected, PluginManager.CreateComputer("OverlayComputer"), targetPPB);
+                    }
                 }
                 //LogDiagnostic($"Result's diag info:{result?.GetDiagnosticsInfo() ?? "unknown"}");
                 if (result?.Width == targetWidth && result?.Height == targetHeight)
@@ -144,17 +203,20 @@ namespace projectFrameCut.Render.Rendering
                     result = Placer.Render(result, null, targetWidth, targetHeight);
                 }
             ok:
-                result = MixtureCache.GetOrAdd(
-                           MixtureMode.Overlay, GetMixer(MixtureMode.Overlay))
-                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer("OverlayComputer"))
+                result = OverlayMixture
+                               .Mix(FallBackImageGetter(targetWidth, targetHeight), result, PluginManager.CreateComputer("OverlayComputer"), targetPPB)
                                .Resize(targetWidth, targetHeight, true);
+                if (PictureProcesser.SaveDiagResult)
+                {
+                    var opId = Guid.NewGuid();
+                    File.WriteAllText(Path.Combine(PictureProcesser.DiagResultPath, $"diag-render-{frameIndex}-{opId}-stacks.txt"), PictureProcessStack.FormatProcessStackForLog(result.ProcessStack, 100000));
+                }
                 return result;
             }
             catch (Exception ex)
             {
                 Log(ex, $"Render frame {frameIndex}", "Timeline");
                 throw;
-                return new Picture(Path.Combine(AppContext.BaseDirectory, "FallbackResources", "MediaNotAvailable.png")).Resize(targetWidth, targetHeight, true);
             }
 
         }
@@ -165,17 +227,7 @@ namespace projectFrameCut.Render.Rendering
             StartY = 0
         };
 
-        private static IMixture GetMixer(MixtureMode mixtureMode)
-        {
-            switch (mixtureMode)
-            {
-                case MixtureMode.Overlay:
-                    return new OverlayMixture();
 
-                default:
-                    throw new NotSupportedException($"Mixture mode {mixtureMode} is not supported.");
-            }
-        }
 
         public static List<OverlapInfo> FindOverlaps(IEnumerable<ClipDraftDTO>? clips, uint allowedOverlapFrames = 5)
         {

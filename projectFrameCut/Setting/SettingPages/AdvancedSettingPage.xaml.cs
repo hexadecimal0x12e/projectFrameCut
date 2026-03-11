@@ -14,9 +14,20 @@ namespace projectFrameCut.Setting.SettingPages;
 
 public partial class AdvancedSettingPage : ContentPage
 {
+    private Dictionary<string, string> overrideOpts;
 
     public AdvancedSettingPage()
     {
+        overrideOpts = new Dictionary<string, string>
+        {
+            {"default", SettingLocalizedResources.General_Language_OverrideCulture_DontOverride},
+            {"zh-CN", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
+                    (__ISimpleLocalizerBase_zh_CN__._LocateDisplayName) },
+            {"ja-JP", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
+                    (__ISimpleLocalizerBase_ja_JP__._LocateDisplayName) },
+            {"ko-KR", SettingLocalizedResources.General_Language_OverrideCulture_OverrideTo
+                    (__ISimpleLocalizerBase_ko_KR__._LocateDisplayName) },
+        };
         BuildPPB();
     }
 
@@ -57,7 +68,7 @@ public partial class AdvancedSettingPage : ContentPage
             }
             else
             {
-                await DisplayAlert("Error", "Key and Value cannot be empty.", "OK");
+                await DisplayAlertAsync("Error", "Key and Value cannot be empty.", "OK");
             }
         };
 
@@ -99,11 +110,14 @@ public partial class AdvancedSettingPage : ContentPage
         .AddSwitch("DedicatedLogWindow", SettingLocalizedResources.Advanced_DedicatedLogWindow, SettingsManager.IsBoolSettingTrue("DedicatedLogWindow"))
         .AddSwitch("LogUIMessageToLogger", SettingLocalizedResources.Advanced_LogUIMessageToLogger, SettingsManager.IsBoolSettingTrue("LogUIMessageToLogger"))
         .AddSwitch("UseSystemFont", SettingLocalizedResources.Advanced_UseSystemFont, SettingsManager.IsBoolSettingTrue("UseSystemFont"))
+        .AddSwitch("ui_ForceUseShell", SettingLocalizedResources.Advanced_UseMAUIShell, SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
+        .AddSwitch("ui_ShowWelcomePage", SettingLocalizedResources.Advanced_ShowWelcomePage, SettingsManager.IsBoolSettingTrue("ui_ShowWelcomePage"))
         .AddSeparator()
         .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
+        .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts.TryGetValue(GetSetting("OverrideCulture", "default"), out var k) ? k : "", null)
         .AddSeparator()
         .AddText(SettingLocalizedResources.Advanced_ExportPlugin, fontSize: 20)
-        .AddPicker("exportPlugin", SettingLocalizedResources.Advanced_ExportPlugin_Select, projectFrameCut.Render.Plugin.PluginManager.LoadedPlugins.Select(c => c.Key).ToArray(), "")
+        .AddPicker("exportPlugin", SettingLocalizedResources.Advanced_ExportPlugin_Select, projectFrameCut.Render.Plugin.PluginManager.LoadedPlugins.Select(c => c.Key).ToArray(), "Pick a plugin here")
         .AddSeparator()
         .AddButton(SettingLocalizedResources.Diag_OpenBaseData, async (s, e) =>
         {
@@ -115,6 +129,7 @@ public partial class AdvancedSettingPage : ContentPage
             await FileSystemService.OpenFileAsync(jsonPath);
         })
         .AddText(new SingleLineLabel(SettingLocalizedResources.Advanced_Reset, 25))
+        .AddButton(SettingLocalizedResources.Advanced_ShowWelcomePage, async (_, _) => await Navigation.PushAsync(new SetupPage()))
         .AddButton(SettingLocalizedResources.Advanced_FixDraft, async (s, e) =>
         {
             if (!await DisplayAlertAsync(Title, SettingLocalizedResources.Advanced_FixDraft_Info, Localized._OK, Localized._Cancel)) return;
@@ -156,7 +171,8 @@ public partial class AdvancedSettingPage : ContentPage
 
                             if (modified)
                             {
-                                File.WriteAllText(projectFile, jsonText);
+                                File.WriteAllText(Path.ChangeExtension(projectFile, "pjfc"), jsonText);
+                                File.Delete(projectFile);
                                 fixedCount++;
                             }
                         }
@@ -215,6 +231,7 @@ public partial class AdvancedSettingPage : ContentPage
         {
             if (!await DisplayAlertAsync(Title, SettingLocalizedResources.Advanced_AreYouSure, Localized._OK, Localized._Cancel)) return;
             Settings.TryRemove("UserID", out _);
+            ToggleSaveSignal();
             await MainSettingsPage.RebootApp(this);
         })
         .ListenToChanges(async (e) =>
@@ -233,7 +250,14 @@ public partial class AdvancedSettingPage : ContentPage
                             var pluginPem = await SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}");
                             if (string.IsNullOrEmpty(pluginPem))
                             {
-                                throw new FileNotFoundException("Plugin PEM not found in secure storage", pluginID);
+                                string? localizedPluginBrokenReason = null;
+                                try
+                                {
+                                    localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_SignMissing;
+                                }
+                                catch { }
+                                failReason = localizedPluginBrokenReason ?? "Plugin's signature is missing or corrupted. Try reinstall it.";
+                                throw new FileNotFoundException(failReason, pluginID);
                             }
 
                             if (!File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.enc")) || !File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.sig")) || !File.Exists(Path.Combine(pluginRoot, "hashtable.json.enc")))
@@ -293,6 +317,27 @@ public partial class AdvancedSettingPage : ContentPage
                         failReason = localizedPluginBrokenReason ?? $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
                     }
                     await DisplayAlertAsync(Localized._Error, $"failed\r\n({failReason ?? "unknown"})", Localized._OK);
+                }
+                else if (e.Id == "OverrideCulture")
+                {
+                    var DispName = e.Value?.ToString() ?? "default";
+                    if (DispName == SettingLocalizedResources.General_Language_OverrideCulture_DontOverride)
+                    {
+                        Settings.Remove("OverrideCulture", out _);
+                        ToggleSaveSignal();
+                    }
+                    else
+                    {
+                        try
+                        {
+                            var overrideLocate = overrideOpts.ReverseLookup(DispName);
+                            WriteSetting("OverrideCulture", overrideLocate);
+                        }
+                        catch { }
+                    }
+
+                    await MainSettingsPage.RebootApp(this);
+
                 }
                 return;
             }

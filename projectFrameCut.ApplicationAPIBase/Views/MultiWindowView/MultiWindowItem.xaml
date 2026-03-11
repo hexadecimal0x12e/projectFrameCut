@@ -43,7 +43,7 @@
                             <HorizontalStackLayout Grid.Column="0" Spacing="2" Margin="5,0,-5,0" VerticalOptions="Center"
                                                    IsVisible="{TemplateBinding IsNavigationVisible}">
                                 <!-- Back Button -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="BackBtn" ToolTipProperties.Text="Back">
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="BackBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_GoBack}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnBackTapped"/>
                                     </Border.GestureRecognizers>
@@ -57,7 +57,7 @@
                                 </Border>
 
                                 <!-- Forward Button -->
-                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="ForwardBtn" ToolTipProperties.Text="Forward">
+                                <Border Style="{StaticResource WindowButtonStyle}" x:Name="ForwardBtn" ToolTipProperties.Text="{l:Localized Key=MultiWindowView_GoForward}">
                                     <Border.GestureRecognizers>
                                         <TapGestureRecognizer Tapped="OnForwardTapped"/>
                                     </Border.GestureRecognizers>

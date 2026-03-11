@@ -2,6 +2,7 @@
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Handlers;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -87,26 +88,135 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             }
             """;
 
+        public const string ShaderColorSrcU16 =
+            """
+            #version 310 es            
+            layout(local_size_x = 256) in;
+
+            layout(std430, binding = 0) buffer AAlphaBuffer { float aAlpha[]; };
+            layout(std430, binding = 1) buffer ABuffer { float a []; };
+            layout(std430, binding = 2) buffer BAlphaBuffer { float bAlpha []; };
+            layout(std430, binding = 3) buffer BBuffer { float b []; };
+            layout(std430, binding = 6) buffer CBuffer { uint c []; };
+
+            void main()
+            {
+                uint i = gl_GlobalInvocationID.x;
+                float aA = aAlpha[i];
+                float bA = bAlpha[i];
+
+                float outC;
+                if (aA == 1.0)
+                {
+                    outC = a[i];
+                }
+                else if (aA <= 0.05)
+                {
+                    outC = b[i];
+                }
+                else
+                {
+                    float outA = aA + bA * (1.0 - aA);
+                    if (outA < 1e-6)
+                    {
+                        outC = 0.0;
+                    }
+                    else
+                    {
+                        float aC = a[i] * aA / outA;
+                        float bC = b[i] * bA * (1.0 - aA) / outA;
+                        outC = aC + bC;
+                    }
+                }
+
+                outC = clamp(outC, 0.0, 65535.0);
+                c[i] = uint(outC + 0.5);
+            }
+            """;
+
+        public const string ShaderColorSrcU8 =
+            """
+            #version 310 es            
+            layout(local_size_x = 256) in;
+
+            layout(std430, binding = 0) buffer AAlphaBuffer { float aAlpha[]; };
+            layout(std430, binding = 1) buffer ABuffer { float a []; };
+            layout(std430, binding = 2) buffer BAlphaBuffer { float bAlpha []; };
+            layout(std430, binding = 3) buffer BBuffer { float b []; };
+            layout(std430, binding = 6) buffer CBuffer { uint c []; };
+
+            void main()
+            {
+                uint i = gl_GlobalInvocationID.x;
+                float aA = aAlpha[i];
+                float bA = bAlpha[i];
+
+                float outC;
+                if (aA == 1.0)
+                {
+                    outC = a[i];
+                }
+                else if (aA <= 0.05)
+                {
+                    outC = b[i];
+                }
+                else
+                {
+                    float outA = aA + bA * (1.0 - aA);
+                    if (outA < 1e-6)
+                    {
+                        outC = 0.0;
+                    }
+                    else
+                    {
+                        float aC = a[i] * aA / outA;
+                        float bC = b[i] * bA * (1.0 - aA) / outA;
+                        outC = aC + bC;
+                    }
+                }
+
+                outC = clamp(outC, 0.0, 65535.0);
+                float out8 = outC / 257.0;
+                out8 = clamp(out8, 0.0, 255.0);
+                c[i] = uint(out8 + 0.5);
+            }
+            """;
+
         public static Lock locker = new();
 
     }
 
-    public class OverlayComputer : IComputer
+    public class OverlayComputer : IComputer  
     {
         public string FromPlugin => "projectFrameCut.Render.AndroidOpenGL.Platforms.Android.OpenGLComputers";
         public string SupportedEffectOrMixture => "Overlay";
 
         public object[] Compute(object[] args)
         {
-            // args: [A, B, aAlpha, bAlpha]
+            // args: [A, B, aAlpha, bAlpha, outputBpp, basePixels]
             var A = args[0] as float[];
             var B = args[1] as float[];
-            var aAlpha = args[2] as float[];
-            var bAlpha = args[3] as float[];
+            var aAlpha = args.Length > 2 ? (args[2] as float[]) : null;
+            var bAlpha = args.Length > 3 ? (args[3] as float[]) : null;
+            var outputBpp = args.Length > 4 ? Convert.ToInt32(args[4]) : 16;
+            var actualPixels = args.Length > 5 ? Convert.ToInt32(args[5]) : A?.Length ?? 0;
 
-            // Ensure inputs are not null
-            if (aAlpha == null) aAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
-            if (bAlpha == null) bAlpha = Enumerable.Repeat(1f, A.Length).ToArray();
+            // A and B may be larger than actualPixels due to ArrayPool.Rent
+            // Trim them to the actual size to match alpha arrays
+            float[] trimmedA = new float[actualPixels];
+            float[] trimmedB = new float[actualPixels];
+            Array.Copy(A!, 0, trimmedA, 0, actualPixels);
+            Array.Copy(B!, 0, trimmedB, 0, actualPixels);
+
+            // Ensure alpha arrays match the actual pixel count
+            if (aAlpha == null) aAlpha = Enumerable.Repeat(1f, actualPixels).ToArray();
+            if (bAlpha == null) bAlpha = Enumerable.Repeat(1f, actualPixels).ToArray();
+            
+            // Validate all arrays have the same length
+            if (aAlpha.Length != actualPixels || bAlpha.Length != actualPixels)
+            {
+                throw new InvalidDataException($"Alpha array length mismatch: aAlpha={aAlpha.Length}, bAlpha={bAlpha.Length}, expected={actualPixels}");
+            }
 
             using (ShaderLibrary.locker.EnterScope())
             {
@@ -120,10 +230,40 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                         Inputs = new float[][] { aAlpha, bAlpha },
                         WidthRequest = 50,
                         HeightRequest = 50,
-                        JobID = "OverlayComputer"
+                        JobID = "OverlayComputer",
+                        OutputElementType = GLComputeView.OutputElementType.Float32
                     };
+                    
+                    // Wait for Handler to be created/attached
+                    var handlerReadyTcs = new TaskCompletionSource<NativeGLSurfaceViewHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    void OnHandlerChanged(object? sender, EventArgs e)
+                    {
+                        if (accelerator.Handler is NativeGLSurfaceViewHandler handler)
+                        {
+                            accelerator.HandlerChanged -= OnHandlerChanged;
+                            handlerReadyTcs.TrySetResult(handler);
+                        }
+                    }
+                    accelerator.HandlerChanged += OnHandlerChanged;
+                    
                     ComputerHelper.AddGLViewHandler?.Invoke(accelerator);
-                    var handler = accelerator.Handler as NativeGLSurfaceViewHandler;
+                    
+                    // Check if handler is already set (in case HandlerChanged fired before we subscribed)
+                    if (accelerator.Handler is NativeGLSurfaceViewHandler existingHandler)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        handlerReadyTcs.TrySetResult(existingHandler);
+                    }
+                    
+                    // Wait for handler with timeout
+                    var handlerWaitTask = handlerReadyTcs.Task;
+                    if (await Task.WhenAny(handlerWaitTask, Task.Delay(TimeSpan.FromSeconds(10))) != handlerWaitTask)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        throw new TimeoutException("Handler creation timed out after 10 seconds.");
+                    }
+                    var handler = await handlerWaitTask;
+                    
                     if (handler?.PlatformView is not GLComputeView glView)
                         throw new InvalidOperationException("Accelerator is not ready or not attached.");
 
@@ -133,16 +273,55 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                         throw new TimeoutException("GLComputeView.WaitUntilReadyAsync timed out after 30 seconds.");
                     await readyTask; // Propagate any exception
 
-                    var alphaResult = await glView.RunComputeAsync();
+                    var alphaResult = (float[])await glView.RunComputeAsync(GLComputeView.OutputElementType.Float32);
 
                     // 2. Compute Color
-                    accelerator.ShaderSource = ShaderLibrary.ShaderColorSrc;
-                    accelerator.Inputs = new float[][] { aAlpha, A, bAlpha, B };
+                    if (outputBpp == 8)
+                    {
+                        accelerator.ShaderSource = ShaderLibrary.ShaderColorSrcU8;
+                        accelerator.OutputElementType = GLComputeView.OutputElementType.UInt32;
+                    }
+                    else if (outputBpp == 16)
+                    {
+                        accelerator.ShaderSource = ShaderLibrary.ShaderColorSrcU16;
+                        accelerator.OutputElementType = GLComputeView.OutputElementType.UInt32;
+                    }
+                    else
+                    {
+                        accelerator.ShaderSource = ShaderLibrary.ShaderColorSrc;
+                        accelerator.OutputElementType = GLComputeView.OutputElementType.Float32;
+                    }
+                    accelerator.Inputs = new float[][] { aAlpha, trimmedA, bAlpha, trimmedB };
                     NativeGLSurfaceViewHandler.MapInputs(handler, accelerator);
 
-                    var colorResult = await glView.RunComputeAsync();
+                    var colorResult = await glView.RunComputeAsync(accelerator.OutputElementType);
 
-                    return new float[][] { colorResult, alphaResult };
+                    if (outputBpp == 8)
+                    {
+                        var colorU32 = (uint[])colorResult;
+                        var outputU8 = new byte[colorU32.Length];
+                        for (int i = 0; i < colorU32.Length; i++)
+                        {
+                            uint v = colorU32[i];
+                            if (v > 255u) v = 255u;
+                            outputU8[i] = (byte)v;
+                        }
+                        return new object[] { outputU8, alphaResult };
+                    }
+                    if (outputBpp == 16)
+                    {
+                        var colorU32 = (uint[])colorResult;
+                        var outputU16 = new ushort[colorU32.Length];
+                        for (int i = 0; i < colorU32.Length; i++)
+                        {
+                            uint v = colorU32[i];
+                            if (v > 65535u) v = 65535u;
+                            outputU16[i] = (ushort)v;
+                        }
+                        return new object[] { outputU16, alphaResult };
+                    }
+
+                    return new object[] { (float[])colorResult, alphaResult };
                 });
 
                 // Use Task.Wait with timeout instead of .Result to detect deadlocks
@@ -151,7 +330,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     throw new TimeoutException($"OverlayComputer.Compute timed out after 60 seconds - likely deadlock due to main thread congestion. Consider reducing MaxThreads on Android.");
                 }
 
-                var result = mainThreadTask.Result;
+                var result = (object[])TaskHelper.SyncWait(() => mainThreadTask, CancellationToken.None);
 
                 if (result is null)
                     throw new InvalidOperationException($"OverlayComputer Compute failed: accelerator returned null result.");
@@ -174,7 +353,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
         public object[] Compute(object[] args)
         {
 
-            // args: [aR, aG, aB, sourceA, [toRemoveR], [toRemoveG], [toRemoveB], [range]]
+            // args: [aR, aG, aB, sourceA, [toRemoveR], [toRemoveG], [toRemoveB], [range], [actualPixels]]
             var aR = args[0] as float[];
             var aG = args[1] as float[];
             var aB = args[2] as float[];
@@ -184,6 +363,12 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
             var toRemoveG = (ushort)args[5];
             var toRemoveB = (ushort)args[6];
             var range = (ushort)args[7];
+            
+            // Validate all input arrays have the same length
+            if (aR!.Length != aG!.Length || aR.Length != aB!.Length || aR.Length != sourceA!.Length)
+            {
+                throw new InvalidDataException($"Input array length mismatch: aR={aR.Length}, aG={aG.Length}, aB={aB.Length}, sourceA={sourceA.Length}");
+            }
 
             int lowR = Math.Max(0, toRemoveR - range);
             int highR = Math.Min(65535, toRemoveR + range);
@@ -229,10 +414,40 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                         Inputs = new float[][] { aR, aG, aB, sourceA },
                         WidthRequest = 50,
                         HeightRequest = 50,
-                        JobID = "RemoveColorComputer"
+                        JobID = "RemoveColorComputer",
+                        OutputElementType = GLComputeView.OutputElementType.Float32
                     };
+                    
+                    // Wait for Handler to be created/attached
+                    var handlerReadyTcs = new TaskCompletionSource<NativeGLSurfaceViewHandler>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    void OnHandlerChanged(object? sender, EventArgs e)
+                    {
+                        if (accelerator.Handler is NativeGLSurfaceViewHandler handler)
+                        {
+                            accelerator.HandlerChanged -= OnHandlerChanged;
+                            handlerReadyTcs.TrySetResult(handler);
+                        }
+                    }
+                    accelerator.HandlerChanged += OnHandlerChanged;
+                    
                     ComputerHelper.AddGLViewHandler?.Invoke(accelerator);
-                    var handler = accelerator.Handler as NativeGLSurfaceViewHandler;
+                    
+                    // Check if handler is already set (in case HandlerChanged fired before we subscribed)
+                    if (accelerator.Handler is NativeGLSurfaceViewHandler existingHandler)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        handlerReadyTcs.TrySetResult(existingHandler);
+                    }
+                    
+                    // Wait for handler with timeout
+                    var handlerWaitTask = handlerReadyTcs.Task;
+                    if (await Task.WhenAny(handlerWaitTask, Task.Delay(TimeSpan.FromSeconds(10))) != handlerWaitTask)
+                    {
+                        accelerator.HandlerChanged -= OnHandlerChanged;
+                        throw new TimeoutException("Handler creation timed out after 10 seconds.");
+                    }
+                    var handler = await handlerWaitTask;
+                    
                     if (handler?.PlatformView is not GLComputeView glView)
                         throw new InvalidOperationException("Accelerator is not ready or not attached.");
 
@@ -242,7 +457,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                         throw new TimeoutException("GLComputeView.WaitUntilReadyAsync timed out after 30 seconds.");
                     await readyTask; // Propagate any exception
 
-                    return await glView.RunComputeAsync();
+                    return await glView.RunComputeAsync(GLComputeView.OutputElementType.Float32);
                 });
 
                 // Use Task.Wait with timeout instead of .Result to detect deadlocks
@@ -251,7 +466,7 @@ namespace projectFrameCut.Render.AndroidOpenGL.Platforms.Android
                     throw new TimeoutException($"RemoveColorComputer.Compute timed out after 60 seconds - likely deadlock due to main thread congestion. Consider reducing MaxThreads on Android.");
                 }
 
-                float[] result = mainThreadTask.Result;
+                var result = TaskHelper.SyncWait(() => mainThreadTask, CancellationToken.None);
 
                 if (result is null)
                     throw new InvalidOperationException($"RemoveColorComputer Compute failed: accelerator returned null result.");

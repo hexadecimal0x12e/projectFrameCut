@@ -22,5 +22,14 @@ namespace projectFrameCut.ApplicationAPIBase.Views.TabbedView
             get => (bool)GetValue(IsSelectedProperty);
             set => SetValue(IsSelectedProperty, value);
         }
+
+        public static readonly BindableProperty TagProperty =
+            BindableProperty.Create(nameof(Tag), typeof(string), typeof(TabbedViewItem), "");
+
+        public string Tag
+        {
+            get => (string)GetValue(TagProperty);
+            set => SetValue(TagProperty, value);
+        }
     }
 }

@@ -21,7 +21,7 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
 
         /// <summary>
         /// Trying to load PNG image to a Microsoft.Maui.Controls.Image control.
-
+        /// </summary>
         public static async Task ForceLoadPNGToAImage(this Microsoft.Maui.Controls.Image source, string path)
         {
             var exists = System.IO.File.Exists(path);
@@ -126,8 +126,9 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
                 }
             }
             return ImageSource.FromFile(Path.Combine(AppContext.BaseDirectory, assetName + ".scale-100.png"));
-#endif
+#else
             return ImageSource.FromFile(assetName);
+#endif
         }
 
         /// <summary>
@@ -139,63 +140,16 @@ namespace projectFrameCut.ApplicationAPIBase.Helpers
         {
             if (picture == null) return null;
 
-            IPicture<ushort>? p16 = null;
-            bool disposeP16 = false;
-
-            if (picture is IPicture<ushort> casted)
-            {
-                p16 = casted;
-            }
-            else
-            {
-                var converted = picture.ToBitPerPixel(IPicture.PicturePixelMode.UShortPicture);
-                if (converted is IPicture<ushort> c)
-                {
-                    p16 = c;
-                    disposeP16 = true;
-                }
-            }
-
-            if (p16 == null) return null;
-
             try
             {
-                int width = p16.Width;
-                int height = p16.Height;
-                using var img = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(width, height);
-
-                img.ProcessPixelRows(accessor =>
-                {
-                    var r = p16.r;
-                    var g = p16.g;
-                    var b = p16.b;
-                    var a = p16.a;
-                    bool hasAlpha = p16.hasAlphaChannel && a != null;
-
-                    for (int y = 0; y < height; y++)
-                    {
-                        var row = accessor.GetRowSpan(y);
-                        int offset = y * width;
-                        for (int x = 0; x < width; x++)
-                        {
-                            int i = offset + x;
-                            byte R = (byte)(r[i] >> 8);
-                            byte G = (byte)(g[i] >> 8);
-                            byte B = (byte)(b[i] >> 8);
-                            byte A = hasAlpha ? (byte)(a[i] * 255f) : (byte)255;
-                            row[x] = new SixLabors.ImageSharp.PixelFormats.Rgba32(R, G, B, A);
-                        }
-                    }
-                });
-
                 var ms = new MemoryStream();
+                using var img = picture.SaveToSixLaborsImage(16, true, false);
                 img.SaveAsPng(ms);
                 var bytes = ms.ToArray();
                 return ImageSource.FromStream(() => new MemoryStream(bytes));
             }
             finally
             {
-                if (disposeP16) p16.Dispose();
             }
         }
 

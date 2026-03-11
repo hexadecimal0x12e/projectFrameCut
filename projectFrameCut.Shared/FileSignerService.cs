@@ -1,10 +1,12 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace projectFrameCut.Shared
 {
+    [DebuggerNonUserCode()]
     public static class FileSignerService 
     {
         public static (string publicKeyPem, string privateKeyPem) GenerateKeyPair(int keySize = 2048)

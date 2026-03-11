@@ -91,8 +91,8 @@ namespace projectFrameCut.Render.Benchmark
                     MixtureMode = MixtureMode.Overlay,
                     TextEntries =
                     [
-                        new TextClip.TextClipEntry("projectFrameCut Benchmark", 80, 80, "Arial", 72, 65535, 65535, 65535, 1.0f),
-                        new TextClip.TextClipEntry("SolidColorClip + Effects", 90, 180, "Arial", 44, 65535, 50000, 20000, 1.0f),
+                        new TextClipEntry("projectFrameCut Benchmark", 80, 80, "Arial", 72, 65535, 65535, 65535, 1.0f),
+                        new TextClipEntry("SolidColorClip + Effects", 90, 180, "Arial", 44, 65535, 50000, 20000, 1.0f),
                     ],
                     Effects =
                     [
@@ -142,8 +142,8 @@ namespace projectFrameCut.Render.Benchmark
                     MixtureMode = MixtureMode.Overlay,
                     TextEntries =
                     [
-                        new TextClip.TextClipEntry("基准测试", 520, 420, "HarmonyOS_Sans_SC_Regular", 120, 65535, 40000, 8000, 1.0f),
-                        new TextClip.TextClipEntry("ZoomIn / Crop / Resize", 500, 560, "HarmonyOS_Sans_SC_Regular", 52, 50000, 65535, 50000, 1.0f),
+                        new TextClipEntry("基准测试", 520, 420, "HarmonyOS_Sans_SC_Regular", 120, 65535, 40000, 8000, 1.0f),
+                        new TextClipEntry("ZoomIn / Crop / Resize", 500, 560, "HarmonyOS_Sans_SC_Regular", 52, 50000, 65535, 50000, 1.0f),
                     ],
                     Effects =
                     [

@@ -41,17 +41,6 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         /// <returns></returns>
         public IPictureProcessStep GetStep(IPicture source, uint index, int targetWidth, int targetHeight);
 
-
-        IPicture IEffect.Render(IPicture source, IComputer? computer, int targetWidth, int targetHeight)
-        {
-            throw new InvalidOperationException($"Cast this {TypeName} to IContinuousEffect, and call IContinuousEffect.Render().");
-        }
-
-        IPictureProcessStep IEffect.GetStep(IPicture source, int targetWidth, int targetHeight)
-        {
-            throw new InvalidOperationException($"Cast this {TypeName} to IContinuousEffect, and call IContinuousEffect.GetStep().");
-        }
-
         /// <summary>
         /// If you'd like to initialize the effect before use, override it.
         /// </summary>
@@ -62,6 +51,9 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         bool IEffect.IsNormalEffect => false;
         bool IEffect.IsContinuousEffect => true;
         bool IEffect.IsBindableArgsEffect => false;
+
+        EffectType IEffect.TypeOfEffect => EffectType.ContinuousEffect;
+
     }
 
 }

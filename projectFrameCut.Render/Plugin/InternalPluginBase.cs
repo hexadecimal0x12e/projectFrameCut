@@ -14,6 +14,7 @@ using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Benchmark;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Compose;
+using projectFrameCut.Render.Transform;
 
 namespace projectFrameCut.Render.Plugin;
 
@@ -28,6 +29,8 @@ public class InternalPluginBase : IPluginBase
     public string PluginID => InternalPluginBaseID;
 
     public int PluginAPIVersion => IPluginBase.CurrentPluginAPIVersion;
+
+    public int PluginAPIMinorVersion => 1;
 
     public string Name => "Internal fundamental plugin";
 
@@ -58,6 +61,7 @@ public class InternalPluginBase : IPluginBase
         {"Place",  new(() => new PlaceEffect_ImageSharp())},
         {"Crop",  new(() => new CropEffect_ImageSharp())},
         {"Resize",  new(() => new ResizeEffect_ImageSharp())},
+        {"Blur",  new(() => new BlurEffect_ImageSharp())},
     };
 
     public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -66,12 +70,13 @@ public class InternalPluginBase : IPluginBase
         {"Crop", new CropEffectFactory()},
         {"Resize", new ResizeEffectFactory()},
         {"RemoveColor", new RemoveColorEffectFactory()},
+        {"Blur", new BlurEffectFactory()},
     };
 
-    public Dictionary<string, Func<IMixture>> MixtureProvider => new Dictionary<string, Func<IMixture>>
-    {
-        {"Overlay", new(() => new OverlayMixture()) }
-    };
+    //public Dictionary<string, Func<IMixture>> MixtureProvider => new Dictionary<string, Func<IMixture>>
+    //{
+    //    {"Overlay", new(() => new OverlayMixture()) }
+    //};
 
     public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>
     {
@@ -109,11 +114,13 @@ public class InternalPluginBase : IPluginBase
         { "MaskApplier", new MaskApplierFactory() },
         { "StraightLineMovementValueProducer",new StraightLineMovementValueProducerFactory() },
         { "PointPlacer", new PointPlacerFactory() },
+#if DEBUG
         { "MockValueProvider",  new MockValueProviderFactory() },
         { "MockOneToOneProcessor",  new MockOneToOneProcessorFactory() },
         { "MockManyToOneProcessor",  new MockManyToOneProcessorFactory() },
         { "MockOneInputResultGenerator",  new MockOneInputResultGeneratorFactory() },
         { "MockManyInputResultGenerator",  new MockManyInputResultGeneratorFactory() },
+#endif
     };
 
 
@@ -126,12 +133,12 @@ public class InternalPluginBase : IPluginBase
     };
 
     public Dictionary<string, Func<string, IVideoSource>> VideoSourceProvider =>
-        (((MessagingQueue?.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccel"]) ?? "true") is string hwaccel && bool.TryParse(hwaccel, out var result) && result)
-            ? new List<KeyValuePair<string, Func<string, IVideoSource>>>([new("DecoderContextHW", new((p) => new DecoderContextHW(p)))])
+        (HWAccelOptionGetter() ? new List<KeyValuePair<string, Func<string, IVideoSource>>>([new("DecoderContextHW", new((p) => new DecoderContextHW(p)))])
             : new List<KeyValuePair<string, Func<string, IVideoSource>>>([]))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext8Bit", new((p) => new DecoderContext8Bit(p))))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("DecoderContext16Bit", new((p) => new DecoderContext16Bit(p))))
         .Append(new KeyValuePair<string, Func<string, IVideoSource>>("HttpDecoderContext", new((p) => new HttpDecoderContext(p))))
+        .Append(new KeyValuePair<string, Func<string, IVideoSource>>("RPSVDecoderContext", new((p) => new RawPictureSequenceStreamVideoDecoderContext(p))))
         .ToDictionary();
 
 
@@ -156,9 +163,13 @@ public class InternalPluginBase : IPluginBase
         {"BlackHoleWriter", new((_) => new BlackholeVideoWriter()) }
     };
 
-    public IMessagingService MessagingQueue { get; set; }
-
-    public static IMessagingService PluginMessagingQueue { get; private set; }
+    public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider => new Dictionary<string, Func<Guid, Guid, ITransform>>
+    {
+        {
+            "Crossfade",
+            (prevId, nextId) => new CrossfadeTransform { PreviousClipId = prevId, NextClipId = nextId }
+        }
+    };
 
     IClip IPluginBase.ClipCreator(JsonElement element)
     {
@@ -171,6 +182,7 @@ public class InternalPluginBase : IPluginBase
             ClipMode.SolidColorClip => element.Deserialize<SolidColorClip>() ?? throw new NullReferenceException(),
             ClipMode.TextClip => element.Deserialize<TextClip>() ?? throw new NullReferenceException(),
             ClipMode.AudioClip => element.Deserialize<SoundTrackToClipWrapper>() ?? throw new NullReferenceException(),
+            ClipMode.TransformClip => element.Deserialize<TransformContainer>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
         };
     }
@@ -186,6 +198,17 @@ public class InternalPluginBase : IPluginBase
         };
     }
 
+    ITransform IPluginBase.TransformCreator(JsonElement element)
+    {
+        var typeName = element.GetProperty("TypeName").GetString();
+        return typeName switch
+        {
+            "Crossfade" => element.Deserialize<CrossfadeTransform>() ?? throw new NullReferenceException("Failed to deserialize CrossfadeTransform."),
+            "ExternalSourceTransform" => element.Deserialize<ExternalSourceTransform>() ?? throw new NullReferenceException("Failed to deserialize ExternalSourceTransform."),
+            _ => throw new NotSupportedException($"Unknown or unsupported transform type '{typeName}'.")
+        };
+    }
+
     string? IPluginBase.ReadLocalizationItem(string key, string locate)
     {
         var loc = ISimpleLocalizerBase_PropertyPanel.GetMapping().FirstOrDefault(x => x.Key == locate, ISimpleLocalizerBase_PropertyPanel.GetMapping().First()).Value;
@@ -195,16 +218,20 @@ public class InternalPluginBase : IPluginBase
 
     bool IPluginBase.OnLoaded(out string FailedReason)
     {
+        try
+        {
+            TextClip.GetFont(); //build font cache
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Init Fone cache", this);
+        }
         FailedReason = "";
-        PluginMessagingQueue = MessagingQueue;
         return true;
     }
 
-    ProjectJSONStructure? IPluginBase.OnProjectLoad(ProjectJSONStructure project)
-    {
-        PluginMessagingQueue = MessagingQueue;
-        return null;
-    }
+
+    public static Func<bool> HWAccelOptionGetter = new(() => ((GlobalPluginHelper.MessagingService?.Call("projectFrameCut.Program", "GetSetting", ["codec_PreferredHWAccel"]) ?? "true") is string hwaccel && bool.TryParse(hwaccel, out var result) && result));
 
 }
 

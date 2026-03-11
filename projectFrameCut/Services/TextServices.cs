@@ -1,5 +1,8 @@
-﻿using projectFrameCut.Render.ClipsAndTracks;
+﻿using Kawazu;
+using projectFrameCut.Render.ClipsAndTracks;
 using projectFrameCut.Render.Plugin;
+using Microsoft.Maui.Controls;
+using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Shared;
 using SixLabors.Fonts;
 using SixLabors.Fonts.Unicode;
@@ -9,134 +12,27 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.Unicode;
 using TinyPinyin;
-using Kawazu;
-using static projectFrameCut.Services.TextHelper;
+using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
 using Color = SixLabors.ImageSharp.Color;
 using Font = SixLabors.Fonts.Font;
 using HorizontalAlignment = SixLabors.Fonts.HorizontalAlignment;
 using PointF = SixLabors.ImageSharp.PointF;
 using VerticalAlignment = SixLabors.Fonts.VerticalAlignment;
-using System.Diagnostics;
-using System.IO.Compression;
+using projectFrameCut.ApplicationAPIBase.Views.Pickers;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 
 namespace projectFrameCut.Services
 {
-    public static class TextHelper
+    public static class TextServices
     {
-        public enum TextLanguage
-        {
-            Unknown,
-            English,
-            Chinese,
-            Japanese,
-            Korean,
-            Russian,
-            Thai,
-            Arabic
-        }
-
-        /// <summary>
-        /// 从语言代码转换为 TextLanguage 枚举
-        /// </summary>
-        /// <param name="languageCode">语言代码，如 "zh-CN", "en", "ja-JP" 等</param>
-        /// <returns>对应的 TextLanguage 枚举值</returns>
-        public static TextLanguage FromLanguageCode(string languageCode)
-        {
-            if (string.IsNullOrEmpty(languageCode))
-            {
-                return TextLanguage.Unknown;
-            }
-
-            // 标准化为小写并提取主语言代码
-            var code = languageCode.ToLowerInvariant().Split('-', '_')[0];
-
-            return code switch
-            {
-                "zh" => TextLanguage.Chinese,
-                "ja" => TextLanguage.Japanese,
-                "ko" => TextLanguage.Korean,
-                "ru" => TextLanguage.Russian,
-                "th" => TextLanguage.Thai,
-                "ar" => TextLanguage.Arabic,
-                "en" => TextLanguage.English,
-                _ => TextLanguage.Unknown
-            };
-        }
-
-        /// <summary>
-        /// 从 TextLanguage 枚举转换为语言代码
-        /// </summary>
-        /// <param name="language">TextLanguage 枚举值</param>
-        /// <param name="includeRegion">是否包含区域代码，默认为 false</param>
-        /// <returns>语言代码字符串，如 "zh", "en", "ja" 等</returns>
-        public static string ToLanguageCode(TextLanguage language, bool includeRegion = false)
-        {
-            if (includeRegion)
-            {
-                return language switch
-                {
-                    TextLanguage.Chinese => "zh-CN",
-                    TextLanguage.Japanese => "ja-JP",
-                    TextLanguage.Korean => "ko-KR",
-                    TextLanguage.Russian => "ru-RU",
-                    TextLanguage.Thai => "th-TH",
-                    TextLanguage.Arabic => "ar-SA",
-                    TextLanguage.English => "en-US",
-                    _ => string.Empty
-                };
-            }
-            else
-            {
-                return language switch
-                {
-                    TextLanguage.Chinese => "zh",
-                    TextLanguage.Japanese => "ja",
-                    TextLanguage.Korean => "ko",
-                    TextLanguage.Russian => "ru",
-                    TextLanguage.Thai => "th",
-                    TextLanguage.Arabic => "ar",
-                    TextLanguage.English => "en",
-                    _ => string.Empty
-                };
-            }
-        }
-
-        public static string GetSampleText(TextLanguage lang)
-        {
-            return lang switch
-            {
-                TextLanguage.Chinese => "你好，世界！",
-                TextLanguage.Japanese => "こんにちは、世界！",
-                TextLanguage.Korean => "안녕하세요, 세계!",
-                TextLanguage.Russian => "Привет, мир!",
-                TextLanguage.Thai => "สวัสดี ชาวโลก!",
-                TextLanguage.Arabic => "مرحبا بالعالم!",
-                TextLanguage.English => "Hello, world!",
-                _ => "Hello, world!",
-            };
-        }
-
-
-        public static double MeasureTextLength(string text, float fontSize = 14f)
-        {
-            try
-            {
-                Font font = SystemFonts.CreateFont(SystemFonts.Families.First().Name, fontSize);
-                FontRectangle rect = TextMeasurer.MeasureSize(text, new TextOptions(font));
-                return rect.Width > 0 ? rect.Width : 100;
-            }
-            catch
-            {
-                return text.Length * fontSize * 0.6 + 50;
-            }
-        }
-
-
+        #region thumb
         public static Shared.IPicture GenerateFontThumbnail(string fontPath)
         {
             if (string.IsNullOrEmpty(fontPath) || !File.Exists(fontPath))
@@ -146,20 +42,19 @@ namespace projectFrameCut.Services
 
             try
             {
+                // 直接从字体文件 name 表 + OS/2 Unicode Range 读取语言，不再依赖命名猜测
+                var info = ReadFontFileInfo(fontPath);
                 FontCollection collection = new FontCollection();
                 FontFamily family = collection.Add(fontPath);
                 Image<Rgba64> canvas = new(640, 480);
                 canvas.Mutate((ctx) =>
                 {
                     ctx.Fill(Color.White);
-                    TextLanguage lang = DetectPrimaryLanguage(family);
-                    string sampleText = GetSampleText(lang);
+                    string sampleText = GetSampleText(info.PrimaryLanguage);
                     Font font = family.CreateFont(72, FontStyle.Regular);
-
                     ctx.DrawText(sampleText, font, Color.Black, new PointF(10, 240));
                 });
                 return new Picture8bpp(canvas);
-
             }
             catch
             {
@@ -167,76 +62,141 @@ namespace projectFrameCut.Services
             }
         }
 
-        [DebuggerNonUserCode()]
-        public static TextLanguage DetectTextLanguage(string input)
+
+        public static Task<ImageSource> RenderFontPreviewAsync(projectFrameCut.ApplicationAPIBase.Views.Pickers.FontItem item) => RenderFontPreviewAsync(item, 1000, 64);
+
+        /// <summary>
+        /// 渲染字体预览图。<paramref name="sample"/> 为 null 时，自动根据字体文件 name 表检测主语言并使用对应语言的样本文字。
+        /// </summary>
+        public static async Task<ImageSource> RenderFontPreviewAsync(projectFrameCut.ApplicationAPIBase.Views.Pickers.FontItem item, int width = 420, int height = 64, string? sample = null)
         {
-            if (string.IsNullOrEmpty(input))
+            if (item == null)
+                return null;
+
+#pragma warning disable CS8603 // shut up pls
+            return await Task<ImageSource>.Run(() =>
             {
-                return TextLanguage.Unknown;
+                var cachePath = Path.Combine(FileSystem.CacheDirectory, "FontCache", $"{item.FontName}.png");
+                if (File.Exists(cachePath))
+                {
+                    return ImageSource.FromFile(cachePath);
+                }
+                float fontSize = Math.Clamp(height * 0.6f, 12f, 64f);
+
+                try
+                {
+                    Font font = null!;
+                    try
+                    {
+                        font = item.InnerFont?.Families?.FirstOrDefault().CreateFont(fontSize) ?? throw new InvalidOperationException("Font not available.");
+                    }
+                    catch
+                    {
+                        font = TextClip.FontsCache.TryGet(item.FontName, out var family) ? family.CreateFont(fontSize) : throw new InvalidOperationException("Font not available.");
+                    }
+
+
+                    // 当未指定 sample 时，优先使用 FontItem.PrimaryLanguageTag 判断语言，
+                    // 再尝试从字体文件直接读取（如果能找到路径的话）。
+                    string effectiveSample = sample ?? ResolveSampleText(item);
+
+                    var options = new DrawingOptions();
+                    using var img = new Image<Rgba32>(width, height);
+                    img.Mutate(ctx =>
+                    {
+                        ctx.Fill(Color.Transparent);
+                        var location = new PointF(10, height / 2f - fontSize / 2f);
+                        ctx.DrawText(options, effectiveSample, font, Color.White, location);
+                    });
+
+                    img.SaveAsPng(cachePath);
+                    img.Dispose();
+
+                    return ImageSource.FromFile(cachePath);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Init preview image for font {item.FontName}");
+                }
+                return null;
+            });
+#pragma warning restore CS8603 
+        }
+        /// <summary>
+        /// 根据 FontItem.PrimaryLanguageTag 选出合适的样本文字。
+        /// </summary>
+        private static string ResolveSampleText(projectFrameCut.ApplicationAPIBase.Views.Pickers.FontItem item)
+        {
+            if (!string.IsNullOrEmpty(item.PrimaryLanguageTag))
+            {
+                var lang = FromLanguageCode(item.PrimaryLanguageTag);
+                if (lang != TextLanguage.Unknown)
+                    return GetSampleText(lang);
+            }
+            // 最后回退到通用英文
+            return GetSampleText(TextLanguage.English);
+        }
+        #endregion
+
+        #region font
+
+        public static Dictionary<string, FontItem> LoadedFonts = new();
+
+        public static void LoadFonts()
+        {
+            Directory.CreateDirectory(Path.Combine(FileSystem.CacheDirectory, "FontCache"));
+            LoadedFonts.Clear();
+            foreach (var f in (new[] { "*.ttf", "*.otf", "*.ttc" }).SelectMany(ext => Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "My Assets"), ext)))
+            {
+                var info = TextHelper.ReadFontFileInfo(f);
+                var fontCollection = new FontCollection();
+                try
+                {
+                    fontCollection.Add(f);
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Failed to add font to collection: {f}");
+                }
+                LoadedFonts.TryAdd(info.EnglishName, new FontItem
+                {
+                    InnerItem = info,
+                    InnerFont = fontCollection,
+                    Category = Localized.TextServices_FontCatagory_YourAsset,
+                    DisplayName = info.DisplayName,
+                    PrimaryLanguageTag = TextHelper.ToLanguageCode(info.PrimaryLanguage, true),
+                    FontName = info.EnglishName,
+
+                });
+
+            }
+            foreach (var item in TextHelper.BuildSystemFontItems(category: Localized.TextServices_FontCatagory_System))
+            {
+                LoadedFonts.TryAdd(item.FontName, item);
             }
 
-            var languageScores = new Dictionary<TextLanguage, int>
-            {
-                { TextLanguage.Chinese, 0 },
-                { TextLanguage.Japanese, 0 },
-                { TextLanguage.Korean, 0 },
-                { TextLanguage.Russian, 0 },
-                { TextLanguage.Thai, 0 },
-                { TextLanguage.Arabic, 0 },
-                { TextLanguage.English, 0 }
-            };
+        }
 
-            foreach (char c in input)
+        #endregion
+
+        #region pron and order
+        public static async Task<IEnumerable<TResult>> OrderByPronounceAsync<TResult>(this IEnumerable<TResult> source, Func<TResult, string> keySelector, string? locateID = null)
+        {
+            var kvpList = await GetPronounceKVP(source, keySelector, locateID).ToListAsync();
+            return kvpList.OrderBy(kvp => kvp.Value).Select(kvp => kvp.Key);
+        }
+        public static async Task<IEnumerable<TResult>> OrderByPronounceDescendingAsync<TResult>(this IEnumerable<TResult> source, Func<TResult, string> keySelector, string? locateID = null)
+        {
+            var kvpList = await GetPronounceKVP(source, keySelector, locateID).ToListAsync();
+            return kvpList.OrderByDescending(kvp => kvp.Value).Select(kvp => kvp.Key);
+        }
+
+        private static async IAsyncEnumerable<KeyValuePair<TResult, string>> GetPronounceKVP<TResult>(IEnumerable<TResult> source, Func<TResult, string> keySelector, string? locateID = null)
+        {
+            foreach (var item in source)
             {
-                if (c >= 0x4E00 && c <= 0x9FFF)
-                {
-                    languageScores[TextLanguage.Chinese]++;
-                }
-                else if (c >= 0x3040 && c <= 0x309F)
-                {
-                    languageScores[TextLanguage.Japanese]++;
-                }
-                else if (c >= 0x30A0 && c <= 0x30FF)
-                {
-                    languageScores[TextLanguage.Japanese]++;
-                }
-                else if (c >= 0xAC00 && c <= 0xD7AF)
-                {
-                    languageScores[TextLanguage.Korean]++;
-                }
-                else if ((c >= 0x0400 && c <= 0x04FF) || (c >= 0x0500 && c <= 0x052F))
-                {
-                    languageScores[TextLanguage.Russian]++;
-                }
-                else if (c >= 0x0E00 && c <= 0x0E7F)
-                {
-                    languageScores[TextLanguage.Thai]++;
-                }
-                else if ((c >= 0x0600 && c <= 0x06FF) || (c >= 0x0750 && c <= 0x077F))
-                {
-                    languageScores[TextLanguage.Arabic]++;
-                }
-                else if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
-                {
-                    languageScores[TextLanguage.English]++;
-                }
+                yield return new(item, await GetPronounceForOrdering(keySelector(item), locateID));
             }
-
-            var maxScore = languageScores.Values.Max();
-            if (maxScore == 0)
-            {
-                return TextLanguage.Unknown;
-            }
-
-            var detectedLanguage = languageScores.FirstOrDefault(x => x.Value == maxScore).Key;
-
-            if (languageScores[TextLanguage.Chinese] > 0 &&
-                (languageScores[TextLanguage.Japanese] > 0))
-            {
-                detectedLanguage = TextLanguage.Japanese;
-            }
-
-            return detectedLanguage;
         }
 
         public static async Task<string> GetPronounceForOrdering(string input, string? locateID = null)
@@ -257,39 +217,6 @@ namespace projectFrameCut.Services
             };
         }
 
-
-        private static TextLanguage DetectPrimaryLanguage(FontFamily family)
-        {
-            TextLanguage result = TextLanguage.Unknown;
-            if (family.Culture.ThreeLetterISOLanguageName == "ivl")
-            {
-                result = family.Name.ToLowerInvariant() switch
-                {
-                    string name when name.Contains("ja") || name.Contains("jp") => TextLanguage.Japanese,
-                    string name when name.Contains("kr") || name.Contains("ko") => TextLanguage.Korean,
-                    string name when name.Contains("ru") => TextLanguage.Russian,
-                    string name when name.Contains("th") => TextLanguage.Thai,
-                    string name when name.Contains("ar") => TextLanguage.Arabic,
-                    string name when name.Contains("zh") || name.Contains("sc") || name.Contains("tc") => TextLanguage.Chinese,
-                    _ => TextLanguage.English,
-                };
-            }
-            else
-            {
-                result = family.Culture.Name.StartsWith("ja") ? TextLanguage.Japanese :
-                                      family.Culture.Name.StartsWith("ko") ? TextLanguage.Korean :
-                                      family.Culture.Name.StartsWith("ru") ? TextLanguage.Russian :
-                                      family.Culture.Name.StartsWith("th") ? TextLanguage.Thai :
-                                      family.Culture.Name.StartsWith("ar") ? TextLanguage.Arabic :
-                                      family.Culture.Name.StartsWith("zh") ? TextLanguage.Chinese :
-                                      TextLanguage.English;
-            }
-
-
-            Log($"Font {family.Name}: consider as {result}.");
-
-            return result;
-        }
 
         public static async Task<string> GetHowToPronuce(string input, TextLanguage? language = null)
         {
@@ -379,7 +306,7 @@ namespace projectFrameCut.Services
                     }
                     else if (c >= 0x4E00 && c <= 0x9FFF)
                     {
-                        result.Append(c); 
+                        result.Append(c);
                     }
                     else
                     {
@@ -399,7 +326,7 @@ namespace projectFrameCut.Services
                 var result = await (await GetKawazuConvenerAsync()).Convert(input, To.Hiragana);
                 return result;
             }
-            catch (Exception ex)
+            catch
             {
                 return input;
             }
@@ -515,11 +442,12 @@ namespace projectFrameCut.Services
             {'Э', "E"}, {'Ю', "Yu"}, {'Я', "Ya"}
         };
 
-        public static string DummyString = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur est tortor, imperdiet et dui id, egestas hendrerit quam. Suspendisse ac felis a felis ultrices cursus a sit amet ligula. Praesent volutpat vitae dolor luctus rutrum. Vestibulum eu nibh magna. Maecenas vel tempus nunc. Donec vitae convallis odio. Donec nec mattis sapien.";
-
         public static string[] DummyStrings => JapaneseKatakanaOrHiraganaMapping.Keys.Select(c => c.ToString()).ToArray();
+
+        #endregion
 
     }
 
 
 }
+

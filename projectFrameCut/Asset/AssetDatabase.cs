@@ -103,7 +103,7 @@ namespace projectFrameCut.Asset
             }
 
             asset = createdAsset;
-            asset.Path = Path.Combine(MauiProgram.DataPath,"My Assets",$"{asset.AssetId}{Path.GetExtension(path)}");
+            asset.Path = Path.Combine(MauiProgram.DataPath, "My Assets", $"{asset.AssetId}{Path.GetExtension(path)}");
             if (asset.AssetId is null || asset.Path is null) return false;
 
             if (AssetDatabase.Assets.TryAdd(asset.AssetId, asset))
@@ -223,9 +223,9 @@ namespace projectFrameCut.Asset
 
                                 if (!File.Exists(asset.ThumbnailPath))
                                 {
-                                    using var stream = FileSystem.OpenAppPackageFileAsync("Images/unknown_music.png").GetAwaiter().GetResult();
+                                    using var stream = TaskHelper.SyncWait(() => FileSystem.OpenAppPackageFileAsync("Images/unknown_music.png"), 10000, null);
                                     using FileStream fileStream = File.Create(asset.ThumbnailPath);
-                                    stream.CopyTo(fileStream);
+                                    stream?.CopyTo(fileStream);
                                 }
                             }
                             catch { }
@@ -236,7 +236,13 @@ namespace projectFrameCut.Asset
                     }
                 case AssetType.Font:
                     {
-                        TextHelper.GenerateFontThumbnail(sourcePath).SaveAsPng8bpp(thumbnailPath, null);
+                        TextServices.GenerateFontThumbnail(sourcePath).SaveAsPng8bpp(thumbnailPath, null);
+                        var t = new Thread(TextServices.LoadFonts)
+                        {
+                            Priority = ThreadPriority.BelowNormal,
+                            IsBackground = true
+                        };
+                        t.Start();
                         break;
                     }
                 case AssetType.Image:
@@ -245,7 +251,14 @@ namespace projectFrameCut.Asset
                         break;
                     }
             }
-            return fail ? null : asset;
+            if (DeviceInfo.DeviceType == DeviceType.Virtual)
+            {
+                return (AssetItem?)asset;
+            }
+            else
+            {
+                return (fail ? null : asset);
+            }
         }
 
         public static bool Remove(string assetId)

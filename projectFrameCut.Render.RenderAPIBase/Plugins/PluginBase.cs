@@ -20,7 +20,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Get the current plugin API version.
         /// </summary>
-        public const int CurrentPluginAPIVersion = 2;
+        public const int CurrentPluginAPIVersion = 3;
 
         /// <summary>
         /// The unique identifier of the plugin. Must equal to the full name of the main class implementing IPluginBase.
@@ -34,6 +34,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Get the minor version of plugin. Default to 0.
         /// </summary>
         public virtual int PluginAPIMinorVersion => 0;
+
         /// <summary>
         /// The plugin's name.
         /// </summary>
@@ -104,6 +105,13 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider { get; }
 
 
+        /// <summary>
+        /// Create an IClip instance from the given file path and JSON data.
+        /// </summary>
+        /// <remarks>
+        /// The argument for value is Id of the previous clip, and the second argument is Id of the next clip
+        /// </remarks>
+        public Dictionary<string, Func<Guid, Guid, ITransform>> TransformProvider { get; }
 
         /// <summary>
         /// Create an blank IEffect instance from the given id.
@@ -142,7 +150,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <summary>
         /// Create an IMixture instance from the given JSON structure.
         /// </summary>
-        public Dictionary<string, Func<IMixture>> MixtureProvider { get; }
+        [Obsolete("We have no plan on custom type of mixturing, so this property is no longer used and it will be removed in next Plugin API version.", false)]
+        public virtual Dictionary<string, Func<IMixture>> MixtureProvider { get => new(); }
 
         /// <summary>
         /// Create an IComputer instance from the given JSON structure.
@@ -229,8 +238,19 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public ISoundTrack SoundTrackCreator(JsonElement element);
 
         /// <summary>
+        /// Obtains an instance of ITransform from the given JSON element. Let this method throw an <see cref="NotImplementedException"/> to indicate that this plugin does not provide any transform.
+        /// </summary>
+        /// <param name="element">the source element</param>
+        /// <returns>the transform</returns>
+        /// <exception cref="NotImplementedException">indicates that this plugin does not provide any transform.</exception>
+        public virtual ITransform TransformCreator(JsonElement element) => throw new NotImplementedException();
+
+        /// <summary>
         /// Creates an effect instance from the given JSON structure.
         /// </summary>
+        /// <remarks>
+        /// We provide you a default implement, which can cover 99% of purpose when you make factories correctly, so you probably don't need to override this method unless you have some special needs that cannot be achieved by factories, or you want to support some special effect types that are not covered by current implementation.
+        /// </remarks>
         /// <param name="stru">the source structure</param>
         /// <returns>the effect</returns>
         /// <exception cref="NotSupportedException"></exception>
@@ -309,6 +329,8 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
 
             throw new NotSupportedException($"No suitable effect found for the given type '{stru.TypeName}'.");
         }
+
+
         /// <summary>
         /// Create a VideoSource instance from the file.
         /// This method will first try to find a preferred video source by file extension,
@@ -470,7 +492,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// Represents the messaging queue provided by the host application.
         /// </summary>
         [Obsolete("Use GlobalPluginHelper.MessagingService instead. This property is no longer been assigned while initialization and it will be removed in next Plugin API version.", false)]
-        public IMessagingService MessagingQueue { get; set; }
+        public virtual IMessagingService MessagingQueue { get => null; set { } }
     }
 
     public static class GlobalPluginHelper
@@ -530,6 +552,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// The supported API version of the plugin.
         /// </summary>
         public int PluginAPIVersion { get; set; }
+        /// <summary>
+        /// Get the minor version of plugin. Default to 0.
+        /// </summary>
+        public int PluginAPIMinorVersion { get; set; } = 0;
         /// <summary>
         /// The plugin's name.
         /// </summary>
@@ -607,14 +633,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
                 }
             }
 
-            if (pluginBase.MixtureProvider.Any())
-            {
-                providedContent.AppendLine("Mixture:");
-                foreach (var item in pluginBase.MixtureProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-            }
+
             if (pluginBase.ComputerProvider.Any())
             {
                 providedContent.AppendLine("Computer:");

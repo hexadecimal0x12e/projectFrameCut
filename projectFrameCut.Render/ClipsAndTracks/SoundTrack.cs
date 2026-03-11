@@ -36,6 +36,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string Name { get; init; }
         public string? BindedSoundTrack { get => SoundTrack?.Id; init { throw new NotSupportedException(); } }
         public uint LayerIndex { get; init; }
+        public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
@@ -47,6 +48,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IEffect[]? EffectsInstances { get; init; }
         public string? FilePath { get; set; }
         public bool NeedFilePath => true;
+        public Dictionary<string, object> ExtraData { get; set; }
+        public bool ExtendToWholeDraft { get; set; }
+
 
         public ISoundTrack SoundTrack { get; set; }
         public TrackMode TrackType => TrackMode.NormalTrack;
@@ -59,7 +63,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
         {
-            throw new NotSupportedException("This clip does not support getting frames relative to the start point of the source.");
+            throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
+        }
+
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
+        {
+            throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
         }
 
         public void ReInit()

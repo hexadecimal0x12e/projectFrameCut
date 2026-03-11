@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="projectFrameCut.ApplicationAPIBase.Views.Pickers.ColorPicker">
+    <ContentView.Resources>
+        <Color x:Key="PanelBackground">#1F2023</Color>
+        <Color x:Key="EditorBackground">#2A2B2F</Color>
+        <Color x:Key="EditorBorder">#3A3B41</Color>
+        <Color x:Key="TextPrimary">#F2F2F2</Color>
+        <Color x:Key="TextSecondary">#C8C8C8</Color>
+
+        <Style x:Key="SectionLabelStyle" TargetType="Label">
+            <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+            <Setter Property="FontSize" Value="{OnIdiom Phone=16, Tablet=18, Desktop=20}" />
+            <Setter Property="FontAttributes" Value="Bold" />
+        </Style>
+
+        <Style x:Key="FieldCaptionStyle" TargetType="Label">
+            <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+            <Setter Property="FontSize" Value="{OnIdiom Phone=12, Tablet=13, Desktop=14}" />
+            <Setter Property="VerticalTextAlignment" Value="Center" />
+        </Style>
+
+        <Style x:Key="EditorEntryStyle" TargetType="Entry">
+            <Setter Property="TextColor" Value="{StaticResource TextPrimary}" />
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="FontSize" Value="{OnIdiom Phone=13, Tablet=14, Desktop=15}" />
+            <Setter Property="ClearButtonVisibility" Value="Never" />
+            <Setter Property="Margin" Value="10,0" />
+            <Setter Property="VerticalTextAlignment" Value="Center" />
+        </Style>
+    </ContentView.Resources>
+
+
+    <ScrollView Grid.Row="1">
+        <Border Background="{StaticResource PanelBackground}"
+                    StrokeThickness="0"
+                    Padding="10"
+                    StrokeShape="RoundRectangle 12">
+            <VerticalStackLayout Spacing="8">
+                <Grid ColumnDefinitions="3.4*,0.9*" ColumnSpacing="8">
+                    <Grid x:Name="ColorWheelHost"
+                          Grid.Column="0"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center"
+                          WidthRequest="{OnIdiom Phone=170, Tablet=185, Desktop=200}"
+                          HeightRequest="{OnIdiom Phone=170, Tablet=185, Desktop=200}">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnWheelTapped" />
+                        </Grid.GestureRecognizers>
+
+                        <Ellipse StrokeThickness="0">
+                            <Ellipse.Fill>
+                                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                    <GradientStop Color="#FF0000" Offset="0.00" />
+                                    <GradientStop Color="#FFFF00" Offset="0.17" />
+                                    <GradientStop Color="#00FF00" Offset="0.33" />
+                                    <GradientStop Color="#00FFFF" Offset="0.50" />
+                                    <GradientStop Color="#0000FF" Offset="0.67" />
+                                    <GradientStop Color="#FF00FF" Offset="0.83" />
+                                    <GradientStop Color="#FF0000" Offset="1.00" />
+                                </LinearGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
+
+                        <Ellipse StrokeThickness="0" Opacity="0.55">
+                            <Ellipse.Fill>
+                                <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                                    <GradientStop Color="#FFFFFFFF" Offset="0.00" />
+                                    <GradientStop Color="#00FFFFFF" Offset="0.52" />
+                                    <GradientStop Color="#A0000000" Offset="1.00" />
+                                </LinearGradientBrush>
+                            </Ellipse.Fill>
+                        </Ellipse>
+
+                        <Border x:Name="WheelThumb"
+                                WidthRequest="16"
+                                HeightRequest="16"
+                                Background="#F8F8F8"
+                                Stroke="#121212"
+                                StrokeThickness="2"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center"
+                                StrokeShape="RoundRectangle 8" />
+                    </Grid>
+
+                    <Border x:Name="PreviewStrip"
+                            Grid.Column="1"
+                            WidthRequest="{OnIdiom Phone=32, Tablet=36, Desktop=40}"
+                            HeightRequest="{OnIdiom Phone=170, Tablet=185, Desktop=200}"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 6">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                                <GradientStop Color="#F8F8F8" Offset="0" />
+                                <GradientStop Color="#D5D5D5" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+                </Grid>
+
+                <Grid HeightRequest="22">
+                    <Border BackgroundColor="#33363D"
+                            StrokeThickness="0"
+                            StrokeShape="RoundRectangle 6"
+                            HeightRequest="8"
+                            VerticalOptions="Center"
+                            Margin="12,0">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                <GradientStop Color="#000000" Offset="0" />
+                                <GradientStop Color="#D3D3D3" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+                    <Slider Minimum="0"
+                            Maximum="1"
+                            Value="1"
+                            x:Name="ValueSlider"
+                            ValueChanged="OnValueSliderChanged"
+                            ThumbColor="#F2F2F2"
+                            MinimumTrackColor="#00000000"
+                            MaximumTrackColor="#00000000" />
+                </Grid>
+
+                <Grid HeightRequest="42">
+                    <Border StrokeThickness="0"
+                            StrokeShape="RoundRectangle 6"
+                            HeightRequest="8"
+                            VerticalOptions="Center"
+                            BackgroundColor="#4A4A4A"
+                            Margin="12,0" />
+                    <Border StrokeThickness="0"
+                            StrokeShape="RoundRectangle 6"
+                            HeightRequest="8"
+                            VerticalOptions="Center"
+                            Margin="12,0">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                <GradientStop Color="#00FFFFFF" Offset="0" />
+                                <GradientStop Color="#FFFFFFFF" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+                    <Slider Minimum="0"
+                            Maximum="1"
+                            Value="1"
+                            x:Name="AlphaSlider"
+                            ValueChanged="OnAlphaSliderChanged"
+                            ThumbColor="#F2F2F2"
+                            MinimumTrackColor="#00000000"
+                            MaximumTrackColor="#00000000" />
+                </Grid>
+
+                <Grid ColumnDefinitions="Auto,*" Margin="0,1,0,0">
+                    <Grid.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnExpandToggleTapped" />
+                    </Grid.GestureRecognizers>
+                    <Label x:Name="ExpandTextLabel"
+                           Grid.Column="0"
+                           Text="Less"
+                           TextColor="{StaticResource TextPrimary}"
+                           FontSize="{OnIdiom Phone=12, Tablet=13, Desktop=14}"
+                           VerticalTextAlignment="Center" />
+                    <Label x:Name="ExpandIconLabel"
+                           Grid.Column="1"
+                           Text="^"
+                           TextColor="{StaticResource TextPrimary}"
+                           FontSize="{OnIdiom Phone=10, Tablet=11, Desktop=12}"
+                           Margin="4,0,0,0"
+                           VerticalTextAlignment="Center" />
+                </Grid>
+
+                <VerticalStackLayout x:Name="DetailsPanel">
+                    <Grid ColumnDefinitions="1.05*,1.15*" ColumnSpacing="8" Margin="0,1,0,0">
+                    <Border BackgroundColor="{StaticResource EditorBackground}"
+                            Stroke="{StaticResource EditorBorder}"
+                            StrokeThickness="2"
+                            StrokeShape="RoundRectangle 8">
+                        <Picker 
+                            SelectedIndex="0"
+                            x:Name="ColorModePicker"
+                            FontSize="{OnIdiom Phone=13, Tablet=14, Desktop=15}"
+                            HeightRequest="34">
+                            <Picker.Items>
+                                <x:String>RGB</x:String>
+                                <x:String>HSV</x:String>
+                                <x:String>HSL</x:String>
+                            </Picker.Items>
+                        </Picker>
+                    </Border>
+
+                    <Border Grid.Column="1"
+                            BackgroundColor="{StaticResource EditorBackground}"
+                            Stroke="{StaticResource EditorBorder}"
+                            StrokeThickness="2"
+                            StrokeShape="RoundRectangle 8">
+                        <Entry x:Name="HexEntry"
+                               Margin="0"
+                               Text="#FFFFFFFF"
+                               Completed="OnHexEntryCompleted"
+                               Unfocused="OnHexEntryUnfocused"
+                               Style="{StaticResource EditorEntryStyle}" />
+                    </Border>
+                </Grid>
+
+                    <VerticalStackLayout>
+                        <Label x:Name="RedLabel" Text="Red" Style="{StaticResource FieldCaptionStyle}" />
+                        <Border BackgroundColor="{StaticResource EditorBackground}"
+                                Stroke="{StaticResource EditorBorder}"
+                                StrokeThickness="2"
+                                StrokeShape="RoundRectangle 8">
+                            <Entry x:Name="RedEntry"
+                                   Margin="0"
+                                   Text="255"
+                                   Keyboard="Numeric"
+                                   Completed="OnRgbEntryCompleted"
+                                   Unfocused="OnRgbEntryUnfocused"
+                                   HeightRequest="32"
+                                   Style="{StaticResource EditorEntryStyle}" />
+                        </Border>
+
+                        <Label x:Name="GreenLabel" Text="Green" Style="{StaticResource FieldCaptionStyle}" />
+
+                        <Border BackgroundColor="{StaticResource EditorBackground}"
+                                Stroke="{StaticResource EditorBorder}"
+                                StrokeThickness="2"
+                                StrokeShape="RoundRectangle 8">
+                            <Entry x:Name="GreenEntry"
+                                   Margin="0"
+                                   Text="255"
+                                   Keyboard="Numeric"
+                                   Completed="OnRgbEntryCompleted"
+                                   Unfocused="OnRgbEntryUnfocused"
+                                   HeightRequest="32"
+                                   Style="{StaticResource EditorEntryStyle}" />
+                        </Border>
+
+                        <Label x:Name="BlueLabel" Text="Blue" Style="{StaticResource FieldCaptionStyle}" />
+
+                        <Border BackgroundColor="{StaticResource EditorBackground}"
+                                Stroke="{StaticResource EditorBorder}"
+                                StrokeThickness="2"
+                                StrokeShape="RoundRectangle 8">
+                            <Entry x:Name="BlueEntry"
+                                   Margin="0"
+                                   Text="255"
+                                   Keyboard="Numeric"
+                                   Completed="OnRgbEntryCompleted"
+                                   Unfocused="OnRgbEntryUnfocused"
+                                   HeightRequest="32"
+                                   Style="{StaticResource EditorEntryStyle}" />
+                        </Border>
+                        <Label x:Name="OpacityLabel" Text="Opacity" Style="{StaticResource FieldCaptionStyle}" />
+
+                        <Border BackgroundColor="{StaticResource EditorBackground}"
+                                Stroke="{StaticResource EditorBorder}"
+                                StrokeThickness="2"
+                                StrokeShape="RoundRectangle 8">
+                            <Entry x:Name="OpacityEntry"
+                                   Margin="0"
+                                   Text="100%"
+                                   Keyboard="Numeric"
+                                   Completed="OnOpacityEntryCompleted"
+                                   Unfocused="OnOpacityEntryUnfocused"
+                                   HeightRequest="32"
+                                   Style="{StaticResource EditorEntryStyle}" />
+                        </Border>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </Border>
+    </ScrollView>
+</ContentView>

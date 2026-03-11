@@ -132,20 +132,22 @@ namespace projectFrameCut.Helper
 
         public static string AppVersion { get; set; } = "";
         public static string AppTitle { get; set; } = "projectFrameCut";
+        public static string AppChannel { get; set; } = "Unknown";
 
         public static void CloseSplash()
         {
             Thread.Sleep(1500);
-            splash.Invoke(new Action(() =>
+            splash?.Invoke(new Action(() =>
             {
-                splash.Close();
+                splash?.Close();
             }));
             SplashShowing = false;
+            splash = null;
         }
         public static void CloseLog()
         {
             Thread.Sleep(1500);
-            log.Invoke(log.Close);
+            log?.Invoke(() => log?.Close());
         }
 
         public static void Cleanup()

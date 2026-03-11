@@ -72,6 +72,7 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 - **`--resolveArgsFromEnvironmentVars`**
   尝试从环境变量解析参数值。参数名称应与环境变量名称匹配，前缀为 `projectFrameCut_`。
   例如，参数 `-project` 可通过环境变量 `projectFrameCut_project` 设置。
+
   如果一个参数在命令行和环境变量中都有定义，以环境变量里的参数优先。
   请注意，运行模式参数（如 `render`）不能通过环境变量设置，必须在命令行中指定。
 
@@ -116,7 +117,7 @@ projectFrameCut.StandaloneRender <mode> [<args>]
 
 - **`-oneByOneRender=<true|false>`**  
   是否逐帧渲染，并且在每一帧的结果产生之后同步写入输出视频，而不是计划写入。默认：`false`
-  设置此参数为`true`会覆盖参数**`-maxParallelThreads`**为1。
+  设置此参数为`true`会覆盖参数 **`-maxParallelThreads`** 为1。
 
 - **`-multiAccelerator=<true|false>`**  
   是否使用多个加速器设备。默认：`false`
@@ -230,7 +231,7 @@ projectFrameCut.StandaloneRender render \
 
 项目目录必须包含以下文件：
 
-- **`project.json`**: 项目配置文件
+- **`project.pjfc`或者`project.json`**: 项目配置文件
 - **`timeline.json`**: 时间线和片段信息
 - **`assets.json`**: 资产列表
 

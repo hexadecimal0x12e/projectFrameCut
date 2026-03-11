@@ -8,7 +8,8 @@
              x:DataType="vm:RenderPageViewModel"
              Title="RenderPage">
     <ContentPage.ToolbarItems>
-        <!-- <ToolbarItem Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/> -->
+        <ToolbarItem Order="Secondary" Text="{l:Localized Key=RenderPage_RenderMoreOptions}" x:Name="MoreOptions" Clicked="MoreOptions_Clicked"/>
+        <ToolbarItem Order="Secondary" x:Name="GenerateStandaloneArgsButton" Text="{l:Localized Key=RenderPage_ToolBar_GenerateStandaloneArgs}" Clicked="GenerateStandaloneArgs_Clicked" IsEnabled="{OnPlatform WinUI=True, Default=False}" />
 
     </ContentPage.ToolbarItems>
     <Grid>
@@ -140,7 +141,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="5"/>
+                <RowDefinition Height="10"/>
             </Grid.RowDefinitions>
 
             <Button Grid.Row="0" Margin="0,8,0,8" IsVisible="True"  x:Name="CancelRender" Text="{l:Localized Key=RenderPage_CancelRender}" Clicked="CancelRender_Clicked" />
@@ -151,7 +152,7 @@
             <Label Grid.Row="3" Text="{l:Localized Key=RenderPage_LoggingLabel}"  Margin="0,8,0,0"/>
 
             <Editor Grid.Row="4" x:Name="LoggingBox" Margin="0,16,0,0" IsReadOnly="True"></Editor>
-            <VerticalStackLayout Grid.Row="5" x:Name="ComputeView" Background="Black" />
+            <VerticalStackLayout Opacity="50" Grid.Row="5" x:Name="ComputeView" Background="Black" />
         </Grid>
     </Grid>
 </ContentPage>

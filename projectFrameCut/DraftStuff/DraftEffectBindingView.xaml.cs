@@ -5,13 +5,24 @@ using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.Rendering;
 using projectFrameCut.Services;
 using projectFrameCut.Shared;
+using SixLabors.ImageSharp;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
+using Color = Microsoft.Maui.Graphics.Color;
+using Image = Microsoft.Maui.Controls.Image;
+using IPicture = projectFrameCut.Shared.IPicture;
+using Point = Microsoft.Maui.Graphics.Point;
 using Rect = Microsoft.Maui.Graphics.Rect;
 
 namespace projectFrameCut.DraftStuff;
@@ -337,13 +348,21 @@ public partial class DraftEffectBindingView : ContentView
         var view = CreateNodeView(node);
         node.View = view;
         NodesContainer.Add(view);
-        AbsoluteLayout.SetLayoutBounds(view, new Rect(node.X, node.Y, -1, 80));
+        AbsoluteLayout.SetLayoutBounds(view, new Rect(node.X, node.Y, -1, AbsoluteLayout.AutoSize));
         _nodes.Add(node.Id, node);
     }
 
     private View CreateNodeView(NodeViewModel node)
     {
         ArgumentNullException.ThrowIfNull(node);
+        var container = new VerticalStackLayout
+        {
+            Spacing = 0,
+            HorizontalOptions = LayoutOptions.Start,
+            VerticalOptions = LayoutOptions.Start,
+            InputTransparent = false
+        };
+
         var frame = new Border
         {
             Stroke = node.Kind == NodeKind.Effect ? Colors.Gray : Colors.White,
@@ -352,7 +371,8 @@ public partial class DraftEffectBindingView : ContentView
             BackgroundColor = Color.FromArgb("#2d2d2d"),
             Padding = 5,
             HeightRequest = 80,
-            MinimumWidthRequest = 150
+            MinimumWidthRequest = 150,
+            ZIndex = 2
         };
 
         var title = node.Kind switch
@@ -495,7 +515,63 @@ public partial class DraftEffectBindingView : ContentView
         frame.SizeChanged += (s, e) => ConnectionsLayer.Invalidate();
 
         frame.Content = layout;
-        return frame;
+
+        container.Add(frame);
+
+        // Preview Section
+        if (node.Kind == NodeKind.Effect || node.Kind == NodeKind.Input)
+        {
+            var arrow = new BoxView
+            {
+                Color = Colors.White,
+                WidthRequest = 2,
+                HeightRequest = 20,
+                HorizontalOptions = LayoutOptions.Center,
+                IsVisible = false // Hidden initially
+            };
+
+            var previewBorder = new Border
+            {
+                Stroke = Colors.White,
+                StrokeThickness = 2,
+                StrokeShape = new RoundRectangle { CornerRadius = 5 },
+                BackgroundColor = Colors.Black,
+                Padding = 0,
+                WidthRequest = node.Width,
+                HeightRequest = 120,
+                HorizontalOptions = LayoutOptions.Center,
+                IsVisible = false // Hidden initially
+            };
+
+            var previewImage = new Microsoft.Maui.Controls.Image
+            {
+                Aspect = Aspect.AspectFit,
+            };
+
+            previewBorder.Content = previewImage;
+
+            container.Add(arrow);
+            container.Add(previewBorder);
+
+            // Property to update preview
+            node.PreviewImageChanged += (s, img) =>
+            {
+                previewImage.Source = img;
+                bool hasImage = img != null;
+                arrow.IsVisible = hasImage;
+                previewBorder.IsVisible = hasImage;
+            };
+
+            // Trigger initial update if already set
+            if (node.PreviewImage != null)
+            {
+                previewImage.Source = node.PreviewImage;
+                arrow.IsVisible = true;
+                previewBorder.IsVisible = true;
+            }
+        }
+
+        return container;
     }
 
     private void OnNodePan(NodeViewModel node, PanUpdatedEventArgs e)
@@ -516,7 +592,11 @@ public partial class DraftEffectBindingView : ContentView
                 node.X = node.DragStartX + (e.TotalX / scale);
                 node.Y = node.DragStartY + (e.TotalY / scale);
 
-                AbsoluteLayout.SetLayoutBounds(node.View, new Rect(node.X, node.Y, -1, 80));
+                // Use AutoSize for height while dragging so preview (if present)
+                // isn't clipped by a fixed height.
+                AbsoluteLayout.SetLayoutBounds(node.View, new Rect(node.X, node.Y, -1, AbsoluteLayout.AutoSize));
+                // Ensure layout height is AutoSize after drag ends so preview remains visible.
+                AbsoluteLayout.SetLayoutBounds(node.View, new Rect(node.X, node.Y, -1, AbsoluteLayout.AutoSize));
                 ConnectionsLayer.Invalidate();
                 break;
             case GestureStatus.Completed:
@@ -1148,6 +1228,104 @@ public partial class DraftEffectBindingView : ContentView
 
     }
 
+
+    private async Task GeneratePreviews()
+    {
+        if (_clip == null || _page == null) return;
+        if (_clip.ClipType != ClipMode.VideoClip && _clip.ClipType != ClipMode.PhotoClip) return;
+
+        // Get source image
+        var clipId = _clip.Id;
+        ClipInfoBuilder.RebuildAllEffects(_clip);
+        var clip = _page.previewer.Clips?.FirstOrDefault(c => c.Id == clipId);
+        if (clip == null) return;
+
+        Dictionary<string, object> localCache = new(), globalCache = new(); //for bindable effect
+        var w = _page.previewWidth;
+        var h = _page.previewHeight;
+
+        try
+        {
+            var srcFrame = clip.GetFrameRelativeToStartPointOfSource(0);
+            if (_inputNode is not null)
+            {
+                await UpdateNodePreview(_inputNode, srcFrame);
+            }
+            srcFrame.Disposed = null;
+            var frame = new OneFrame(42, clip, srcFrame)
+            {
+                Effects = _clip.Effects?.Values?.ToArray() ?? []
+            };
+
+
+            // Use AfterEffect callback to receive intermediate pictures after each effect
+            var result = Timeline.MixtureLayers([frame], 0, w, h, 8, async (effect, pic) =>
+            {
+                try
+                {
+                    var effectId = effect.BindedEffectGroupID;
+                    LogDiagnostic($"Effect {effectId} returns:\r\n{Shared.PictureProcessStack.FormatProcessStackForLog(pic.ProcessStack)}");
+                    if (string.IsNullOrEmpty(effectId) || pic == null) return;
+
+                    if (Guid.TryParse(effectId, out var gid) && _nodes.TryGetValue(gid, out var nodeByGuid))
+                    {
+                        LogDiagnostic($"Showing result on node {nodeByGuid.DisplayName}...");
+                        await UpdateNodePreview(nodeByGuid, pic);
+                        return;
+                    }
+                    else
+                    {
+                        Log($"Effect '{effectId}' does not match any node in the UI for {_clip.DisplayName}","error");
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "AfterEffect callback", this);
+#if DEBUG
+                    if (await _page.DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(0, ex), "Throw", Localized._OK)) throw;
+#else
+                    await _page.DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(0, ex), Localized._OK);
+#endif
+                }
+            });
+
+            if (_outputNode is not null)
+            {
+                await UpdateNodePreview(_outputNode, result);
+            }
+
+
+            srcFrame.Disposed = false;
+            srcFrame.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, $"Failed to render", this);
+
+        }
+
+    }
+
+    private async Task UpdateNodePreview(NodeViewModel node, IPicture picture)
+    {
+        await MainThread.InvokeOnMainThreadAsync(async () =>
+         {
+             try
+             {
+                 using var stream = new MemoryStream();
+                 await Task.Run(() => picture.SaveToSixLaborsImage().SaveAsPng(stream)); // Assuming SaveAsPng exists as extension
+                 stream.Position = 0;
+                 var imageSource = ImageSource.FromStream(() => new MemoryStream(stream.ToArray()));
+                 node.PreviewImage = imageSource;
+             }
+             catch (Exception ex)
+             {
+                 Log(ex, "Failed to update preview image", this);
+             }
+         });
+    }
+
     [DebuggerDisplay("{Id}, {Bundle?.TypeName}")]
     class NodeViewModel
     {
@@ -1168,6 +1346,10 @@ public partial class DraftEffectBindingView : ContentView
         public double Width => View?.Width > 0 ? View.Width : 150;
 
         public string DisplayName { get; set; }
+
+        private ImageSource? _previewImage;
+        public ImageSource? PreviewImage { get => _previewImage; set { _previewImage = value; PreviewImageChanged?.Invoke(this, value); } }
+        public event EventHandler<ImageSource?>? PreviewImageChanged;
 
 
     }
@@ -1224,6 +1406,15 @@ public partial class DraftEffectBindingView : ContentView
         SetStatusText(Localized._Done);
     }
 
+    private async void GeneratePreviewButton_Clicked(object sender, EventArgs e)
+    {
+        GeneratePreviewButton.IsEnabled = false;
+        BottomCommandBar.Children.Insert(0, new ActivityIndicator { IsRunning = true });
+        await GeneratePreviews();
+        GeneratePreviewButton.IsEnabled = true;
+        BottomCommandBar.Children.RemoveAt(0);
+
+    }
 
     class ConnectionsDrawable : IDrawable
     {

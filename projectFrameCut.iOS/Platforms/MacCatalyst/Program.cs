@@ -14,23 +14,23 @@ namespace projectFrameCut.Platforms.MacCatalyst
         {
             System.Threading.Thread.CurrentThread.Name = "App Main thread";
 
-            loggingDir = Path.Combine(FileSystem.AppDataDirectory, "logging"); // ~/Library/Containers/<bundle>/Data/Library/Application Support/<bundle>）
+            //loggingDir = Path.Combine(FileSystem.AppDataDirectory, "logging"); // ~/Library/Containers/<bundle>/Data/Library/Application Support/<bundle>）
 
-            try
-            {
-                Directory.CreateDirectory(loggingDir);
+            //try
+            //{
+            //    Directory.CreateDirectory(loggingDir);
 
-                MauiProgram.LogWriter = new StreamWriter(System.IO.Path.Combine(loggingDir, $"log-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log"), append: true)
-                {
-                    AutoFlush = true
-                };
+            //    MauiProgram.LogWriter = new StreamWriter(System.IO.Path.Combine(loggingDir, $"log-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log"), append: true)
+            //    {
+            //        AutoFlush = true
+            //    };
 
-                MyLoggerExtensions.OnLog += MyLoggerExtensions_OnLog;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to create log file in {loggingDir}: {ex}");
-            }
+            //    MyLoggerExtensions.OnLog += MyLoggerExtensions_OnLog;
+            //}
+            //catch (Exception ex)
+            //{
+            //    System.Diagnostics.Debug.WriteLine($"Failed to create log file in {loggingDir}: {ex}");
+            //}
 
             try
             {

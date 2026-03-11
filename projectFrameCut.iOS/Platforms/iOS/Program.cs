@@ -14,23 +14,23 @@ namespace projectFrameCut.Platforms.iOS
         {
             System.Threading.Thread.CurrentThread.Name = "App Main thread";
 
-            loggingDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "logging"); //files->my [iDevices]->projectFrameCut
+            //loggingDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "logging"); //files->my [iDevices]->projectFrameCut
 
-            try
-            {
-                Directory.CreateDirectory(loggingDir);
+            //try
+            //{
+            //    Directory.CreateDirectory(loggingDir);
                 
-                MauiProgram.LogWriter = new StreamWriter(System.IO.Path.Combine(loggingDir, $"log-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log"), append: true)
-                {
-                    AutoFlush = true
-                };
+            //    MauiProgram.LogWriter = new StreamWriter(System.IO.Path.Combine(loggingDir, $"log-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log"), append: true)
+            //    {
+            //        AutoFlush = true
+            //    };
 
-                MyLoggerExtensions.OnLog += MyLoggerExtensions_OnLog;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to create log file in {loggingDir}: {ex}");
-            }
+            //    MyLoggerExtensions.OnLog += MyLoggerExtensions_OnLog;
+            //}
+            //catch (Exception ex)
+            //{
+            //    System.Diagnostics.Debug.WriteLine($"Failed to create log file in {loggingDir}: {ex}");
+            //}
 
             try
             {

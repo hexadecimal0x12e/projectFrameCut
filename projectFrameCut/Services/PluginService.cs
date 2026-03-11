@@ -169,13 +169,15 @@ namespace projectFrameCut.Services
                                         }
                                     }
 
+
                                     try
                                     {
                                         void removeLangDependence(string key)
                                         {
-                                            if (Directory.GetFiles(key).Count() == 1 && Path.GetFileName(Directory.GetFiles(key)[0]) == "Microsoft.Maui.Controls.resources.dll")
+                                            if (Directory.GetFiles(key).Length == 1 && Path.GetFileName(Directory.GetFiles(key)[0]) == "Microsoft.Maui.Controls.resources.dll")
                                             {
                                                 Directory.Delete(key, true);
+                                                htbDict.Remove(key);
                                                 Log($"Deleted directory {key}.");
                                             }
                                         }
@@ -353,10 +355,17 @@ namespace projectFrameCut.Services
                 var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
                 if (Directory.Exists(pluginRoot))
                 {
-                    pluginPem ??= SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}").GetAwaiter().GetResult();
+                    pluginPem ??= TaskHelper.SyncWait(() => SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}"));
                     if (string.IsNullOrEmpty(pluginPem))
                     {
-                        throw new FileNotFoundException("Plugin PEM not found in secure storage", pluginID);
+                        string? localizedPluginBrokenReason = null;
+                        try
+                        {
+                            localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_SignMissing;
+                        }
+                        catch { }
+                        failReason = localizedPluginBrokenReason ?? "Plugin's signature is missing or corrupted. Try reinstall it.";
+                        return null;
                     }
 
                     if (!File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.enc")) || !File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.sig")) || !File.Exists(Path.Combine(pluginRoot, "hashtable.json.enc")))
@@ -469,9 +478,9 @@ namespace projectFrameCut.Services
                         return null;
                     }
 
-                    if(plugin is IApplicationPluginBase apb)
+                    if (plugin is IApplicationPluginBase apb)
                     {
-                        if(apb.AppLevelPluginAPIVersion != IApplicationPluginBase.CurrentAppLevelPluginAPIVersion)
+                        if (apb.AppLevelPluginAPIVersion != IApplicationPluginBase.CurrentAppLevelPluginAPIVersion)
                         {
                             string? localizedFailReason = null;
                             try
@@ -581,6 +590,38 @@ namespace projectFrameCut.Services
                 {
                     throw new EntryPointNotFoundException($"No suitable PluginLoader class found. Do you forget to add it?");
                 }
+                var ver = ldr.GetMethod("get_PluginAPIVersion", BindingFlags.Public | BindingFlags.Static)?.Invoke(null, null);
+                if (ver is int apiVer)
+                {
+                    if (apiVer != PluginAPIVersion)
+                    {
+                        Log($"Plugin has a mismatch PluginAPIVersion. Excepted {PluginAPIVersion}, got {apiVer}.", "error");
+                        string? localizedFailReason = null;
+                        try
+                        {
+                            localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
+                        }
+                        catch { }
+                        var failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
+                        throw new FeatureNotSupportedException(failReason);
+                    }
+                }
+                else
+                {
+                    Log($"Plugin has no version defined in LoaderClass.", "error");
+
+                    string? localizedFailReason = null;
+                    try
+                    {
+                        localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
+                    }
+                    catch { }
+                    var failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
+                    throw new FeatureNotSupportedException(failReason);
+                }
+
+
+
                 var ldrMethod = ldr.GetMethod("CreateInstance");
                 var pluginObj = ldrMethod?.Invoke(null, [Localized._LocaleId_, workingPath]);
                 if (pluginObj is IPluginBase plugin)
@@ -597,7 +638,7 @@ namespace projectFrameCut.Services
                         var failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
                         throw new FeatureNotSupportedException(failReason);
                     }
-                    
+
                     return plugin;
                 }
                 return null;
@@ -605,7 +646,7 @@ namespace projectFrameCut.Services
             catch (Exception ex)
             {
                 Log(ex, "Load userplugin", asb);
-                throw ex;
+                throw;
 
             }
         }
