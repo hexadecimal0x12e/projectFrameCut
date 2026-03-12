@@ -1,6 +1,6 @@
 # codename 'projectFrameCut'
 
-<image src="projectFrameCut\Resources\AppIcon\projectframecut.svg" width="300" height="300" />
+<image src="projectFrameCut\Resources\Images\projectframecut.svg" width="300" height="300" />
 
 一个强大，易上手且完全自由的视频剪辑软件
 
@@ -31,6 +31,8 @@
 
 - [x] 高级特效（过渡，关键帧，对象跟踪...）
 
+- [x] 转场
+
 - [x] Windows - 硬件加速渲染
 
 - [x] Android - 硬件加速渲染
@@ -43,7 +45,7 @@
 
 - [ ] 远程服务器支持 （仍然需要完善）
 
-- [ ] AI功能（AI生成字幕，配音，甚至素材）
+- [x] AI功能（AI生成字幕，配音，甚至素材）
 
 - [ ] AI全自动剪辑
 
@@ -152,9 +154,6 @@ c:\path\to\your\folder\Android
 你可以使用插件来自定义projectFrameCut。要开发插件，如果你感兴趣[这里有教程](https://github.com/hexadecimal0x12e/projectFrameCut.PluginTemplate)
 
 ### 许可和第三方库致谢
-projectFrameCut的主程序使用了Apache License，共享库（projectFrameCut.Shared和projectFrameCut.Render.RenderAPIBase）使用了MIT License。
+projectFrameCut的主程序和核心渲染库（CRL）使用了Apache License，共享库（projectFrameCut.Shared和projectFrameCut.Render.RenderAPIBase）使用了MIT License。
 
 更多详情，请见[license.md](license.md)
-
-
-
