@@ -226,7 +226,7 @@ namespace projectFrameCut
                     }
                     if (File.Exists(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json")))
                     {
-                        AIHelper.CurrentVideoOption = JsonSerializer.Deserialize<AIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json"))) ?? new AIOption { Provider = "OpenAI" };
+                        AIHelper.CurrentVideoOption = JsonSerializer.Deserialize<VideoGenAIOption>(File.ReadAllText(Path.Combine(MauiProgram.BasicDataPath, "ai_settings_video.json"))) ?? new VideoGenAIOption { Provider = "OpenAI" };
                     }
                 }
                 catch (Exception ex)

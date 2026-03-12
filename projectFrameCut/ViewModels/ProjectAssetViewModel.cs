@@ -118,9 +118,14 @@ public class ProjectAssetViewModel : INotifyPropertyChanged
 
     public ProjectAssetViewModel()
     {
-        AddAssetCommand = new Command(async () => await OnAddAsset());
-        RemoveAssetCommand = new Command<AssetItemViewModel>(async (asset) => await OnRemoveAsset(asset));
-        AddToTrackCommand = new Command<AssetItemViewModel>(async (asset) => await OnAddToTrack(asset));
+
+    }
+
+    public ProjectAssetViewModel(ICommand addAssetCommand, ICommand removeAssetCommand, ICommand addToTrackCommand)
+    {
+        AddAssetCommand = addAssetCommand;
+        RemoveAssetCommand = removeAssetCommand;
+        AddToTrackCommand = addToTrackCommand;
     }
 
     private async Task OnAddAsset()
@@ -128,12 +133,12 @@ public class ProjectAssetViewModel : INotifyPropertyChanged
         // 这个方法将在 ProjectAssetView.xaml.cs 中被重载
     }
 
-    private async Task OnRemoveAsset(AssetItemViewModel asset)
+    public async Task OnRemoveAsset(AssetItemViewModel asset)
     {
         // 这个方法将在 ProjectAssetView.xaml.cs 中被重载
     }
 
-    private async Task OnAddToTrack(AssetItemViewModel asset)
+    public async Task OnAddToTrack(AssetItemViewModel asset)
     {
         // 这个方法将在 ProjectAssetView.xaml.cs 中被重载
     }
@@ -162,7 +167,7 @@ public class ProjectAssetViewModel : INotifyPropertyChanged
             {
                 var assetPron = (await TextServices.GetHowToPronuce(asset.Name, default)).ToLower();
                 var assetPronInLocate = (await TextServices.GetHowToPronuce(asset.Name, TextHelper.FromLanguageCode(Localized._LocaleId_))).ToLower();
-                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate)|| assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
+                if (asset.Name.ToLower().Contains(searchLower) || assetPron.Contains(SearchText) || assetPron.Contains(inputPron) || assetPron.Contains(inputPronInLocate) || assetPronInLocate.Contains(SearchText) || assetPronInLocate.Contains(inputPron) || assetPronInLocate.Contains(inputPronInLocate))
                 {
                     localFiltered.Add(asset);
                 }
@@ -332,11 +337,14 @@ public class AssetItemViewModel : INotifyPropertyChanged
         }
     } = true;
 
+    public ICommand RemoveAssetCommand { get; set; }
+    public ICommand AddToTrackCommand { get; set; }
+
     public bool IsAddable => OriginalAsset != null && (OriginalAsset.AssetType == AssetType.Video || OriginalAsset.AssetType == AssetType.Image || OriginalAsset.AssetType == AssetType.Audio);
 
     public AssetItem OriginalAsset { get; set; }
 
-    public AssetItemViewModel(AssetItem asset, bool isLocal = true)
+    public AssetItemViewModel(AssetItem asset, ProjectAssetViewModel parent, bool isLocal = true)
     {
         OriginalAsset = asset;
         Id = asset.AssetId ?? "";
@@ -351,5 +359,7 @@ public class AssetItemViewModel : INotifyPropertyChanged
         FrameCount = (uint)(asset.FrameCount ?? 0L);
         IsInfiniteLength = asset.isInfiniteLength;
         IsLocal = isLocal;
+        RemoveAssetCommand = parent.RemoveAssetCommand;
+        AddToTrackCommand = parent.AddToTrackCommand;
     }
 }

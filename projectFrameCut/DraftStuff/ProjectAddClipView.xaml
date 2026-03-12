@@ -28,36 +28,24 @@
     <tv:TabbedView x:Name="MainTabView" x:FieldModifier="public">
         <tv:TabbedView.HeaderRightContent>
             <HorizontalStackLayout Spacing="8" VerticalOptions="Center" Margin="0,2,0,2">
-                <Border StrokeShape="RoundRectangle 10"
-                        Stroke="{AppThemeBinding Light=#D1D5DB, Dark=#4B5563}"
-                        BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#2F3542}"
-                        Padding="8,0"
-                        HeightRequest="40">
-                    <Picker x:Name="OrderOptionPicker"
-                            WidthRequest="130"
-                            BackgroundColor="Transparent"
-                            TextColor="{AppThemeBinding Light=#111827, Dark=#F3F4F6}"
-                            SelectedIndex="{Binding OrderOption}">
-                        <Picker.Items>
-                            <l:Localized Key="AssetPage_OrderBy_AddDate"/>
-                            <l:Localized Key="AssetPage_OrderBy_Name"/>
-                        </Picker.Items>
-                    </Picker>
-                </Border>
+                <Picker x:Name="OrderOptionPicker"
+                        WidthRequest="130"
+                        BackgroundColor="Transparent"
+                        TextColor="{AppThemeBinding Light=#111827, Dark=#F3F4F6}"
+                        SelectedIndex="{Binding OrderOption}">
+                    <Picker.Items>
+                        <l:Localized Key="AssetPage_OrderBy_AddDate"/>
+                        <l:Localized Key="AssetPage_OrderBy_Name"/>
+                    </Picker.Items>
+                </Picker>
 
-                <Border StrokeShape="RoundRectangle 10"
-                        Stroke="{AppThemeBinding Light=#D1D5DB, Dark=#4B5563}"
-                        BackgroundColor="{AppThemeBinding Light=#F3F4F6, Dark=#2F3542}"
-                        Padding="8,0"
-                        HeightRequest="40">
-                    <SearchBar Placeholder="{l:Localized Key=DraftPage_AddClipView_Search}"
+                <SearchBar Placeholder="{l:Localized Key=DraftPage_AddClipView_Search}"
                                x:Name="SearchInputEntry"
                                Text="{Binding SearchText}"
                                PlaceholderColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}"
                                TextColor="{AppThemeBinding Light=#111827, Dark=#F3F4F6}"
                                BackgroundColor="Transparent"
                                WidthRequest="250" />
-                </Border>
             </HorizontalStackLayout>
         </tv:TabbedView.HeaderRightContent>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}" Tag="LocalAssets" x:Name="LocalAssetsTab" x:FieldModifier="public">
@@ -116,8 +104,7 @@
                                             CornerRadius="4"
                                             Grid.Column="1"
                                             ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}"
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ProjectAddClipViewModel}}, Path=AddAssetClipCommand}"
-                                            CommandParameter="{Binding .}"/>
+                                            Command="{Binding AddAssetClipCommand}"/>
                                 </Grid>
                             </Grid>
                         </Border>
@@ -189,8 +176,8 @@
                                             CornerRadius="4"
                                             Grid.Column="1"
                                             ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}"
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ProjectAddClipViewModel}}, Path=AddAssetClipCommand}"
-                                            CommandParameter="{Binding .}"/>
+                                            Command="{Binding AddAssetClipCommand}"/>
+
                                 </Grid>
                             </Grid>
                         </Border>
@@ -217,6 +204,10 @@
                         Text="{Binding AIPrompt, Mode=TwoWay}"
                         BackgroundColor="{AppThemeBinding Dark=Black,Light=White}"
                         Margin="0,0,4,0"/>
+                <HorizontalStackLayout>
+                    <Label Text="{l:Localized Key=DraftPage_AddClipView_AIGC_Acknowledge1}" FontSize="12" TextColor="#f0ffffff" />
+                    <Label Text="{l:Localized Key=DraftPage_AddClipView_AIGC_Acknowledge2}" FontSize="12" FontAttributes="Bold" TextColor="#ffff00"  />
+                </HorizontalStackLayout>
 
                 <Grid RowDefinitions="Auto,Auto" Margin="0,8,0,0">
                     <Grid.Resources>
@@ -321,7 +312,10 @@
                                BackgroundColor="{AppThemeBinding Light=White, Dark=#424242}"
                                PlaceholderColor="{AppThemeBinding Light=#757575, Dark=#BDBDBD}"
                                FontSize="14"/>
-
+                        <HorizontalStackLayout>
+                            <Label Text="{l:Localized Key=DraftPage_AddClipView_AIGC_Acknowledge1}" FontSize="12" TextColor="#80ffffff" />
+                            <Label Text="{l:Localized Key=DraftPage_AddClipView_AIGC_Acknowledge2}" FontSize="12" FontAttributes="Bold" TextColor="#ffffff"  />
+                        </HorizontalStackLayout>
                         <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding IsGeneratingAITransition, Converter={toolkit:InvertedBoolConverter}}" >
                             <HorizontalStackLayout Grid.Column="0" Spacing="8">
                                 <Label Text="{l:Localized Key=DraftPage_AddClipView_AIGC_Duration}"
@@ -441,12 +435,8 @@
                                     WidthRequest="180"
                                     StrokeShape="RoundRectangle 8">
                                 <Border.GestureRecognizers>
-                                    <PointerGestureRecognizer
-                                        PointerEnteredCommand="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ProjectAddClipViewModel}}, Path=GenerateTransformPreviewCommand}"
-                                        PointerEnteredCommandParameter="{Binding .}"/>
-                                    <TapGestureRecognizer
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ProjectAddClipViewModel}}, Path=SelectTransformForPreviewCommand}"
-                                        CommandParameter="{Binding .}"/>
+                                    <PointerGestureRecognizer PointerEnteredCommand="{Binding GenerateTransformPreviewCommand}" />
+                                    <TapGestureRecognizer Command="{Binding SelectTransformForPreviewCommand}" />
                                 </Border.GestureRecognizers>
                                 <Grid RowDefinitions="*,Auto,Auto">
                                     <toolkit:MediaElement Grid.Row="0"
@@ -485,8 +475,8 @@
                                                     HeightRequest="36"
                                                     CornerRadius="4"
                                                     IsVisible="{Binding IsSideDetermined}"
-                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ProjectAddClipViewModel}}, Path=AddTransformClipCommand}"
-                                                    CommandParameter="{Binding .}"/>
+                                                    Command="{Binding AddTransformClipCommand}"/>
+
 
                                             <Button HorizontalOptions="End"
                                                     Text="👈"                                           
@@ -499,8 +489,8 @@
                                                     IsVisible="{Binding IsSideDetermined, Converter={toolkit:InvertedBoolConverter}}"
                                                     IsEnabled="{Binding IsApplicableToLeft}"
                                                     Background="{Binding IsApplicableToLeft, Converter={StaticResource IsValidConverter}}"
-                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ProjectAddClipViewModel}}, Path=AddTransformClipInLeftCommand}"
-                                                    CommandParameter="{Binding .}"/>
+                                                    Command="{Binding AddTransformClipInLeftCommand}" />
+
 
                                             <Button HorizontalOptions="End"
                                                     Text="👉"
@@ -514,8 +504,9 @@
                                                     IsVisible="{Binding IsSideDetermined, Converter={toolkit:InvertedBoolConverter}}"
                                                     IsEnabled="{Binding IsApplicableToRight}"
                                                     Background="{Binding IsApplicableToRight, Converter={StaticResource IsValidConverter}}"
-                                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ProjectAddClipViewModel}}, Path=AddTransformClipInRightCommand}"
-                                                    CommandParameter="{Binding .}"/>
+                                                    Command="{Binding AddTransformClipInRightCommand}" />
+
+
                                         </HorizontalStackLayout>
                                     </Grid>
                                 </Grid>
@@ -570,7 +561,7 @@
                                     Margin="8,0,0,0"
                                     WidthRequest="120"
                                     HeightRequest="34" />
-                            <CheckBox IsChecked="{Binding TextClipInSubTrack}" VerticalOptions="Center" Margin="8,0,0,0" />
+                            <CheckBox IsChecked="{Binding TextClipInSubTrack, Mode=TwoWay}" VerticalOptions="Center" Margin="8,0,0,0" />
                             <Label Text="{l:Localized Key=DraftPage_AddClipView_AddText_ShouldInSubtrack}" VerticalOptions="Center" Margin="-4,0,8,0" />
                         </HorizontalStackLayout>
 
@@ -599,8 +590,7 @@
                                 <Border.GestureRecognizers>
                                     <TapGestureRecognizer
                                         NumberOfTapsRequired="2"
-                                        Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:ProjectAddClipViewModel}}, Path=AddTextClipWithStyleCommand}"
-                                        CommandParameter="{Binding .}"/>
+                                        Command="{Binding AddTextClipWithStyleCommand}"/>
                                 </Border.GestureRecognizers>
                                 <Grid Padding="8">
                                     <Image Source="{Binding PreviewSource}"/>

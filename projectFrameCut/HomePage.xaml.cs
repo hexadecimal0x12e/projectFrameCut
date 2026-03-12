@@ -317,23 +317,37 @@ public partial class HomePage : ContentPage
 
         var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, "Untitled Project 1", 1024, null, "Untitled Project 1");
         if (projName is null) return;
+        
+        if (Path.GetInvalidPathChars().Any(projName.Contains) || Path.GetInvalidFileNameChars().Any(projName.Contains))
+        {
+            await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+            return;
+        }
+        
         draftSourcePath = Path.Combine(draftSourcePath, projName + ".pjfc");
         if (Directory.Exists(draftSourcePath))
         {
             await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
             return;
         }
-        if (Path.GetInvalidPathChars().Any(projName.Contains))
+        
+        try
+        {
+            Directory.CreateDirectory(draftSourcePath);
+        }
+        catch (Exception ex)
         {
             await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
             return;
         }
-        Directory.CreateDirectory(draftSourcePath);
+        
         var ProjectInfo = new ProjectJSONStructure
         {
             ProjectName = projName,
             NormallyExited = true,
-            LastChanged = DateTime.Now
+            LastChanged = DateTime.Now,
+            LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion,
+            LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown"
         };
 
         File.WriteAllText(
@@ -346,7 +360,7 @@ public partial class HomePage : ContentPage
             Path.Combine(draftSourcePath, "assets.json"),
             JsonSerializer.Serialize(Array.Empty<AssetItem>()));
         File.WriteAllText(
-            Path.Combine(draftSourcePath, "project.json"),
+            Path.Combine(draftSourcePath, "project.pjfc"),
             JsonSerializer.Serialize(ProjectInfo));
 
         await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
@@ -1127,20 +1141,21 @@ public partial class HomePage : ContentPage
     {
         var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, vmItem.Name, 1024, null, vmItem.Name);
         if (projName is null) return;
-        var newPath = Path.Combine(Path.GetDirectoryName(vmItem._projectPath) ?? "", projName);
+        var newPath = Path.Combine(Path.GetDirectoryName(vmItem._projectPath) ?? "", projName + ".pjfc");
         if (Directory.Exists(newPath))
         {
             await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
             return;
         }
-        if (Path.GetInvalidPathChars().Any(projName.Contains))
+        if (Path.GetInvalidPathChars().Any(projName.Contains) || Path.GetInvalidFileNameChars().Any(projName.Contains))
         {
             await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
             return;
         }
         Directory.Move(vmItem._projectPath, newPath);
-
-        var info = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(Path.Combine(newPath, "project.pjfc")), DraftPage.DraftJSONOption);
+        var projInfoPath = Path.Combine(newPath, "project.pjfc");
+        if (!File.Exists(projInfoPath)) projInfoPath = Path.Combine(newPath, "project.json");
+        var info = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(projInfoPath), DraftPage.DraftJSONOption);
         if (info is not null)
         {
             info.ProjectName = projName;

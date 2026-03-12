@@ -13,6 +13,7 @@ namespace projectFrameCut.Helper
     public partial class CrashForm : Form
     {
         public string logPath = string.Empty;
+        public string infoLogPath = string.Empty;
 
         public CrashForm()
         {
@@ -22,9 +23,9 @@ namespace projectFrameCut.Helper
                 FeedbackButton.Text = Localized.CrashForm_Feedback;
                 RestartButton.Text = Localized.CrashForm_Restart;
                 Text = Localized.CrashForm_Title();
-                if (Environment.GetCommandLineArgs().Contains("crashForm"))
+                if (Environment.GetCommandLineArgs().Contains("crashForm") && Environment.GetCommandLineArgs().Length >= 3)
                 {
-                    logPath = Environment.GetCommandLineArgs().Last();
+                    logPath = Environment.GetCommandLineArgs()[2];
                     if (!string.IsNullOrWhiteSpace(logPath) && File.Exists(logPath))
                     {
                         var logText = File.ReadAllText(logPath);
@@ -32,6 +33,11 @@ namespace projectFrameCut.Helper
                         var logHeader = File.ReadAllLines(logPath)[0];
                         MessageLabel.Text = logHeader;
                     }
+                    else
+                    {
+                        LogBox.Text = "Sorry, logs not available.";
+                    }
+                    infoLogPath = Environment.GetCommandLineArgs().Last();
                 }
             };
             InitializeComponent();
@@ -39,7 +45,15 @@ namespace projectFrameCut.Helper
 
         private void OpenLogButton_Click(object sender, EventArgs e)
         {
-            if (!string.IsNullOrWhiteSpace(logPath))
+            if (!string.IsNullOrWhiteSpace(infoLogPath) && File.Exists(infoLogPath))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    UseShellExecute = true,
+                    FileName = infoLogPath
+                });
+            }
+            else if (!string.IsNullOrWhiteSpace(logPath))
             {
                 Process.Start(new ProcessStartInfo
                 {
@@ -61,15 +75,11 @@ namespace projectFrameCut.Helper
 
         private void RestartButton_Click(object sender, EventArgs e)
         {
-            Environment.CurrentDirectory = AppContext.BaseDirectory;
-            if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.exe")))
+            Process.Start(new ProcessStartInfo
             {
-                Process.Start(new ProcessStartInfo
-                {
-                    UseShellExecute = true,
-                    FileName = "projectFrameCut.exe"
-                });
-            }
+                UseShellExecute = true,
+                FileName = "pjfc:"
+            });
         }
     }
 }

@@ -414,7 +414,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (!File.Exists(videoInputPath))
                 throw new FileNotFoundException($"Video input file not found: {videoInputPath}");
             if (!File.Exists(audioInputPath))
-                throw new FileNotFoundException($"Audio input file not found: {audioInputPath}");
+            {
+                File.Copy(videoInputPath, outputPath, overwrite: true);
+            }
 
             AVFormatContext* videoFmtCtx = null;
             AVFormatContext* audioFmtCtx = null;
