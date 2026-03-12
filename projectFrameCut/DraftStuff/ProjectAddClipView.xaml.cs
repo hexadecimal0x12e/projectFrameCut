@@ -26,7 +26,7 @@ public partial class ProjectAddClipView : ContentView
             "name" => 1,
             _ => 0
         };
-        if (_page?.UseCompactLayout ?? false || DeviceInfo.Idiom == DeviceIdiom.Phone)
+        if (_page?.UseCompactLayout ?? false || DeviceInfo.Idiom == DeviceIdiom.Phone || Width < 400)
         {
             SearchInputEntry.IsVisible = false;
             OrderOptionPicker.IsVisible = false;

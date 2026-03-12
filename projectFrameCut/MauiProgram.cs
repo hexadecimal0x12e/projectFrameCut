@@ -53,6 +53,8 @@ namespace projectFrameCut
     {
         public static StreamWriter LogWriter;
 
+        public static string LogPath { get; private set;  }
+
         public static string DataPath { get; private set; }
 
         public static string BasicDataPath { get; private set; }
@@ -131,7 +133,8 @@ namespace projectFrameCut
                     Log(ex, "create userdata dir", CreateMauiApp);
                     DataPath = FileSystem.AppDataDirectory;
                 }
-                LogWriter = new StreamWriter(System.IO.Path.Combine(loggingDir, $"log-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log"), append: true)
+                LogPath = System.IO.Path.Combine(loggingDir, $"log-{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.log");
+                LogWriter = new StreamWriter(LogPath, append: true)
                 {
                     AutoFlush = true
                 };

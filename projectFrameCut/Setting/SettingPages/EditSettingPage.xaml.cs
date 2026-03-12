@@ -11,6 +11,7 @@ using System.Globalization;
 using static SettingManager.SettingsManager;
 using projectFrameCut.Shared;
 using projectFrameCut.Services;
+using projectFrameCut.Render.Compose;
 
 public partial class EditSettingPage : ContentPage
 {
@@ -40,12 +41,32 @@ public partial class EditSettingPage : ContentPage
     Dictionary<string, TextClipEntry> TextTemplates = new();
 
     static string[] resolutions = ["640x480", "1280x720", "1920x1080", "2560x1440", "3840x2160"];
-
+    static bool LoadTextPreview = false;
 
     public EditSettingPage()
     {
+#if WINDOWS
+        try
+        {
+            if (!IsBoolSettingTrue("Edit_NoLoadTextTemplatePreview"))
+            {
+                ILGPU.Context context = ILGPU.Context.CreateDefault();
+                var devices = context.Devices.ToList();
+                var accelDevice = devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices[0]);
+                projectFrameCut.Render.WindowsRender.ILGPUPlugin.accelerators = [accelDevice?.CreateAccelerator(context)];
+                LoadTextPreview = true;
+            }
+        }
+        catch { LoadTextPreview = false; }
+#endif
+        Content = new ActivityIndicator
+        {
+            IsRunning = true,
+            WidthRequest = 200,
+            HeightRequest = 200
+        };
         LoadTextTemplates(ref TextTemplates);
-        BuildPPB();
+        Task.Run(BuildPPB);
     }
 
     async Task AddTextTemplateAsync()
@@ -225,10 +246,8 @@ public partial class EditSettingPage : ContentPage
         }
     }
 
-    void BuildPPB()
+    async void BuildPPB()
     {
-        Title = Localized.MainSettingsPage_Tab_Edit;
-
         rootPPB = new();
         rootPPB.AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_EditorPreference, SettingLocalizedResources.Edit_EditorPreference_Subtitle))
             .AppendWhen(DeviceInfo.Idiom != DeviceIdiom.Phone, c => c.AddPicker("Edit_PreferredPopupMode",
@@ -263,12 +282,36 @@ public partial class EditSettingPage : ContentPage
                                 e.Value with { text = sample }
                             }
                         };
+                        SolidColorClip bkg = new SolidColorClip
+                        {
+                            Id = s.StyleId,
+                            Name = s.StyleId,
+                            R = (ushort)(65535 - e.Value.r),
+                            G = (ushort)(65535 - e.Value.g),
+                            B = (ushort)(65535 - e.Value.b),
+                            A = 1f
+                        };
 
                         var fs = s.fontSize > 0 ? s.fontSize : 36;
                         var imgHeight = Math.Clamp((int)(fs * 1.2) + 4, 24, 200);
                         var imgWidth = Math.Clamp((int)(sample.Length * fs * 0.6) + 20, 100, 1200);
 
-                        var img = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true);
+                        var textPic = t.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true);
+                        var bkgPic = bkg.GetFrameRelativeToStartPointOfSource(0, imgWidth, imgHeight, true);
+
+                        IPicture img = null;
+                        if (LoadTextPreview)
+                        {
+                            img = OverlayMixture.Mix(bkgPic, textPic, Render.Plugin.PluginManager.CreateComputer(OverlayMixture.ComputerId, false), 8);
+                            textPic.Dispose();
+                            bkgPic.Dispose();
+                        }
+                        else
+                        {
+                            img = textPic;
+                        }
+
+
 
                         b.AddText(SettingLocalizedResources.Edit_AddView_Text_Template_TemplateItem(e.Key))
                          .AddCustomChild(new Image { Source = img.ToImageSource(), Aspect = Aspect.AspectFit, HeightRequest = imgHeight, WidthRequest = Math.Min(imgWidth, 600), HorizontalOptions = LayoutOptions.Start, VerticalOptions = LayoutOptions.Start, Margin = new Thickness(0) })
@@ -282,17 +325,17 @@ public partial class EditSettingPage : ContentPage
                 {
                     try
                     {
-                        var f = await FilePicker.PickAsync(
-                                        new PickOptions
-                                        {
-                                            FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
-                                            {
-                                                                    { DevicePlatform.WinUI, [".json"]},
-                                                                    { DevicePlatform.Android, ["application/json"] },
-                                                                    { DevicePlatform.iOS, ["public.json"]  },
-                                                                    { DevicePlatform.MacCatalyst, ["json"] }
-                                            })
-                                        });
+                        var f = await Dispatcher.DispatchAsync(() => FilePicker.PickAsync(
+                                new PickOptions
+                                {
+                                    FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
+                                    {
+                                        { DevicePlatform.WinUI, [".json"]},
+                                        { DevicePlatform.Android, ["application/json"] },
+                                        { DevicePlatform.iOS, ["public.json"]  },
+                                        { DevicePlatform.MacCatalyst, ["json"] }
+                                    })
+                                }));
                         using var json = await (f?.OpenReadAsync() ?? new(() => Stream.Null));
                         using var sr = new StreamReader(json ?? Stream.Null);
                         var text = await sr.ReadToEndAsync();
@@ -302,14 +345,14 @@ public partial class EditSettingPage : ContentPage
                             var exists = importedTemplates.Where(k => TextTemplates.ContainsKey(k.Key));
                             if (exists.Any())
                             {
-                                var conf = await DisplayPromptAsync(Localized._Warn,
+                                var conf = await Dispatcher.DispatchAsync(() => DisplayPromptAsync(Localized._Warn,
                                             SettingLocalizedResources.Edit_AddView_Text_Template_Import_Warn(string.Join(", ", exists.Select(c => c.Key))),
                                             Localized._Confirm,
                                             Localized._Cancel,
                                             "no",
                                             -1,
                                             Keyboard.Default,
-                                            "");
+                                            ""));
                                 if (conf != "yes")
                                 {
                                     return;
@@ -332,19 +375,19 @@ public partial class EditSettingPage : ContentPage
             .AddButton(SettingLocalizedResources.Edit_AddView_Text_Template_Import,
                 async (s, e) =>
                 {
-                    await Share.RequestAsync(new ShareFileRequest { File = new ShareFile(Path.Combine(MauiProgram.BasicDataPath, "TextTemplates.json")) });
+                    await Dispatcher.DispatchAsync(() => Share.RequestAsync(new ShareFileRequest { File = new ShareFile(Path.Combine(MauiProgram.BasicDataPath, "TextTemplates.json")) }));
                 })
             .AddButton(SettingLocalizedResources.Edit_AddView_Text_Template_Reset,
                         async (s, e) =>
                         {
-                            await DisplayPromptAsync(Localized._Warn,
+                            await Dispatcher.DispatchAsync(() => DisplayPromptAsync(Localized._Warn,
                                                      SettingLocalizedResources.Edit_AddView_Text_Template_Reset_Warn,
                                                      Localized._Confirm,
                                                      Localized._Cancel,
                                                      "no",
                                                      -1,
                                                      Keyboard.Default,
-                                                     "")
+                                                     ""))
                             .ContinueWith(async (t) =>
                             {
                                 if (t.Result != "yes")
@@ -380,7 +423,12 @@ public partial class EditSettingPage : ContentPage
             ;
 
 
-        Content = rootPPB.ListenToChanges(SettingInvoker).BuildWithScrollView();
+        Dispatcher.Dispatch(() =>
+        {
+            Title = Localized.MainSettingsPage_Tab_Edit;
+            Content = rootPPB.ListenToChanges(SettingInvoker).BuildWithScrollView();
+
+        });
     }
 
     private async void SettingInvoker(PropertyPanelPropertyChangedEventArgs args)

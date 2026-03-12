@@ -20,10 +20,11 @@ public partial class ProjectAssetView : ContentView
     {
         workingDraft = page;
 
-        _viewModel = new ProjectAssetViewModel();
-        _viewModel.AddAssetCommand = new Command(async () => await OnAddAssetClicked());
-        _viewModel.RemoveAssetCommand = new Command<AssetItemViewModel>(async (asset) => await OnRemoveAsset(asset));
-        _viewModel.AddToTrackCommand = new Command<AssetItemViewModel>(async (asset) => await OnAddToTrack(asset));
+        _viewModel = new ProjectAssetViewModel(
+            addAssetCommand: new Command(async () => await OnAddAssetClicked()),
+            removeAssetCommand: new Command<AssetItemViewModel>(async (asset) => await OnRemoveAsset(asset)),
+            addToTrackCommand: new Command<AssetItemViewModel>(async (asset) => await OnAddToTrack(asset))
+        );
 
         // 设置本地化字符串
         _viewModel.LocalAssetsTitle = Localized.DraftPage_AssetPanel_LocalAssets;
@@ -37,21 +38,21 @@ public partial class ProjectAssetView : ContentView
 
 
     private void LoadAssets()
-        {
+    {
         _viewModel.LocalAssets.Clear();
         _viewModel.SharedAssets.Clear();
 
         // 加载本地素材
         foreach (var kvp in workingDraft.Assets)
         {
-            var assetVM = new AssetItemViewModel(kvp.Value, isLocal: true);
+            var assetVM = new AssetItemViewModel(kvp.Value, _viewModel, isLocal: true);
             _viewModel.LocalAssets.Add(assetVM);
         }
 
         // 加载共享素材
         foreach (var kvp in AssetDatabase.Assets.Where(c => c.Value.AssetType is AssetType.Video or AssetType.Audio or AssetType.Image))
         {
-            var assetVM = new AssetItemViewModel(kvp.Value, isLocal: false);
+            var assetVM = new AssetItemViewModel(kvp.Value, _viewModel, isLocal: false);
             _viewModel.SharedAssets.Add(assetVM);
         }
 
@@ -179,7 +180,7 @@ public partial class ProjectAssetView : ContentView
         if (asset is not null)
         {
             workingDraft.Assets[asset.AssetId] = asset;
-            _viewModel.LocalAssets.Add(new AssetItemViewModel(asset, isLocal: true));
+            _viewModel.LocalAssets.Add(new AssetItemViewModel(asset, _viewModel, isLocal: true));
             _viewModel.FilterAssets(); // 刷新过滤列表
         }
     }

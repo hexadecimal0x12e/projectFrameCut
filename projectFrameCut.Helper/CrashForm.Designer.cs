@@ -41,38 +41,41 @@
             // 
             label1.AutoSize = true;
             label1.Font = new Font("HarmonyOS Sans SC", 48F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            label1.Location = new Point(12, 9);
-            label1.Margin = new Padding(18, 0, 18, 0);
+            label1.Location = new Point(10, 8);
+            label1.Margin = new Padding(15, 0, 15, 0);
             label1.Name = "label1";
-            label1.Size = new Size(104, 112);
+            label1.Size = new Size(88, 94);
             label1.TabIndex = 0;
             label1.Text = ":(";
             // 
             // MessageLabel
             // 
             MessageLabel.Font = new Font("HarmonyOS Sans SC", 18F, FontStyle.Regular, GraphicsUnit.Point, 134);
-            MessageLabel.Location = new Point(12, 121);
+            MessageLabel.Location = new Point(10, 101);
+            MessageLabel.Margin = new Padding(2, 0, 2, 0);
             MessageLabel.Name = "MessageLabel";
-            MessageLabel.Size = new Size(1205, 91);
+            MessageLabel.Size = new Size(1004, 76);
             MessageLabel.TabIndex = 1;
             MessageLabel.Text = "Sorry, the application has encountered an unhandled exception and needs to close now.";
             // 
             // LogBox
             // 
-            LogBox.Location = new Point(12, 200);
+            LogBox.Location = new Point(10, 167);
+            LogBox.Margin = new Padding(2, 2, 2, 2);
             LogBox.Multiline = true;
             LogBox.Name = "LogBox";
             LogBox.ReadOnly = true;
             LogBox.ScrollBars = ScrollBars.Both;
-            LogBox.Size = new Size(1225, 417);
+            LogBox.Size = new Size(1022, 348);
             LogBox.TabIndex = 2;
             LogBox.UseSystemPasswordChar = true;
             // 
             // OpenLogButton
             // 
-            OpenLogButton.Location = new Point(12, 623);
+            OpenLogButton.Location = new Point(10, 519);
+            OpenLogButton.Margin = new Padding(2, 2, 2, 2);
             OpenLogButton.Name = "OpenLogButton";
-            OpenLogButton.Size = new Size(160, 34);
+            OpenLogButton.Size = new Size(133, 28);
             OpenLogButton.TabIndex = 3;
             OpenLogButton.Text = "Open log";
             OpenLogButton.UseVisualStyleBackColor = true;
@@ -81,9 +84,10 @@
             // RestartButton
             // 
             RestartButton.AutoSize = true;
-            RestartButton.Location = new Point(1035, 623);
+            RestartButton.Location = new Point(862, 519);
+            RestartButton.Margin = new Padding(2, 2, 2, 2);
             RestartButton.Name = "RestartButton";
-            RestartButton.Size = new Size(211, 34);
+            RestartButton.Size = new Size(176, 30);
             RestartButton.TabIndex = 4;
             RestartButton.Text = "Restart application";
             RestartButton.UseVisualStyleBackColor = true;
@@ -91,9 +95,10 @@
             // 
             // FeedbackButton
             // 
-            FeedbackButton.Location = new Point(178, 623);
+            FeedbackButton.Location = new Point(148, 519);
+            FeedbackButton.Margin = new Padding(2, 2, 2, 2);
             FeedbackButton.Name = "FeedbackButton";
-            FeedbackButton.Size = new Size(160, 34);
+            FeedbackButton.Size = new Size(133, 28);
             FeedbackButton.TabIndex = 5;
             FeedbackButton.Text = "Feedback";
             FeedbackButton.UseVisualStyleBackColor = true;
@@ -102,9 +107,9 @@
             // CrashForm
             // 
             AcceptButton = RestartButton;
-            AutoScaleDimensions = new SizeF(144F, 144F);
+            AutoScaleDimensions = new SizeF(120F, 120F);
             AutoScaleMode = AutoScaleMode.Dpi;
-            ClientSize = new Size(1258, 664);
+            ClientSize = new Size(1052, 561);
             Controls.Add(FeedbackButton);
             Controls.Add(RestartButton);
             Controls.Add(OpenLogButton);
@@ -112,9 +117,8 @@
             Controls.Add(MessageLabel);
             Controls.Add(label1);
             Icon = (Icon)resources.GetObject("$this.Icon");
-            Margin = new Padding(4);
             MaximizeBox = false;
-            MinimumSize = new Size(1280, 720);
+            MinimumSize = new Size(1070, 608);
             Name = "CrashForm";
             Text = "projectFrameCut Crash Report";
             ResumeLayout(false);

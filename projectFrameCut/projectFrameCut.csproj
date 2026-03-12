@@ -48,13 +48,13 @@
 		<AssemblyVersion>1.4.0.0</AssemblyVersion>
 		<FileVersion>1.4.0.0</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
-		<Product>codename 'projectFrameCut'</Product>
-		<Description>projectFrameCut alpha</Description>
-		<AssemblyTitle>codename 'projectFrameCut'</AssemblyTitle>
+		<Product>projectFrameCut</Product>
+		<Description>projectFrameCut Application</Description>
+		<AssemblyTitle>projectFrameCut Application</AssemblyTitle>
 		<AssemblyDescription>projectFrameCut Main Application</AssemblyDescription>
-		<Copyright>Copyright (c) hexadecimal0x12e 2026</Copyright>
+		<Copyright>Copyright (c) hexadecimal0x12e 2025-2026</Copyright>
 		<PackageProjectUrl>hexadecimal0x12e.com/projectFrameCut</PackageProjectUrl>
-		<Title>codename 'projectFrameCut'</Title>
+		<Title>projectFrameCut Application</Title>
 
 
 
@@ -84,6 +84,7 @@
 		<ApplicationId>hexadecimal0x12e.projectframecut</ApplicationId>
 		<ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
 		<WindowsPackageType>MSIX</WindowsPackageType>
+		<SelfContained>true</SelfContained>
 		<GenerateAppInstallerFile>True</GenerateAppInstallerFile>
 		<AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
 		<PackageCertificateThumbprint>AADFCEA554CF8361334EFB9B2C8D48B0DA05F7AF</PackageCertificateThumbprint>

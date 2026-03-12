@@ -1,13 +1,19 @@
 using CommunityToolkit.Maui.Core;
+using Microsoft.Maui.Storage;
+using projectFrameCut.AIAssistance;
 using projectFrameCut.APIClient;
-using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using projectFrameCut.Render.Rendering;
+using projectFrameCut.Render.Transform;
 using projectFrameCut.Services;
+using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Setting.SettingPages;
 using projectFrameCut.Shared;
 using System.Collections.ObjectModel;
@@ -15,13 +21,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
-using projectFrameCut.Render.Rendering;
-using projectFrameCut.AIAssistance;
-using IPicture = projectFrameCut.Shared.IPicture;
-using Microsoft.Maui.Storage;
-using projectFrameCut.Render.Transform;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
-using projectFrameCut.ApplicationAPIBase.Views.Pickers;
+using IPicture = projectFrameCut.Shared.IPicture;
 
 namespace projectFrameCut.ViewModels;
 
@@ -37,7 +38,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         _draftPage.SelectedClipChanged += async (s, e) => await Refresh();
     }
 
-    private readonly DraftPage _draftPage;
+    public readonly DraftPage _draftPage;
 
     public bool TransformMenuActivatedViaHandleClick = false;
 
@@ -208,7 +209,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     public bool IsSideDetermined
     {
         get;
-        private set
+        set
         {
             if (field != value)
             {
@@ -277,6 +278,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 field = value;
                 TextClipInSubTrack = value?.ShouldInSubtrack ?? false;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(TextClipInSubTrack));
             }
         }
     }
@@ -445,7 +447,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         LoadTransforms();
     }
 
-    private async Task LoadAssets()
+    public async Task LoadAssets()
     {
         LocalAssets.Clear();
         SharedAssets.Clear();
@@ -453,7 +455,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
         foreach (var asset in _draftPage.Assets.Values.Where(c => c.AssetType != AssetType.Font).OrderBy(a => a.Name))
         {
-            LocalAssets.Add(new AssetItemViewModel
+            LocalAssets.Add(new AssetItemViewModel(this)
             {
                 Id = asset.AssetId,
                 Name = asset.Name,
@@ -468,7 +470,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
         foreach (var asset in AssetDatabase.Assets.Values.Where(c => c.AssetType != AssetType.Font).OrderBy(a => a.Name))
         {
-            SharedAssets.Add(new AssetItemViewModel
+            SharedAssets.Add(new AssetItemViewModel(this)
             {
                 Id = asset.AssetId,
                 Name = asset.Name,
@@ -522,7 +524,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     #endregion
 
     #region asset
-    private async Task AddAssetClip(AssetItemViewModel? assetViewModel)
+    public async Task AddAssetClip(AssetItemViewModel? assetViewModel)
     {
         if (assetViewModel?.OriginalAsset == null) return;
 
@@ -548,7 +550,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     #region text
 
-    private async Task AddTextClipWithStyle(TextStyleItemViewModel? styleOverride = null)
+    public async Task AddTextClipWithStyle(TextStyleItemViewModel? styleOverride = null)
     {
         var style = styleOverride ?? SelectedTextStyle;
         if (style is null) return;
@@ -623,7 +625,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         TextToAdd = "";
     }
 
-    private void InitializeTextStyles(string? previewText = null)
+    public void InitializeTextStyles(string? previewText = null)
     {
 
         AvailableTextStyles.Clear();
@@ -633,7 +635,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             EditSettingPage.LoadTextTemplates(ref template);
             foreach (var item in template)
             {
-                AvailableTextStyles.Add(new TextStyleItemViewModel
+                AvailableTextStyles.Add(new TextStyleItemViewModel(this)
                 {
                     Id = item.Key,
                     Name = item.Key,
@@ -645,7 +647,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         catch (Exception ex)
         {
             Log(ex, "Load user text templates", this);
-            AvailableTextStyles.Add(new TextStyleItemViewModel
+            AvailableTextStyles.Add(new TextStyleItemViewModel(this)
             {
                 Id = "default",
                 Name = "Default",
@@ -660,7 +662,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     fontSize = 36
                 }
             });
-            AvailableTextStyles.Add(new TextStyleItemViewModel
+            AvailableTextStyles.Add(new TextStyleItemViewModel(this)
             {
                 Id = "title",
                 Name = "Title",
@@ -675,7 +677,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     fontSize = 64
                 }
             });
-            AvailableTextStyles.Add(new TextStyleItemViewModel
+            AvailableTextStyles.Add(new TextStyleItemViewModel(this)
             {
                 Id = "subtitle",
                 Name = "Subtitle",
@@ -725,7 +727,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         var applicableToRight = _draftPage?.SelectedClip != null && _draftPage.FindNeighbors(_draftPage.SelectedClip).right is not null;
         foreach (var kvp in localizedNames)
         {
-            AvailableTransforms.Add(new TransformItemViewModel
+            AvailableTransforms.Add(new TransformItemViewModel(this)
             {
                 TypeKey = kvp.Key,
                 DisplayName = kvp.Value,
@@ -750,7 +752,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task AddTransformClip(TransformItemViewModel? transform, bool left, bool right)
+    public async Task AddTransformClip(TransformItemViewModel? transform, bool left, bool right)
     {
         if (transform is null) return;
         if (transform.IsSideDetermined) _draftPage.AddTransformToNeighbors(transform.TypeKey);
@@ -761,7 +763,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         ClipAdded?.Invoke(this, EventArgs.Empty);
     }
 
-    private async Task GenerateTransformPreviewAsync(TransformItemViewModel? transform)
+    public async Task GenerateTransformPreviewAsync(TransformItemViewModel? transform)
     {
         if (transform is null || transform.IsGeneratingPreview) return;
         transform.IsGeneratingPreview = true;
@@ -870,7 +872,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     #region search
 
-    private async Task FilterAssets()
+    public async Task FilterAssets()
     {
         FilteredLocalAssets.Clear();
         FilteredSharedAssets.Clear();
@@ -983,8 +985,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     #region sketch
 
-    private CommunityToolkit.Maui.Views.DrawingView? _drawingView;
-    private readonly Stack<CommunityToolkit.Maui.Core.IDrawingLine> _redoStack = new();
+    public CommunityToolkit.Maui.Views.DrawingView? _drawingView;
+    public readonly Stack<CommunityToolkit.Maui.Core.IDrawingLine> _redoStack = new();
 
     public void SetDrawingView(CommunityToolkit.Maui.Views.DrawingView drawingView)
     {
@@ -994,7 +996,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         _drawingView.DrawingLineCompleted += (_, _) => _redoStack.Clear();
     }
 
-    private void DrawingUndo()
+    public void DrawingUndo()
     {
         if (_drawingView?.Lines is { Count: > 0 } lines)
         {
@@ -1004,7 +1006,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private void DrawingRedo()
+    public void DrawingRedo()
     {
         if (_redoStack.Count > 0 && _drawingView != null)
         {
@@ -1012,7 +1014,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task SelectDrawingPenColor()
+    public async Task SelectDrawingPenColor()
     {
 #if WINDOWS
         var picker = new Microsoft.UI.Xaml.Controls.ColorPicker
@@ -1056,7 +1058,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 #endif
     }
 
-    private async Task AddDrawingContent()
+    public async Task AddDrawingContent()
     {
         if (_drawingView == null || _drawingView.Lines.Count == 0)
         {
@@ -1135,7 +1137,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     #endregion
 
     #region misc
-    private async Task AddSolidColorClip()
+    public async Task AddSolidColorClip()
     {
         var trackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
         if (!_draftPage.Tracks.ContainsKey(trackIndex))
@@ -1199,7 +1201,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     }
 
 
-    private async Task AddAlternativeSourceClip()
+    public async Task AddAlternativeSourceClip()
     {
         var path = await _draftPage.DisplayPromptAsync("Add", "Input source path", placeholder: "#<provider>,<stream id>");
         if (string.IsNullOrWhiteSpace(path)) return;
@@ -1236,7 +1238,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     }
 
 
-    private async Task AddReuseableAssetClip(AssetItemViewModel? assetViewModel)
+    public async Task AddReuseableAssetClip(AssetItemViewModel? assetViewModel)
     {
         if (assetViewModel?.OriginalAsset == null) return;
 
@@ -1327,7 +1329,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     #region AI Content Generation
 
-    private async Task GenerateAIContent()
+    public async Task GenerateAIContent()
     {
         if (string.IsNullOrWhiteSpace(AIPrompt))
         {
@@ -1370,7 +1372,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task GenerateAIImage()
+    public async Task GenerateAIImage()
     {
         try
         {
@@ -1448,7 +1450,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     }
 
 
-    private async Task AddAIGeneratedImageToTimeline(string imagePath, string prompt)
+    public async Task AddAIGeneratedImageToTimeline(string imagePath, string prompt)
     {
         try
         {
@@ -1494,7 +1496,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task GenerateAIVideo()
+    public async Task GenerateAIVideo()
     {
         try
         {
@@ -1554,7 +1556,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private (int width, int height) ParseVideoRatio(string ratio)
+    public (int width, int height) ParseVideoRatio(string ratio)
     {
         return ratio switch
         {
@@ -1568,7 +1570,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     }
 
 
-    private async Task AddAIGeneratedVideoToTimeline(string videoPath, string prompt)
+    public async Task AddAIGeneratedVideoToTimeline(string videoPath, string prompt)
     {
         try
         {
@@ -1627,7 +1629,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     #region AI Transition Generation
 
-    private async Task GenerateAITransition(object direction)
+    public async Task GenerateAITransition(object direction)
     {
         if (direction is not string directionStr) directionStr = "";
 
@@ -1803,7 +1805,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task<IPicture?> GetClipLastFrame(ClipElementUI clipElement)
+    public async Task<IPicture?> GetClipLastFrame(ClipElementUI clipElement)
     {
         try
         {
@@ -1824,7 +1826,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task<IPicture?> GetClipFirstFrame(ClipElementUI clipElement)
+    public async Task<IPicture?> GetClipFirstFrame(ClipElementUI clipElement)
     {
         try
         {
@@ -1842,7 +1844,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     }
 
-    private Render.RenderAPIBase.ClipAndTrack.IClip? ConvertClipElementToIClip(ClipElementUI clipElement)
+    public Render.RenderAPIBase.ClipAndTrack.IClip? ConvertClipElementToIClip(ClipElementUI clipElement)
     {
         try
         {
@@ -1970,6 +1972,13 @@ public class AssetItemViewModel
     public bool HasThumbnail => !string.IsNullOrEmpty(ThumbPath);
 
     public Brush BackgroundBrush { get; set; } = new SolidColorBrush(Colors.CornflowerBlue);
+
+    public Command AddAssetClipCommand { get; set; }
+
+    public AssetItemViewModel(ProjectAddClipViewModel parent)
+    {
+        AddAssetClipCommand = new Command(async () => await parent.AddAssetClip(this));
+    }
 }
 
 public class TransformItemViewModel : INotifyPropertyChanged
@@ -1985,7 +1994,7 @@ public class TransformItemViewModel : INotifyPropertyChanged
     public bool IsSideDetermined { get; set; } = false;
     public bool IsDraftSelectedAnyClip { get; set; } = false;
 
-    private string? _previewVideoPath;
+    public string? _previewVideoPath;
     /// <summary>Path to the locally-cached preview MP4 for this transform.</summary>
     public string? PreviewVideoPath
     {
@@ -2004,7 +2013,7 @@ public class TransformItemViewModel : INotifyPropertyChanged
     /// <summary>True once a preview video has been cached for this transform.</summary>
     public bool IsPreviewReady => !string.IsNullOrEmpty(_previewVideoPath);
 
-    private bool _isGeneratingPreview;
+    public bool _isGeneratingPreview;
     /// <summary>True while the preview is being rendered in the background.</summary>
     public bool IsGeneratingPreview
     {
@@ -2017,6 +2026,17 @@ public class TransformItemViewModel : INotifyPropertyChanged
                 OnPropertyChanged();
             }
         }
+    }
+
+    public Command AddTransformClipCommand { get; set; }
+    public Command AddTransformClipInLeftCommand { get; set; }
+    public Command AddTransformClipInRightCommand { get; set; }
+
+    public TransformItemViewModel(ProjectAddClipViewModel parent)
+    {
+        AddTransformClipCommand = new Command(async () => await parent.AddTransformClip(this,false,false));
+        AddTransformClipInLeftCommand = new Command(async () => await parent.AddTransformClip(this,true,false));
+        AddTransformClipInRightCommand = new Command(async () => await parent.AddTransformClip(this,false,true));
     }
 }
 
@@ -2050,6 +2070,12 @@ public class TextStyleItemViewModel
         }
     }
     public bool ShouldInSubtrack { get; set; } = false;
+
+    public Command AddTextClipWithStyleCommand { get; set; }
+    public TextStyleItemViewModel(ProjectAddClipViewModel parent)
+    {
+        AddTextClipWithStyleCommand = new Command(async () => parent.AddTextClipWithStyle(this));
+    }
 }
 
 #endregion

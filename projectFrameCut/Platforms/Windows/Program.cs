@@ -70,9 +70,9 @@ namespace projectFrameCut.WinUI
                 }
                 catch (Exception ex)
                 {
-                    Log(ex,"Read channel");
+                    Log(ex, "Read channel");
                 }
-                if(args.Length == 1)
+                if (args.Length == 1)
                 {
                     if (args[0].StartsWith("pjfc:"))
                     {
@@ -177,6 +177,8 @@ namespace projectFrameCut.WinUI
         [DoesNotReturn]
         public static void Crash(Exception ex)
         {
+            MauiProgram.LogWriter?.Flush();
+
 #if DEBUG
             if (Debugger.IsAttached)
             {
@@ -185,9 +187,11 @@ namespace projectFrameCut.WinUI
 #endif
             try
             {
-                Log(ex, "Application crashed", "Application");
+                MauiProgram.LogWriter?.WriteLine("FATAL: CRASH");
+                Log("FATAL: projectFrameCut encountered an unhandled exception and is going to crash.", "fatal");
+                Log(ex, "", "Application");
+                Log($"Crash() is invoked by:{Environment.StackTrace}.", "fatal");
                 MauiProgram.LogWriter?.Flush();
-                Helper.HelperProgram.Cleanup();
 
             }
             catch (Exception) { }
@@ -262,14 +266,38 @@ Current directory: {Environment.CurrentDirectory}
                     File.WriteAllText(logPath, logMessage);
                 }
                 Thread.Sleep(100);
-                if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.exe")))
+                if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.dll")))
                 {
-                    Process.Start(new ProcessStartInfo { FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.exe"), Arguments = $"crashForm \"{logPath}\"", UseShellExecute = true });
+                    try
+                    {
+
+                        string bootArgs = $"\"{Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.dll")}\" crashForm \"{logPath}\" \"{MauiProgram.LogPath}\"";
+                        Log($"CrashForm boot args: {bootArgs}", "fatal");
+                        var p = Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "dotnet.exe",
+                            Arguments = bootArgs,
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        });
+                        p.WaitForExit(5000);
+                        if (p.HasExited && p.ExitCode != 0)
+                        {
+                            Process.Start(new ProcessStartInfo { FileName = logPath, UseShellExecute = true });
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        Process.Start(new ProcessStartInfo { FileName = logPath, UseShellExecute = true });
+                    }
                 }
                 else
                 {
                     Process.Start(new ProcessStartInfo { FileName = logPath, UseShellExecute = true });
                 }
+
+                MauiProgram.LogWriter?.Flush();
+                Helper.HelperProgram.Cleanup();
 
                 Environment.FailFast(logMessage, ex);
                 Environment.Exit(ex.HResult);

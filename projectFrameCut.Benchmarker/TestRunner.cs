@@ -26,7 +26,7 @@ namespace projectFrameCut.Benchmarker
                 }
                 else
                 {
-                    instance.Render(src, PluginManager.CreateComputer(instance.NeedComputer), 1280, 720);
+                    (instance as INormalEffect)?.Render(src, PluginManager.CreateComputer(instance.NeedComputer), 1280, 720);
                 }
                 sw.Stop();
                 Console.WriteLine($"Test turn {i} done. Elapsed {sw.Elapsed}");

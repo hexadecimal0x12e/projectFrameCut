@@ -95,6 +95,7 @@ namespace projectFrameCut.Services
                         font = TextClip.FontsCache.TryGet(item.FontName, out var family) ? family.CreateFont(fontSize) : throw new InvalidOperationException("Font not available.");
                     }
 
+                    var isDark = Application.Current?.UserAppTheme == AppTheme.Dark;
 
                     // 当未指定 sample 时，优先使用 FontItem.PrimaryLanguageTag 判断语言，
                     // 再尝试从字体文件直接读取（如果能找到路径的话）。
@@ -106,7 +107,7 @@ namespace projectFrameCut.Services
                     {
                         ctx.Fill(Color.Transparent);
                         var location = new PointF(10, height / 2f - fontSize / 2f);
-                        ctx.DrawText(options, effectiveSample, font, Color.White, location);
+                        ctx.DrawText(options, effectiveSample, font, isDark ? Color.White : Color.Black, location);
                     });
 
                     img.SaveAsPng(cachePath);
