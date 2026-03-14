@@ -94,7 +94,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         /// <remarks>
         /// The argument for value is Id of the clip, and the second argument is the name of the clip.
         /// </remarks>
-        public Dictionary<string, Func<string, string, IClip>> ClipProvider { get; }
+        //public Dictionary<string, Func<string, string, IClip>> ClipProvider { get; }
 
         /// <summary>
         /// Create an ISoundTrack instance from the given file path and JSON data.
@@ -595,14 +595,14 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public static string GetWhatProvided(IPluginBase pluginBase)
         {
             StringBuilder providedContent = new($"{pluginBase.Name} ({pluginBase.PluginID}) provide these:\r\n");
-            if (pluginBase.ClipProvider.Any())
-            {
-                providedContent.AppendLine("Clips:");
-                foreach (var item in pluginBase.ClipProvider)
-                {
-                    providedContent.AppendLine($"- {item.Key}");
-                }
-            }
+            //if (pluginBase.ClipProvider.Any())
+            //{
+            //    providedContent.AppendLine("Clips:");
+            //    foreach (var item in pluginBase.ClipProvider)
+            //    {
+            //        providedContent.AppendLine($"- {item.Key}");
+            //    }
+            //}
             var effectTypes = pluginBase.EffectFactoryProvider.Keys.Concat(pluginBase.EffectProvider.Keys).Distinct();
             if (effectTypes.Any())
             {

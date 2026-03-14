@@ -101,11 +101,7 @@ public class InternalPluginBase : IPluginBase
         { "MaskApplier", () => new MaskApplier() },
         { "StraightLineMovementValueProducer",() => new StraightLineMovementValueProducer() },
         { "PointPlacer",() => new PointPlacer() },
-        { "MockValueProvider", () => new MockValueProvider() },
-        { "MockOneToOneProcessor", () => new MockOneToOneProcessor() },
-        { "MockManyToOneProcessor", () => new MockManyToOneProcessor() },
-        { "MockOneInputResultGenerator", () => new MockOneInputResultGenerator() },
-        { "MockManyInputResultGenerator", () => new MockManyInputResultGenerator() },
+
     };
 
     public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -114,13 +110,7 @@ public class InternalPluginBase : IPluginBase
         { "MaskApplier", new MaskApplierFactory() },
         { "StraightLineMovementValueProducer",new StraightLineMovementValueProducerFactory() },
         { "PointPlacer", new PointPlacerFactory() },
-#if DEBUG
-        { "MockValueProvider",  new MockValueProviderFactory() },
-        { "MockOneToOneProcessor",  new MockOneToOneProcessorFactory() },
-        { "MockManyToOneProcessor",  new MockManyToOneProcessorFactory() },
-        { "MockOneInputResultGenerator",  new MockOneInputResultGeneratorFactory() },
-        { "MockManyInputResultGenerator",  new MockManyInputResultGeneratorFactory() },
-#endif
+
     };
 
 
@@ -154,7 +144,7 @@ public class InternalPluginBase : IPluginBase
 
     public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider => new Dictionary<string, Func<string, IAudioSource>>
     {
-        {"AudioDecoder", (s) => new AudioDecoder(s) }
+        {"AudioDecoder", (s) => new Float32bitAudioDecoder(s) }
     };
 
     public Dictionary<string, Func<string, IVideoWriter>> VideoWriterProvider => new Dictionary<string, Func<string, IVideoWriter>>

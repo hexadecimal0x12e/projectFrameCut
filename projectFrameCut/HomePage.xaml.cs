@@ -347,7 +347,8 @@ public partial class HomePage : ContentPage
             NormallyExited = true,
             LastChanged = DateTime.Now,
             LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion,
-            LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown"
+            LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown",
+            PluginUsed = []
         };
 
         File.WriteAllText(
@@ -1422,7 +1423,7 @@ public partial class HomePage : ContentPage
                 }
             }
 
-            if (project?.PluginUsed != null && project.PluginUsed.Any())
+            if (project?.PluginUsed != null && project.PluginUsed.Any((c) => !string.IsNullOrWhiteSpace(c)))
             {
 
                 var unsupportedPlugins = project.PluginUsed.Where(p => !plugins.Contains(p)).ToList();

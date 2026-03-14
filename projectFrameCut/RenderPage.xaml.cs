@@ -26,6 +26,8 @@ using System.Runtime.InteropServices;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using System.Globalization;
 using PictureExtensions = projectFrameCut.Shared.PictureExtensions;
+using IPicture = projectFrameCut.Shared.IPicture;
+
 
 
 #if ANDROID
@@ -526,7 +528,11 @@ public partial class RenderPage : ContentPage
                 _ => ".mp4"
             };
 
-
+            var bpp = vm.BitDepth switch
+            {
+                "8bit" => IPicture.PicturePixelMode.BytePicture,
+                _ => IPicture.PicturePixelMode.UShortPicture
+            };
 
 
             var outTempFile = outputPath + ext;
@@ -596,7 +602,7 @@ public partial class RenderPage : ContentPage
 
             foreach (var item in clips)
             {
-                await Task.Run(item.ReInit);
+                await Task.Run(() => item.ReInit(bpp));
             }
 
             SetSubProg("PrepareDraft");
@@ -625,7 +631,8 @@ public partial class RenderPage : ContentPage
                 LogState = false,
                 LogStatToLogger = true,
                 LogProcessStack = SettingsManager.IsBoolSettingTrue("render_DumpDiagData"),
-                GCOption = gcOption
+                GCOption = gcOption,
+                Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture
             };
 
             renderer.OnProgressChanged += (p, etr) =>
@@ -676,7 +683,7 @@ public partial class RenderPage : ContentPage
             Log("Start render...");
 
             sw1.Restart();
-            if (blockwrite) 
+            if (blockwrite)
             {
                 await Task.Run(async () => await renderer.GoRenderSync(_cts.Token));
                 Log($"Sync render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
@@ -743,7 +750,7 @@ public partial class RenderPage : ContentPage
         catch (Exception ex)
         {
             Log(ex, "Render", this);
-            throw;           
+            throw;
         }
 
 
@@ -762,8 +769,9 @@ public partial class RenderPage : ContentPage
         }
 
         var clips = DraftImportAndExportHelper.JSONToIClips(draftSrc).Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip).ToArray();
+        var tracks = DraftImportAndExportHelper.JSONToISoundTracks(draftSrc).ToArray();
 
-        if (clips == null || clips.Length == 0)
+        if (!clips.ArrayAny() && !tracks.ArrayAny())
         {
             Log("No sound clips in the whole draft. returning...");
             return;
@@ -774,14 +782,23 @@ public partial class RenderPage : ContentPage
         Log("Initializing all clips...");
         foreach (IClip clip in clips)
         {
-            clip.ReInit();
+            clip.ReInit(8);
         }
 
-        var buf = AudioComposer.Compose(clips, null, (int)_project.TargetFrameRate, 48000, 2);
-        AudioWriter writer = new(outputPath, 48000, 2);
-        writer.Append(buf);
+        var writer = new AudioWriter(outputPath, 192000, 2, "pcm_s16le");
+
+        var composer = new AudioComposer<float>
+        {
+            Clips = clips,
+            SoundTracks = tracks,
+            Writer = writer
+        };
+
+        composer.Compose((int)_draft.TargetFrameRate, 192000, 2, 4096);
+
         writer.Finish();
         writer.Dispose();
+
         foreach (var item in clips)
         {
             item?.Dispose();

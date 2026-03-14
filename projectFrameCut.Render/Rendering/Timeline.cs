@@ -24,12 +24,12 @@ namespace projectFrameCut.Render.Rendering
     public static class Timeline
     {
         //public static ConcurrentDictionary<string, IComputer> ComputerCache = new();
-        public static ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
         public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture.GenerateSolidColor(w, h, 0, 0, 0, null);
 
 
-        public static IEnumerable<OneFrame> GetFramesInOneFrame(IClip[] video, uint targetFrame, int targetWidth, int targetHeight, bool forceResize = false)
+        public static IEnumerable<OneFrame> GetFramesInOneFrame(IClip[] video, uint targetFrame, int targetWidth, int targetHeight, bool forceResize = false, IPicture.PicturePixelMode? targetPPB = null)
         {
+            var ppb = targetPPB ?? 8;
             List<OneFrame> result = new List<OneFrame>();
             foreach (var clip in video)
             {
@@ -44,7 +44,7 @@ namespace projectFrameCut.Render.Rendering
                     IPicture frame = null!;
                     if (clip is TransformContainer c)
                     {
-                        if (c.Transform == null) c.ReInit();
+                        if (c.Transform == null) c.ReInit(ppb);
                         var t = c.Transform;
                         if (t == null)
                         {
@@ -62,13 +62,13 @@ namespace projectFrameCut.Render.Rendering
                             }
                             else
                             {
-                                frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, targetWidth, targetHeight, targetFrame);
+                                frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, targetWidth, targetHeight, targetFrame, ppb);
                             }
                         }
                     }
                     else
                     {
-                        frame = clip.GetFrame(targetFrame, targetWidth, targetHeight, true);
+                        throw new InvalidDataException($"Cannot process a non-transform clip in GetFramesInOneFrame. Clip ID: {clip.Id}");
                     }
                     bool isAI = false;
                     if (clip.ExtraData.TryGetValue("IsAI", out var aiMark))
@@ -298,7 +298,6 @@ namespace projectFrameCut.Render.Rendering
         public uint FrameNumber { get; init; }
         public IPicture Clip { get; init; }
         public uint LayerIndex { get; init; } = 0;
-        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
         public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
         public IClip ParentClip { get; init; }
         public OneFrame(uint frameNumber, IClip parent, IPicture pic)
@@ -307,7 +306,6 @@ namespace projectFrameCut.Render.Rendering
             ParentClip = parent;
             Clip = pic;
             LayerIndex = parent.LayerIndex;
-            MixtureMode = parent.MixtureMode;
             Effects = EffectHelper.GetEffectsInstances(parent.Effects);
         }
     }

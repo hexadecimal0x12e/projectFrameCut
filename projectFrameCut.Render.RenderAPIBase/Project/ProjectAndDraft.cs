@@ -119,7 +119,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public uint Duration { get; set; }
         public float FrameTime { get; set; } // seconds per frame (1 / framerate)
         public float SecondPerFrameRatio { get; set; }
-        public MixtureMode MixtureMode { get; set; } = MixtureMode.Overlay;
         public string? FilePath { get; set; }
         public long? SourceDuration { get; set; } // in frames, null for infinite length source
         public bool IsInfiniteLength { get; set; }

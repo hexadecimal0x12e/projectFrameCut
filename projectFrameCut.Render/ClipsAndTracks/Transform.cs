@@ -60,12 +60,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex) => throw new NotSupportedException("Use TransformProcesser.");
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize = false)
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
         {
             throw new NotSupportedException("Use TransformProcesser.");
         }
 
-        public void ReInit()
+        public void ReInit(IPicture.PicturePixelMode targetPPB)
         {
             if (TransformElement is JsonElement e)
             {

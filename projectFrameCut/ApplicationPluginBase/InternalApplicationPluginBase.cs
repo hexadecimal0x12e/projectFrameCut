@@ -17,13 +17,6 @@ namespace projectFrameCut.ApplicationPluginBase
             { "Jitter", () => new Effect.JitterEffectBundle() },
             { "Movement", () => new Effect.MovementEffectBundle()  },
             { "Blur", () => new Effect.BlurEffectBundle() },
-#if DEBUG
-            { "MockValueProvider", () => new MockValueProviderBundle() },
-            { "MockOneToOneProcessor", () => new MockOneToOneProcessorBundle() },
-            { "MockManyToOneProcessor", () => new MockManyToOneProcessorBundle() },
-            { "MockOneInputResultGenerator", () => new MockOneInputResultGeneratorBundle() },
-            { "MockManyInputResultGenerator", () => new MockManyInputResultGeneratorBundle() },
-#endif
         };
 
         public int AppLevelPluginAPIVersion => IApplicationPluginBase.CurrentAppLevelPluginAPIVersion;

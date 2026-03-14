@@ -56,7 +56,7 @@ namespace projectFrameCut.Render.WindowsRender
         public Dictionary<string, Func<IEffect>> ContinuousEffectProvider => new Dictionary<string, Func<IEffect>> { };
         public Dictionary<string, Func<IEffect>> BindableArgumentEffectProvider => new Dictionary<string, Func<IEffect>> { };
         Dictionary<string, Func<IMixture>> IPluginBase.MixtureProvider => new Dictionary<string, Func<IMixture>> { };
-        Dictionary<string, Func<string, string, IClip>> IPluginBase.ClipProvider => new Dictionary<string, Func<string, string, IClip>> { };
+        //Dictionary<string, Func<string, string, IClip>> IPluginBase.ClipProvider => new Dictionary<string, Func<string, string, IClip>> { };
         Dictionary<string, Func<string, IVideoSource>> IPluginBase.VideoSourceProvider => new Dictionary<string, Func<string, IVideoSource>> { };
         public Dictionary<string, string> Configuration { get => new Dictionary<string, string>(); set { } }
         public Dictionary<string, Dictionary<string, string>> ConfigurationDisplayString => new Dictionary<string, Dictionary<string, string>> { };

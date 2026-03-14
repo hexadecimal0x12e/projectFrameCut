@@ -62,7 +62,6 @@ namespace projectFrameCut.Render.Benchmark
                     Duration = 900,
                     FrameTime = frameTime,
                     SecondPerFrameRatio = 1f,
-                    MixtureMode = MixtureMode.Overlay,
                     R = 5000,
                     G = 9000,
                     B = 14000,
@@ -88,7 +87,6 @@ namespace projectFrameCut.Render.Benchmark
                     Duration = 900,
                     FrameTime = frameTime,
                     SecondPerFrameRatio = 1f,
-                    MixtureMode = MixtureMode.Overlay,
                     TextEntries =
                     [
                         new TextClipEntry("projectFrameCut Benchmark", 80, 80, "Arial", 72, 65535, 65535, 65535, 1.0f),
@@ -113,7 +111,6 @@ namespace projectFrameCut.Render.Benchmark
                     Duration = 420,
                     FrameTime = frameTime,
                     SecondPerFrameRatio = 1f,
-                    MixtureMode = MixtureMode.Overlay,
                     R = 0,
                     G = 65535,
                     B = 0,
@@ -139,7 +136,6 @@ namespace projectFrameCut.Render.Benchmark
                     Duration = 420,
                     FrameTime = frameTime,
                     SecondPerFrameRatio = 1f,
-                    MixtureMode = MixtureMode.Overlay,
                     TextEntries =
                     [
                         new TextClipEntry("基准测试", 520, 420, "HarmonyOS_Sans_SC_Regular", 120, 65535, 40000, 8000, 1.0f),

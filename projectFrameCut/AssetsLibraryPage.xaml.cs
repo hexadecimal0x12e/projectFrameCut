@@ -103,8 +103,11 @@ public partial class AssetsLibraryPage : ContentPage
 
     public async Task AddAsset(string path)
     {
-       
-        await AssetDatabase.Add(path, this);
+        var asset = await AssetDatabase.Add(path, this);
+        if(asset?.AssetType == AssetType.Font)
+        {
+            await MainSettingsPage.RebootApp(this);
+        }
         if (BindingContext is AssetViewModel vm)
         {
             vm.LoadAssets();

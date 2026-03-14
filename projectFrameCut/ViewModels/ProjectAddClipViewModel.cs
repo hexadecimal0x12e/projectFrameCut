@@ -836,7 +836,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     for (uint i = 0; i < frameCount; i++)
                     {
                         double progress = (double)i / Math.Max(1, frameCount - 1);
-                        using var frame = TransformProcessing.ProcessTransform(prevClip, nextClip, t, previewW, previewH, i);
+                        using var frame = TransformProcessing.ProcessTransform(prevClip, nextClip, t, previewW, previewH, i, 8);
                         writer.Append(frame);
                     }
 
@@ -2034,9 +2034,9 @@ public class TransformItemViewModel : INotifyPropertyChanged
 
     public TransformItemViewModel(ProjectAddClipViewModel parent)
     {
-        AddTransformClipCommand = new Command(async () => await parent.AddTransformClip(this,false,false));
-        AddTransformClipInLeftCommand = new Command(async () => await parent.AddTransformClip(this,true,false));
-        AddTransformClipInRightCommand = new Command(async () => await parent.AddTransformClip(this,false,true));
+        AddTransformClipCommand = new Command(async () => await parent.AddTransformClip(this, false, false));
+        AddTransformClipInLeftCommand = new Command(async () => await parent.AddTransformClip(this, true, false));
+        AddTransformClipInRightCommand = new Command(async () => await parent.AddTransformClip(this, false, true));
     }
 }
 

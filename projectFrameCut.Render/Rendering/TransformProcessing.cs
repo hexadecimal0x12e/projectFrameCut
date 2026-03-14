@@ -22,8 +22,9 @@ namespace projectFrameCut.Render.Rendering
         /// <param name="width">Target output width.</param>
         /// <param name="height">Target output height.</param>
         /// <param name="frameIndex">The current frame index relative to the start of the project.</param>
+        /// <param name="targetPPB">The target picture pixel bit depth.</param>
         /// <returns>The resulting composited frame.</returns>
-        public static IPicture ProcessTransform(IClip left, IClip? right, ITransform source, int width, int height, uint frameIndex)
+        public static IPicture ProcessTransform(IClip left, IClip? right, ITransform source, int width, int height, uint frameIndex, IPicture.PicturePixelMode targetPPB)
         {
             var computer = PluginManager.CreateComputer(source.NeedComputer);
 
@@ -65,8 +66,8 @@ namespace projectFrameCut.Render.Rendering
                     // Could be either ISingleFrameTransform (two-input) or IOneInputSingleFrameTransform (one-input)
                     if (source is ISingleFrameTransform sft)
                     {
-                        var leftFrame = left.GetFrame(ClampFrameForClip(left, frameIndex), width, height, true);
-                        var rightFrame = right.GetFrame(ClampFrameForClip(right, frameIndex), width, height, true);
+                        var leftFrame = left.GetFrame(ClampFrameForClip(left, frameIndex), width, height, true, targetPPB);
+                        var rightFrame = right.GetFrame(ClampFrameForClip(right, frameIndex), width, height, true, targetPPB);
                         return sft.GetFrame(leftFrame, rightFrame, computer, width, height);
                     }
                     if (source is IOneInputSingleFrameTransform oneInput)
@@ -77,15 +78,15 @@ namespace projectFrameCut.Render.Rendering
                         // distance to clip edges
                         long distToLeft = Math.Abs((long)frameIndex - (long)left.StartFrame - (long)left.Duration + 1);
                         long distToRight = Math.Abs((long)frameIndex - (long)right.StartFrame);
-                        var input = distToRight <= distToLeft ? right.GetFrame(clampRight, width, height, true) : left.GetFrame(clampLeft, width, height, true);
+                        var input = distToRight <= distToLeft ? right.GetFrame(clampRight, width, height, true, targetPPB) : left.GetFrame(clampLeft, width, height, true, targetPPB);
                         return oneInput.GetFrame(input, progress, computer, width, height);
                     }
                     break;
                 case TransformType.ContinuousTransform:
                     if (source is IContinuousTransform cont)
                     {
-                        var leftFrame = left.GetFrame(ClampFrameForClip(left, frameIndex), width, height, true);
-                        var rightFrame = right.GetFrame(ClampFrameForClip(right, frameIndex), width, height, true);
+                        var leftFrame = left.GetFrame(ClampFrameForClip(left, frameIndex), width, height, true, targetPPB);
+                        var rightFrame = right.GetFrame(ClampFrameForClip(right, frameIndex), width, height, true, targetPPB);
                         return cont.GetFrame(leftFrame, rightFrame, progress, computer, width, height);
                     }
                     break;

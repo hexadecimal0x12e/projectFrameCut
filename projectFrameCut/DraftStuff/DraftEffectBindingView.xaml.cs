@@ -1246,7 +1246,7 @@ public partial class DraftEffectBindingView : ContentView
 
         try
         {
-            var srcFrame = clip.GetFrameRelativeToStartPointOfSource(0);
+            var srcFrame = clip.GetFrameRelativeToStartPointOfSource(0, 1280, 720, true, 8);
             if (_inputNode is not null)
             {
                 await UpdateNodePreview(_inputNode, srcFrame);
@@ -1275,7 +1275,7 @@ public partial class DraftEffectBindingView : ContentView
                     }
                     else
                     {
-                        Log($"Effect '{effectId}' does not match any node in the UI for {_clip.DisplayName}","error");
+                        Log($"Effect '{effectId}' does not match any node in the UI for {_clip.DisplayName}", "error");
                     }
 
                 }

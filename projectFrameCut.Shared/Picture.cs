@@ -209,6 +209,7 @@ namespace projectFrameCut.Shared
     /// This class is for compatibility with some pretty old codes (mostly written before the main application appears in the Git repository). It's basically equals to <see cref="Picture16bpp"/>.
     /// </summary>
     [DebuggerDisplay("ProcessStack: {ProcessStack}")]
+    [Obsolete("Consider to use Picture16bpp. It's exactly same.",false)]
     public class Picture : Picture16bpp
     {
         public Picture(IPicture<ushort> picture) : base(picture)

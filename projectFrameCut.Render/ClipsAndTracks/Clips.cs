@@ -29,9 +29,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
+
         public string? FilePath { get; set; }
-        public Dictionary<string, object>? MixtureArgs { get; init; }
+
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
         public Dictionary<string, object> ExtraData { get; set; }
@@ -53,9 +53,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         }
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, bool forceResize) => (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => (Decoder ?? throw new NullReferenceException("Decoder is null. Please init it.")).GetFrame(targetFrame).Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB);
 
-        void IClip.ReInit()
+        void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
             Decoder = PluginManager.CreateVideoSource(FilePath ?? throw new NullReferenceException($"VideoClip {Id}'s source path is null."));
         }
@@ -80,7 +80,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
+
         public string? FilePath { get; set; } = string.Empty;
         public bool NeedFilePath => true;
         public Dictionary<string, object> ExtraData { get; set; }
@@ -98,7 +98,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string BindedSoundTrack { get; init; } = "";
 
 
-        public Dictionary<string, object>? MixtureArgs { get; init; }
+
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
 
@@ -107,12 +107,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
             EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
 
         }
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize) => source?.Resize(targetWidth, targetHeight, forceResize) ?? throw new NullReferenceException("Source is null. Please init it.");
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => source?.Resize(targetWidth, targetHeight, forceResize).ToBitPerPixel(targetPPB) ?? throw new NullReferenceException("Source is null. Please init it.");
 
-        void IClip.ReInit()
+        void IClip.ReInit(IPicture.PicturePixelMode targetPPB)
         {
             if (FilePath is null) throw new NullReferenceException($"PhotoClip {Id}'s source path is null.");
-            source = Use16bpp ? new Picture16bpp(FilePath) : new Picture8bpp(FilePath);
+            source = targetPPB == 16 ? new Picture16bpp(FilePath) : new Picture8bpp(FilePath);
             source.Disposed = null;
             source.ProcessStack = new List<PictureProcessStack>
             {
@@ -149,11 +149,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
+
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.SolidColorClip;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public Dictionary<string, object>? MixtureArgs { get; init; }
+
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
         public bool NeedFilePath => false;
@@ -173,9 +173,15 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public int targetWidth { get; init; } = 1920;
         public int targetHeight { get; init; } = 1080;
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize) => Picture.GenerateSolidColor(tWidth, tHeight, R, G, B, A);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize) => Picture16bpp.GenerateSolidColor(tWidth, tHeight, R, G, B, A);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => targetPPB.Value switch
+        {
+            16 => Picture16bpp.GenerateSolidColor(tWidth, tHeight, R, G, B, A),
+            8 => Picture8bpp.GenerateSolidColor(tWidth, tHeight, (byte)(R / 257), (byte)(G / 257), (byte)(B / 257), A),
+            _ => throw new NotSupportedException($"Unsupported target pixel mode {targetPPB}.")
+        };
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex) => Picture.GenerateSolidColor(targetWidth, targetHeight, R, G, B, A);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex) => Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, R, G, B, A);
 
         public SolidColorClip()
         {
@@ -194,6 +200,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public uint? GetClipLength() => Duration;
 
+
+        public void ReInit(IPicture.PicturePixelMode targetPPB)
+        {
+        }
     }
 
     public class TextClip : IClip
@@ -207,11 +217,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; } = MixtureMode.Overlay;
+
         public string? filePath { get; } = null;
         public ClipMode ClipType => ClipMode.TextClip;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public Dictionary<string, object>? MixtureArgs { get; init; }
+
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
         public bool NeedFilePath => false;
@@ -228,6 +238,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string FontPath { get; set; } = string.Empty;
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
+            => GetFrameRelativeToStartPointOfSource(frameIndex, targetWidth, targetHeight, forceResize, IPicture.PicturePixelMode.BytePicture);
+
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
         {
             Image<Rgba64> canvas = new(targetWidth, targetHeight);
 
@@ -329,10 +342,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                     });
                 }
             }
-
-            return new Picture(canvas)
-            {
-                ProcessStack = new List<PictureProcessStack>
+            var stack = new List<PictureProcessStack>
                 {
                     new PictureProcessStack
                     {
@@ -346,7 +356,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
                             { "FontPath", FontPath }
                         }
                     }
-                }
+                };
+
+            return targetPPB.Value switch
+            {
+                8 => new Picture8bpp(canvas) { ProcessStack = stack },
+                16 => new Picture16bpp(canvas) { ProcessStack = stack },
+                _ => throw new NotSupportedException($"Unsupported target pixel mode {targetPPB}.")
             };
         }
 
@@ -360,7 +376,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
             EffectsInstances = EffectHelper.GetEffectsInstances(Effects);
         }
 
-        public void ReInit()
+        public void ReInit(IPicture.PicturePixelMode targetPPB)
         {
             if (!string.IsNullOrWhiteSpace(FontPath))
             {
@@ -486,7 +502,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 currentY += charAdvance;
             }
         }
-        
+
     }
 
     public class MarkingClip : IClip
@@ -505,8 +521,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; }
-        public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
         public string? FilePath { get; set; }
@@ -540,6 +554,15 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
         }
 
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ReInit(IPicture.PicturePixelMode targetPPB)
+        {
+            throw new NotImplementedException();
+        }
     }
 
 }

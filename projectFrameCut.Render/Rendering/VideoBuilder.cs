@@ -14,7 +14,7 @@ namespace projectFrameCut.Render.Rendering
         string outputPath;
         IVideoWriter builder;
         uint index;
-        bool running = true, stopped = false;
+        bool running = true, stopped = false, buildStarted = false;
         ConcurrentDictionary<uint, IPicture> Cache = new();
 
         private int _totalFramesCount = 0;
@@ -186,25 +186,24 @@ namespace projectFrameCut.Render.Rendering
             }
             return new Thread(() =>
             {
+                Volatile.Write(ref buildStarted, true);
                 Log($"[VideoBuilder] Successfully started writer for {outputPath}");
 
-                while (running)
+                try
                 {
-                    if (Cache.ContainsKey(index))
+                    while (running)
                     {
-                        builder.Append(Cache.TryRemove(index, out var f) ? f : throw new KeyNotFoundException());
-                        FramePendedToWrite[index] = true;
-                        Interlocked.Increment(ref _writtenFramesCount);
-                        index++;
-
-                        if (DisposeFrameAfterEachWrite && !f.Flag.HasFlag(IPicture.PictureFlag.NoDisposeAfterWrite)) f.Dispose();
-                        if (DoGCAfterEachWrite) GC.Collect();
-                        if (LogStat) Log($"[VideoBuilder] Frame #{index} wrote.");
+                        if (Cache.TryRemove(index, out var frame))
+                        {
+                            WriteFrame(index, frame, LogStat ? $"[VideoBuilder] Frame #{index} wrote." : null);
+                        }
                     }
-
                 }
-                Thread.Sleep(50);
-                stopped = true;
+                finally
+                {
+                    Thread.Sleep(50);
+                    stopped = true;
+                }
             })
             {
                 Name = $"VideoWriter for {outputPath}",
@@ -217,8 +216,7 @@ namespace projectFrameCut.Render.Rendering
         public void Finish(Func<uint, IPicture> regenerator, uint totalFrames = 0)
         {
             running = false;
-            while (!Volatile.Read(ref stopped))
-                Thread.Sleep(500);
+            WaitForBuildThreadToStop();
 
             var missingFrames = new List<uint>();
             uint currentIndex = index;
@@ -285,6 +283,83 @@ namespace projectFrameCut.Render.Rendering
             }
 
             Dispose();
+        }
+
+        public void Interrupt()
+        {
+            Log("Interrupt signal received. Stopping the video builder...");
+            running = false;
+            WaitForBuildThreadToStop();
+
+            while (Cache.TryRemove(index, out var frame))
+            {
+                WriteFrame(index, frame,  $"[VideoBuilder] Frame #{index} wrote during interrupt drain." );
+            }
+
+            var remainingFrameIndexes = Cache.Keys.OrderBy(frameIndex => frameIndex).ToArray();
+            if (remainingFrameIndexes.Length > 0)
+            {
+                Log($"[VideoBuilder] WARN: Non-contiguous frames remain in cache during interrupt: {FormatFrameRanges(remainingFrameIndexes)}. Writing them in ascending order before closing.", "warn");
+
+                foreach (var frameIndex in remainingFrameIndexes)
+                {
+                    if (Cache.TryRemove(frameIndex, out var remainingFrame))
+                    {
+                        WriteFrame(frameIndex, remainingFrame, $"[VideoBuilder] Frame #{frameIndex} wrote during interrupt drain." );
+                    }
+                }
+            }
+
+            Dispose();
+        }
+
+        private void WaitForBuildThreadToStop()
+        {
+            if (BlockWrite || !Volatile.Read(ref buildStarted))
+                return;
+
+            while (!Volatile.Read(ref stopped))
+                Thread.Sleep(50);
+        }
+
+        private void WriteFrame(uint frameIndex, IPicture frame, string? logMessage = null)
+        {
+            builder.Append(frame);
+            FramePendedToWrite[frameIndex] = true;
+            Interlocked.Increment(ref _writtenFramesCount);
+            if (frameIndex >= index)
+                index = frameIndex + 1;
+
+            if (DisposeFrameAfterEachWrite && !frame.Flag.HasFlag(IPicture.PictureFlag.NoDisposeAfterWrite)) frame.Dispose();
+            if (DoGCAfterEachWrite) GC.Collect();
+            if (!string.IsNullOrEmpty(logMessage)) Log(logMessage);
+        }
+
+        private static string FormatFrameRanges(uint[] frameIndexes)
+        {
+            if (frameIndexes.Length == 0)
+                return "none";
+
+            var ranges = new List<string>();
+            uint rangeStart = frameIndexes[0];
+            uint previous = frameIndexes[0];
+
+            for (int i = 1; i < frameIndexes.Length; i++)
+            {
+                uint current = frameIndexes[i];
+                if (current == previous + 1)
+                {
+                    previous = current;
+                    continue;
+                }
+
+                ranges.Add(rangeStart == previous ? $"#{rangeStart}" : $"#{rangeStart}-#{previous}");
+                rangeStart = current;
+                previous = current;
+            }
+
+            ranges.Add(rangeStart == previous ? $"#{rangeStart}" : $"#{rangeStart}-#{previous}");
+            return string.Join(", ", ranges);
         }
 
     }

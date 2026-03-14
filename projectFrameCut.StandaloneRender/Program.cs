@@ -36,14 +36,14 @@ namespace projectFrameCut.StandaloneRender
                 MyLoggerExtensions.OnLog += (m, l) => Console.WriteLine($"[{l}] {m}");
                 Console.WriteLine($"projectFrameCut.StandaloneRender v{Assembly.GetExecutingAssembly().GetName().Version}");
                 Console.Write(GetInfo());
-                Console.WriteLine($"Copyright hexadecimal0x12e 2025-2026.");
+                Console.WriteLine($"Copyright hexadecimal0x12e 2025-2026. https://github.com/hexadecimal0x12e/projectFrameCut/");
 
             }
             if (args.Contains("--logDiagnostic"))
             {
                 MyLoggerExtensions.LoggingDiagnosticInfo = true;
             }
-            
+
 
             if (args.Length == 0 || args.Any(x => x.Equals("-h") || x.Equals("--help")))
             {
@@ -99,6 +99,13 @@ namespace projectFrameCut.StandaloneRender
 
             var runningMode = args[0];
 
+            if(runningMode == "about")
+            {
+                Console.WriteLine();
+                Console.WriteLine(GetInfo(true));
+                return 0;
+            }
+
 
             ConcurrentDictionary<string, string> switches = new(args
                .Skip(1)
@@ -114,15 +121,16 @@ namespace projectFrameCut.StandaloneRender
                     if (de.Key is string key && de.Value is string value) envVars[key] = value;
                 }
 
-                foreach (var item in envVars.Where(kv =>kv.Key.StartsWith("projectFrameCut_")))
+                foreach (var item in envVars.Where(kv => kv.Key.StartsWith("projectFrameCut_")))
                 {
-                    switches[item.Key.Split("projectFrameCut_",2)[1]] = item.Value;
+                    switches[item.Key.Split("projectFrameCut_", 2)[1]] = item.Value;
                 }
-               
+
             }
 
             Log($"Running mode: {runningMode}");
-            Log($"Switches: {string.Join(", ", switches.Select(kv => $"{kv.Key}={kv.Value}"))}");
+            Log($"Switches: {Environment.NewLine}{string.Join(Environment.NewLine, switches.Select(kv => $"- {kv.Key}: {kv.Value}"))}");
+            Log($"Flags: {Environment.NewLine}{string.Join(Environment.NewLine, args.Where(c => c.StartsWith("--")).Select(c => $"- {c.Substring(2)}"))}");
 
             AppDomain.CurrentDomain.AssemblyResolve += (sender, eventArgs) =>
             {
@@ -147,7 +155,16 @@ namespace projectFrameCut.StandaloneRender
                     {
                         return accelResult;
                     }
-                    return await GoRender(switches);
+                    try
+                    {
+                        return await GoRender(switches);
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        Log("Render task was canceled.");
+                        return 255;
+                    }
+                    catch { throw; }
                 case "list_accels":
                     Context context = Context.CreateDefault();
                     var devices = context.Devices.ToList();
@@ -158,11 +175,6 @@ namespace projectFrameCut.StandaloneRender
                         listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
                     }
                     Console.Error.WriteLine(JsonSerializer.Serialize(listAccels, new JsonSerializerOptions { WriteIndented = true }));
-                    return 0;
-
-                case "about":
-                    Console.WriteLine("---");
-                    Console.WriteLine(GetInfo(true));
                     return 0;
                 default:
                     Log($"ERROR: Mode {runningMode} doesn't defined.");
@@ -293,6 +305,7 @@ namespace projectFrameCut.StandaloneRender
             outputEncoder = outputOptions[4];
 
             var use16Bit = bool.TryParse(switches.GetOrAdd("Use16bpp", "true"), out var b1) ? b1 : true;
+            var bpp = use16Bit ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
 
             if (!switches.ContainsKey("output"))
             {
@@ -382,12 +395,12 @@ namespace projectFrameCut.StandaloneRender
             {
                 if (!int.TryParse(gcopt, out GCOption))
                 {
-                    Log("Invalid GCOptions value, must be 0, 1 or 2. Default to 0.");
+                    Log("Invalid GCOptions consoleCanceller, must be 0, 1 or 2. Default to 0.");
                     GCOption = 0;
                 }
                 if (GCOption < 0 || GCOption > 2)
                 {
-                    Log("Invalid GCOptions value, must be 0, 1 or 2. Default to 0.");
+                    Log("Invalid GCOptions consoleCanceller, must be 0, 1 or 2. Default to 0.");
                     GCOption = 0;
                 }
             }
@@ -463,13 +476,15 @@ namespace projectFrameCut.StandaloneRender
             }
             #endregion
 
+            CancellationTokenSource cts = new();
+            VideoBuilder builder = null!;
             async Task composeVideo(string resultPath)
             {
-                var clips = JSONToIClips(timeline, assets);
+                var clips = JSONToIClips(timeline, assets, bpp);
 
                 switches.TryGetValue("diagReportPath", out var diagReportPath);
 
-                VideoBuilder builder = new VideoBuilder(resultPath, width, height, fps, outputEncoder, outputFormat.ToString())
+                builder = new VideoBuilder(resultPath, width, height, fps, outputEncoder, outputFormat.ToString())
                 {
                     EnablePreview = true,
                     DoGCAfterEachWrite = GCOption > 0,
@@ -487,20 +502,34 @@ namespace projectFrameCut.StandaloneRender
                     LogProcessStack = !string.IsNullOrWhiteSpace(diagReportPath),
                     LogState = (bool.TryParse(switches.TryGetValue("LogState", out var ls2) ? ls2 : "false", out var lsbool) && lsbool),
                     LogStatToLogger = true,
-                    GCOption = GCOption
+                    GCOption = GCOption,
+                    Use16Bit = use16Bit,
                 };
                 builder?.Build()?.Start();
-                renderer.PrepareRender(CancellationToken.None);
+                renderer.PrepareRender(cts.Token);
                 Stopwatch sw1 = new();
                 Log("Start render...");
                 sw1.Restart();
-                if (blockWrite)
+                try
                 {
-                    await renderer.GoRenderSync(CancellationToken.None);
+                    if (blockWrite)
+                    {
+                        await renderer.GoRenderSync(cts.Token);
+                    }
+                    else
+                    {
+                        await renderer.GoRender(cts.Token);
+                    }
                 }
-                else
+                catch (TaskCanceledException)
                 {
-                    await renderer.GoRender(CancellationToken.None);
+                    Log("Render was canceled.");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, "Render error");
+                    throw;
                 }
 
                 Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
@@ -531,9 +560,10 @@ namespace projectFrameCut.StandaloneRender
 
             void composeAudio(string resultPath)
             {
-                var clips = JSONToIClips(timeline, assets).Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip).ToArray();
+                var clips = JSONToIClips(timeline, assets, bpp).Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip).ToArray();
+                var tracks = JSONToISoundTracks(timeline, assets).ToArray();
 
-                if (clips == null || clips.Length == 0)
+                if (!clips.ArrayAny() && !tracks.ArrayAny())
                 {
                     Log("No sound clips in the whole draft. returning...");
                     return;
@@ -544,19 +574,65 @@ namespace projectFrameCut.StandaloneRender
                 Log("Initializing all clips...");
                 foreach (IClip clip in clips)
                 {
-                    clip.ReInit();
+                    clip.ReInit(8);
                 }
 
-                var buf = AudioComposer.Compose(clips, null, (int)project.TargetFrameRate, 48000, 2);
-                AudioWriter writer = new(resultPath, 48000, 2);
-                writer.Append(buf);
+                var writer = new AudioWriter(outputPath, 192000, 2, "pcm_s16le");
+
+                var composer = new AudioComposer<float>
+                {
+                    Clips = clips,
+                    SoundTracks = tracks,
+                    Writer = writer
+                };
+
+                composer.Compose(fps, 192000, 2, 4096);
+
                 writer.Finish();
                 writer.Dispose();
+
                 foreach (var item in clips)
                 {
                     item?.Dispose();
                 }
                 return;
+            }
+
+            if (switches.TryGetValue("stopAfter", out var stopAfterStr) && int.TryParse(stopAfterStr, out var stopAfter)) //for Instrument testing, to avoid long time cause a lot huge log.
+            {
+                Log($"stopAfter is set, render will stop after {stopAfter}s.");
+
+                Timer t = new((c) =>
+                {
+                    Log($"Time's up! stopAfter's {stopAfter}s timeout reached, exiting...");
+                    cts.Cancel();
+                    builder?.Interrupt();
+                    Environment.Exit(255);
+                });
+
+                t.Change(stopAfter * 1000, Timeout.Infinite);
+
+            }
+
+            if (!Environment.GetCommandLineArgs().Contains("--noSigInt"))
+            {
+                ConsoleCancelEventHandler consoleCanceller = null!;
+                consoleCanceller = (s, e) =>
+                {
+                    Console.WriteLine("You hit Ctrl-C! try cancelling render...");
+                    Console.CancelKeyPress -= consoleCanceller;
+                    Console.WriteLine("Hit Ctrl-C again to stop immediately.");
+
+                    cts.Cancel();
+                    builder?.Interrupt();
+                    Environment.Exit(255);
+                };
+                Console.CancelKeyPress += consoleCanceller;
+                Log("Render job starts. Press Ctrl-C to interrupt render process.");
+            }
+            else
+            {
+                Log("Render job starts. Press Ctrl-C to stop.");
             }
 
             switch (target)
@@ -592,7 +668,7 @@ namespace projectFrameCut.StandaloneRender
             return 0;
         }
 
-        public static IClip[] JSONToIClips(DraftStructureJSON json, IDictionary<string, AssetItem> assets)
+        public static IClip[] JSONToIClips(DraftStructureJSON json, IDictionary<string, AssetItem> assets, IPicture.PicturePixelMode bpp)
         {
             var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
 
@@ -605,7 +681,12 @@ namespace projectFrameCut.StandaloneRender
                 {
                     try
                     {
-                        clipInstance.FilePath = assets[clipInstance.FilePath.Substring(1)].Path;
+                        var id = clipInstance.FilePath.Substring(1);
+                        if (!assets.TryGetValue(id, out var value))
+                        {
+                            throw new FileNotFoundException($"Asset for clip {clipInstance.Name} ({clipInstance.TypeName}) '{id}' is not exist.");
+                        }
+                        clipInstance.FilePath = value.Path;
                     }
                     catch (InvalidOperationException)
                     {
@@ -631,11 +712,65 @@ namespace projectFrameCut.StandaloneRender
                         throw;
                     }
                 }
-                clipInstance.ReInit();
+                clipInstance.ReInit(bpp);
                 clipsList.Add(clipInstance);
 
             }
             return clipsList.ToArray();
+        }
+
+        public static ISoundTrack[] JSONToISoundTracks(DraftStructureJSON json, IDictionary<string, AssetItem> assets)
+        {
+            var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.SoundTracks) ?? throw new NullReferenceException("Failed to cast SoundtrackDTOs to ISoundTracks.");
+
+            var tracksList = new List<ISoundTrack>();
+
+            foreach (var track in elements.Cast<JsonElement>())
+            {
+                var trackInstance = PluginManager.CreateSoundTrack(track);
+                trackInstance.ExtraData = track.Deserialize<SoundtrackDTO>()?.MetaData ?? new();
+
+                if (trackInstance.FilePath?.StartsWith('$') ?? false)
+                {
+                    try
+                    {
+                        var id = trackInstance.FilePath.Substring(1);
+                        if (!assets.TryGetValue(id, out var value))
+                        {
+                            throw new FileNotFoundException($"Asset for clip {trackInstance.Name} ({trackInstance.TypeName}) '{id}' is not exist.");
+                        }
+                        trackInstance.FilePath = value.Path;
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        //safe to ignore
+                    }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+                }
+                else if (string.IsNullOrEmpty(trackInstance.FilePath) && track.TryGetProperty("FilePath", out var fp) && trackInstance.NeedFilePath)
+                {
+                    try
+                    {
+                        trackInstance.FilePath = fp.GetString();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        //safe to ignore
+                    }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+                }
+
+                trackInstance.ReInit();
+                tracksList.Add(trackInstance);
+            }
+
+            return tracksList.ToArray();
         }
 
         public static string GetInfo(bool all = false)
@@ -688,6 +823,16 @@ namespace projectFrameCut.StandaloneRender
                         builder.AppendLine();
                     }
                 }
+
+                builder.AppendLine(
+                    """
+                    The standalone render is a part of projectFrameCut. To use this standalone render, you MUST have a license/permission to use the projectFrameCut itself.
+                    Most of the project, and this standalone render is licensed under Apache License.
+                    The use of other open-source project can be found in readme of the repository:
+                    https://github.com/hexadecimal0x12e/projectFrameCut/
+
+                    """
+                    );
             }
             return builder.ToString();
         }

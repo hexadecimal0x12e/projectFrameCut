@@ -10,7 +10,7 @@ using System.IO;
 namespace projectFrameCut.Render.EncodeAndDecode
 {
 
-    public sealed unsafe class DecoderContext16Bit : IVideoSource
+    public sealed unsafe class DecoderContext16Bit : IVideoSource<ushort>
     {
         private readonly string _path;
         private AVFormatContext* _fmt = null;
@@ -181,7 +181,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
 
 
-        public IPicture GetFrame(uint targetFrame, bool hasAlpha = false)
+        public IPicture<ushort> GetFrame(uint targetFrame, bool hasAlpha = false)
         {
             if (EnableLock) locker.Enter();
 
@@ -257,10 +257,10 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
 
         [DebuggerNonUserCode()]
-        private static IPicture PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
+        private static Picture16bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
         {
             var size = width * height;
-            var result = new Picture(width, height)
+            var result = new Picture16bpp(width, height)
             {
                 r = new ushort[size],
                 g = new ushort[size],
@@ -315,7 +315,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         }
     }
 
-    public sealed unsafe class DecoderContext8Bit : IVideoSource
+    public sealed unsafe class DecoderContext8Bit : IVideoSource<byte>
     {
 
         private readonly string _path;
@@ -517,7 +517,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
 
         [DebuggerNonUserCode()]
-        public IPicture GetFrame(uint targetFrame, bool hasAlpha)
+        public IPicture<byte> GetFrame(uint targetFrame, bool hasAlpha)
         {
             if (EnableLock) locker.Enter();
             if (targetFrame < _currentFrameNumber)

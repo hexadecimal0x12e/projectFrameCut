@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json;
+using IPicture = projectFrameCut.Shared.IPicture;
 
 namespace projectFrameCut.DraftStuff
 {
@@ -209,7 +210,6 @@ namespace projectFrameCut.DraftStuff
                     RelativeStartFrame = elem.relativeStartFrame,
                     Duration = durationFrames,
                     FrameTime = elem.sourceSecondPerFrame,
-                    MixtureMode = MixtureMode.Overlay,
                     FilePath = elem.SourcePath,
                     SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
                     IsInfiniteLength = elem.isInfiniteLength,
@@ -247,7 +247,6 @@ namespace projectFrameCut.DraftStuff
                 RelativeStartFrame = elem.relativeStartFrame,
                 Duration = durationFrames,
                 FrameTime = elem.sourceSecondPerFrame,
-                MixtureMode = MixtureMode.Overlay,
                 FilePath = elem.SourcePath,
                 SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
                 IsInfiniteLength = elem.isInfiniteLength,
@@ -303,7 +302,7 @@ namespace projectFrameCut.DraftStuff
             };
         }
 
-        public static IClip[] JSONToIClips(DraftStructureJSON json, bool InitAtLoad = true)
+        public static IClip[] JSONToIClips(DraftStructureJSON json, bool InitAtLoad = true, IPicture.PicturePixelMode? targetPPB = null)
         {
             var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
 
@@ -342,11 +341,60 @@ namespace projectFrameCut.DraftStuff
                         throw;
                     }
                 }
-                if(InitAtLoad) clipInstance.ReInit();
+                if(InitAtLoad) clipInstance.ReInit(targetPPB ?? throw new NullReferenceException("You must provide a targetPPB."));
                 clipsList.Add(clipInstance);
 
             }
             return clipsList.ToArray();
+        }
+
+        public static ISoundTrack[] JSONToISoundTracks(DraftStructureJSON json, bool InitAtLoad = true)
+        {
+            var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.SoundTracks) ?? throw new NullReferenceException("Failed to cast SoundtrackDTOs to ISoundTracks.");
+
+            var tracksList = new List<ISoundTrack>();
+
+            foreach (var track in elements.Cast<JsonElement>())
+            {
+                var trackInstance = PluginManager.CreateSoundTrack(track);
+                trackInstance.ExtraData = track.Deserialize<SoundtrackDTO>()?.MetaData ?? new();
+
+                if (trackInstance.FilePath?.StartsWith('$') ?? false)
+                {
+                    try
+                    {
+                        trackInstance.FilePath = AssetDatabase.Assets[trackInstance.FilePath.Substring(1)].Path;
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        //safe to ignore
+                    }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+                }
+                else if (string.IsNullOrEmpty(trackInstance.FilePath) && track.TryGetProperty("FilePath", out var fp) && trackInstance.NeedFilePath)
+                {
+                    try
+                    {
+                        trackInstance.FilePath = fp.GetString();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        //safe to ignore
+                    }
+                    catch (Exception)
+                    {
+                        throw;
+                    }
+                }
+
+                if (InitAtLoad) trackInstance.ReInit();
+                tracksList.Add(trackInstance);
+            }
+
+            return tracksList.ToArray();
         }
 
         public static ConcurrentDictionary<string, AssetItem> ImportAssetsFromJSON(string json)

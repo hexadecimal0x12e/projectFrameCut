@@ -6,6 +6,7 @@ using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.ClipsAndTracks
 {
@@ -21,9 +22,27 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
-        public float Ratio { get; init; }
-        public float Volume { get; init; }
+        public float Ratio { get; set; }
+        public float Volume { get; set; }
+        public EffectAndMixtureJSONStructure[]? Effects { get; init; }
+        public IEffect[]? EffectsInstances { get; init; }
+        public Dictionary<string, object> ExtraData { get; set; }
+
+        public bool NeedFilePath => true;
+        public string? FilePath { get; set; }
+
+        [JsonIgnore]
         public IAudioSource? AudioSource { get; set; }
+
+        public int SamplePerSecond => AudioSource?.SamplePerSecond ?? 0;
+
+
+        public IAudioSamples GetAudioSamplesRelatedToStartPointOfSource(uint startIndex, int length) => AudioSource?.GetSample(startIndex, length) ?? throw new InvalidOperationException("AudioSource is not set.");
+
+        public void ReInit()
+        {
+            AudioSource = FilePath is not null ? PluginManager.CreateAudioSource(FilePath) : null;
+        }
     }
 
     public class SoundTrackToClipWrapper : IClip
@@ -42,8 +61,6 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint Duration { get; init; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
-        public MixtureMode MixtureMode { get; init; }
-        public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
         public string? FilePath { get; set; }
@@ -71,6 +88,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
             throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
         }
 
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
+        {
+            throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
+        }
+
         public void ReInit()
         {
             SoundTrack = TrackType switch
@@ -89,6 +111,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
                 },
                 _ => throw new NotSupportedException($"Unsupported track type {TrackType}."),
             };
+        }
+
+        public void ReInit(IPicture.PicturePixelMode targetPPB)
+        {
         }
     }
 }

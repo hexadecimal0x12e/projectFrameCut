@@ -5,6 +5,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
     /// <summary>
     /// Represents a buffer of audio samples.
     /// </summary>
+    [Obsolete("Use the AudioSample system instead.")]
     public class AudioBuffer : IDisposable
     {
         /// <summary>

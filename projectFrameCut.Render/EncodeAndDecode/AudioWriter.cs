@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace projectFrameCut.Render.EncodeAndDecode
 {
-    public sealed unsafe class AudioWriter : IDisposable
+    public sealed unsafe class AudioWriter : AudioWriterBase<float>
     {
         private readonly string _outputPath;
         private readonly string _codecName;
@@ -19,15 +19,20 @@ namespace projectFrameCut.Render.EncodeAndDecode
         private AVCodecContext* _codecCtx = null;
         private AVFrame* _frame = null;
         private SwrContext* _swr = null;
+        private int _swrInputSampleRate = 0;
         private int _frameIndex = 0;
         private bool _isHeaderWritten = false;
         private bool _isDisposed = false;
+        private readonly float[] _singleSampleBuffer;
+        private readonly bool[] _singleSampleChannelWritten;
 
         public AudioWriter(string outputPath, int sampleRate = 44100, int channels = 2, string? codecName = null)
         {
             _outputPath = outputPath;
             _sampleRate = sampleRate;
             _channels = channels;
+            _singleSampleBuffer = new float[channels];
+            _singleSampleChannelWritten = new bool[channels];
             
             // Auto-detect codec based on file extension if not specified
             if (string.IsNullOrEmpty(codecName))
@@ -47,11 +52,67 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 _codecName = codecName;
             }
+
+            // Keep base metadata in sync for base helper methods such as Append(T[]).
+            OutputPath = _outputPath;
+            CodecName = _codecName;
+            AudioFormat = Path.GetExtension(_outputPath).TrimStart('.').ToLowerInvariant();
+            SamplePerSecond = _sampleRate;
+            ChannelCount = _channels;
+            BitPerSample = sizeof(float) * 8;
             
-            Init();
         }
 
-        private void Init()
+        public override bool SupportCodec(string codecName)
+        {
+            if (string.IsNullOrWhiteSpace(codecName))
+            {
+                return false;
+            }
+
+            return ffmpeg.avcodec_find_encoder_by_name(codecName) != null;
+        }
+
+        public override void Write(float data, int channel)
+        {
+            if (_isDisposed) throw new ObjectDisposedException(nameof(AudioWriter));
+            if (channel < 0 || channel >= _channels)
+            {
+                throw new ArgumentOutOfRangeException(nameof(channel));
+            }
+
+            if (_singleSampleChannelWritten[channel])
+            {
+                throw new InvalidOperationException($"Channel {channel} has already been written for current sample.");
+            }
+
+            _singleSampleBuffer[channel] = data;
+            _singleSampleChannelWritten[channel] = true;
+
+            for (int c = 0; c < _channels; c++)
+            {
+                if (!_singleSampleChannelWritten[c])
+                {
+                    return;
+                }
+            }
+
+            float[][] channels = new float[_channels][];
+            for (int c = 0; c < _channels; c++)
+            {
+                channels[c] = new[] { _singleSampleBuffer[c] };
+                _singleSampleChannelWritten[c] = false;
+            }
+
+            Append(new FloatAudioSamples
+            {
+                Channels = channels,
+                SampleCount = 1,
+                SamplePerSecond = _sampleRate
+            });
+        }
+
+        public override void Initialize()
         {
             AVFormatContext* oc = null;
             FFmpegHelper.Throw(ffmpeg.avformat_alloc_output_context2(&oc, null, null, _outputPath), "avformat_alloc_output_context2");
@@ -103,48 +164,125 @@ namespace projectFrameCut.Render.EncodeAndDecode
             _frame->nb_samples = _codecCtx->frame_size > 0 ? _codecCtx->frame_size : 1024;
             FFmpegHelper.Throw(ffmpeg.av_frame_get_buffer(_frame, 0), "av_frame_get_buffer");
 
-            // Initialize SwrContext for conversion from AudioBuffer (Float Planar) to encoder format
+            // Initialize SwrContext for conversion from float planar samples to encoder format.
+            RecreateSwr(_sampleRate);
+        }
+
+        private void RecreateSwr(int inputSampleRate)
+        {
+            if (_swr != null)
+            {
+                fixed (SwrContext** p = &_swr) ffmpeg.swr_free(p);
+            }
+
             _swr = ffmpeg.swr_alloc();
+
             AVChannelLayout inLayout;
             ffmpeg.av_channel_layout_default(&inLayout, _channels);
-            
+
             SwrContext* swr = _swr;
             AVChannelLayout* outLayout = &_codecCtx->ch_layout;
             AVChannelLayout* pInLayout = &inLayout;
-            ffmpeg.swr_alloc_set_opts2(&swr, outLayout, _codecCtx->sample_fmt, _codecCtx->sample_rate,
-                                       pInLayout, AVSampleFormat.AV_SAMPLE_FMT_FLTP, _sampleRate, 0, null);
+            FFmpegHelper.Throw(
+                ffmpeg.swr_alloc_set_opts2(
+                    &swr,
+                    outLayout,
+                    _codecCtx->sample_fmt,
+                    _codecCtx->sample_rate,
+                    pInLayout,
+                    AVSampleFormat.AV_SAMPLE_FMT_FLTP,
+                    inputSampleRate,
+                    0,
+                    null),
+                "swr_alloc_set_opts2");
             _swr = swr;
-            ffmpeg.swr_init(_swr);
+            FFmpegHelper.Throw(ffmpeg.swr_init(_swr), "swr_init");
+            _swrInputSampleRate = inputSampleRate;
         }
 
+        [Obsolete("Use Append(IAudioSamples<float>) instead.")]
         public void Append(AudioBuffer buffer)
         {
+            if (buffer == null) throw new ArgumentNullException(nameof(buffer));
+            Append(new FloatAudioSamples
+            {
+                Channels = buffer.Samples,
+                SampleCount = buffer.SampleCount,
+                SamplePerSecond = buffer.SampleRate
+            });
+        }
+
+        public override void Append(IAudioSamples<float> samples)
+        {
             if (_isDisposed) throw new ObjectDisposedException(nameof(AudioWriter));
+            if (samples == null) throw new ArgumentNullException(nameof(samples));
+
+            if (samples.channelCount <= 0)
+            {
+                throw new ArgumentException("Input has no channels.", nameof(samples));
+            }
+
+            // Ensure the resampler input side matches current sample rate.
+            int inputSampleRate = samples.SamplePerSecond > 0 ? samples.SamplePerSecond : _sampleRate;
+            if (_swr == null || _swrInputSampleRate != inputSampleRate)
+            {
+                RecreateSwr(inputSampleRate);
+            }
+
             if (!_isHeaderWritten)
             {
                 FFmpegHelper.Throw(ffmpeg.avformat_write_header(_fmtCtx, null), "avformat_write_header");
                 _isHeaderWritten = true;
             }
 
+            float[][] sourceChannels = new float[_channels][];
+            for (int c = 0; c < _channels; c++)
+            {
+                int srcChannelIndex = samples.channelCount == 1 ? 0 : Math.Min(c, samples.channelCount - 1);
+                sourceChannels[c] = samples.GetSamples(srcChannelIndex)
+                    ?? throw new InvalidOperationException($"Channel {srcChannelIndex} is null.");
+            }
+
+            int totalSamples = samples.SampleCount;
+            if (totalSamples <= 0)
+            {
+                totalSamples = sourceChannels[0].Length;
+                for (int c = 1; c < sourceChannels.Length; c++)
+                {
+                    totalSamples = Math.Min(totalSamples, sourceChannels[c].Length);
+                }
+            }
+
+            if (totalSamples <= 0)
+            {
+                return;
+            }
+
             int samplesProcessed = 0;
             byte** inData = (byte**)ffmpeg.av_malloc((ulong)(sizeof(byte*) * _channels));
 
-            while (samplesProcessed < buffer.SampleCount)
+            GCHandle[] handles = new GCHandle[_channels];
+            float** pinnedChannelPointers = stackalloc float*[_channels];
+            try
             {
-                int nb_samples = Math.Min(buffer.SampleCount - samplesProcessed, _frame->nb_samples);
-                
-                float[] s0 = buffer.Samples[0];
-                float[] s1 = buffer.Samples[1];
-
-                fixed (float* p0 = s0)
-                fixed (float* p1 = s1)
+                for (int c = 0; c < _channels; c++)
                 {
-                    inData[0] = (byte*)(p0 + samplesProcessed);
-                    inData[1] = (byte*)(p1 + samplesProcessed);
+                    handles[c] = GCHandle.Alloc(sourceChannels[c], GCHandleType.Pinned);
+                    pinnedChannelPointers[c] = (float*)handles[c].AddrOfPinnedObject();
+                }
+
+                while (samplesProcessed < totalSamples)
+                {
+                    int nb_samples = Math.Min(totalSamples - samplesProcessed, _frame->nb_samples);
+
+                    for (int c = 0; c < _channels; c++)
+                    {
+                        inData[c] = (byte*)(pinnedChannelPointers[c] + samplesProcessed);
+                    }
 
                     FFmpegHelper.Throw(ffmpeg.av_frame_make_writable(_frame), "av_frame_make_writable");
                     int converted = ffmpeg.swr_convert(_swr, (byte**)&_frame->data, _frame->nb_samples, inData, nb_samples);
-                    
+
                     _frame->pts = ffmpeg.av_rescale_q(_frameIndex, new AVRational { num = 1, den = _sampleRate }, _audioStream->time_base);
                     _frameIndex += converted;
 
@@ -152,7 +290,18 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     samplesProcessed += nb_samples;
                 }
             }
-            ffmpeg.av_free(inData);
+            finally
+            {
+                for (int c = 0; c < _channels; c++)
+                {
+                    if (handles[c].IsAllocated)
+                    {
+                        handles[c].Free();
+                    }
+                }
+
+                ffmpeg.av_free(inData);
+            }
         }
 
         private void EncodeFrame(AVFrame* frame)
@@ -194,7 +343,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private bool _isFinished = false;
         
-        public void Finish()
+        override public void Finish()
         {
             if (_isDisposed || _isFinished) return;
             _isFinished = true;
@@ -213,7 +362,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
         }
 
-        public void Dispose()
+        override public void Dispose()
         {
             if (_isDisposed) return;
             

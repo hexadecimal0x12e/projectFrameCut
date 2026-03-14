@@ -40,6 +40,8 @@ using projectFrameCut.ApplicationAPIBase.Helpers;
 using ITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System.Reflection;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+
 
 
 
@@ -4055,12 +4057,45 @@ public partial class DraftPage : ContentPage
             {
                 "Debug_ComposeAudio", new Command(() =>
                 {
-                    var clip = DraftImportAndExportHelper.JSONToIClips(DraftImportAndExportHelper.ExportFromDraftPage(this,true));
-                    var buf = AudioComposer.Compose(clip, null, (int)ProjectInfo.TargetFrameRate, 44100, 2);
-                    AudioWriter w = new(Path.Combine(MauiProgram.DataPath,$"audioExport-{DateTime.Now:yyyyMMddHHmmss}.wav"));
-                    w.Append(buf);
-                    w.Finish();
-                    w.Dispose();
+                    var draftSrc = DraftImportAndExportHelper.ExportFromDraftPage(this);
+
+                    Log($"Draft loaded: audio duration {draftSrc.AudioDuration}, saved on {draftSrc.SavedAt}, {draftSrc.Clips.Length} clips.");
+
+                    var clips = DraftImportAndExportHelper.JSONToIClips(draftSrc).Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip).ToArray();
+                    var tracks = DraftImportAndExportHelper.JSONToISoundTracks(draftSrc).ToArray();
+
+                    if (!clips.ArrayAny() && !tracks.ArrayAny())
+                    {
+                        Log("No sound clips in the whole draft. returning...");
+                        return;
+                    }
+
+                    Log($"Found {clips.Length} audio clips.");
+
+                    Log("Initializing all clips...");
+                    foreach (IClip clip in clips)
+                    {
+                        clip.ReInit(8);
+                    }
+
+                    var writer = new AudioWriter(Path.Combine(MauiProgram.DataPath,$"audioExport-{DateTime.Now:yyyyMMddHHmmss}.wav"), 192000, 2, "pcm_s16le");
+
+                    var composer = new AudioComposer<float>
+                    {
+                        Clips = clips,
+                        SoundTracks = tracks,
+                        Writer = writer
+                    };
+
+                    composer.Compose((int)draftSrc.TargetFrameRate, 192000, 2, 4096);
+
+                    writer.Finish();
+                    writer.Dispose();
+
+                    foreach (var item in clips)
+                    {
+                        item?.Dispose();
+                    }
                 })
             },
             {
