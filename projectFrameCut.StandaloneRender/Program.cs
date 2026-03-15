@@ -586,7 +586,7 @@ namespace projectFrameCut.StandaloneRender
                     Writer = writer
                 };
 
-                composer.Compose(fps, 192000, 2, 4096);
+                composer.Compose(fps, 192000, 2, 4096, cts.Token);
 
                 writer.Finish();
                 writer.Dispose();
@@ -616,18 +616,22 @@ namespace projectFrameCut.StandaloneRender
 
             if (!Environment.GetCommandLineArgs().Contains("--noSigInt"))
             {
-                ConsoleCancelEventHandler consoleCanceller = null!;
-                consoleCanceller = (s, e) =>
+                var cancelled = false;
+                Console.CancelKeyPress += (s, e) =>
                 {
+                    e.Cancel = true;
+                    if(cancelled) Process.GetCurrentProcess().Kill();
+                    cancelled = true;
                     Console.WriteLine("You hit Ctrl-C! try cancelling render...");
-                    Console.CancelKeyPress -= consoleCanceller;
                     Console.WriteLine("Hit Ctrl-C again to stop immediately.");
 
-                    cts.Cancel();
-                    builder?.Interrupt();
-                    Environment.Exit(255);
+                    new Thread(() =>
+                    {
+                        cts.Cancel();
+                        builder?.Interrupt();
+                        Environment.Exit(255);
+                    }).Start();
                 };
-                Console.CancelKeyPress += consoleCanceller;
                 Log("Render job starts. Press Ctrl-C to interrupt render process.");
             }
             else

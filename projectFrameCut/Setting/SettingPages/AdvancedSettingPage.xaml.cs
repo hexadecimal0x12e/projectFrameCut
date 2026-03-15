@@ -1,5 +1,7 @@
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Render.EncodeAndDecode;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
@@ -115,6 +117,9 @@ public partial class AdvancedSettingPage : ContentPage
         .AddSeparator()
         .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
         .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts.TryGetValue(GetSetting("OverrideCulture", "default"), out var k) ? k : "", null)
+        .AddSeparator()
+        .AddText("Codec")
+        .AddPicker("codecs", "Test codec", FFmpegHelper.CodecUtils.GetAllCodecs().Select(C => C.Name).Order().ToArray(), "", null)
         .AddSeparator()
         .AddText(SettingLocalizedResources.Advanced_ExportPlugin, fontSize: 20)
         .AddPicker("exportPlugin", SettingLocalizedResources.Advanced_ExportPlugin_Select, projectFrameCut.Render.Plugin.PluginManager.LoadedPlugins.Select(c => c.Key).ToArray(), "Pick a plugin here")
@@ -236,115 +241,136 @@ public partial class AdvancedSettingPage : ContentPage
         })
         .ListenToChanges(async (e) =>
         {
-            if (e.Id == "exportPlugin")
+            switch (e.Id)
             {
-                var pluginID = e.Value?.ToString();
-                if (!string.IsNullOrEmpty(pluginID))
-                {
-                    var failReason = "";
-                    try
+                case "exportPlugin":
                     {
-                        var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
-                        if (Directory.Exists(pluginRoot))
+                        var pluginID = e.Value?.ToString();
+                        if (!string.IsNullOrEmpty(pluginID))
                         {
-                            var pluginPem = await SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}");
-                            if (string.IsNullOrEmpty(pluginPem))
-                            {
-                                string? localizedPluginBrokenReason = null;
-                                try
-                                {
-                                    localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_SignMissing;
-                                }
-                                catch { }
-                                failReason = localizedPluginBrokenReason ?? "Plugin's signature is missing or corrupted. Try reinstall it.";
-                                throw new FileNotFoundException(failReason, pluginID);
-                            }
-
-                            if (!File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.enc")) || !File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.sig")) || !File.Exists(Path.Combine(pluginRoot, "hashtable.json.enc")))
-                            {
-                                string? localizedPluginBrokenReason = null;
-                                try
-                                {
-                                    localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing;
-                                }
-                                catch { }
-                                failReason = localizedPluginBrokenReason ?? "Some of the plugin files are missing. Try reinstall it.";
-                            }
-
-                            var pemHash = HashServices.ComputeStringHash(pluginPem ?? string.Empty, SHA512.Create());
-                            var pluginEnc = File.ReadAllBytes(Path.Combine(pluginRoot, pluginID + ".dll.enc"));
-                            var htbEnc = File.ReadAllBytes(Path.Combine(pluginRoot, "hashtable.json.enc"));
-                            var decBytes = FileCryptoService.DecryptToFileWithPassword(pemHash, pluginEnc);
-                            var savePath = Path.Combine(FileSystem.CacheDirectory, $"{pluginID}.dll");
-                            await File.WriteAllBytesAsync(savePath, decBytes, default);
-                            await Share.RequestAsync(new ShareFileRequest()
-                            {
-                                File = new ShareFile(savePath),
-                                Title = $"assembly for {pluginID}",
-                            });
-                            return;
-                        }
-                        else
-                        {
-                            string? localizedPluginBrokenReason = null;
+                            var failReason = "";
                             try
                             {
-                                localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing_DirectoryNotFound;
+                                var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
+                                if (Directory.Exists(pluginRoot))
+                                {
+                                    var pluginPem = await SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}");
+                                    if (string.IsNullOrEmpty(pluginPem))
+                                    {
+                                        string? localizedPluginBrokenReason = null;
+                                        try
+                                        {
+                                            localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_SignMissing;
+                                        }
+                                        catch { }
+                                        failReason = localizedPluginBrokenReason ?? "Plugin's signature is missing or corrupted. Try reinstall it.";
+                                        throw new FileNotFoundException(failReason, pluginID);
+                                    }
+
+                                    if (!File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.enc")) || !File.Exists(Path.Combine(pluginRoot, pluginID + ".dll.sig")) || !File.Exists(Path.Combine(pluginRoot, "hashtable.json.enc")))
+                                    {
+                                        string? localizedPluginBrokenReason = null;
+                                        try
+                                        {
+                                            localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing;
+                                        }
+                                        catch { }
+                                        failReason = localizedPluginBrokenReason ?? "Some of the plugin files are missing. Try reinstall it.";
+                                    }
+
+                                    var pemHash = HashServices.ComputeStringHash(pluginPem ?? string.Empty, SHA512.Create());
+                                    var pluginEnc = File.ReadAllBytes(Path.Combine(pluginRoot, pluginID + ".dll.enc"));
+                                    var htbEnc = File.ReadAllBytes(Path.Combine(pluginRoot, "hashtable.json.enc"));
+                                    var decBytes = FileCryptoService.DecryptToFileWithPassword(pemHash, pluginEnc);
+                                    var savePath = Path.Combine(FileSystem.CacheDirectory, $"{pluginID}.dll");
+                                    await File.WriteAllBytesAsync(savePath, decBytes, default);
+                                    await Share.RequestAsync(new ShareFileRequest()
+                                    {
+                                        File = new ShareFile(savePath),
+                                        Title = $"assembly for {pluginID}",
+                                    });
+                                    return;
+                                }
+                                else
+                                {
+                                    string? localizedPluginBrokenReason = null;
+                                    try
+                                    {
+                                        localizedPluginBrokenReason = SettingsManager.SettingLocalizedResources.Plugin_FileMissing_DirectoryNotFound;
+                                    }
+                                    catch { }
+                                    failReason = localizedPluginBrokenReason ?? "Plugin file not found.";
+                                }
                             }
-                            catch { }
-                            failReason = localizedPluginBrokenReason ?? "Plugin file not found.";
+                            catch (ReflectionTypeLoadException)
+                            {
+                                string? localizedFailReason = null;
+                                try
+                                {
+                                    localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
+                                }
+                                catch { }
+                                failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
+                            }
+
+                            catch (Exception ex)
+                            {
+                                string? localizedPluginBrokenReason = null;
+                                try
+                                {
+                                    localizedPluginBrokenReason = Localized._ExceptionTemplate(ex);
+                                }
+                                catch { }
+                                failReason = localizedPluginBrokenReason ?? $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
+                            }
+                            await DisplayAlertAsync(Localized._Error, $"failed\r\n({failReason ?? "unknown"})", Localized._OK);
                         }
-                    }
-                    catch (ReflectionTypeLoadException)
-                    {
-                        string? localizedFailReason = null;
-                        try
+                        else if (e.Id == "OverrideCulture")
                         {
-                            localizedFailReason = SettingsManager.SettingLocalizedResources.Plugin_VersionMismatch;
+                            var DispName = e.Value?.ToString() ?? "default";
+                            if (DispName == SettingLocalizedResources.General_Language_OverrideCulture_DontOverride)
+                            {
+                                Settings.Remove("OverrideCulture", out _);
+                                ToggleSaveSignal();
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    var overrideLocate = overrideOpts.ReverseLookup(DispName);
+                                    WriteSetting("OverrideCulture", overrideLocate);
+                                }
+                                catch { }
+                            }
+
+                            await MainSettingsPage.RebootApp(this);
+
                         }
-                        catch { }
-                        failReason = localizedFailReason ?? "plugin may be not up-to-date with the base API inside projectFrameCut. Try upgrade it.";
+                        return;
                     }
 
-                    catch (Exception ex)
+                case "codecs":
                     {
-                        string? localizedPluginBrokenReason = null;
-                        try
+                        var cid = e.Value?.ToString();
+                        if (!string.IsNullOrEmpty(cid))
                         {
-                            localizedPluginBrokenReason = Localized._ExceptionTemplate(ex);
+                            try
+                            {
+                                var writer = PluginManager.CreateVideoWriter(cid);
+                                await DisplayAlertAsync(Localized._Info, $"Successfully create video writer with codec {writer.CodecName}.", Localized._OK);
+                            }
+                            catch (Exception ex)
+                            {
+                                await DisplayAlertAsync(Localized._Error, $"Failed to create video writer with codec {cid}.\r\n({Localized._ExceptionTemplate(ex)})", Localized._OK); return;
+                            }
                         }
-                        catch { }
-                        failReason = localizedPluginBrokenReason ?? $"An unhandled {ex.GetType().Name} exception occurs when trying to load plugin.\r\n({ex.Message})";
-                    }
-                    await DisplayAlertAsync(Localized._Error, $"failed\r\n({failReason ?? "unknown"})", Localized._OK);
-                }
-                else if (e.Id == "OverrideCulture")
-                {
-                    var DispName = e.Value?.ToString() ?? "default";
-                    if (DispName == SettingLocalizedResources.General_Language_OverrideCulture_DontOverride)
-                    {
-                        Settings.Remove("OverrideCulture", out _);
-                        ToggleSaveSignal();
-                    }
-                    else
-                    {
-                        try
-                        {
-                            var overrideLocate = overrideOpts.ReverseLookup(DispName);
-                            WriteSetting("OverrideCulture", overrideLocate);
-                        }
-                        catch { }
+                        break;
                     }
 
+                default:
+                    SettingsManager.WriteSetting(e.Id, e.Value?.ToString());
                     await MainSettingsPage.RebootApp(this);
-
-                }
-                return;
-            }
-            else
-            {
-                SettingsManager.WriteSetting(e.Id, e.Value?.ToString());
-                await MainSettingsPage.RebootApp(this);
+                    break;
             }
 
 

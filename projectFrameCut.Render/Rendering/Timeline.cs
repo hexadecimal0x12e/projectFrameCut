@@ -68,7 +68,7 @@ namespace projectFrameCut.Render.Rendering
                     }
                     else
                     {
-                        throw new InvalidDataException($"Cannot process a non-transform clip in GetFramesInOneFrame. Clip ID: {clip.Id}");
+                        frame = clip.GetFrame(targetFrame, targetWidth, targetHeight, forceResize, ppb);
                     }
                     bool isAI = false;
                     if (clip.ExtraData.TryGetValue("IsAI", out var aiMark))

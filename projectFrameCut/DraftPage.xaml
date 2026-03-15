@@ -124,6 +124,10 @@
             </MenuFlyoutItem>
         </MenuBarItem>
 
+        <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Extensions}" x:Name="ExtensionsMenuBar" x:FieldModifier="public">
+            
+        </MenuBarItem>
+
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs}">
             <MenuFlyoutItem x:Name="JobRunningIndicator" Text="{l:Localized Key=DraftPage_NoJobRunning}" IsEnabled="False" />
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Jobs_ManageJobs}" Command="{Binding ManageJobsCommand}">
@@ -200,7 +204,11 @@
                     <Label x:Name="CurrentPlayheadLabel" Text="00:00/99:99" Margin="8,0,0,0" VerticalOptions="Center"></Label>
                 </HorizontalStackLayout>
 
-                <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar">
+                <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar" Spacing="8">
+                    <HorizontalStackLayout VerticalOptions="Center" Margin="8,0,0,0" Spacing="4">
+                        <CheckBox x:Name="MultiSelectCheckBox" CheckedChanged="MultiSelectCheckBox_CheckedChanged" VerticalOptions="Center" />
+                        <Label Text="Multi" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
                     <Picker x:Name="ResolutionPicker" WidthRequest="150"  SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
                     <Button x:Name="ZoomOutButton" Text="-" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />
                     <Button x:Name="ZoomResetButton" Text="1x" Margin="8,0,0,0" Clicked="ZoomResetButton_Clicked"/>

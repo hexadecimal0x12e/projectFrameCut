@@ -112,7 +112,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// This is the ONLY method you need to implement.
         /// </summary>
         /// <remarks>
-        /// <b>DON'T DO any frame index mapping, AND PLEASE MAKE SURE result <see cref="IPicture"/> has the correct size defined in parameters.</b>
+        /// <b>DON'T DO any frame index mapping, AND PLEASE MAKE SURE result <see cref="IPicture"/> has the correct size and format defined in parameters.</b>
         /// If you don't do these, it may cause an unexcepted result.
         /// </remarks>
         /// <param name="frameIndex">frame index related to the source.</param>

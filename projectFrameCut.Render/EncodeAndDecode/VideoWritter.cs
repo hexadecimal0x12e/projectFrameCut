@@ -491,7 +491,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public void Finish()
         {
-            if (_isDisposed) return;
+            if (_isDisposed || Index <= 0) return;
 
             FFmpegHelper.Throw(ffmpeg.avcodec_send_frame(_codecCtx, null), "avcodec_send_frame(flush)");
             while (true)

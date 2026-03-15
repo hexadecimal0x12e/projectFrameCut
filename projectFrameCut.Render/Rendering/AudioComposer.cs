@@ -6,6 +6,7 @@ using projectFrameCut.Shared;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace projectFrameCut.Render.Rendering
@@ -14,22 +15,12 @@ namespace projectFrameCut.Render.Rendering
     {
         private const int DefaultChunkSampleCount = 4096;
 
-        private sealed class AudioClipContext
-        {
-            public IClip? Clip { get; init; }
-            public ISoundTrack? SoundTrack { get; init; }
-            public IAudioSource Source { get; init; } = null!;
-            public int TimelineStartSample { get; init; }
-            public int TimelineEndSample { get; init; }
-            public int SourceStartSample { get; init; }
-            public float Volume { get; init; }
-            public float Ratio { get; init; }
-            public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
-        }
-
         public AudioWriterBase<T> Writer { get; init; }
         public IClip[] Clips { get; init; }
         public ISoundTrack[]? SoundTracks { get; init; }
+        public event Action<double, TimeSpan>? OnProgressChanged;
+        public bool LogState = false;
+
 
 
         /// <summary>
@@ -39,13 +30,14 @@ namespace projectFrameCut.Render.Rendering
             int videoFramerate = 30,
             int samplerate = 48000,
             int channels = 2,
-            int chunkSampleCount = DefaultChunkSampleCount)
+            int chunkSampleCount = DefaultChunkSampleCount,
+            CancellationToken? cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(Clips);
             ArgumentNullException.ThrowIfNull(Writer);
             if (chunkSampleCount <= 0) throw new ArgumentOutOfRangeException(nameof(chunkSampleCount));
 
-            var setup = BuildAudioContexts(videoFramerate, samplerate);
+            var (contexts, totalSamples) = BuildAudioContexts(videoFramerate, samplerate);
             var sampleConverter = GetDefaultConverter<T>();
 
             try
@@ -54,30 +46,64 @@ namespace projectFrameCut.Render.Rendering
                 Writer.ChannelCount = channels;
                 Writer.Initialize();
 
-                ComposeInto(
-                    setup.contexts,
-                    setup.totalSamples,
-                    samplerate,
-                    channels,
-                    chunkSampleCount,
-                    (_, chunk) =>
+                if (totalSamples <= 0)
+                {
+                    return;
+                }
+                Stopwatch elapsed = Stopwatch.StartNew();
+                ConcurrentDictionary<string, object> globalBindableCache = new();
+                Log($"[AudioComposer] Total {totalSamples} samples need to compose.");
+                for (int chunkStart = 0; chunkStart < totalSamples; chunkStart += chunkSampleCount)
+                {
+                    if(cancellationToken?.IsCancellationRequested == true)
                     {
-                        Writer.Append(chunk);
+                        Log($"[AudioComposer] Cancellation requested, stopping composition.");
                         return;
+                    }
+                    int chunkLength = Math.Min(chunkSampleCount, totalSamples - chunkStart);
+                    float[][] mixed = CreateZeroChannels(channels, chunkLength);
+
+                    foreach (var context in contexts)
+                    {
+                        MixContextIntoChunk(context, chunkStart, chunkLength, samplerate, channels, mixed, globalBindableCache);
+                    }
+
+                    Writer.Append(new FloatAudioSamples
+                    {
+                        Channels = mixed,
+                        SampleCount = chunkLength,
+                        SamplePerSecond = samplerate
                     });
+
+                    var prog = (double)(chunkStart + chunkLength) / totalSamples;
+                    TimeSpan etr = TimeSpan.Zero;
+                    if (prog > 0.005)
+                    {
+                        double totalEst = elapsed.Elapsed.TotalSeconds / prog;
+                        double remaining = totalEst - elapsed.Elapsed.TotalSeconds;
+                        if (remaining > 0) etr = TimeSpan.FromSeconds(remaining);
+                    }
+
+                    OnProgressChanged?.Invoke(prog, etr);
+
+                    if (LogState && chunkStart % 200 == 0) Log($"[AudioComposer] Finished {(float)(chunkStart / (float)totalSamples):p2} ({chunkStart} of {totalSamples})");
+
+                }
             }
             finally
             {
-                DisposeContexts(setup.contexts);
+                DisposeContexts(contexts);
             }
         }
+
+
 
         private (List<AudioClipContext> contexts, int totalSamples) BuildAudioContexts(
             int videoFramerate,
             int outputSampleRate)
         {
-            if (videoFramerate <= 0) throw new ArgumentOutOfRangeException(nameof(videoFramerate));
-            if (outputSampleRate <= 0) throw new ArgumentOutOfRangeException(nameof(outputSampleRate));
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(videoFramerate);
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(outputSampleRate);
 
             Dictionary<string, ISoundTrack> trackMap = new();
             if (SoundTracks != null)
@@ -229,39 +255,6 @@ namespace projectFrameCut.Render.Rendering
             return (contexts, totalSamples);
         }
 
-        private static void ComposeInto(
-            List<AudioClipContext> contexts,
-            int totalSamples,
-            int outputSampleRate,
-            int channels,
-            int chunkSize,
-            Action<int, IAudioSamples<float>> onMixedChunk)
-        {
-            if (totalSamples <= 0)
-            {
-                return;
-            }
-
-            ConcurrentDictionary<string, object> globalBindableCache = new();
-
-            for (int chunkStart = 0; chunkStart < totalSamples; chunkStart += chunkSize)
-            {
-                int chunkLength = Math.Min(chunkSize, totalSamples - chunkStart);
-                float[][] mixed = CreateZeroChannels(channels, chunkLength);
-
-                foreach (var context in contexts)
-                {
-                    MixContextIntoChunk(context, chunkStart, chunkLength, outputSampleRate, channels, mixed, globalBindableCache);
-                }
-
-                onMixedChunk(chunkStart, new FloatAudioSamples
-                {
-                    Channels = mixed,
-                    SampleCount = chunkLength,
-                    SamplePerSecond = outputSampleRate
-                });
-            }
-        }
 
         private static void MixContextIntoChunk(
             AudioClipContext context,
@@ -624,6 +617,19 @@ namespace projectFrameCut.Render.Rendering
                 {
                 }
             }
+        }
+
+        private sealed class AudioClipContext
+        {
+            public IClip? Clip { get; init; }
+            public ISoundTrack? SoundTrack { get; init; }
+            public IAudioSource Source { get; init; } = null!;
+            public int TimelineStartSample { get; init; }
+            public int TimelineEndSample { get; init; }
+            public int SourceStartSample { get; init; }
+            public float Volume { get; init; }
+            public float Ratio { get; init; }
+            public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();
         }
 
     }

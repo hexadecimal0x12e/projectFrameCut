@@ -24,6 +24,7 @@ using projectFrameCut.ApplicationAPIBase.Helpers;
 using System.Globalization;
 using System.Reflection;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.ApplicationAPIBase.Plugins;
 
 
 #if WINDOWS
@@ -317,20 +318,20 @@ public partial class HomePage : ContentPage
 
         var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, "Untitled Project 1", 1024, null, "Untitled Project 1");
         if (projName is null) return;
-        
+
         if (Path.GetInvalidPathChars().Any(projName.Contains) || Path.GetInvalidFileNameChars().Any(projName.Contains))
         {
             await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
             return;
         }
-        
+
         draftSourcePath = Path.Combine(draftSourcePath, projName + ".pjfc");
         if (Directory.Exists(draftSourcePath))
         {
             await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
             return;
         }
-        
+
         try
         {
             Directory.CreateDirectory(draftSourcePath);
@@ -340,7 +341,7 @@ public partial class HomePage : ContentPage
             await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
             return;
         }
-        
+
         var ProjectInfo = new ProjectJSONStructure
         {
             ProjectName = projName,
@@ -760,6 +761,28 @@ public partial class HomePage : ContentPage
                             page.AcceleratorToUse = accelDevice.CreateAccelerator(context);
 #endif
                             await page.PostInit();
+                            foreach (var plugin in PluginManager.LoadedPlugins.Values.OfType<IApplicationPluginBase>())
+                            {
+                                try
+                                {
+                                    plugin.InjectUI(page);
+                                    var name = plugin.ReadLocalizationItem("_PluginBase_Name_", Localized._LocaleId_) ?? plugin.Name;
+                                    var items = plugin.GetMenuItems(page.MainMultiWindowView);
+                                    var sub = new MenuFlyoutSubItem { Text = name, IsEnabled = items.Any() };
+                                    items.ForEach(c => sub.Add(c));
+                                    page.ExtensionsMenuBar.Add(sub);
+
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log(ex, $"plugin {plugin.Name} InjectUI", this);
+                                    if (!await DisplayAlertAsync(Localized._Warn, Localized.HomePage_InitPlugin_Fail(plugin.Name, ex), Localized.HomePage_SourceNotFound_Continue, Localized._Cancel))
+                                    {
+                                        page = null;
+                                        return;
+                                    }
+                                }
+                            }
                             break;
                         }
                         catch (COMException comEx)

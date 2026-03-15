@@ -174,6 +174,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// </remarks>
         /// <param name="children"></param>
         /// <exception cref="InvalidOperationException">when the window is not a <see cref="MultiWindowItem"/>.</exception>
+        [Obsolete("This method is for compatibility purposes only. Use AddWindow(MultiWindowItem) instead to add a window to this multi-window view.",false)]
         public void Add(IView children)
         {
             if (children is MultiWindowItem item)
@@ -196,6 +197,7 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
         /// </remarks>
         /// <param name="children"></param>
         /// <exception cref="InvalidOperationException">when the window is not a <see cref="MultiWindowItem"/>.</exception>
+        [Obsolete("This method is for compatibility purposes only. Use CloseWindow(MultiWindowItem, bool) instead to close a window to this multi-window view.", false)]
         public IView Remove(IView children)
         {
             if (children is MultiWindowItem item)

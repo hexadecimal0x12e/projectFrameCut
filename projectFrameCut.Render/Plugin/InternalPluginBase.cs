@@ -139,7 +139,7 @@ public class InternalPluginBase : IPluginBase
 
     public Dictionary<string, Func<string, string, ISoundTrack>> SoundTrackProvider => new Dictionary<string, Func<string, string, ISoundTrack>>
     {
-        {"NormalTrack", new((i,n) => new NormalSoundTrack{Id = i, Name = n}) }
+        {"NormalTrack", new((i,n) => new NormalSoundTrack{Id = i, Name = n, Ratio = 1f, Volume = 1f}) }
     };
 
     public Dictionary<string, Func<string, IAudioSource>> AudioSourceProvider => new Dictionary<string, Func<string, IAudioSource>>

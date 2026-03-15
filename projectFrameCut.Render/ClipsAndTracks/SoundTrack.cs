@@ -12,6 +12,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
 {
     public class NormalSoundTrack : ISoundTrack
     {
+        private bool disposedValue;
+
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public TrackMode TrackType => TrackMode.NormalTrack;
@@ -22,8 +24,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; init; }
-        public float Ratio { get; set; }
-        public float Volume { get; set; }
+        public float Ratio { get; set; } = 1f;
+        public float Volume { get; set; } = 1f;
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; init; }
         public Dictionary<string, object> ExtraData { get; set; }
@@ -42,6 +44,26 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public void ReInit()
         {
             AudioSource = FilePath is not null ? PluginManager.CreateAudioSource(FilePath) : null;
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    AudioSource?.Dispose();
+                }
+
+                disposedValue = true;
+            }
+        }
+
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 

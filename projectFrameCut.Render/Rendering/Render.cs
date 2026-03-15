@@ -177,10 +177,11 @@ namespace projectFrameCut.Render.Rendering
             var ppb = Use16Bit ? IPicture.PicturePixelMode.UShortPicture : IPicture.PicturePixelMode.BytePicture;
             foreach (var idx in ClipNeedForFrame.Keys.OrderBy(x => x))
             {
-                // Throttling: Wait if too many frames are prepared but not yet rendered
-                while (!IsProfilerAttached && Volatile.Read(ref TotalEnqueued) - Volatile.Read(ref Finished) > throttleThreshold && !token.IsCancellationRequested)
+                // Throttling: limit only by prepared source-frame queue depth.
+                // Do not use TotalEnqueued here because it includes blank frames and can deadlock with many blanks.
+                while (!IsProfilerAttached && PreparedFrames.Count > throttleThreshold && !token.IsCancellationRequested)
                 {
-                    Log($"[Preparer] Waiting for more render slots... prepared but not rendered: {Volatile.Read(ref TotalEnqueued) - Volatile.Read(ref Finished)} (threshold: {throttleThreshold})");
+                    Log($"[Preparer] Waiting for more render slots... prepared source frames pending: {PreparedFrames.Count} (threshold: {throttleThreshold})");
                     Thread.Sleep(500);
                 }
 

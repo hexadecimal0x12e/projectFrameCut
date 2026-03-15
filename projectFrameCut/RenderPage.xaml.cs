@@ -534,6 +534,7 @@ public partial class RenderPage : ContentPage
                 _ => IPicture.PicturePixelMode.UShortPicture
             };
 
+            await SubProgress.ProgressTo(0, 250, Easing.Linear);
 
             var outTempFile = outputPath + ext;
             Directory.CreateDirectory(Path.GetDirectoryName(outTempFile) ?? throw new NullReferenceException());
@@ -637,7 +638,6 @@ public partial class RenderPage : ContentPage
 
             renderer.OnProgressChanged += (p, etr) =>
             {
-                totalProg = p + lastProg;
                 Dispatcher.Dispatch(async () =>
                 {
                     string timeStr = "";
@@ -675,7 +675,7 @@ public partial class RenderPage : ContentPage
             };
 
             builder?.Build()?.Start();
-            renderer.PrepareRender(_cts.Token);
+            await Task.Run(() => renderer.PrepareRender(_cts.Token), _cts.Token);
             if (_cts.IsCancellationRequested) return;
 
             Stopwatch sw1 = new();
@@ -685,7 +685,7 @@ public partial class RenderPage : ContentPage
             sw1.Restart();
             if (blockwrite)
             {
-                await Task.Run(async () => await renderer.GoRenderSync(_cts.Token));
+                await Task.Run(async () => await renderer.GoRenderSync(_cts.Token), _cts.Token);
                 Log($"Sync render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
                 builder?.Writer.Finish();
             }
@@ -699,7 +699,6 @@ public partial class RenderPage : ContentPage
                 builder?.Finish((i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), duration);
 
             }
-            if (_cts.IsCancellationRequested) return;
 
 
             Log($"Releasing resources...");
@@ -768,7 +767,7 @@ public partial class RenderPage : ContentPage
             return;
         }
 
-        var clips = DraftImportAndExportHelper.JSONToIClips(draftSrc).Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip).ToArray();
+        var clips = DraftImportAndExportHelper.JSONToIClips(draftSrc, false).Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip).ToArray();
         var tracks = DraftImportAndExportHelper.JSONToISoundTracks(draftSrc).ToArray();
 
         if (!clips.ArrayAny() && !tracks.ArrayAny())
@@ -780,9 +779,13 @@ public partial class RenderPage : ContentPage
         Log($"Found {clips.Length} audio clips.");
 
         Log("Initializing all clips...");
-        foreach (IClip clip in clips)
+        foreach (var clip in clips)
         {
-            clip.ReInit(8);
+            await Task.Run(() => clip.ReInit(8));
+        }
+        foreach (var track in tracks)
+        {
+            await Task.Run(track.ReInit);
         }
 
         var writer = new AudioWriter(outputPath, 192000, 2, "pcm_s16le");
@@ -794,12 +797,37 @@ public partial class RenderPage : ContentPage
             Writer = writer
         };
 
-        composer.Compose((int)_draft.TargetFrameRate, 192000, 2, 4096);
+        SetSubProg("ComposeAudio");
+
+        composer.OnProgressChanged += (p, etr) =>
+        {
+            Dispatcher.Dispatch(async () =>
+            {
+                string timeStr = "";
+                if (etr.TotalSeconds > 0)
+                {
+                    timeStr = (etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss"));
+                    SubProgLabel.Text = $"{_currentSubProgText} ({timeStr})";
+                }
+                await SubProgress.ProgressTo(p, 250, Easing.Linear);
+
+                if (ScreenSaverOverlay.IsVisible)
+                {
+                    HintLabel.Text = $"{Localized.RenderPage_ClickToShowUI}{Environment.NewLine}{Localized.RenderPage_Stat(p, timeStr)}";
+                }
+            });
+        };
+
+        await Task.Run(() => composer.Compose((int)_draft.TargetFrameRate, 192000, 2, 4096, _cts.Token));
 
         writer.Finish();
         writer.Dispose();
 
         foreach (var item in clips)
+        {
+            item?.Dispose();
+        }
+        foreach (var item in tracks)
         {
             item?.Dispose();
         }

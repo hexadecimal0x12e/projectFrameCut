@@ -99,7 +99,8 @@ public partial class DraftPage : ContentPage
     ConcurrentDictionary<string, double> HandleStartWidth = new();
 
     ClipElementUI? _selected = null;
-    Brush? _selectedOrigColor = null;
+    readonly HashSet<string> _selectedClipIds = [];
+    readonly ConcurrentDictionary<string, Brush?> _selectedOrigColorByClipId = new();
     private double _currentFrame = 0;
     public double CurrentFrame => _currentFrame;
 
@@ -208,6 +209,7 @@ public partial class DraftPage : ContentPage
     public bool AutoSavePreviewAreaHeight { get; set; } = true;
     public bool? UseCompactLayout { get; set; } = null;
     public bool LockScrollViewAfterSelection { get; set; }
+    public bool MultiSelectEnabled { get; private set; }
 
 
     public bool UseCommunityToolkitPopupInsteadOfOverlayLayer { get { return (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS()) || field; } set; }
@@ -675,8 +677,11 @@ public partial class DraftPage : ContentPage
     private void Split_Clicked(object sender, EventArgs e)
     {
         var clip = _selected;
-        UnSelectTapGesture_Tapped(sender, null);
-        if (clip is null) { SetStatusText("No clip selected"); return; }
+        if (clip is null || _selectedClipIds.Count != 1)
+        {
+            SetStatusText("Please select exactly one clip");
+            return;
+        }
         try
         {
             // Absolute X of playhead relative to page root
@@ -983,6 +988,104 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region select clip
+    private bool IsClipSelected(ClipElementUI clip)
+    {
+        return _selectedClipIds.Contains(clip.Id);
+    }
+
+    private void AddClipToSelection(ClipElementUI clip)
+    {
+        if (!_selectedClipIds.Add(clip.Id)) return;
+        _selectedOrigColorByClipId.TryAdd(clip.Id, clip.Clip.Background);
+        clip.Clip.Background = Colors.YellowGreen;
+        _selected = clip;
+    }
+
+    private void RemoveClipFromSelection(ClipElementUI clip)
+    {
+        if (!_selectedClipIds.Remove(clip.Id)) return;
+
+        if (_selectedOrigColorByClipId.TryRemove(clip.Id, out var origColor))
+        {
+            clip.Clip.Background = origColor ?? ClipElementUI.DetermineAssetColor(clip.ClipType);
+        }
+        else
+        {
+            clip.ApplyClipColor();
+        }
+
+        if (_selected?.Id == clip.Id)
+        {
+            _selected = _selectedClipIds
+                .Select(id => Clips.TryGetValue(id, out var selectedClip) ? selectedClip : null)
+                .FirstOrDefault(c => c is not null);
+        }
+    }
+
+    private void ClearSelectionInternal()
+    {
+        var selectedIds = _selectedClipIds.ToArray();
+        foreach (var id in selectedIds)
+        {
+            if (Clips.TryGetValue(id, out var clip))
+            {
+                if (_selectedOrigColorByClipId.TryRemove(id, out var origColor))
+                {
+                    clip.Clip.Background = origColor ?? ClipElementUI.DetermineAssetColor(clip.ClipType);
+                }
+                else
+                {
+                    clip.ApplyClipColor();
+                }
+            }
+        }
+
+        _selectedClipIds.Clear();
+        _selected = null;
+    }
+
+    private async Task RefreshSelectionUiAsync()
+    {
+        if (_selectedClipIds.Count == 0)
+        {
+            SetStatusText(Localized.DraftPage_EverythingFine);
+            ClipEditor.SetClip(null, null);
+            SetTimelineScrollEnabled(true);
+            RightContentBorder.Content = new Label { Text = Localized.DraftPage_PropertyPanel_SelectToContinue, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
+            SelectedClipChanged?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        if (_selected is null || !_selectedClipIds.Contains(_selected.Id))
+        {
+            _selected = _selectedClipIds
+                .Select(id => Clips.TryGetValue(id, out var selectedClip) ? selectedClip : null)
+                .FirstOrDefault(c => c is not null);
+        }
+
+        if (_selectedClipIds.Count == 1 && _selected is not null)
+        {
+            var clip = _selected;
+            SetStatusText(Localized.DraftPage_Selected(clip.DisplayName));
+            ClipEditor.SetClip(clip, Assets.TryGetValue(clip.Id, out var asset) ? asset : null);
+            SetTimelineScrollEnabled(false);
+            RightContentBorder.Content = await BuildPropertyPanel(clip);
+            SelectedClipChanged?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        SetStatusText($"{_selectedClipIds.Count} clips selected");
+        ClipEditor.SetClip(null, null);
+        SetTimelineScrollEnabled(false);
+        RightContentBorder.Content = new Label
+        {
+            Text = $"{_selectedClipIds.Count} clips selected",
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center
+        };
+        SelectedClipChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     private async void DoubleTapGesture_Tapped(object? sender, TappedEventArgs e)
     {
         if (sender is not Border border) return;
@@ -996,20 +1099,27 @@ public partial class DraftPage : ContentPage
     {
         if (sender is not Border border) return;
         if (border.BindingContext is not ClipElementUI clip) return;
-        if (_selected is not null)
-        {
-            _selected.Clip.Background = new SolidColorBrush(Colors.CornflowerBlue);
-        }
         LogDiagnostic($"Clip {clip.Id} clicked, state:{clip.MovingStatus}");
         if (clip.MovingStatus != ClipMovingStatus.Free) return;
-        _selected = clip;
-        _selectedOrigColor = clip.Clip.Background;
-        clip.Clip.Background = Colors.YellowGreen;
-        SetStatusText(Localized.DraftPage_Selected(clip.DisplayName));
-        ClipEditor.SetClip(clip, Assets.TryGetValue(clip.Id, out var asset) ? asset : null);
-        SetTimelineScrollEnabled(false);
-        RightContentBorder.Content = await BuildPropertyPanel(clip);
-        SelectedClipChanged?.Invoke(this, EventArgs.Empty);
+
+        if (MultiSelectEnabled)
+        {
+            if (IsClipSelected(clip))
+            {
+                RemoveClipFromSelection(clip);
+            }
+            else
+            {
+                AddClipToSelection(clip);
+            }
+        }
+        else
+        {
+            ClearSelectionInternal();
+            AddClipToSelection(clip);
+        }
+
+        await RefreshSelectionUiAsync();
     }
 
     private void ContextSelectTapGesture_Tapped(object? sender, TappedEventArgs e)
@@ -1053,19 +1163,22 @@ public partial class DraftPage : ContentPage
 
     private void UnSelectTapGesture_Tapped(object? sender, TappedEventArgs e)
     {
-        if (_selected is null) return;
-        _selected = null;
-        UnselectClip(_selected);
+        if (_selectedClipIds.Count == 0) return;
+        ClearSelectionInternal();
+        _ = RefreshSelectionUiAsync();
     }
 
     public void UnselectClip(ClipElementUI? clip)
     {
-        clip?.Clip?.Background = _selectedOrigColor ?? new SolidColorBrush(Colors.CornflowerBlue);
-        SetStatusText(Localized.DraftPage_EverythingFine);
-        ClipEditor.SetClip(null, null);
-        SetTimelineScrollEnabled(true);
-        RightContentBorder.Content = new Label { Text = Localized.DraftPage_PropertyPanel_SelectToContinue, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
-        SelectedClipChanged?.Invoke(this, EventArgs.Empty);
+        if (clip is null)
+        {
+            ClearSelectionInternal();
+            _ = RefreshSelectionUiAsync();
+            return;
+        }
+
+        RemoveClipFromSelection(clip);
+        _ = RefreshSelectionUiAsync();
     }
 
     private void SetTimelineScrollEnabled(bool enabled)
@@ -1354,6 +1467,12 @@ public partial class DraftPage : ContentPage
 
             if (!Tracks.ContainsKey(newTrack))
             {
+                if (_selectedClipIds.Contains(cid))
+                {
+                    _selectedClipIds.Remove(cid);
+                    _selectedOrigColorByClipId.TryRemove(cid, out _);
+                    if (_selected?.Id == cid) _selected = null;
+                }
                 Clips.TryRemove(cid, out _);
                 SetStatusText(Localized.DraftPage_Removed);
                 SetStateOK();
@@ -1491,23 +1610,48 @@ public partial class DraftPage : ContentPage
 
     private void DeleteAClip(ClipElementUI? clip = null)
     {
-        UnselectClip(clip);
-        clip ??= _selected;
-        if (clip is null) return;
-        if (clip.origTrack is null) return;
-        if (Tracks.TryGetValue(clip.origTrack ?? 0, out var trackLayout))
+        List<ClipElementUI> clipsToDelete = [];
+
+        if (clip is not null)
         {
-            trackLayout.Children.Remove(clip.Clip);
+            clipsToDelete.Add(clip);
         }
-        Clips.TryRemove(clip.Id, out _);
-        LogDiagnostic($"clip {clip.Id} deleted.");
+        else if (_selectedClipIds.Count > 0)
+        {
+            clipsToDelete.AddRange(
+                _selectedClipIds
+                    .Select(id => Clips.TryGetValue(id, out var selectedClip) ? selectedClip : null)
+                    .Where(c => c is not null)
+                    .Cast<ClipElementUI>());
+        }
+        else if (_selected is not null)
+        {
+            clipsToDelete.Add(_selected);
+        }
+
+        if (clipsToDelete.Count == 0) return;
+
+        foreach (var target in clipsToDelete)
+        {
+            RemoveClipFromSelection(target);
+
+            if (target.origTrack is not null && Tracks.TryGetValue(target.origTrack.Value, out var trackLayout))
+            {
+                trackLayout.Children.Remove(target.Clip);
+            }
+
+            Clips.TryRemove(target.Id, out _);
+            LogDiagnostic($"clip {target.Id} deleted.");
+
+            try
+            {
+                RemoveTransformsReferencingClip(target.Id);
+            }
+            catch { }
+        }
+
         SetStatusText(Localized.DraftPage_Removed);
-        // Remove any transform clips that reference this clip
-        try
-        {
-            RemoveTransformsReferencingClip(clip.Id);
-        }
-        catch { }
+        _ = RefreshSelectionUiAsync();
     }
 
     #endregion
@@ -4208,6 +4352,23 @@ public partial class DraftPage : ContentPage
     private void ZoomOutButton_Clicked(object sender, EventArgs e)
     {
         PerformZoom(1.2);
+    }
+
+    private async void MultiSelectCheckBox_CheckedChanged(object? sender, CheckedChangedEventArgs e)
+    {
+        MultiSelectEnabled = e.Value;
+
+        if (!MultiSelectEnabled && _selectedClipIds.Count > 1)
+        {
+            var keep = _selected;
+            ClearSelectionInternal();
+            if (keep is not null)
+            {
+                AddClipToSelection(keep);
+            }
+        }
+
+        await RefreshSelectionUiAsync();
     }
 
     private void ZoomResetButton_Clicked(object sender, EventArgs e)

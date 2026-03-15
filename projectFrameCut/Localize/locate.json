@@ -3590,6 +3590,22 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "\u63D2\u4EF6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "\u5408\u6210\u97F3\u9891",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
       }
     ],
     "en-US": [
@@ -7505,6 +7521,24 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -11418,6 +11452,24 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -15339,6 +15391,24 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -19259,6 +19329,24 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -23173,6 +23261,24 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -27094,6 +27200,24 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ar-SA": [
@@ -31013,6 +31137,24 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -34934,6 +35076,24 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "es-ES": [
@@ -38853,6 +39013,24 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -42774,6 +42952,24 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "pl-PL": [
@@ -46693,6 +46889,24 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -50614,6 +50828,24 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ru-RU": [
@@ -54534,6 +54766,24 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "tr-TR": [
@@ -58453,6 +58703,24 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]

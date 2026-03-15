@@ -1,4 +1,5 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -53,12 +54,34 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         {
 
         }
+
+        /// <summary>
+        /// Inject custom controls to the editor UI.
+        /// </summary>
+        /// <remarks>
+        /// This method will be called after Post-Init stage (The time when DraftPage is created in HomePage and PostInit() is called.)
+        /// </remarks>
+        /// <param name="draftPage"></param>
+        public virtual void InjectUI(Page draftPage)
+        {
+
+        }
+
+        /// <summary>
+        /// Inject custom menu-bar items to the 'Extension' menu.
+        /// </summary>
+        /// <remarks>
+        /// This method will be called after Post-Init stage (The time when DraftPage is created in HomePage and PostInit() is called.)
+        /// This method will parse the page's <see cref="MultiWindowView"/>, you can use it for displaying a new page. To get the whole page, you may use the <paramref name="MainMWV"/>'s <see cref="IElement.Parent"/> and cast it to <see cref="Page"/>.
+        /// </remarks>
+        /// <param name="MainMWV">
+        /// The <see cref="MultiWindowView"/> of the showing page.
+        /// </param>
+        /// <return>The items.</return>
+        public virtual List<MenuFlyoutItem> GetMenuItems(MultiWindowView MainMWV)
+        {
+            return [];
+        }
     }
-
-
-
-
-
-
 
 }

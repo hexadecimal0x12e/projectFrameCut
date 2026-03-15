@@ -287,9 +287,8 @@ namespace projectFrameCut.Render.Rendering
 
         public void Interrupt()
         {
-            Log("Interrupt signal received. Stopping the video builder...");
+            Log("[VideoBuilder] Interrupt signal received. Stopping the video builder...");
             running = false;
-            WaitForBuildThreadToStop();
 
             while (Cache.TryRemove(index, out var frame))
             {

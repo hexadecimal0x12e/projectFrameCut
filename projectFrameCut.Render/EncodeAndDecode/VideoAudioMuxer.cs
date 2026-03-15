@@ -416,6 +416,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (!File.Exists(audioInputPath))
             {
                 File.Copy(videoInputPath, outputPath, overwrite: true);
+                return;
             }
 
             AVFormatContext* videoFmtCtx = null;

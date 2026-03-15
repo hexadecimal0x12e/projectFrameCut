@@ -11,7 +11,7 @@ using System.Text.Json.Serialization;
 
 namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
 {
-    public interface ISoundTrack
+    public interface ISoundTrack : IDisposable
     {
         /// <summary>
         /// Gets the ID of the plugin that provided this value.
