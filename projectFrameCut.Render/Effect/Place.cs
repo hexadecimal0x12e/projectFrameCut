@@ -34,7 +34,7 @@ namespace projectFrameCut.Render.Effect
         public string? NeedComputer => null;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public bool YieldProcessStep => true;
-        public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -50,7 +50,7 @@ namespace projectFrameCut.Render.Effect
 
         public string TypeName => "Place";
 
-        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.ImageSharp)
         {
             ArgumentNullException.ThrowIfNull(parameters);
             if (!ParametersNeeded.All(parameters.ContainsKey))
@@ -67,6 +67,7 @@ namespace projectFrameCut.Render.Effect
             {
                 StartX = Convert.ToInt32(parameters["StartX"]),
                 StartY = Convert.ToInt32(parameters["StartY"]),
+                ImplementType = implementType,
             };
         }
 
@@ -130,16 +131,7 @@ namespace projectFrameCut.Render.Effect
         public IPicture Process(IPicture source)
         {
             var sw = Stopwatch.StartNew();
-            var srcImg = source.SaveToSixLaborsImage();
-            var resultImg = new Image<Rgba32>(TargetWidth, TargetHeight, Color.Transparent);
-            resultImg.Mutate(ctx => ctx.DrawImage(srcImg, new Point(StartX, StartY), 1f));
-
-            IPicture result = (int)source.bitPerPixel switch
-            {
-                8 => new Picture8bpp(resultImg),
-                16 => new Picture16bpp(resultImg),
-                _ => throw new NotSupportedException($"Specific pixel-mode is not supported.")
-            };
+            var result = EffectHelper.PlacePicture(source, StartX, StartY, TargetWidth, TargetHeight, "Place", typeof(PlaceProcessStep));
             sw.Stop();
             _elapsed = sw.Elapsed;
 
@@ -190,7 +182,7 @@ namespace projectFrameCut.Render.Effect
             {"StartY", "int"},
         };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -201,7 +193,8 @@ namespace projectFrameCut.Render.Effect
 
             return implementType switch
             {
-                EffectImplementType.ImageSharp => BuildWithDefaultType(parameters),
+                EffectImplementType.ImageSharp => PlaceEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
+                EffectImplementType.IPicture => PlaceEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };
         }

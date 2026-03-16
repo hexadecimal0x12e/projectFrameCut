@@ -41,7 +41,7 @@ namespace projectFrameCut.DraftStuff
             return CreateClipDraftDTO(page, border, element, (uint)trackIndex, wrapSoundtrackAsClip);
         }
 
-        public static DraftStructureJSON ExportFromDraftPage(projectFrameCut.DraftPage page, bool wrapSoundtrackAsClip = false)
+        public static DraftStructureJSON ExportFromDraftPage(projectFrameCut.DraftPage page, bool wrapSoundtrackAsClip = false, bool includeUiOnlyClips = true)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
 
@@ -61,6 +61,7 @@ namespace projectFrameCut.DraftStuff
                         ClipInfoBuilder.RebuildAllEffects(elem);
 
                         if (elem.Id.StartsWith("ghost_") || elem.Id.StartsWith("shadow_")) continue;
+                        if (!includeUiOnlyClips && elem.ClipType == ClipMode.MarkingClip) continue;
 
                         double startPx = border.TranslationX;
                         double widthPx = (border.WidthRequest > 0) ? border.WidthRequest : ((border.Width > 0) ? border.Width : border.WidthRequest);
@@ -206,6 +207,7 @@ namespace projectFrameCut.DraftStuff
                     TypeName = nameof(SoundTrackToClipWrapper),
                     ClipType = ClipMode.AudioClip,
                     LayerIndex = layerIndex,
+                    SubLayerIndex = (uint)Math.Max(0, elem.SubLayerIndex),
                     StartFrame = startFrame,
                     RelativeStartFrame = elem.relativeStartFrame,
                     Duration = durationFrames,
@@ -213,6 +215,7 @@ namespace projectFrameCut.DraftStuff
                     FilePath = elem.SourcePath,
                     SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
                     IsInfiniteLength = elem.isInfiniteLength,
+                    ShouldDisplayInUI = elem.ShouldDisplayInUI,
                     SecondPerFrameRatio = elem.SecondPerFrameRatio,
                     MetaData = normalizedMeta,
                     Effects = null
@@ -243,6 +246,7 @@ namespace projectFrameCut.DraftStuff
                 TypeName = elem.TypeName,
                 ClipType = elem.ClipType,
                 LayerIndex = layerIndex,
+                SubLayerIndex = (uint)Math.Max(0, elem.SubLayerIndex),
                 StartFrame = startFrame,
                 RelativeStartFrame = elem.relativeStartFrame,
                 Duration = durationFrames,
@@ -250,6 +254,7 @@ namespace projectFrameCut.DraftStuff
                 FilePath = elem.SourcePath,
                 SourceDuration = elem.maxFrameCount > 0 ? (long?)elem.maxFrameCount : null,
                 IsInfiniteLength = elem.isInfiniteLength,
+                ShouldDisplayInUI = elem.ShouldDisplayInUI,
                 SecondPerFrameRatio = elem.SecondPerFrameRatio,
                 MetaData = normalizedMeta2,
                 Effects = elem.Effects?.Select((kv) =>
@@ -310,6 +315,14 @@ namespace projectFrameCut.DraftStuff
 
             foreach (var clip in elements.Cast<JsonElement>())
             {
+                if (clip.TryGetProperty("ClipType", out var clipTypeProp)
+                    && clipTypeProp.ValueKind == JsonValueKind.Number
+                    && clipTypeProp.TryGetInt32(out var clipTypeValue)
+                    && (ClipMode)clipTypeValue == ClipMode.MarkingClip)
+                {
+                    continue;
+                }
+
                 var clipInstance = PluginManager.CreateClip(clip);
                 if (clipInstance.FilePath?.StartsWith('$') ?? false)
                 {
@@ -358,6 +371,18 @@ namespace projectFrameCut.DraftStuff
             {
                 var trackInstance = PluginManager.CreateSoundTrack(track);
                 trackInstance.ExtraData = track.Deserialize<SoundtrackDTO>()?.MetaData ?? new();
+
+                if (trackInstance.ExtraData.TryGetValue("Volume", out var trackVolObj))
+                {
+                    trackInstance.Volume = trackVolObj switch
+                    {
+                        double d => (float)d,
+                        float f => f,
+                        System.Text.Json.JsonElement je when je.TryGetDouble(out var jd) => (float)jd,
+                        _ when float.TryParse(trackVolObj?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var pv) => pv,
+                        _ => 1f
+                    };
+                }
 
                 if (trackInstance.FilePath?.StartsWith('$') ?? false)
                 {
@@ -455,9 +480,12 @@ namespace projectFrameCut.DraftStuff
                 element.origTrack = (int)dto.LayerIndex;
                 element.origLength = widthPx;
                 element.origX = startPx;
+                element.SubLayerIndex = (int)dto.SubLayerIndex;
                 element.relativeStartFrame = dto.RelativeStartFrame;
                 element.maxFrameCount = maxFrames;
                 element.isInfiniteLength = dto.IsInfiniteLength;
+                element.ShouldDisplayInUI = dto.ShouldDisplayInUI;
+                element.Clip.IsVisible = dto.ShouldDisplayInUI;
                 element.SourcePath = dto.FilePath ?? (dto.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
                 element.ClipType = dto.ClipType;
                 element.ExtraData = dto.MetaData ?? new();
@@ -494,7 +522,7 @@ namespace projectFrameCut.DraftStuff
                     element.Effects = new Dictionary<string, IEffect>();
                 }
 
-                if (element.ClipType == ClipMode.TransformClip)
+                if (element.ClipType == ClipMode.TransformClip || element.ClipType == ClipMode.MarkingClip)
                 {
                     element.LeftHandle.IsVisible = false;
                     element.RightHandle.IsVisible = false;
@@ -691,9 +719,12 @@ namespace projectFrameCut.DraftStuff
             element.origTrack = (int)clip.LayerIndex;
             element.origLength = widthPx;
             element.origX = clip.StartFrame;
+            element.SubLayerIndex = (int)clip.SubLayerIndex;
             element.relativeStartFrame = clip.RelativeStartFrame;
             element.maxFrameCount = maxFrames;
             element.isInfiniteLength = clip.IsInfiniteLength;
+            element.ShouldDisplayInUI = clip.ShouldDisplayInUI;
+            element.Clip.IsVisible = clip.ShouldDisplayInUI;
             element.SourcePath = clip.FilePath ?? (clip.MetaData?.TryGetValue("FilePath", out var filePath) == true ? filePath?.ToString() : null);
             element.ClipType = clip.ClipType;
             element.ExtraData = clip.MetaData ?? new();
@@ -738,7 +769,7 @@ namespace projectFrameCut.DraftStuff
                 element.EffectBundles = new Dictionary<Guid, IEffectBundle>();
             }
 
-            if(element.ClipType  == ClipMode.TransformClip)
+            if (element.ClipType == ClipMode.TransformClip || element.ClipType == ClipMode.MarkingClip)
             {
                 element.LeftHandle.IsVisible = false;
                 element.RightHandle.IsVisible = false;

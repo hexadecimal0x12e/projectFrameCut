@@ -10,7 +10,7 @@ using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Render.Effect;
 
-namespace InteractableEditor
+namespace projectFrameCut.InteractableEditor
 {
     public partial class InteractableEditor : ContentView
     {

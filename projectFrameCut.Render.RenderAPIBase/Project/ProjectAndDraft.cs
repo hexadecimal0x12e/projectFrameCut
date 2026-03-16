@@ -114,6 +114,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public uint LayerIndex { get; set; }
+        public uint SubLayerIndex { get; set; }
         public uint StartFrame { get; set; }
         public uint RelativeStartFrame { get; init; }
         public uint Duration { get; set; }
@@ -122,6 +123,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public string? FilePath { get; set; }
         public long? SourceDuration { get; set; } // in frames, null for infinite length source
         public bool IsInfiniteLength { get; set; }
+        public bool ShouldDisplayInUI { get; set; } = true;
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
         public EffectBundleJSONStructure[]? EffectBundles { get; set; }
 

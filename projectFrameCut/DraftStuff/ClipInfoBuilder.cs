@@ -109,11 +109,14 @@ namespace projectFrameCut.DraftStuff
                     Content = await BuildTextOptionTab(clip, handler)
                 });
             }
-            t.TabItems.Add(new TabbedViewItem
+            if(clip.LeftHandle?.IsVisible == true && clip.RightHandle?.IsVisible == true)
             {
-                Header = PPLocalizedResources.Tabs_Timing,
-                Content = BuildTimingTab(clip, handler)
-            });
+                t.TabItems.Add(new TabbedViewItem
+                {
+                    Header = PPLocalizedResources.Tabs_Timing,
+                    Content = BuildTimingTab(clip, handler)
+                });
+            }
             t.TabItems.Add(new TabbedViewItem
             {
                 Header = PPLocalizedResources.Tabs_Effect,
@@ -237,12 +240,16 @@ namespace projectFrameCut.DraftStuff
                 return layout;
             }, "clipColor", currentColorHex)
             .AddSeparator(null)
-            .AppendWhen(clip.ClipType != ClipMode.TextClip && clip.ClipType != ClipMode.SubtitleClip,
+            .AppendWhen(clip.ClipType == ClipMode.VideoClip || clip.ClipType == ClipMode.PhotoClip || clip.ClipType == ClipMode.SolidColorClip,
             (c) => c.AddText(new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 20))
                     .AddEntry("placeX", PPLocalizedResources.General_LocationX, valX.ToString(), "0", null, default)
                     .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
                     .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
-                    .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default));
+                    .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default))
+            .AppendWhen(clip.ClipType == ClipMode.AudioClip,
+            c => c.AddText(new SingleLineLabel("PPLocalizedResources.General_Audio", 20))
+                  .AddSlider("volume", "Volume", clip.ExtraData.TryGetValue("Volume", out var volume) ? (double)volume : 1d, 0, 1)
+            );
 
 
 
@@ -363,6 +370,15 @@ namespace projectFrameCut.DraftStuff
                     case "displayName":
                         clip.DisplayName = e.Value?.ToString() ?? clip.DisplayName;
                         break;
+                    case "volume":
+                        {
+                            if (e.Value is double vol || double.TryParse(e.Value as string, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out vol))
+                            {
+                                clip.ExtraData ??= new Dictionary<string, object>();
+                                clip.ExtraData["Volume"] = vol;
+                            }
+                            break;
+                        }
                     case "speedRatio":
                         {
                             if (e.Value is double ratio || double.TryParse(e.Value as string, out ratio))

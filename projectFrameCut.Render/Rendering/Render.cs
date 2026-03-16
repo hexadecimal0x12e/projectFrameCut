@@ -430,6 +430,7 @@ namespace projectFrameCut.Render.Rendering
                         {
                             try
                             {
+                                Thread.CurrentThread?.Name = $"Render worker #{targetFrame}";
                                 FlushBlankFramesBefore(targetFrame, token);
                                 RenderAFrame(targetFrame, token);
                             }

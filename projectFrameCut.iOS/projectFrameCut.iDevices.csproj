@@ -106,6 +106,7 @@
 		<Compile Include="..\projectFrameCut\Localize\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\ViewModels\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\DraftStuff\**\*.cs" Exclude="..\projectFrameCut\DraftStuff\*.xaml.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut\InteractableEditor\**\*.cs" Exclude="..\projectFrameCut\InteractableEditor\*.xaml.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Converters\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Services\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Setting\Setting*\**\*.cs" Exclude="..\projectFrameCut\Setting\SettingPages\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />

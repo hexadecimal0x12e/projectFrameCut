@@ -35,7 +35,7 @@ namespace projectFrameCut.Render.Effect
         public string? NeedComputer => null;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public bool YieldProcessStep => true;
-        public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -55,7 +55,7 @@ namespace projectFrameCut.Render.Effect
 
         public string TypeName => "Crop";
 
-        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.ImageSharp)
         {
             ArgumentNullException.ThrowIfNull(parameters);
             if (!ParametersNeeded.All(parameters.ContainsKey))
@@ -73,6 +73,7 @@ namespace projectFrameCut.Render.Effect
                 StartY = Convert.ToInt32(parameters["StartY"]),
                 Height = Convert.ToInt32(parameters["Height"]),
                 Width = Convert.ToInt32(parameters["Width"]),
+                ImplementType = implementType,
             };
         }
 
@@ -143,24 +144,10 @@ namespace projectFrameCut.Render.Effect
         public IPicture Process(IPicture source)
         {
             var sw = Stopwatch.StartNew();
-
-            if (Width <= 0 || Height <= 0)
-            {
-                throw new ArgumentException("Width and Height must be positive");
-            }
-            var rect = new Rectangle(StartX, StartY, Width, Height);
-            var resultImg = source.SaveToSixLaborsImage().Clone(x => x.Crop(rect));
-
-            IPicture result = (int)source.bitPerPixel switch
-            {
-                8 => new Picture8bpp(resultImg),
-                16 => new Picture16bpp(resultImg),
-            };
-
+            var result = EffectHelper.CropPicture(source, StartX, StartY, Width, Height, "Crop", typeof(CropProcessStep));
             sw.Stop();
             _elapsed = sw.Elapsed;
-
-            result.ProcessStack = source.ProcessStack;
+            result.ProcessStack = source.ProcessStack.Append(GetProcessStack()).ToList();
             return result;
         }
 
@@ -208,7 +195,7 @@ namespace projectFrameCut.Render.Effect
             {"Width", "int" },
         };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -219,7 +206,8 @@ namespace projectFrameCut.Render.Effect
 
             return implementType switch
             {
-                EffectImplementType.ImageSharp => BuildWithDefaultType(parameters),
+                EffectImplementType.ImageSharp => CropEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
+                EffectImplementType.IPicture => CropEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };
         }

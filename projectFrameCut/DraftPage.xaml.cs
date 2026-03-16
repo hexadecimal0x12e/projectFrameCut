@@ -145,6 +145,7 @@ public partial class DraftPage : ContentPage
     public LivePreviewer previewer = new();
     public ClipInfoBuilder infoBuilder;
     public InteractableEditor.InteractableEditor ClipEditor;
+    public InteractableEditor.DynamicPreview DynamicPreviewProvider;
     public AIAssistance.AssistanceChatSessionsView ChatSessionsView = new();
     public ProjectAddClipView AddClipView = null!;
     public bool IsPopupClosableByTapBackground { get; set; } = true;
@@ -166,6 +167,7 @@ public partial class DraftPage : ContentPage
     public ICommand UndoCommand { get; private set; }
     public ICommand RedoCommand { get; private set; }
     public ICommand SpiltCommand { get; private set; }
+    public ICommand CombineCommand { get; private set; }
     public ICommand DeleteCommand { get; private set; }
     public ICommand SaveCommand { get; private set; }
     public ICommand GotoCommand { get; private set; }
@@ -295,6 +297,7 @@ public partial class DraftPage : ContentPage
         UndoCommand = new Command(() => UndoChanges());
         RedoCommand = new Command(() => RedoChanges());
         SpiltCommand = new Command(() => Split_Clicked(this, EventArgs.Empty));
+        CombineCommand = new Command(() => CombineSelection());
         DeleteCommand = new Command(() => DeleteAClip());
         SaveCommand = new Command(() => OnRefreshButtonClicked(this, EventArgs.Empty));
         GotoCommand = new Command(async () => await GotoButtonClicked());
@@ -308,7 +311,6 @@ public partial class DraftPage : ContentPage
         ManageWindowCommand = new Command<string?>(ExecuteManageWindowCommand);
         ResetMultiWindowViewCommand = new Command(() => ResetLayout());
     }
-
 
     private bool Inited = false;
 
@@ -669,6 +671,7 @@ public partial class DraftPage : ContentPage
         if (!Tracks.ContainsKey(c.origTrack ?? 0))
             throw new ArgumentOutOfRangeException(nameof(c.origTrack));
 
+        c.Clip.IsVisible = c.ShouldDisplayInUI;
         Tracks[c.origTrack ?? 0].Children.Add(c.Clip);
         UpdateAdjacencyForTrack();
         UpdateTimelineWidth();
@@ -1578,6 +1581,7 @@ public partial class DraftPage : ContentPage
 
         ClipElementUI ghostElement = new ClipElementUI
         {
+            Id = "ghost_" + cid,
             layoutX = clipElementUI.layoutX,
             layoutY = clipElementUI.layoutY,
             defaultY = clipElementUI.defaultY,
@@ -1602,6 +1606,7 @@ public partial class DraftPage : ContentPage
 
         ClipElementUI shadowElement = new ClipElementUI
         {
+            Id = "shadow_" + cid,
             Clip = shadowBorder,
             origTrack = 0
         };
@@ -2205,6 +2210,124 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region adjust track and clip
+    private async Task CombineSelection()
+    {
+        var selected = _selectedClipIds
+            .Select(id => Clips.TryGetValue(id, out var clip) ? clip : null)
+            .Where(c => c is not null)
+            .Cast<ClipElementUI>()
+            .Where(c => !c.Id.StartsWith("ghost_") && !c.Id.StartsWith("shadow_"))
+            .ToList();
+
+        if (selected.Count < 2)
+        {
+            SetStatusText("Please select at least 2 clips to combine");
+            return;
+        }
+
+        var located = new List<(ClipElementUI clip, int layer)>();
+        foreach (var clip in selected)
+        {
+            int currentLayer = clip.origTrack ?? -1;
+            if (currentLayer < 0 || !Tracks.TryGetValue(currentLayer, out var trackLayout) || !trackLayout.Children.Contains(clip.Clip))
+            {
+                var found = Tracks.FirstOrDefault(kv => kv.Value.Children.Contains(clip.Clip));
+                if (found.Value is null)
+                {
+                    continue;
+                }
+                currentLayer = found.Key;
+            }
+            located.Add((clip, currentLayer));
+        }
+
+        if (located.Count < 2)
+        {
+            SetStatusText("No enough visible clips found to combine");
+            return;
+        }
+
+        int targetLayer = located.Min(x => x.layer);
+        if (!Tracks.TryGetValue(targetLayer, out var targetTrack))
+        {
+            SetStatusText($"Target track {targetLayer} not found");
+            return;
+        }
+
+        double minX = double.MaxValue;
+        double maxX = double.MinValue;
+
+        foreach (var (clip, oldLayer) in located)
+        {
+            double start = clip.Clip.TranslationX;
+            double width = clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength;
+            if (width <= 0) width = MinClipWidth;
+
+            minX = Math.Min(minX, start);
+            maxX = Math.Max(maxX, start + width);
+
+            clip.SubLayerIndex = oldLayer;
+            clip.origTrack = targetLayer;
+            clip.ShouldDisplayInUI = false;
+            clip.Clip.IsVisible = false;
+
+            if (Tracks.TryGetValue(oldLayer, out var oldTrack) && !ReferenceEquals(oldTrack, targetTrack) && oldTrack.Children.Contains(clip.Clip))
+            {
+                oldTrack.Children.Remove(clip.Clip);
+                targetTrack.Children.Add(clip.Clip);
+            }
+        }
+
+        if (minX == double.MaxValue || maxX <= minX)
+        {
+            SetStatusText("Failed to determine combined area");
+            return;
+        }
+
+        double markerWidth = Math.Max(MinClipWidth, maxX - minX);
+        var marker = CreateAndAddClip(
+            startX: minX,
+            width: markerWidth,
+            trackIndex: targetLayer,
+            id: $"marking_{Guid.NewGuid():N}",
+            labelText: $"Group ({located.Count})",
+            background: new SolidColorBrush(Color.FromRgba(51, 136, 255, 96)),
+            prototype: null,
+            resolveOverlap: false,
+            relativeStart: 0,
+            maxFrames: (uint)Math.Max(1, PixelToFrame(markerWidth))
+        );
+
+        marker.ClipType = ClipMode.MarkingClip;
+        marker.FromPlugin = InternalPluginBase.InternalPluginBaseID;
+        marker.TypeName = "MarkingClip";
+        marker.SubLayerIndex = targetLayer;
+        marker.ShouldDisplayInUI = true;
+        marker.LeftHandle.IsVisible = false;
+        marker.RightHandle.IsVisible = false;
+        marker.LeftHandle.GestureRecognizers.Clear();
+        marker.RightHandle.GestureRecognizers.Clear();
+        marker.ExtraData["GroupedClipIds"] = located.Select(x => x.clip.Id).ToArray();
+        marker.ExtraData["IsGroupingMarker"] = true;
+
+        ClearSelectionInternal();
+        AddClipToSelection(marker);
+
+        await UpdateAdjacencyForTrack(targetLayer);
+        await ReRenderUI();
+        await RefreshSelectionUiAsync();
+
+        OnClipChanged?.Invoke(marker.Id, new ClipUpdateEventArgs
+        {
+            SourceId = marker.Id,
+            Reason = ClipUpdateReason.ClipItselfMove
+        });
+
+        SetStateOK();
+        SetStatusText($"Combined {located.Count} clips in track {targetLayer}");
+
+    }
+
     private async Task ReRenderUI()
     {
         SetStateBusy(Localized._Processing);
@@ -2229,6 +2352,7 @@ public partial class DraftPage : ContentPage
                     {
                         border.BindingContext = clip;
                         clip.Clip = border;
+                        border.IsVisible = clip.ShouldDisplayInUI;
 
                         // Update children: find label(s) and handle borders, rebind them and update texts
                         void UpdateLayoutChildren(Microsoft.Maui.Controls.Layout layout)
@@ -2348,6 +2472,7 @@ public partial class DraftPage : ContentPage
         var byorder = track.Children.OfType<Border>()
             .Select(b => b.BindingContext)
             .OfType<ClipElementUI>()
+            .Where(ShouldParticipateInTimelineLayout)
             .ToList();
 
         const double defaultRadius = 20.0;
@@ -2920,9 +3045,17 @@ public partial class DraftPage : ContentPage
         }
         else
         {
-            OverlayLayer.InputTransparent = false;
-            Popup.GestureRecognizers.Add(nopGesture);
-            OverlayLayer.Add(Popup);
+            try
+            {
+                OverlayLayer.InputTransparent = false;
+                Popup.GestureRecognizers.Add(nopGesture);
+                OverlayLayer.Add(Popup);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Show popup", this);
+                await DisplayAlertAsync(Localized._Error, "Cannot show a popup.", Localized._OK);
+            }
 
             var targetY = height;
             try
@@ -2980,10 +3113,17 @@ public partial class DraftPage : ContentPage
         }
         else
         {
-            OverlayLayer.InputTransparent = false;
-            Popup.GestureRecognizers.Add(nopGesture);
-            OverlayLayer.Add(Popup);
-
+            try
+            {
+                OverlayLayer.InputTransparent = false;
+                Popup.GestureRecognizers.Add(nopGesture);
+                OverlayLayer.Add(Popup);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Show popup", this);
+                await DisplayAlertAsync(Localized._Error, "Cannot show a popup.", Localized._OK);
+            }
             var targetX = width;
             try
             {
@@ -3069,9 +3209,17 @@ public partial class DraftPage : ContentPage
         }
         else
         {
-            OverlayLayer.InputTransparent = false;
-            Popup.GestureRecognizers.Add(nopGesture);
-            OverlayLayer.Add(Popup);
+            try
+            {
+                OverlayLayer.InputTransparent = false;
+                Popup.GestureRecognizers.Add(nopGesture);
+                OverlayLayer.Add(Popup);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Show popup", this);
+                await DisplayAlertAsync(Localized._Error, "Cannot show a popup.", Localized._OK);
+            }
 
             const uint entranceMs = 220u;
             try
@@ -3280,6 +3428,15 @@ public partial class DraftPage : ContentPage
     private readonly double LeftOverlapDelta = 4.2d;
     private readonly double RightOverlapDelta = 3.2d;
 
+    private bool ShouldParticipateInTimelineLayout(ClipElementUI? clip)
+    {
+        if (clip is null) return false;
+        if (string.IsNullOrWhiteSpace(clip.Id)) return false;
+        if (!clip.ShouldDisplayInUI) return false;
+        if (clip.Id.StartsWith("ghost_") || clip.Id.StartsWith("shadow_")) return false;
+        return true;
+    }
+
     private double ResolveOverlapStartPixels(int trackIndex, string selfId, double startX, double width)
     {
         // Try to find a non-overlapping X on the given track by shifting left/right
@@ -3300,15 +3457,13 @@ public partial class DraftPage : ContentPage
                     var pair = Clips.FirstOrDefault(kv => kv.Value.Clip == b);
                     if (pair.Key == null) return false;
                     if (pair.Key == selfId) return false;
-                    // skip ghost/shadow
-                    if (pair.Key.StartsWith("ghost_") || pair.Key.StartsWith("shadow_")) return false;
+                    if (!ShouldParticipateInTimelineLayout(pair.Value)) return false;
                     double bx = Math.Round(b.TranslationX);
                     double bw = (!double.IsNaN(b.Width) && b.Width > 0) ? Math.Round(b.Width) : Math.Round(b.WidthRequest);
                     // overlap check using integer pixels
                     return Math.Max(s, bx) < Math.Min(end, bx + bw);
                 })
                 .ToList();
-
             if (overlappers.Count == 0) break;
 
             // compute integer-edge candidates
@@ -3329,7 +3484,7 @@ public partial class DraftPage : ContentPage
                     var pair = Clips.FirstOrDefault(kv => kv.Value.Clip == b);
                     if (pair.Key == null) return false;
                     if (pair.Key == selfId) return false;
-                    if (pair.Key.StartsWith("ghost_") || pair.Key.StartsWith("shadow_")) return false;
+                    if (!ShouldParticipateInTimelineLayout(pair.Value)) return false;
                     double bx = Math.Round(b.TranslationX);
                     double bw = (!double.IsNaN(b.Width) && b.Width > 0) ? Math.Round(b.Width) : Math.Round(b.WidthRequest);
                     return Math.Max(leftCandidate, bx) < Math.Min(leftCandidate + Math.Round(width), bx + bw);
@@ -3369,6 +3524,7 @@ public partial class DraftPage : ContentPage
         {
             var c = kv.Value;
             if (c.Id == clip.Id || c.origTrack != track) continue;
+            if (!ShouldParticipateInTimelineLayout(c)) continue;
 
             double cWidth = c.Clip.WidthRequest > 0 ? c.Clip.WidthRequest : c.origLength;
             double cRight = c.Clip.TranslationX + cWidth;
@@ -3459,7 +3615,6 @@ public partial class DraftPage : ContentPage
                     }
                     catch { }
                 };
-                _isLivePreviewPlayerEventsHooked = true;
             }
             await Task.Run(PrepareLivePreview);
         }
@@ -3470,7 +3625,6 @@ public partial class DraftPage : ContentPage
             await PauseLivePreview();
             SetStateOK();
         }
-
 
     }
     MediaElement LivePreviewPlayer = new();
@@ -3630,7 +3784,7 @@ public partial class DraftPage : ContentPage
         }
         if (!e?.NoSave ?? false) await Save();
         UpdatePlayheadHeight();
-        var d = DraftImportAndExportHelper.ExportFromDraftPage(this);
+        var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
         SetStateBusy();
         SetStatusText(Localized.DraftPage_ApplyingChanges);
 
@@ -3659,7 +3813,7 @@ public partial class DraftPage : ContentPage
     {
         if (AlreadyDisappeared) return;
 
-        var d = DraftImportAndExportHelper.ExportFromDraftPage(this);
+        var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
         await previewer.UpdateDraft(d);
 
 
@@ -3831,7 +3985,7 @@ public partial class DraftPage : ContentPage
             SetStateFail(Localized.DraftPage_CannotSave_Readonly);
             return;
         }
-        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this);
+        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: true);
         var assets = Assets.Values.ToList();
         string slot = ".";
         if (noSlot)
@@ -4201,7 +4355,7 @@ public partial class DraftPage : ContentPage
             {
                 "Debug_ComposeAudio", new Command(() =>
                 {
-                    var draftSrc = DraftImportAndExportHelper.ExportFromDraftPage(this);
+                    var draftSrc = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
 
                     Log($"Draft loaded: audio duration {draftSrc.AudioDuration}, saved on {draftSrc.SavedAt}, {draftSrc.Clips.Length} clips.");
 
@@ -4295,7 +4449,7 @@ public partial class DraftPage : ContentPage
     private async void OnExportedClick(object sender, EventArgs e)
     {
         await Save(true);
-        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, true);
+        var draft = DraftImportAndExportHelper.ExportFromDraftPage(this, true, false);
         var page = new RenderPage(WorkingPath, ProjectDuration, ProjectInfo, draft);
         await Dispatcher.DispatchAsync(async () =>
         {
@@ -4357,7 +4511,7 @@ public partial class DraftPage : ContentPage
     private async void MultiSelectCheckBox_CheckedChanged(object? sender, CheckedChangedEventArgs e)
     {
         MultiSelectEnabled = e.Value;
-
+        OnPropertyChanged(nameof(MultiSelectEnabled));
         if (!MultiSelectEnabled && _selectedClipIds.Count > 1)
         {
             var keep = _selected;

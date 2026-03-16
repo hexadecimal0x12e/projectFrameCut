@@ -17,7 +17,7 @@ namespace projectFrameCut.Render.Effect
         public string? NeedComputer => null;
         public string FromPlugin => Plugin.InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "ZoomIn";
-        public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
         public bool YieldProcessStep => true;
         public string? BindedEffectGroupID { get; set; }
         public string Id { get; set; }
@@ -76,6 +76,7 @@ namespace projectFrameCut.Render.Effect
             {
                 TargetX = (int)parameters["TargetX"],
                 TargetY = (int)parameters["TargetY"],
+                ImplementType = this.ImplementType,
                 RelativeWidth = this.RelativeWidth,
                 RelativeHeight = this.RelativeHeight,
                 Name = this.Name,
@@ -140,23 +141,14 @@ namespace projectFrameCut.Render.Effect
         public IPicture Process(IPicture source)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            var resultImg = source.SaveToSixLaborsImage().Clone(x =>
+            var safeCrop = Rectangle.Intersect(CropRect, new Rectangle(0, 0, source.Width, source.Height));
+            if (safeCrop.Width <= 0 || safeCrop.Height <= 0)
             {
-                var originalSize = x.GetCurrentSize();
-                var safeCrop = Rectangle.Intersect(CropRect, new Rectangle(0, 0, originalSize.Width, originalSize.Height));
-                if (safeCrop.Width <= 0 || safeCrop.Height <= 0)
-                {
-                    safeCrop = new Rectangle(0, 0, Math.Min(originalSize.Width, 1), Math.Min(originalSize.Height, 1));
-                }
-                x.Crop(safeCrop).Resize(TargetWidth, TargetHeight);
-            });
+                safeCrop = new Rectangle(0, 0, Math.Min(source.Width, 1), Math.Min(source.Height, 1));
+            }
 
-            IPicture result = (int)source.bitPerPixel switch
-            {
-                8 => new Picture8bpp(resultImg),
-                16 => new Picture16bpp(resultImg),
-                _ => throw new NotSupportedException($"Specific pixel-mode is not supported.")
-            };
+            using var cropped = EffectHelper.CropPicture(source, safeCrop.X, safeCrop.Y, safeCrop.Width, safeCrop.Height, "ZoomIn Crop", typeof(ZoomInProcessStep));
+            var result = cropped.Resize(TargetWidth, TargetHeight, false);
             sw.Stop();
             _elapsed = sw.Elapsed;
 
@@ -215,7 +207,7 @@ namespace projectFrameCut.Render.Effect
             {"TargetY", "int"},
         };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -224,15 +216,20 @@ namespace projectFrameCut.Render.Effect
                 return BuildWithDefaultType(parameters);
             }
 
-            if (implementType != EffectImplementType.ImageSharp)
+            return implementType switch
             {
-                throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.");
-            }
-
-            return BuildWithDefaultType(parameters);
+                EffectImplementType.ImageSharp => BuildWithType(implementType, parameters),
+                EffectImplementType.IPicture => BuildWithType(implementType, parameters),
+                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
+            };
         }
 
         public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
+        {
+            return BuildWithType(EffectImplementType.ImageSharp, parameters);
+        }
+
+        private static IEffect BuildWithType(EffectImplementType implementType, Dictionary<string, object>? parameters)
         {
             parameters ??= new Dictionary<string, object>();
             if (!parameters.ContainsKey("TargetX")) parameters["TargetX"] = 1;
@@ -242,6 +239,7 @@ namespace projectFrameCut.Render.Effect
             {
                 TargetX = Convert.ToInt32(parameters["TargetX"]),
                 TargetY = Convert.ToInt32(parameters["TargetY"]),
+                ImplementType = implementType,
             };
         }
     }

@@ -14,7 +14,7 @@ namespace projectFrameCut.Render.Effect
         public string Name { get; set; }
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
-        public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
 
         public int MaxOffsetX { get; init; }
         public int MaxOffsetY { get; init; }
@@ -168,7 +168,7 @@ namespace projectFrameCut.Render.Effect
             {"Direction", "string"},
         };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -177,15 +177,20 @@ namespace projectFrameCut.Render.Effect
                 return BuildWithDefaultType(parameters);
             }
 
-            if (implementType != EffectImplementType.ImageSharp)
+            return implementType switch
             {
-                throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.");
-            }
-
-            return BuildWithDefaultType(parameters);
+                EffectImplementType.ImageSharp => BuildWithType(implementType, parameters),
+                EffectImplementType.IPicture => BuildWithType(implementType, parameters),
+                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
+            };
         }
 
         public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)
+        {
+            return BuildWithType(EffectImplementType.ImageSharp, parameters);
+        }
+
+        private static IEffect BuildWithType(EffectImplementType implementType, Dictionary<string, object>? parameters)
         {
             parameters ??= new Dictionary<string, object>();
             if (!parameters.ContainsKey("MaxOffsetX")) parameters["MaxOffsetX"] = 0;
@@ -199,6 +204,7 @@ namespace projectFrameCut.Render.Effect
                 MaxOffsetY = Convert.ToInt32(parameters["MaxOffsetY"]),
                 Seed = Convert.ToInt32(parameters["Seed"]),
                 Direction = parameters["Direction"].ToString() ?? JitterEffect.Direction_Both,
+                ImplementType = implementType,
             };
         }
     }

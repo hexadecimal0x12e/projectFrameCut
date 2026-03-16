@@ -1849,8 +1849,8 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         try
         {
             // 导出单个Clip的数据
-            var draftData = DraftImportAndExportHelper.ExportFromDraftPage(_draftPage, true);
-            var clips = DraftImportAndExportHelper.JSONToIClips(draftData);
+            var draftData = DraftImportAndExportHelper.ExportFromDraftPage(_draftPage, true, false);
+            var clips = DraftImportAndExportHelper.JSONToIClips(draftData, true, 8);
 
             // 根据ID查找对应的IClip
             return clips.FirstOrDefault(c => c.Id == clipElement.Id);

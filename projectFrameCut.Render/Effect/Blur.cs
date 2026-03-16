@@ -28,7 +28,7 @@ namespace projectFrameCut.Render.Effect
         public string? NeedComputer => null;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public bool YieldProcessStep => true;
-        public EffectImplementType ImplementType => EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -41,9 +41,9 @@ namespace projectFrameCut.Render.Effect
 
         public string TypeName => "Blur";
         public string? BindedEffectGroupID { get; set; }
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
-        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters)
+        public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.ImageSharp)
         {
             ArgumentNullException.ThrowIfNull(parameters);
             if (!ParametersNeeded.All(parameters.ContainsKey))
@@ -55,7 +55,7 @@ namespace projectFrameCut.Render.Effect
             {
                 sigma = Convert.ToSingle(val);
             }
-            return new BlurEffect_ImageSharp { Sigma = sigma };
+            return new BlurEffect_ImageSharp { Sigma = sigma, ImplementType = implementType };
         }
 
         public IEffect WithParameters(Dictionary<string, object> parameters) => FromParametersDictionary(parameters);
@@ -88,14 +88,7 @@ namespace projectFrameCut.Render.Effect
         public IPicture Process(IPicture source)
         {
             var sw = Stopwatch.StartNew();
-            var img = source.SaveToSixLaborsImage();
-            img.Mutate(x => x.GaussianBlur(Sigma));
-            IPicture result = (int)source.bitPerPixel switch
-            {
-                8 => new Picture8bpp(img),
-                16 => new Picture16bpp(img),
-                _ => throw new NotSupportedException($"Specific pixel-mode is not supported.")
-            };
+            var result = EffectHelper.BlurPicture(source, Sigma, "Blur", typeof(BlurProcessStep));
             sw.Stop();
             _elapsed = sw.Elapsed;
             result.ProcessStack = source.ProcessStack.Append(GetProcessStack()).ToList();
@@ -128,7 +121,7 @@ namespace projectFrameCut.Render.Effect
         public List<string> ParametersNeeded { get; } = new List<string> { "Sigma" };
         public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string> { { "Sigma", "float" } };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -136,11 +129,12 @@ namespace projectFrameCut.Render.Effect
             {
                 return BuildWithDefaultType(parameters);
             }
-            if (implementType != EffectImplementType.ImageSharp)
+            return implementType switch
             {
-                throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.");
-            }
-            return BlurEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
+                EffectImplementType.ImageSharp => BlurEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
+                EffectImplementType.IPicture => BlurEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
+                _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
+            };
         }
 
         public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters = null)

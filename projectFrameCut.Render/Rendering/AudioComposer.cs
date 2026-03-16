@@ -13,7 +13,7 @@ namespace projectFrameCut.Render.Rendering
 {
     public class AudioComposer<T>
     {
-        private const int DefaultChunkSampleCount = 4096;
+        private const int DefaultChunkSampleCount = 40960;
 
         public AudioWriterBase<T> Writer { get; init; }
         public IClip[] Clips { get; init; }
@@ -55,7 +55,7 @@ namespace projectFrameCut.Render.Rendering
                 Log($"[AudioComposer] Total {totalSamples} samples need to compose.");
                 for (int chunkStart = 0; chunkStart < totalSamples; chunkStart += chunkSampleCount)
                 {
-                    if(cancellationToken?.IsCancellationRequested == true)
+                    if (cancellationToken?.IsCancellationRequested == true)
                     {
                         Log($"[AudioComposer] Cancellation requested, stopping composition.");
                         return;

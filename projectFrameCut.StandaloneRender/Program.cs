@@ -19,6 +19,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using static ILGPU.IR.BasicBlock;
 using static projectFrameCut.Shared.Logger;
 
 namespace projectFrameCut.StandaloneRender
@@ -99,7 +100,7 @@ namespace projectFrameCut.StandaloneRender
 
             var runningMode = args[0];
 
-            if(runningMode == "about")
+            if (runningMode == "about")
             {
                 Console.WriteLine();
                 Console.WriteLine(GetInfo(true));
@@ -505,6 +506,15 @@ namespace projectFrameCut.StandaloneRender
                     GCOption = GCOption,
                     Use16Bit = use16Bit,
                 };
+
+                if (!Environment.GetCommandLineArgs().Contains("--nolog"))
+                {
+                    renderer.OnProgressChanged += (s, e) =>
+                    {
+                        Console.Write($"[STAT] Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss} \r");
+                    };
+                }
+
                 builder?.Build()?.Start();
                 renderer.PrepareRender(cts.Token);
                 Stopwatch sw1 = new();
@@ -585,9 +595,18 @@ namespace projectFrameCut.StandaloneRender
                     SoundTracks = tracks,
                     Writer = writer
                 };
+                if (!Environment.GetCommandLineArgs().Contains("--nolog"))
+                {
+                    composer.OnProgressChanged += (s, e) =>
+                    {
+                        Console.Write($"[STAT] Composing finished {s:p0}, ETA:{e:mm\\:ss} \r");
+                    };
+                }
+
 
                 composer.Compose(fps, 192000, 2, 4096, cts.Token);
-
+                Console.WriteLine();
+                Console.WriteLine();
                 writer.Finish();
                 writer.Dispose();
 
@@ -620,14 +639,14 @@ namespace projectFrameCut.StandaloneRender
                 Console.CancelKeyPress += (s, e) =>
                 {
                     e.Cancel = true;
-                    if(cancelled) Process.GetCurrentProcess().Kill();
+                    if (cancelled) Process.GetCurrentProcess().Kill();
                     cancelled = true;
                     Console.WriteLine("You hit Ctrl-C! try cancelling render...");
                     Console.WriteLine("Hit Ctrl-C again to stop immediately.");
 
-                    new Thread(() =>
+                    new Thread(async () =>
                     {
-                        cts.Cancel();
+                        await cts.CancelAsync();
                         builder?.Interrupt();
                         Environment.Exit(255);
                     }).Start();
@@ -680,6 +699,14 @@ namespace projectFrameCut.StandaloneRender
 
             foreach (var clip in elements.Cast<JsonElement>())
             {
+                if (clip.TryGetProperty("ClipType", out var clipTypeProp)
+                    && clipTypeProp.ValueKind == JsonValueKind.Number
+                    && clipTypeProp.TryGetInt32(out var clipTypeValue)
+                    && (ClipMode)clipTypeValue == ClipMode.MarkingClip)
+                {
+                    continue;
+                }
+
                 var clipInstance = PluginManager.CreateClip(clip);
                 if (clipInstance.FilePath?.StartsWith('$') ?? false)
                 {
@@ -733,6 +760,18 @@ namespace projectFrameCut.StandaloneRender
             {
                 var trackInstance = PluginManager.CreateSoundTrack(track);
                 trackInstance.ExtraData = track.Deserialize<SoundtrackDTO>()?.MetaData ?? new();
+
+                if (trackInstance.ExtraData.TryGetValue("Volume", out var trackVolObj))
+                {
+                    trackInstance.Volume = trackVolObj switch
+                    {
+                        double d => (float)d,
+                        float f => f,
+                        System.Text.Json.JsonElement je when je.TryGetDouble(out var jd) => (float)jd,
+                        _ when float.TryParse(trackVolObj?.ToString(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var pv) => pv,
+                        _ => 1f
+                    };
+                }
 
                 if (trackInstance.FilePath?.StartsWith('$') ?? false)
                 {

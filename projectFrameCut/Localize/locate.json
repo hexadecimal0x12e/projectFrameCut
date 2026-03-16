@@ -1294,6 +1294,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "\u591A\u9009",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_CenterMenuBar_Spilt",
         "Value": "\u62C6\u5206",
         "Mode": "ConstString",
@@ -1582,6 +1590,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "\u521B\u5EFA\u590D\u5408\u7247\u6BB5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_MenuBar_Edit_DeleteClip",
         "Value": "\u5220\u9664\u9009\u4E2D\u7684\u7247\u6BB5",
         "Mode": "ConstString",
@@ -1640,6 +1656,14 @@
       {
         "Id": "DraftPage_MenuBar_Edit_Undo",
         "Value": "\u64A4\u9500",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Extensions",
+        "Value": "\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3479,6 +3503,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "RenderPage_SubProg_ComposeAudio",
+        "Value": "\u5408\u6210\u97F3\u9891",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "RenderPage_SubProg_FinalEncoding",
         "Value": "\u7F16\u7801\u5A92\u4F53",
         "Mode": "ConstString",
@@ -3586,22 +3618,6 @@
       {
         "Id": "WelocmePage_Start",
         "Value": "\u5F00\u59CB",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "\u63D2\u4EF6",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "\u5408\u6210\u97F3\u9891",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7524,16 +7540,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Value": "Extensions",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Value": "Compose Audio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "Create Composite Fragment",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11456,16 +11490,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Value": "\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Value": "\u5408\u6210\u97F3\u8A0A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "\u5EFA\u7ACB\u7D44\u5408\u7247\u6BB5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15394,16 +15446,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Value": "\u62E1\u5F35\u6A5F\u80FD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Value": "\u30AA\u30FC\u30C7\u30A3\u30AA\u5408\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "\u8907\u5408\u30D5\u30E9\u30B0\u30E1\u30F3\u30C8\u3092\u4F5C\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -19332,16 +19402,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Value": "\uD655\uC7A5 \uAE30\uB2A5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Value": "\uC624\uB514\uC624 \uD569\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "\uBCF5\uD569 \uC870\uAC01 \uC0DD\uC131",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -23265,16 +23353,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Value": "Extensions",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Value": "Composer l\u0027audio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "Cr\u00E9er un fragment composite",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -27203,16 +27309,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Value": "\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Value": "\u5408\u6210\u97F3\u9891",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "\u521B\u590D\u5408\u6BB5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u83DC\u5355\u9879\uFF1A\u521B\u5EFA\u590D\u5408\u7247\u6BB5",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31141,16 +31265,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Value": "\u0627\u0644\u0625\u0636\u0627\u0641\u0627\u062A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Value": "\u062A\u0623\u0644\u064A\u0641 \u0627\u0644\u0635\u0648\u062A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "\u0625\u0646\u0634\u0627\u0621 \u0645\u0642\u0637\u0639 \u0645\u0631\u0643\u0628",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -35079,16 +35221,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Value": "Erweiterungen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Value": "Audio zusammenstellen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "Zusammengesetztes Fragment erstellen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -39017,16 +39177,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Value": "Complementos",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Value": "Componer audio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "Crear fragmento compuesto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -42955,16 +43133,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Value": "Estensioni",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Value": "Composizione audio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "Crea frammento composto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -46893,16 +47089,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Value": "Wtyczki",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Value": "Komponuj audio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "Utw\u00F3rz z\u0142o\u017Cony fragment",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -50831,16 +51045,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Value": "Extens\u00F5es",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Value": "Compor \u00E1udio",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "Criar fragmento composto",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -54769,16 +55001,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Value": "\u0420\u0430\u0441\u0448\u0438\u0440\u0435\u043D\u0438\u044F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Value": "\u0421\u043E\u0437\u0434\u0430\u043D\u0438\u0435 \u0430\u0443\u0434\u0438\u043E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u0441\u043E\u0441\u0442\u0430\u0432\u043D\u043E\u0439 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -58707,16 +58957,34 @@
       },
       {
         "Id": "DraftPage_MenuBar_Extensions",
-        "Value": "Unset localization item:DraftPage_MenuBar_Extensions()",
+        "Value": "Eklentiler",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "RenderPage_SubProg_ComposeAudio",
-        "Value": "Unset localization item:RenderPage_SubProg_ComposeAudio()",
+        "Value": "Ses Birle\u015Ftirme",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Combine",
+        "Value": "Bile\u015Fik Par\u00E7a Olu\u015Ftur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_CenterMenuBar_MultiSelect",
+        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

@@ -26,6 +26,8 @@ namespace projectFrameCut.DraftStuff
         [JsonIgnore]
         public required Border RightHandle { get; set; }
 
+        public bool ShouldDisplayInUI { get; set; } = true;
+
         public string DisplayName { get; set; } = "Clip";
 
         public ClipMovingStatus MovingStatus { get; set; } = ClipMovingStatus.Free;
@@ -52,6 +54,12 @@ namespace projectFrameCut.DraftStuff
         public string FromPlugin { get; set; } = string.Empty;
         public string TypeName { get; set; } = string.Empty;
         public string? SourcePath { get; set; } = null;
+        public int SubLayerIndex { get; set; } = 0;
+        public int SubTrackIndex
+        {
+            get => SubLayerIndex;
+            set => SubLayerIndex = value;
+        }
 
         public string? ClipColor { get; set; } = null;
 
@@ -249,6 +257,7 @@ namespace projectFrameCut.DraftStuff
                 ClipMode.AudioClip => new SolidColorBrush(Colors.Goldenrod),
                 ClipMode.SubtitleClip => new SolidColorBrush(Colors.SlateGray),
                 ClipMode.SolidColorClip => new SolidColorBrush(Colors.OrangeRed),
+                ClipMode.MarkingClip => new SolidColorBrush(Color.FromRgba(51, 136, 255, 96)),
                 ClipMode.TransformClip => new SolidColorBrush(Colors.AliceBlue),
                 _ => new SolidColorBrush(Colors.Gray),
             };

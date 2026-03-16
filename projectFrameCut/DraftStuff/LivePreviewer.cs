@@ -67,6 +67,14 @@ namespace projectFrameCut.LivePreview
 
             foreach (var clip in elements.Cast<JsonElement>())
             {
+                if (clip.TryGetProperty("ClipType", out var clipTypeProp)
+                    && clipTypeProp.ValueKind == JsonValueKind.Number
+                    && clipTypeProp.TryGetInt32(out var clipTypeValue)
+                    && (ClipMode)clipTypeValue == ClipMode.MarkingClip)
+                {
+                    continue;
+                }
+
                 var clipInstance = PluginManager.CreateClip(clip);
                 if (clipInstance.FilePath is not null)
                 {

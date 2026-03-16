@@ -44,6 +44,12 @@
                     Key="S" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Combine}" Command="{Binding CombineCommand}" IsEnabled="{Binding Path=MultiSelectEnabled}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
+                    Key="G" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" Command="{Binding DeleteCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator
@@ -207,7 +213,7 @@
                 <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar" Spacing="8">
                     <HorizontalStackLayout VerticalOptions="Center" Margin="8,0,0,0" Spacing="4">
                         <CheckBox x:Name="MultiSelectCheckBox" CheckedChanged="MultiSelectCheckBox_CheckedChanged" VerticalOptions="Center" />
-                        <Label Text="Multi" VerticalOptions="Center" />
+                        <Label Text="{l:Localized Key=DraftPage_CenterMenuBar_MultiSelect}" VerticalOptions="Center" />
                     </HorizontalStackLayout>
                     <Picker x:Name="ResolutionPicker" WidthRequest="150"  SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
                     <Button x:Name="ZoomOutButton" Text="-" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />

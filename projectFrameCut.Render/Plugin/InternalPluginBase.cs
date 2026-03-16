@@ -62,6 +62,7 @@ public class InternalPluginBase : IPluginBase
         {"Crop",  new(() => new CropEffect_ImageSharp())},
         {"Resize",  new(() => new ResizeEffect_ImageSharp())},
         {"Blur",  new(() => new BlurEffect_ImageSharp())},
+        {"Rotation",  new(() => new RotationEffect_ImageSharp())},
     };
 
     public Dictionary<string, IEffectFactory> EffectFactoryProvider => new Dictionary<string, IEffectFactory>
@@ -71,6 +72,7 @@ public class InternalPluginBase : IPluginBase
         {"Resize", new ResizeEffectFactory()},
         {"RemoveColor", new RemoveColorEffectFactory()},
         {"Blur", new BlurEffectFactory()},
+        {"Rotation", new RotationEffectFactory()},
     };
 
     //public Dictionary<string, Func<IMixture>> MixtureProvider => new Dictionary<string, Func<IMixture>>
@@ -172,6 +174,7 @@ public class InternalPluginBase : IPluginBase
             ClipMode.SolidColorClip => element.Deserialize<SolidColorClip>() ?? throw new NullReferenceException(),
             ClipMode.TextClip => element.Deserialize<TextClip>() ?? throw new NullReferenceException(),
             ClipMode.AudioClip => element.Deserialize<SoundTrackToClipWrapper>() ?? throw new NullReferenceException(),
+            ClipMode.MarkingClip => element.Deserialize<MarkingClip>() ?? throw new NullReferenceException(),
             ClipMode.TransformClip => element.Deserialize<TransformContainer>() ?? throw new NullReferenceException(),
             _ => throw new NotSupportedException($"Unknown or unsupported clip type {type}."),
         };

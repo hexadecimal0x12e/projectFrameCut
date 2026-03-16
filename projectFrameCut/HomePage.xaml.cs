@@ -1142,7 +1142,7 @@ public partial class HomePage : ContentPage
             }
             (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(tml, project);
             var draftPage = new DraftPage(project ?? new ProjectJSONStructure(), dict, new(), trackCount, vmItem._projectPath, project?.ProjectName ?? "?", false);
-            var draft = DraftImportAndExportHelper.ExportFromDraftPage(draftPage, true);
+            var draft = DraftImportAndExportHelper.ExportFromDraftPage(draftPage, true, false);
             var renderPage = new RenderPage(vmItem._projectPath, tml.Duration, project, draft);
             await Dispatcher.DispatchAsync(async () =>
             {

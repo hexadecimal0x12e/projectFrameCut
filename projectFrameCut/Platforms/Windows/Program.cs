@@ -187,8 +187,7 @@ namespace projectFrameCut.WinUI
 #endif
             try
             {
-                MauiProgram.LogWriter?.WriteLine("FATAL: CRASH");
-                Log("FATAL: projectFrameCut encountered an unhandled exception and is going to crash.", "fatal");
+                MauiProgram.LogWriter?.WriteLine("*** FATAL: CRASH");
                 Log(ex, "", "Application");
                 Log($"Crash() is invoked by:{Environment.StackTrace}.", "fatal");
                 MauiProgram.LogWriter?.Flush();
