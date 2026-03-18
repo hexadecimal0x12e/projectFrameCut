@@ -673,6 +673,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "\u65E0\u6548\u957F\u5EA6\u7247\u6BB5\u7684\u9ED8\u8BA4\u957F\u5EA6 (\u5E27)",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Edit_Denoise",
         "Value": "\u4E3A\u62D6\u52A8\u64CD\u4F5C\u964D\u566A",
         "Mode": "ConstString",
@@ -691,6 +699,14 @@
       {
         "Id": "Edit_EditorPreference_Subtitle",
         "Value": "\u6309\u7167\u4F60\u7684\u559C\u597D\u8C03\u6574\u7F16\u8F91\u5668\u754C\u9762",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "\u5141\u8BB8\u901A\u8FC7\u53CC\u51FB\u7247\u6BB5\u6765\u5F39\u51FA\u5C5E\u6027\u9762\u677F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1848,6 +1864,14 @@
       {
         "Id": "Render_AdvanceOpts_Show",
         "Value": "\u663E\u793A\u66F4\u591A\u9009\u9879...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "\u97F3\u9891\u5408\u6210\u7F13\u51B2\u533A\u5927\u5C0F\r(\u8D8A\u5927\u5408\u6210\u97F3\u9891\u7684\u901F\u5EA6\u8D8A\u5FEB\uFF1B\u8D8A\u5C0F\u5408\u6210\u97F3\u9891\u7684\u7CBE\u5EA6\u53EF\u80FD\u66F4\u9AD8)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4358,6 +4382,33 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -6637,6 +6688,33 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -8919,6 +8997,33 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -11199,6 +11304,33 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -13481,6 +13613,33 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -15761,6 +15920,33 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -18043,6 +18229,33 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "de-DE": [
@@ -20323,6 +20536,33 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -22605,6 +22845,33 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "it-IT": [
@@ -24885,6 +25152,33 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -27167,6 +27461,33 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "pt-BR": [
@@ -29447,6 +29768,33 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -31729,6 +32077,33 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "tr-TR": [
@@ -34009,6 +34384,33 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_DefaultInfLengthClipLength",
+        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Edit_EnableClipInfoPopup",
+        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Render_AudioComposeBufferSize",
+        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]

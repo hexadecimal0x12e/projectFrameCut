@@ -250,12 +250,17 @@ public partial class EditSettingPage : ContentPage
     {
         rootPPB = new();
         rootPPB.AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_EditorPreference, SettingLocalizedResources.Edit_EditorPreference_Subtitle))
-            .AppendWhen(DeviceInfo.Idiom != DeviceIdiom.Phone, c => c.AddPicker("Edit_PreferredPopupMode",
+            .AppendWhen(DeviceInfo.Idiom != DeviceIdiom.Phone, 
+                c => c.AddPicker("Edit_PreferredPopupMode",
                 SettingLocalizedResources.Edit_PreferredPopupMode, ModeStringMapping.Keys.ToArray(),
-                ModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreferredPopupMode", "right"), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_PreferredPopupMode_Right, "right")).Key))
+                ModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreferredPopupMode", "right"), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_PreferredPopupMode_Right, "right")).Key)
+                      .AddSwitch("Edit_EnableClipInfoPopup", SettingLocalizedResources.Edit_EnableClipInfoPopup, IsBoolSettingTrue("Edit_EnableClipInfoPopup"), null)
+            )
             .AddSwitch("Edit_UpperContentHeight_AutoSave", SettingLocalizedResources.Edit_UpperContentHeight_AutoSave, IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave"), null)
             .AppendWhen(!IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave"), p => p.AddEntry("Edit_UpperContentHeight", SettingLocalizedResources.Edit_UpperContentHeight, GetSetting("Edit_UpperContentHeight", "250"), "250"))
             .AddEntry("Edit_MaximumSaveSlot", SettingLocalizedResources.Edit_MaxiumSaveSlot, GetSetting("Edit_MaximumSaveSlot", "10"), "10")
+            .AddEntry("Edit_DefaultInfLengthClipLength", SettingLocalizedResources.Edit_DefaultInfLengthClipLength, GetSettingAs<int>("Edit_DefaultInfLengthClipLength", 300, 300).ToString(), "300")
+
             .AddSeparator()
 
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_AddView, SettingLocalizedResources.Edit_AddView_Subtitle))

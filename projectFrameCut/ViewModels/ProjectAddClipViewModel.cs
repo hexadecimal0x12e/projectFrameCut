@@ -42,6 +42,34 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
     public bool TransformMenuActivatedViaHandleClick = false;
 
+    private void EnsurePlacementTrackExists(bool useSubTrack)
+    {
+        if (useSubTrack)
+        {
+            var trackIndex = _draftPage.Tracks.Keys.Where(k => k >= DraftPage.SubTrackOffset).DefaultIfEmpty(DraftPage.SubTrackOffset).Max();
+            if (!_draftPage.Tracks.ContainsKey(trackIndex))
+            {
+                _draftPage.AddASubTrack(trackIndex);
+            }
+            return;
+        }
+
+        var mainTrackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
+        if (!_draftPage.Tracks.ContainsKey(mainTrackIndex))
+        {
+            _draftPage.AddATrack(mainTrackIndex);
+        }
+    }
+
+    private void BeginTimelineClipPlacement(Func<int, double, ClipElementUI> clipFactory, bool useSubTrack = false, string? name = null)
+    {
+        EnsurePlacementTrackExists(useSubTrack);
+        _draftPage.BeginClipPlacement(
+            clipFactory,
+            useSubTrack ? trackId => trackId >= DraftPage.SubTrackOffset : trackId => trackId < DraftPage.SubTrackOffset,
+            name);
+    }
+
     public string SearchText
     {
         get;
@@ -528,21 +556,21 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         if (assetViewModel?.OriginalAsset == null) return;
 
-        var trackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
-        if (!_draftPage.Tracks.ContainsKey(trackIndex))
+        var sourcePath = _draftPage.Assets.ContainsKey(assetViewModel.Id) ? assetViewModel.SourcePath : null;
+        BeginTimelineClipPlacement((trackIndex, startX) =>
         {
-            _draftPage.AddATrack(trackIndex);
-        }
+            var clip = _draftPage.CreateFromAsset(
+                assetViewModel.OriginalAsset,
+                trackIndex,
+                startX,
+                InternalPluginBase.InternalPluginBaseID,
+                sourcePath);
 
-        var clip = _draftPage.CreateFromAsset(
-            assetViewModel.OriginalAsset,
-            trackIndex,
-            InternalPluginBase.InternalPluginBaseID,
-            _draftPage.Assets.ContainsKey(assetViewModel.Id) ? assetViewModel.SourcePath : null
-        );
+            _draftPage.RegisterClip(clip, true);
+            _draftPage.AddAClip(clip);
+            return clip;
+        }, name: assetViewModel.Name, useSubTrack: assetViewModel.OriginalAsset.AssetType == AssetType.Audio);
 
-        _draftPage.RegisterClip(clip, true);
-        _draftPage.AddAClip(clip);
         ClipAdded?.Invoke(this, EventArgs.Empty);
     }
 
@@ -556,44 +584,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         if (style is null) return;
         var text = TextToAdd;
         if (string.IsNullOrWhiteSpace(text)) return;
-
-
-        int trackIndex = 0;
-        if (TextClipInSubTrack)
-        {
-            trackIndex = _draftPage.Tracks.Keys.Where(k => k >= DraftPage.SubTrackOffset).DefaultIfEmpty(DraftPage.SubTrackOffset).Max();
-            if (!_draftPage.Tracks.ContainsKey(trackIndex))
-            {
-                _draftPage.AddASubTrack(trackIndex);
-            }
-        }
-        else
-        {
-            trackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
-            if (!_draftPage.Tracks.ContainsKey(trackIndex))
-            {
-                _draftPage.AddATrack(trackIndex);
-            }
-        }
-
-
-        var element = _draftPage.CreateAndAddClip(
-            startX: 0,
-            width: _draftPage.FrameToPixel(300),
-            trackIndex: trackIndex,
-            id: null,
-            labelText: text,
-            background: new SolidColorBrush(Colors.MediumPurple),
-            resolveOverlap: true,
-            relativeStart: 0,
-            maxFrames: 0
-        );
-
-        element.ClipType = ClipMode.TextClip;
-        element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-        element.isInfiniteLength = true;
-        element.maxFrameCount = 0;
-        element.ExtraData = new();
 
         var textLang = DetectTextLanguage(text);
         var fontOverride = style.ActualTemplate.fontFamily;
@@ -612,14 +602,32 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
         }
 
-        if (style != null)
+        BeginTimelineClipPlacement((trackIndex, startX) =>
         {
+            var element = _draftPage.CreateAndAddClip(
+                startX: startX,
+                width: _draftPage.FrameToPixel(300),
+                trackIndex: trackIndex,
+                id: null,
+                labelText: text,
+                background: new SolidColorBrush(Colors.MediumPurple),
+                resolveOverlap: true,
+                relativeStart: 0,
+                maxFrames: 0
+            );
+
+            element.ClipType = ClipMode.TextClip;
+            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+            element.isInfiniteLength = true;
+            element.maxFrameCount = 0;
+            element.ExtraData = new();
             element.ExtraData["TextEntries"] = new List<TextClipEntry>
             {
                 style.ActualTemplate with { text = text, fontFamily = fontOverride }
             };
 
-        }
+            return element;
+        }, TextClipInSubTrack, name: "Text");
 
         ClipAdded?.Invoke(this, EventArgs.Empty);
         TextToAdd = "";
@@ -1093,37 +1101,32 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 await imageStream.CopyToAsync(fs);
             }
 
-            // 添加到时间轴（Photo Clip，默认 90 帧 / 3 秒）
             const uint defaultFrames = 90u;
-            var trackIndex = _draftPage.Tracks.Keys
-                .Where(k => k < DraftPage.SubTrackOffset)
-                .DefaultIfEmpty(0)
-                .Max();
-            if (!_draftPage.Tracks.ContainsKey(trackIndex))
-                _draftPage.AddATrack(trackIndex);
+            BeginTimelineClipPlacement((trackIndex, startX) =>
+            {
+                var element = _draftPage.CreateAndAddClip(
+                    startX: startX,
+                    width: _draftPage.FrameToPixel(defaultFrames),
+                    trackIndex: trackIndex,
+                    id: null,
+                    labelText: "Sketch 1",
+                    background: new SolidColorBrush(Colors.MediumSeaGreen),
+                    resolveOverlap: true,
+                    relativeStart: 0,
+                    maxFrames: defaultFrames
+                );
 
-            var element = _draftPage.CreateAndAddClip(
-                startX: 0,
-                width: _draftPage.FrameToPixel(defaultFrames),
-                trackIndex: trackIndex,
-                id: null,
-                labelText: "Sketch 1",
-                background: new SolidColorBrush(Colors.MediumSeaGreen),
-                resolveOverlap: true,
-                relativeStart: 0,
-                maxFrames: defaultFrames
-            );
+                element.ClipType = ClipMode.PhotoClip;
+                element.SourcePath = tempPath;
+                element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+                element.isInfiniteLength = false;
+                element.maxFrameCount = defaultFrames;
+                element.ExtraData = new();
 
-            element.ClipType = ClipMode.PhotoClip;
-            element.SourcePath = tempPath;
-            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-            element.isInfiniteLength = false;
-            element.maxFrameCount = defaultFrames;
-            element.ExtraData = new();
-
-            // 清空画布
-            _drawingView.Lines.Clear();
-            _redoStack.Clear();
+                _drawingView.Lines.Clear();
+                _redoStack.Clear();
+                return element;
+            }, name: "Drawing");
 
             ClipAdded?.Invoke(this, EventArgs.Empty);
         }
@@ -1139,12 +1142,6 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     #region misc
     public async Task AddSolidColorClip()
     {
-        var trackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
-        if (!_draftPage.Tracks.ContainsKey(trackIndex))
-        {
-            _draftPage.AddATrack(trackIndex);
-        }
-
         ushort R = 65535, G = 65535, B = 65535;
         float A = 1f;
 
@@ -1174,28 +1171,32 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         G = (ushort)(picker.SelectedColor.Green * ushort.MaxValue);
         B = (ushort)(picker.SelectedColor.Blue * ushort.MaxValue);
         A = picker.SelectedColor.Alpha;
+        var colorStr = $"#{R / 257:X2}{G / 257:X2}{B / 257:X2}{(int)(A * 255):X2}";
+        BeginTimelineClipPlacement((trackIndex, startX) =>
+        {
+            var element = _draftPage.CreateAndAddClip(
+                startX: startX,
+                width: _draftPage.FrameToPixel(90),
+                trackIndex: trackIndex,
+                id: null,
+                labelText: colorStr,
+                background: new SolidColorBrush(Colors.MediumPurple),
+                resolveOverlap: true,
+                relativeStart: 0,
+                maxFrames: 0
+            );
 
-        var element = _draftPage.CreateAndAddClip(
-            startX: 0,
-            width: _draftPage.FrameToPixel(90),
-            trackIndex: trackIndex,
-            id: null,
-            labelText: $"#{R / 257:X2}{G / 257:X2}{B / 257:X2}{(int)(A * 255):X2}",
-            background: new SolidColorBrush(Colors.MediumPurple),
-            resolveOverlap: true,
-            relativeStart: 0,
-            maxFrames: 0
-        );
-
-        element.ClipType = ClipMode.SolidColorClip;
-        element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-        element.isInfiniteLength = true;
-        element.maxFrameCount = 0;
-        element.ExtraData["R"] = R;
-        element.ExtraData["G"] = G;
-        element.ExtraData["B"] = B;
-        element.ExtraData["A"] = A;
-        element.isInfiniteLength = true;
+            element.ClipType = ClipMode.SolidColorClip;
+            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+            element.isInfiniteLength = true;
+            element.maxFrameCount = 0;
+            element.ExtraData["R"] = R;
+            element.ExtraData["G"] = G;
+            element.ExtraData["B"] = B;
+            element.ExtraData["A"] = A;
+            element.isInfiniteLength = true;
+            return element;
+        }, name: colorStr);
 
         ClipAdded?.Invoke(this, EventArgs.Empty);
     }
@@ -1206,33 +1207,31 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         var path = await _draftPage.DisplayPromptAsync("Add", "Input source path", placeholder: "#<provider>,<stream id>");
         if (string.IsNullOrWhiteSpace(path)) return;
 
-        var trackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
-        if (!_draftPage.Tracks.ContainsKey(trackIndex))
-        {
-            _draftPage.AddATrack(trackIndex);
-        }
-
         var vidSrc = PluginManager.CreateVideoSource(path);
 
-        var element = _draftPage.CreateAndAddClip(
-            startX: 0,
-            width: _draftPage.FrameToPixel((uint)vidSrc.TotalFrames),
-            trackIndex: trackIndex,
-            id: null,
-            labelText: "Alternative source 1",
-            background: new SolidColorBrush(Colors.MediumPurple),
-            resolveOverlap: true,
-            relativeStart: 0,
-            maxFrames: 0
-        );
+        BeginTimelineClipPlacement((trackIndex, startX) =>
+        {
+            var element = _draftPage.CreateAndAddClip(
+                startX: startX,
+                width: _draftPage.FrameToPixel((uint)vidSrc.TotalFrames),
+                trackIndex: trackIndex,
+                id: null,
+                labelText: "Alternative source 1",
+                background: new SolidColorBrush(Colors.MediumPurple),
+                resolveOverlap: true,
+                relativeStart: 0,
+                maxFrames: 0
+            );
 
-        element.ClipType = ClipMode.VideoClip;
-        element.SourcePath = path;
-        element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-        element.isInfiniteLength = false;
-        element.maxFrameCount = (uint)vidSrc.TotalFrames;
-        element.sourceSecondPerFrame = (float)(1 / vidSrc.Fps);
-        element.ExtraData = new();
+            element.ClipType = ClipMode.VideoClip;
+            element.SourcePath = path;
+            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+            element.isInfiniteLength = false;
+            element.maxFrameCount = (uint)vidSrc.TotalFrames;
+            element.sourceSecondPerFrame = (float)(1 / vidSrc.Fps);
+            element.ExtraData = new();
+            return element;
+        }, name: path);
 
         ClipAdded?.Invoke(this, EventArgs.Empty);
     }
@@ -1300,22 +1299,20 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 assetViewModel.OriginalAsset.Path = localPath;
             }
 
-            var trackIndex = _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(0).Max();
-            if (!_draftPage.Tracks.ContainsKey(trackIndex))
+            BeginTimelineClipPlacement((trackIndex, startX) =>
             {
-                _draftPage.AddATrack(trackIndex);
-            }
+                var clip = _draftPage.CreateFromAsset(
+                    assetViewModel.OriginalAsset,
+                    trackIndex,
+                    startX,
+                    InternalPluginBase.InternalPluginBaseID,
+                    assetViewModel.SourcePath
+                );
 
-            var clip = _draftPage.CreateFromAsset(
-                assetViewModel.OriginalAsset,
-                trackIndex,
-                InternalPluginBase.InternalPluginBaseID,
-                assetViewModel.SourcePath
-            );
-
-            _draftPage.RegisterClip(clip, true);
-
-            _draftPage.AddAClip(clip);
+                _draftPage.RegisterClip(clip, true);
+                _draftPage.AddAClip(clip);
+                return clip;
+            }, name: assetViewModel.Name);
 
             ClipAdded?.Invoke(this, EventArgs.Empty);
         }
@@ -1455,39 +1452,35 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         try
         {
             const uint defaultFrames = 90u;
-            var trackIndex = _draftPage.Tracks.Keys
-                .Where(k => k < DraftPage.SubTrackOffset)
-                .DefaultIfEmpty(0)
-                .Max();
-
-            if (!_draftPage.Tracks.ContainsKey(trackIndex))
-                _draftPage.AddATrack(trackIndex);
-
-            var element = _draftPage.CreateAndAddClip(
-                startX: 0,
-                width: _draftPage.FrameToPixel(defaultFrames),
-                trackIndex: trackIndex,
-                id: null,
-                labelText: $"AI: {string.Join("", prompt.Take(20).ToArray())}",
-                background: new SolidColorBrush(Colors.Orange),
-                resolveOverlap: true,
-                relativeStart: 0,
-                maxFrames: defaultFrames
-            );
-
-            element.ClipType = ClipMode.PhotoClip;
-            element.SourcePath = imagePath;
-            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-            element.isInfiniteLength = false;
-            element.maxFrameCount = defaultFrames;
-            element.ExtraData = new Dictionary<string, object>
+            BeginTimelineClipPlacement((trackIndex, startX) =>
             {
-                ["IsAI"] = true,
-                ["AIPrompt"] = prompt,
-                ["GeneratedAt"] = DateTime.Now,
-                ["ImageRatio"] = AIVideoRatio,
-                ["ImageStyle"] = AIImageStyle
-            };
+                var element = _draftPage.CreateAndAddClip(
+                    startX: startX,
+                    width: _draftPage.FrameToPixel(defaultFrames),
+                    trackIndex: trackIndex,
+                    id: null,
+                    labelText: $"AI: {string.Join("", prompt.Take(20).ToArray())}",
+                    background: new SolidColorBrush(Colors.Orange),
+                    resolveOverlap: true,
+                    relativeStart: 0,
+                    maxFrames: defaultFrames
+                );
+
+                element.ClipType = ClipMode.PhotoClip;
+                element.SourcePath = imagePath;
+                element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+                element.isInfiniteLength = false;
+                element.maxFrameCount = defaultFrames;
+                element.ExtraData = new Dictionary<string, object>
+                {
+                    ["IsAI"] = true,
+                    ["AIPrompt"] = prompt,
+                    ["GeneratedAt"] = DateTime.Now,
+                    ["ImageRatio"] = AIVideoRatio,
+                    ["ImageStyle"] = AIImageStyle
+                };
+                return element;
+            }, name: $"AI: {string.Join("", prompt.Take(20).ToArray())}");
         }
         catch (Exception ex)
         {
@@ -1584,39 +1577,35 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             }
             catch { }
 
-            var trackIndex = _draftPage.Tracks.Keys
-                .Where(k => k < DraftPage.SubTrackOffset)
-                .DefaultIfEmpty(0)
-                .Max();
-
-            if (!_draftPage.Tracks.ContainsKey(trackIndex))
-                _draftPage.AddATrack(trackIndex);
-
-            var element = _draftPage.CreateAndAddClip(
-                startX: 0,
-                width: _draftPage.FrameToPixel(totalFrames),
-                trackIndex: trackIndex,
-                id: null,
-                labelText: $"AI Video: {string.Join("", prompt.Take(20).ToArray())}",
-                background: new SolidColorBrush(Colors.Purple),
-                resolveOverlap: true,
-                relativeStart: 0,
-                maxFrames: totalFrames
-            );
-
-            element.ClipType = ClipMode.VideoClip;
-            element.SourcePath = videoPath;
-            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
-            element.isInfiniteLength = false;
-            element.maxFrameCount = totalFrames;
-            element.ExtraData = new Dictionary<string, object>
+            BeginTimelineClipPlacement((trackIndex, startX) =>
             {
-                ["IsAI"] = true,
-                ["AIPrompt"] = prompt,
-                ["GeneratedAt"] = DateTime.Now,
-                ["VideoDuration"] = AIVideoDuration,
-                ["VideoRatio"] = AIVideoRatio
-            };
+                var element = _draftPage.CreateAndAddClip(
+                    startX: startX,
+                    width: _draftPage.FrameToPixel(totalFrames),
+                    trackIndex: trackIndex,
+                    id: null,
+                    labelText: $"AI Video: {string.Join("", prompt.Take(20).ToArray())}",
+                    background: new SolidColorBrush(Colors.Purple),
+                    resolveOverlap: true,
+                    relativeStart: 0,
+                    maxFrames: totalFrames
+                );
+
+                element.ClipType = ClipMode.VideoClip;
+                element.SourcePath = videoPath;
+                element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+                element.isInfiniteLength = false;
+                element.maxFrameCount = totalFrames;
+                element.ExtraData = new Dictionary<string, object>
+                {
+                    ["IsAI"] = true,
+                    ["AIPrompt"] = prompt,
+                    ["GeneratedAt"] = DateTime.Now,
+                    ["VideoDuration"] = AIVideoDuration,
+                    ["VideoRatio"] = AIVideoRatio
+                };
+                return element;
+            }, name: $"AI: {string.Join("", prompt.Take(20).ToArray())}");
         }
         catch (Exception ex)
         {

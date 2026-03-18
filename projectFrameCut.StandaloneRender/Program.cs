@@ -587,7 +587,7 @@ namespace projectFrameCut.StandaloneRender
                     clip.ReInit(8);
                 }
 
-                var writer = new AudioWriter(outputPath, 192000, 2, "pcm_s16le");
+                var writer = new AudioWriter(outputPath, 96000, 2, "pcm_s16le");
 
                 var composer = new AudioComposer<float>
                 {
@@ -604,7 +604,7 @@ namespace projectFrameCut.StandaloneRender
                 }
 
 
-                composer.Compose(fps, 192000, 2, 4096, cts.Token);
+                composer.Compose(fps, 96000, 2, 4096, cts.Token);
                 Console.WriteLine();
                 Console.WriteLine();
                 writer.Finish();

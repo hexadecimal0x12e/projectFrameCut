@@ -2,7 +2,7 @@
   "profiles": {
     "projectFrameCut.StandaloneRender": {
       "commandName": "Project",
-      "commandLineArgs": " render  \"-project=D:\\code\\playground\\projectFrameCut\\My Drafts\\audio test 1.pjfc\" \"-output=D:\\code\\playground\\projectFrameCut\\audio test 1.wav\" \"-output_options=1280,720,60,AV_PIX_FMT_YUV420P,libx264\" \"-target=video\" \"-assetDbFile=D:\\code\\playground\\projectFrameCut\\My Assets\\.database\\database.json\" \"-maxParallelThreads=24\" \"-GCOptions=0\" \"-multiAccelerator=False\" \"-acceleratorDeviceId=0\"　"
+      "commandLineArgs": " render  \"-project=D:\\code\\playground\\projectFrameCut\\My Drafts\\audio test 1.pjfc\" \"-output=D:\\code\\playground\\projectFrameCut\\audio test 1.wav\" \"-output_options=1280,720,60,AV_PIX_FMT_YUV420P,libx264\" \"-target=audio\" \"-assetDbFile=D:\\code\\playground\\projectFrameCut\\My Assets\\.database\\database.json\" \"-maxParallelThreads=24\" \"-GCOptions=0\" \"-multiAccelerator=False\" \"-acceleratorDeviceId=0\"　"
     }
   }
 }

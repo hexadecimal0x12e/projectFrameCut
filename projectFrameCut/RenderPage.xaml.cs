@@ -66,6 +66,7 @@ public partial class RenderPage : ContentPage
     private readonly ConcurrentQueue<string> _logQueue = new ConcurrentQueue<string>();
     private System.Timers.Timer? _logUpdateTimer;
     private readonly SemaphoreSlim _logSemaphore = new SemaphoreSlim(1, 1);
+    private readonly SemaphoreSlim _previewUpdateSemaphore = new SemaphoreSlim(1, 1);
 
     private System.Timers.Timer? _screenSaverTimer;
     private System.Timers.Timer? _moveHintTimer;
@@ -655,8 +656,13 @@ public partial class RenderPage : ContentPage
                 });
             };
 
-            builder.OnPreviewGenerated += (s, e) =>
+            builder.OnPreviewGenerated += async (s, e) =>
             {
+                if (!_previewUpdateSemaphore.Wait(0))
+                {
+                    return;
+                }
+
                 try
                 {
                     var src = e.ToImageSource();
@@ -671,6 +677,11 @@ public partial class RenderPage : ContentPage
                 catch (Exception)
                 {
                     // ignored
+                }
+                finally
+                {
+                    await Task.Delay(500);
+                    _previewUpdateSemaphore.Release();
                 }
             };
 
@@ -788,7 +799,7 @@ public partial class RenderPage : ContentPage
             await Task.Run(track.ReInit);
         }
 
-        var writer = new AudioWriter(outputPath, 192000, 2, "pcm_s16le");
+        var writer = new AudioWriter(outputPath, 96000, 2, "pcm_s16le");
 
         var composer = new AudioComposer<float>
         {
@@ -809,7 +820,7 @@ public partial class RenderPage : ContentPage
                     timeStr = (etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss"));
                     SubProgLabel.Text = $"{_currentSubProgText} ({timeStr})";
                 }
-                await SubProgress.ProgressTo(p, 250, Easing.Linear);
+                await SubProgress.ProgressTo(p, 25, Easing.Linear);
 
                 if (ScreenSaverOverlay.IsVisible)
                 {
@@ -818,7 +829,7 @@ public partial class RenderPage : ContentPage
             });
         };
 
-        await Task.Run(() => composer.Compose((int)_draft.TargetFrameRate, 192000, 2, 4096, _cts.Token));
+        await Task.Run(() => composer.Compose((int)_draft.TargetFrameRate, 96000, 2, SettingsManager.GetSettingAs<int>("Render_AudioComposeBufferSize", 40960, 40960), _cts.Token));
 
         writer.Finish();
         writer.Dispose();

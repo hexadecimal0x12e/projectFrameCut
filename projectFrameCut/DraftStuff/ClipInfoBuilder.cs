@@ -40,15 +40,6 @@ using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 
 
-
-
-
-
-
-
-
-
-
 #if WINDOWS
 using Microsoft.UI.Xaml;
 
@@ -109,7 +100,7 @@ namespace projectFrameCut.DraftStuff
                     Content = await BuildTextOptionTab(clip, handler)
                 });
             }
-            if(clip.LeftHandle?.IsVisible == true && clip.RightHandle?.IsVisible == true)
+            if (clip.LeftHandle?.IsVisible == true && clip.RightHandle?.IsVisible == true)
             {
                 t.TabItems.Add(new TabbedViewItem
                 {
@@ -245,16 +236,21 @@ namespace projectFrameCut.DraftStuff
                     .AddEntry("placeX", PPLocalizedResources.General_LocationX, valX.ToString(), "0", null, default)
                     .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
                     .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
-                    .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default))
+                    .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default)
+                    .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, 0))
             .AppendWhen(clip.ClipType == ClipMode.AudioClip,
-            c => c.AddText(new SingleLineLabel("PPLocalizedResources.General_Audio", 20))
-                  .AddSlider("volume", "Volume", clip.ExtraData.TryGetValue("Volume", out var volume) ? (double)volume : 1d, 0, 1)
+            c => c.AddText(new SingleLineLabel(PPLocalizedResources.General_Audio, 20))
+                  .AddSlider("volume", PPLocalizedResources.General_Audio_Volume, clip.ExtraData.TryGetValue("Volume", out var volume) ? (double)volume : 1d, 0, 1)
+            )
+            .AppendWhen(clip.ClipType == ClipMode.MarkingClip,
+            c => c.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip))
             );
 
 
 
             ppb.PropertyChanged += async (s, e) =>
             {
+                clip.Effects ??= new Dictionary<string, IEffect>();
                 if (e.Id == "clipColor")
                 {
                     if (e.Value == null || string.IsNullOrWhiteSpace(e.Value?.ToString()))
@@ -348,6 +344,24 @@ namespace projectFrameCut.DraftStuff
 
                     handler?.Invoke(s, e);
                     return;
+                }
+                if (e.Id == "rotationDeg")
+                {
+                    if (e.Value is double deg)
+                    {
+                        var newR = new RotationEffect_ImageSharp
+                        {
+                            Angle = (float)deg,
+                            Enabled = true,
+                            Name = "__Internal_Rotation__",
+                            Index = int.MinValue + 100,
+                            RelativeWidth = page.ProjectInfo.RelativeWidth,
+                            RelativeHeight = page.ProjectInfo.RelativeHeight,
+                            ExpandCanvas = false
+                        };
+                        clip.Effects["__Internal_Rotation__"] = newR;
+                    }
+
                 }
 
                 if (e.Id == "clipColor")

@@ -167,7 +167,8 @@ public partial class RenderSettingPage : ContentPage
             rootPPB
                 .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Render_AdvanceOpts, SettingLocalizedResources.Misc_DiagOptions_Subtitle))
                 .AddPicker("render_GCOption", SettingLocalizedResources.Render_GCOption, GCOptionMapping.Values.ToArray(), GCOptionMapping.TryGetValue(int.Parse(GetSetting("render_GCOption", "0")), out var value) ? value : SettingLocalizedResources.Render_GCOption_LetCLRDoGC)
-                .AddSwitch("render_BlockWrite", SettingLocalizedResources.Render_BlockWrite, IsBoolSettingTrue("render_BlockWrite"), null);
+                .AddSwitch("render_BlockWrite", SettingLocalizedResources.Render_BlockWrite, IsBoolSettingTrue("render_BlockWrite"), null)
+                .AddEntry("Render_AudioComposeBufferSize", SettingLocalizedResources.Render_AudioComposeBufferSize, GetSettingAs<int>("Render_AudioComposeBufferSize", 40960, 40960).ToString(), "40960", c => c.Keyboard = Keyboard.Numeric);
 
         }
         else

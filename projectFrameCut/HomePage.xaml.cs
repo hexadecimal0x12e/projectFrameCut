@@ -750,7 +750,8 @@ public partial class HomePage : ContentPage
                                 LockScrollViewAfterSelection = SettingsManager.IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection", true),
                                 UseCommunityToolkitPopupInsteadOfOverlayLayer = SettingsManager.IsBoolSettingTrue("Edit_UseCommunityToolkitPopupInsteadOfOverlayLayer"),
                                 PreviewAreaHeight = double.TryParse(SettingsManager.GetSetting("Edit_UpperContentHeight", "250"), out var upperHeight) ? upperHeight : 250d,
-                                UseCompactLayout = overrideLayoutOption ?? DeviceInfo.Idiom == DeviceIdiom.Phone
+                                UseCompactLayout = overrideLayoutOption ?? DeviceInfo.Idiom == DeviceIdiom.Phone,
+                                EnableClipInfoPopup = SettingsManager.IsBoolSettingTrue("Edit_EnableClipInfoPopup")
                             };
 #if WINDOWS
                             Context context = Context.CreateDefault();

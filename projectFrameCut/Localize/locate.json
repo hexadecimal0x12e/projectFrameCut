@@ -1057,6 +1057,94 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "\u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u300C{name}\u300D\u3002{(compact ? $\u0022{Environment.NewLine}\u4F60\u8FD8\u53EF\u4EE5\u6309Esc\u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002\u0022 : \u0022\u0022)}",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "\u6210\u529F\u7684\u653E\u7F6E\u4E86\u300C{name}\u300D\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "\u4F60\u70B9\u51FB\u7684\u4F4D\u7F6E\u65E0\u6548\uFF0C\u6362\u4E00\u4E2A\u5730\u65B9\u8BD5\u8BD5\u770B\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "\u300C{name}\u300D\u53EA\u80FD\u88AB\u6DFB\u52A0\u5230\u4E3B\u8F68\u9053\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "\u300C{name}\u300D\u53EA\u80FD\u88AB\u6DFB\u52A0\u5230\u8F85\u8F68\u9053\u3002",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_AddClipView_Search",
         "Value": "\u641C\u7D22\u6B64\u9875\u9762\u4E2D\u7684\u5185\u5BB9",
         "Mode": "ConstString",
@@ -1614,6 +1702,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "\u79FB\u52A8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_MenuBar_Edit_PlayheadMoveLeft",
         "Value": "\u5FEB\u9000",
         "Mode": "ConstString",
@@ -1648,6 +1744,14 @@
       {
         "Id": "DraftPage_MenuBar_Edit_Spilt",
         "Value": "\u62C6\u5206\u9009\u4E2D\u7684\u7247\u6BB5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "\u5728\u4E3B/\u526F\u8F68\u9053\u4E4B\u95F4\u79FB\u52A8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1776,6 +1880,22 @@
       {
         "Id": "DraftPage_NoJobRunning",
         "Value": "\u6CA1\u6709\u6B63\u5728\u6267\u884C\u7684\u4EFB\u52A1",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "\u6B64\u64CD\u4F5C\u4EC5\u5728\u9009\u62E9\u591A\u4E2A\u7247\u6BB5\u65F6\u53EF\u7528\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "\u6B64\u64CD\u4F5C\u4EC5\u5728\u9009\u62E9\u4E00\u4E2A\u7247\u6BB5\u65F6\u53EF\u7528\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2012,6 +2132,30 @@
             "Value": "clipName"
           }
         ],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "\u9009\u62E9\u4E00\u4E2A\u7247\u6BB5\u6765\u8FDB\u884C\u6B64\u64CD\u4F5C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "\u9009\u62E9\u81F3\u5C11\u4E24\u4E2A\u7247\u6BB5\u6765\u8FDB\u884C\u6B64\u64CD\u4F5C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "\u9009\u62E9\u81F3\u5C11\u4E00\u4E2A\u7247\u6BB5\u6765\u8FDB\u884C\u6B64\u64CD\u4F5C\u3002",
+        "Mode": "ConstString",
+        "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
       },
@@ -7573,6 +7717,162 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -11518,6 +11818,162 @@
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
         "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -15479,6 +15935,162 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -19435,6 +20047,162 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -23381,6 +24149,162 @@
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
         "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -27342,6 +28266,162 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ar-SA": [
@@ -31293,6 +32373,162 @@
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
         "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -35254,6 +36490,162 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "es-ES": [
@@ -39205,6 +40597,162 @@
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
         "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -43166,6 +44714,162 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "pl-PL": [
@@ -47117,6 +48821,162 @@
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
         "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -51078,6 +52938,162 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ru-RU": [
@@ -55034,6 +57050,162 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "tr-TR": [
@@ -58985,6 +61157,162 @@
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
         "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          },
+          {
+            "Key": "bool",
+            "Value": "compact"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          },
+          {
+            "Key": "compact",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Move",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_AddClipView_ClickToPlace_Done",
+        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string ",
+            "Value": "name"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "name",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenOneSelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectOneOrManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectExactlyOneToContinue",
+        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectManyToContinue",
+        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_OnlyAvailableWhenManySelection",
+        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

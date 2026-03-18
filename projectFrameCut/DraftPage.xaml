@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.DraftPage"
              xmlns:l="clr-namespace:LocalizedResources"
-             xmlns:ie="clr-namespace:InteractableEditor"
              xmlns:local="clr-namespace:projectFrameCut"
              xmlns:mw="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;assembly=projectFrameCut.ApplicationAPIBase"
              x:DataType="local:DraftPage"
@@ -38,10 +37,16 @@
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" Command="{Binding SpiltCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" Command="{Binding SpiltCommand}" IsEnabled="{Binding SelectedAnyClip}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
                     Key="S" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" Command="{Binding MoveCommand}" IsEnabled="{Binding SelectedAnyClip}">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Alt, MacCatalyst=Option}"
+                    Key="M" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_Combine}" Command="{Binding CombineCommand}" IsEnabled="{Binding Path=MultiSelectEnabled}">
@@ -50,7 +55,7 @@
                     Key="G" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" Command="{Binding DeleteCommand}">
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" Command="{Binding DeleteCommand}" IsEnabled="{Binding SelectedAnyClip}">
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator
                     Key="Delete" />
@@ -194,28 +199,40 @@
             
 
 
-            <Grid Margin="0,8,0,8" x:Name="MainControlGrid">
+            <Grid Margin="0,8,0,8" x:Name="MainControlGrid" >
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <HorizontalStackLayout Grid.Column="0" x:Name="LeftMenuBar">
-                    <Button x:Name="AddClip" Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" Clicked="AddClip_Clicked" Margin="2,0,0,0" />
-                    <Button x:Name="AssetPanelButton" Text="{l:Localized Key=DraftPage_CenterMenuBar_Asset}"  Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
-                    <Button x:Name="SpiltButton" Text="{l:Localized Key=DraftPage_CenterMenuBar_Spilt}" Margin="8,0,0,0" Clicked="Split_Clicked"/>
-                </HorizontalStackLayout>
+                <Grid Grid.Column="0" x:Name="LeftMenuBar" ColumnSpacing="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" x:Name="AddClip" Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" Clicked="AddClip_Clicked" Margin="2,0,0,0" />
+                    <Button Grid.Column="1" x:Name="AssetPanelButton" Text="{l:Localized Key=DraftPage_CenterMenuBar_Asset}"  Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
+                    <Button Grid.Column="2" x:Name="SpiltButton" Text="{l:Localized Key=DraftPage_CenterMenuBar_Spilt}" IsEnabled="{Binding SelectedAnyClip}" Margin="8,0,0,0" Clicked="Split_Clicked"/>
+                    <Label Grid.Column="3" x:Name="LeftInfoLabel" Text="" Margin="8,0,0,0" VerticalOptions="Center" HorizontalOptions="Fill" LineBreakMode="WordWrap" />
+                </Grid>
+                
                 <HorizontalStackLayout x:Name="PlayingControlLayout" Grid.Column="1" HorizontalOptions="Center">
                     <Button x:Name="PlayPauseButton" Text="▶" Clicked="PlayPauseButton_Clicked" WidthRequest="40" />
-                    <Label x:Name="CurrentPlayheadLabel" Text="00:00/99:99" Margin="8,0,0,0" VerticalOptions="Center"></Label>
+                    <Label x:Name="CurrentPlayheadLabel" Text="00:00/??:??" Margin="8,0,0,0" VerticalOptions="Center"></Label>
                 </HorizontalStackLayout>
-
-                <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar" Spacing="8">
-                    <HorizontalStackLayout VerticalOptions="Center" Margin="8,0,0,0" Spacing="4">
-                        <CheckBox x:Name="MultiSelectCheckBox" CheckedChanged="MultiSelectCheckBox_CheckedChanged" VerticalOptions="Center" />
-                        <Label Text="{l:Localized Key=DraftPage_CenterMenuBar_MultiSelect}" VerticalOptions="Center" />
+                
+                <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar" >
+                    <HorizontalStackLayout Grid.Column="4" x:Name="MultiSelectControlLayout" HorizontalOptions="Start" VerticalOptions="Center" Margin="0,0,8,0" Spacing="4">
+                        <CheckBox x:Name="MultiSelectCheckBox" Margin="0,0,-16,0" CheckedChanged="MultiSelectCheckBox_CheckedChanged" VerticalOptions="Center" />
+                        <Label Text="{l:Localized Key=DraftPage_CenterMenuBar_MultiSelect}" x:Name="MultiSelectInfoLabel" VerticalOptions="Center" >
+                            <Label.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="MultiSelectLabel_TapGestureRecognizer_Tapped"/>
+                            </Label.GestureRecognizers>
+                        </Label>
                     </HorizontalStackLayout>
-                    <Picker x:Name="ResolutionPicker" WidthRequest="150"  SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
+                    <Picker x:Name="ResolutionPicker" Margin="0,-2,0,0" WidthRequest="150" SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
                     <Button x:Name="ZoomOutButton" Text="-" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />
                     <Button x:Name="ZoomResetButton" Text="1x" Margin="8,0,0,0" Clicked="ZoomResetButton_Clicked"/>
                     <Button x:Name="ZoomInButton" Text="+" Margin="8,0,0,0" Clicked="ZoomInButton_Clicked"/>

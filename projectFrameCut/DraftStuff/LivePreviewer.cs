@@ -54,6 +54,7 @@ namespace projectFrameCut.LivePreview
 
         public IPicture GetFrame(uint frameIndex, int targetWidth, int targetHeight)
         {
+            ArgumentNullException.ThrowIfNull(Clips, "Clips");
             var layers = Timeline.GetFramesInOneFrame(Clips, frameIndex, targetWidth, targetHeight, true);
             var pic = Timeline.MixtureLayers(layers, frameIndex, targetWidth, targetHeight);
             return pic;
@@ -108,7 +109,7 @@ namespace projectFrameCut.LivePreview
                         }
                     }
                 }
-                await Task.Run(clipInstance.ReInit);
+                await Task.Run(() => clipInstance.ReInit(8));
                 clipsList.Add(clipInstance);
 
             }

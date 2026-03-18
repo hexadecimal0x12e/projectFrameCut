@@ -12,6 +12,8 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
+
 
 namespace projectFrameCut.ApplicationAPIBase.Plugins
 {
@@ -39,10 +41,17 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         public Dictionary<string, Func<IEffectBundle>> EffectBundleProvider { get; }
 
         /// <summary>
+        /// Get a 
+        /// </summary>
+        public Dictionary<string, IClipDynamicPreviewProvider> DynamicPreviewProvider { get; }
+
+
+        /// <summary>
         /// Create the setting page for the plugin.
         /// return null if no setting page is provided.
         /// </summary>
         public View? SettingPageProvider(ref IApplicationPluginBase instance);
+
 
         /// <summary>
         /// Override this method to do some custom action after this plugin loaded in application level.

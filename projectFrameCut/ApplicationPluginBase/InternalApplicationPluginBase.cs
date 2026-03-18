@@ -6,6 +6,8 @@ using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
+
 
 namespace projectFrameCut.ApplicationPluginBase
 {
@@ -21,6 +23,8 @@ namespace projectFrameCut.ApplicationPluginBase
         };
 
         public int AppLevelPluginAPIVersion => IApplicationPluginBase.CurrentAppLevelPluginAPIVersion;
+
+        public Dictionary<string, IClipDynamicPreviewProvider> DynamicPreviewProvider => new();
 
         public View? SettingPageProvider(ref IApplicationPluginBase instance)
         {

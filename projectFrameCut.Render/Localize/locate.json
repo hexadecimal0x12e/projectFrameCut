@@ -449,6 +449,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "General_Audio",
+        "Value": "\u97F3\u9891",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "\u97F3\u91CF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "General_DisplayColor",
         "Value": "\u663E\u793A\u989C\u8272",
         "Mode": "ConstString",
@@ -475,6 +491,14 @@
       {
         "Id": "General_LocationY",
         "Value": "Y \u8F74\u5750\u6807",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "\u65CB\u8F6C (\u5EA6)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -908,6 +932,14 @@
             "Value": ""
           }
         ],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "\u53D6\u6D88\u7EC4\u5408",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "HasValidationErrors": false
       }
     ],
@@ -1906,6 +1938,42 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "Unset localization item:General_Rotation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio",
+        "Value": "Unset localization item:General_Audio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "Unset localization item:General_Audio_Volume()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "Unset localization item:General_Unbind()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -2902,6 +2970,42 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "Unset localization item:General_Rotation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio",
+        "Value": "Unset localization item:General_Audio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "Unset localization item:General_Audio_Volume()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "Unset localization item:General_Unbind()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -3900,6 +4004,42 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "Unset localization item:General_Rotation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio",
+        "Value": "Unset localization item:General_Audio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "Unset localization item:General_Audio_Volume()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "Unset localization item:General_Unbind()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -4896,6 +5036,42 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "Unset localization item:General_Rotation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio",
+        "Value": "Unset localization item:General_Audio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "Unset localization item:General_Audio_Volume()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "Unset localization item:General_Unbind()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -5894,6 +6070,42 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "Unset localization item:General_Rotation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio",
+        "Value": "Unset localization item:General_Audio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "Unset localization item:General_Audio_Volume()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "Unset localization item:General_Unbind()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -6890,6 +7102,42 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "Unset localization item:General_Rotation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio",
+        "Value": "Unset localization item:General_Audio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "Unset localization item:General_Audio_Volume()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "Unset localization item:General_Unbind()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -7888,6 +8136,42 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "Unset localization item:General_Rotation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio",
+        "Value": "Unset localization item:General_Audio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "Unset localization item:General_Audio_Volume()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "Unset localization item:General_Unbind()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "de-DE": [
@@ -8884,6 +9168,42 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "Unset localization item:General_Rotation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio",
+        "Value": "Unset localization item:General_Audio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "Unset localization item:General_Audio_Volume()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "Unset localization item:General_Unbind()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -9882,6 +10202,42 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "Unset localization item:General_Rotation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio",
+        "Value": "Unset localization item:General_Audio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "Unset localization item:General_Audio_Volume()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "Unset localization item:General_Unbind()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "it-IT": [
@@ -10878,6 +11234,42 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "Unset localization item:General_Rotation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio",
+        "Value": "Unset localization item:General_Audio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "Unset localization item:General_Audio_Volume()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "Unset localization item:General_Unbind()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -11876,6 +12268,42 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "Unset localization item:General_Rotation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio",
+        "Value": "Unset localization item:General_Audio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "Unset localization item:General_Audio_Volume()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "Unset localization item:General_Unbind()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "pt-BR": [
@@ -12872,6 +13300,42 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "Unset localization item:General_Rotation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio",
+        "Value": "Unset localization item:General_Audio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "Unset localization item:General_Audio_Volume()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "Unset localization item:General_Unbind()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -13870,6 +14334,42 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "Unset localization item:General_Rotation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio",
+        "Value": "Unset localization item:General_Audio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "Unset localization item:General_Audio_Volume()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "Unset localization item:General_Unbind()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "tr-TR": [
@@ -14866,6 +15366,42 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Rotation",
+        "Value": "Unset localization item:General_Rotation()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio",
+        "Value": "Unset localization item:General_Audio()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Audio_Volume",
+        "Value": "Unset localization item:General_Audio_Volume()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "General_Unbind",
+        "Value": "Unset localization item:General_Unbind()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]
