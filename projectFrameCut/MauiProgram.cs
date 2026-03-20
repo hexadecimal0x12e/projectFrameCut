@@ -440,6 +440,7 @@ namespace projectFrameCut
                     {
                         fonts.AddFont("HarmonyOS_Sans_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_Bold.ttf", "Font_Semibold");
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
                     });
                 }
 
@@ -831,6 +832,7 @@ namespace projectFrameCut
                     {
                         fonts.AddFont("HarmonyOS_Sans_SC_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_SC_Bold.ttf", "Font_Semibold");
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
                     });
                     break;
                 case 950: //Traditional Chinese
@@ -838,6 +840,7 @@ namespace projectFrameCut
                     {
                         fonts.AddFont("HarmonyOS_Sans_TC_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_TC_Bold.ttf", "Font_Semibold");
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
                     });
                     break;
                 case 932: //Japanese
@@ -846,8 +849,13 @@ namespace projectFrameCut
                     {
                         fonts.AddFont("HarmonyOS_Sans_SC_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_SC_Bold.ttf", "Font_Semibold");
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
                     });
 #else
+                    builder.ConfigureFonts(fonts =>
+                    {
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
+                    });
                     //use system ones
 #endif
                     break;
@@ -859,6 +867,10 @@ namespace projectFrameCut
                         fonts.AddFont("NotoSansKR-Bold.ttf", "Font_Semibold");
                     });
 #else
+                    builder.ConfigureFonts(fonts =>
+                    {
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
+                    });
                     //use system ones
 #endif
                     break;
@@ -867,6 +879,7 @@ namespace projectFrameCut
                     {
                         fonts.AddFont("HarmonyOS_Sans_Naskh_Arabic_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_Naskh_Arabic_Bold.ttf", "Font_Semibold");
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
                     });
                     break;
                 default: //Latin and others
@@ -874,6 +887,7 @@ namespace projectFrameCut
                     {
                         fonts.AddFont("HarmonyOS_Sans_Regular.ttf", "Font_Regular");
                         fonts.AddFont("HarmonyOS_Sans_Bold.ttf", "Font_Semibold");
+                        fonts.AddFont("MaterialSymbolsRounded.ttf", "Icons");
                     });
                     break;
             }

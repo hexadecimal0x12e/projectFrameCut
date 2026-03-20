@@ -857,7 +857,14 @@ public partial class HomePage : ContentPage
                 });
             }
         });
-
+        await Dispatcher.DispatchAsync(() =>
+        {
+            try
+            {
+                cancelButton.IsVisible = false;
+            }
+            catch { }
+        });
         initTimer.Stop();
         LogDiagnostic($"Initialize project {project?.ProjectName} cost {initTimer.ElapsedMilliseconds} ms.");
         if (initTimer.Elapsed.TotalSeconds < 2) await Task.Delay(2000 - (int)initTimer.Elapsed.TotalMilliseconds);
@@ -867,6 +874,7 @@ public partial class HomePage : ContentPage
         {
             await Dispatcher.DispatchAsync(async () =>
             {
+  
                 try
                 {
                     try

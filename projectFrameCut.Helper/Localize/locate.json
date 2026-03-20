@@ -114,6 +114,14 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u4E0D\u80FD\u5728\u7BA1\u7406\u5458\u8EAB\u4EFD\u4E0B\u8FD0\u884C\u3002\r\u8BF7\u5C1D\u8BD5\u5728\u6CA1\u6709\u7BA1\u7406\u5458\u6743\u9650\u7684\u4E0A\u4E0B\u6587\u91CC\u91CD\u65B0\u6253\u5F00\u7A0B\u5E8F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
       }
     ],
     "en-US": [

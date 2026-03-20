@@ -114,26 +114,8 @@ namespace projectFrameCut
                     Environment.Exit(0);
                 }
 #if WINDOWS
-                string path = "pjfc:";
-                var script =
-$$"""
-
-Clear-Host;Start-Process "{{path}}";exit
-
-""";
-                var proc = new Process();
-                proc.StartInfo.FileName = "powershell.exe";
-                proc.StartInfo.UseShellExecute = false;
-                proc.StartInfo.RedirectStandardInput = true;
-                proc.StartInfo.CreateNoWindow = true;
-                proc.Start();
-                var procWriter = proc.StandardInput;
-                if (procWriter != null)
-                {
-                    procWriter.AutoFlush = true;
-                    procWriter.WriteLine(script);
-                }
-#endif
+                WinUI.Program.RebootApp();
+#endif  
                 Environment.Exit(0);
 
             }

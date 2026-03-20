@@ -1686,6 +1686,22 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "\u590D\u5236",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "\u526A\u5207",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_MenuBar_Edit_DeleteClip",
         "Value": "\u5220\u9664\u9009\u4E2D\u7684\u7247\u6BB5",
         "Mode": "ConstString",
@@ -1704,6 +1720,14 @@
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
         "Value": "\u79FB\u52A8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "\u7C98\u8D34",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3765,6 +3789,48 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "\u7247\u6BB5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "\u53D6\u6D88\u9009\u62E9\u7247\u6BB5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "\u53EA\u80FD\u5728\u9009\u4E2D\u4E86\u4E00\u4E2A\u7247\u6BB5\u7684\u60C5\u51B5\u4E0B\u914D\u7F6E\u5C5E\u6027\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "\u9009\u62E9\u4E86 {n} \u4E2A\u7247\u6BB5",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
         "HasValidationErrors": false
       }
     ],
@@ -7873,6 +7939,79 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -11977,6 +12116,79 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -16091,6 +16303,79 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -20203,6 +20488,79 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -24308,6 +24666,79 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -28422,6 +28853,79 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ar-SA": [
@@ -32532,6 +33036,79 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -36646,6 +37223,79 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "es-ES": [
@@ -40756,6 +41406,79 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -44870,6 +45593,79 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "pl-PL": [
@@ -48980,6 +49776,79 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
@@ -53094,6 +53963,79 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ru-RU": [
@@ -57206,6 +58148,79 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "tr-TR": [
@@ -61316,6 +62331,79 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Copy",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Cut",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Paste",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }

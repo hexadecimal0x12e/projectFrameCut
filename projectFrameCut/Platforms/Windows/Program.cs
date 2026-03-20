@@ -30,10 +30,15 @@ namespace projectFrameCut.WinUI
             Debug.WriteLine($"Copyright (c) hexadecimal0x12e 2025-2026.");
             try
             {
+                try
+                {
+                    SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
+                }
+                catch { }
                 if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041, 0))
                 {
                     var opt = MessageBox(IntPtr.Zero,
-                        "Sorry, projectFrameCut requires Windows 10 2004 / LTSC 2021 (build 19041) or higher to run.\r\nConsider upgrade your Windows system.",
+                          SimpleLocalizerBaseGeneratedHelper.Localized?.UnsupportedOSPrompt() ?? "Sorry, projectFrameCut requires Windows 10 2004 / LTSC 2021 (build 19041) or higher to run.\r\nConsider upgrade your Windows system.",
                         "projectFrameCut",
                         0x10 | 0x4);
                     if (opt == 6)
@@ -44,6 +49,16 @@ namespace projectFrameCut.WinUI
                             UseShellExecute = true
                         });
                     }
+                    return;
+                }
+                if (Services.AdminServices.IsRunningAsAdministrator())
+                {
+
+                    _ = MessageBox(IntPtr.Zero,
+                        SimpleLocalizerBaseGeneratedHelper.Localized.AdminPrompt() ?? "Sorry, projectFrameCut does not support running with administrator privileges. Reboot the app in a context which is without administrator privileges.",
+                        "projectFrameCut",
+                        0x10);
+                    Environment.Exit(-1);
                     return;
                 }
                 try
@@ -300,6 +315,29 @@ Current directory: {Environment.CurrentDirectory}
 
                 Environment.FailFast(logMessage, ex);
                 Environment.Exit(ex.HResult);
+            }
+        }
+
+        public static void RebootApp()
+        {
+            string path = "pjfc:";
+            var script =
+$$"""
+
+Clear-Host;Start-Process "{{path}}";exit
+
+""";
+            var proc = new Process();
+            proc.StartInfo.FileName = "powershell.exe";
+            proc.StartInfo.UseShellExecute = false;
+            proc.StartInfo.RedirectStandardInput = true;
+            proc.StartInfo.CreateNoWindow = true;
+            proc.Start();
+            var procWriter = proc.StandardInput;
+            if (procWriter != null)
+            {
+                procWriter.AutoFlush = true;
+                procWriter.WriteLine(script);
             }
         }
 

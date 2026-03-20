@@ -108,26 +108,29 @@ namespace projectFrameCut.DraftStuff
                     Content = BuildTimingTab(clip, handler)
                 });
             }
-            t.TabItems.Add(new TabbedViewItem
-            {
-                Header = PPLocalizedResources.Tabs_Effect,
-                Content = await BuildEffectTab(clip, handler)
-            });
-            if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"))
+            if (clip.ClipType != ClipMode.MarkingClip)
             {
                 t.TabItems.Add(new TabbedViewItem
                 {
-                    Header = PPLocalizedResources.Tabs_Effect_Classic,
-                    Content = BuildClassicEffectTab(clip, handler)
+                    Header = PPLocalizedResources.Tabs_Effect,
+                    Content = await BuildEffectTab(clip, handler)
                 });
-            }
-            if (!clip.isInfiniteLength)
-            {
-                t.TabItems.Add(new TabbedViewItem
+                if (SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"))
                 {
-                    Header = PPLocalizedResources.Tabs_SpeedRatio,
-                    Content = BuildSpeedAndRatioTab(clip, handler)
-                });
+                    t.TabItems.Add(new TabbedViewItem
+                    {
+                        Header = PPLocalizedResources.Tabs_Effect_Classic,
+                        Content = BuildClassicEffectTab(clip, handler)
+                    });
+                }
+                if (!clip.isInfiniteLength)
+                {
+                    t.TabItems.Add(new TabbedViewItem
+                    {
+                        Header = PPLocalizedResources.Tabs_SpeedRatio,
+                        Content = BuildSpeedAndRatioTab(clip, handler)
+                    });
+                }
             }
 
             return t;
@@ -2033,6 +2036,20 @@ namespace projectFrameCut.DraftStuff
 
         private View BuildTimingTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
+            static bool ReadExtendToWholeDraft(ClipElementUI c)
+            {
+                if (c.ExtraData is null) return false;
+                if (!c.ExtraData.TryGetValue("ExtendToWholeDraft", out var raw) || raw is null) return false;
+                if (raw is bool b) return b;
+                if (raw is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.True) return true;
+                    if (je.ValueKind == JsonValueKind.False) return false;
+                    if (je.ValueKind == JsonValueKind.String && bool.TryParse(je.GetString(), out var parsed)) return parsed;
+                }
+                return bool.TryParse(raw.ToString(), out var fallback) && fallback;
+            }
+
             float fps = page.ProjectInfo.TargetFrameRate;
             var stack = new VerticalStackLayout { Spacing = 8, Padding = new Thickness(8) };
 
@@ -2122,6 +2139,7 @@ namespace projectFrameCut.DraftStuff
                     ? clip.lengthInFrame
                     : page.PixelToFrame(clip.origLength > 0 ? clip.origLength : 300d);
 
+
                 stack.Children.Add(new Label
                 {
                     Text = PPLocalizedResources.Timing_InfLength_Input,
@@ -2173,6 +2191,72 @@ namespace projectFrameCut.DraftStuff
                 stack.Children.Add(lengthEntry);
                 stack.Children.Add(secHintLabel);
                 stack.Children.Add(applyBtn);
+            }
+
+            if ((clip.origTrack ?? -1) >= DraftPage.SubTrackOffset)
+            {
+                bool isExtended = ReadExtendToWholeDraft(clip);
+                bool hasOtherClipsInTrack = page.Clips.Values.Any(c =>
+                    c is not null
+                    && c.Id != clip.Id
+                    && c.ShouldDisplayInUI
+                    && !string.IsNullOrWhiteSpace(c.Id)
+                    && !c.Id.StartsWith("ghost_")
+                    && !c.Id.StartsWith("shadow_")
+                    && c.origTrack == clip.origTrack);
+
+                stack.Children.Add(new BoxView
+                {
+                    HeightRequest = 1,
+                    Color = Colors.White.WithAlpha(0.08f),
+                    Margin = new Thickness(0, 8, 0, 2)
+                });
+
+                var extendSwitch = new Switch
+                {
+                    IsToggled = isExtended,
+                    HorizontalOptions = LayoutOptions.End,
+                    VerticalOptions = LayoutOptions.Center
+                };
+
+                extendSwitch.Toggled += (s, e) =>
+                {
+                    clip.ExtraData ??= new Dictionary<string, object>();
+                    clip.ExtraData["ExtendToWholeDraft"] = e.Value;
+                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("ExtendToWholeDraft", e.Value, isExtended));
+                    isExtended = e.Value;
+                };
+
+                var row = new Grid
+                {
+                    ColumnDefinitions =
+                    {
+                        new ColumnDefinition(GridLength.Star),
+                        new ColumnDefinition(GridLength.Auto)
+                    },
+                    ColumnSpacing = 8,
+                    Margin = new Thickness(0, 4, 0, 0)
+                };
+
+                row.Add(new Label
+                {
+                    Text = "延长到整个项目",
+                    FontSize = 13,
+                    TextColor = Colors.White,
+                    VerticalOptions = LayoutOptions.Center
+                }, 0, 0);
+                row.Add(extendSwitch, 1, 0);
+
+                stack.Children.Add(row);
+
+                stack.Children.Add(new Label
+                {
+                    Text = hasOtherClipsInTrack
+                        ? "当前辅轨道存在多个片段，无法启用该选项。"
+                        : "启用后该辅轨道片段将作用于整个项目时长。",
+                    FontSize = 11,
+                    TextColor = hasOtherClipsInTrack ? Colors.Orange : Color.FromArgb("#AAAAAA")
+                });
             }
 
             return new ScrollView { Content = stack };

@@ -203,7 +203,7 @@
                         FontSize="24"
                         Text="{Binding AIPrompt, Mode=TwoWay}"
                         BackgroundColor="{AppThemeBinding Dark=Black,Light=White}"
-                        Margin="0,0,4,0"/>
+                        Margin="0,4,4,0"/>
                 <HorizontalStackLayout>
                     <Label Text="{l:Localized Key=DraftPage_AddClipView_AIGC_Acknowledge1}" FontSize="12" TextColor="#f0ffffff" />
                     <Label Text="{l:Localized Key=DraftPage_AddClipView_AIGC_Acknowledge2}" FontSize="12" FontAttributes="Bold" TextColor="#ffff00"  />
@@ -294,7 +294,30 @@
         </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddTransform}" Tag="Transform" x:Name="TransformTab" x:FieldModifier="public">
             <Grid RowDefinitions="Auto,Auto,*">
-                <Border Grid.Row="0"
+                 <Border Grid.Row="0"
+                         IsEnabled="{Binding IsGeneratingAITransition, Converter={toolkit:InvertedBoolConverter}}"
+                         BackgroundColor="{AppThemeBinding Light=#E8F4FD, Dark=#1A3A5C}"
+                         Padding="12,8"
+                         Margin="8,8,8,-4 "
+                         StrokeThickness="0"
+                         StrokeShape="RoundRectangle 6">
+                     <Grid>
+                         <Label Text="{Binding TransformAddHintText}"
+                                FontSize="12"
+                                TextColor="{AppThemeBinding Light=#1A5276, Dark=#85C1E9}"/>
+                         <Button IsVisible="{x:OnIdiom Phone=true, Default=false}"
+                                 IsEnabled="{Binding IsDraftSelectedAnyClip}"
+                                 Background="{Binding IsSideDetermined, Converter={StaticResource IsValidConverter}}"
+                                 Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_RenderPreview}"              
+                                 Command="{Binding GenerateTransformPreviewCommand}"
+                                 HorizontalOptions="{Binding IsDraftSelectedAnyClip, Converter={toolkit:BoolToObjectConverter FalseObject=End, TrueObject=Start}}"
+                                 VerticalOptions="Center"
+                                 Margin="8,0,0,0"
+                                 WidthRequest="120"
+                                 HeightRequest="34" />
+                     </Grid>
+                 </Border>
+                <Border Grid.Row="1"
                         BackgroundColor="{AppThemeBinding Light=#FFF8E1, Dark=#3E2723}"
                         Padding="12,8"
                         Margin="8,8,8,4"
@@ -392,29 +415,7 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <Border Grid.Row="1"
-                        IsEnabled="{Binding IsGeneratingAITransition, Converter={toolkit:InvertedBoolConverter}}"
-                        BackgroundColor="{AppThemeBinding Light=#E8F4FD, Dark=#1A3A5C}"
-                        Padding="12,8"
-                        Margin="8,8,8,4"
-                        StrokeThickness="0"
-                        StrokeShape="RoundRectangle 6">
-                    <Grid>
-                        <Label Text="{Binding TransformAddHintText}"
-                               FontSize="12"
-                               TextColor="{AppThemeBinding Light=#1A5276, Dark=#85C1E9}"/>
-                        <Button IsVisible="{x:OnIdiom Phone=true, Default=false}"
-                                IsEnabled="{Binding IsDraftSelectedAnyClip}"
-                                Background="{Binding IsSideDetermined, Converter={StaticResource IsValidConverter}}"
-                                Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_RenderPreview}"              
-                                Command="{Binding GenerateTransformPreviewCommand}"
-                                HorizontalOptions="{Binding IsDraftSelectedAnyClip, Converter={toolkit:BoolToObjectConverter FalseObject=End, TrueObject=Start}}"
-                                VerticalOptions="Center"
-                                Margin="8,0,0,0"
-                                WidthRequest="120"
-                                HeightRequest="34" />
-                    </Grid>
-                </Border>
+               
 
                 <CollectionView x:Name="TransformCollectionView"
                                 Grid.Row="2"

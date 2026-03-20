@@ -80,6 +80,7 @@ namespace projectFrameCut.Helper
                 }
                 return;
             }
+#if DEBUG
             if (args.Contains("--wait"))
             {
                 while (!Debugger.IsAttached)
@@ -87,6 +88,7 @@ namespace projectFrameCut.Helper
                     Thread.Sleep(500);
                 }
             }
+#endif
             SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
 
             if (args.Length > 1)
@@ -106,23 +108,28 @@ namespace projectFrameCut.Helper
                         return;
                 }
             }
-            if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.exe")))
+            Process.Start(new ProcessStartInfo
             {
-                var proc = new ProcessStartInfo
-                {
-                    FileName = Path.Combine(AppContext.BaseDirectory, "projectFrameCut.exe"),
-                    Arguments = args.Length > 0 ? string.Join(" ", args.Select(a => $"\"{a}\"")) : "",
-                };
-                Process.Start(proc);
-            }
-            else
-            {
-                _ = MessageBox(IntPtr.Zero,
-                     SimpleLocalizerBaseGeneratedHelper.Localized.CorruptedInstallPrompt(),
-                     AppTitle,
-                     0x10);
-                return;
-            }
+                FileName = "pjfc:",
+                UseShellExecute = true
+            });
+            //if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.exe")))
+            //{
+            //    var proc = new ProcessStartInfo
+            //    {
+            //        FileName = "pjfc:",
+            //        Arguments = args.Length > 0 ? string.Join(" ", args.Select(a => $"\"{a}\"")) : "",
+            //    };
+            //    Process.Start(proc);
+            //}
+            //else
+            //{
+            //    _ = MessageBox(IntPtr.Zero,
+            //         SimpleLocalizerBaseGeneratedHelper.Localized.CorruptedInstallPrompt(),
+            //         AppTitle,
+            //         0x10);
+            //    return;
+            //}
 
 
 
