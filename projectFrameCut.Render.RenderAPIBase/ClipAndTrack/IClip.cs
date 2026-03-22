@@ -94,7 +94,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <summary>
         /// The actual effects applied to this clip.
         /// </summary>
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
 
         /// <summary>
         /// Get the path of the source file for this clip. May be null for some kind of clips.

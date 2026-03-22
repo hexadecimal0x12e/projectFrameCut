@@ -33,7 +33,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string? FilePath { get; set; }
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
 
@@ -100,7 +100,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
 
         public PhotoClip()
         {
@@ -113,7 +113,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         {
             if (FilePath is null) throw new NullReferenceException($"PhotoClip {Id}'s source path is null.");
             source = targetPPB == 16 ? new Picture16bpp(FilePath) : new Picture8bpp(FilePath);
-            source.Disposed = null;
+            source.CanBeDisposed = false;
             source.ProcessStack = new List<PictureProcessStack>
             {
                 new PictureProcessStack
@@ -155,7 +155,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
         public bool NeedFilePath => false;
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
@@ -223,7 +223,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
         public bool NeedFilePath => false;
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
@@ -243,9 +243,13 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
         {
             Image<Rgba64> canvas = new(targetWidth, targetHeight);
+            var entriesToRender = ResolveTextEntriesForRender();
 
-            foreach (var entry in TextEntries)
+            foreach (var entry in entriesToRender)
             {
+                if (string.IsNullOrEmpty(entry.text))
+                    continue;
+
                 Font font;
                 if (GetFont().TryGet(entry.fontFamily, out var family))
                 {
@@ -352,7 +356,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
                         StepUsed = null,
                         Properties = new Dictionary<string, object>
                         {
-                            { "TextEntries", JsonSerializer.Serialize(TextEntries, JsonSerializerOptions.Web) },
+                            { "TextEntries", JsonSerializer.Serialize(entriesToRender, JsonSerializerOptions.Web) },
                             { "FontPath", FontPath }
                         }
                     }
@@ -408,6 +412,45 @@ namespace projectFrameCut.Render.ClipsAndTracks
             hasGetFontCache = true;
             return fontsCache;
 
+        }
+
+        private IReadOnlyList<TextClipEntry> ResolveTextEntriesForRender()
+        {
+            if (ExtraData?.TryGetValue("TextEntries", out var rawEntries) == true)
+            {
+                if (rawEntries is List<TextClipEntry> list && list.Count > 0)
+                    return list;
+
+                if (rawEntries is JsonElement je)
+                {
+                    try
+                    {
+                        var parsed = je.Deserialize<List<TextClipEntry>>();
+                        if (parsed is { Count: > 0 })
+                            return parsed;
+                    }
+                    catch
+                    {
+                        // fall back to TextEntries
+                    }
+                }
+
+                if (rawEntries is string json && !string.IsNullOrWhiteSpace(json))
+                {
+                    try
+                    {
+                        var parsed = JsonSerializer.Deserialize<List<TextClipEntry>>(json);
+                        if (parsed is { Count: > 0 })
+                            return parsed;
+                    }
+                    catch
+                    {
+                        // fall back to TextEntries
+                    }
+                }
+            }
+
+            return TextEntries;
         }
 
         /// <summary>
@@ -522,7 +565,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
         public string? FilePath { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }

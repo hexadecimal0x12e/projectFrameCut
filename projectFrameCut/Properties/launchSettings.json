@@ -4,6 +4,11 @@
       "commandName": "MsixPackage",
       "commandLineArgs": "--noSplash",
       "nativeDebugging": false
+    },
+    "Windows Machine Unpackaged": {
+      "commandName": "Project",
+      "commandLineArgs": "--noSplash",
+      "nativeDebugging": false
     }
   }
 }

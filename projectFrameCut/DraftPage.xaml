@@ -235,34 +235,31 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Grid Grid.Column="0" x:Name="LeftMenuBar" ColumnSpacing="0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Button Grid.Column="0" x:Name="AddClip" IsVisible="{Binding _ShouldShowClipMoveControlInCenterInfoBar}"  FontFamily="Icons" Text="&#xe145;" FontSize="24" ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" SemanticProperties.Description="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" Clicked="AddClip_Clicked" Margin="2,0,0,0" />
-                    <Button Grid.Column="1" x:Name="AssetPanelButton" IsVisible="{Binding _ShouldShowClipMoveControlInCenterInfoBar}"  Text="&#xe413;" FontSize="24"  FontFamily="Icons" ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_Asset}" SemanticProperties.Description="{l:Localized Key=DraftPage_CenterMenuBar_Asset}" Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
-                   <!-- <Button Grid.Column="2" x:Name="SpiltButton" Text="&#xf1f8;" FontSize="24"  FontFamily="Icons" ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_Spilt}" IsEnabled="{Binding SelectedAnyClip}" Margin="8,0,0,0" Clicked="Split_Clicked"/> -->
-                    <Label Grid.Column="3" x:Name="LeftInfoLabel"  Text="" FontSize="12" Margin="8,0,0,0" VerticalOptions="Center" HorizontalOptions="Fill" LineBreakMode="CharacterWrap"     />
-                </Grid>
+                <HorizontalStackLayout Grid.Column="0" x:Name="LeftMenuBar">
 
-                <HorizontalStackLayout x:Name="PlayingControlLayout" Grid.Column="1" HorizontalOptions="Center">
-                    <HorizontalStackLayout IsVisible="{Binding SelectedAnyClip, Converter={toolkit:InvertedBoolConverter}}">
-                        <Button x:Name="PlayPauseButton" Text="&#xe037;" FontFamily="Icons" FontSize="16" Clicked="PlayPauseButton_Clicked"  />
-                        <Label x:Name="CurrentPlayheadLabel" Text="00:00/??:??" Margin="8,0,0,0" VerticalOptions="Center"></Label>
-
-                    </HorizontalStackLayout>
-                    <HorizontalStackLayout x:Name="CenterControlBar" IsVisible="{Binding SelectedAnyClip}">
-                        <Button Text="&#xe8b8;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding ShowClipInfoPanelCommand}" IsVisible="{Binding UseCompactLayout}" IsEnabled="{Binding MultiSelectEnabled, Converter={toolkit:InvertedBoolConverter}}"  SemanticProperties.Description="{l:Localized Key=PropertyPanel}" ToolTipProperties.Text="{l:Localized Key=PropertyPanel}" />
+                    <Button x:Name="AddClip" IsVisible="{Binding _ShouldShowClipMoveControlInCenterInfoBar}"  FontFamily="Icons" Text="&#xe145;" FontSize="24" ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" SemanticProperties.Description="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" Clicked="AddClip_Clicked" Margin="2,0,0,0" />
+                    <Button x:Name="AssetPanelButton" IsVisible="{Binding _ShouldShowClipMoveControlInCenterInfoBar}"  Text="&#xe413;" FontSize="24"  FontFamily="Icons" ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_Asset}" SemanticProperties.Description="{l:Localized Key=DraftPage_CenterMenuBar_Asset}" Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
+                    <HorizontalStackLayout IsEnabled="{Binding SelectedAnyClip}" IsVisible="{Binding UnNullUseCompactLayout, Converter={toolkit:InvertedBoolConverter}}"  HorizontalOptions="{Binding UnNullUseCompactLayout, Converter={toolkit:BoolToObjectConverter TrueObject=End, FalseObject=Start}}" Margin="{Binding UnNullUseCompactLayout, Converter={toolkit:BoolToObjectConverter TrueObject='0,0,0,0', FalseObject='8,0,0,0'}}">
+                        <BoxView WidthRequest="1" Margin="8,0,4,0" BackgroundColor="#80aaaaaa" />
                         <Button Text="&#xf71e;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding MoveCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" />
                         <Button Text="&#xf1f8;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding SpiltCommand}" IsEnabled="{Binding MultiSelectEnabled, Converter={toolkit:InvertedBoolConverter}}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" />
                         <Button Text="&#xe14a;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding DeleteCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" />
-                        <BoxView WidthRequest="1" Margin="4,0,0,0" BackgroundColor="#80aaaaaa" IsVisible="{Binding UseCompactLayout}" />
-                        <Button Text="&#xe9d5;" FontSize="24" Margin="8,0,-4,0" FontFamily="Icons" Command="{Binding UnselectCommand}" IsVisible="{Binding UseCompactLayout}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" />
                     </HorizontalStackLayout>
+                    <Label x:Name="LeftInfoLabel"  Text="" FontSize="12" Margin="8,0,0,0" VerticalOptions="Center" HorizontalOptions="Fill" LineBreakMode="CharacterWrap" />
 
+                </HorizontalStackLayout>
+
+                <HorizontalStackLayout x:Name="PlayingControlLayout" Grid.Column="1" HorizontalOptions="Center" IsVisible="{Binding SelectedAnyClip, Converter={toolkit:InvertedBoolConverter}}">
+                    <Button x:Name="PlayPauseButton" Text="&#xe037;" FontFamily="Icons" FontSize="20" Clicked="PlayPauseButton_Clicked"  />
+                    <Label x:Name="CurrentPlayheadLabel" Text="00:00/??:??" Margin="8,0,0,0" VerticalOptions="Center"></Label>
+                </HorizontalStackLayout>
+                <HorizontalStackLayout Grid.Column="9" x:Name="CenterCompactControlGrid" IsEnabled="{Binding SelectedAnyClip}" IsVisible="{Binding _ShouldShowCenterCompactControlGrid}">
+                    <Button Text="&#xe8b8;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding ShowClipInfoPanelCommand}" IsVisible="{Binding UnNullUseCompactLayout}" IsEnabled="{Binding MultiSelectEnabled, Converter={toolkit:InvertedBoolConverter}}"  SemanticProperties.Description="{l:Localized Key=PropertyPanel}" ToolTipProperties.Text="{l:Localized Key=PropertyPanel}" />
+                    <Button Text="&#xf71e;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding MoveCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" />
+                    <Button Text="&#xf1f8;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding SpiltCommand}" IsEnabled="{Binding MultiSelectEnabled, Converter={toolkit:InvertedBoolConverter}}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" />
+                    <Button Text="&#xe14a;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding DeleteCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" />
+                    <BoxView WidthRequest="1" Margin="4,0,0,0" BackgroundColor="#80aaaaaa"  />
+                    <Button Text="&#xe9d5;" FontSize="24" Margin="8,0,8,0" FontFamily="Icons" Command="{Binding UnselectCommand}"  SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" />
                 </HorizontalStackLayout>
 
                 <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar" >

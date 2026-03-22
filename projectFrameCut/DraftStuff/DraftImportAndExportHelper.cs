@@ -2,6 +2,7 @@
 using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.ClipsAndTracks;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -13,6 +14,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using IPicture = projectFrameCut.Shared.IPicture;
 
@@ -311,6 +313,15 @@ namespace projectFrameCut.DraftStuff
         {
             var elements = (JsonSerializer.SerializeToElement(json).Deserialize<DraftStructureJSON>()?.Clips) ?? throw new NullReferenceException("Failed to cast ClipDraftDTOs to IClips."); //I don't want to write a lot of code to clone attributes from dto to IClip, it's too hard and may cause a lot of mystery bugs.
 
+            if(!elements.Any())
+            {
+                if (json.Clips.Any())
+                {
+                    throw new NullReferenceException("Failed to convert DTO to IClip, but the Clips array in JSON is not empty. This may indicate a problem with the JSON structure or the deserialization process.");
+                }
+                return Array.Empty<IClip>();
+            }
+
             var clipsList = new List<IClip>();
 
             foreach (var clip in elements.Cast<JsonElement>())
@@ -323,7 +334,7 @@ namespace projectFrameCut.DraftStuff
                     continue;
                 }
 
-                var clipInstance = PluginManager.CreateClip(clip);
+                var clipInstance = PluginManager.CreateClip(clip) ?? throw new NullReferenceException($"PluginManager.CreateClip(clip) failed to create clip for the specific clip.\r\n({JsonSerializer.Serialize(clip, new JsonSerializerOptions { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping})})");
                 if (clipInstance.FilePath?.StartsWith('$') ?? false)
                 {
                     try
@@ -355,6 +366,7 @@ namespace projectFrameCut.DraftStuff
                     }
                 }
                 if(InitAtLoad) clipInstance.ReInit(targetPPB ?? throw new NullReferenceException("You must provide a targetPPB."));
+                clipInstance.EffectsInstances = clipInstance?.Effects?.Select(e => PluginManager.CreateEffect(e, default))?.ToArray() ?? [];
                 clipsList.Add(clipInstance);
 
             }

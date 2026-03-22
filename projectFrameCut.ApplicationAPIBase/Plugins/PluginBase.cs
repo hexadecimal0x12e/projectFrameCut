@@ -41,9 +41,13 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         public Dictionary<string, Func<IEffectBundle>> EffectBundleProvider { get; }
 
         /// <summary>
-        /// Get a 
+        /// Get a helper for dynamic preview generation. The key of the dictionary is the type name of the clip or effect that the provider can generate preview for. The value is the provider itself.
         /// </summary>
-        public Dictionary<string, IClipDynamicPreviewProvider> DynamicPreviewProvider { get; }
+        public Dictionary<string, IClipDynamicPreviewProvider> ClipDynamicPreviewProvider { get; }
+        /// <summary>
+        /// Get a helper for dynamic preview generation for effects. The key of the dictionary is the type name of the effect that the provider can generate preview for. The value is the provider itself.
+        /// </summary>
+        public Dictionary<string, IEffectDynamicPreviewProvider> EffectDynamicPreviewProvider { get; }
 
 
         /// <summary>

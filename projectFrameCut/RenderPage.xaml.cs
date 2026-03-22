@@ -67,6 +67,8 @@ public partial class RenderPage : ContentPage
     private System.Timers.Timer? _logUpdateTimer;
     private readonly SemaphoreSlim _logSemaphore = new SemaphoreSlim(1, 1);
     private readonly SemaphoreSlim _previewUpdateSemaphore = new SemaphoreSlim(1, 1);
+    private ToolbarItem? _toggleLogToolbarItem;
+    private bool _isLogPanelVisible;
 
     private System.Timers.Timer? _screenSaverTimer;
     private System.Timers.Timer? _moveHintTimer;
@@ -97,6 +99,7 @@ public partial class RenderPage : ContentPage
         catch { }
         BindingContext = vmDefault;
         InitializeLogTimer();
+        InitializeLogPanel();
         InitializeScreenSaverTimer();
         ScreenSaverOverlay.InputTransparent = true;
         ScreenSaverOverlay.CascadeInputTransparent = true;
@@ -136,6 +139,7 @@ public partial class RenderPage : ContentPage
         }
         if (!SettingsManager.IsSettingExists("accel_enableMultiAccel")) SettingsManager.WriteSetting("accel_enableMultiAccel", "true");
         InitializeLogTimer();
+        InitializeLogPanel();
         InitializeScreenSaverTimer();
 
 #if ANDROID
@@ -151,6 +155,73 @@ public partial class RenderPage : ContentPage
         _logUpdateTimer = new System.Timers.Timer(800);
         _logUpdateTimer.Elapsed += async (s, e) => await FlushLogQueue();
         _logUpdateTimer.AutoReset = true;
+    }
+
+    private void InitializeLogPanel()
+    {
+        SetLogPanelVisible(false);
+
+        _toggleLogToolbarItem = new ToolbarItem
+        {
+            Order = ToolbarItemOrder.Secondary
+        };
+        _toggleLogToolbarItem.Clicked += ToggleLogPanel_Clicked;
+        ToolbarItems.Add(_toggleLogToolbarItem);
+        UpdateLogPanelToggleText();
+    }
+
+    private void ToggleLogPanel_Clicked(object? sender, EventArgs e)
+    {
+        SetLogPanelVisible(!_isLogPanelVisible);
+    }
+
+    private void SetLogPanelVisible(bool visible)
+    {
+        _isLogPanelVisible = visible;
+        LoggingBox.IsVisible = visible;
+        LoggingBox.HeightRequest = visible ? -1 : 0;
+        if (LoggingBox.Parent is Microsoft.Maui.Controls.Grid progressGrid && progressGrid.RowDefinitions.Count > 4)
+        {
+            progressGrid.RowDefinitions[4].Height = visible ? GridLength.Star : new GridLength(0);
+        }
+        UpdateLogPanelToggleText();
+        UpdateLogRefreshState();
+
+        if (visible)
+        {
+            _ = FlushLogQueue();
+        }
+    }
+
+    private void UpdateLogPanelToggleText()
+    {
+        var text = _isLogPanelVisible ? Localized.RenderPage_HideLogs : Localized.RenderPage_ShowLogs;
+        if (_toggleLogToolbarItem is not null)
+        {
+            _toggleLogToolbarItem.Text = text;
+        }
+
+        if (ToggleLogPanelButton is not null)
+        {
+            ToggleLogPanelButton.Text = text;
+        }
+    }
+
+    private void UpdateLogRefreshState()
+    {
+        if (_logUpdateTimer is null)
+        {
+            return;
+        }
+
+        if (running && _isLogPanelVisible)
+        {
+            _logUpdateTimer.Start();
+        }
+        else
+        {
+            _logUpdateTimer.Stop();
+        }
     }
 
     private void InitializeScreenSaverTimer()
@@ -220,7 +291,7 @@ public partial class RenderPage : ContentPage
 
     private async Task FlushLogQueue()
     {
-        if (_logQueue.IsEmpty) return;
+        if (!_isLogPanelVisible || _logQueue.IsEmpty) return;
         await _logSemaphore.WaitAsync();
         try
         {
@@ -261,7 +332,7 @@ public partial class RenderPage : ContentPage
     {
         if (string.IsNullOrWhiteSpace(_workingPath))
         {
-            await DisplayAlert(Localized._Info, Localized.RenderPage_NoDraft, Localized._OK);
+            await DisplayAlertAsync(Localized._Info, Localized.RenderPage_NoDraft, Localized._OK);
         }
     }
     #region rendering
@@ -291,7 +362,7 @@ public partial class RenderPage : ContentPage
             _logBuffer.Clear();
             _logQueue.Clear();
             LoggingBox.Text = string.Empty;
-            _logUpdateTimer?.Start();
+            UpdateLogRefreshState();
             if (!SettingsManager.IsSettingExists("render_EnableScreenSaver"))
             {
 #if ANDROID || IOS //oled screen, avoid burn-in
@@ -432,6 +503,7 @@ public partial class RenderPage : ContentPage
 
                 running = false;
                 CancelRender.IsEnabled = false;
+                UpdateLogRefreshState();
 
 
                 try
@@ -588,7 +660,7 @@ public partial class RenderPage : ContentPage
 
             if (draftSrc.Duration <= 1)
             {
-                await DisplayAlertAsync(Localized._Info, "Draft invalid", Localized._OK);
+                await DisplayAlertAsync(Localized._Info, "No clips in the draft.", Localized._OK);
                 return;
             }
 
@@ -639,19 +711,15 @@ public partial class RenderPage : ContentPage
 
             renderer.OnProgressChanged += (p, etr) =>
             {
+                string fpsStr = renderer.CurrentFps > 0 ? $"{renderer.CurrentFps:n2}" : "--";
+                var timeStr = etr.TotalSeconds >= 5 ? (etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss")) : "--";
                 Dispatcher.Dispatch(async () =>
                 {
-                    string timeStr = "";
-                    if (etr.TotalSeconds > 0)
-                    {
-                        timeStr = (etr.TotalHours >= 1 ? etr.ToString(@"hh\:mm\:ss") : etr.ToString(@"mm\:ss"));
-                        SubProgLabel.Text = $"{_currentSubProgText} ({timeStr})";
-                    }
                     await SubProgress.ProgressTo(p, 250, Easing.Linear);
-
+                    SubProgLabel.Text = $"{_currentSubProgText} ({Localized.RenderPage_LongStat(p, timeStr, fpsStr)})";
                     if (ScreenSaverOverlay.IsVisible)
                     {
-                        HintLabel.Text = $"{Localized.RenderPage_ClickToShowUI}{Environment.NewLine}{Localized.RenderPage_Stat(p, timeStr)}";
+                        HintLabel.Text = $"{Localized.RenderPage_ClickToShowUI}{Environment.NewLine}{Localized.RenderPage_Stat(p, timeStr)} | {fpsStr}";
                     }
                 });
             };
@@ -977,6 +1045,7 @@ public partial class RenderPage : ContentPage
             MoreOptions.IsEnabled = true;
             PreviewLayout.IsVisible = false;
             running = false;
+            UpdateLogRefreshState();
         }
     }
 

@@ -15,9 +15,11 @@ namespace projectFrameCut.Render.Rendering
     {
         private const int DefaultChunkSampleCount = 40960;
 
-        public AudioWriterBase<T> Writer { get; init; }
-        public IClip[] Clips { get; init; }
+        public required AudioWriterBase<T> Writer { get; init; }
+        public required IClip[] Clips { get; init; }
         public ISoundTrack[]? SoundTracks { get; init; }
+        public uint StartFrame { get; set; } = 0;
+        public uint Duration { get; set; } = uint.MaxValue;
         public event Action<double, TimeSpan>? OnProgressChanged;
         public bool LogState = false;
 
@@ -38,7 +40,6 @@ namespace projectFrameCut.Render.Rendering
             if (chunkSampleCount <= 0) throw new ArgumentOutOfRangeException(nameof(chunkSampleCount));
 
             var (contexts, totalSamples) = BuildAudioContexts(videoFramerate, samplerate);
-            var sampleConverter = GetDefaultConverter<T>();
 
             try
             {
@@ -105,6 +106,12 @@ namespace projectFrameCut.Render.Rendering
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(videoFramerate);
             ArgumentOutOfRangeException.ThrowIfNegativeOrZero(outputSampleRate);
 
+            int renderStartSample = FrameToSample(StartFrame, videoFramerate, outputSampleRate);
+            int? requestedDurationSamples = Duration == uint.MaxValue ? null : FrameToSample(Duration, videoFramerate, outputSampleRate);
+            int renderEndSample = requestedDurationSamples is null
+                ? int.MaxValue
+                : SafeAdd(renderStartSample, requestedDurationSamples.Value);
+
             Dictionary<string, ISoundTrack> trackMap = new();
             if (SoundTracks != null)
             {
@@ -115,7 +122,7 @@ namespace projectFrameCut.Render.Rendering
             }
 
             List<AudioClipContext> contexts = new();
-            int totalSamples = 0;
+            int totalSamples = requestedDurationSamples ?? 0;
 
             foreach (var clip in Clips)
             {
@@ -173,20 +180,30 @@ namespace projectFrameCut.Render.Rendering
                     .ToArray();
 
                 int clipEndSample = clipStartSample + clipDurationSamples;
+                int overlapStartSample = Math.Max(clipStartSample, renderStartSample);
+                int overlapEndSample = Math.Min(clipEndSample, renderEndSample);
+                if (overlapEndSample <= overlapStartSample)
+                {
+                    source.Dispose();
+                    continue;
+                }
+
+                int localSampleOffset = overlapStartSample - clipStartSample;
                 contexts.Add(new AudioClipContext
                 {
                     Clip = clip,
                     SoundTrack = bindedTrack,
                     Source = source,
-                    TimelineStartSample = clipStartSample,
-                    TimelineEndSample = clipEndSample,
+                    TimelineStartSample = overlapStartSample - renderStartSample,
+                    TimelineEndSample = overlapEndSample - renderStartSample,
                     SourceStartSample = sourceStartSample,
+                    LocalSampleOffset = localSampleOffset,
                     Volume = volume,
                     Ratio = ratio,
                     Effects = effects
                 });
 
-                totalSamples = Math.Max(totalSamples, clipEndSample);
+                totalSamples = Math.Max(totalSamples, overlapEndSample - renderStartSample);
             }
 
             if (SoundTracks != null)
@@ -235,20 +252,30 @@ namespace projectFrameCut.Render.Rendering
                         .ToArray();
 
                     int trackEndSample = trackStartSample + trackDurationSamples;
+                    int overlapStartSample = Math.Max(trackStartSample, renderStartSample);
+                    int overlapEndSample = Math.Min(trackEndSample, renderEndSample);
+                    if (overlapEndSample <= overlapStartSample)
+                    {
+                        source.Dispose();
+                        continue;
+                    }
+
+                    int localSampleOffset = overlapStartSample - trackStartSample;
                     contexts.Add(new AudioClipContext
                     {
                         Clip = null,
                         SoundTrack = track,
                         Source = source,
-                        TimelineStartSample = trackStartSample,
-                        TimelineEndSample = trackEndSample,
+                        TimelineStartSample = overlapStartSample - renderStartSample,
+                        TimelineEndSample = overlapEndSample - renderStartSample,
                         SourceStartSample = sourceStartSample,
+                        LocalSampleOffset = localSampleOffset,
                         Volume = track.Volume,
                         Ratio = ratio,
                         Effects = effects
                     });
 
-                    totalSamples = Math.Max(totalSamples, trackEndSample);
+                    totalSamples = Math.Max(totalSamples, overlapEndSample - renderStartSample);
                 }
             }
 
@@ -276,9 +303,10 @@ namespace projectFrameCut.Render.Rendering
             int clipLocalOffset = overlapStart - context.TimelineStartSample;
             int localChunkOffset = overlapStart - chunkStart;
             int overlapLength = overlapEnd - overlapStart;
+            int clipLocalOffsetToSource = context.LocalSampleOffset + clipLocalOffset;
 
-            FloatAudioSamples clipWindow = ReadClipWindowToFloat(context, clipLocalOffset, overlapLength, outputSampleRate, outputChannels);
-            clipWindow = ApplyAudioEffects(context, clipWindow, (uint)clipLocalOffset, globalBindableCache);
+            FloatAudioSamples clipWindow = ReadClipWindowToFloat(context, clipLocalOffsetToSource, overlapLength, outputSampleRate, outputChannels);
+            clipWindow = ApplyAudioEffects(context, clipWindow, (uint)clipLocalOffsetToSource, globalBindableCache);
 
             for (int c = 0; c < outputChannels; c++)
             {
@@ -478,6 +506,17 @@ namespace projectFrameCut.Render.Rendering
             return (int)Math.Max(0, Math.Round(frame / fps * sampleRate));
         }
 
+        private static int SafeAdd(int left, int right)
+        {
+            if (right <= 0)
+            {
+                return left;
+            }
+
+            long sum = (long)left + right;
+            return sum >= int.MaxValue ? int.MaxValue : (int)sum;
+        }
+
         private static float[][] CreateZeroChannels(int channels, int sampleCount)
         {
             float[][] result = new float[channels][];
@@ -577,34 +616,6 @@ namespace projectFrameCut.Render.Rendering
             throw new KeyNotFoundException($"Cached value with key '{key}' not found.");
         }
 
-        private static Func<float, T> GetDefaultConverter<T>()
-        {
-            if (typeof(T) == typeof(float))
-            {
-                return sample => (T)(object)sample;
-            }
-
-            if (typeof(T) == typeof(short))
-            {
-                return sample =>
-                {
-                    float clamped = Math.Clamp(sample, -1.0f, 1.0f);
-                    return (T)(object)(short)Math.Round(clamped * short.MaxValue);
-                };
-            }
-
-            if (typeof(T) == typeof(int))
-            {
-                return sample =>
-                {
-                    float clamped = Math.Clamp(sample, -1.0f, 1.0f);
-                    return (T)(object)(int)Math.Round(clamped * int.MaxValue);
-                };
-            }
-
-            return sample => (T)Convert.ChangeType(sample, typeof(T));
-        }
-
         private static void DisposeContexts(IEnumerable<AudioClipContext> contexts)
         {
             foreach (var context in contexts)
@@ -627,6 +638,7 @@ namespace projectFrameCut.Render.Rendering
             public int TimelineStartSample { get; init; }
             public int TimelineEndSample { get; init; }
             public int SourceStartSample { get; init; }
+            public int LocalSampleOffset { get; init; }
             public float Volume { get; init; }
             public float Ratio { get; init; }
             public IEffect[] Effects { get; init; } = Array.Empty<IEffect>();

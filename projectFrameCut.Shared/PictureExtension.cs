@@ -25,7 +25,7 @@ namespace projectFrameCut.Shared
         public static IPicture DeepCopy(this IPicture source)
         {
             if (source is null) throw new ArgumentNullException(nameof(source));
-            if (source.Disposed is not null && source.Disposed.Value) throw new ObjectDisposedException(nameof(source));
+            if (source.Disposed) throw new ObjectDisposedException(nameof(source));
             var sw = Stopwatch.StartNew();
             lock (source)
             {

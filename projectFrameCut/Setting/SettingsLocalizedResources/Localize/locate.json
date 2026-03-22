@@ -2102,6 +2102,14 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "\u5728\u6B64\u9875\u9762\u4E2D\uFF0C\u9664\u975E\u4F60\u4E3B\u52A8\u70B9\u51FB\u201C\u4FDD\u5B58\u201D\uFF0C\u5426\u5219\u6240\u6709\u7684\u66F4\u6539\u90FD\u4E0D\u4F1A\u751F\u6548\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
       }
     ],
     "en-US": [
@@ -4409,6 +4417,15 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -6711,6 +6728,15 @@
       {
         "Id": "Render_AudioComposeBufferSize",
         "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "Unset localization item:AISetting_ModelHint2()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9024,6 +9050,15 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -11327,6 +11362,15 @@
       {
         "Id": "Render_AudioComposeBufferSize",
         "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "Unset localization item:AISetting_ModelHint2()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13640,6 +13684,15 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -15943,6 +15996,15 @@
       {
         "Id": "Render_AudioComposeBufferSize",
         "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "Unset localization item:AISetting_ModelHint2()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18256,6 +18318,15 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "de-DE": [
@@ -20559,6 +20630,15 @@
       {
         "Id": "Render_AudioComposeBufferSize",
         "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "Unset localization item:AISetting_ModelHint2()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22872,6 +22952,15 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "it-IT": [
@@ -25175,6 +25264,15 @@
       {
         "Id": "Render_AudioComposeBufferSize",
         "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "Unset localization item:AISetting_ModelHint2()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -27488,6 +27586,15 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "pt-BR": [
@@ -29791,6 +29898,15 @@
       {
         "Id": "Render_AudioComposeBufferSize",
         "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "Unset localization item:AISetting_ModelHint2()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -32104,6 +32220,15 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "tr-TR": [
@@ -34407,6 +34532,15 @@
       {
         "Id": "Render_AudioComposeBufferSize",
         "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AISetting_ModelHint2",
+        "Value": "Unset localization item:AISetting_ModelHint2()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

@@ -49,6 +49,13 @@ namespace projectFrameCut.AIAssistance
                         ImageModels = new() { "gpt-image-1.5", "chatgpt-image-latest" },
                         VideoModels = new() { "sora-2", "sora-2-pro" }
                     },
+                    new ModelProvider
+                    {
+                        Name = "Sora (OpenAI)",
+                        TextModels = new() { },
+                        ImageModels = new() { },
+                        VideoModels = new() { "sora-2", "sora-2-pro" }
+                    },
                     //new ModelProvider
                     //{
                     //    Name = "Anthropic",

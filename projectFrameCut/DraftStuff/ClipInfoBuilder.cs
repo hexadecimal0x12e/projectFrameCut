@@ -100,7 +100,7 @@ namespace projectFrameCut.DraftStuff
                     Content = await BuildTextOptionTab(clip, handler)
                 });
             }
-            if (clip.LeftHandle?.IsVisible == true && clip.RightHandle?.IsVisible == true)
+            if (clip.isInfiniteLength || (clip.LeftHandle?.IsVisible == true && clip.RightHandle?.IsVisible == true))
             {
                 t.TabItems.Add(new TabbedViewItem
                 {
@@ -177,37 +177,84 @@ namespace projectFrameCut.DraftStuff
             .AddEntry("displayName", Localized.PropertyPanel_General_DisplayName, clip.DisplayName, clip.DisplayName)
             .AddCustomChild(PPLocalizedResources.General_DisplayColor, (invoker) =>
             {
+                string ToArgbHex(Color color)
+                {
+                    var a = (int)Math.Round(color.Alpha * 255);
+                    var r = (int)Math.Round(color.Red * 255);
+                    var g = (int)Math.Round(color.Green * 255);
+                    var b = (int)Math.Round(color.Blue * 255);
+                    return $"#{a:X2}{r:X2}{g:X2}{b:X2}";
+                }
+
                 var colorPreview = new BoxView
                 {
                     WidthRequest = 30,
                     HeightRequest = 30,
                     CornerRadius = 5,
                     Color = Color.FromArgb(currentColorHex),
-                    VerticalOptions = LayoutOptions.Center
+                    VerticalOptions = LayoutOptions.Center,
+                    HorizontalOptions = LayoutOptions.Start
                 };
 
-                var colorEntry = new Entry
+                var colorHexLabel = new Label
                 {
                     Text = currentColorHex,
-                    Placeholder = "#RRGGBB",
-                    WidthRequest = 100,
-                    VerticalOptions = LayoutOptions.Center
+                    WidthRequest = 108,
+                    VerticalOptions = LayoutOptions.Center,
+                    VerticalTextAlignment = TextAlignment.Center
                 };
 
-                colorEntry.TextChanged += (s, e) =>
+                bool isOpeningColorPicker = false;
+                var openPickerTap = new TapGestureRecognizer();
+                openPickerTap.Tapped += async (s, e) =>
                 {
+                    if (isOpeningColorPicker)
+                    {
+                        return;
+                    }
+
+                    isOpeningColorPicker = true;
                     try
                     {
-                        var color = Color.FromArgb(e.NewTextValue);
-                        colorPreview.Color = color;
-                    }
-                    catch { }
-                };
+                        var picker = new ColorPicker
+                        {
+                            SelectedColor = colorPreview.Color
+                        };
 
-                colorEntry.Unfocused += (s, e) =>
-                {
-                    invoker(colorEntry.Text);
+                        picker.SelectedColorChanged += (sender, selectedColor) =>
+                        {
+                            var hex = ToArgbHex(selectedColor);
+                            colorPreview.Color = selectedColor;
+                            colorHexLabel.Text = hex;
+                            invoker(hex);
+                        };
+
+                        var popupView = new VerticalStackLayout
+                        {
+                            Spacing = 10,
+                            Padding = new Thickness(10, 0),
+                            Children =
+                            {
+                                picker,
+                                new Button
+                                {
+                                    Text = Localized._Confirm,
+                                    Command = new Command(async () => await page.HidePopup(true))
+                                }
+                            }
+                        };
+
+                        await page.ShowAPopup(new ScrollView { Content = popupView }, mode: "dialog");
+                    }
+                    catch
+                    {
+                    }
+                    finally
+                    {
+                        isOpeningColorPicker = false;
+                    }
                 };
+                colorPreview.GestureRecognizers.Add(openPickerTap);
 
                 var resetButton = new Button
                 {
@@ -220,7 +267,7 @@ namespace projectFrameCut.DraftStuff
                 resetButton.Clicked += (s, e) =>
                 {
                     var defaultColor = GetDefaultColorHex(clip.ClipType);
-                    colorEntry.Text = defaultColor;
+                    colorHexLabel.Text = defaultColor;
                     colorPreview.Color = Color.FromArgb(defaultColor);
                     invoker(null!); // Reset to default
                 };
@@ -228,7 +275,7 @@ namespace projectFrameCut.DraftStuff
                 var layout = new HorizontalStackLayout
                 {
                     Spacing = 8,
-                    Children = { colorPreview, colorEntry, resetButton }
+                    Children = { colorPreview, colorHexLabel, resetButton }
                 };
 
                 return layout;
@@ -1023,43 +1070,43 @@ namespace projectFrameCut.DraftStuff
             if (clip.EffectBundles != null)
             {
                 var sortedBundles = SortEffectBundles(clip.EffectBundles);
-                foreach (var bundleData in sortedBundles)
+                for (int i = 0; i < sortedBundles.Count; i++)
                 {
-                    var bundleId = bundleData.Id;
+                    var bundleData = sortedBundles[i];
                     bundleData.Parameters ??= new();
-                    var param = EffectArgsHelper.ConvertElementDictToObjectDict(bundleData.Parameters, bundleData.ParametersType);
-
-                    var effectFactories = bundleData.Create();
-                    List<IEffect> effects = new();
-                    foreach (var item in effectFactories)
-                    {
-
-                        var impType = EffectHelper.DefaultImplementsType.GetValueOrDefault(item.TypeName, EffectImplementType.NotSpecified);
-                        if (item is IBindableEffectFactory be)
-                        {
-                            effects.Add(be.Build(impType, be.ID, be.BindedInputID, be.BindedInputIDs, param));
-                        }
-                        else
-                        {
-                            effects.Add(item.Build(impType, param));
-                        }
-                    }
-
-                    if (effects != null)
-                    {
-                        for (int i = 0; i < effects.Count; i++)
-                        {
-                            var effect = effects[i];
-                            effect.Name = $"EffectBundle {bundleData.TypeName}({bundleData.Id}) - Subeffect #{i}";
-                            effect.Enabled = bundleData.BindedOutputId != IEffectBundle.NoConnectionGUID;
-                            effect.Index = globalIndex++;
-                            effect.BindedEffectGroupID = bundleData.Id.ToString();
-                            string key = $"{bundleData.Id}_{i}";
-                            if (effect is not IBindableArgumentEffect) effect.Id = Guid.NewGuid().ToString();
-                            newEffects[key] = effect;
-                        }
-                    }
                 }
+                var bundleDict = sortedBundles.ToDictionary(b => b.Id, b => b);
+                var bundleParams = sortedBundles.ToDictionary(b => b.Id, bundleData => EffectArgsHelper.ConvertElementDictToObjectDict(bundleData.Parameters, bundleData.ParametersType));
+                var bundleFacts = sortedBundles.SelectMany(bundle => bundle.Create().Select(effect => (bundle, effect))).Select(c => (c.bundle.Id, c.effect));
+                var imps = EffectFactoryExtensions.DetermineEffectImplementTypes(bundleFacts.Select(c => c.effect).ToArray());
+                var subIdxByBundle = new Dictionary<Guid, int>();
+
+                for (int i = 0; i < bundleFacts.Count(); i++)
+                {
+                    var bundleId = bundleFacts.ElementAt(i).Id;
+                    var fact = bundleFacts.ElementAt(i).effect;
+                    var bundleData = bundleDict[bundleId];
+                    var impType = imps[i];
+                    IEffect effect;
+                    if (fact is IBindableEffectFactory be)
+                    {
+                        effect = be.Build(impType, be.ID, be.BindedInputID, be.BindedInputIDs, bundleParams[bundleId]);
+                    }
+                    else
+                    {
+                        effect = fact.Build(impType, bundleParams[bundleId]);
+                    }
+                    int subIdx = subIdxByBundle.ContainsKey(bundleId) ? subIdxByBundle[bundleId] : 0;
+                    subIdxByBundle[bundleId] = subIdx + 1;
+                    effect.Name = $"EffectBundle {bundleData.TypeName}({bundleData.Id}){Environment.NewLine} - Subeffect #{subIdx}";
+                    effect.Enabled = bundleData.BindedOutputId != IEffectBundle.NoConnectionGUID;
+                    effect.Index = globalIndex++;
+                    effect.BindedEffectGroupID = bundleData.Id.ToString();
+                    string key = $"{bundleData.Id}_{subIdx}";
+                    if (effect is not IBindableArgumentEffect) effect.Id = Guid.NewGuid().ToString();
+                    newEffects[key] = effect;
+                }
+
             }
             clip.Effects = newEffects
                 .Where(e => string.IsNullOrWhiteSpace(e.Value.BindedEffectGroupID)
@@ -1137,7 +1184,17 @@ namespace projectFrameCut.DraftStuff
                 yield break;
             }
 
-            if (IsValidInputDependency(bundle.BindedInputId)) yield return bundle.BindedInputId;
+            if (IsValidInputDependency(bundle.BindedInputId))
+            {
+                yield return bundle.BindedInputId;
+                yield break;
+            }
+
+            if (bundle.BindedInputIds is not null && bundle.BindedInputIds.Count > 0 && IsValidInputDependency(bundle.BindedInputIds[0]))
+            {
+                // DraftEffectBindingView may store single-input connections in BindedInputIds[0].
+                yield return bundle.BindedInputIds[0];
+            }
         }
 
         private static bool IsValidInputDependency(Guid id)
@@ -1226,7 +1283,12 @@ namespace projectFrameCut.DraftStuff
 
                         if (bundleInstance.InputAnchorsDisplayName is null)
                         {
-                            ppb.AddPicker($"Bundle|{bundleId}|InAnchor", $"Input anchor {bundleInstance.InputAnchorDisplayName}", clip.EffectBundles.Select(b => $"{b.Value.Name} ({b.Key})").Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetInputAnchorSelection(bundleInstance.BindedInputId));
+                            var selectedInAnchor = bundleInstance.BindedInputId;
+                            if (selectedInAnchor == IEffectBundle.NoConnectionGUID && bundleInstance.BindedInputIds is not null && bundleInstance.BindedInputIds.Count > 0)
+                            {
+                                selectedInAnchor = bundleInstance.BindedInputIds[0];
+                            }
+                            ppb.AddPicker($"Bundle|{bundleId}|InAnchor", $"Input anchor {bundleInstance.InputAnchorDisplayName}", clip.EffectBundles.Select(b => $"{b.Value.Name} ({b.Key})").Append(PPLocalizedResources.EffectBind_SourcePicture).Append(PPLocalizedResources.EffectBind_NoConnection).ToArray(), GetInputAnchorSelection(selectedInAnchor));
                         }
                         else
                         {
@@ -1366,6 +1428,17 @@ namespace projectFrameCut.DraftStuff
                                         if (TryParseAnchorSelection(e.Value?.ToString(), PPLocalizedResources.EffectBind_SourcePicture, IEffectBundle.InputAnchorGUID, out var inId))
                                         {
                                             inBundle.BindedInputId = inId;
+                                            if (inBundle.InputAnchorsDisplayName is null)
+                                            {
+                                                if (inBundle.BindedInputIds is null || inBundle.BindedInputIds.Count == 0)
+                                                {
+                                                    inBundle.BindedInputIds = [inId];
+                                                }
+                                                else
+                                                {
+                                                    inBundle.BindedInputIds[0] = inId;
+                                                }
+                                            }
                                             RebuildAllEffects(clip);
                                             handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                         }
@@ -1386,6 +1459,10 @@ namespace projectFrameCut.DraftStuff
                                                         insBundle.BindedInputIds = Enumerable.Repeat(IEffectBundle.NoConnectionGUID, insBundle.InputAnchorsDisplayName.Length).ToList();
                                                     }
                                                     insBundle.BindedInputIds[idx] = inIds;
+                                                    if (insBundle.InputAnchorsDisplayName.Length == 1 && idx == 0)
+                                                    {
+                                                        insBundle.BindedInputId = inIds;
+                                                    }
                                                     RebuildAllEffects(clip);
                                                     handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("__REFRESH_PANEL__", null, null));
                                                 }
@@ -2135,129 +2212,134 @@ namespace projectFrameCut.DraftStuff
             else
             {
                 // ── 无限长度：使用文本框手动输入 ────────────────────────────
-                uint initFrames = clip.lengthInFrame > 0
+                if (!clip.isInfiniteLength)
+                {
+                    uint initFrames = clip.lengthInFrame > 0
                     ? clip.lengthInFrame
                     : page.PixelToFrame(clip.origLength > 0 ? clip.origLength : 300d);
 
 
-                stack.Children.Add(new Label
-                {
-                    Text = PPLocalizedResources.Timing_InfLength_Input,
-                    FontSize = 13,
-                    TextColor = Colors.White,
-                    Margin = new Thickness(0, 12, 0, 0)
-                });
-
-                var lengthEntry = new Entry
-                {
-                    Text = initFrames.ToString(),
-                    Keyboard = Keyboard.Numeric,
-                    HorizontalOptions = LayoutOptions.Fill,
-                    Placeholder = "42"
-                };
-
-                // 实时秒数提示
-                var secHintLabel = new Label
-                {
-                    Text = fps > 0 ? $"≈ {initFrames / fps:F2}s" : string.Empty,
-                    FontSize = 11,
-                    TextColor = Color.FromArgb("#AAAAAA")
-                };
-                lengthEntry.TextChanged += (s, e) =>
-                {
-                    secHintLabel.Text = uint.TryParse(lengthEntry.Text, out var previewFrames) && fps > 0
-                        ? $"≈ {previewFrames / fps:F2}s"
-                        : string.Empty;
-                };
-
-                var applyBtn = new Button
-                {
-                    Text = Localized._Apply,
-                    HorizontalOptions = LayoutOptions.End,
-                    Margin = new Thickness(0, 6, 0, 0)
-                };
-                applyBtn.Clicked += (s, e) =>
-                {
-                    if (uint.TryParse(lengthEntry.Text, out var newLen) && newLen > 0)
+                    stack.Children.Add(new Label
                     {
-                        clip.lengthInFrame = newLen;
-                        double newPx = page.FrameToPixel(newLen);
-                        clip.Clip.WidthRequest = newPx;
-                        clip.origLength = newPx;
-                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("lengthInFrame", newLen, newLen));
-                    }
-                };
+                        Text = PPLocalizedResources.Timing_InfLength_Input,
+                        FontSize = 13,
+                        TextColor = Colors.White,
+                        Margin = new Thickness(0, 12, 0, 0)
+                    });
 
-                stack.Children.Add(lengthEntry);
-                stack.Children.Add(secHintLabel);
-                stack.Children.Add(applyBtn);
-            }
+                    var lengthEntry = new Entry
+                    {
+                        Text = initFrames.ToString(),
+                        Keyboard = Keyboard.Numeric,
+                        HorizontalOptions = LayoutOptions.Fill,
+                        Placeholder = "42"
+                    };
 
-            if ((clip.origTrack ?? -1) >= DraftPage.SubTrackOffset)
-            {
-                bool isExtended = ReadExtendToWholeDraft(clip);
-                bool hasOtherClipsInTrack = page.Clips.Values.Any(c =>
-                    c is not null
-                    && c.Id != clip.Id
-                    && c.ShouldDisplayInUI
-                    && !string.IsNullOrWhiteSpace(c.Id)
-                    && !c.Id.StartsWith("ghost_")
-                    && !c.Id.StartsWith("shadow_")
-                    && c.origTrack == clip.origTrack);
+                    // 实时秒数提示
+                    var secHintLabel = new Label
+                    {
+                        Text = fps > 0 ? $"≈ {initFrames / fps:F2}s" : string.Empty,
+                        FontSize = 11,
+                        TextColor = Color.FromArgb("#AAAAAA")
+                    };
+                    lengthEntry.TextChanged += (s, e) =>
+                    {
+                        secHintLabel.Text = uint.TryParse(lengthEntry.Text, out var previewFrames) && fps > 0
+                            ? $"≈ {previewFrames / fps:F2}s"
+                            : string.Empty;
+                    };
 
-                stack.Children.Add(new BoxView
+                    var applyBtn = new Button
+                    {
+                        Text = Localized._Apply,
+                        HorizontalOptions = LayoutOptions.End,
+                        Margin = new Thickness(0, 6, 0, 0)
+                    };
+                    applyBtn.Clicked += (s, e) =>
+                    {
+                        if (uint.TryParse(lengthEntry.Text, out var newLen) && newLen > 0)
+                        {
+                            clip.lengthInFrame = newLen;
+                            double newPx = page.FrameToPixel(newLen);
+                            clip.Clip.WidthRequest = newPx;
+                            clip.origLength = newPx;
+                            handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("lengthInFrame", newLen, newLen));
+                        }
+                    };
+
+                    stack.Children.Add(lengthEntry);
+                    stack.Children.Add(secHintLabel);
+                    stack.Children.Add(applyBtn);
+                }
+                else if ((clip.origTrack ?? -1) >= DraftPage.SubTrackOffset)
                 {
-                    HeightRequest = 1,
-                    Color = Colors.White.WithAlpha(0.08f),
-                    Margin = new Thickness(0, 8, 0, 2)
-                });
+                    bool isExtended = ReadExtendToWholeDraft(clip);
+                    bool hasOtherClipsInTrack = page.Clips.Values.Any(c =>
+                        c is not null
+                        && c.Id != clip.Id
+                        && c.ShouldDisplayInUI
+                        && !string.IsNullOrWhiteSpace(c.Id)
+                        && !c.Id.StartsWith("ghost_")
+                        && !c.Id.StartsWith("shadow_")
+                        && c.origTrack == clip.origTrack);
 
-                var extendSwitch = new Switch
-                {
-                    IsToggled = isExtended,
-                    HorizontalOptions = LayoutOptions.End,
-                    VerticalOptions = LayoutOptions.Center
-                };
+                    stack.Children.Add(new BoxView
+                    {
+                        HeightRequest = 1,
+                        Color = Colors.White.WithAlpha(0.08f),
+                        Margin = new Thickness(0, 8, 0, 2)
+                    });
 
-                extendSwitch.Toggled += (s, e) =>
-                {
-                    clip.ExtraData ??= new Dictionary<string, object>();
-                    clip.ExtraData["ExtendToWholeDraft"] = e.Value;
-                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("ExtendToWholeDraft", e.Value, isExtended));
-                    isExtended = e.Value;
-                };
+                    var extendSwitch = new Switch
+                    {
+                        IsToggled = isExtended,
+                        HorizontalOptions = LayoutOptions.End,
+                        VerticalOptions = LayoutOptions.Center
+                    };
 
-                var row = new Grid
-                {
-                    ColumnDefinitions =
+                    extendSwitch.Toggled += (s, e) =>
+                    {
+                        clip.ExtraData ??= new Dictionary<string, object>();
+                        clip.ExtraData["ExtendToWholeDraft"] = e.Value;
+                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("ExtendToWholeDraft", e.Value, isExtended));
+                        isExtended = e.Value;
+                    };
+
+                    var row = new Grid
+                    {
+                        ColumnDefinitions =
                     {
                         new ColumnDefinition(GridLength.Star),
                         new ColumnDefinition(GridLength.Auto)
                     },
-                    ColumnSpacing = 8,
-                    Margin = new Thickness(0, 4, 0, 0)
-                };
+                        ColumnSpacing = 8,
+                        Margin = new Thickness(0, 4, 0, 0)
+                    };
 
-                row.Add(new Label
-                {
-                    Text = "延长到整个项目",
-                    FontSize = 13,
-                    TextColor = Colors.White,
-                    VerticalOptions = LayoutOptions.Center
-                }, 0, 0);
-                row.Add(extendSwitch, 1, 0);
+                    row.Add(new Label
+                    {
+                        Text = PPLocalizedResources.Timing_InfLength_ExtendToWholeDraft,
+                        FontSize = 13,
+                        TextColor = Colors.White,
+                        VerticalOptions = LayoutOptions.Center,
+                        IsEnabled = !hasOtherClipsInTrack
+                    }, 0, 0);
+                    row.Add(extendSwitch, 1, 0);
 
-                stack.Children.Add(row);
+                    stack.Children.Add(row);
 
-                stack.Children.Add(new Label
-                {
-                    Text = hasOtherClipsInTrack
-                        ? "当前辅轨道存在多个片段，无法启用该选项。"
-                        : "启用后该辅轨道片段将作用于整个项目时长。",
-                    FontSize = 11,
-                    TextColor = hasOtherClipsInTrack ? Colors.Orange : Color.FromArgb("#AAAAAA")
-                });
+                    stack.Children.Add(new Label
+                    {
+                        Text = hasOtherClipsInTrack
+                            ? PPLocalizedResources.Timing_InfLength_ExtendToWholeDraft_NotAvailable
+                            : PPLocalizedResources.Timing_InfLength_ExtendToWholeDraft_Available,
+                        FontSize = 11,
+                        TextColor = hasOtherClipsInTrack ? Colors.Orange : Color.FromArgb("#AAAAAA")
+                    });
+                }
             }
+
+
 
             return new ScrollView { Content = stack };
         }

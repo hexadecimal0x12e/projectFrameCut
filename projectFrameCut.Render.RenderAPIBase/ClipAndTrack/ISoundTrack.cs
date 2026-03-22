@@ -93,7 +93,7 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <summary>
         /// The actual effects applied to this track.
         /// </summary>
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
 
         /// <summary>
         /// The ExtraData/Metadata from the <see cref="projectFrameCut.Render.RenderAPIBase.Project.SoundtrackDTO.MetaData"/>

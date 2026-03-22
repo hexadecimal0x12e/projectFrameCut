@@ -71,6 +71,9 @@ namespace projectFrameCut.Render.Rendering
 
         public event Action<double, TimeSpan>? OnProgressChanged;
         private Stopwatch _renderTotalStopwatch = new();
+        private double _currentFps = 0;
+
+        public double CurrentFps => Interlocked.CompareExchange(ref _currentFps, 0, 0);
 
         public ConcurrentBag<TimeSpan> EachElapsed = new(), EachElapsedForPreparing = new();
 
@@ -257,7 +260,7 @@ namespace projectFrameCut.Render.Rendering
 
             BlankFrame = Use16Bit ? Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0) : Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
             BlankFrame.Flag = IPicture.PictureFlag.NoDisposeAfterWrite;
-            BlankFrame.Disposed = null;
+            BlankFrame.CanBeDisposed = false;
             GC.KeepAlive(BlankFrame);
             ConcurrentQueue<Exception> exceptions = new();
 
@@ -299,14 +302,13 @@ namespace projectFrameCut.Render.Rendering
                             wrote = builder.WrittenFramesCount;
                             working = Volatile.Read(ref ThreadWorking);
 
-                            Log($"[STAT] " +
-                                $"Overall finished {finished / d:p2}, and {TotalEnqueued / d:p2} is ready to render. ETA: {GetEstimated(finished / d)}, " +
+                            Log($"Overall finished {finished / d:p2}, and {TotalEnqueued / d:p2} is ready to render. ETA: {GetEstimated(finished / d)}, " +
                                 $"Memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB. \r\n" +
                                 $"       (Already elapsed {_renderTotalStopwatch.Elapsed}, Total {TotalEnqueued}/{d} prepared and {finished}/{d} finished, " +
                                 $"pending to render: {Volatile.Read(ref TotalEnqueued) - finished}, " +
                                 $"total write frames: {wrote} wrote and {builder.TotalFramesCount - wrote} pended, " +
                                 $"slots {Math.Max(0, MaxThreads - working)}/{MaxThreads}, active workers: {working}, " +
-                                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}.)");
+                                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}.)","STAT");
                             Thread.Sleep(10000);
                         }
                         catch { }
@@ -437,6 +439,7 @@ namespace projectFrameCut.Render.Rendering
                             catch (Exception ex)
                             {
                                 Log($"Error rendering frame {targetFrame}: {ex}", "error");
+                                ex.Data["OrigStacktrace"] = ex.StackTrace;
                                 exceptions.Enqueue(ex);
                             }
                             finally
@@ -507,7 +510,7 @@ namespace projectFrameCut.Render.Rendering
                 ? Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0)
                 : Picture8bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0);
             BlankFrame.Flag = IPicture.PictureFlag.NoDisposeAfterWrite;
-            BlankFrame.Disposed = null;
+            BlankFrame.CanBeDisposed = false;
             GC.KeepAlive(BlankFrame);
 
             running = true;
@@ -532,11 +535,10 @@ namespace projectFrameCut.Render.Rendering
                             if (token.IsCancellationRequested) return;
                             finished = Volatile.Read(ref Finished);
 
-                            Log($"[STAT] " +
-                                $"Finished {finished / d:p2}. ETA: {GetEstimated(finished / d)}, " +
+                            Log($"Finished {finished / d:p2}. ETA: {GetEstimated(finished / d)}, " +
                                 $"Memory used by program: {Environment.WorkingSet / 1024 / 1024:n2} MB. \r\n" +
                                 $"       ({finished} of {d} finished, already elapsed {_renderTotalStopwatch.Elapsed}, " +
-                                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}.)");
+                                $"preparing elapsed average: {eachPrepare}, Each frame render elapsed average: {each}.)","STAT");
                             Thread.Sleep(10000);
                         }
                         catch { }
@@ -926,6 +928,9 @@ namespace projectFrameCut.Render.Rendering
         private void InvokeProgress()
         {
             double prog = (double)Volatile.Read(ref Finished) / Duration;
+            var elapsed = _renderTotalStopwatch.Elapsed;
+            double fps = elapsed.TotalSeconds > 0 ? Volatile.Read(ref Finished) / elapsed.TotalSeconds : 0;
+            Interlocked.Exchange(ref _currentFps, fps);
             OnProgressChanged?.Invoke(prog, GetEstimated(prog));
         }
 

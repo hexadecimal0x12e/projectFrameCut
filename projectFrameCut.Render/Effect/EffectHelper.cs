@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Render.Plugin;
+﻿
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;

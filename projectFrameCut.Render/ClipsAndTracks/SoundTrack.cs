@@ -27,7 +27,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public float Ratio { get; set; } = 1f;
         public float Volume { get; set; } = 1f;
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
 
         public bool NeedFilePath => true;
@@ -84,7 +84,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
         public string? FilePath { get; set; }
         public bool NeedFilePath => true;
         public Dictionary<string, object> ExtraData { get; set; }

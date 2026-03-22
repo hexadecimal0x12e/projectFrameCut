@@ -75,10 +75,15 @@ namespace projectFrameCut.Shared
         /// <summary>
         /// Get whether this picture has been disposed.
         /// </summary>
+        public bool Disposed { get; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the object can be disposed.
+        /// </summary>
         /// <remarks>
-        /// if <see cref="Disposed"/> is null, this picture'll never be disposed.
+        /// when this is true, <see cref="Dispose(bool)"/> will have no effect, except the force param is True.
         /// </remarks>
-        public bool? Disposed { get; set; }
+        public bool CanBeDisposed { get; set; }
 
         /// <summary>
         /// Resize the picture. 
@@ -107,6 +112,12 @@ namespace projectFrameCut.Shared
         /// </summary>
         /// <returns>The Diagnostics info</returns>
         string GetDiagnosticsInfo();
+
+        /// <summary>
+        /// Dispose the Picture when <see cref="CanBeDisposed"/> is true or <paramref name="force"/> is true.
+        /// </summary>
+        /// <param name="force">Ignore <see cref="CanBeDisposed"/> and dispose it anyway.</param>
+        public void Dispose(bool force = false);
 
         public enum ChannelId
         {
@@ -256,7 +267,8 @@ namespace projectFrameCut.Shared
         public string? filePath { get; init; } //诊断用
         public PictureFlag Flag { get; set; }
         public List<PictureProcessStack> ProcessStack { get; set; }
-        public bool? Disposed { get; set; } = false;
+        public bool Disposed { get; set; } = false;
+        public bool CanBeDisposed { get; set; } = true;
 
         public bool hasAlphaChannel { get; set; } = false;
 
@@ -693,7 +705,7 @@ namespace projectFrameCut.Shared
 
         protected virtual void Dispose(bool disposing, bool force = false)
         {
-            if (!force && (disposedValue || Disposed is null)) return;
+            if (!force && (disposedValue || !CanBeDisposed)) return;
             lock (this)
             {
                 if (!disposedValue)
@@ -713,9 +725,12 @@ namespace projectFrameCut.Shared
             }
         }
 
-        public void Dispose()
+        public void Dispose() => Dispose(force: true);
+
+
+        public void Dispose(bool force = false)
         {
-            Dispose(disposing: true);
+            Dispose(disposing: true, force);
             GC.SuppressFinalize(this);
         }
 
@@ -824,7 +839,8 @@ namespace projectFrameCut.Shared
         public string? filePath { get; init; } //诊断用
         public PictureFlag Flag { get; set; }
         public List<PictureProcessStack> ProcessStack { get; set; }
-        public bool? Disposed { get; set; } = false;
+        public bool Disposed { get; set; } = false;
+        public bool CanBeDisposed { get; set; } = true;
 
         public bool hasAlphaChannel { get; set; } = false;
 
@@ -1274,7 +1290,7 @@ namespace projectFrameCut.Shared
 
         protected virtual void Dispose(bool disposing, bool force = false)
         {
-            if (!force && (disposedValue || Disposed is null)) return;
+            if (!force && (disposedValue || CanBeDisposed)) return;
             lock (this)
             {
                 if (!disposedValue)
@@ -1293,9 +1309,11 @@ namespace projectFrameCut.Shared
             }
         }
 
-        public void Dispose()
+        public void Dispose() => Dispose(force: true);
+
+        public void Dispose(bool force = false)
         {
-            Dispose(disposing: true);
+            Dispose(disposing: true,force);
             GC.SuppressFinalize(this);
         }
 
@@ -1399,7 +1417,8 @@ namespace projectFrameCut.Shared
         public PictureFlag Flag { get; set; }
         public List<PictureProcessStack> ProcessStack { get; set; }
         public bool hasAlphaChannel { get; set; }
-        public bool? Disposed { get; set; }
+        public bool Disposed { get; set; } = false;
+        public bool CanBeDisposed { get; set; } = true;
 
         public string GetDiagnosticsInfo() => $"BitMaskPicture image, Size: {Width}*{Height}, avg R:{r.Average(v => v ? 1 : 0)} G:{g.Average(v => v ? 1 : 0)} B:{b.Average(v => v ? 1 : 0)}";
 
@@ -1462,7 +1481,7 @@ namespace projectFrameCut.Shared
 
         protected virtual void Dispose(bool disposing, bool force = false)
         {
-            if (!force && (disposedValue || Disposed is null)) return;
+            if (!force && (disposedValue || !CanBeDisposed)) return;
             lock (this)
             {
                 if (!disposedValue)
@@ -1481,9 +1500,11 @@ namespace projectFrameCut.Shared
             }
         }
 
-        public void Dispose()
+        public void Dispose() => Dispose(force: true);
+
+        public void Dispose(bool force = false)
         {
-            Dispose(disposing: true);
+            Dispose(disposing: true,force);
             GC.SuppressFinalize(this);
         }
     }

@@ -4,8 +4,7 @@
              xmlns:l="clr-namespace:LocalizedResources"
              x:Class="projectFrameCut.SetupPage"
              Shell.NavBarIsVisible="False"
-             Shell.TabBarIsVisible="False"
-             Title="欢迎">
+             Shell.TabBarIsVisible="False">
 
     <VerticalStackLayout Padding="24" Spacing="12" VerticalOptions="Center">
         <Image x:Name="AppLogoIcon" WidthRequest="180" HeightRequest="180" Source="appicon.png"/>
@@ -13,6 +12,10 @@
         <HorizontalStackLayout HorizontalOptions="Center">
             <CheckBox x:Name="AgreeEULACheckbox" VerticalOptions="Center"  />
             <Label Text="{l:Localized Key=WelocmePage_AgreeEULA}" VerticalOptions="Center" Margin="-8,0,0,0" />
+        </HorizontalStackLayout>
+        <HorizontalStackLayout HorizontalOptions="Center" IsVisible="{OnIdiom Desktop=true, Default=false}">
+            <CheckBox x:Name="CreateDesktopShortcutCheckbox" VerticalOptions="Center"  />
+            <Label Text="{l:Localized Key=WelocmePage_CreateShortcutToDesktop}" VerticalOptions="Center" Margin="-8,0,0,0" />
         </HorizontalStackLayout>
         <Button Text="{l:Localized Key=WelocmePage_Start}" HorizontalOptions="Center" WidthRequest="220" Clicked="Button_Clicked" IsEnabled="{Binding Source={x:Reference AgreeEULACheckbox}, Path=IsChecked}" />
     </VerticalStackLayout>

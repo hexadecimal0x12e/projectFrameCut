@@ -27,7 +27,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public float SecondPerFrameRatio { get; init; }
         public Dictionary<string, object>? MixtureArgs { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
-        public IEffect[]? EffectsInstances { get; init; }
+        public IEffect[]? EffectsInstances { get; set; }
         public string? FilePath { get; set; }
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }

@@ -639,26 +639,26 @@ public partial class HomePage : ContentPage
             ok:
                 (var dict, var trackCount) = DraftImportAndExportHelper.ImportFromJSON(timeline, project);
                 ConcurrentDictionary<string, AssetItem> assetDict = new ConcurrentDictionary<string, AssetItem>(assets.ToDictionary((AssetItem a) => a.AssetId ?? $"unknown+{Random.Shared.Next()}", (AssetItem a) => a));
-                Dictionary<string, string> notfounds = new();
+                Dictionary<string, AssetItem> notfounds = new();
                 foreach (var item in dict)
                 {
-                    if (!string.IsNullOrWhiteSpace(item.Value.SourcePath) && !File.Exists(item.Value.SourcePath))
+                    if (!string.IsNullOrWhiteSpace(item.Value.SourcePath) && (Path.IsPathRooted(item.Value.SourcePath) ? !File.Exists(item.Value.SourcePath) : !File.Exists(Path.Combine(draftSourcePath, item.Value.SourcePath))))
                     {
                         if (item.Value.SourcePath.StartsWith('#')) break;
                         if (item.Value.SourcePath.StartsWith('$') && AssetDatabase.Assets.ContainsKey(item.Value.SourcePath.Substring(1))) break;
-                        notfounds.Add(item.Value.DisplayName, item.Value.SourcePath.StartsWith('$') ? $"Asset@{item.Value.SourcePath.Substring(1)}" : item.Value.SourcePath);
+                        notfounds.Add(item.Value.Id, new AssetItem { AssetId = item.Value.Id, Name = item.Value.SourcePath.StartsWith('$') ? $"Asset@{item.Value.SourcePath.Substring(1)}" : item.Value.SourcePath, Path = item.Value.SourcePath });
                     }
                 }
                 foreach (var item in assetDict)
                 {
                     if (!string.IsNullOrWhiteSpace(item.Value.Path) && !item.Value.Path.StartsWith('#') && !File.Exists(item.Value.Path))
                     {
-                        notfounds.Add(item.Value.Name, item.Value.Path);
+                        notfounds.Add(item.Value.AssetId, item.Value);
                     }
                 }
                 if (notfounds.Any())
                 {
-                    var notFoundStr = notfounds.Select(kv => $"- {kv.Key} ({kv.Value})").Aggregate((a, b) => $"{a}{Environment.NewLine}{b}");
+                    var notFoundStr = notfounds.Select(kv => $"- {kv.Value.Name} ({kv.Value.Path})").Aggregate((a, b) => $"{a}{Environment.NewLine}{b}");
                     await Dispatcher.DispatchAsync(async () =>
                     {
                         int result = 0;
@@ -706,8 +706,8 @@ public partial class HomePage : ContentPage
                                     if (input != "yes") return;
                                     foreach (var item in notfounds)
                                     {
-                                        dict = new(dict.RemoveRange(dict.Where(c => c.Value.SourcePath == item.Value)));
-                                        assetDict = new(assetDict.RemoveRange(assetDict.Where(c => c.Value.Path == item.Value)));
+                                        dict = new(dict.RemoveRange(dict.Where(c => c.Value.SourcePath == item.Value.Path)));
+                                        assetDict = new(assetDict.RemoveRange(assetDict.Where(c => c.Key == item.Key)));
                                     }
 
                                     break;
@@ -743,6 +743,7 @@ public partial class HomePage : ContentPage
                                 ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole"),
                                 LiveVideoPreviewBufferLength = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), out var bufferLen) ? bufferLen : 240,
                                 LivePreviewResolutionFactor = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), out var resolutionFactor) ? resolutionFactor : 8,
+                                UseRealtimePreview = resolution == "Realtime",
                                 DefaultPreviewWidth = int.TryParse(resolution.Split('x', 2)[0], out var w) ? w : 1280,
                                 DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720,
                                 ProxyOption = SettingsManager.GetSetting("Edit_ProxyOption", "none"),
@@ -754,8 +755,20 @@ public partial class HomePage : ContentPage
                                 EnableClipInfoPopup = SettingsManager.IsBoolSettingTrue("Edit_EnableClipInfoPopup")
                             };
 #if WINDOWS
-                            Context context = Context.CreateDefault();
+                            ILGPU.Context context = ILGPU.Context.CreateDefault();
                             var devices = context.Devices.ToList();
+                            List<AcceleratorInfo> listAccels = new();
+                            for (uint i = 0; i < devices.Count; i++)
+                            {
+                                var item = devices[(int)i];
+                                listAccels.Add(new AcceleratorInfo(i, item.Name, item.AcceleratorType.ToString()));
+                            }
+                            if (!int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var result) || result < 0 || !(listAccels?.Any(c => c.index == result) ?? false))
+                            {
+                                var bestAccel = listAccels?.Select(c => (c, c.Type switch { "Cuda" => 10, "OpenCL" => 5, "CPU" => -10, _ => 1 })).OrderByDescending(c => c.Item2).ThenByDescending(c => c.c.name).FirstOrDefault();
+                                SettingsManager.WriteSetting("accel_DeviceId", (bestAccel?.c.index ?? 0).ToString());
+                                Log($"No accelerator defined yet; set to best one {bestAccel?.c.name} ({bestAccel?.c.Type}) by default.");
+                            }
                             var accelDevice = devices.Index().Select(t => new KeyValuePair<int, ILGPU.Runtime.Device>(t.Index, t.Item))
                                                     .FirstOrDefault((t) => t.Key == (int.TryParse(SettingsManager.GetSetting("accel_DeviceId", "-1"), out var accelIdx) ? accelIdx : -1),
                                                     new KeyValuePair<int, ILGPU.Runtime.Device>(-1, devices.FirstOrDefault(c => c.AcceleratorType != ILGPU.Runtime.AcceleratorType.CPU, devices.First()))).Value;
@@ -874,7 +887,7 @@ public partial class HomePage : ContentPage
         {
             await Dispatcher.DispatchAsync(async () =>
             {
-  
+
                 try
                 {
                     try
@@ -1157,6 +1170,9 @@ public partial class HomePage : ContentPage
             {
                 Shell.SetTabBarIsVisible(renderPage, false);
                 Shell.SetNavBarIsVisible(renderPage, true);
+#if WINDOWS
+                AppShell.instance.HideNavView(); 
+#endif
                 await Navigation.PushAsync(renderPage);
             });
 

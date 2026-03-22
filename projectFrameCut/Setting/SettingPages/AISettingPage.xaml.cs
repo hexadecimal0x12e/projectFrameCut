@@ -51,7 +51,7 @@ namespace projectFrameCut.Setting.SettingPages
             {
                 Text = Localized._Save,
                 HorizontalOptions = LayoutOptions.Fill,
-                Margin = new(8, 0, 8, 8)
+                Margin = new(8, 0, 8, 4)
             };
 
             saveButton.Clicked += async (s, e) =>
@@ -105,13 +105,23 @@ namespace projectFrameCut.Setting.SettingPages
                         HorizontalOptions = LayoutOptions.Start,
                         Margin = new(8, 0, 8, 0),
                     },
+                    new Label
+                    {
+                        FontSize = 14,
+                        Background = Colors.Black,
+                        TextColor = Colors.Yellow,
+                        Text = SettingLocalizedResources.AISetting_ModelHint2,
+                        HorizontalOptions = LayoutOptions.Start,
+                        Margin = new(8, 0, 8, 8),
+                    },
+                    saveButton,
+                    new PropertyPanelBuilder().AddSeparator().Build(),
                     t,
                     new PropertyPanelBuilder().AddSeparator().Build(),
                     i,
                     new PropertyPanelBuilder().AddSeparator().Build(),
                     v,
                     new PropertyPanelBuilder().AddSeparator().Build(),
-                    saveButton,
                     showAllModelsButton,
                     refreshButton,
                     busyIndicator
@@ -171,11 +181,11 @@ namespace projectFrameCut.Setting.SettingPages
         private async Task<View> BuildVideoOption()
         {
             // Get built-in models from configuration
-            var videoModels = showAllModelButtonClicked ? await AIHelper.GetModels(GetDefaultTextModelBaseAddress(CurrentVideoOption.Provider, CurrentVideoOption.BaseAddress), CurrentOption.Key) : AIHelper.GetBuiltInModels(CurrentVideoOption.Provider, "video");
+            var models = showAllModelButtonClicked ? await AIHelper.GetModels(GetDefaultTextModelBaseAddress(CurrentVideoOption.Provider, CurrentVideoOption.BaseAddress), CurrentOption.Key) : AIHelper.GetBuiltInModels(CurrentVideoOption.Provider, "video");
 
             // Split models into Text2Video and Image2Video based on model naming patterns
-            string[] Text2VideoModels = videoModels.Where(m => m.Contains("t2v", StringComparison.OrdinalIgnoreCase)).ToArray();
-            string[] Image2VideoModels = videoModels.Where(m => m.Contains("i2v") || m.Contains("kf2v", StringComparison.OrdinalIgnoreCase)).ToArray();
+            string[] Text2VideoModels = models.ToArray();
+            string[] Image2VideoModels = models.ToArray();
 
             var ppb = new PropertyPanelBuilder();
             return ppb
@@ -186,11 +196,12 @@ namespace projectFrameCut.Setting.SettingPages
                 {
                     entry.IsPassword = true;
                 })
-
-                .AppendWhen(!alreadyShowAllOption && CurrentVideoOption.Provider != "Custom" && Text2VideoModels.Any(), c => c.AddPicker("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model_TextToVideo, Text2VideoModels, CurrentVideoOption.Text2VideoModel), c => c.AddEntry("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model, CurrentVideoOption.Text2VideoModel, ""))
-
-                .AppendWhen(!alreadyShowAllOption && CurrentVideoOption.Provider != "Custom" && Image2VideoModels.Any(), c => c.AddPicker("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model_ImageToVideo, Image2VideoModels, CurrentVideoOption.Image2VideoModel), c => c.AddEntry("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model, CurrentVideoOption.Image2VideoModel, ""))
-
+                .AppendWhen((() => alreadyShowAllOption, c => c.AddEntry("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model, CurrentImageOption.Model, "")), 
+                            (models.Any, c => c.AddPicker("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model, models, CurrentImageOption.Model)), 
+                            (() => !models.Any(), c => c.AddPicker("AI_Text2Video_Model", SettingLocalizedResources.AISetting_Model, new[] { SettingLocalizedResources.AISetting_Model_Unknown }, SettingLocalizedResources.AISetting_Model_Unknown, c => c.IsEnabled = false)))
+                .AppendWhen((() => alreadyShowAllOption, c => c.AddEntry("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model, CurrentImageOption.Model, "")), 
+                            (models.Any, c => c.AddPicker("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model, models, CurrentImageOption.Model)), 
+                            (() => !models.Any(), c => c.AddPicker("AI_Image2Video_Model", SettingLocalizedResources.AISetting_Model, new[] { SettingLocalizedResources.AISetting_Model_Unknown }, SettingLocalizedResources.AISetting_Model_Unknown, c => c.IsEnabled = false)))
                 .AddButton(SettingLocalizedResources.AISetting_Test, async (s, e) => await TestVideoModelConnection())
                 .ListenToChanges((_, e) =>
                 {

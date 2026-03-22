@@ -511,7 +511,7 @@ namespace projectFrameCut.StandaloneRender
                 {
                     renderer.OnProgressChanged += (s, e) =>
                     {
-                        Console.Write($"[STAT] Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss} \r");
+                        Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2} \r");
                     };
                 }
 
@@ -599,7 +599,7 @@ namespace projectFrameCut.StandaloneRender
                 {
                     composer.OnProgressChanged += (s, e) =>
                     {
-                        Console.Write($"[STAT] Composing finished {s:p0}, ETA:{e:mm\\:ss} \r");
+                        Console.Write($"Composing finished {s:p0}, ETA:{e:mm\\:ss} \r");
                     };
                 }
 

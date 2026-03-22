@@ -40,7 +40,7 @@ public partial class EditSettingPage : ContentPage
 
     Dictionary<string, TextClipEntry> TextTemplates = new();
 
-    static string[] resolutions = ["640x480", "1280x720", "1920x1080", "2560x1440", "3840x2160"];
+    static string[] resolutions = ["Realtime", "1280x720", "1920x1080", "2560x1440", "3840x2160"];
     static bool LoadTextPreview = false;
 
     public EditSettingPage()

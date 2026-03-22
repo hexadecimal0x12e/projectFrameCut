@@ -366,3 +366,6 @@ FodyWeavers.xsd
 projectFrameCut/0x12e.keystore
 /projectFrameCut.Benchmarker/Generated
 /memories/repo
+.stfolder
+/.stignore
+/.stversions

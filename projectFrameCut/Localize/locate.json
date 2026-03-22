@@ -1646,6 +1646,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_MenuBar_Clip",
+        "Value": "\u7247\u6BB5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_MenuBar_Edit",
         "Value": "\u7F16\u8F91",
         "Mode": "ConstString",
@@ -1784,6 +1792,14 @@
       {
         "Id": "DraftPage_MenuBar_Edit_Undo",
         "Value": "\u64A4\u9500",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_Unselect",
+        "Value": "\u53D6\u6D88\u9009\u62E9\u7247\u6BB5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2157,6 +2173,32 @@
           }
         ],
         "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClips",
+        "Value": "\u53EA\u80FD\u5728\u9009\u4E2D\u4E86\u4E00\u4E2A\u7247\u6BB5\u7684\u60C5\u51B5\u4E0B\u914D\u7F6E\u5C5E\u6027\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_SelectedManyClipsCount",
+        "Value": "\u9009\u62E9\u4E86 {n} \u4E2A\u7247\u6BB5",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "int",
+            "Value": "n"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "n",
+            "Value": ""
+          }
+        ],
         "HasValidationErrors": false
       },
       {
@@ -3494,11 +3536,53 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "RenderPage_HideLogs",
+        "Value": "\u9690\u85CF\u65E5\u5FD7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "RenderPage_LoggingLabel",
         "Value": "\u8F93\u51FA\u65E5\u5FD7",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "\u5DF2\u5B8C\u6210 {p:p2}, \u9884\u8BA1\u8FD8\u5269 {eta}, {fps} \u5E27\u6BCF\u79D2",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
         "HasValidationErrors": false
       },
       {
@@ -3631,6 +3715,14 @@
       {
         "Id": "RenderPage_SelectResolution",
         "Value": "\u9009\u62E9\u4E00\u4E2A\u5206\u8FA8\u7387\uFF1A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "\u663E\u793A\u65E5\u5FD7",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3784,53 +3876,20 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "\u4E3AprojectFrameCut\u521B\u5EFA\u684C\u9762\u5FEB\u6377\u65B9\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "WelocmePage_Start",
         "Value": "\u5F00\u59CB",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_Clip",
-        "Value": "\u7247\u6BB5",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "\u53D6\u6D88\u9009\u62E9\u7247\u6BB5",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftPage_SelectedManyClips",
-        "Value": "\u53EA\u80FD\u5728\u9009\u4E2D\u4E86\u4E00\u4E2A\u7247\u6BB5\u7684\u60C5\u51B5\u4E0B\u914D\u7F6E\u5C5E\u6027\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "\u9009\u62E9\u4E86 {n} \u4E2A\u7247\u6BB5",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "int",
-            "Value": "n"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "n",
-            "Value": ""
-          }
-        ],
         "HasValidationErrors": false
       }
     ],
@@ -7777,16 +7836,16 @@
       },
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
-        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Value": "Multi-select",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Value": "Click on an empty spot on the track to add \u0022{name}\u0022 at the clicked location.{(compact ? $\u0022{Environment.NewLine}You can also press Esc to cancel this operation.\u0022 : \u0022\u0022)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -7808,21 +7867,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Value": "The position you clicked is invalid. Try another location.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Value": "\u0022{name}\u0022 can only be added to a sub-track.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -7836,12 +7895,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Value": "\u0022{name}\u0022 can only be added to the main track.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -7855,30 +7914,30 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Value": "Move",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Value": "Move between main/aux tracks",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_Done",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Value": "Successfully placed \u0022{name}\u0022.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -7892,111 +7951,111 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenOneSelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Value": "This operation is only available when a single segment is selected.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectOneOrManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Value": "Select at least one segment to perform this operation.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectExactlyOneToContinue",
-        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Value": "Select exactly one clip to perform this operation.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Value": "Select at least two clips to perform this operation.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenManySelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Value": "This operation is only available when multiple clips are selected.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Copy",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Value": "Copy",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Cut",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Value": "Cut",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Paste",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Value": "Paste",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Clip",
-        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Value": "Clip",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Value": "Deselect Clip",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClips",
-        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Value": "Properties can only be configured when a single clip is selected.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Value": "Selected {n} clips",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -8010,7 +8069,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "Show logs",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "Create a desktop shortcut for projectFrameCut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_HideLogs",
+        "Value": "Hide Logs",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "Completed {p:p2}, ETA {eta}, {fps} FPS",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -11956,16 +12077,16 @@
       },
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
-        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Value": "\u591A\u9078",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Value": "\u9EDE\u64CA\u8ECC\u9053\u4E0A\u7A7A\u9592\u7684\u4F4D\u7F6E\uFF0C\u5373\u53EF\u5728\u9EDE\u64CA\u8655\u65B0\u589E\u300C{name}\u300D\u3002{(compact ? $\u0022{Environment.NewLine}\u60A8\u4E5F\u53EF\u4EE5\u6309 Esc \u9375\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002\u0022 : \u0022\u0022)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -11987,21 +12108,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Value": "\u4F60\u9EDE\u64CA\u7684\u4F4D\u7F6E\u7121\u6548\uFF0C\u63DB\u4E00\u500B\u5730\u65B9\u8A66\u8A66\u770B\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Value": "\u300C{name}\u300D\u53EA\u80FD\u52A0\u5165\u5230\u8F14\u8ECC\u9053\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -12015,12 +12136,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Value": "\u300C{name}\u300D\u53EA\u80FD\u88AB\u6DFB\u52A0\u5230\u4E3B\u8ECC\u9053\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -12034,30 +12155,30 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Value": "\u79FB\u52D5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Value": "\u5728\u4E3B/\u526F\u8ECC\u9053\u4E4B\u9593\u79FB\u52D5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_Done",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Value": "\u6210\u529F\u7684\u653E\u7F6E\u4E86\u300C{name}\u300D\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -12071,111 +12192,111 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenOneSelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Value": "\u6B64\u64CD\u4F5C\u50C5\u5728\u9078\u64C7\u4E00\u500B\u7247\u6BB5\u6642\u53EF\u7528\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectOneOrManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Value": "\u9078\u64C7\u81F3\u5C11\u4E00\u500B\u7247\u6BB5\u4F86\u9032\u884C\u6B64\u64CD\u4F5C\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectExactlyOneToContinue",
-        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Value": "\u9078\u64C7\u4E00\u500B\u7247\u6BB5\u4F86\u57F7\u884C\u6B64\u64CD\u4F5C\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Value": "\u9078\u64C7\u81F3\u5C11\u5169\u500B\u7247\u6BB5\u4F86\u9032\u884C\u6B64\u64CD\u4F5C\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenManySelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Value": "\u6B64\u64CD\u4F5C\u50C5\u5728\u9078\u64C7\u591A\u500B\u7247\u6BB5\u6642\u53EF\u7528\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Copy",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Value": "\u8907\u88FD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Cut",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Value": "\u526A\u4E0B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Paste",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Value": "\u8CBC\u4E0A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Clip",
-        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Value": "\u7247\u6BB5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Value": "\u53D6\u6D88\u9078\u64C7\u7247\u6BB5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClips",
-        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Value": "\u50C5\u80FD\u5728\u9078\u53D6\u55AE\u4E00\u7247\u6BB5\u6642\u8A2D\u5B9A\u5C6C\u6027\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Value": "\u9078\u64C7\u4E86 {n} \u500B\u7247\u6BB5",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -12189,7 +12310,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "\u986F\u793A\u65E5\u8A8C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "\u70BA projectFrameCut \u5EFA\u7ACB\u684C\u9762\u6377\u5F91",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_HideLogs",
+        "Value": "\u96B1\u85CF\u65E5\u8A8C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "\u5DF2\u5B8C\u6210 {p:p2}\uFF0C\u9810\u8A08\u5269\u9918 {eta}\uFF0C{fps} \u5E40/\u79D2",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -16141,16 +16324,16 @@
       },
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
-        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Value": "\u8907\u6570\u9078\u629E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Value": "\u30C8\u30E9\u30C3\u30AF\u4E0A\u306E\u7A7A\u3044\u3066\u3044\u308B\u5834\u6240\u3092\u30AF\u30EA\u30C3\u30AF\u3059\u308B\u3068\u3001\u30AF\u30EA\u30C3\u30AF\u3057\u305F\u4F4D\u7F6E\u306B\u300C{name}\u300D\u3092\u8FFD\u52A0\u3067\u304D\u307E\u3059\u3002{(compact ? $\u0022\u0022 : $\u0022{Environment.NewLine}Esc\u30AD\u30FC\u3092\u62BC\u3059\u3068\u3001\u3053\u306E\u64CD\u4F5C\u3092\u30AD\u30E3\u30F3\u30BB\u30EB\u3067\u304D\u307E\u3059\u3002\u0022)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -16172,21 +16355,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Value": "\u30AF\u30EA\u30C3\u30AF\u3057\u305F\u4F4D\u7F6E\u306F\u7121\u52B9\u3067\u3059\u3002\u5225\u306E\u5834\u6240\u3092\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Value": "\u300C{name}\u300D\u306F\u30B5\u30D6\u30C8\u30E9\u30C3\u30AF\u306B\u306E\u307F\u8FFD\u52A0\u3067\u304D\u307E\u3059\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -16200,12 +16383,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Value": "\u300C{name}\u300D\u306F\u30E1\u30A4\u30F3\u30C8\u30E9\u30C3\u30AF\u306B\u306E\u307F\u8FFD\u52A0\u3067\u304D\u307E\u3059\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -16219,30 +16402,30 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Value": "\u79FB\u52D5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Value": "\u30E1\u30A4\u30F3/\u30B5\u30D6\u30C8\u30E9\u30C3\u30AF\u9593\u3067\u79FB\u52D5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_Done",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Value": "\u300C{name}\u300D\u3092\u914D\u7F6E\u3057\u307E\u3057\u305F\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -16256,111 +16439,111 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenOneSelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u306F\u30011\u3064\u306E\u30BB\u30B0\u30E1\u30F3\u30C8\u3092\u9078\u629E\u3057\u305F\u5834\u5408\u306E\u307F\u4F7F\u7528\u53EF\u80FD\u3067\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectOneOrManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u3092\u884C\u3046\u306B\u306F\u3001\u5C11\u306A\u304F\u3068\u30821\u3064\u306E\u30BB\u30B0\u30E1\u30F3\u30C8\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectExactlyOneToContinue",
-        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u3092\u884C\u3046\u306B\u306F\u30011\u3064\u306E\u30BB\u30B0\u30E1\u30F3\u30C8\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u3092\u884C\u3046\u306B\u306F\u3001\u5C11\u306A\u304F\u3068\u30822\u3064\u306E\u30BB\u30B0\u30E1\u30F3\u30C8\u3092\u9078\u629E\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenManySelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u306F\u8907\u6570\u306E\u30BB\u30B0\u30E1\u30F3\u30C8\u3092\u9078\u629E\u3057\u305F\u5834\u5408\u306E\u307F\u5229\u7528\u53EF\u80FD\u3067\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Copy",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Value": "\u30B3\u30D4\u30FC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Cut",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Value": "\u30AB\u30C3\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Paste",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Value": "\u8CBC\u308A\u4ED8\u3051",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Clip",
-        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Value": "\u30AF\u30EA\u30C3\u30D7",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Value": "\u9078\u629E\u30BB\u30B0\u30E1\u30F3\u30C8\u3092\u89E3\u9664",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClips",
-        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Value": "\u30D7\u30ED\u30D1\u30C6\u30A3\u306E\u8A2D\u5B9A\u306F\u30011\u3064\u306E\u30AF\u30EA\u30C3\u30D7\u306E\u307F\u304C\u9078\u629E\u3055\u308C\u3066\u3044\u308B\u5834\u5408\u306B\u306E\u307F\u53EF\u80FD\u3067\u3059\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Value": "{n} \u500B\u306E\u30AF\u30EA\u30C3\u30D7\u3092\u9078\u629E\u3057\u307E\u3057\u305F",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -16374,7 +16557,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "\u30ED\u30B0\u3092\u8868\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "projectFrameCut\u306E\u30C7\u30B9\u30AF\u30C8\u30C3\u30D7\u30B7\u30E7\u30FC\u30C8\u30AB\u30C3\u30C8\u3092\u4F5C\u6210",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_HideLogs",
+        "Value": "\u30ED\u30B0\u3092\u975E\u8868\u793A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "\u5B8C\u4E86 {p:p2}, \u6B8B\u308A\u4E88\u60F3\u6642\u9593 {eta}, {fps} \u30D5\u30EC\u30FC\u30E0/\u79D2",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u306E\u9032\u6357\u72B6\u6CC1\u3092\u8868\u793A\u3059\u308B\u30B9\u30C6\u30FC\u30BF\u30B9\u30E1\u30C3\u30BB\u30FC\u30B8\u3002p\u306F\u5B8C\u4E86\u7387\u3001eta\u306F\u6B8B\u308A\u6642\u9593\u3001fps\u306F\u51E6\u7406\u901F\u5EA6\uFF08\u30D5\u30EC\u30FC\u30E0/\u79D2\uFF09\u3002",
         "HasValidationErrors": false
       }
     ],
@@ -20326,16 +20571,16 @@
       },
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
-        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Value": "\uB2E4\uC911 \uC120\uD0DD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Value": "\uD2B8\uB799\uC758 \uBE48 \uACF5\uAC04\uC744 \uD074\uB9AD\uD558\uC5EC \uD574\uB2F9 \uC704\uCE58\uC5D0 \u300C{name}\u300D\uC744(\uB97C) \uCD94\uAC00\uD569\uB2C8\uB2E4.{(compact ? $\u0022{Environment.NewLine}Esc \uD0A4\uB97C \uB20C\uB7EC \uC774 \uC791\uC5C5\uC744 \uCDE8\uC18C\uD560 \uC218\uB3C4 \uC788\uC2B5\uB2C8\uB2E4.\u0022 : \u0022\u0022)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -20357,21 +20602,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Value": "\uD074\uB9AD\uD55C \uC704\uCE58\uAC00 \uC720\uD6A8\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uB2E4\uB978 \uACF3\uC744 \uC2DC\uB3C4\uD574 \uBCF4\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Value": "\u300C{name}\u300D\uB294 \uBCF4\uC870 \uD2B8\uB799\uC5D0\uB9CC \uCD94\uAC00\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -20385,12 +20630,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Value": "\u300C{name}\u300D\uB294(\uC740) \uBA54\uC778 \uD2B8\uB799\uC5D0\uB9CC \uCD94\uAC00\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -20404,30 +20649,30 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Value": "\uC774\uB3D9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Value": "\uBA54\uC778/\uC11C\uBE0C \uD2B8\uB799 \uAC04 \uC774\uB3D9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_Done",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Value": "\u300C{name}\u300D\uC744(\uB97C) \uC131\uACF5\uC801\uC73C\uB85C \uBC30\uCE58\uD588\uC2B5\uB2C8\uB2E4.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -20441,111 +20686,111 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenOneSelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Value": "\uC774 \uC791\uC5C5\uC740 \uD558\uB098\uC758 \uD074\uB9BD\uC744 \uC120\uD0DD\uD588\uC744 \uB54C\uB9CC \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectOneOrManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Value": "\uC774 \uC791\uC5C5\uC744 \uC218\uD589\uD558\uB824\uBA74 \uCD5C\uC18C\uD55C \uD558\uB098 \uC774\uC0C1\uC758 \uD074\uB9BD\uC744 \uC120\uD0DD\uD558\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectExactlyOneToContinue",
-        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Value": "\uC774 \uC791\uC5C5\uC744 \uC218\uD589\uD558\uB824\uBA74 \uD558\uB098\uC758 \uC138\uADF8\uBA3C\uD2B8\uB97C \uC120\uD0DD\uD558\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Value": "\uC774 \uC791\uC5C5\uC744 \uC218\uD589\uD558\uB824\uBA74 \uCD5C\uC18C \uB450 \uAC1C \uC774\uC0C1\uC758 \uD074\uB9BD\uC744 \uC120\uD0DD\uD558\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenManySelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Value": "\uC774 \uC791\uC5C5\uC740 \uC5EC\uB7EC \uC138\uADF8\uBA3C\uD2B8\uB97C \uC120\uD0DD\uD588\uC744 \uB54C\uB9CC \uC0AC\uC6A9 \uAC00\uB2A5\uD569\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Copy",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Value": "\uBCF5\uC0AC",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Cut",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Value": "\uC798\uB77C\uB0B4\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Paste",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Value": "\uBD99\uC5EC\uB123\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Clip",
-        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Value": "\uD074\uB9BD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Value": "\uC120\uD0DD\uD55C \uD074\uB9BD \uC120\uD0DD \uD574\uC81C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClips",
-        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Value": "\uC18D\uC131\uC740 \uD558\uB098\uC758 \uD074\uB9BD\uB9CC \uC120\uD0DD\uB41C \uACBD\uC6B0\uC5D0\uB9CC \uAD6C\uC131\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Value": "{n}\uAC1C\uC758 \uD074\uB9BD\uC744 \uC120\uD0DD\uD588\uC2B5\uB2C8\uB2E4",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -20559,7 +20804,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "\uB85C\uADF8 \uD45C\uC2DC",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "projectFrameCut\uC5D0 \uB300\uD55C \uBC14\uD0D5\uD654\uBA74 \uBC14\uB85C \uAC00\uAE30 \uB9CC\uB4E4\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_HideLogs",
+        "Value": "\uB85C\uADF8 \uC228\uAE30\uAE30",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "{p:p2} \uC644\uB8CC, \uC608\uC0C1 \uB0A8\uC740 \uC2DC\uAC04 {eta}, \uCD08\uB2F9 {fps} \uD504\uB808\uC784",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -24506,16 +24813,16 @@
       },
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
-        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Value": "S\u00E9lection multiple",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Value": "Cliquez sur un emplacement vide de la piste pour ajouter \u00AB\u202F{name}\u202F\u00BB \u00E0 l\u2019endroit cliqu\u00E9.{(compact ? $\u0022{Environment.NewLine}Vous pouvez aussi appuyer sur \u00C9chap pour annuler cette op\u00E9ration.\u0022 : \u0022\u0022)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -24537,21 +24844,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Value": "L\u0027emplacement que vous avez cliqu\u00E9 est invalide. Essayez un autre endroit.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Value": "\u00AB {name} \u00BB ne peut \u00EAtre ajout\u00E9 qu\u0027\u00E0 une piste auxiliaire.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -24565,12 +24872,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Value": "\u00AB {name} \u00BB ne peut \u00EAtre ajout\u00E9 qu\u0027\u00E0 la piste principale.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -24584,30 +24891,30 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Value": "D\u00E9placer",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Value": "D\u00E9placer entre les pistes principale/auxiliaire",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_Done",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Value": "\u00AB {name} \u00BB a \u00E9t\u00E9 plac\u00E9 avec succ\u00E8s.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -24621,111 +24928,111 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenOneSelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Value": "Cette op\u00E9ration n\u0027est disponible que lorsqu\u0027un seul segment est s\u00E9lectionn\u00E9.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectOneOrManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Value": "S\u00E9lectionnez au moins un segment pour effectuer cette op\u00E9ration.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectExactlyOneToContinue",
-        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Value": "S\u00E9lectionnez exactement un fragment pour effectuer cette op\u00E9ration.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Value": "S\u00E9lectionnez au moins deux segments pour effectuer cette op\u00E9ration.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenManySelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Value": "Cette action n\u2019est disponible que lorsque plusieurs segments sont s\u00E9lectionn\u00E9s.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Copy",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Value": "Copier",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Cut",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Value": "Couper",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Paste",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Value": "Coller",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Clip",
-        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Value": "\u7247\u6BB5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Value": "D\u00E9s\u00E9lectionner le segment",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClips",
-        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Value": "Configuration des propri\u00E9t\u00E9s possible uniquement avec un seul clip s\u00E9lectionn\u00E9.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Value": "{n} clips s\u00E9lectionn\u00E9s",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -24739,7 +25046,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "Afficher les logs",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "Cr\u00E9er un raccourci sur le bureau pour projectFrameCut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_HideLogs",
+        "Value": "Masquer les journaux",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "{p:p2} rendu, {eta} restant, {fps} ips",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Statut long du rendu : pourcentage rendu, temps restant estim\u00E9, et d\u00E9bit d\u0027images.",
         "HasValidationErrors": false
       }
     ],
@@ -28691,16 +29060,16 @@
       },
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
-        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Value": "\u591A\u9009",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Value": "\u51FB\u8F68\u9053\u7A7A\u95F2\u4E4B\u5904\uFF0C\u4E8E\u6240\u51FB\u4E4B\u4F4D\u6DFB\u300C{name}\u300D\u3002{(compact ? $\u0022{Environment.NewLine}\u4EA6\u53EF\u6309Esc\u952E\u4EE5\u64A4\u6B64\u64CD\u4F5C\u3002\u0022 : \u0022\u0022)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -28722,21 +29091,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u63D0\u793A\u7528\u6237\u5728\u8F68\u9053\u4E0A\u70B9\u51FB\u6DFB\u52A0\u526A\u8F91\uFF0Ccompact\u4E3A\u771F\u65F6\u663E\u793A\u6362\u884C\u53CA\u53D6\u6D88\u64CD\u4F5C\u63D0\u793A\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Value": "\u6C5D\u6240\u51FB\u4E4B\u5904\u65E0\u6548\uFF0C\u6613\u5730\u518D\u8BD5\u4E4B\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Value": "\u300C{name}\u300D\u552F\u53EF\u7F6E\u4E8E\u8F85\u8F68\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -28750,12 +29119,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Value": "\u300C{name}\u300D\u552F\u53EF\u6DFB\u4E8E\u4E3B\u8F68\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -28769,30 +29138,30 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Value": "\u5F99",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u610F\u4E3A\u79FB\u52A8\u6216\u642C\u8FC1\uFF0C\u9002\u914D\u83DC\u5355\u9879\u8BED\u5883\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Value": "\u5207\u6362\u4E3B\u526F\u4E4B\u8F68",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_Done",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Value": "\u5DF2\u7F6E\u300C{name}\u300D\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -28806,111 +29175,111 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u8868\u793A\u6210\u529F\u653E\u7F6E\u67D0\u7269\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenOneSelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Value": "\u6B64\u64CD\u60DF\u4E8E\u62E9\u4E00\u7247\u6BB5\u65F6\u4E43\u53EF\u7528\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectOneOrManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Value": "\u62E9\u81F3\u5C11\u4E00\u7247\uFF0C\u4EE5\u884C\u6B64\u52A1\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectExactlyOneToContinue",
-        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Value": "\u62E9\u4E00\u6BB5\u4EE5\u7EED\u4E4B\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u63D0\u793A\u7528\u6237\u9700\u9009\u62E9\u4E00\u64CD\u4F5C\u7247\u6BB5\u65B9\u53EF\u7EE7\u7EED",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Value": "\u8BF7\u9009\u62E9\u81F3\u5C11\u4E24\u4E2A\u7247\u6BB5\u4EE5\u7EE7\u7EED\u6B64\u64CD\u4F5C\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenManySelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Value": "\u987B\u62E9\u591A\u7247\u6BB5\uFF0C\u6B64\u64CD\u4F5C\u65B9\u53EF\u7528\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Copy",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Value": "\u590D",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Cut",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Value": "\u79FB\u85CF",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u5C06\u6240\u9009\u5185\u5BB9\u79FB\u9664\u5E76\u6682\u5B58\uFF0C\u5BF9\u5E94\u73B0\u4EE3\u4E4B\u201C\u526A\u5207\u201D\u64CD\u4F5C\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Paste",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Value": "\u9644\u4E4B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Clip",
-        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Value": "\u65AD\u7AE0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Value": "\u53D6\u6D88\u9009\u62E9\u7247\u6BB5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClips",
-        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Value": "\u914D\u7F6E\u5C5E\u6027\uFF0C\u987B\u4EC5\u62E9\u4E00\u7247\u6BB5\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Value": "\u62E9 {n} \u6BB5",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -28924,7 +29293,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "\u793A\u5F55",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "\u4E3AprojectFrameCut\u8BBE\u684C\u9762\u6377\u5F84",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_HideLogs",
+        "Value": "\u9690\u65E5\u5FD7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "\u5DF2\u6BD5 {p:p2}\uFF0C\u9884\u8BA1\u4F59 {eta}\uFF0C\u6BCF\u79D2 {fps} \u5E27",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -32876,16 +33307,16 @@
       },
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
-        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Value": "\u062A\u062D\u062F\u064A\u062F \u0645\u062A\u0639\u062F\u062F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Value": "\u0627\u0646\u0642\u0631 \u0639\u0644\u0649 \u0645\u0643\u0627\u0646 \u0641\u0627\u0631\u063A \u0641\u064A \u0627\u0644\u0645\u0633\u0627\u0631 \u0644\u0625\u0636\u0627\u0641\u0629 \u300C{name}\u300D \u0641\u064A \u0627\u0644\u0645\u0648\u0636\u0639 \u0627\u0644\u0630\u064A \u0646\u0642\u0631\u062A \u0639\u0644\u064A\u0647.{(compact ? $\u0022{Environment.NewLine}\u064A\u0645\u0643\u0646\u0643 \u0623\u064A\u0636\u064B\u0627 \u0627\u0644\u0636\u063A\u0637 \u0639\u0644\u0649 Esc \u0644\u0625\u0644\u063A\u0627\u0621 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621.\u0022 : \u0022\u0022)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -32907,21 +33338,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Value": "\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0630\u064A \u0646\u0642\u0631\u062A \u0639\u0644\u064A\u0647 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u060C \u062D\u0627\u0648\u0644 \u0641\u064A \u0645\u0643\u0627\u0646 \u0622\u062E\u0631.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Value": "\u0644\u0627 \u064A\u0645\u0643\u0646 \u0625\u0636\u0627\u0641\u0629 {name} \u0625\u0644\u0627 \u0625\u0644\u0649 \u0627\u0644\u0645\u0633\u0627\u0631 \u0627\u0644\u0645\u0633\u0627\u0639\u062F",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -32935,12 +33366,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Value": "\u064A\u0645\u0643\u0646 \u0625\u0636\u0627\u0641\u0629 \u0022{name}\u0022 \u0641\u0642\u0637 \u0625\u0644\u0649 \u0627\u0644\u0645\u0633\u0627\u0631 \u0627\u0644\u0631\u0626\u064A\u0633\u064A.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -32954,30 +33385,30 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Value": "\u0646\u0642\u0644",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Value": "\u0627\u0644\u0627\u0646\u062A\u0642\u0627\u0644 \u0628\u064A\u0646 \u0627\u0644\u0645\u0633\u0627\u0631 \u0627\u0644\u0631\u0626\u064A\u0633\u064A \u0648\u0627\u0644\u0645\u0633\u0627\u0631 \u0627\u0644\u0641\u0631\u0639\u064A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_Done",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Value": "\u062A\u0645 \u0648\u0636\u0639 \u300A{name}\u300B \u0628\u0646\u062C\u0627\u062D\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -32991,111 +33422,111 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenOneSelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Value": "\u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u062A\u0627\u062D \u0641\u0642\u0637 \u0639\u0646\u062F \u062A\u062D\u062F\u064A\u062F \u0645\u0642\u0637\u0639 \u0648\u0627\u062D\u062F.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectOneOrManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Value": "\u0627\u062E\u062A\u0631 \u0645\u0642\u0637\u0639\u064B\u0627 \u0648\u0627\u062D\u062F\u064B\u0627 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629 \u0645\u0639 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectExactlyOneToContinue",
-        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Value": "\u0627\u062E\u062A\u0631 \u0645\u0642\u0637\u0639\u064B\u0627 \u0648\u0627\u062D\u062F\u064B\u0627 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629 \u0645\u0639 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Value": "\u0627\u062E\u062A\u0631 \u0645\u0642\u0637\u0639\u064A\u0646 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0644\u0644\u0645\u062A\u0627\u0628\u0639\u0629.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenManySelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Value": "\u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u062A\u0627\u062D \u0641\u0642\u0637 \u0639\u0646\u062F \u062A\u062D\u062F\u064A\u062F \u0639\u062F\u0629 \u0645\u0642\u0627\u0637\u0639.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Copy",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Value": "\u0646\u0633\u062E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Cut",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Value": "\u0642\u0635",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Paste",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Value": "\u0644\u0635\u0642",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Clip",
-        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Value": "\u0645\u0642\u0637\u0639",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Value": "\u0625\u0644\u063A\u0627\u0621 \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0645\u0642\u0637\u0639",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClips",
-        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Value": "\u064A\u0645\u0643\u0646 \u062A\u0643\u0648\u064A\u0646 \u0627\u0644\u062E\u0635\u0627\u0626\u0635 \u0641\u0642\u0637 \u0639\u0646\u062F \u062A\u062D\u062F\u064A\u062F \u0645\u0642\u0637\u0639 \u0648\u0627\u062D\u062F.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Value": "\u062A\u0645 \u062A\u062D\u062F\u064A\u062F {n} \u0645\u0642\u0637\u0639",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -33109,7 +33540,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "\u0639\u0631\u0636 \u0627\u0644\u0633\u062C\u0644\u0627\u062A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "\u0625\u0646\u0634\u0627\u0621 \u0627\u062E\u062A\u0635\u0627\u0631 \u0644\u0640 projectFrameCut \u0639\u0644\u0649 \u0633\u0637\u062D \u0627\u0644\u0645\u0643\u062A\u0628",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u062A\u0645 \u0627\u0644\u062D\u0641\u0627\u0638 \u0639\u0644\u0649 \u0627\u0633\u0645 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u0027projectFrameCut\u0027 \u062F\u0648\u0646 \u062A\u0631\u062C\u0645\u0629 \u0643\u0645\u0627 \u0647\u0648 \u0645\u0637\u0644\u0648\u0628",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_HideLogs",
+        "Value": "\u0625\u062E\u0641\u0627\u0621 \u0627\u0644\u0633\u062C\u0644\u0627\u062A",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "\u0627\u0643\u062A\u0645\u0644 {p:p2}\u060C \u0645\u062A\u0628\u0642\u064A {eta}\u060C {fps} \u0625\u0637\u0627\u0631 \u0641\u064A \u0627\u0644\u062B\u0627\u0646\u064A\u0629",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -37061,16 +37554,16 @@
       },
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
-        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Value": "Mehrfachauswahl",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Value": "Klicken Sie auf eine freie Stelle der Spur, um \u201E{name}\u201C an der Klickposition hinzuzuf\u00FCgen.{(compact ? $\u0022{Environment.NewLine}Sie k\u00F6nnen auch Esc dr\u00FCcken, um diesen Vorgang abzubrechen.\u0022 : \u0022\u0022)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -37092,21 +37585,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Value": "Die von Ihnen angeklickte Position ist ung\u00FCltig. Versuchen Sie es an einer anderen Stelle.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Value": "\u201E{name}\u201C kann nur zu einer Hilfsspur hinzugef\u00FCgt werden.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -37120,12 +37613,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Value": "\u201E{name}\u201C kann nur zur Hauptspur hinzugef\u00FCgt werden.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -37139,30 +37632,30 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Value": "Verschieben",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Value": "Zwischen Haupt- und Nebenkanal verschieben",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_Done",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Value": "Erfolgreich platziert: \u201E{name}\u201C.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -37176,111 +37669,111 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenOneSelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Value": "Diese Aktion ist nur verf\u00FCgbar, wenn genau ein Segment ausgew\u00E4hlt ist.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectOneOrManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Value": "W\u00E4hlen Sie mindestens ein Segment aus, um diesen Vorgang fortzusetzen.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectExactlyOneToContinue",
-        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Value": "W\u00E4hlen Sie genau ein Fragment aus, um mit diesem Vorgang fortzufahren.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Value": "W\u00E4hlen Sie mindestens zwei Segmente aus, um diese Aktion fortzusetzen.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenManySelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Value": "Diese Aktion ist nur verf\u00FCgbar, wenn mehrere Segmente ausgew\u00E4hlt sind.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Copy",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Value": "Kopieren",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Cut",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Value": "Ausschneiden",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Paste",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Value": "Einf\u00FCgen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Clip",
-        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Value": "Clip",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Value": "Auswahl des Clips aufheben",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClips",
-        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Value": "Eigenschaften k\u00F6nnen nur konfiguriert werden, wenn genau ein Clip ausgew\u00E4hlt ist.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Value": "{n} Clips ausgew\u00E4hlt",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -37294,7 +37787,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "Protokolle anzeigen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "F\u00FCr projectFrameCut eine Desktop-Verkn\u00FCpfung erstellen",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_HideLogs",
+        "Value": "Protokolle ausblenden",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "{p:p2} abgeschlossen, voraussichtlich noch {eta} \u00FCbrig, {fps} FPS",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -41246,16 +41801,16 @@
       },
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
-        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Value": "Selecci\u00F3n m\u00FAltiple",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Value": "Haz clic en un espacio vac\u00EDo de la pista para a\u00F1adir \u00AB{name}\u00BB en la posici\u00F3n del clic.{(compact ? $\u0022{Environment.NewLine}Tambi\u00E9n puedes pulsar Esc para cancelar esta operaci\u00F3n.\u0022 : \u0022\u0022)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -41277,21 +41832,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Value": "La posici\u00F3n en la que hiciste clic no es v\u00E1lida. Prueba en otro lugar.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Value": "\u00AB{name}\u00BB solo se puede agregar a la pista secundaria.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -41305,12 +41860,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Value": "\u00AB{name}\u00BB solo se puede agregar a la pista principal.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -41324,30 +41879,30 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Value": "Mover",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Value": "Mover entre pista principal/secundaria",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_Done",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Value": "Se ha colocado \u0027{name}\u0027 correctamente.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -41361,111 +41916,111 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenOneSelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Value": "Esta acci\u00F3n solo est\u00E1 disponible cuando se selecciona un fragmento.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectOneOrManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Value": "Selecciona al menos un fragmento para realizar esta operaci\u00F3n.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectExactlyOneToContinue",
-        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Value": "Selecciona un fragmento para realizar esta operaci\u00F3n.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Value": "Selecciona al menos dos fragmentos para realizar esta operaci\u00F3n.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenManySelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Value": "Esta operaci\u00F3n solo est\u00E1 disponible cuando se seleccionan varios segmentos.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Copy",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Value": "Copiar",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Cut",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Value": "Cortar",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Paste",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Value": "Pegar",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Clip",
-        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Value": "Clip",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Value": "Deseleccionar fragmento",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClips",
-        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Value": "Solo se pueden configurar propiedades cuando se ha seleccionado un solo clip.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Value": "Seleccionados {n} fragmentos",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -41479,7 +42034,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "Mostrar registros",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "Crear un acceso directo en el escritorio para projectFrameCut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_HideLogs",
+        "Value": "Ocultar registros",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "Completado {p:p2}, quedan {eta}, {fps} FPS",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -45431,16 +46048,16 @@
       },
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
-        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Value": "Selezione multipla",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9996\u5148\uFF0C\u6211\u9700\u8981\u7406\u89E3\u8FD9\u4E2A\u672C\u5730\u5316\u8D44\u6E90\u7684\u5185\u5BB9\u548C\u4E0A\u4E0B\u6587\u3002  \n\n- **Id**: \u0060DraftPage_AddClipView_ClickToPlace\u0060  \n- **Value**: \u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u201C{name}\u201D\u3002{(compact ? $\\u0022{Environment.NewLine}\u4F60\u8FD8\u53EF\u4EE5\u6309Esc\u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002\\u0022 : \\u0022\\u0022)}  \n- **Mode**: \u0060InterpolationString\u0060\uFF08\u63D2\u503C\u5B57\u7B26\u4E32\uFF09  \n- **Args**: \u0060name\u0060\uFF08\u5B57\u7B26\u4E32\uFF09\u3001\u0060compact\u0060\uFF08\u5E03\u5C14\u503C\uFF09  \n- **TargetLanguage**: \u0060it-IT\u0060\uFF08\u610F\u5927\u5229\u8BED\uFF09  \n\n\u7FFB\u8BD1\u8981\u70B9\uFF1A  \n1. \u4FDD\u6301\u63D2\u503C\u53C2\u6570 \u0060{name}\u0060 \u4E0D\u53D8\u3002  \n2. \u6761\u4EF6\u8868\u8FBE\u5F0F\u90E8\u5206\u8981\u6839\u636E \u0060compact\u0060 \u7684\u503C\u51B3\u5B9A\u662F\u5426\u6DFB\u52A0\u6362\u884C\u548C\u63D0\u793A\u3002  \n3. \u610F\u5927\u5229\u8BED\u4E2D\uFF0C\u5F15\u5BFC\u901A\u5E38\u7528 \u0060\u00AB \u00BB\u0060 \u6216 \u0060\u201C \u201D\u0060\uFF0C\u4F46\u8F6F\u4EF6\u754C\u9762\u5E38\u7528\u5F15\u53F7\u4E3A \u0060\u0022\u0060 \u6216 \u0060\u00AB\u00BB\u0060\uFF0C\u8FD9\u91CC\u4FDD\u6301\u4E0E\u539F\u6587\u4E00\u81F4\u7528 \u0060\u00AB \u00BB\u0060 \u53EF\u80FD\u66F4\u7B26\u5408\u610F\u5927\u5229\u8BED\u4E60\u60EF\uFF0C\u4F46\u539F\u6587\u662F \u0060\u300C\u300D\u0060\uFF08\u65E5\u5F0F\u5F15\u53F7\uFF09\uFF0C\u4E0D\u8FC7\u8FD9\u91CC\u663E\u793A\u4E3A \u0060\\u300C\u0060 \u548C \u0060\\u300D\u0060\uFF0C\u662F CJK \u5F15\u53F7\u3002\u5728\u610F\u5927\u5229\u8BED\u4E2D\uFF0C\u76F4\u63A5\u4F7F\u7528\u53CC\u5F15\u53F7 \u0060\u0022\u0060 \u6216\u4E66\u540D\u53F7 \u0060\u00AB \u00BB\u0060 \u90FD\u53EF\u4EE5\u3002\u8003\u8651\u5230\u8FD9\u662F\u8F6F\u4EF6\u754C\u9762\uFF0C\u6211\u9009\u62E9\u7528 \u0060\u0022\u0060\u3002  \n4. \u53E5\u5B50\u7ED3\u6784\u8981\u81EA\u7136\uFF0C\u7B26\u5408\u610F\u5927\u5229\u8BED\u8BED\u5E8F\u3002  \n\n\u7FFB\u8BD1\u8349\u7A3F\uFF1A  \n- \u4E3B\u53E5\uFF1A\u70B9\u51FB\u8F68\u9053\u4E0A\u7684\u7A7A\u95F2\u4F4D\u7F6E\uFF0C\u5728\u70B9\u51FB\u5904\u6DFB\u52A0\u201C{name}\u201D\u3002  \n- \u6761\u4EF6\u90E8\u5206\uFF1A\u5982\u679C \u0060compact\u0060 \u4E3A false\uFF0C\u4E0D\u6DFB\u52A0\u989D\u5916\u6587\u672C\uFF1B\u5982\u679C\u4E3A true\uFF0C\u5219\u6DFB\u52A0\u6362\u884C\u548C\u201C\u4F60\u8FD8\u53EF\u4EE5\u6309 Esc \u53D6\u6D88\u6B64\u64CD\u4F5C\u3002\u201D  \n\n\u610F\u5927\u5229\u8BED\u5BF9\u5E94\u8868\u8FBE\uFF1A  \n- \u201C\u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u201D \u2192 \u201CClicca su un punto libero della traccia\u201D  \n- \u201C\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u2018{name}\u2019\u201D \u2192 \u201Cper aggiungere \\\u0022{name}\\\u0022 nel punto cliccato\u201D  \n- \u6761\u4EF6\u90E8\u5206\uFF1A\u201C\u4F60\u8FD8\u53EF\u4EE5\u6309 Esc \u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002\u201D \u2192 \u201CPuoi anche premere Esc per annullare l\u0027operazione.\u201D  \n\n\u6CE8\u610F\uFF1A\u0060{Environment.NewLine}\u0060 \u5728\u7FFB\u8BD1\u4E2D\u4FDD\u7559\uFF0C\u56E0\u4E3A\u5B83\u662F\u4EE3\u7801\u4E2D\u7684\u6362\u884C\u7B26\u3002  \n\n\u5B8C\u6574\u7FFB\u8BD1\uFF1A  \n\u0060\u0060\u0060\nClicca su un punto libero della traccia per aggiungere \u0022{name}\u0022 nel punto cliccato.{(compact ? $\u0022{Environment.NewLine}Puoi anche premere Esc per annullare l\u0027operazione.\u0022 : \u0022\u0022)}\n\u0060\u0060\u0060\n\n\u68C0\u67E5\u662F\u5426\u81EA\u7136\uFF1A  \n- \u610F\u5927\u5229\u8BED\u4E2D\u201C\u8F68\u9053\u201D\u5728\u97F3\u9891/\u89C6\u9891\u7F16\u8F91\u4E2D\u5E38\u7528\u201Ctraccia\u201D\uFF0C\u5408\u9002\u3002  \n- \u201Cpunto libero\u201D \u8868\u793A\u7A7A\u95F2\u70B9/\u7A7A\u767D\u5904\uFF0C\u7B26\u5408\u539F\u6587\u610F\u601D\u3002  \n- \u6761\u4EF6\u53E5\u7684\u610F\u5927\u5229\u8BED\u8868\u8FBE\u6E05\u6670\u3002  \n\n\u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022Clicca su un punto libero della traccia per aggiungere \\\u0022{name}\\\u0022 nel punto cliccato.{(compact ? $\\\u0022{Environment.NewLine}Puoi anche premere Esc per annullare l\u0027operazione.\\\u0022 : \\\u0022\\\u0022)}\u0022,\n    \u0022Comment\u0022: \u0022\u0022\n}\n\u0060\u0060\u0060",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -45462,21 +46079,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9996\u5148\uFF0C\u6211\u9700\u8981\u7406\u89E3\u8FD9\u4E2A\u672C\u5730\u5316\u8D44\u6E90\u7684\u5185\u5BB9\u548C\u4E0A\u4E0B\u6587\u3002  \n\n- **Id**: \u0060DraftPage_AddClipView_ClickToPlace\u0060  \n- **Value**: \u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u201C{name}\u201D\u3002{(compact ? $\\u0022{Environment.NewLine}\u4F60\u8FD8\u53EF\u4EE5\u6309Esc\u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002\\u0022 : \\u0022\\u0022)}  \n- **Mode**: \u0060InterpolationString\u0060\uFF08\u63D2\u503C\u5B57\u7B26\u4E32\uFF09  \n- **Args**: \u0060name\u0060\uFF08\u5B57\u7B26\u4E32\uFF09\u3001\u0060compact\u0060\uFF08\u5E03\u5C14\u503C\uFF09  \n- **TargetLanguage**: \u0060it-IT\u0060\uFF08\u610F\u5927\u5229\u8BED\uFF09  \n\n\u7FFB\u8BD1\u8981\u70B9\uFF1A  \n1. \u4FDD\u6301\u63D2\u503C\u53C2\u6570 \u0060{name}\u0060 \u4E0D\u53D8\u3002  \n2. \u6761\u4EF6\u8868\u8FBE\u5F0F\u90E8\u5206\u8981\u6839\u636E \u0060compact\u0060 \u7684\u503C\u51B3\u5B9A\u662F\u5426\u6DFB\u52A0\u6362\u884C\u548C\u63D0\u793A\u3002  \n3. \u610F\u5927\u5229\u8BED\u4E2D\uFF0C\u5F15\u5BFC\u901A\u5E38\u7528 \u0060\u00AB \u00BB\u0060 \u6216 \u0060\u201C \u201D\u0060\uFF0C\u4F46\u8F6F\u4EF6\u754C\u9762\u5E38\u7528\u5F15\u53F7\u4E3A \u0060\u0022\u0060 \u6216 \u0060\u00AB\u00BB\u0060\uFF0C\u8FD9\u91CC\u4FDD\u6301\u4E0E\u539F\u6587\u4E00\u81F4\u7528 \u0060\u00AB \u00BB\u0060 \u53EF\u80FD\u66F4\u7B26\u5408\u610F\u5927\u5229\u8BED\u4E60\u60EF\uFF0C\u4F46\u539F\u6587\u662F \u0060\u300C\u300D\u0060\uFF08\u65E5\u5F0F\u5F15\u53F7\uFF09\uFF0C\u4E0D\u8FC7\u8FD9\u91CC\u663E\u793A\u4E3A \u0060\\u300C\u0060 \u548C \u0060\\u300D\u0060\uFF0C\u662F CJK \u5F15\u53F7\u3002\u5728\u610F\u5927\u5229\u8BED\u4E2D\uFF0C\u76F4\u63A5\u4F7F\u7528\u53CC\u5F15\u53F7 \u0060\u0022\u0060 \u6216\u4E66\u540D\u53F7 \u0060\u00AB \u00BB\u0060 \u90FD\u53EF\u4EE5\u3002\u8003\u8651\u5230\u8FD9\u662F\u8F6F\u4EF6\u754C\u9762\uFF0C\u6211\u9009\u62E9\u7528 \u0060\u0022\u0060\u3002  \n4. \u53E5\u5B50\u7ED3\u6784\u8981\u81EA\u7136\uFF0C\u7B26\u5408\u610F\u5927\u5229\u8BED\u8BED\u5E8F\u3002  \n\n\u7FFB\u8BD1\u8349\u7A3F\uFF1A  \n- \u4E3B\u53E5\uFF1A\u70B9\u51FB\u8F68\u9053\u4E0A\u7684\u7A7A\u95F2\u4F4D\u7F6E\uFF0C\u5728\u70B9\u51FB\u5904\u6DFB\u52A0\u201C{name}\u201D\u3002  \n- \u6761\u4EF6\u90E8\u5206\uFF1A\u5982\u679C \u0060compact\u0060 \u4E3A false\uFF0C\u4E0D\u6DFB\u52A0\u989D\u5916\u6587\u672C\uFF1B\u5982\u679C\u4E3A true\uFF0C\u5219\u6DFB\u52A0\u6362\u884C\u548C\u201C\u4F60\u8FD8\u53EF\u4EE5\u6309 Esc \u53D6\u6D88\u6B64\u64CD\u4F5C\u3002\u201D  \n\n\u610F\u5927\u5229\u8BED\u5BF9\u5E94\u8868\u8FBE\uFF1A  \n- \u201C\u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u201D \u2192 \u201CClicca su un punto libero della traccia\u201D  \n- \u201C\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u2018{name}\u2019\u201D \u2192 \u201Cper aggiungere \\\u0022{name}\\\u0022 nel punto cliccato\u201D  \n- \u6761\u4EF6\u90E8\u5206\uFF1A\u201C\u4F60\u8FD8\u53EF\u4EE5\u6309 Esc \u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002\u201D \u2192 \u201CPuoi anche premere Esc per annullare l\u0027operazione.\u201D  \n\n\u6CE8\u610F\uFF1A\u0060{Environment.NewLine}\u0060 \u5728\u7FFB\u8BD1\u4E2D\u4FDD\u7559\uFF0C\u56E0\u4E3A\u5B83\u662F\u4EE3\u7801\u4E2D\u7684\u6362\u884C\u7B26\u3002  \n\n\u5B8C\u6574\u7FFB\u8BD1\uFF1A  \n\u0060\u0060\u0060\nClicca su un punto libero della traccia per aggiungere \u0022{name}\u0022 nel punto cliccato.{(compact ? $\u0022{Environment.NewLine}Puoi anche premere Esc per annullare l\u0027operazione.\u0022 : \u0022\u0022)}\n\u0060\u0060\u0060\n\n\u68C0\u67E5\u662F\u5426\u81EA\u7136\uFF1A  \n- \u610F\u5927\u5229\u8BED\u4E2D\u201C\u8F68\u9053\u201D\u5728\u97F3\u9891/\u89C6\u9891\u7F16\u8F91\u4E2D\u5E38\u7528\u201Ctraccia\u201D\uFF0C\u5408\u9002\u3002  \n- \u201Cpunto libero\u201D \u8868\u793A\u7A7A\u95F2\u70B9/\u7A7A\u767D\u5904\uFF0C\u7B26\u5408\u539F\u6587\u610F\u601D\u3002  \n- \u6761\u4EF6\u53E5\u7684\u610F\u5927\u5229\u8BED\u8868\u8FBE\u6E05\u6670\u3002  \n\n\u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022Clicca su un punto libero della traccia per aggiungere \\\u0022{name}\\\u0022 nel punto cliccato.{(compact ? $\\\u0022{Environment.NewLine}Puoi anche premere Esc per annullare l\u0027operazione.\\\u0022 : \\\u0022\\\u0022)}\u0022,\n    \u0022Comment\u0022: \u0022\u0022\n}\n\u0060\u0060\u0060",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Value": "La posizione che hai cliccato non \u00E8 valida, prova con un altro punto.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Value": "{name} pu\u00F2 essere aggiunto solo a una traccia ausiliaria.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -45490,12 +46107,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Value": "\u201C{name}\u201D pu\u00F2 essere aggiunto solo alla traccia principale.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -45509,30 +46126,30 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Value": "Sposta",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Value": "Sposta tra tracce principale/secondarie",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_Done",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Value": "Posizionato con successo \u00AB{name}\u00BB.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -45546,111 +46163,111 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenOneSelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Value": "Questa operazione \u00E8 disponibile solo quando \u00E8 selezionato un segmento.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectOneOrManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Value": "Seleziona almeno un frammento per continuare con questa operazione.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectExactlyOneToContinue",
-        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Value": "Seleziona un frammento per eseguire questa operazione.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Value": "Seleziona almeno due clip per continuare con questa operazione.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenManySelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Value": "Questa operazione \u00E8 disponibile solo quando sono selezionati pi\u00F9 segmenti.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Copy",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Value": "Copia",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Cut",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Value": "Taglia",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Paste",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Value": "Incolla",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Clip",
-        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Value": "Clip",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Value": "Deseleziona clip",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClips",
-        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Value": "\u00C8 possibile configurare le propriet\u00E0 solo quando \u00E8 selezionato un singolo clip.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Value": "Selezionati {n} clip",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -45664,7 +46281,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "Mostra registri",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "Crea un collegamento sul desktop per projectFrameCut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_HideLogs",
+        "Value": "Nascondi log",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "Completato al {p:p2}, rimangono circa {eta}, {fps} fps",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -49616,16 +50295,16 @@
       },
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
-        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Value": "Wielokrotny wyb\u00F3r",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Value": "Kliknij puste miejsce na \u015Bcie\u017Cce, aby doda\u0107 \u201E{name}\u201D w miejscu klikni\u0119cia.{(compact ? $\u201E{Environment.NewLine}Mo\u017Cesz r\u00F3wnie\u017C nacisn\u0105\u0107 Esc, aby anulowa\u0107 t\u0119 operacj\u0119.\u201D : \u201E\u201D)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -49647,21 +50326,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Value": "Klikni\u0119ta przez Ciebie lokalizacja jest nieprawid\u0142owa. Spr\u00F3buj gdzie indziej.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Value": "\u300C{name}\u300D mo\u017Cna doda\u0107 tylko do toru pomocniczego.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -49675,12 +50354,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Value": "\u201E{name}\u201D mo\u017Cna doda\u0107 tylko do g\u0142\u00F3wnej \u015Bcie\u017Cki.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -49694,30 +50373,30 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Value": "Przenie\u015B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Value": "Przenie\u015B mi\u0119dzy g\u0142\u00F3wn\u0105 a drugorz\u0119dn\u0105 \u015Bcie\u017Ck\u0105",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_Done",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Value": "Pomy\u015Blnie umieszczono {name}.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -49731,111 +50410,111 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenOneSelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Value": "Ta operacja jest dost\u0119pna tylko wtedy, gdy wybrano jeden segment.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectOneOrManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Value": "Wybierz co najmniej jeden fragment, aby kontynuowa\u0107 t\u0119 operacj\u0119.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectExactlyOneToContinue",
-        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Value": "Wybierz dok\u0142adnie jeden fragment, aby kontynuowa\u0107 t\u0119 operacj\u0119.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Value": "Wybierz co najmniej dwa fragmenty, aby kontynuowa\u0107 t\u0119 operacj\u0119.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenManySelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Value": "Ta operacja jest dost\u0119pna tylko przy wyborze wielu fragment\u00F3w.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Copy",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Value": "Kopiuj",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Cut",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Value": "Wytnij",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Paste",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Value": "Wklej",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Clip",
-        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Value": "Fragment",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Value": "Odznacz fragment",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClips",
-        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Value": "W\u0142a\u015Bciwo\u015Bci mo\u017Cna konfigurowa\u0107 tylko wtedy, gdy wybrano jeden klip.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Value": "Wybrano {n} klip\u00F3w",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -49849,7 +50528,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "Poka\u017C dzienniki",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "Utw\u00F3rz skr\u00F3t do pulpitu dla projectFrameCut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_HideLogs",
+        "Value": "Ukryj dzienniki",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "Zako\u0144czono {p:p2}, pozosta\u0142o {eta}, {fps} klatek na sekund\u0119",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -53801,16 +54542,16 @@
       },
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
-        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Value": "Sele\u00E7\u00E3o m\u00FAltipla",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Value": "Clique em um local vazio na trilha para adicionar \u0022{name}\u0022 na posi\u00E7\u00E3o clicada.{(compact ? $\u0022{Environment.NewLine}Voc\u00EA tamb\u00E9m pode pressionar Esc para cancelar esta opera\u00E7\u00E3o.\u0022 : \u0022\u0022)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -53832,21 +54573,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Value": "A posi\u00E7\u00E3o que voc\u00EA clicou \u00E9 inv\u00E1lida, tente outro lugar.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Value": "\u300C{name}\u300D s\u00F3 pode ser adicionado a uma faixa auxiliar.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -53860,12 +54601,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Value": "\u201C{name}\u201D s\u00F3 pode ser adicionado \u00E0 faixa principal.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -53879,30 +54620,30 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Value": "Mover",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Value": "Mover entre trilha principal/trilha secund\u00E1ria",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_Done",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Value": "Colocado com sucesso: \u0022{name}\u0022.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -53916,111 +54657,111 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenOneSelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Value": "Esta opera\u00E7\u00E3o est\u00E1 dispon\u00EDvel apenas quando um \u00FAnico segmento est\u00E1 selecionado.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectOneOrManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Value": "Selecione pelo menos um fragmento para realizar esta opera\u00E7\u00E3o.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectExactlyOneToContinue",
-        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Value": "Selecione um segmento para realizar esta opera\u00E7\u00E3o.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Value": "Selecione pelo menos dois segmentos para prosseguir com esta opera\u00E7\u00E3o.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenManySelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Value": "Esta opera\u00E7\u00E3o est\u00E1 dispon\u00EDvel apenas quando v\u00E1rios segmentos s\u00E3o selecionados.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Copy",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Value": "Copiar",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Cut",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Value": "Cortar",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Paste",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Value": "Colar",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Clip",
-        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Value": "Fragmento",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Value": "Cancelar sele\u00E7\u00E3o de segmento",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClips",
-        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Value": "As propriedades s\u00F3 podem ser configuradas quando um \u00FAnico clipe est\u00E1 selecionado.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Value": "Selecionou {n} clipes",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -54034,7 +54775,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "Mostrar logs",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "Criar atalho na \u00E1rea de trabalho para o projectFrameCut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_HideLogs",
+        "Value": "Ocultar Logs",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "Conclu\u00EDdo {p:p2}, estimativa restante {eta}, {fps} quadros por segundo",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -57986,16 +58789,16 @@
       },
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
-        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Value": "\u041C\u043D\u043E\u0436\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0439 \u0432\u044B\u0431\u043E\u0440",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Value": "\u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u043D\u0430 \u043F\u0443\u0441\u0442\u043E\u0435 \u043C\u0435\u0441\u0442\u043E \u043D\u0430 \u0434\u043E\u0440\u043E\u0436\u043A\u0435, \u0447\u0442\u043E\u0431\u044B \u0434\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u00AB{name}\u00BB \u0432 \u043C\u0435\u0441\u0442\u0435 \u043D\u0430\u0436\u0430\u0442\u0438\u044F.{(compact ? $\u0022{Environment.NewLine}\u0412\u044B \u0442\u0430\u043A\u0436\u0435 \u043C\u043E\u0436\u0435\u0442\u0435 \u043D\u0430\u0436\u0430\u0442\u044C Esc, \u0447\u0442\u043E\u0431\u044B \u043E\u0442\u043C\u0435\u043D\u0438\u0442\u044C \u044D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435.\u0022 : \u0022\u0022)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -58017,21 +58820,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u0418\u043D\u0441\u0442\u0440\u0443\u043A\u0446\u0438\u044F \u043F\u043E \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u0438\u044E \u043A\u043B\u0438\u043F\u0430 \u043D\u0430 \u0434\u043E\u0440\u043E\u0436\u043A\u0443. \u041F\u0440\u0438 \u043D\u0430\u0436\u0430\u0442\u0438\u0438 \u043D\u0430 \u043F\u0443\u0441\u0442\u043E\u0435 \u043C\u0435\u0441\u0442\u043E \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442\u0441\u044F \u043A\u043B\u0438\u043F \u0441 \u0443\u043A\u0430\u0437\u0430\u043D\u043D\u044B\u043C \u0438\u043C\u0435\u043D\u0435\u043C. \u0412 \u0437\u0430\u0432\u0438\u0441\u0438\u043C\u043E\u0441\u0442\u0438 \u043E\u0442 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u0430 compact \u043C\u043E\u0436\u0435\u0442 \u043E\u0442\u043E\u0431\u0440\u0430\u0436\u0430\u0442\u044C\u0441\u044F \u0434\u043E\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C\u043D\u0430\u044F \u043F\u043E\u0434\u0441\u043A\u0430\u0437\u043A\u0430 \u043E\u0431 \u043E\u0442\u043C\u0435\u043D\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F.",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Value": "\u0412\u044B\u0431\u0440\u0430\u043D\u043D\u043E\u0435 \u0432\u0430\u043C\u0438 \u043C\u0435\u0441\u0442\u043E \u043D\u0435\u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u043E. \u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0432\u044B\u0431\u0440\u0430\u0442\u044C \u0434\u0440\u0443\u0433\u043E\u0435.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Value": "\u00AB{name}\u00BB \u043C\u043E\u0436\u043D\u043E \u0434\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0442\u043E\u043B\u044C\u043A\u043E \u043D\u0430 \u0432\u0441\u043F\u043E\u043C\u043E\u0433\u0430\u0442\u0435\u043B\u044C\u043D\u0443\u044E \u0434\u043E\u0440\u043E\u0436\u043A\u0443.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -58045,12 +58848,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Value": "\u00AB{name}\u00BB \u043C\u043E\u0436\u043D\u043E \u0434\u043E\u0431\u0430\u0432\u0438\u0442\u044C \u0442\u043E\u043B\u044C\u043A\u043E \u043D\u0430 \u0433\u043B\u0430\u0432\u043D\u0443\u044E \u0434\u043E\u0440\u043E\u0436\u043A\u0443.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -58064,30 +58867,30 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Value": "\u041F\u0435\u0440\u0435\u043C\u0435\u0441\u0442\u0438\u0442\u044C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Value": "\u041F\u0435\u0440\u0435\u043C\u0435\u0441\u0442\u0438\u0442\u044C \u043D\u0430 \u0433\u043B\u0430\u0432\u043D\u0443\u044E/\u0432\u0442\u043E\u0440\u043E\u0441\u0442\u0435\u043F\u0435\u043D\u043D\u0443\u044E \u0434\u043E\u0440\u043E\u0436\u043A\u0443",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_Done",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Value": "\u0423\u0441\u043F\u0435\u0448\u043D\u043E \u0440\u0430\u0437\u043C\u0435\u0449\u0435\u043D\u043E \u00AB{name}\u00BB.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -58101,111 +58904,111 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenOneSelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Value": "\u042D\u0442\u0430 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u044F \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u0440\u0438 \u0432\u044B\u0431\u043E\u0440\u0435 \u043E\u0434\u043D\u043E\u0433\u043E \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectOneOrManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Value": "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0445\u043E\u0442\u044F \u0431\u044B \u043E\u0434\u0438\u043D \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442 \u0434\u043B\u044F \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u044F \u044D\u0442\u043E\u0439 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u0438.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectExactlyOneToContinue",
-        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Value": "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043E\u0434\u0438\u043D \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442 \u0434\u043B\u044F \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u044F \u044D\u0442\u043E\u0433\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044F.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Value": "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043A\u0430\u043A \u043C\u0438\u043D\u0438\u043C\u0443\u043C \u0434\u0432\u0430 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430 \u0434\u043B\u044F \u0432\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u044F \u044D\u0442\u043E\u0439 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u0438.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenManySelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Value": "\u042D\u0442\u0430 \u043E\u043F\u0435\u0440\u0430\u0446\u0438\u044F \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430 \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u0440\u0438 \u0432\u044B\u0431\u043E\u0440\u0435 \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u0438\u0445 \u0441\u0435\u0433\u043C\u0435\u043D\u0442\u043E\u0432.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Copy",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Value": "\u041A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u0442\u044C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Cut",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Value": "\u0412\u044B\u0440\u0435\u0437\u0430\u0442\u044C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Paste",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Value": "\u0412\u0441\u0442\u0430\u0432\u0438\u0442\u044C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Clip",
-        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Value": "\u0424\u0440\u0430\u0433\u043C\u0435\u043D\u0442",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Value": "\u041E\u0442\u043C\u0435\u043D\u0438\u0442\u044C \u0432\u044B\u0431\u043E\u0440 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClips",
-        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Value": "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0441\u0432\u043E\u0439\u0441\u0442\u0432 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u0440\u0438 \u0432\u044B\u0431\u043E\u0440\u0435 \u043E\u0434\u043D\u043E\u0433\u043E \u043A\u043B\u0438\u043F\u0430.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Value": "\u0412\u044B\u0431\u0440\u0430\u043D\u043E {n} \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u043E\u0432",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -58219,7 +59022,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u043B\u043E\u0433\u0438",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "\u0421\u043E\u0437\u0434\u0430\u0442\u044C \u044F\u0440\u043B\u044B\u043A \u043D\u0430 \u0440\u0430\u0431\u043E\u0447\u0435\u043C \u0441\u0442\u043E\u043B\u0435 \u0434\u043B\u044F projectFrameCut",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_HideLogs",
+        "Value": "\u0421\u043A\u0440\u044B\u0442\u044C \u0436\u0443\u0440\u043D\u0430\u043B\u044B",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "\u0412\u044B\u043F\u043E\u043B\u043D\u0435\u043D\u043E {p:p2}, \u043E\u0441\u0442\u0430\u043B\u043E\u0441\u044C \u043F\u0440\u0438\u043C\u0435\u0440\u043D\u043E {eta}, {fps} \u043A\u0430\u0434\u0440\u043E\u0432 \u0432 \u0441\u0435\u043A\u0443\u043D\u0434\u0443",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -62171,16 +63036,16 @@
       },
       {
         "Id": "DraftPage_CenterMenuBar_MultiSelect",
-        "Value": "Unset localization item:DraftPage_CenterMenuBar_MultiSelect()",
+        "Value": "\u00C7oklu Se\u00E7im",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace",
+        "Value": "Ray \u00FCzerindeki bo\u015F bir yere t\u0131klayarak, t\u0131klad\u0131\u011F\u0131n\u0131z konuma \u300C{name}\u300D ekleyin.{(compact ? $\u0022{Environment.NewLine}Ayr\u0131ca bu i\u015Flemi iptal etmek i\u00E7in Esc tu\u015Funa basabilirsiniz.\u0022 : \u0022\u0022)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -62202,21 +63067,21 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace()",
+        "Value": "T\u0131klad\u0131\u011F\u0131n\u0131z konum ge\u00E7ersiz, ba\u015Fka bir yer deneyin.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_SubOnly(string name)",
+        "Value": "{name} yaln\u0131zca yard\u0131mc\u0131 kanala eklenebilir.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -62230,12 +63095,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_InvaildPlace_MainOnly(string name)",
+        "Value": "\u201C{name}\u201D yaln\u0131zca ana kanala eklenebilir.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -62249,30 +63114,30 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Move",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Move()",
+        "Value": "Ta\u015F\u0131",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_SwitchTrackType",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_SwitchTrackType()",
+        "Value": "Ana/Yan par\u00E7a aras\u0131nda ta\u015F\u0131",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace_Done",
-        "Value": "Unset localization item:DraftPage_AddClipView_ClickToPlace_Done(string  name)",
+        "Value": "\u300C{name}\u300D ba\u015Far\u0131yla yerle\u015Ftirildi.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -62286,111 +63151,111 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u6210\u529F\u653E\u7F6E\u6D88\u606F\u7684\u571F\u8033\u5176\u8BED\u7FFB\u8BD1\uFF0C\u8C03\u6574\u4E86\u8BED\u5E8F\u4EE5\u7B26\u5408\u672C\u5730\u8868\u8FBE\u4E60\u60EF\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenOneSelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenOneSelection()",
+        "Value": "Bu i\u015Flem yaln\u0131zca bir par\u00E7a se\u00E7ildi\u011Finde kullan\u0131labilir.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectOneOrManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectOneOrManyToContinue()",
+        "Value": "Bu i\u015Flemi ger\u00E7ekle\u015Ftirmek i\u00E7in en az bir par\u00E7a se\u00E7in.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectExactlyOneToContinue",
-        "Value": "Unset localization item:DraftPage_SelectExactlyOneToContinue()",
+        "Value": "Bu i\u015Flemi ger\u00E7ekle\u015Ftirmek i\u00E7in bir par\u00E7a se\u00E7in.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectManyToContinue",
-        "Value": "Unset localization item:DraftPage_SelectManyToContinue()",
+        "Value": "Bu i\u015Flemi ger\u00E7ekle\u015Ftirmek i\u00E7in en az iki par\u00E7a se\u00E7in.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_OnlyAvailableWhenManySelection",
-        "Value": "Unset localization item:DraftPage_OnlyAvailableWhenManySelection()",
+        "Value": "Bu i\u015Flem yaln\u0131zca birden fazla par\u00E7a se\u00E7ildi\u011Finde kullan\u0131labilir.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Copy",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Copy()",
+        "Value": "Kopyala",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Cut",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Cut()",
+        "Value": "Kes",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Paste",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Paste()",
+        "Value": "Yap\u0131\u015Ft\u0131r",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Clip",
-        "Value": "Unset localization item:DraftPage_MenuBar_Clip()",
+        "Value": "K\u0131rp\u0131nt\u0131",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_MenuBar_Edit_Unselect",
-        "Value": "Unset localization item:DraftPage_MenuBar_Edit_Unselect()",
+        "Value": "Par\u00E7a Se\u00E7imini Kald\u0131r",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClips",
-        "Value": "Unset localization item:DraftPage_SelectedManyClips()",
+        "Value": "\u00D6zellikleri yaln\u0131zca tek bir klibi se\u00E7ti\u011Finizde yap\u0131land\u0131rabilirsiniz.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "DraftPage_SelectedManyClipsCount",
-        "Value": "Unset localization item:DraftPage_SelectedManyClipsCount(int n)",
+        "Value": "{n} klip se\u00E7ildi",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -62404,7 +63269,69 @@
             "Value": ""
           }
         ],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_ShowLogs",
+        "Value": "G\u00FCnl\u00FCkleri G\u00F6ster",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "WelocmePage_CreateShortcutToDesktop",
+        "Value": "projectFrameCut i\u00E7in masa\u00FCst\u00FC k\u0131sayolu olu\u015Ftur",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_HideLogs",
+        "Value": "G\u00FCnl\u00FCkleri Gizle",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "RenderPage_LongStat",
+        "Value": "{p:p2} tamamland\u0131, kalan s\u00FCre {eta}, saniyede {fps} kare",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "fps"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]

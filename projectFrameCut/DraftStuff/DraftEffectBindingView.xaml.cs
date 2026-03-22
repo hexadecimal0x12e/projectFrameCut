@@ -1251,7 +1251,7 @@ public partial class DraftEffectBindingView : ContentView
             {
                 await UpdateNodePreview(_inputNode, srcFrame);
             }
-            srcFrame.Disposed = null;
+            srcFrame.CanBeDisposed = false;
             var frame = new OneFrame(42, clip, srcFrame)
             {
                 Effects = _clip.Effects?.Values?.ToArray() ?? []
@@ -1296,8 +1296,8 @@ public partial class DraftEffectBindingView : ContentView
             }
 
 
-            srcFrame.Disposed = false;
-            srcFrame.Dispose();
+            srcFrame.CanBeDisposed = true;
+            srcFrame.Dispose(true);
         }
         catch (Exception ex)
         {

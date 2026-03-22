@@ -505,6 +505,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "General_Unbind",
+        "Value": "\u53D6\u6D88\u7EC4\u5408",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "PropertyPanel",
         "Value": "\u5C5E\u6027\u9762\u677F",
         "Mode": "ConstString",
@@ -935,8 +943,24 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "General_Unbind",
-        "Value": "\u53D6\u6D88\u7EC4\u5408",
+        "Id": "Timing_InfLength_ExtendToWholeDraft",
+        "Value": "\u5EF6\u957F\u5230\u6574\u4E2A\u9879\u76EE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_InfLength_ExtendToWholeDraft_Available",
+        "Value": "\u542F\u7528\u540E\u8BE5\u8F85\u8F68\u9053\u7247\u6BB5\u5C06\u4F5C\u7528\u4E8E\u6574\u4E2A\u9879\u76EE\u65F6\u957F\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Timing_InfLength_ExtendToWholeDraft_NotAvailable",
+        "Value": "\u5F53\u524D\u8F85\u8F68\u9053\u5B58\u5728\u591A\u4E2A\u7247\u6BB5\uFF0C\u65E0\u6CD5\u542F\u7528\u8BE5\u9009\u9879\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
