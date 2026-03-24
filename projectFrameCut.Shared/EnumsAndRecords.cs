@@ -53,6 +53,13 @@ namespace projectFrameCut.Shared
         NotSpecified = -1,
     }
 
+    public enum EffectTarget
+    {
+        Video,
+        Audio,
+        NotSpecified = -1,
+    }
+
     public enum BindableArgumentEffectType
     {
         ValueProvider,

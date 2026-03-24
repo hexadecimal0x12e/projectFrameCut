@@ -76,6 +76,7 @@ namespace projectFrameCut.Render.Effect
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "StraightLineMovementValueProducer";
+        public EffectTarget Target => EffectTarget.Video;
         public static List<string> s_ParametersNeeded = new List<string>
         {
             "StartX",

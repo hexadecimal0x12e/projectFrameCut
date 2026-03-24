@@ -94,6 +94,7 @@ namespace projectFrameCut.Render.Effect
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "PointPlacer";
+        public EffectTarget Target => EffectTarget.Video;
         public List<string> ParametersNeeded => PointPlacer.ParametersNeeded;
         public Dictionary<string, string> ParametersType => PointPlacer.ParametersType;
 

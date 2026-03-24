@@ -467,6 +467,8 @@ namespace projectFrameCut.Render.Effect
 
         public string TypeName => "Resize";
 
+        public EffectTarget Target => EffectTarget.Video;
+
         public List<string> ParametersNeeded { get; } = new List<string>
         {
             "Height",

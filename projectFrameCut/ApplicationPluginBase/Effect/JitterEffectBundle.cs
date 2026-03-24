@@ -3,6 +3,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -21,6 +22,10 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public bool IsContinuousEffect => true;
 
         public bool IsBindableEffect => false;
+
+        public EffectType TypeOfEffect => EffectType.ContinuousEffect;
+
+        public EffectTarget Target => EffectTarget.Video;
 
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; }

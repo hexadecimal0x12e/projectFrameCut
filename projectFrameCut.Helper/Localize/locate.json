@@ -10,6 +10,14 @@
   "Values": {
     "zh-CN": [
       {
+        "Id": "AdminPrompt",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u4E0D\u80FD\u5728\u7BA1\u7406\u5458\u8EAB\u4EFD\u4E0B\u8FD0\u884C\u3002\r\u8BF7\u5C1D\u8BD5\u5728\u6CA1\u6709\u7BA1\u7406\u5458\u6743\u9650\u7684\u4E0A\u4E0B\u6587\u91CC\u91CD\u65B0\u6253\u5F00\u7A0B\u5E8F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "AppLoading",
         "Value": "\u52A0\u8F7D\u5E94\u7528\u7A0B\u5E8F...",
         "Mode": "ConstString",
@@ -116,8 +124,32 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "AdminPrompt",
-        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u4E0D\u80FD\u5728\u7BA1\u7406\u5458\u8EAB\u4EFD\u4E0B\u8FD0\u884C\u3002\r\u8BF7\u5C1D\u8BD5\u5728\u6CA1\u6709\u7BA1\u7406\u5458\u6743\u9650\u7684\u4E0A\u4E0B\u6587\u91CC\u91CD\u65B0\u6253\u5F00\u7A0B\u5E8F\u3002",
+        "Id": "FrozenForm_Title",
+        "Value": "{HelperProgram.AppTitle} \u672A\u54CD\u5E94",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "\u91CD\u542F\u5E94\u7528\u7A0B\u5E8F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "\u7EE7\u7EED\u7B49\u5F85",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "{HelperProgram.AppTitle} \u4F3C\u4E4E\u5FD9\u4E8E\u67D0\u4E8B\uFF0C\u65E0\u6CD5\u54CD\u5E94UI\u3002\r\u4F60\u53EF\u4EE5\u7EE7\u7EED\u7B49\u5F85\uFF0C\u6216\u8005\u91CD\u542F\u5E94\u7528\u7A0B\u5E8F\u3002\r\u5982\u679C\u4F60\u91CD\u542F\u7A0B\u5E8F\uFF0C\u4F60\u7684\u6570\u636E\u53EF\u80FD\u4F1A\u4E22\u5931\u3002",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -242,6 +274,51 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Unset localization item:AdminPrompt()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "Unset localization item:FrozenForm_Title()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Unset localization item:FrozenForm_RebootApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Unset localization item:FrozenForm_Wait()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "Unset localization item:FrozenForm_Content()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -361,6 +438,51 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Unset localization item:AdminPrompt()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "Unset localization item:FrozenForm_Title()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Unset localization item:FrozenForm_RebootApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Unset localization item:FrozenForm_Wait()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "Unset localization item:FrozenForm_Content()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -482,6 +604,51 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Unset localization item:AdminPrompt()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "Unset localization item:FrozenForm_Title()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Unset localization item:FrozenForm_RebootApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Unset localization item:FrozenForm_Wait()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "Unset localization item:FrozenForm_Content()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -601,6 +768,51 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Unset localization item:AdminPrompt()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "Unset localization item:FrozenForm_Title()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Unset localization item:FrozenForm_RebootApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Unset localization item:FrozenForm_Wait()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "Unset localization item:FrozenForm_Content()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -722,6 +934,51 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Unset localization item:AdminPrompt()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "Unset localization item:FrozenForm_Title()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Unset localization item:FrozenForm_RebootApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Unset localization item:FrozenForm_Wait()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "Unset localization item:FrozenForm_Content()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -841,6 +1098,51 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u6587\u8A00\u6587\u7248\u672C\u4E4B\u7CFB\u7EDF\u8981\u6C42\u63D0\u793A\uFF0C\u4FDD\u7559\u53C2\u6570\u5360\u4F4D\u7B26\uFF0C\u7528\u8BED\u53E4\u96C5\u800C\u660E\u6670\u3002",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Unset localization item:AdminPrompt()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "Unset localization item:FrozenForm_Title()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Unset localization item:FrozenForm_RebootApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Unset localization item:FrozenForm_Wait()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "Unset localization item:FrozenForm_Content()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -962,6 +1264,51 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Unset localization item:AdminPrompt()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "Unset localization item:FrozenForm_Title()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Unset localization item:FrozenForm_RebootApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Unset localization item:FrozenForm_Wait()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "Unset localization item:FrozenForm_Content()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "de-DE": [
@@ -1081,6 +1428,51 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Unset localization item:AdminPrompt()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "Unset localization item:FrozenForm_Title()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Unset localization item:FrozenForm_RebootApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Unset localization item:FrozenForm_Wait()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "Unset localization item:FrozenForm_Content()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -1202,6 +1594,51 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Unset localization item:AdminPrompt()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "Unset localization item:FrozenForm_Title()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Unset localization item:FrozenForm_RebootApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Unset localization item:FrozenForm_Wait()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "Unset localization item:FrozenForm_Content()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "it-IT": [
@@ -1321,6 +1758,51 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Unset localization item:AdminPrompt()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "Unset localization item:FrozenForm_Title()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Unset localization item:FrozenForm_RebootApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Unset localization item:FrozenForm_Wait()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "Unset localization item:FrozenForm_Content()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -1442,6 +1924,51 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Unset localization item:AdminPrompt()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "Unset localization item:FrozenForm_Title()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Unset localization item:FrozenForm_RebootApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Unset localization item:FrozenForm_Wait()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "Unset localization item:FrozenForm_Content()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "pt-BR": [
@@ -1561,6 +2088,51 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Unset localization item:AdminPrompt()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "Unset localization item:FrozenForm_Title()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Unset localization item:FrozenForm_RebootApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Unset localization item:FrozenForm_Wait()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "Unset localization item:FrozenForm_Content()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -1682,6 +2254,51 @@
         "ArgsComment": [],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Unset localization item:AdminPrompt()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "Unset localization item:FrozenForm_Title()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Unset localization item:FrozenForm_RebootApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Unset localization item:FrozenForm_Wait()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "Unset localization item:FrozenForm_Content()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "tr-TR": [
@@ -1801,6 +2418,51 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AdminPrompt",
+        "Value": "Unset localization item:AdminPrompt()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Title",
+        "Value": "Unset localization item:FrozenForm_Title()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_RebootApp",
+        "Value": "Unset localization item:FrozenForm_RebootApp()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Wait",
+        "Value": "Unset localization item:FrozenForm_Wait()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "FrozenForm_Content",
+        "Value": "Unset localization item:FrozenForm_Content()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]

@@ -1789,6 +1789,8 @@ namespace projectFrameCut.DraftStuff
                             ppb.AddEntry(controlId, PluginManager.GetLocalizationItem($"_{paramName}", paramName), valStr, "");
                         }
                     }
+                    ppb.AddSeparator();
+                    ppb.AddCustomChild("Type of implement", new Label { Text = effect.ImplementType.ToString() });
                     if (effect is IBindableArgumentEffect be)
                     {
                         ppb.AddSeparator();
@@ -2380,6 +2382,9 @@ namespace projectFrameCut.DraftStuff
 
             public Dictionary<string, string> ParametersType => [];
 
+            public EffectType TypeOfEffect => EffectType.NotSpecified;
+
+            public EffectTarget Target => EffectTarget.NotSpecified;
 
             public IEffectFactory[] Create()
             {

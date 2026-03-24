@@ -275,6 +275,7 @@ namespace projectFrameCut.DraftStuff
                         IsMixture = false,
                         IsContinuousEffect = effect is IContinuousEffect,
                         IsVariableArgumentEffect = effect is IBindableArgumentEffect,
+                        ImplementType = effect.ImplementType,
                         BindedEffectGroupID = effect.BindedEffectGroupID ?? "",
                     };
 
@@ -366,7 +367,8 @@ namespace projectFrameCut.DraftStuff
                     }
                 }
                 if(InitAtLoad) clipInstance.ReInit(targetPPB ?? throw new NullReferenceException("You must provide a targetPPB."));
-                clipInstance.EffectsInstances = clipInstance?.Effects?.Select(e => PluginManager.CreateEffect(e, default))?.ToArray() ?? [];
+                clipInstance.EffectsInstances = clipInstance?.Effects?.Select(e => PluginManager.CreateEffect(e, e.ImplementType == EffectImplementType.NotSpecified ? EffectHelper.DefaultImplementsType.GetValueOrDefault($"{e.FromPlugin}.{e.TypeName}", EffectImplementType.NotSpecified) : e.ImplementType))?.ToArray() ?? [];
+                if (clipInstance is null) throw new NullReferenceException();
                 clipsList.Add(clipInstance);
 
             }

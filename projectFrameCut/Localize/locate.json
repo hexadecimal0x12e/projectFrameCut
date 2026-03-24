@@ -2037,6 +2037,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "\u52A8\u6001\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_RedoAndUndo_Failed",
         "Value": "\u65E0\u6CD5\u64A4\u9500/\u590D\u539F\u66F4\u6539\u3002",
         "Mode": "ConstString",
@@ -3887,6 +3895,22 @@
       {
         "Id": "WelocmePage_Start",
         "Value": "\u5F00\u59CB",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "\u9690\u85CF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "\u663E\u793A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8133,6 +8157,33 @@
         ],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "Unset localization item:DraftPage_DynamicPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "Unset localization item:_Hide()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -12373,6 +12424,33 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "Unset localization item:DraftPage_DynamicPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "Unset localization item:_Hide()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -16621,6 +16699,33 @@
         ],
         "Comment": "\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u306E\u9032\u6357\u72B6\u6CC1\u3092\u8868\u793A\u3059\u308B\u30B9\u30C6\u30FC\u30BF\u30B9\u30E1\u30C3\u30BB\u30FC\u30B8\u3002p\u306F\u5B8C\u4E86\u7387\u3001eta\u306F\u6B8B\u308A\u6642\u9593\u3001fps\u306F\u51E6\u7406\u901F\u5EA6\uFF08\u30D5\u30EC\u30FC\u30E0/\u79D2\uFF09\u3002",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "Unset localization item:DraftPage_DynamicPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "Unset localization item:_Hide()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -20868,6 +20973,33 @@
         ],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "Unset localization item:DraftPage_DynamicPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "Unset localization item:_Hide()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -25109,6 +25241,33 @@
           }
         ],
         "Comment": "Statut long du rendu : pourcentage rendu, temps restant estim\u00E9, et d\u00E9bit d\u0027images.",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "Unset localization item:DraftPage_DynamicPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "Unset localization item:_Hide()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -29357,6 +29516,33 @@
         ],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "Unset localization item:DraftPage_DynamicPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "Unset localization item:_Hide()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ar-SA": [
@@ -33603,6 +33789,33 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "Unset localization item:DraftPage_DynamicPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "Unset localization item:_Hide()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -37851,6 +38064,33 @@
         ],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "Unset localization item:DraftPage_DynamicPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "Unset localization item:_Hide()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "es-ES": [
@@ -42098,6 +42338,33 @@
         ],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "Unset localization item:DraftPage_DynamicPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "Unset localization item:_Hide()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "it-IT": [
@@ -44355,7 +44622,7 @@
       },
       {
         "Id": "DraftPage_Track",
-        "Value": "\u8F68\u9053 #{trackId}",
+        "Value": "Traccia #{trackId}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -46057,7 +46324,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "[Translation Error]: Can\u0027t find any JSON in the response. Origin response: \u9996\u5148\uFF0C\u6211\u9700\u8981\u7406\u89E3\u8FD9\u4E2A\u672C\u5730\u5316\u8D44\u6E90\u7684\u5185\u5BB9\u548C\u4E0A\u4E0B\u6587\u3002  \n\n- **Id**: \u0060DraftPage_AddClipView_ClickToPlace\u0060  \n- **Value**: \u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u201C{name}\u201D\u3002{(compact ? $\\u0022{Environment.NewLine}\u4F60\u8FD8\u53EF\u4EE5\u6309Esc\u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002\\u0022 : \\u0022\\u0022)}  \n- **Mode**: \u0060InterpolationString\u0060\uFF08\u63D2\u503C\u5B57\u7B26\u4E32\uFF09  \n- **Args**: \u0060name\u0060\uFF08\u5B57\u7B26\u4E32\uFF09\u3001\u0060compact\u0060\uFF08\u5E03\u5C14\u503C\uFF09  \n- **TargetLanguage**: \u0060it-IT\u0060\uFF08\u610F\u5927\u5229\u8BED\uFF09  \n\n\u7FFB\u8BD1\u8981\u70B9\uFF1A  \n1. \u4FDD\u6301\u63D2\u503C\u53C2\u6570 \u0060{name}\u0060 \u4E0D\u53D8\u3002  \n2. \u6761\u4EF6\u8868\u8FBE\u5F0F\u90E8\u5206\u8981\u6839\u636E \u0060compact\u0060 \u7684\u503C\u51B3\u5B9A\u662F\u5426\u6DFB\u52A0\u6362\u884C\u548C\u63D0\u793A\u3002  \n3. \u610F\u5927\u5229\u8BED\u4E2D\uFF0C\u5F15\u5BFC\u901A\u5E38\u7528 \u0060\u00AB \u00BB\u0060 \u6216 \u0060\u201C \u201D\u0060\uFF0C\u4F46\u8F6F\u4EF6\u754C\u9762\u5E38\u7528\u5F15\u53F7\u4E3A \u0060\u0022\u0060 \u6216 \u0060\u00AB\u00BB\u0060\uFF0C\u8FD9\u91CC\u4FDD\u6301\u4E0E\u539F\u6587\u4E00\u81F4\u7528 \u0060\u00AB \u00BB\u0060 \u53EF\u80FD\u66F4\u7B26\u5408\u610F\u5927\u5229\u8BED\u4E60\u60EF\uFF0C\u4F46\u539F\u6587\u662F \u0060\u300C\u300D\u0060\uFF08\u65E5\u5F0F\u5F15\u53F7\uFF09\uFF0C\u4E0D\u8FC7\u8FD9\u91CC\u663E\u793A\u4E3A \u0060\\u300C\u0060 \u548C \u0060\\u300D\u0060\uFF0C\u662F CJK \u5F15\u53F7\u3002\u5728\u610F\u5927\u5229\u8BED\u4E2D\uFF0C\u76F4\u63A5\u4F7F\u7528\u53CC\u5F15\u53F7 \u0060\u0022\u0060 \u6216\u4E66\u540D\u53F7 \u0060\u00AB \u00BB\u0060 \u90FD\u53EF\u4EE5\u3002\u8003\u8651\u5230\u8FD9\u662F\u8F6F\u4EF6\u754C\u9762\uFF0C\u6211\u9009\u62E9\u7528 \u0060\u0022\u0060\u3002  \n4. \u53E5\u5B50\u7ED3\u6784\u8981\u81EA\u7136\uFF0C\u7B26\u5408\u610F\u5927\u5229\u8BED\u8BED\u5E8F\u3002  \n\n\u7FFB\u8BD1\u8349\u7A3F\uFF1A  \n- \u4E3B\u53E5\uFF1A\u70B9\u51FB\u8F68\u9053\u4E0A\u7684\u7A7A\u95F2\u4F4D\u7F6E\uFF0C\u5728\u70B9\u51FB\u5904\u6DFB\u52A0\u201C{name}\u201D\u3002  \n- \u6761\u4EF6\u90E8\u5206\uFF1A\u5982\u679C \u0060compact\u0060 \u4E3A false\uFF0C\u4E0D\u6DFB\u52A0\u989D\u5916\u6587\u672C\uFF1B\u5982\u679C\u4E3A true\uFF0C\u5219\u6DFB\u52A0\u6362\u884C\u548C\u201C\u4F60\u8FD8\u53EF\u4EE5\u6309 Esc \u53D6\u6D88\u6B64\u64CD\u4F5C\u3002\u201D  \n\n\u610F\u5927\u5229\u8BED\u5BF9\u5E94\u8868\u8FBE\uFF1A  \n- \u201C\u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u201D \u2192 \u201CClicca su un punto libero della traccia\u201D  \n- \u201C\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u2018{name}\u2019\u201D \u2192 \u201Cper aggiungere \\\u0022{name}\\\u0022 nel punto cliccato\u201D  \n- \u6761\u4EF6\u90E8\u5206\uFF1A\u201C\u4F60\u8FD8\u53EF\u4EE5\u6309 Esc \u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002\u201D \u2192 \u201CPuoi anche premere Esc per annullare l\u0027operazione.\u201D  \n\n\u6CE8\u610F\uFF1A\u0060{Environment.NewLine}\u0060 \u5728\u7FFB\u8BD1\u4E2D\u4FDD\u7559\uFF0C\u56E0\u4E3A\u5B83\u662F\u4EE3\u7801\u4E2D\u7684\u6362\u884C\u7B26\u3002  \n\n\u5B8C\u6574\u7FFB\u8BD1\uFF1A  \n\u0060\u0060\u0060\nClicca su un punto libero della traccia per aggiungere \u0022{name}\u0022 nel punto cliccato.{(compact ? $\u0022{Environment.NewLine}Puoi anche premere Esc per annullare l\u0027operazione.\u0022 : \u0022\u0022)}\n\u0060\u0060\u0060\n\n\u68C0\u67E5\u662F\u5426\u81EA\u7136\uFF1A  \n- \u610F\u5927\u5229\u8BED\u4E2D\u201C\u8F68\u9053\u201D\u5728\u97F3\u9891/\u89C6\u9891\u7F16\u8F91\u4E2D\u5E38\u7528\u201Ctraccia\u201D\uFF0C\u5408\u9002\u3002  \n- \u201Cpunto libero\u201D \u8868\u793A\u7A7A\u95F2\u70B9/\u7A7A\u767D\u5904\uFF0C\u7B26\u5408\u539F\u6587\u610F\u601D\u3002  \n- \u6761\u4EF6\u53E5\u7684\u610F\u5927\u5229\u8BED\u8868\u8FBE\u6E05\u6670\u3002  \n\n\u0060\u0060\u0060json\n{\n    \u0022Value\u0022: \u0022Clicca su un punto libero della traccia per aggiungere \\\u0022{name}\\\u0022 nel punto cliccato.{(compact ? $\\\u0022{Environment.NewLine}Puoi anche premere Esc per annullare l\u0027operazione.\\\u0022 : \\\u0022\\\u0022)}\u0022,\n    \u0022Comment\u0022: \u0022\u0022\n}\n\u0060\u0060\u0060",
+        "Value": "Clicca su un punto libero della traccia per aggiungere \u0022{name}\u0022 nel punto cliccato.{(compact ? $\u0022{Environment.NewLine}Puoi anche premere Esc per annullare l\u0027operazione.\u0022 : \u0022\u0022)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -46344,6 +46611,33 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "Unset localization item:DraftPage_DynamicPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "Unset localization item:_Hide()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -50304,7 +50598,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "Kliknij puste miejsce na \u015Bcie\u017Cce, aby doda\u0107 \u201E{name}\u201D w miejscu klikni\u0119cia.{(compact ? $\u201E{Environment.NewLine}Mo\u017Cesz r\u00F3wnie\u017C nacisn\u0105\u0107 Esc, aby anulowa\u0107 t\u0119 operacj\u0119.\u201D : \u201E\u201D)}",
+        "Value": "Kliknij puste miejsce na \u015Bcie\u017Cce, aby doda\u0107 \u201E{name}\u201D w miejscu klikni\u0119cia. {(compact ? $\u0022{Environment.NewLine}Mo\u017Cesz r\u00F3wnie\u017C nacisn\u0105\u0107 Esc, aby anulowa\u0107 t\u0119 operacj\u0119.\u0022 :\u0022\u0022)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -50591,6 +50885,33 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "Unset localization item:DraftPage_DynamicPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "Unset localization item:_Hide()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ],
@@ -54839,6 +55160,33 @@
         ],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "Unset localization item:DraftPage_DynamicPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "Unset localization item:_Hide()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ru-RU": [
@@ -59086,6 +59434,33 @@
         ],
         "Comment": "",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "Unset localization item:DraftPage_DynamicPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "Unset localization item:_Hide()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "tr-TR": [
@@ -63332,6 +63707,33 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "Unset localization item:DraftPage_DynamicPreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Hide",
+        "Value": "Unset localization item:_Hide()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
       }
     ]

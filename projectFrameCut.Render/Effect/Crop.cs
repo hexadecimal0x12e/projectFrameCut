@@ -179,6 +179,8 @@ namespace projectFrameCut.Render.Effect
 
         public string TypeName => "Crop";
 
+        public EffectTarget Target => EffectTarget.Video;
+
         public List<string> ParametersNeeded { get; } = new List<string>
         {
             "StartX",

@@ -153,6 +153,8 @@ namespace projectFrameCut.Render.Effect
 
         public string TypeName => "Jitter";
 
+        public EffectTarget Target => EffectTarget.Video;
+
         public List<string> ParametersNeeded { get; } = new List<string>
         {
             "MaxOffsetX",

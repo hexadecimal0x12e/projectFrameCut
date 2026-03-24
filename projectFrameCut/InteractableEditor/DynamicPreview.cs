@@ -159,6 +159,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 
 			generatedView.HorizontalOptions = LayoutOptions.Fill;
 			generatedView.VerticalOptions = LayoutOptions.Fill;
+			generatedView.ZIndex = (int)((result.Source?.LayerIndex ?? 1) * 100);
 			composite.Children.Add(generatedView);
 			renderedCount++;
 		}
@@ -188,7 +189,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 	private static PreparedPreview GenerateClipPreviewPrepared(PreviewRequest request, int targetWidth, int targetHeight, uint frameIndex)
 	{
 		var generatedView = GenerateClipPreview(request, targetWidth, targetHeight, frameIndex, out var message);
-		return new PreparedPreview(generatedView, message);
+		return new PreparedPreview(generatedView, message, request.Clip);
 	}
 
 	private IReadOnlyList<PreviewRequest> ResolveRequests(uint frameIndex)
@@ -440,129 +441,6 @@ public sealed class DynamicPreview : ContentView, IDisposable
 		}
 	}
 
-	/// <summary>
-	/// Renders a video file from the specified frame range using DynamicPreview's clip selection
-	/// and effect application mechanisms. This method utilizes the dynamic preview provider system
-	/// to determine which clips to render for each frame.
-	/// </summary>
-	public async Task<string> RenderSomeFrames(int startIndex, int length, int targetWidth, int targetFramerate, int targetHeight, string tempPath, CancellationToken token)
-	{
-		if (_clips is null || _clips.Length == 0)
-		{
-			throw new InvalidOperationException("No clips are available for rendering. Call UpdateDraft first.");
-		}
-
-		var encodeWidth = (targetWidth % 2 == 0) ? targetWidth : targetWidth - 1;
-		var encodeHeight = (targetHeight % 2 == 0) ? targetHeight : targetHeight - 1;
-
-		var destPath = Path.Combine(tempPath, $"projectFrameCut_DynamicRender_{Guid.NewGuid()}.mp4");
-
-		using var builder = new VideoBuilder(destPath, encodeWidth, encodeHeight, targetFramerate, "libx264", "AV_PIX_FMT_YUV420P")
-		{
-			Duration = (uint)length,
-			BlockWrite = true // Process frames synchronously
-		};
-
-		var endIndex = startIndex + length;
-
-		for (int i = 0; i < length; i++)
-		{
-			var frameIndex = startIndex + i;
-			token.ThrowIfCancellationRequested();
-
-			try
-			{
-				// Use DynamicPreview's mechanism to get active clips and resolve which to render
-				var requests = ResolveRequests((uint)frameIndex);
-
-				// Generate frame pixels using DynamicPreview's clip selection logic
-				var picture = await GenerateFramePixelsUsingDynamicPreview(requests, encodeWidth, encodeHeight, (uint)frameIndex, token).ConfigureAwait(false);
-
-				if (picture != null)
-				{
-					builder.Append((uint)i, picture);
-				}
-				else
-				{
-					// If rendering fails, append a blank frame
-					var blankFrame = Picture8bpp.GenerateSolidColor(encodeWidth, encodeHeight, 0, 0, 0, 0);
-					builder.Append((uint)i, blankFrame);
-				}
-			}
-			catch (Exception ex)
-			{
-				System.Diagnostics.Debug.WriteLine($"Error rendering frame {frameIndex}: {ex.Message}");
-				// Continue with next frame
-				var blankFrame = Picture8bpp.GenerateSolidColor(encodeWidth, encodeHeight, 0, 0, 0, 0);
-				builder.Append((uint)i, blankFrame);
-			}
-		}
-
-		// Finish writing and return the path
-		builder.Writer.Finish();
-		builder.Dispose();
-
-		return destPath;
-	}
-
-	private async Task<IPicture?> GenerateFramePixelsUsingDynamicPreview(IReadOnlyList<PreviewRequest> requests, int targetWidth, int targetHeight, uint frameIndex, CancellationToken token)
-	{
-		if (requests.Count == 0)
-		{
-			return null;
-		}
-
-		// Collect all frames from active clips using DynamicPreview's logic
-		IPicture? compositeFrame = null;
-
-		// Process clips in reverse order (bottom to top) for proper layering
-		foreach (var request in requests.Reverse())
-		{
-			token.ThrowIfCancellationRequested();
-
-			var clip = request.Clip;
-			if (clip is null)
-			{
-				continue;
-			}
-
-			IPicture? frameData = null;
-
-			try
-			{
-				// Get the frame data from the clip
-				var relativeIndex = clip.GetRelativeFrameIndex(frameIndex);
-				if (relativeIndex is not null)
-				{
-					frameData = clip.GetFrame((uint)relativeIndex.Value, targetWidth, targetHeight, true, IPicture.PicturePixelMode.BytePicture);
-				}
-			}
-			catch (IndexOutOfRangeException)
-			{
-				continue;
-			}
-
-			if (frameData is null)
-			{
-				continue;
-			}
-
-			// Simple compositing: overlay frames
-			if (compositeFrame == null)
-			{
-				compositeFrame = frameData;
-			}
-			else
-			{
-				// For now, use the foreground frame (the top-most clip)
-				// You can enhance this with proper alpha blending if needed
-				frameData.Dispose();
-			}
-		}
-
-		return compositeFrame;
-	}
-
 	private void DisposeClips()
 	{
 		if (_clips is null)
@@ -586,5 +464,5 @@ public sealed class DynamicPreview : ContentView, IDisposable
 
 	private sealed record PreviewRequest(IClip Clip, IClipDynamicPreviewProvider? Provider);
 
-	private sealed record PreparedPreview(Microsoft.Maui.IView? View, string? ErrorMessage);
+	private sealed record PreparedPreview(Microsoft.Maui.IView? View, string? ErrorMessage, IClip? Source);
 }

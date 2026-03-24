@@ -18,6 +18,17 @@ namespace projectFrameCut.Services
     public static class PluginService
     {
         public const int PluginAPIVersion = IPluginBase.CurrentPluginAPIVersion;
+        private const string PluginPemStoragePrefix = "plugin_pem_";
+        private const string PluginPemPepperStorageKey = "plugin_pem_pepper_v1";
+
+        private class SaltedPemEnvelope
+        {
+            public int Version { get; set; }
+            public string Salt { get; set; } = string.Empty;
+            public string Nonce { get; set; } = string.Empty;
+            public string CipherText { get; set; } = string.Empty;
+            public string Tag { get; set; } = string.Empty;
+        }
 
         public static async Task AddAPlugin(string pluginPath, Page currentPage)
         {
@@ -79,9 +90,10 @@ namespace projectFrameCut.Services
                         return;
                     }
 
-                    var storPluginPem = await SecureStorage.Default.GetAsync($"plugin_pem_{metadata.PluginID}");
+                    var storPluginPem = await GetPluginPemFromSecureStorageAsync(metadata.PluginID);
                     PEMExists = storPluginPem is not null;
-                    if (PEMExists && storPluginPem != File.ReadAllText(pemPath))
+                    var pluginPemFromPackage = File.ReadAllText(pemPath);
+                    if (PEMExists && storPluginPem != pluginPemFromPackage)
                     {
                         failReason = SettingsManager.SettingLocalizedResources.Plugin_InvaildSignToPreviousOne;
                         return;
@@ -259,7 +271,7 @@ namespace projectFrameCut.Services
                     {
                         var pemPath = Path.Combine(pluginRoot, "publickey.pem");
                         var pem = File.ReadAllText(pemPath);
-                        await SecureStorage.Default.SetAsync($"plugin_pem_{pluginInstance.PluginID}", pem);
+                        await SavePluginPemToSecureStorageAsync(pluginInstance.PluginID, pem);
                     }
                     if (Directory.Exists(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID))) Directory.Delete(Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID), true);
                     Directory.Move(pluginRoot, Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginInstance.PluginID));
@@ -341,7 +353,7 @@ namespace projectFrameCut.Services
 
         public static async Task<Tuple<IPluginBase?, string?>> CreateFromID(string pluginID)
         {
-            var pluginPem = await SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}");
+            var pluginPem = await GetPluginPemFromSecureStorageAsync(pluginID);
             var plugin = CreateFromID(pluginID, out string failReason, pluginPem);
             return new(plugin, failReason);
 
@@ -355,7 +367,7 @@ namespace projectFrameCut.Services
                 var pluginRoot = Path.Combine(MauiProgram.BasicDataPath, "Plugins", pluginID);
                 if (Directory.Exists(pluginRoot))
                 {
-                    pluginPem ??= TaskHelper.SyncWait(() => SecureStorage.Default.GetAsync($"plugin_pem_{pluginID}"));
+                    pluginPem ??= GetPluginPemFromSecureStorage(pluginID);
                     if (string.IsNullOrEmpty(pluginPem))
                     {
                         string? localizedPluginBrokenReason = null;
@@ -577,6 +589,127 @@ namespace projectFrameCut.Services
             }
             Log($"Assembly {name} not found.");
             return null;
+        }
+
+        private static string GetPluginPemStorageKey(string pluginID) => $"{PluginPemStoragePrefix}{pluginID}";
+
+        private static async Task<string> GetOrCreatePluginPemPepperAsync()
+        {
+            var pepper = await SecureStorage.Default.GetAsync(PluginPemPepperStorageKey);
+            if (!string.IsNullOrEmpty(pepper))
+            {
+                return pepper;
+            }
+
+            var bytes = RandomNumberGenerator.GetBytes(32);
+            pepper = Convert.ToBase64String(bytes);
+            await SecureStorage.Default.SetAsync(PluginPemPepperStorageKey, pepper);
+            return pepper;
+        }
+
+        private static byte[] DerivePemKey(byte[] pepper, byte[] salt)
+        {
+            var mix = new byte[pepper.Length + salt.Length];
+            Buffer.BlockCopy(pepper, 0, mix, 0, pepper.Length);
+            Buffer.BlockCopy(salt, 0, mix, pepper.Length, salt.Length);
+            return SHA256.HashData(mix);
+        }
+
+        private static async Task SavePluginPemToSecureStorageAsync(string pluginID, string pem)
+        {
+            var pepperBase64 = await GetOrCreatePluginPemPepperAsync();
+            var pepper = Convert.FromBase64String(pepperBase64);
+            var salt = RandomNumberGenerator.GetBytes(16);
+            var nonce = RandomNumberGenerator.GetBytes(12);
+            var key = DerivePemKey(pepper, salt);
+            var plain = Encoding.UTF8.GetBytes(pem);
+            var cipher = new byte[plain.Length];
+            var tag = new byte[16];
+            var aad = Encoding.UTF8.GetBytes(pluginID);
+
+            using (var aes = new AesGcm(key))
+            {
+                aes.Encrypt(nonce, plain, cipher, tag, aad);
+            }
+
+            var payload = new SaltedPemEnvelope
+            {
+                Version = 1,
+                Salt = Convert.ToBase64String(salt),
+                Nonce = Convert.ToBase64String(nonce),
+                CipherText = Convert.ToBase64String(cipher),
+                Tag = Convert.ToBase64String(tag)
+            };
+
+            await SecureStorage.Default.SetAsync(GetPluginPemStorageKey(pluginID), JsonSerializer.Serialize(payload));
+        }
+
+        private static async Task<string?> GetPluginPemFromSecureStorageAsync(string pluginID)
+        {
+            var key = GetPluginPemStorageKey(pluginID);
+            var raw = await SecureStorage.Default.GetAsync(key);
+            if (string.IsNullOrEmpty(raw))
+            {
+                return raw;
+            }
+
+            try
+            {
+                var payload = JsonSerializer.Deserialize<SaltedPemEnvelope>(raw);
+                if (payload?.Version != 1 ||
+                    string.IsNullOrEmpty(payload.Salt) ||
+                    string.IsNullOrEmpty(payload.Nonce) ||
+                    string.IsNullOrEmpty(payload.CipherText) ||
+                    string.IsNullOrEmpty(payload.Tag))
+                {
+                    // Legacy plaintext PEM format, migrate in-place to salted protected format.
+                    await SavePluginPemToSecureStorageAsync(pluginID, raw);
+                    return raw;
+                }
+
+                var pepperBase64 = await SecureStorage.Default.GetAsync(PluginPemPepperStorageKey);
+                if (string.IsNullOrEmpty(pepperBase64))
+                {
+                    return null;
+                }
+
+                var pepper = Convert.FromBase64String(pepperBase64);
+                var salt = Convert.FromBase64String(payload.Salt);
+                var nonce = Convert.FromBase64String(payload.Nonce);
+                var cipher = Convert.FromBase64String(payload.CipherText);
+                var tag = Convert.FromBase64String(payload.Tag);
+                var plain = new byte[cipher.Length];
+                var pemKey = DerivePemKey(pepper, salt);
+                var aad = Encoding.UTF8.GetBytes(pluginID);
+
+                using (var aes = new AesGcm(pemKey))
+                {
+                    aes.Decrypt(nonce, cipher, tag, plain, aad);
+                }
+
+                return Encoding.UTF8.GetString(plain);
+            }
+            catch (CryptographicException ex)
+            {
+                Log(ex, $"Plugin PEM secure storage record validation failed: {pluginID}");
+                return null;
+            }
+            catch (FormatException ex)
+            {
+                Log(ex, $"Plugin PEM secure storage record format invalid: {pluginID}");
+                return null;
+            }
+            catch (JsonException)
+            {
+                // Legacy plaintext PEM format, migrate in-place to salted protected format.
+                await SavePluginPemToSecureStorageAsync(pluginID, raw);
+                return raw;
+            }
+        }
+
+        private static string? GetPluginPemFromSecureStorage(string pluginID)
+        {
+            return TaskHelper.SyncWait(() => GetPluginPemFromSecureStorageAsync(pluginID));
         }
 
         public static IPluginBase? CreateIPluginFromAsb(Assembly asb, string workingPath)

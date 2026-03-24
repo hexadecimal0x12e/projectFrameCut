@@ -24,6 +24,8 @@ using projectFrameCut.Render.Effect;
 using Microsoft.Maui.LifecycleEvents;
 using CommunityToolkit.Maui.Core;
 using projectFrameCut.AIAssistance;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+
 
 
 
@@ -53,7 +55,7 @@ namespace projectFrameCut
     {
         public static StreamWriter LogWriter;
 
-        public static string LogPath { get; private set;  }
+        public static string LogPath { get; private set; }
 
         public static string DataPath { get; private set; }
 
@@ -197,7 +199,8 @@ namespace projectFrameCut
                         Preferences.Clear();
                     }
 
-                    MyLoggerExtensions.LoggingDiagnosticInfo = SettingsManager.IsBoolSettingTrue("LogDiagnostics");
+                    if (SettingsManager.IsBoolSettingTrue("LogDiagnostics"))
+                        MyLoggerExtensions.LoggingDiagnosticInfo = true;
                 }
                 else
                 {
@@ -343,6 +346,7 @@ namespace projectFrameCut
                 }
                 builder.Logging.SetMinimumLevel(logLevel);
                 builder.Logging.AddProvider(new MyLoggerProvider(logLevel));
+                builder.Services.AddSingleton<UIThreadWatchdogService>();
 #if WINDOWS
                 builder.Services.AddSingleton<IDialogueHelper, DialogueHelper>();
 #elif ANDROID
@@ -433,6 +437,28 @@ namespace projectFrameCut
                 try
                 {
                     if (!SettingsManager.IsBoolSettingTrue("UseSystemFont")) ConfigFontFromCulture(builder, ReadCultureFromSetting(locate, culture));
+                    if (!SettingsManager.IsBoolSettingTrue("RegisterUserFonts"))
+                    {
+                        foreach (var item in Directory.GetFiles(Path.Combine(DataPath, "My Assets"), "*.ttf", SearchOption.TopDirectoryOnly))
+                        {
+                            try
+                            {
+                                var info = TextHelper.ReadFontFileInfo(item);
+                                builder.ConfigureFonts(f => f.AddFont(item, "UserFont_" + info.EnglishName));
+                            }
+                            catch { }
+                        }
+                        foreach (var item in Directory.GetFiles(Path.Combine(DataPath, "My Assets"), "*.otf", SearchOption.TopDirectoryOnly))
+                        {
+                            try
+                            {
+                                var info = TextHelper.ReadFontFileInfo(item);
+                                builder.ConfigureFonts(f => f.AddFont(item, "UserFont_" + info.EnglishName));
+                            }
+                            catch { }
+                        }
+                    }
+
                 }
                 catch
                 {
@@ -499,6 +525,9 @@ namespace projectFrameCut
                 SettingsManager.SettingLocalizedResources = ISimpleLocalizerBase_Settings.GetMapping().TryGetValue(Localized._LocaleId_, out var loc) ? loc : ISimpleLocalizerBase_Settings.GetMapping().First().Value;
                 SimpleLocalizerBaseGeneratedHelper_PropertyPanel.PPLocalizedResources = ISimpleLocalizerBase_PropertyPanel.GetMapping().TryGetValue(Localized._LocaleId_, out var pploc) ? pploc : ISimpleLocalizerBase_PropertyPanel.GetMapping().First().Value;
                 projectFrameCut.ApplicationAPIBase.LocalizedResources.APIBaseLocalizedResources.Localized = ApplicationAPIBaseLocalizerBase.GetMapping().TryGetValue(Localized._LocaleId_, out var apiloc) ? apiloc : ApplicationAPIBaseLocalizerBase.GetMapping().First().Value;
+#if WINDOWS
+                SimpleLocalizerBaseGeneratedHelper.Localized = ISimpleLocalizerBase_Helper.GetMapping().TryGetValue(Localized._LocaleId_, out var hloc) ? hloc : ISimpleLocalizerBase_Helper.GetMapping().First().Value;
+#endif
                 PluginManager.CurrentLocale = Localized._LocaleId_;
                 PluginManager.ExtenedLocalizationGetter = new((k) =>
                 {

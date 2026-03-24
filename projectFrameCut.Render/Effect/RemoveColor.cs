@@ -248,6 +248,7 @@ namespace projectFrameCut.Render.Effect
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "RemoveColor";
+        public EffectTarget Target => EffectTarget.Video;
         public List<string> ParametersNeeded { get; } = new List<string>
         {
             "R",

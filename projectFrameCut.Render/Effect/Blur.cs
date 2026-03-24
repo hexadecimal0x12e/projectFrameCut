@@ -118,6 +118,7 @@ namespace projectFrameCut.Render.Effect
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "Blur";
+        public EffectTarget Target => EffectTarget.Video;
         public List<string> ParametersNeeded { get; } = new List<string> { "Sigma" };
         public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string> { { "Sigma", "float" } };
 

@@ -40,7 +40,7 @@ public partial class EditSettingPage : ContentPage
 
     Dictionary<string, TextClipEntry> TextTemplates = new();
 
-    static string[] resolutions = ["Realtime", "1280x720", "1920x1080", "2560x1440", "3840x2160"];
+    static string[] resolutions = ["1280x720", "1920x1080", "2560x1440", "3840x2160"];
     static bool LoadTextPreview = false;
 
     public EditSettingPage()
@@ -59,11 +59,22 @@ public partial class EditSettingPage : ContentPage
         }
         catch { LoadTextPreview = false; }
 #endif
-        Content = new ActivityIndicator
+        Title = Localized.MainSettingsPage_Tab_Edit;
+        Content = new VerticalStackLayout
         {
-            IsRunning = true,
-            WidthRequest = 200,
-            HeightRequest = 200
+            Children =
+            {
+                new ActivityIndicator
+                {
+                    IsRunning = true,
+                },
+                new Label
+                {
+                    Text = Localized.LandingPage_Loading,
+                }
+            },
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center
         };
         LoadTextTemplates(ref TextTemplates);
         Task.Run(BuildPPB);
@@ -250,7 +261,7 @@ public partial class EditSettingPage : ContentPage
     {
         rootPPB = new();
         rootPPB.AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_EditorPreference, SettingLocalizedResources.Edit_EditorPreference_Subtitle))
-            .AppendWhen(DeviceInfo.Idiom != DeviceIdiom.Phone, 
+            .AppendWhen(DeviceInfo.Idiom != DeviceIdiom.Phone,
                 c => c.AddPicker("Edit_PreferredPopupMode",
                 SettingLocalizedResources.Edit_PreferredPopupMode, ModeStringMapping.Keys.ToArray(),
                 ModeStringMapping.FirstOrDefault(k => k.Value == GetSetting("Edit_PreferredPopupMode", "right"), new KeyValuePair<string, string>(SettingLocalizedResources.Edit_PreferredPopupMode_Right, "right")).Key)
@@ -412,9 +423,12 @@ public partial class EditSettingPage : ContentPage
             .AddSeparator()
 
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_PreviewOption, SettingLocalizedResources.Edit_PreviewOption_Subtitle))
-            .AddPicker("Edit_LiveVideoPreviewDefaultResolution", SettingLocalizedResources.Edit_LiveVideoPreviewDefaultResolution, resolutions, GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720"), null)
-            .AddEntry("Edit_LiveVideoPreviewBufferLength", SettingLocalizedResources.Edit_LiveVideoPreviewBufferLength, GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), "240")
-            .AddEntry("Edit_LiveVideoPreviewZoomFactor", SettingLocalizedResources.Edit_LiveVideoPreviewZoomFactor, GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), "8")
+            .AddSwitch("Edit_UseDynamicPreview", SettingLocalizedResources.Edit_UseDynamicPreview, IsBoolSettingTrue("Edit_UseDynamicPreview"), null)
+            .AppendWhen(!IsBoolSettingTrue("Edit_UseDynamicPreview"), 
+                c => c.AddPicker("Edit_LiveVideoPreviewDefaultResolution", SettingLocalizedResources.Edit_LiveVideoPreviewDefaultResolution, resolutions, GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720"), null)
+                      .AddEntry("Edit_LiveVideoPreviewBufferLength", SettingLocalizedResources.Edit_LiveVideoPreviewBufferLength, GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), "240")
+                      .AddEntry("Edit_LiveVideoPreviewZoomFactor", SettingLocalizedResources.Edit_LiveVideoPreviewZoomFactor, GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), "8")
+            )
             .AddSeparator()
 
 
@@ -430,7 +444,6 @@ public partial class EditSettingPage : ContentPage
 
         Dispatcher.Dispatch(() =>
         {
-            Title = Localized.MainSettingsPage_Tab_Edit;
             Content = rootPPB.ListenToChanges(SettingInvoker).BuildWithScrollView();
 
         });
@@ -464,6 +477,11 @@ public partial class EditSettingPage : ContentPage
                         break;
                     }
                 case "Edit_UpperContentHeight_AutoSave":
+                case "Edit_UseDynamicPreview":
+                    if (args.Value != null)
+                    {
+                        WriteSetting(args.Id, args.Value?.ToString() ?? "");
+                    }
                     BuildPPB();
                     break;
                 default:

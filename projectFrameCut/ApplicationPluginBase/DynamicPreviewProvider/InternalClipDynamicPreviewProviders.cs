@@ -6,6 +6,8 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using System.Linq;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Render.Effect;
+using System.Collections.Concurrent;
+using System.Threading;
 
 namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
 
@@ -35,6 +37,13 @@ internal abstract class InternalClipDynamicPreviewProviderBase : IClipDynamicPre
 
 internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPreviewProviderBase
 {
+    private const int MaxCachedVideoFrames = 160;
+    private const int PrefetchForwardCount = 8;
+    private const int PrefetchBackwardCount = 1;
+
+    private static readonly ConcurrentDictionary<VideoFrameCacheKey, CachedVideoFrame> _frameCache = new();
+    private static readonly ConcurrentDictionary<VideoPrefetchContextKey, VideoPrefetchContext> _prefetchContexts = new();
+
     public override string TypeName => "VideoClip";
 
     public override bool IsAvailable(IClip target)
@@ -52,15 +61,196 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
             return BuildFallbackLabel("Video source is unavailable.");
         }
 
-        var frame = target.GetFrame(targetFrame, canvasWidth, canvasHeight, true, 8);
+        var contextKey = new VideoPrefetchContextKey(clip.Id, canvasWidth, canvasHeight);
+        var frameKey = new VideoFrameCacheKey(clip.Id, canvasWidth, canvasHeight, targetFrame);
 
+        if (TryGetCachedFrame(frameKey, out var cachedSource))
+        {
+            EnqueuePrefetch(clip, contextKey, targetFrame);
+            return BuildImage(cachedSource);
+        }
+
+        var source = RenderFrameAsImageSource(clip, canvasWidth, canvasHeight, targetFrame, contextKey);
+        if (source is null)
+        {
+            return BuildFallbackLabel("Video source is unavailable.");
+        }
+
+        CacheFrame(frameKey, source);
+        EnqueuePrefetch(clip, contextKey, targetFrame);
+
+        return BuildImage(source);
+    }
+
+    private static Image BuildImage(ImageSource source)
+    {
         return new Image
         {
-            Source = frame.ToImageSource(),
+            Source = source,
             HorizontalOptions = LayoutOptions.Fill,
             VerticalOptions = LayoutOptions.Fill,
         };
     }
+
+    private static bool TryGetCachedFrame(VideoFrameCacheKey frameKey, out ImageSource source)
+    {
+        if (_frameCache.TryGetValue(frameKey, out var cached))
+        {
+            cached.Touch();
+            source = cached.Source;
+            return true;
+        }
+
+        source = null!;
+        return false;
+    }
+
+    private static void CacheFrame(VideoFrameCacheKey frameKey, ImageSource source)
+    {
+        _frameCache[frameKey] = new CachedVideoFrame(source);
+        TrimCacheIfNeeded();
+    }
+
+    private static void TrimCacheIfNeeded()
+    {
+        if (_frameCache.Count <= MaxCachedVideoFrames)
+        {
+            return;
+        }
+
+        var removeCount = _frameCache.Count - MaxCachedVideoFrames;
+        foreach (var stale in _frameCache
+            .OrderBy(x => x.Value.LastAccessTicks)
+            .Take(removeCount))
+        {
+            _frameCache.TryRemove(stale.Key, out _);
+        }
+    }
+
+    private static void EnqueuePrefetch(VideoClip clip, VideoPrefetchContextKey contextKey, uint targetFrame)
+    {
+        var context = _prefetchContexts.GetOrAdd(contextKey, static _ => new VideoPrefetchContext());
+
+        foreach (var frameIndex in EnumeratePrefetchFrames(targetFrame))
+        {
+            if (_frameCache.ContainsKey(new VideoFrameCacheKey(contextKey.ClipId, contextKey.CanvasWidth, contextKey.CanvasHeight, frameIndex)))
+            {
+                continue;
+            }
+
+            if (context.PendingFrames.TryAdd(frameIndex, 0))
+            {
+                context.Queue.Enqueue(frameIndex);
+            }
+        }
+
+        StartPrefetchWorkerIfNeeded(clip, contextKey, context);
+    }
+
+    private static IEnumerable<uint> EnumeratePrefetchFrames(uint centerFrame)
+    {
+        for (var i = 1; i <= PrefetchForwardCount; i++)
+        {
+            if (centerFrame <= uint.MaxValue - (uint)i)
+            {
+                yield return centerFrame + (uint)i;
+            }
+        }
+
+        for (var i = 1; i <= PrefetchBackwardCount; i++)
+        {
+            if (centerFrame >= (uint)i)
+            {
+                yield return centerFrame - (uint)i;
+            }
+        }
+    }
+
+    private static void StartPrefetchWorkerIfNeeded(VideoClip clip, VideoPrefetchContextKey contextKey, VideoPrefetchContext context)
+    {
+        if (Interlocked.CompareExchange(ref context.WorkerRunning, 1, 0) != 0)
+        {
+            return;
+        }
+
+        _ = Task.Run(() =>
+        {
+            while (true)
+            {
+                while (context.Queue.TryDequeue(out var frameIndex))
+                {
+                    context.PendingFrames.TryRemove(frameIndex, out _);
+
+                    var frameKey = new VideoFrameCacheKey(contextKey.ClipId, contextKey.CanvasWidth, contextKey.CanvasHeight, frameIndex);
+                    if (_frameCache.ContainsKey(frameKey))
+                    {
+                        continue;
+                    }
+
+                    var source = RenderFrameAsImageSource(clip, contextKey.CanvasWidth, contextKey.CanvasHeight, frameIndex, contextKey);
+                    if (source is not null)
+                    {
+                        CacheFrame(frameKey, source);
+                    }
+                }
+
+                Interlocked.Exchange(ref context.WorkerRunning, 0);
+
+                if (context.Queue.IsEmpty || Interlocked.CompareExchange(ref context.WorkerRunning, 1, 0) != 0)
+                {
+                    break;
+                }
+            }
+        });
+    }
+
+    private static ImageSource? RenderFrameAsImageSource(VideoClip clip, int canvasWidth, int canvasHeight, uint targetFrame, VideoPrefetchContextKey contextKey)
+    {
+        var context = _prefetchContexts.GetOrAdd(contextKey, static _ => new VideoPrefetchContext());
+        context.DecodeGate.Wait();
+
+        try
+        {
+            using var frame = ((IClip)clip).GetFrame(targetFrame, canvasWidth, canvasHeight, true, 8);
+            return frame.ToImageSource();
+        }
+        catch
+        {
+            return null;
+        }
+        finally
+        {
+            context.DecodeGate.Release();
+        }
+    }
+
+    private sealed class VideoPrefetchContext
+    {
+        public SemaphoreSlim DecodeGate { get; } = new(1, 1);
+        public ConcurrentQueue<uint> Queue { get; } = new();
+        public ConcurrentDictionary<uint, byte> PendingFrames { get; } = new();
+        public int WorkerRunning;
+    }
+
+    private sealed class CachedVideoFrame
+    {
+        public CachedVideoFrame(ImageSource source)
+        {
+            Source = source;
+            Touch();
+        }
+
+        public ImageSource Source { get; }
+        public long LastAccessTicks { get; private set; }
+
+        public void Touch()
+        {
+            LastAccessTicks = DateTime.UtcNow.Ticks;
+        }
+    }
+
+    private sealed record VideoFrameCacheKey(string ClipId, int CanvasWidth, int CanvasHeight, uint FrameIndex);
+    private sealed record VideoPrefetchContextKey(string ClipId, int CanvasWidth, int CanvasHeight);
 }
 
 internal sealed class PhotoClipDynamicPreviewProvider : InternalClipDynamicPreviewProviderBase
@@ -156,6 +346,7 @@ internal sealed class TextClipDynamicPreviewProvider : InternalClipDynamicPrevie
                 _ => FontAttributes.None,
             },
             Margin = new Thickness(12),
+            FontFamily = "UserFont_" + e.fontFamily,
             CharacterSpacing = e.lineSpacing,
             TranslationX = e.x,
             TranslationY = e.y,

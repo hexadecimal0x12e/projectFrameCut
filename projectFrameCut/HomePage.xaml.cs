@@ -731,7 +731,6 @@ public partial class HomePage : ContentPage
                     {
                         try
                         {
-                            var resolution = SettingsManager.GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720");
                             page = new DraftPage(project ?? new ProjectJSONStructure(), dict, assetDict, trackCount, draftSourcePath, project?.ProjectName ?? "?", isReadonly)
                             {
                                 ProjectName = project?.ProjectName ?? "?",
@@ -743,9 +742,7 @@ public partial class HomePage : ContentPage
                                 ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole"),
                                 LiveVideoPreviewBufferLength = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), out var bufferLen) ? bufferLen : 240,
                                 LivePreviewResolutionFactor = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewZoomFactor", "8"), out var resolutionFactor) ? resolutionFactor : 8,
-                                UseRealtimePreview = resolution == "Realtime",
-                                DefaultPreviewWidth = int.TryParse(resolution.Split('x', 2)[0], out var w) ? w : 1280,
-                                DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720,
+                                UseRealtimePreview = SettingsManager.IsBoolSettingTrue("Edit_UseDynamicPreview"),
                                 ProxyOption = SettingsManager.GetSetting("Edit_ProxyOption", "none"),
                                 AutoSavePreviewAreaHeight = SettingsManager.IsBoolSettingTrue("Edit_UpperContentHeight_AutoSave"),
                                 LockScrollViewAfterSelection = SettingsManager.IsBoolSettingTrueOrDefault("Edit_LockScrollViewAfterSelection", true),
@@ -754,6 +751,20 @@ public partial class HomePage : ContentPage
                                 UseCompactLayout = overrideLayoutOption ?? DeviceInfo.Idiom == DeviceIdiom.Phone,
                                 EnableClipInfoPopup = SettingsManager.IsBoolSettingTrue("Edit_EnableClipInfoPopup")
                             };
+                            if (!SettingsManager.IsBoolSettingTrue("Edit_UseDynamicPreview"))
+                            {
+                                var resolution = SettingsManager.GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720");
+                                if (resolution.Split('x', 2).Length >= 2)
+                                {
+                                    page.DefaultPreviewWidth = int.TryParse(resolution.Split('x', 2)[0], out var w) ? w : 1280;
+                                    page.DefaultPreviewHeight = int.TryParse(resolution.Split('x', 2)[1], out var h) ? h : 720;
+                                }
+                                else
+                                {
+                                    page.DefaultPreviewWidth = 1280;
+                                    page.DefaultPreviewHeight = 720;
+                                }
+                            }
 #if WINDOWS
                             ILGPU.Context context = ILGPU.Context.CreateDefault();
                             var devices = context.Devices.ToList();

@@ -114,6 +114,7 @@ namespace projectFrameCut.Render.Effect
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "MaskApplier";
+        public EffectTarget Target => EffectTarget.Video;
         public List<string> ParametersNeeded => MaskApplier.ParametersNeeded;
         public Dictionary<string, string> ParametersType => MaskApplier.ParametersType;
 

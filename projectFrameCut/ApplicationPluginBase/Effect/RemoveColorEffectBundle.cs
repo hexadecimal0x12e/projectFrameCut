@@ -5,6 +5,7 @@ using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -46,6 +47,10 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public bool IsContinuousEffect => false;
 
         public bool IsBindableEffect => false;
+
+        public EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public EffectTarget Target => EffectTarget.Video;
 
         public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
         public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;

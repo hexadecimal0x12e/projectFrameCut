@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.Shared;
 
 namespace projectFrameCut.ApplicationPluginBase.Effect
 {
@@ -55,6 +56,10 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
+
+        public EffectType TypeOfEffect => EffectType.NormalEffect;
+
+        public EffectTarget Target => EffectTarget.Video;
 
         public IEffectFactory[] Create()
         {

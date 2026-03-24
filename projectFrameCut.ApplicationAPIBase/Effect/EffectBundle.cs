@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Maui.Views;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -33,12 +34,33 @@ namespace projectFrameCut.ApplicationAPIBase.Effect
         /// </remarks>
         public string TypeName { get; }
 
-        public bool Enabled { get; set; }
-
+        /// <summary>
+        /// Indicate which plugin this effect comes from, which is used to determine which plugin to use when creating the effect.
+        /// </summary>
         public string FromPlugin { get; }
 
+        /// <summary>
+        /// Get the type of the effect, which is used to determine how to process this effect.
+        /// </summary>
+        public EffectType TypeOfEffect { get; }
+
+        /// <summary>
+        /// Get the target of the effect, which is used to determine where this effect can be applied.
+        /// </summary>
+        public EffectTarget Target { get; }
+
+        /// <summary>
+        /// Determine whether this effect is enabled.
+        /// </summary>
+        public bool Enabled { get; set; }
+
+
+
+        [Obsolete("Use TypeOfEffect instead.",false)]
         public bool IsNormalEffect { get; }
+        [Obsolete("Use TypeOfEffect instead.", false)]
         public bool IsContinuousEffect { get; }
+        [Obsolete("Use TypeOfEffect instead.", false)]
         public bool IsBindableEffect { get; }
 
         /// <summary>

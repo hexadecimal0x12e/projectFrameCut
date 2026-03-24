@@ -1,7 +1,10 @@
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.Shared;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 using System.Text.Json;
 using projectFrameCut.DraftStuff;
@@ -39,11 +42,46 @@ namespace projectFrameCut.InteractableEditor
         private PanGestureRecognizer? _trPan;
         private PanGestureRecognizer? _blPan;
         private PanGestureRecognizer? _brPan;
+        private readonly DynamicPreview _editorDynamicPreview = new();
+        private Func<DraftStructureJSON>? _previewDraftFactory;
+        private Func<uint>? _previewFrameFactory;
+        private long _lastPreviewRefreshTick;
+        private int _isPreviewRefreshRunning;
+
+        private const int PreviewRefreshThrottleMs = 120;
 
         public InteractableEditor()
         {
             InitializeComponent();
+            DynamicPreviewHost.Content = _editorDynamicPreview;
             InitGestures();
+        }
+
+        public void ConfigureDynamicPreview(Func<DraftStructureJSON>? draftFactory, Func<uint>? frameFactory = null)
+        {
+            _previewDraftFactory = draftFactory;
+            _previewFrameFactory = frameFactory;
+        }
+
+        public async Task SyncDynamicPreview(DraftStructureJSON draft, uint frameIndex)
+        {
+            await _editorDynamicPreview.UpdateDraft(draft);
+            _editorDynamicPreview.SetPreferredClipId(_currentClip?.Id);
+            await RefreshDynamicPreviewFrame(frameIndex);
+        }
+
+        public async Task<bool> RefreshDynamicPreviewFrame(uint frameIndex)
+        {
+            _editorDynamicPreview.SetPreferredClipId(_currentClip?.Id);
+            if (_currentClip is null)
+            {
+                _editorDynamicPreview.IsVisible = false;
+                return false;
+            }
+
+            var width = Math.Max(1, (int)Math.Round(_videoWidth));
+            var height = Math.Max(1, (int)Math.Round(_videoHeight));
+            return await _editorDynamicPreview.RenderFrame(frameIndex, width, height);
         }
 
         protected override void OnSizeAllocated(double width, double height)
@@ -88,10 +126,12 @@ namespace projectFrameCut.InteractableEditor
         {
             _currentClip = clip;
             _currentAsset = asset;
+            _editorDynamicPreview.SetPreferredClipId(clip?.Id);
             if (clip == null)
             {
                 this.IsVisible = false;
                 this.InputTransparent = true;
+                _editorDynamicPreview.IsVisible = false;
                 return;
             }
             this.IsVisible = true;
@@ -153,6 +193,58 @@ namespace projectFrameCut.InteractableEditor
             
             // 确保手势识别器在新的容器环境中正确工作
             RefreshGestureRecognizers();
+
+            if (_previewFrameFactory is not null)
+            {
+                _ = RefreshDynamicPreviewFrame(_previewFrameFactory());
+            }
+        }
+
+        private void RequestInteractivePreviewRefresh()
+        {
+            if (_currentClip is null)
+            {
+                return;
+            }
+
+            var now = Environment.TickCount64;
+            var last = Interlocked.Read(ref _lastPreviewRefreshTick);
+            if (now - last < PreviewRefreshThrottleMs)
+            {
+                return;
+            }
+
+            if (Interlocked.CompareExchange(ref _isPreviewRefreshRunning, 1, 0) != 0)
+            {
+                return;
+            }
+
+            Interlocked.Exchange(ref _lastPreviewRefreshTick, now);
+
+            _ = RefreshInteractivePreviewCoreAsync();
+        }
+
+        private async Task RefreshInteractivePreviewCoreAsync()
+        {
+            try
+            {
+                if (_previewDraftFactory is not null)
+                {
+                    var snapshot = _previewDraftFactory();
+                    await _editorDynamicPreview.UpdateDraft(snapshot);
+                }
+
+                var frame = _previewFrameFactory?.Invoke() ?? 0u;
+                await RefreshDynamicPreviewFrame(frame);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Dynamic preview refresh failed: {ex.Message}");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _isPreviewRefreshRunning, 0);
+            }
         }
 
         private void InitGestures()
@@ -284,6 +376,7 @@ namespace projectFrameCut.InteractableEditor
                         UpdateClipEffects(newVisualX, newVisualY, _startW, _startH);
                     }
                     UpdateVisuals();
+                    RequestInteractivePreviewRefresh();
                     break;
                 case GestureStatus.Completed:
                     _updateCallback?.Invoke();
@@ -345,6 +438,7 @@ namespace projectFrameCut.InteractableEditor
 
                     UpdateClipEffects(newX, newY, newW, newH);
                     UpdateVisuals();
+                    RequestInteractivePreviewRefresh();
                     break;
                 case GestureStatus.Completed:
                     _updateCallback?.Invoke();

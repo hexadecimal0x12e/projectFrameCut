@@ -179,6 +179,7 @@ namespace projectFrameCut.Render.Effect
     {
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
         public string TypeName => "Rotation";
+        public EffectTarget Target => EffectTarget.Video;
         public List<string> ParametersNeeded { get; } = new List<string> { "Angle" };
         public Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
         {

@@ -39,7 +39,7 @@ namespace projectFrameCut.Render.Effect
             List<IEffect> effects = new();
             foreach (var item in Effects)
             {
-                effects.Add(PluginManager.CreateEffect(item, DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified)));
+                effects.Add(PluginManager.CreateEffect(item, item.ImplementType == EffectImplementType.NotSpecified ? DefaultImplementsType.GetValueOrDefault($"{item.FromPlugin}.{item.TypeName}", EffectImplementType.NotSpecified) : item.ImplementType));
             }
             return effects.Where(c => c.Enabled).OrderBy(c => c.Index).ToArray();
         }

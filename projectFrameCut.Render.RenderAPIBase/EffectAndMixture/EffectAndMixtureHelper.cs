@@ -49,6 +49,7 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public int Index { get; set; } = 1;
         public int RelativeWidth { get; set; }
         public int RelativeHeight { get; set; }
+        public EffectImplementType ImplementType { get; set; } = EffectImplementType.NotSpecified;
         public Dictionary<string, object>? Parameters { get; set; }
         public string? Id { get; set; }
         public string? BindedInputID { get; set; } = null;

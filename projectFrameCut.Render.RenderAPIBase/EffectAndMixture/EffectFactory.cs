@@ -30,6 +30,12 @@ namespace projectFrameCut.Render.RenderAPIBase.EffectAndMixture
         public Dictionary<string, string> ParametersType { get; }
 
         /// <summary>
+        /// Get the target of this effect.
+        /// </summary>
+        public EffectTarget Target { get; }
+
+
+        /// <summary>
         /// Build a effect with default implementation type.
         /// </summary>
         /// <param name="parameters"></param>

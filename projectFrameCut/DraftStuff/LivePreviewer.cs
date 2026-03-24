@@ -1,5 +1,7 @@
 ﻿using Microsoft.Maui.Controls.PlatformConfiguration;
 using projectFrameCut.Asset;
+using projectFrameCut.DraftStuff;
+using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.Project;
@@ -8,6 +10,7 @@ using projectFrameCut.Shared;
 using SixLabors.ImageSharp.Formats.Png;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using IPicture = projectFrameCut.Shared.IPicture;
@@ -17,6 +20,8 @@ namespace projectFrameCut.LivePreview
     public class LivePreviewer
     {
         public IClip[]? Clips;
+        public ISoundTrack[]? SoundTracks;
+        public int targetFrameRate = 60;
         public uint TotalDuration;
         public string TempPath;
         public string? ProxyRoot;
@@ -115,6 +120,7 @@ namespace projectFrameCut.LivePreview
             }
 
             Clips = clipsList.ToArray();
+            SoundTracks = DraftImportAndExportHelper.JSONToISoundTracks(json).ToArray();
             long max = 0;
             foreach (var clip in Clips)
             {
@@ -132,13 +138,67 @@ namespace projectFrameCut.LivePreview
             Log($"[LiveRender] Updated clips, total {Clips.Length} clips.");
         }
 
+        public bool HasAudioSources()
+        {
+            var hasAudioClip = Clips?.Any(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip) ?? false;
+            var hasSoundTrack = SoundTracks?.Any() ?? false;
+            return hasAudioClip || hasSoundTrack;
+        }
+
+        public async Task ResetAudioPlaybackSources(int ppb = 8)
+        {
+            if (Clips is not null)
+            {
+                foreach (var clip in Clips.Where(c => c.ClipType == ClipMode.AudioClip || c.ClipType == ClipMode.VideoClip))
+                {
+                    await Task.Run(() => clip.ReInit(ppb));
+                }
+            }
+
+            if (SoundTracks is not null)
+            {
+                foreach (var track in SoundTracks)
+                {
+                    await Task.Run(track.ReInit);
+                }
+            }
+        }
+
+        public async Task<string?> RenderSomeAudio(int startIndex, int length, int targetFramerate, CancellationToken token, int sampleRate = 96000, int channels = 2)
+        {
+            if (!HasAudioSources())
+            {
+                return null;
+            }
+
+            var id = Guid.NewGuid();
+            var audDestPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}.wav");
+
+            using var writer = new AudioWriter(audDestPath, sampleRate, channels, "pcm_s16le");
+            var composer = new AudioComposer<float>
+            {
+                Clips = Clips ?? Array.Empty<IClip>(),
+                SoundTracks = SoundTracks,
+                Writer = writer,
+                StartFrame = (uint)startIndex,
+                Duration = (uint)length,
+            };
+
+            await Task.Run(() => composer.Compose(targetFramerate, sampleRate, channels, 40960, token), token);
+            writer.Finish();
+            return audDestPath;
+        }
+
         public async Task<string> RenderSomeFrames(int startIndex, int length, int targetWidth, int targetFramerate, int targetHeight, CancellationToken token)
         {
 
             var encodeWidth = (targetWidth % 2 == 0) ? targetWidth : targetWidth - 1;
             var encodeHeight = (targetHeight % 2 == 0) ? targetHeight : targetHeight - 1;
 
-            var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{Guid.NewGuid()}.mp4");
+            var id = Guid.NewGuid();
+            var resultPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}_result.mp4");
+            var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}.mp4");
+            var audDestPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}.wav");
             LogDiagnostic($"[LiveRender] RenderSomeFrames request: frame #{startIndex}, length {length}, adjusted output size {targetWidth}x{targetHeight}");
             using var builder = new VideoBuilder(destPath, encodeWidth, encodeHeight, targetFramerate, "libx264", "AV_PIX_FMT_YUV420P")
             {
@@ -148,7 +208,7 @@ namespace projectFrameCut.LivePreview
             Renderer renderer = new Renderer
             {
                 StartFrame = (uint)startIndex,
-                Duration = (uint)(startIndex + length),
+                Duration = (uint)length,
                 builder = builder,
                 Clips = Clips,
                 Use16Bit = false,
@@ -159,11 +219,23 @@ namespace projectFrameCut.LivePreview
             renderer.OnProgressChanged += OnProgressChanged;
             await renderer.GoRender(token);
             renderer.OnProgressChanged -= OnProgressChanged;
-
+            audDestPath = await RenderSomeAudio(startIndex, length, targetFramerate, token) ?? string.Empty;
             builder.Writer.Finish(); //Finish doesn't support non-0 start frame, just end the writer
             builder.Dispose();
-            LogDiagnostic($"[LiveRender] RenderSomeFrames finished: {destPath}");
-            return destPath;
+
+            if (!string.IsNullOrWhiteSpace(audDestPath) && File.Exists(audDestPath))
+            {
+                await Task.Run(() => VideoAudioMuxer.MuxFromFiles(destPath, audDestPath, resultPath, true), token);
+                File.Delete(audDestPath);
+            }
+            else
+            {
+                File.Copy(destPath, resultPath, true);
+            }
+
+            File.Delete(destPath);
+            LogDiagnostic($"[LiveRender] RenderSomeFrames finished: {resultPath}");
+            return resultPath;
         }
 
         private static PngEncoder encoder = new()

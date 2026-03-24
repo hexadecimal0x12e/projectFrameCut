@@ -17,10 +17,11 @@ namespace projectFrameCut.Helper
     {
         static SplashForm splash;
         static LogForm log;
+        static FrozenForm froze;
         [STAThread]
         public static void SplashMain()
         {
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized ??= SimpleLocalizer_Helper.Init();
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
@@ -34,7 +35,7 @@ namespace projectFrameCut.Helper
         [STAThread]
         public static void CrashMain()
         {
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized ??= SimpleLocalizer_Helper.Init();
 
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
@@ -48,7 +49,7 @@ namespace projectFrameCut.Helper
         [STAThread]
         public static void LogMain()
         {
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized ??= SimpleLocalizer_Helper.Init();
 
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
 
@@ -58,6 +59,21 @@ namespace projectFrameCut.Helper
             log = new LogForm();
             log.ShowInTaskbar = false;
             log.Show();
+            Application.Run();
+        }
+
+        [STAThread]
+        public static void FrozenMain(object? obj)
+        {
+            SimpleLocalizerBaseGeneratedHelper.Localized ??= SimpleLocalizer_Helper.Init();
+
+            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            froze = new FrozenForm();
+            froze.ShowInTaskbar = true;
+            froze.Show();
             Application.Run();
         }
 
@@ -155,6 +171,11 @@ namespace projectFrameCut.Helper
         {
             Thread.Sleep(1500);
             log?.Invoke(() => log?.Close());
+        }
+        public static void CloseFrozenDiag()
+        {
+            Thread.Sleep(1500);
+            froze?.Invoke(() => froze?.Close());
         }
 
         public static void Cleanup()

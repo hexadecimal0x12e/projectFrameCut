@@ -192,6 +192,8 @@ namespace projectFrameCut.Render.Effect
 
         public string TypeName => "ZoomIn";
 
+        public EffectTarget Target => EffectTarget.Video;
+
         public List<string> ParametersNeeded => s_ParametersNeeded;
         public static List<string> s_ParametersNeeded { get; } = new List<string>
         {

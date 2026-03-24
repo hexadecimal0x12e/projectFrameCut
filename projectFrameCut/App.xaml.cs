@@ -35,6 +35,7 @@ namespace projectFrameCut
     {
 
         public static App instance;
+        private readonly UIThreadWatchdogService _watchdog;
 
         // If the app was launched/opened via a .pjfc file, this will hold the incoming URI string.
         public string? LaunchedPjfcUri { get; private set; }
@@ -75,6 +76,7 @@ namespace projectFrameCut
             };
 #endif
 
+
         }
 
         protected override async void OnAppLinkRequestReceived(Uri uri)
@@ -99,6 +101,48 @@ namespace projectFrameCut
 
         protected override Microsoft.Maui.Controls.Window CreateWindow(IActivationState? activationState)
         {
+            try
+            {
+                var watchdogService = Handler?.MauiContext?.Services.GetService<UIThreadWatchdogService>();
+                if (watchdogService != null)
+                {
+#if WINDOWS
+                    int count = 0;
+                    watchdogService.ThreadFrozen += (sender, e) =>
+                    {
+                        new Thread(Helper.HelperProgram.FrozenMain)
+                        {
+                            Name = "Frozen UI Thread",
+                            Priority = ThreadPriority.Lowest
+                        }.Start();
+                    };
+                    watchdogService.ThreadRecovered += (sender, e) =>
+                    {
+                        Helper.HelperProgram.CloseFrozenDiag();
+                    };
+                    watchdogService.FrozenContinues += (S, e) =>
+                    {
+                        if (!watchdogService.IsThreadFrozen) return;
+                        count++;
+                        if(count % 10 == 0)
+                        {
+                            new Thread(Helper.HelperProgram.FrozenMain)
+                            {
+                                Name = "Frozen UI Thread",
+                                Priority = ThreadPriority.Lowest
+                            }.Start();
+                        }
+                    };
+#endif
+
+                    watchdogService.Start();
+                    Log("UI Thread Watchdog Service started");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"start UI Thread Watchdog Service", this);
+            }
             var stylePath = Path.Combine(MauiProgram.DataPath, "style.xaml");
             var colorPath = Path.Combine(MauiProgram.DataPath, "color.xaml");
             try
@@ -126,35 +170,44 @@ namespace projectFrameCut
             {
                 Log(ex, "Apply user style", this);
             }
+            try
+            {
 #if WINDOWS
-            if (CultureInfo.CurrentCulture.TextInfo.IsRightToLeft || SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
-            {
-                var shell = new AppShell(false);
-                var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
-
-                shell.Items.Add(new ShellContent { Content = new HomePage(), Title = Localized.AppShell_ProjectsTab, Icon = ImageHelper.LoadFromAsset("icon_project"), Route = "home" });
-                shell.Items.Add(new ShellContent { Content = new AssetsLibraryPage(), Title = Localized.AppShell_AssetsTab, Icon = ImageHelper.LoadFromAsset("icon_asset"), Route = "assets" });
-                shell.Items.Add(new ShellContent { Content = new MainSettingsPage(), Title = Localized._Settings, Icon = ImageHelper.LoadFromAsset("icon_setting"), Route = "options" });
-                return mauiWindow;
-
-            }
-            else
-            {
-                var shell = new AppShell(true);
-                var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
-
-                mauiWindow.HandlerChanged += (s, e) =>
+                if (CultureInfo.CurrentCulture.TextInfo.IsRightToLeft || SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
                 {
-                    MakeWindow(mauiWindow);
-                };
-                return mauiWindow;
+                    var shell = new AppShell(false);
+                    var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
+
+                    shell.Items.Add(new ShellContent { Content = new HomePage(), Title = Localized.AppShell_ProjectsTab, Icon = ImageHelper.LoadFromAsset("icon_project"), Route = "home" });
+                    shell.Items.Add(new ShellContent { Content = new AssetsLibraryPage(), Title = Localized.AppShell_AssetsTab, Icon = ImageHelper.LoadFromAsset("icon_asset"), Route = "assets" });
+                    shell.Items.Add(new ShellContent { Content = new MainSettingsPage(), Title = Localized._Settings, Icon = ImageHelper.LoadFromAsset("icon_setting"), Route = "options" });
+                    return mauiWindow;
+
+                }
+                else
+                {
+                    var shell = new AppShell(true);
+                    var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
+
+                    mauiWindow.HandlerChanged += (s, e) =>
+                    {
+                        MakeWindow(mauiWindow);
+                    };
+                    return mauiWindow;
 
 
-            }
+                }
 
 #else
-            return new Microsoft.Maui.Controls.Window(new AppShell());
+                return new Microsoft.Maui.Controls.Window(new AppShell());
 #endif
+            }
+            catch (Exception ex)
+            {
+                Log("*** FATAL: Cannot create main window.", "fatal");
+                MauiProgram.Crash(ex);
+                throw;
+            }
 
         }
 
@@ -272,12 +325,21 @@ namespace projectFrameCut
         {
             MainNavView?.IsPaneVisible = false;
             await Task.Delay(50);
-            if (NativeWindow != null)
+            var appWindow = Current?.Windows[0];
+            if (NativeWindow != null && appWindow != null)
             {
                 NativeWindow.Content.InvalidateMeasure();
+                await Task.Delay(50);
                 NativeWindow.Content.InvalidateArrange();
+                await Task.Delay(50);
+                NativeWindow.ExtendsContentIntoTitleBar = false;
+                await Task.Delay(150);
+                NativeWindow.ExtendsContentIntoTitleBar = true;
+                //await Task.Delay(150);
+                //appWindow.Width = appWindow.Width - 8; //avoid the contents go inside navigation bar
+                //await Task.Delay(150);
+                //appWindow.Width = appWindow.Width + 8;
             }
-
         }
         public static async Task ShowNavBar()
         {
@@ -285,17 +347,26 @@ namespace projectFrameCut
                 MainNavView.IsPaneVisible = true;
 
             await Task.Delay(50);
-            //var appWindow = Current?.Windows[0];
             //if (appWindow != null)
             //{
             //    appWindow.Width = appWindow.Width - 8; //avoid the contents go inside navigation bar
             //    await Task.Delay(50);
             //    appWindow.Width = appWindow.Width + 8;
             //}
-            if (NativeWindow != null)
+            var appWindow = Current?.Windows[0];
+            if (NativeWindow != null && appWindow != null)
             {
                 NativeWindow.Content.InvalidateMeasure();
+                await Task.Delay(50);
                 NativeWindow.Content.InvalidateArrange();
+                await Task.Delay(50);
+                NativeWindow.ExtendsContentIntoTitleBar = false;
+                await Task.Delay(150);
+                NativeWindow.ExtendsContentIntoTitleBar = true;
+                //await Task.Delay(150);
+                //appWindow.Width = appWindow.Width - 8; //avoid the contents go inside navigation bar
+                //await Task.Delay(150);
+                //appWindow.Width = appWindow.Width + 8;
             }
         }
 
