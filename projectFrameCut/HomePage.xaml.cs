@@ -25,6 +25,7 @@ using System.Globalization;
 using System.Reflection;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.Template;
 
 
 #if WINDOWS
@@ -1057,6 +1058,8 @@ public partial class HomePage : ContentPage
             PictureProcesser.SaveDiagResult = false;
         }
 
+        PictureProcesser.EnableLogProcessStack = !SettingsManager.IsSettingExists("diag_EnableProcessStack") || SettingsManager.IsBoolSettingTrue("diag_EnableProcessStack");
+        PictureLifecycleTracker.Enabled = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
 
 #if WINDOWS
         if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();
@@ -1107,6 +1110,19 @@ public partial class HomePage : ContentPage
     }
 
 
+    private async Task ExportToTemplate(ProjectsViewModel vmItem)
+    {
+        try
+        {
+            var page = new TemplateExtractPage(vmItem);
+            await Navigation.PushAsync(page);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "export to template", this);
+            await DisplayAlertAsync(Localized._Error, $"???????{ex.Message}", Localized._OK);
+        }
+    }
     private async Task ExportProject(ProjectsViewModel vmItem)
     {
         var origCont = Content;
@@ -1337,6 +1353,7 @@ public partial class HomePage : ContentPage
             Localized.HomePage_ProjectContextMenu_Open,
             Localized.HomePage_ProjectContextMenu_OpenReadonly,
             Localized.DraftPage_GoRender,
+            Localized.HomePage_ProjectContextMenu_ToTemplate,
             Localized.HomePage_ProjectContextMenu_Export,
             Localized.HomePage_ProjectContextMenu_OpenInFileManager,
             Localized.HomePage_ProjectContextMenu_Clone,
@@ -1387,19 +1404,22 @@ public partial class HomePage : ContentPage
                 case 2: //Render
                     await GoRender(vmItem);
                     break;
-                case 3: //Export
+                case 3: //ToTemplate
+                    await ExportToTemplate(vmItem);
+                    break;
+                case 4: //Export
                     await ExportProject(vmItem);
                     break;
-                case 4: //OpenInFileManager
+                case 5: //OpenInFileManager
                     await FileSystemService.OpenFolderAsync(vmItem._projectPath);
                     break;
-                case 5: //Clone
+                case 6: //Clone
                     await CloneDraft(vmItem);
                     break;
-                case 6: //Rename
+                case 7: //Rename
                     await RenameProject(vmItem);
                     break;
-                case 7: //Delete
+                case 8: //Delete
                     await DeleteProject(vmItem);
                     break;
                 default: //unknown/cancel

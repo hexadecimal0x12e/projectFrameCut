@@ -5,15 +5,18 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System;
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Channels;
 using static projectFrameCut.Shared.IPicture;
 using Image = SixLabors.ImageSharp.Image;
@@ -315,6 +318,8 @@ namespace projectFrameCut.Shared
                     { "CopyData", copyData }
                 },
             }];
+
+            PictureLifecycleTracker.RegisterCreated(this);
         }
 
         /// <summary>
@@ -339,6 +344,8 @@ namespace projectFrameCut.Shared
                 Operator = this.GetType(),
                 ProcessingFuncStackTrace = new StackTrace(true),
             }];
+
+            PictureLifecycleTracker.RegisterCreated(this);
         }
 
 
@@ -398,6 +405,8 @@ namespace projectFrameCut.Shared
                     },
                 }
             };
+
+            PictureLifecycleTracker.RegisterCreated(this);
         }
 
         /// <summary>
@@ -408,6 +417,7 @@ namespace projectFrameCut.Shared
         [DebuggerNonUserCode()]
         public Picture16bpp(SixLabors.ImageSharp.Image source)
         {
+            Stopwatch sw = Stopwatch.StartNew();
             if (source == null) throw new ArgumentNullException(nameof(source));
             Width = source.Width;
             Height = source.Height;
@@ -474,9 +484,12 @@ namespace projectFrameCut.Shared
                 {
                     OperationDisplayName = "Created from SixLabors.ImageSharp.Image",
                     Operator = this.GetType(),
+                    Elapsed = sw.Elapsed,
                     ProcessingFuncStackTrace = new StackTrace(true),
                 }
             };
+
+            PictureLifecycleTracker.RegisterCreated(this);
 
         }
 
@@ -719,6 +732,7 @@ namespace projectFrameCut.Shared
                     }
 
                     disposedValue = true;
+                    PictureLifecycleTracker.MarkDisposed(this);
                 }
                 Disposed = disposedValue;
 
@@ -894,6 +908,8 @@ namespace projectFrameCut.Shared
                 }
             };
 
+            PictureLifecycleTracker.RegisterCreated(this);
+
         }
 
         /// <summary>
@@ -926,6 +942,8 @@ namespace projectFrameCut.Shared
                     },
                 }
             };
+
+            PictureLifecycleTracker.RegisterCreated(this);
 
         }
 
@@ -983,11 +1001,14 @@ namespace projectFrameCut.Shared
                 }
             };
 
+            PictureLifecycleTracker.RegisterCreated(this);
+
         }
 
         [DebuggerNonUserCode()]
         public Picture8bpp(SixLabors.ImageSharp.Image source)
         {
+            Stopwatch sw = Stopwatch.StartNew();
             if (source == null) throw new ArgumentNullException(nameof(source));
             Width = source.Width;
             Height = source.Height;
@@ -1055,6 +1076,7 @@ namespace projectFrameCut.Shared
                     OperationDisplayName = "Created from SixLabors.ImageSharp.Image",
                     Operator = this.GetType(),
                     ProcessingFuncStackTrace = new StackTrace(true),
+                    Elapsed = sw.Elapsed,
                     Properties = new Dictionary<string, object>
                     {
                         { "Width", Width },
@@ -1062,6 +1084,8 @@ namespace projectFrameCut.Shared
                     },
                 }
             };
+
+            PictureLifecycleTracker.RegisterCreated(this);
 
         }
 
@@ -1304,6 +1328,7 @@ namespace projectFrameCut.Shared
                     }
 
                     disposedValue = true;
+                    PictureLifecycleTracker.MarkDisposed(this);
                 }
                 Disposed = disposedValue;
             }
@@ -1420,6 +1445,12 @@ namespace projectFrameCut.Shared
         public bool Disposed { get; set; } = false;
         public bool CanBeDisposed { get; set; } = true;
 
+        public BitMaskPicture()
+        {
+            ProcessStack = new List<PictureProcessStack>();
+            PictureLifecycleTracker.RegisterCreated(this);
+        }
+
         public string GetDiagnosticsInfo() => $"BitMaskPicture image, Size: {Width}*{Height}, avg R:{r.Average(v => v ? 1 : 0)} G:{g.Average(v => v ? 1 : 0)} B:{b.Average(v => v ? 1 : 0)}";
 
 
@@ -1494,6 +1525,7 @@ namespace projectFrameCut.Shared
                     }
 
                     disposedValue = true;
+                    PictureLifecycleTracker.MarkDisposed(this);
                 }
                 Disposed = disposedValue;
 

@@ -40,12 +40,12 @@
                 </Picker>
 
                 <SearchBar Placeholder="{l:Localized Key=DraftPage_AddClipView_Search}"
-                               x:Name="SearchInputEntry"
-                               Text="{Binding SearchText}"
-                               PlaceholderColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}"
-                               TextColor="{AppThemeBinding Light=#111827, Dark=#F3F4F6}"
-                               BackgroundColor="Transparent"
-                               WidthRequest="250" />
+                           x:Name="SearchInputEntry"
+                           Text="{Binding SearchText}"
+                           PlaceholderColor="{AppThemeBinding Light=#6B7280, Dark=#9CA3AF}"
+                           TextColor="{AppThemeBinding Light=#111827, Dark=#F3F4F6}"
+                           BackgroundColor="Transparent"
+                           WidthRequest="250" />
             </HorizontalStackLayout>
         </tv:TabbedView.HeaderRightContent>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_LocalAssets}" Tag="LocalAssets" x:Name="LocalAssetsTab" x:FieldModifier="public">
@@ -112,7 +112,7 @@
                 </CollectionView.ItemTemplate>
 
                 <CollectionView.EmptyView>
-                    <Label Text="No assets available" 
+                    <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" 
                            FontSize="14"
                            HorizontalOptions="Center"
                            VerticalOptions="Center"
@@ -185,7 +185,7 @@
                 </CollectionView.ItemTemplate>
 
                 <CollectionView.EmptyView>
-                    <Label Text="No assets available" 
+                    <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" 
                            FontSize="14"
                            HorizontalOptions="Center"
                            VerticalOptions="Center"
@@ -516,7 +516,7 @@
                     </CollectionView.ItemTemplate>
 
                     <CollectionView.EmptyView>
-                        <Label Text="No transforms available"
+                        <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" 
                                FontSize="14"
                                HorizontalOptions="Center"
                                VerticalOptions="Center"
@@ -601,7 +601,7 @@
                     </CollectionView.ItemTemplate>
 
                     <CollectionView.EmptyView>
-                        <Label Text="No text styles available"
+                        <Label Text="{l:Localized Key=AssetPage_SearchNoResult}" 
                                FontSize="14"
                                HorizontalOptions="Center"
                                VerticalOptions="Center"

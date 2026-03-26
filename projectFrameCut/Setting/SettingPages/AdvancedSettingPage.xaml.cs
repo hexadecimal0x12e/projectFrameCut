@@ -11,6 +11,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Tasks;
 using static projectFrameCut.Setting.SettingManager.SettingsManager;
+using IPicture = projectFrameCut.Shared.IPicture;
 
 namespace projectFrameCut.Setting.SettingPages;
 
@@ -36,6 +37,15 @@ public partial class AdvancedSettingPage : ContentPage
     void BuildPPB()
     {
         Title = Localized.MainSettingsPage_Tab_Advanced;
+        string[] codecs = ["Unknown"];
+        try
+        {
+            codecs = FFmpegHelper.CodecUtils.GetAllCodecs().Select(C => C.Name).Order().ToArray();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "get codec list", this);
+        }
         var layout = new HorizontalStackLayout();
         var keyEntry = new Entry { Placeholder = "Key", MinimumWidthRequest = 200 };
         var valueEntry = new Entry { Placeholder = SettingLocalizedResources.Advanced_KeyBox_Hint, MinimumWidthRequest = 250, Margin = new Thickness(10, 0, 0, 0) };
@@ -103,27 +113,50 @@ public partial class AdvancedSettingPage : ContentPage
             FontAttributes = FontAttributes.Bold,
         })
         .AddSeparator()
-        .AddText(SettingLocalizedResources.Advanced_ManualEditSetting)
-        .AddCustomChild(layout)
-        .AddSeparator()
-        .AddSwitch("DeveloperMode", SettingLocalizedResources.Advanced_DeveloperMode, SettingsManager.IsBoolSettingTrue("DeveloperMode"))
-        .AddSwitch("AutoRecoverDraft", SettingLocalizedResources.Advanced_AutoRecoverDraft, SettingsManager.IsBoolSettingTrue("AutoRecoverDraft"))
-        .AddSwitch("DontPanicOnUnhandledException", SettingLocalizedResources.Advanced_DontPanicOnUnhandledException, SettingsManager.IsBoolSettingTrue("DontPanicOnUnhandledException"))
-        .AddSwitch("DedicatedLogWindow", SettingLocalizedResources.Advanced_DedicatedLogWindow, SettingsManager.IsBoolSettingTrue("DedicatedLogWindow"))
+        .AppendWhen(SettingsManager.IsBoolSettingTrue("DeveloperMode"),
+            c => c.AddText(SettingLocalizedResources.Advanced_ManualEditSetting)
+                  .AddCustomChild(layout)
+                  .AddSeparator()
+                  .AddSwitch("DeveloperMode", SettingLocalizedResources.Advanced_DeveloperMode, SettingsManager.IsBoolSettingTrue("DeveloperMode"))
+                  .AddSeparator())
+        .AddText(SettingLocalizedResources.Advanced_Logging, fontSize: 20)
+        .AddSwitch("LogDiagnostics", SettingLocalizedResources.Misc_LogDiagnostics, SettingsManager.IsBoolSettingTrue("LogDiagnostics"), null)
         .AddSwitch("LogUIMessageToLogger", SettingLocalizedResources.Advanced_LogUIMessageToLogger, SettingsManager.IsBoolSettingTrue("LogUIMessageToLogger"))
+        .AddSwitch("DedicatedLogWindow", SettingLocalizedResources.Advanced_DedicatedLogWindow, SettingsManager.IsBoolSettingTrue("DedicatedLogWindow"))
+        .AddSeparator()
+
+        .AddText(SettingLocalizedResources.Advanced_Recover, fontSize: 20)
+        .AddSwitch("DontPanicOnUnhandledException", SettingLocalizedResources.Advanced_DontPanicOnUnhandledException, SettingsManager.IsBoolSettingTrue("DontPanicOnUnhandledException"))
+        .AddSwitch("AutoRecoverDraft", SettingLocalizedResources.Advanced_AutoRecoverDraft, SettingsManager.IsBoolSettingTrue("AutoRecoverDraft"))
+        .AddSeparator()
+
+        .AddText(SettingLocalizedResources.Misc_DiagOptions, fontSize: 20)
+        .AddSwitch("diag_EnableProcessStack", SettingLocalizedResources.Advanced_EnableProcessStack, SettingsManager.IsBoolSettingTrue("diag_EnableProcessStack"))
+        .AddSwitch("diag_TraceIPictureObject", SettingLocalizedResources.Advanced_TraceIPictureObject, SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject"))
+        .AddSwitch("render_SaveCheckpoint", SettingLocalizedResources.Render_SaveCheckpoint, IsBoolSettingTrue("render_SaveCheckpoint"), null)
+        .AddSwitch("render_DumpDiagData", SettingLocalizedResources.Render_DumpDiagData, IsBoolSettingTrue("render_DumpDiagData"), null)
+        .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
+        .AddSeparator()
+
+        .AddText(SettingLocalizedResources.Advanced_Globalization, fontSize: 20)
+        .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts.TryGetValue(GetSetting("OverrideCulture", "default"), out var k) ? k : "", null)
         .AddSwitch("UseSystemFont", SettingLocalizedResources.Advanced_UseSystemFont, SettingsManager.IsBoolSettingTrue("UseSystemFont"))
+        .AddSeparator()
+
+        .AddText("UI", fontSize: 20)
         .AddSwitch("ui_ForceUseShell", SettingLocalizedResources.Advanced_UseMAUIShell, SettingsManager.IsBoolSettingTrue("ui_ForceUseShell"))
         .AddSwitch("ui_ShowWelcomePage", SettingLocalizedResources.Advanced_ShowWelcomePage, SettingsManager.IsBoolSettingTrue("ui_ShowWelcomePage"))
         .AddSeparator()
-        .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
-        .AddPicker("OverrideCulture", SettingLocalizedResources.General_Language_OverrideCulture, overrideOpts.Values.ToArray(), overrideOpts.TryGetValue(GetSetting("OverrideCulture", "default"), out var k) ? k : "", null)
+
+        .AddText(SettingLocalizedResources.GeneralCodec_Title, fontSize: 20)
+        .AddPicker("codecs", SettingLocalizedResources.Advanced_TestCodec, codecs, "", null)
         .AddSeparator()
-        .AddText("Codec")
-        .AddPicker("codecs", "Test codec", FFmpegHelper.CodecUtils.GetAllCodecs().Select(C => C.Name).Order().ToArray(), "", null)
-        .AddSeparator()
+
         .AddText(SettingLocalizedResources.Advanced_ExportPlugin, fontSize: 20)
         .AddPicker("exportPlugin", SettingLocalizedResources.Advanced_ExportPlugin_Select, projectFrameCut.Render.Plugin.PluginManager.LoadedPlugins.Select(c => c.Key).ToArray(), "Pick a plugin here")
         .AddSeparator()
+
+        .AddText(SettingLocalizedResources.General_UserData, fontSize: 20)
         .AddButton(SettingLocalizedResources.Diag_OpenBaseData, async (s, e) =>
         {
             await FileSystemService.OpenFolderAsync(MauiProgram.BasicDataPath);
@@ -133,7 +166,7 @@ public partial class AdvancedSettingPage : ContentPage
             var jsonPath = Path.Combine(MauiProgram.BasicDataPath, "settings.json");
             await FileSystemService.OpenFileAsync(jsonPath);
         })
-        .AddText(new SingleLineLabel(SettingLocalizedResources.Advanced_Reset, 25))
+        .AddText(new SingleLineLabel(SettingLocalizedResources.Advanced_Reset, 20))
         .AddButton(SettingLocalizedResources.Advanced_ShowWelcomePage, async (_, _) => await Navigation.PushAsync(new SetupPage()))
         .AddButton(SettingLocalizedResources.Advanced_FixDraft, async (s, e) =>
         {
@@ -238,6 +271,17 @@ public partial class AdvancedSettingPage : ContentPage
             Settings.TryRemove("UserID", out _);
             ToggleSaveSignal();
             await MainSettingsPage.RebootApp(this);
+        })
+        .AddButton(SettingLocalizedResources.Advanced_ClearPrefs, async (s, e) =>
+        {
+            if (!await DisplayAlertAsync(Title, SettingLocalizedResources.Advanced_AreYouSure, Localized._OK, Localized._Cancel)) return;
+            if (await DisplayPromptAsync(Title, SettingLocalizedResources.Advanced_ClearPrefs_Warn2, Localized._OK, Localized._Cancel) != "ok") return;
+            Preferences.Clear();
+        },
+        (b) =>
+        {
+            b.BackgroundColor = Color.FromRgba("FF9999FF");
+            b.TextColor = Colors.Black;
         })
         .ListenToChanges(async (e) =>
         {
@@ -366,7 +410,19 @@ public partial class AdvancedSettingPage : ContentPage
                         }
                         break;
                     }
-
+                case "render_SaveCheckpoint":
+                    if (e.Value is bool b && b)
+                    {
+                        WriteSetting("render_SaveCheckpoint", "true");
+                        Directory.CreateDirectory(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"));
+                        IPicture.DiagImagePath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
+                    }
+                    else
+                    {
+                        WriteSetting("render_SaveCheckpoint", "false");
+                        IPicture.DiagImagePath = null;
+                    }
+                    break;
                 default:
                     SettingsManager.WriteSetting(e.Id, e.Value?.ToString());
                     await MainSettingsPage.RebootApp(this);

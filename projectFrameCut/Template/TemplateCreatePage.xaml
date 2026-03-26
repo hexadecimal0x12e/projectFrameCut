@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="projectFrameCut.Template.TemplateCreatePage"
+             Title="从模板创建项目">
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="10" Padding="12">
+        <VerticalStackLayout Grid.Row="0" Spacing="4">
+            <Label Text="导入 JSON 模板并填写变量，生成可直接编辑的项目。"
+                   FontSize="13"
+                   Opacity="0.85" />
+            <Label x:Name="TemplatePathLabel"
+                   Text="模板文件：未选择"
+                   FontSize="12"
+                   Opacity="0.75"
+                   LineBreakMode="TailTruncation" />
+        </VerticalStackLayout>
+
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+            <Button Text="导入模板"
+                    Clicked="ImportTemplate_Clicked" />
+            <Entry Grid.Column="1"
+                   x:Name="ProjectNameEntry"
+                   Placeholder="输入新项目名称"
+                   ClearButtonVisibility="WhileEditing" />
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <SearchBar x:Name="FieldSearchBar"
+                       Placeholder="搜索变量名 / 路径 / 默认值"
+                       TextChanged="FieldSearchBar_TextChanged" />
+            <Button Grid.Column="1"
+                    Text="恢复默认"
+                    Clicked="ResetDefaults_Clicked" />
+        </Grid>
+
+        <CollectionView Grid.Row="3" x:Name="VariablesCollectionView" SelectionMode="None" ItemSizingStrategy="MeasureAllItems">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border StrokeThickness="1"
+                            Padding="8"
+                            Margin="0,0,0,6">
+                        <VerticalStackLayout Spacing="6">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <Label Text="{Binding Key}"
+                                       FontAttributes="Bold"
+                                       LineBreakMode="TailTruncation"
+                                       VerticalOptions="Center" />
+                                <Label Grid.Column="1"
+                                       Text="{Binding Location}"
+                                       FontSize="11"
+                                       Opacity="0.75"
+                                       VerticalOptions="Center" />
+                            </Grid>
+                            <Label Text="{Binding PathsDisplay}"
+                                   FontSize="11"
+                                   Opacity="0.75"
+                                   LineBreakMode="TailTruncation" />
+                            <Label Text="{Binding DefaultDisplay}"
+                                   FontSize="12"
+                                   Opacity="0.85"
+                                   LineBreakMode="TailTruncation" />
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <Label Text="{Binding TypeDisplay}"
+                                       FontSize="11"
+                                       Opacity="0.75"
+                                       VerticalOptions="Center" />
+                                <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <Entry Text="{Binding Value}"
+                                           Placeholder="输入变量值"
+                                           Keyboard="{Binding InputKeyboard}"
+                                           ClearButtonVisibility="WhileEditing" />
+                                    <Button Grid.Column="1"
+                                            Text="选择文件"
+                                            IsVisible="{Binding IsFileType}"
+                                            Clicked="PickFileForVariable_Clicked" />
+                                </Grid>
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" VerticalOptions="Center">
+            <Label x:Name="StatsLabel"
+                   Text="未加载模板"
+                   VerticalOptions="Center" />
+            <Button Grid.Column="1"
+                    Text="取消"
+                    Clicked="Cancel_Clicked" />
+            <Button Grid.Column="2"
+                    x:Name="CreateButton"
+                    Text="创建项目"
+                    Clicked="CreateProject_Clicked" />
+        </Grid>
+    </Grid>
+</ContentPage>

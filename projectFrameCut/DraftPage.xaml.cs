@@ -5601,6 +5601,20 @@ public partial class DraftPage : ContentPage
         try
         {
             ToolbarItems.Clear();
+            ToolbarItems.Add(new ToolbarItem
+            {
+                Text = Localized.DraftPage_MenuBar_Edit_Undo,
+                Order = ToolbarItemOrder.Secondary,
+                Priority = 0,
+                Command = UndoCommand
+            });
+            ToolbarItems.Add(new ToolbarItem
+            {
+                Text = Localized.DraftPage_MenuBar_Edit_Redo,
+                Order = ToolbarItemOrder.Secondary,
+                Priority = 0,
+                Command = RedoCommand
+            });
             RunningTaskToolbarItem = new ToolbarItem
             {
                 Text = Localized.DraftPage_MenuBar_Jobs_ManageJobs,

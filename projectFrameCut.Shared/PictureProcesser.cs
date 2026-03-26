@@ -344,6 +344,7 @@ namespace projectFrameCut.Shared
     {
         public static bool SaveDiagResult = false;
         public static string DiagResultPath = null!;
+        public static bool EnableLogProcessStack = true;
 
         public static IPicture Process(List<IPictureProcessStep> steps, IPicture source, int targetPPB)
         {
@@ -352,17 +353,7 @@ namespace projectFrameCut.Shared
             var swTotal = Stopwatch.StartNew();
             List<PictureProcessStack> procStack = new(steps.Count);
             List<(Func<IImageProcessingContext, IImageProcessingContext> processer, IPictureProcessStep step)> processingContexts = new(steps.Count);
-            var swConvert = Stopwatch.StartNew();
             var convertedSource = source.ToBitPerPixel(targetPPB);
-            swConvert.Stop();
-            procStack.Add(new PictureProcessStack
-            {
-                OperationDisplayName = "Convert IPicture to Image",
-                ProcessingFuncStackTrace = null,
-                Operator = typeof(PictureProcesser),
-                Elapsed = swConvert.Elapsed,
-                StepUsed = null,
-            });
             try
             {
                 var img = convertedSource.SaveToSixLaborsImage(targetPPB, true, false);
@@ -399,9 +390,12 @@ namespace projectFrameCut.Shared
                                     outputPicture.Dispose();
                                 }
                             }
-                            var stack = item.GetProcessStack();
-                            stack.Elapsed = sw.Elapsed;
-                            procStack.Add(stack);
+                            if (EnableLogProcessStack)
+                            {
+                                var stack = item.GetProcessStack();
+                                stack.Elapsed = sw.Elapsed;
+                                procStack.Add(stack);
+                            }
                         }
                     }
 
@@ -409,29 +403,22 @@ namespace projectFrameCut.Shared
                     {
                         img = ProcessSixLaborsProcessingContexts(img, processingContexts, ref procStack, SessionId);
                     }
-                    var swFinal = Stopwatch.StartNew();
                     var result = img.ToPJFCPicture(targetPPB);
-                    swFinal.Stop();
-                    swTotal.Stop();
-                    var dirtyTime = swTotal.Elapsed - procStack.Where(s => s.Elapsed.HasValue).Aggregate(TimeSpan.Zero, (a, b) => a + b.Elapsed!.Value);
-                    procStack.Add(new PictureProcessStack
+                    if (EnableLogProcessStack)
                     {
-                        OperationDisplayName = "Convert final Image to IPicture",
-                        ProcessingFuncStackTrace = null,
-                        Operator = typeof(PictureProcesser),
-                        Elapsed = swFinal.Elapsed,
-                        StepUsed = null,
-                    });
-                    procStack.Add(new PictureProcessStack
-                    {
-                        OperationDisplayName = "Dirty time spent on PictureProcesser",
-                        ProcessingFuncStackTrace = null,
-                        Operator = null,
-                        Elapsed = dirtyTime,
-                        StepUsed = null,
-                    });
-                    result.ProcessStack = source.ProcessStack.Concat(procStack).ToList();
-                    if (SaveDiagResult) result.SaveAsPng(Path.Combine(DiagResultPath, $"diag-after-{SessionId}.png"));
+                        swTotal.Stop();
+                        var dirtyTime = swTotal.Elapsed - procStack.Where(s => s.Elapsed.HasValue).Aggregate(TimeSpan.Zero, (a, b) => a + b.Elapsed!.Value);
+                        procStack.Add(new PictureProcessStack
+                        {
+                            OperationDisplayName = "Dirty time spent on PictureProcesser",
+                            ProcessingFuncStackTrace = null,
+                            Operator = null,
+                            Elapsed = dirtyTime,
+                            StepUsed = null,
+                        });
+                        result.ProcessStack = source.ProcessStack.Concat(procStack).ToList();
+                        if (SaveDiagResult) result.SaveAsPng(Path.Combine(DiagResultPath, $"diag-after-{SessionId}.png"));
+                    }
                     return result;
                 }
                 finally

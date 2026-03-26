@@ -78,6 +78,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "_Hide",
+        "Value": "\u9690\u85CF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "_Info",
         "Value": "\u63D0\u793A",
         "Mode": "ConstString",
@@ -156,6 +164,14 @@
       {
         "Id": "_Settings",
         "Value": "\u8BBE\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "_Show",
+        "Value": "\u663E\u793A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -381,6 +397,14 @@
       {
         "Id": "AppShell_ProjectsTab",
         "Value": "\u9879\u76EE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "\u6A21\u677F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -637,6 +661,14 @@
       {
         "Id": "AssetPage_Search",
         "Value": "\u641C\u7D22\u4F60\u7684\u7D20\u6750",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "\u6CA1\u6709\u53EF\u4F9B\u663E\u793A\u7684\u5185\u5BB9\u3002\u8BD5\u8BD5\u770B\u6362\u4E00\u4E2A\u5173\u952E\u8BCD\uFF1F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1515,6 +1547,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "DraftPage_DynamicPreview",
+        "Value": "\u52A8\u6001\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "DraftPage_EffectBindView_AddEffect",
         "Value": "\u6DFB\u52A0\u6548\u679C",
         "Mode": "ConstString",
@@ -2033,14 +2073,6 @@
             "Value": "length"
           }
         ],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "DraftPage_DynamicPreview",
-        "Value": "\u52A8\u6001\u9884\u89C8",
-        "Mode": "ConstString",
-        "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
       },
@@ -3843,6 +3875,46 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "\u4F7F\u7528\u6B64\u6A21\u677F\u521B\u5EFA\u89C6\u9891",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "\u70ED\u95E8\u7A0B\u5EA6",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "\u641C\u7D22\u4F60\u7684\u6A21\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "\u6240\u6709",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "\u6211\u7684\u6A21\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "TextServices_FontCatagory_System",
         "Value": "\u7CFB\u7EDF\u5B57\u4F53",
         "Mode": "ConstString",
@@ -3901,16 +3973,8 @@
         "HasValidationErrors": false
       },
       {
-        "Id": "_Hide",
-        "Value": "\u9690\u85CF",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "_Show",
-        "Value": "\u663E\u793A",
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "\u8F6C\u6362\u6210\u6A21\u677F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8184,6 +8248,78 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "Unset localization item:AppShell_TemplateTab()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "Unset localization item:TemplateViewPage_CreateVideo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "Unset localization item:TemplateViewPage_Title()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "Unset localization item:AssetPage_SearchNoResult()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "Unset localization item:TemplateViewPage_TemplateTag_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "Unset localization item:TemplateViewPage_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "Unset localization item:TemplateViewPage_OrderBy_Popularity()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "Unset localization item:HomePage_ProjectContextMenu_ToTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "zh-TW": [
@@ -12447,6 +12583,78 @@
       {
         "Id": "_Show",
         "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "Unset localization item:AppShell_TemplateTab()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "Unset localization item:TemplateViewPage_CreateVideo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "Unset localization item:TemplateViewPage_Title()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "Unset localization item:AssetPage_SearchNoResult()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "Unset localization item:TemplateViewPage_TemplateTag_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "Unset localization item:TemplateViewPage_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "Unset localization item:TemplateViewPage_OrderBy_Popularity()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "Unset localization item:HomePage_ProjectContextMenu_ToTemplate()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16726,6 +16934,78 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "Unset localization item:AppShell_TemplateTab()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "Unset localization item:TemplateViewPage_CreateVideo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "Unset localization item:TemplateViewPage_Title()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "Unset localization item:AssetPage_SearchNoResult()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "Unset localization item:TemplateViewPage_TemplateTag_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "Unset localization item:TemplateViewPage_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "Unset localization item:TemplateViewPage_OrderBy_Popularity()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "Unset localization item:HomePage_ProjectContextMenu_ToTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ko-KR": [
@@ -21000,6 +21280,78 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "Unset localization item:AppShell_TemplateTab()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "Unset localization item:TemplateViewPage_CreateVideo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "Unset localization item:TemplateViewPage_Title()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "Unset localization item:AssetPage_SearchNoResult()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "Unset localization item:TemplateViewPage_TemplateTag_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "Unset localization item:TemplateViewPage_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "Unset localization item:TemplateViewPage_OrderBy_Popularity()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "Unset localization item:HomePage_ProjectContextMenu_ToTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "fr-FR": [
@@ -25264,6 +25616,78 @@
       {
         "Id": "_Show",
         "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "Unset localization item:AppShell_TemplateTab()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "Unset localization item:TemplateViewPage_CreateVideo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "Unset localization item:TemplateViewPage_Title()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "Unset localization item:AssetPage_SearchNoResult()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "Unset localization item:TemplateViewPage_TemplateTag_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "Unset localization item:TemplateViewPage_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "Unset localization item:TemplateViewPage_OrderBy_Popularity()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "Unset localization item:HomePage_ProjectContextMenu_ToTemplate()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -29543,6 +29967,78 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "Unset localization item:AppShell_TemplateTab()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "Unset localization item:TemplateViewPage_CreateVideo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "Unset localization item:TemplateViewPage_Title()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "Unset localization item:AssetPage_SearchNoResult()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "Unset localization item:TemplateViewPage_TemplateTag_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "Unset localization item:TemplateViewPage_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "Unset localization item:TemplateViewPage_OrderBy_Popularity()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "Unset localization item:HomePage_ProjectContextMenu_ToTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ar-SA": [
@@ -33812,6 +34308,78 @@
       {
         "Id": "_Show",
         "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "Unset localization item:AppShell_TemplateTab()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "Unset localization item:TemplateViewPage_CreateVideo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "Unset localization item:TemplateViewPage_Title()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "Unset localization item:AssetPage_SearchNoResult()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "Unset localization item:TemplateViewPage_TemplateTag_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "Unset localization item:TemplateViewPage_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "Unset localization item:TemplateViewPage_OrderBy_Popularity()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "Unset localization item:HomePage_ProjectContextMenu_ToTemplate()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -38091,6 +38659,78 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "Unset localization item:AppShell_TemplateTab()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "Unset localization item:TemplateViewPage_CreateVideo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "Unset localization item:TemplateViewPage_Title()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "Unset localization item:AssetPage_SearchNoResult()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "Unset localization item:TemplateViewPage_TemplateTag_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "Unset localization item:TemplateViewPage_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "Unset localization item:TemplateViewPage_OrderBy_Popularity()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "Unset localization item:HomePage_ProjectContextMenu_ToTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "es-ES": [
@@ -42360,6 +43000,78 @@
       {
         "Id": "_Show",
         "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "Unset localization item:AppShell_TemplateTab()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "Unset localization item:TemplateViewPage_CreateVideo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "Unset localization item:TemplateViewPage_Title()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "Unset localization item:AssetPage_SearchNoResult()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "Unset localization item:TemplateViewPage_TemplateTag_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "Unset localization item:TemplateViewPage_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "Unset localization item:TemplateViewPage_OrderBy_Popularity()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "Unset localization item:HomePage_ProjectContextMenu_ToTemplate()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -46639,6 +47351,78 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "Unset localization item:AppShell_TemplateTab()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "Unset localization item:TemplateViewPage_CreateVideo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "Unset localization item:TemplateViewPage_Title()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "Unset localization item:AssetPage_SearchNoResult()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "Unset localization item:TemplateViewPage_TemplateTag_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "Unset localization item:TemplateViewPage_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "Unset localization item:TemplateViewPage_OrderBy_Popularity()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "Unset localization item:HomePage_ProjectContextMenu_ToTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "pl-PL": [
@@ -50908,6 +51692,78 @@
       {
         "Id": "_Show",
         "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "Unset localization item:AppShell_TemplateTab()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "Unset localization item:TemplateViewPage_CreateVideo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "Unset localization item:TemplateViewPage_Title()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "Unset localization item:AssetPage_SearchNoResult()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "Unset localization item:TemplateViewPage_TemplateTag_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "Unset localization item:TemplateViewPage_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "Unset localization item:TemplateViewPage_OrderBy_Popularity()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "Unset localization item:HomePage_ProjectContextMenu_ToTemplate()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -55187,6 +56043,78 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "Unset localization item:AppShell_TemplateTab()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "Unset localization item:TemplateViewPage_CreateVideo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "Unset localization item:TemplateViewPage_Title()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "Unset localization item:AssetPage_SearchNoResult()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "Unset localization item:TemplateViewPage_TemplateTag_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "Unset localization item:TemplateViewPage_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "Unset localization item:TemplateViewPage_OrderBy_Popularity()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "Unset localization item:HomePage_ProjectContextMenu_ToTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "ru-RU": [
@@ -59461,6 +60389,78 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "Unset localization item:AppShell_TemplateTab()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "Unset localization item:TemplateViewPage_CreateVideo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "Unset localization item:TemplateViewPage_Title()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "Unset localization item:AssetPage_SearchNoResult()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "Unset localization item:TemplateViewPage_TemplateTag_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "Unset localization item:TemplateViewPage_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "Unset localization item:TemplateViewPage_OrderBy_Popularity()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "Unset localization item:HomePage_ProjectContextMenu_ToTemplate()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
       }
     ],
     "tr-TR": [
@@ -63730,6 +64730,78 @@
       {
         "Id": "_Show",
         "Value": "Unset localization item:_Show()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AppShell_TemplateTab",
+        "Value": "Unset localization item:AppShell_TemplateTab()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_CreateVideo",
+        "Value": "Unset localization item:TemplateViewPage_CreateVideo()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Title",
+        "Value": "Unset localization item:TemplateViewPage_Title()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "AssetPage_SearchNoResult",
+        "Value": "Unset localization item:AssetPage_SearchNoResult()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_TemplateTag_None",
+        "Value": "Unset localization item:TemplateViewPage_TemplateTag_None()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_Search",
+        "Value": "Unset localization item:TemplateViewPage_Search()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "TemplateViewPage_OrderBy_Popularity",
+        "Value": "Unset localization item:TemplateViewPage_OrderBy_Popularity()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "HomePage_ProjectContextMenu_ToTemplate",
+        "Value": "Unset localization item:HomePage_ProjectContextMenu_ToTemplate()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

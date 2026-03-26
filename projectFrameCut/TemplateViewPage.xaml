@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="projectFrameCut.TemplateViewPage"
+             xmlns:l="clr-namespace:LocalizedResources"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             Title="模板">
+    <Grid RowDefinitions="Auto,*,Auto" Padding="8">
+        <Grid Grid.Row="0" Margin="0,0,0,8" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <SearchBar Grid.Column="0"
+                       x:Name="TemplateSearchBar"
+                       Placeholder="{l:Localized Key=TemplateViewPage_Search}"
+                       MinimumWidthRequest="{OnIdiom Phone=80, Default=350}"
+                       TextChanged="TemplateSearchBar_TextChanged" />
+            <Picker x:Name="OrderOptionPicker" Grid.Column="1" MinimumWidthRequest="120" Margin="8,-5,-5,0" SelectedIndex="{Binding OrderOption}">
+                <Picker.Items>
+                    <l:Localized Key="AssetPage_OrderBy_AddDate"/>
+                    <l:Localized Key="TemplateViewPage_OrderBy_Popularity"/>
+                    <l:Localized Key="AssetPage_OrderBy_Name"/>
+                </Picker.Items>
+            </Picker>
+            <Picker x:Name="TagOptionPicker" Grid.Column="2" MinimumWidthRequest="120" Margin="8,-5,0,0" ItemsSource="{Binding Tags}" SelectedIndex="{Binding SelectedTag}">
+
+            </Picker>
+        </Grid>
+
+        <CollectionView Grid.Row="1"
+                        x:Name="TemplatesCollectionView"
+                        ItemSizingStrategy="MeasureAllItems"
+                        ItemsSource="{Binding FilteredTemplates}"
+                        SelectionMode="Single"
+                        SelectedItem="{Binding SelectedTemplate}"
+                        SelectionChanged="TemplatesCollectionView_SelectionChanged"
+                        EmptyView="{l:Localized Key=AssetPage_SearchNoResult}">
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout x:Name="TemplatesGridLayout" Orientation="Vertical" Span="3" VerticalItemSpacing="8" HorizontalItemSpacing="8" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border Padding="0" Margin="0" StrokeThickness="1" Stroke="#20202020" Loaded="TemplateCard_Loaded">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup Name="CommonStates">
+                                <VisualState Name="Normal" />
+                                <VisualState Name="Selected">
+                                    <VisualState.Setters>
+                                        <Setter Property="Stroke" Value="{AppThemeBinding Light=Black, Dark=White}" />
+                                        <Setter Property="StrokeThickness" Value="2" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+
+                        <Grid RowDefinitions="110,Auto" BackgroundColor="{AppThemeBinding Light=#F9F9F9, Dark=#232323}">
+                            <Border Grid.Row="0" BackgroundColor="{Binding AccentColor}" StrokeThickness="0" Padding="0">
+                                <Grid>
+                                    <Grid x:Name="TemplatePreviewHost" />
+
+                                    <BoxView BackgroundColor="#55000000" />
+                                    <Label Text="{Binding DurationText}" ToolTipProperties.Text="{Binding DurationText}"
+                                           VerticalOptions="End"
+                                           Margin="0,0,8,4"
+                                           FontSize="11"
+                                           TextColor="#FFFFFF"
+                                           HorizontalOptions="End" />
+
+                                </Grid>
+                            </Border>
+
+
+                            <VerticalStackLayout Grid.Row="1" Padding="10" Spacing="3">
+                                <Label Text="{Binding Name}" ToolTipProperties.Text="{Binding Name}" FontSize="15" FontAttributes="Bold" LineBreakMode="TailTruncation" />
+                                <Label Text="{Binding Description}" ToolTipProperties.Text="{Binding Description}" FontSize="12" LineBreakMode="TailTruncation" MaxLines="1" />
+                                <Grid ColumnDefinitions="*,Auto" Margin="0,2,0,0">
+                                    <Label Grid.Column="0" Text="{Binding TagsText}" ToolTipProperties.Text="{Binding TagsText}" FontSize="11" TextColor="Gray" LineBreakMode="TailTruncation" />
+                                    <Label Grid.Column="1" Text="{Binding UsageText}" ToolTipProperties.Text="{Binding UsageText}" FontSize="11" TextColor="Gray" />
+                                </Grid>
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Border Grid.Row="2"
+                 IsVisible="{Binding SelectedTemplate, Converter={toolkit:IsNotNullConverter}}"
+                StrokeShape="RoundRectangle 10,10,0,0"
+                StrokeThickness="0"
+                BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
+                Margin="-10,10,-10,-10"
+                Padding="20"
+                MaximumHeightRequest="260">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <VerticalStackLayout Grid.Column="0" Spacing="6">
+                    <Label Text="{l:Localized Key=AssetPage_Info}" FontSize="18" FontAttributes="Bold" />
+                    <Label Text="{Binding SelectedTemplate.Name}" FontSize="16" FontAttributes="Bold" />
+                    <Label Text="{Binding SelectedTemplate.Description}" FontSize="13" />
+                    <Label Text="{Binding SelectedTemplate.TagsText}" FontSize="12" TextColor="Gray" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Grid.Column="1" HorizontalOptions="End" VerticalOptions="Center" Spacing="8">
+                    <Button Text="{l:Localized Key=AssetPage_ShowPreview}" Clicked="PreviewTemplate_Clicked" MinimumWidthRequest="120" />
+                    <Button Text="{l:Localized Key=TemplateViewPage_CreateVideo}" Clicked="CreateVideo_Clicked" MinimumWidthRequest="120" />
+                </VerticalStackLayout>
+            </Grid>
+        </Border>
+    </Grid>
+</ContentPage>

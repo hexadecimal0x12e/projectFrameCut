@@ -224,11 +224,11 @@
 
 
 
-            <Grid Margin="0,8,0,8" x:Name="MainControlGrid" >
+            <Grid Margin="0,8,0,8" x:Name="MainControlGrid">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <HorizontalStackLayout Grid.Column="0" x:Name="LeftMenuBar">
 
@@ -248,25 +248,28 @@
                     <Button x:Name="PlayPauseButton" Text="&#xe037;" FontFamily="Icons" FontSize="20" Clicked="PlayPauseButton_Clicked"  />
                     <Label x:Name="CurrentPlayheadLabel" Text="00:00/??:??" Margin="8,0,0,0" VerticalOptions="Center"></Label>
                 </HorizontalStackLayout>
-                <HorizontalStackLayout Grid.Column="1" x:Name="CenterCompactControlGrid" HorizontalOptions="End" Margin="0,0,-4,0" IsEnabled="{Binding SelectedAnyClip}" IsVisible="{Binding _ShouldShowCenterCompactControlGrid}">
-                    <Button Text="&#xe8b8;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding ShowClipInfoPanelCommand}" IsVisible="{Binding MultiSelectEnabled, Converter={toolkit:InvertedBoolConverter}}"  SemanticProperties.Description="{l:Localized Key=PropertyPanel}" ToolTipProperties.Text="{l:Localized Key=PropertyPanel}" />
-                    <Button Text="&#xf71e;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding MoveCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" />
-                    <Button Text="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject='&#xf420;', FalseObject='&#xf1f8;'}}"  FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding SpiltOrCombineCommand}" IsVisible="True" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" />
-                    <Button Text="&#xe14a;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding DeleteCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" />
-                    <BoxView WidthRequest="1" Margin="4,0,0,0" BackgroundColor="#80aaaaaa"  />
-                    <Button Text="&#xe9d5;" FontSize="24" Margin="8,0,8,0" FontFamily="Icons" Command="{Binding UnselectCommand}"  SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" />
-                </HorizontalStackLayout>
+                <ScrollView  Grid.Column="1"  Orientation="Horizontal" IsVisible="{Binding _ShouldShowCenterCompactControlGrid}"  IsEnabled="{Binding SelectedAnyClip}" x:Name="CenterCompactControlGrid" HorizontalOptions="End" Margin="0,0,-4,0" >
+                    <HorizontalStackLayout>
+                        <Button Text="&#xe8b8;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding ShowClipInfoPanelCommand}" IsVisible="{Binding MultiSelectEnabled, Converter={toolkit:InvertedBoolConverter}}"  SemanticProperties.Description="{l:Localized Key=PropertyPanel}" ToolTipProperties.Text="{l:Localized Key=PropertyPanel}" />
+                        <Button Text="&#xf71e;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding MoveCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" />
+                        <Button Text="{Binding MultiSelectEnabled, Converter={toolkit:BoolToObjectConverter TrueObject='&#xf420;', FalseObject='&#xf1f8;'}}"  FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding SpiltOrCombineCommand}" IsVisible="True" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Spilt}" />
+                        <Button Text="&#xe14a;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding DeleteCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_DeleteClip}" />
+                        <BoxView WidthRequest="1" Margin="4,0,0,0" BackgroundColor="#80aaaaaa"  />
+                        <Button Text="&#xe9d5;" FontSize="24" Margin="8,0,8,0" FontFamily="Icons" Command="{Binding UnselectCommand}"  SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Unselect}" />
+                    </HorizontalStackLayout>
+                </ScrollView>
+
 
                 <HorizontalStackLayout Grid.Column="2" HorizontalOptions="End" x:Name="RightMenuBar" >
                     <HorizontalStackLayout Grid.Column="4" x:Name="MultiSelectControlLayout" HorizontalOptions="Start" VerticalOptions="Center" Margin="0,0,8,0" Spacing="4">
-                        <CheckBox x:Name="MultiSelectCheckBox" Margin="0,0,-16,0" CheckedChanged="MultiSelectCheckBox_CheckedChanged" VerticalOptions="Center" />
+                        <CheckBox x:Name="MultiSelectCheckBox" Margin="0,0,0,0" CheckedChanged="MultiSelectCheckBox_CheckedChanged" VerticalOptions="Center" />
                         <Label Text="{l:Localized Key=DraftPage_CenterMenuBar_MultiSelect}" x:Name="MultiSelectInfoLabel" VerticalOptions="Center" >
                             <Label.GestureRecognizers>
                                 <TapGestureRecognizer Tapped="MultiSelectLabel_TapGestureRecognizer_Tapped"/>
                             </Label.GestureRecognizers>
                         </Label>
                     </HorizontalStackLayout>
-                    <Picker x:Name="ResolutionPicker" Margin="0,-2,0,0" WidthRequest="150" SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
+                    <Picker x:Name="ResolutionPicker" Margin="0,-2,0,0" WidthRequest="120" MinimumWidthRequest="100" SelectedIndexChanged="ResolutionPicker_SelectedIndexChanged"/>
                     <Button x:Name="ZoomOutButton" Text="-" Margin="8,0,0,0" Clicked="ZoomOutButton_Clicked" />
                     <Button x:Name="ZoomResetButton" Text="1x" Margin="8,0,0,0" Clicked="ZoomResetButton_Clicked"/>
                     <Button x:Name="ZoomInButton" Text="+" Margin="8,0,0,0" Clicked="ZoomInButton_Clicked"/>

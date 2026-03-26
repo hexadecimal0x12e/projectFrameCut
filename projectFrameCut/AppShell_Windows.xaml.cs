@@ -26,7 +26,6 @@
 
         private void AppShell_Navigated(object? sender, Microsoft.Maui.Controls.ShellNavigatedEventArgs e)
         {
-            // 导航已完成，获取当前页面
             var currentPage = Microsoft.Maui.Controls.Shell.Current?.CurrentPage;
             switch (currentPage?.GetType())
             {
@@ -35,6 +34,9 @@
                     break;
                 case Type t when t == typeof(AssetsLibraryPage):
                     App.MainNavView?.SelectedItem = App.assetItem;
+                    break;
+                case Type t when t == typeof(TemplatedPage):
+                    App.MainNavView?.SelectedItem = App.templateItem;
                     break;
                 //case Type t when t == typeof(DebuggingMainPage):
                 //    App.MainNavView?.SelectedItem = App.debugItem;

@@ -224,6 +224,9 @@
 		<MauiXaml Update="SetupPage.xaml">
 		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
+		<MauiXaml Update="TemplateViewPage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
 		<MauiXaml Update="TestPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
@@ -241,6 +244,10 @@
 
 		<Compile Update="Setting\SettingPages\AboutSettingPage.xaml.cs">
 			<DependentUpon>AboutSettingPage.xaml</DependentUpon>
+		</Compile>
+
+		<Compile Update="TemplateViewPage.xaml.cs">
+		  <DependentUpon>TemplateViewPage.xaml</DependentUpon>
 		</Compile>
 		<Compile Update="TestPage.xaml.cs">
 			<DependentUpon>TestPage.xaml</DependentUpon>

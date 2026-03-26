@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="projectFrameCut.Template.TemplateExtractPage"
+             Title="导出 JSON 模板">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10" Padding="12">
+        <VerticalStackLayout Grid.Row="0" Spacing="4">
+            <Label x:Name="ProjectNameLabel"
+                   FontAttributes="Bold"
+                   FontSize="18"
+                   Text="项目：-" />
+            <Label Text="勾选你希望挖空的位置，并可自定义变量名。保存后会导出 JSON 模板文件。"
+                   FontSize="12"
+                   Opacity="0.8" />
+        </VerticalStackLayout>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <SearchBar x:Name="FieldSearchBar"
+                       Placeholder="搜索字段路径或值"
+                       TextChanged="FieldSearchBar_TextChanged" />
+            <Button Grid.Column="1"
+                    Text="推荐"
+                    Clicked="SelectRecommended_Clicked" />
+            <Button Grid.Column="2"
+                    Text="清空"
+                    Clicked="ClearSelection_Clicked" />
+        </Grid>
+
+        <CollectionView Grid.Row="2" x:Name="FieldsCollectionView" SelectionMode="None">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border StrokeThickness="1"
+                            Padding="8"
+                            Margin="0,0,0,6">
+                        <VerticalStackLayout Spacing="6">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                <CheckBox IsChecked="{Binding IsSelected}" VerticalOptions="Center" />
+                                <Label Grid.Column="1"
+                                       Text="{Binding PathDisplay}"
+                                       LineBreakMode="TailTruncation"
+                                       VerticalOptions="Center" />
+                                <Label Grid.Column="2"
+                                       Text="{Binding Scope}"
+                                       FontSize="11"
+                                       Opacity="0.75"
+                                       VerticalOptions="Center" />
+                            </Grid>
+                            <Label Text="{Binding ValuePreview}"
+                                   FontSize="12"
+                                   Opacity="0.75"
+                                   LineBreakMode="TailTruncation" />
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <Label Text="变量名"
+                                    VerticalOptions="Center"
+                                    FontSize="12" />
+                                <Entry Grid.Column="1"
+                                    Text="{Binding VariableKey}"
+                                    Placeholder="变量名" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <Label Text="类型"
+                                    VerticalOptions="Center"
+                                    FontSize="12" />
+                                <Picker Grid.Column="1"
+                                     ItemsSource="{Binding VariableTypeOptions}"
+                                     SelectedIndex="{Binding VariableTypeIndex}"
+                                     IsEnabled="{Binding IsSelected}" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" VerticalOptions="Center">
+            <Label x:Name="StatsLabel"
+                   Text="未选择字段"
+                   VerticalOptions="Center" />
+            <Button Grid.Column="1"
+                    Text="取消"
+                    Clicked="Cancel_Clicked" />
+            <Button Grid.Column="2"
+                    x:Name="SaveButton"
+                    Text="保存模板"
+                    Clicked="Save_Clicked" />
+        </Grid>
+    </Grid>
+</ContentPage>

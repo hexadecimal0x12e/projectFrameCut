@@ -5,12 +5,14 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System;
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -457,6 +459,182 @@ namespace projectFrameCut.Shared
             public T g;
             public T b;
             public float a;
+        }
+    }
+
+    /// <summary>
+    /// Read-only lifecycle snapshot of one picture instance.
+    /// </summary>
+    public readonly record struct PictureLifecycleSnapshot(
+        long Id,
+        string TypeName,
+        IPicture.PicturePixelMode BitPerPixel,
+        int Width,
+        int Height,
+        int Pixels,
+        DateTime CreatedAtUtc,
+        DateTime? DisposedAtUtc,
+        DateTime? CollectedAtUtc,
+        bool IsDisposed,
+        bool IsCollected,
+        TimeSpan? LifetimeToDispose,
+        TimeSpan? LifetimeToCollect);
+
+    /// <summary>
+    /// Centralized lifecycle tracker for <see cref="IPicture"/> objects.
+    /// </summary>
+    public static class PictureLifecycleTracker
+    {
+        private sealed class PictureIdentity
+        {
+            public PictureIdentity(long id)
+            {
+                Id = id;
+            }
+
+            public long Id { get; }
+        }
+
+        private sealed class PictureLifecycleState
+        {
+            private long _disposedAtTicks;
+            private long _collectedAtTicks;
+
+            public PictureLifecycleState(long id, IPicture picture)
+            {
+                Id = id;
+                TypeName = picture.GetType().FullName ?? picture.GetType().Name;
+                BitPerPixel = picture.bitPerPixel;
+                Width = picture.Width;
+                Height = picture.Height;
+                Pixels = picture.Pixels;
+                CreatedAtUtc = DateTime.UtcNow;
+            }
+
+            public long Id { get; }
+            public string TypeName { get; }
+            public IPicture.PicturePixelMode BitPerPixel { get; }
+            public int Width { get; }
+            public int Height { get; }
+            public int Pixels { get; }
+            public DateTime CreatedAtUtc { get; }
+
+            public void MarkDisposed()
+            {
+                Interlocked.CompareExchange(ref _disposedAtTicks, DateTime.UtcNow.Ticks, 0);
+            }
+
+            public void MarkCollected()
+            {
+                Interlocked.CompareExchange(ref _collectedAtTicks, DateTime.UtcNow.Ticks, 0);
+            }
+
+            public PictureLifecycleSnapshot ToSnapshot()
+            {
+                long disposedTicks = Volatile.Read(ref _disposedAtTicks);
+                long collectedTicks = Volatile.Read(ref _collectedAtTicks);
+                DateTime? disposedAt = disposedTicks > 0 ? new DateTime(disposedTicks, DateTimeKind.Utc) : null;
+                DateTime? collectedAt = collectedTicks > 0 ? new DateTime(collectedTicks, DateTimeKind.Utc) : null;
+
+                return new PictureLifecycleSnapshot(
+                    Id,
+                    TypeName,
+                    BitPerPixel,
+                    Width,
+                    Height,
+                    Pixels,
+                    CreatedAtUtc,
+                    disposedAt,
+                    collectedAt,
+                    disposedAt.HasValue,
+                    collectedAt.HasValue,
+                    disposedAt?.Subtract(CreatedAtUtc),
+                    collectedAt?.Subtract(CreatedAtUtc));
+            }
+        }
+
+        private sealed class FinalizationSentinel
+        {
+            private readonly long _id;
+
+            public FinalizationSentinel(long id)
+            {
+                _id = id;
+            }
+
+            ~FinalizationSentinel()
+            {
+                PictureLifecycleTracker.MarkCollected(_id);
+            }
+        }
+
+        private static long _nextId;
+        private static bool _enabled;
+        private static readonly ConcurrentDictionary<long, PictureLifecycleState> States = new();
+        private static readonly ConditionalWeakTable<IPicture, PictureIdentity> Identities = new();
+        private static readonly ConditionalWeakTable<IPicture, FinalizationSentinel> Sentinels = new();
+
+        /// <summary>
+        /// Enables tracking globally. Keep false in production unless diagnostics are needed.
+        /// </summary>
+        public static bool Enabled
+        {
+            get => Volatile.Read(ref _enabled);
+            set => Volatile.Write(ref _enabled, value);
+        }
+
+        /// <summary>
+        /// Track GC collection time using an extra finalizer sentinel per picture.
+        /// Keep disabled when only creation/dispose duration is needed.
+        /// </summary>
+        public static bool TrackCollection { get; set; } = false;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void RegisterCreated(IPicture picture)
+        {
+            if (!Enabled) return;
+
+            PictureIdentity identity = Identities.GetValue(picture, _ => new PictureIdentity(Interlocked.Increment(ref _nextId)));
+            States.TryAdd(identity.Id, new PictureLifecycleState(identity.Id, picture));
+
+            if (TrackCollection)
+            {
+                Sentinels.GetValue(picture, _ => new FinalizationSentinel(identity.Id));
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void MarkDisposed(IPicture picture)
+        {
+            if (!Enabled) return;
+            if (!Identities.TryGetValue(picture, out PictureIdentity? identity)) return;
+            if (States.TryGetValue(identity.Id, out PictureLifecycleState? state))
+            {
+                state.MarkDisposed();
+            }
+        }
+
+        public static IReadOnlyList<PictureLifecycleSnapshot> GetSnapshots(bool includeDisposed = true)
+        {
+            var snapshots = States.Values
+                .Select(state => state.ToSnapshot())
+                .Where(snapshot => includeDisposed || !snapshot.IsDisposed)
+                .OrderBy(snapshot => snapshot.Id)
+                .ToArray();
+            return snapshots;
+        }
+
+        public static void Clear()
+        {
+            States.Clear();
+        }
+
+        private static void MarkCollected(long id)
+        {
+            if (States.TryGetValue(id, out PictureLifecycleState? state))
+            {
+                state.MarkCollected();
+            }
         }
     }
 }

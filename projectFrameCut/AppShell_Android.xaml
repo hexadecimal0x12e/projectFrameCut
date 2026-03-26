@@ -16,6 +16,13 @@
                 Title="{l:Localized Key=AppShell_ProjectsTab}" />
         </Tab>
 
+        <Tab x:Name="TemplateStartTab" Icon="icon_template" Title="{l:Localized Key=AppShell_TemplateTab}">
+            <ShellContent 
+                Route="template"
+                ContentTemplate="{DataTemplate local:TemplateViewPage}"
+                Title="{l:Localized Key=AppShell_TemplateTab}" />
+        </Tab>
+
         <Tab x:Name="AssetsTab" Icon="icon_asset" Title="{l:Localized Key=AppShell_AssetsTab}">
             <ShellContent
                 Route="assets"

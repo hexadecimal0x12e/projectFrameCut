@@ -235,12 +235,13 @@ namespace projectFrameCut.DraftStuff
                             Padding = new Thickness(10, 0),
                             Children =
                             {
-                                picker,
                                 new Button
                                 {
-                                    Text = Localized._Confirm,
+                                    Text = Localized._Hide,
                                     Command = new Command(async () => await page.HidePopup(true))
-                                }
+                                },
+                                picker,
+
                             }
                         };
 
@@ -1789,8 +1790,6 @@ namespace projectFrameCut.DraftStuff
                             ppb.AddEntry(controlId, PluginManager.GetLocalizationItem($"_{paramName}", paramName), valStr, "");
                         }
                     }
-                    ppb.AddSeparator();
-                    ppb.AddCustomChild("Type of implement", new Label { Text = effect.ImplementType.ToString() });
                     if (effect is IBindableArgumentEffect be)
                     {
                         ppb.AddSeparator();
@@ -2366,6 +2365,10 @@ namespace projectFrameCut.DraftStuff
 
             public bool IsBindableEffect => false;
 
+            public EffectType TypeOfEffect => EffectType.NotSpecified;
+
+            public EffectTarget Target => EffectTarget.Video;
+
             public string InputAnchorDisplayName => "blackhole";
 
             public string[]? InputAnchorsDisplayName => null;
@@ -2382,9 +2385,6 @@ namespace projectFrameCut.DraftStuff
 
             public Dictionary<string, string> ParametersType => [];
 
-            public EffectType TypeOfEffect => EffectType.NotSpecified;
-
-            public EffectTarget Target => EffectTarget.NotSpecified;
 
             public IEffectFactory[] Create()
             {

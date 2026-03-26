@@ -123,7 +123,8 @@ public partial class PluginSettingPage : ContentPage
                 Log(ex, "Load plugins", this);
             }
 
-        });
+        })
+        .AddSwitch("DisablePluginEngine", SettingLocalizedResources.Advanced_DisablePluginEngine, IsBoolSettingTrue("DisablePluginEngine"));
 
         var scv = rootPPB.AddSeparator().ListenToChanges((e) => SettingInvoker(e, this)).Build();
         DropGestureRecognizer drop = new();
@@ -132,11 +133,21 @@ public partial class PluginSettingPage : ContentPage
         {
             Dispatcher.Dispatch(() =>
             {
-                Content = new ActivityIndicator
+                Content = new VerticalStackLayout
                 {
-                    IsRunning = true,
-                    WidthRequest = 200,
-                    HeightRequest = 200
+                    Children =
+                    {
+                        new ActivityIndicator
+                        {
+                            IsRunning = true,
+                        },
+                        new Label
+                        {
+                            Text = Localized.LandingPage_Loading,
+                        }
+                    },
+                    HorizontalOptions = LayoutOptions.Center,
+                    VerticalOptions = LayoutOptions.Center
                 };
             });
             foreach (var item in await FileDropHelper.GetFilePathsFromDrop(e))
@@ -282,16 +293,33 @@ public partial class PluginSettingPage : ContentPage
                 {
                     Dispatcher.Dispatch(() =>
                     {
-                        Content = new ActivityIndicator
+                        Content = new VerticalStackLayout
                         {
-                            IsRunning = true,
-                            WidthRequest = 200,
-                            HeightRequest = 200
+                            Children =
+                            {
+                                new ActivityIndicator
+                                {
+                                    IsRunning = true,
+                                },
+                                new Label
+                                {
+                                    Text = Localized.LandingPage_Loading,
+                                }
+                            },
+                            HorizontalOptions = LayoutOptions.Center,
+                            VerticalOptions = LayoutOptions.Center
                         };
                     });
                     await PluginService.AddAPlugin(result.FullPath, this);
                     BuildPPB();
                 }
+                return;
+            }
+
+            if(args.Id == "DisablePluginEngine")
+            {
+                SettingManager.SettingsManager.WriteSetting("DisablePluginEngine", args.Value?.ToString() ?? "false");
+                await MainSettingsPage.RebootApp(this);
                 return;
             }
 

@@ -96,7 +96,7 @@ namespace projectFrameCut
 #if WINDOWS
         public static NavigationView MainNavView;
         public static Microsoft.UI.Xaml.Window NativeWindow;
-        public static NavigationViewItem homeItem, assetItem, debugItem, settingItem;
+        public static NavigationViewItem homeItem, assetItem, templateItem, debugItem, settingItem;
 #endif
 
         protected override Microsoft.Maui.Controls.Window CreateWindow(IActivationState? activationState)
@@ -179,6 +179,7 @@ namespace projectFrameCut
                     var mauiWindow = new Microsoft.Maui.Controls.Window(shell);
 
                     shell.Items.Add(new ShellContent { Content = new HomePage(), Title = Localized.AppShell_ProjectsTab, Icon = ImageHelper.LoadFromAsset("icon_project"), Route = "home" });
+                    shell.Items.Add(new ShellContent { Content = new TemplateViewPage(), Title = Localized.AppShell_TemplateTab, Icon = ImageHelper.LoadFromAsset("icon_template"), Route = "template" });
                     shell.Items.Add(new ShellContent { Content = new AssetsLibraryPage(), Title = Localized.AppShell_AssetsTab, Icon = ImageHelper.LoadFromAsset("icon_asset"), Route = "assets" });
                     shell.Items.Add(new ShellContent { Content = new MainSettingsPage(), Title = Localized._Settings, Icon = ImageHelper.LoadFromAsset("icon_setting"), Route = "options" });
                     return mauiWindow;
@@ -258,11 +259,15 @@ namespace projectFrameCut
                 homeItem = new NavigationViewItem { Content = Localized.AppShell_ProjectsTab, Tag = "HomePage", Height = 36, Padding = new(4) };
                 homeItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.Folder };
 
+                templateItem = new NavigationViewItem { Content = Localized.AppShell_ProjectsTab, Tag = "TemplateViewPage", Height = 36, Padding = new(4) };
+                templateItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.SwitchApps };
+
                 assetItem = new NavigationViewItem { Content = Localized.AppShell_AssetsTab, Tag = "Assets", Height = 36, Padding = new(4) };
                 assetItem.Icon = new Microsoft.UI.Xaml.Controls.SymbolIcon { Symbol = Symbol.SlideShow };
 
 
                 nav.MenuItems.Add(homeItem);
+                nav.MenuItems.Add(templateItem);
                 nav.MenuItems.Add(assetItem);
 
                 settingItem = new NavigationViewItem { Content = Localized._Settings, Tag = "Setting", Height = 36, Padding = new(4) };
@@ -280,8 +285,9 @@ namespace projectFrameCut
                     nav.SelectedItem = homeItem;
 
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Log(ex, "Add WinUI3 Nav view", this);
                     nativeWindow.Content = originalContent;
                 }
 
@@ -301,6 +307,9 @@ namespace projectFrameCut
                                 case "HomePage":
                                     await Shell.Current.Navigation.PushAsync(new HomePage());
                                     break;
+                                case "TemplateViewPage":
+                                    await Shell.Current.Navigation.PushAsync(new TemplateViewPage());
+                                    break; 
                                 case "Assets":
                                     await Shell.Current.Navigation.PushAsync(new AssetsLibraryPage());
                                     break;

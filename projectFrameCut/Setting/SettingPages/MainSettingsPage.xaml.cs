@@ -127,7 +127,11 @@ namespace projectFrameCut
             if (count >= 20)
             {
                 count = 0;
-                await NavigateAsync(new AdvancedSettingPage());
+                if (!IsBoolSettingTrue("DeveloperMode"))
+                {
+                    WriteSetting("DeveloperMode", "True");
+                    await DisplayAlertAsync(Localized._Info, "🛠️✅", Localized._OK);
+                }
 
             }
         }
