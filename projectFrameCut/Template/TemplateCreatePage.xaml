@@ -1,35 +1,36 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="projectFrameCut.Template.TemplateCreatePage"
-             Title="从模板创建项目">
+             xmlns:l="clr-namespace:LocalizedResources"
+             x:Class="projectFrameCut.Template.TemplateCreatePage">
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="10" Padding="12">
         <VerticalStackLayout Grid.Row="0" Spacing="4">
-            <Label Text="导入 JSON 模板并填写变量，生成可直接编辑的项目。"
+            <Label Text="{l:Localized Key=TemplateCreatePage_Description}"
                    FontSize="13"
                    Opacity="0.85" />
             <Label x:Name="TemplatePathLabel"
-                   Text="模板文件：未选择"
+                     Text=""
                    FontSize="12"
                    Opacity="0.75"
                    LineBreakMode="TailTruncation" />
         </VerticalStackLayout>
 
-        <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="8">
-            <Button Text="导入模板"
+        <Grid x:Name="ImportControlGrid" Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+            <Button x:Name="ImportTemplateButton"
+                Text="{l:Localized Key=TemplateCreatePage_ImportTemplate}"
                     Clicked="ImportTemplate_Clicked" />
             <Entry Grid.Column="1"
                    x:Name="ProjectNameEntry"
-                   Placeholder="输入新项目名称"
+               Placeholder="{l:Localized Key=TemplateCreatePage_ProjectNamePlaceholder}"
                    ClearButtonVisibility="WhileEditing" />
         </Grid>
 
         <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
             <SearchBar x:Name="FieldSearchBar"
-                       Placeholder="搜索变量名 / 路径 / 默认值"
+                       Placeholder="{l:Localized Key=TemplateCreatePage_FieldSearchPlaceholder}"
                        TextChanged="FieldSearchBar_TextChanged" />
             <Button Grid.Column="1"
-                    Text="恢复默认"
+                    Text="{l:Localized Key=TemplateCreatePage_ResetDefaults}"
                     Clicked="ResetDefaults_Clicked" />
         </Grid>
 
@@ -55,22 +56,28 @@
                                    FontSize="11"
                                    Opacity="0.75"
                                    LineBreakMode="TailTruncation" />
-                            <Label Text="{Binding DefaultDisplay}"
-                                   FontSize="12"
-                                   Opacity="0.85"
-                                   LineBreakMode="TailTruncation" />
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                                <Label Text="{l:Localized Key=_Default}"
+                                    FontSize="12"
+                                    Opacity="0.85" />
+                                <Label Grid.Column="1"
+                                    Text="{Binding DefaultDisplay}"
+                                    FontSize="12"
+                                    Opacity="0.85"
+                                    LineBreakMode="TailTruncation" />
+                            </Grid>
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                <Label Text="{Binding TypeDisplay}"
+                                <Label Text="{l:Localized Key=AssetPage_Info_Type}"
                                        FontSize="11"
                                        Opacity="0.75"
                                        VerticalOptions="Center" />
                                 <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                     <Entry Text="{Binding Value}"
-                                           Placeholder="输入变量值"
+                                           Placeholder="{l:Localized Key=TemplateCreatePage_VariableValuePlaceholder}"
                                            Keyboard="{Binding InputKeyboard}"
                                            ClearButtonVisibility="WhileEditing" />
                                     <Button Grid.Column="1"
-                                            Text="选择文件"
+                                            Text="{l:Localized Key=TemplateCreatePage_SelectFile}"
                                             IsVisible="{Binding IsFileType}"
                                             Clicked="PickFileForVariable_Clicked" />
                                 </Grid>
@@ -83,15 +90,16 @@
 
         <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" VerticalOptions="Center">
             <Label x:Name="StatsLabel"
-                   Text="未加载模板"
+               Text="{l:Localized Key=TemplateCreatePage_Stats_UnloadedTemplate}"
                    VerticalOptions="Center" />
             <Button Grid.Column="1"
-                    Text="取消"
+                    x:Name="CancelButton"
+                Text="{l:Localized Key=_Cancel}"
                     Clicked="Cancel_Clicked" />
             <Button Grid.Column="2"
                     x:Name="CreateButton"
-                    Text="创建项目"
+                Text="{l:Localized Key=TemplateCreatePage_CreateProject}"
                     Clicked="CreateProject_Clicked" />
         </Grid>
     </Grid>
-</ContentPage>
+</ContentView>

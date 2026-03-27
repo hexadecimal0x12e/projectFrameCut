@@ -1,8 +1,13 @@
 using Microsoft.Maui.Controls;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Render.Rendering;
+using projectFrameCut.Shared;
 using System;
 using System.IO;
 using System.Reflection;
+using System.Security.AccessControl;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -34,7 +39,7 @@ public partial class AboutSettingPage : ContentPage
                 count = 0;
                 var result = await DisplayAlertAsync("???", "Let's play a game!", Localized._Cancel, Localized._OK);
                 if (result) await Launcher.OpenAsync("https://oig.mihoyo.com/ys"); //____
-                else await DisplayAlertAsync("???", "Have a nice day :)",Localized._OK);
+                else await DisplayAlertAsync("???", "Have a nice day :)", Localized._OK);
             }
 
         };
@@ -59,6 +64,26 @@ public partial class AboutSettingPage : ContentPage
         {
 
         }
+
+        try
+        {
+            var renderType = typeof(Renderer).Assembly;
+            string renderHash = "";
+            try
+            {
+                renderHash = !renderType.IsDynamic && Path.Exists(renderType.Location) ? HashServices.ComputeFileHash(renderType.Location) : "unknown";
+            }
+            catch { renderHash = "unknown"; }
+
+            AppDetailVersionLabel.Text =
+                $"""
+                IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
+                CoreRender library: v{renderType.GetName().Version} hash:{renderHash}
+                {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "unknown"}: {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config"}@{(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0+unknown commit").Skip(6).Aggregate("", (a, b) => $"{a}{b}")}  
+
+                """;
+        }
+        catch { }
 
 #else
         AppLogoIcon.GestureRecognizers.Add(pinch);
@@ -102,6 +127,6 @@ public partial class AboutSettingPage : ContentPage
         }
     }
 
-    
-    
+
+
 }

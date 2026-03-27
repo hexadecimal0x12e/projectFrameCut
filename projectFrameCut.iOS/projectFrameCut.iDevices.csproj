@@ -86,7 +86,7 @@
 		<PackageReference Include="OpenAI" Version="2.8.0" />
 		<PackageReference Include="Cnblogs.DashScope.Sdk" Version="0.9.0" />
 
-
+		
 		<Reference Include="..\projectFrameCut\Resources\Assembly\*.dll"/>
 
 	</ItemGroup>
@@ -109,6 +109,7 @@
 		<Compile Include="..\projectFrameCut\InteractableEditor\**\*.cs" Exclude="..\projectFrameCut\InteractableEditor\*.xaml.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Converters\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Services\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
+		<Compile Include="..\projectFrameCut\Template\**\*.cs" Exclude="..\projectFrameCut\Template\**\*.xaml.cs"  Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 		<Compile Include="..\projectFrameCut\Setting\Setting*\**\*.cs" Exclude="..\projectFrameCut\Setting\SettingPages\**\*.cs" Link="SharedCodes\%(RecursiveDir)%(Filename)%(Extension)" />
 
 		<Compile Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'" Include="..\projectFrameCut\Platforms\iOS\**\*.cs" Exclude="..\projectFrameCut\Platforms\iOS\AppDelegate.cs;..\projectFrameCut\Platforms\iOS\Program.cs" Link="Platforms\iOS\%(RecursiveDir)%(Filename)%(Extension)" />

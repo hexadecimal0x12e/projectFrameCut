@@ -25,7 +25,8 @@ using Microsoft.Maui.LifecycleEvents;
 using CommunityToolkit.Maui.Core;
 using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Helpers;
-
+using projectFrameCut.Render.TemplateSystem;
+using projectFrameCut.Template;
 
 
 
@@ -46,6 +47,7 @@ using projectFrameCut.Platforms.Windows;
 using projectFrameCut.WinUI;
 using projectFrameCut.Render.WindowsRender;
 using System.Text.RegularExpressions;
+
 #endif
 
 
@@ -67,6 +69,7 @@ namespace projectFrameCut
             [
             "My Drafts",
             "My Assets",
+            "My Templates",
 #if WINDOWS
             "My Assets\\.database",
             "My Assets\\.thumbnails"
@@ -757,6 +760,24 @@ namespace projectFrameCut
 
             }
 
+
+            try
+            {
+                foreach (var item in Directory.GetFiles(Path.Combine(DataPath, "My Templates"), "*.json", SearchOption.AllDirectories))
+                {
+                    var templateJson = File.ReadAllText(item);
+
+                    // Deserialize the template
+                    var template = JSONBasedTemplateHelper.DeserializeTemplate(templateJson);
+
+                    // Add to TemplateStore
+                    TemplateStore.Templates[template.TemplateID] = template;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "load templates", CreateMauiApp);
+            }
 
             try
             {

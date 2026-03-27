@@ -55,9 +55,6 @@
 		<Copyright>Copyright (c) hexadecimal0x12e 2025-2026</Copyright>
 		<PackageProjectUrl>hexadecimal0x12e.com/projectFrameCut</PackageProjectUrl>
 		<Title>projectFrameCut Application</Title>
-
-
-
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">

@@ -1,0 +1,7 @@
+{
+  "publicReleaseRefSpec": [
+    "^refs/heads/main$",
+    "^refs/heads/master$",
+    "^refs/tags/.*$"
+  ]
+}

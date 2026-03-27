@@ -37,12 +37,13 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
     /// <summary>
     /// Represents a template package containing project and draft information.
     /// </summary>
-    public class JSONBasedTemplateStructure
+    public class JSONBasedTemplateStructure : ITemplateStructure
     {
-        /// <summary>
-        /// Template format version.
-        /// </summary>
         public int TemplateVersion { get; set; } = 1;
+        public TemplateType TemplateType  => TemplateType.JSON;
+        public TemplateScope Scope { get; set; }
+        public Guid TemplateID { get; set; } = Guid.NewGuid();
+        public string TemplateName { get; set; } = "Template";
 
         /// <summary>
         /// The project part in template form.
@@ -65,39 +66,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public Dictionary<string, TemplateVariableDefinition> VariableDefinitions { get; set; } = new Dictionary<string, TemplateVariableDefinition>();
     }
 
-    /// <summary>
-    /// Defines what fields should be replaced with placeholders while exporting a template.
-    /// </summary>
-    public class DraftTemplateBuildOptions
-    {
-        /// <summary>
-        /// Placeholder prefix, default is "{{".
-        /// </summary>
-        public string PlaceholderPrefix { get; set; } = "{{";
 
-        /// <summary>
-        /// Placeholder suffix, default is "}}".
-        /// </summary>
-        public string PlaceholderSuffix { get; set; } = "}}";
-
-        /// <summary>
-        /// Clip fields to convert into placeholders.
-        /// </summary>
-        public List<string> ClipFieldsToExtract { get; set; } = new List<string>
-        {
-            "Name",
-            "FilePath"
-        };
-
-        /// <summary>
-        /// Soundtrack fields to convert into placeholders.
-        /// </summary>
-        public List<string> TrackFieldsToExtract { get; set; } = new List<string>
-        {
-            "Name",
-            "FilePath"
-        };
-    }
 
     /// <summary>
     /// Controls placeholder fill behavior.

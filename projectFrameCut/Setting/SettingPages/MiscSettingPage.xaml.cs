@@ -32,7 +32,7 @@ public partial class MiscSettingPage : ContentPage
             .AddButton("makeDiagReport", SettingLocalizedResources.Misc_MakeDiagReport, null)
             .AddButton(Localized.MainSettingsPage_Tab_Advanced, async (s, e) => await Navigation.PushAsync(new SettingPages.AdvancedSettingPage()))
             .AddSeparator()
-            .AddText(new SingleLineLabel(SettingLocalizedResources.Misc_Reset, 20, default))
+            .AddText(new SingleLineLabel(SettingLocalizedResources.Misc_Reset, 25, default))
             .AddButton("reset_ClearPluginSign", SettingLocalizedResources.Misc_ForgetPluginSign,
             (b) =>
             {

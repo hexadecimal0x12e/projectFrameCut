@@ -1,5 +1,6 @@
 using FFmpeg.AutoGen;
 using Microsoft.Maui.Storage;
+using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
@@ -252,11 +253,28 @@ public partial class DiagnosticSettingPage : ContentPage
 
         }
         catch { }
+        string renderHash = "unknown";
+        var renderType = typeof(Renderer).Assembly;
+
+        try
+        {
+            try
+            {
+                renderHash = !renderType.IsDynamic && Path.Exists(renderType.Location) ? HashServices.ComputeFileHash(renderType.Location) : "unknown";
+            }
+            catch { renderHash = "unknown"; }
+
+        }
+        catch { }
 
 
         return
             $"""
             {Localized.AppBrand} - {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} ({AppInfo.BuildString})
+            IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
+            CoreRender library: v{renderType.GetName().Version} hash:{renderHash}
+            {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "unknown"}: {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config"}@{(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0+unknown commit").Skip(6).Aggregate("", (a, b) => $"{a}{b}")}  
+
             - CPU arch: {RuntimeInformation.ProcessArchitecture}
             - AppDataPath: {MauiProgram.BasicDataPath}
             - UserDataPath: {MauiProgram.DataPath}

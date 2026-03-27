@@ -2,6 +2,7 @@ using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -14,16 +15,20 @@ public partial class TemplateExtractPage : ContentPage
 	private readonly ViewModels.ProjectsViewModel _projectVm;
 	private readonly ObservableCollection<TemplateExtractFieldItem> _allFields = [];
 	private readonly ObservableCollection<TemplateExtractFieldItem> _filteredFields = [];
+	private readonly ObservableCollection<TemplateClipItem> _clips = [];
 	private JsonObject _projectNode = new();
 	private JsonObject _draftNode = new();
+	private JsonObject _draftSourceNode = new();
 	private bool _isBusy;
+	private bool _showNonRecommended;
 
 	public TemplateExtractPage(ViewModels.ProjectsViewModel projectVm)
 	{
 		InitializeComponent();
 		_projectVm = projectVm;
 		FieldsCollectionView.ItemsSource = _filteredFields;
-		ProjectNameLabel.Text = $"项目：{projectVm.Name}";
+		ClipsCollectionView.ItemsSource = _clips;
+		ProjectNameLabel.Text = Localized.TemplateExtractPage_ProjectName(projectVm.Name);
 		Loaded += TemplateExtractPage_Loaded;
 	}
 
@@ -46,7 +51,7 @@ public partial class TemplateExtractPage : ContentPage
 			var timelinePath = Path.Combine(_projectVm._projectPath, "timeline.json");
 			if (!File.Exists(projectPath) || !File.Exists(timelinePath))
 			{
-				await DisplayAlertAsync("错误", "项目缺少 project.pjfc/project.json 或 timeline.json，无法导出模板。", "确定");
+				await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
 				await Navigation.PopAsync();
 				return;
 			}
@@ -55,33 +60,184 @@ public partial class TemplateExtractPage : ContentPage
 			var draft = JsonSerializer.Deserialize<DraftStructureJSON>(await File.ReadAllTextAsync(timelinePath), DraftPage.DraftJSONOption);
 			if (project is null || draft is null)
 			{
-				await DisplayAlertAsync("错误", "项目文件解析失败，无法导出模板。", "确定");
+				await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK);
 				await Navigation.PopAsync();
 				return;
 			}
 
 			_projectNode = JsonSerializer.SerializeToNode(project, DraftPage.DraftJSONOption) as JsonObject ?? new JsonObject();
-			_draftNode = JsonSerializer.SerializeToNode(draft, DraftPage.DraftJSONOption) as JsonObject ?? new JsonObject();
+			_draftSourceNode = JsonSerializer.SerializeToNode(draft, DraftPage.DraftJSONOption) as JsonObject ?? new JsonObject();
 
-			_allFields.Clear();
-			_filteredFields.Clear();
-
-			AddExtractableFields(_projectNode, "project", "Project", []);
-			AddExtractableFields(_draftNode, "draft", "Draft", []);
-
-			foreach (var item in _allFields)
-			{
-				item.PropertyChanged += FieldItem_PropertyChanged;
-			}
-
-			ApplyFilter();
-			RefreshStats();
+			InitializeClipSelections();
+			RebuildExtractableFields();
 		}
 		catch (Exception ex)
 		{
-			await DisplayAlertAsync("错误", $"读取项目失败: {ex.Message}", "确定");
+			await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n({Localized._ExceptionTemplate(ex)})", Localized._OK);
 			await Navigation.PopAsync();
 		}
+	}
+
+	private void InitializeClipSelections()
+	{
+		foreach (var clip in _clips)
+		{
+			clip.PropertyChanged -= ClipItem_PropertyChanged;
+		}
+
+		_clips.Clear();
+		if (_draftSourceNode["Clips"] is not JsonArray clipsArray)
+		{
+			return;
+		}
+
+		for (int i = 0; i < clipsArray.Count; i++)
+		{
+			if (clipsArray[i] is not JsonObject clipObj)
+			{
+				continue;
+			}
+
+			var clipId = TryGetClipId(clipObj) ?? $"clip_{i}";
+			var clipName = GetClipDisplayName(clipObj, i, clipId);
+			var item = new TemplateClipItem(clipId, clipName, true);
+			item.PropertyChanged += ClipItem_PropertyChanged;
+			_clips.Add(item);
+		}
+	}
+
+	private void RebuildExtractableFields()
+	{
+		_draftNode = BuildDraftNodeForSelectedClips();
+		var previousSelection = _allFields
+			.GroupBy(f => f.PathDisplay, StringComparer.OrdinalIgnoreCase)
+			.ToDictionary(
+				g => g.Key,
+				g => g.First(),
+				StringComparer.OrdinalIgnoreCase);
+
+		foreach (var item in _allFields)
+		{
+			item.PropertyChanged -= FieldItem_PropertyChanged;
+		}
+
+		_allFields.Clear();
+		_filteredFields.Clear();
+
+		AddExtractableFields(_projectNode, "project", "Project", []);
+		AddExtractableFields(_draftNode, "draft", "Draft", []);
+
+		foreach (var item in _allFields)
+		{
+			if (previousSelection.TryGetValue(item.PathDisplay, out var prev))
+			{
+				item.IsSelected = prev.IsSelected;
+				item.VariableType = prev.VariableType;
+			}
+
+			item.PropertyChanged += FieldItem_PropertyChanged;
+		}
+
+		ApplyFilter();
+		RefreshStats();
+	}
+
+	private JsonObject BuildDraftNodeForSelectedClips()
+	{
+		var draftClone = JsonNode.Parse(_draftSourceNode.ToJsonString()) as JsonObject ?? new JsonObject();
+		if (draftClone["Clips"] is not JsonArray clipsArray)
+		{
+			return draftClone;
+		}
+
+		var selectedClipIds = new HashSet<string>(
+			_clips.Where(c => c.IsSelected).Select(c => c.ClipId),
+			StringComparer.OrdinalIgnoreCase);
+
+		var selectedClips = new JsonArray();
+		var relatedTrackIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+		foreach (var clipNode in clipsArray)
+		{
+			if (clipNode is not JsonObject clipObj)
+			{
+				continue;
+			}
+
+			var clipId = TryGetClipId(clipObj);
+			if (string.IsNullOrWhiteSpace(clipId) || !selectedClipIds.Contains(clipId))
+			{
+				continue;
+			}
+
+			selectedClips.Add(JsonNode.Parse(clipObj.ToJsonString()));
+			if (clipObj.TryGetPropertyValue("BindedSoundTrack", out var trackIdNode)
+				&& trackIdNode is JsonValue trackIdValue
+				&& trackIdValue.TryGetValue<string>(out var trackId)
+				&& !string.IsNullOrWhiteSpace(trackId))
+			{
+				relatedTrackIds.Add(trackId);
+			}
+		}
+
+		draftClone["Clips"] = selectedClips;
+		if (draftClone["SoundTracks"] is JsonArray soundTracks && relatedTrackIds.Count > 0)
+		{
+			var selectedTracks = new JsonArray();
+			foreach (var trackNode in soundTracks)
+			{
+				if (trackNode is not JsonObject trackObj)
+				{
+					continue;
+				}
+
+				if (!trackObj.TryGetPropertyValue("Id", out var idNode)
+					|| idNode is not JsonValue idValue
+					|| !idValue.TryGetValue<string>(out var id)
+					|| string.IsNullOrWhiteSpace(id)
+					|| !relatedTrackIds.Contains(id))
+				{
+					continue;
+				}
+
+				selectedTracks.Add(JsonNode.Parse(trackObj.ToJsonString()));
+			}
+
+			draftClone["SoundTracks"] = selectedTracks;
+		}
+
+		return draftClone;
+	}
+
+	private static string? TryGetClipId(JsonObject clipObj)
+	{
+		if (clipObj.TryGetPropertyValue("Id", out var idNode)
+			&& idNode is JsonValue idValue
+			&& idValue.TryGetValue<string>(out var clipId)
+			&& !string.IsNullOrWhiteSpace(clipId))
+		{
+			return clipId;
+		}
+
+		return null;
+	}
+
+	private static string GetClipDisplayName(JsonObject clipObj, int index, string clipId)
+	{
+		var clipName = string.Empty;
+		if (clipObj.TryGetPropertyValue("Name", out var nameNode)
+			&& nameNode is JsonValue nameValue
+			&& nameValue.TryGetValue<string>(out var name)
+			&& !string.IsNullOrWhiteSpace(name))
+		{
+			clipName = name;
+		}
+
+		if (string.IsNullOrWhiteSpace(clipName))
+		{
+			clipName = $"Clip {index + 1}";
+		}
+
+		return clipName;
 	}
 
 	private void AddExtractableFields(JsonNode? node, string path, string scope, List<PathToken> tokens)
@@ -127,9 +283,10 @@ public partial class TemplateExtractPage : ContentPage
 			var valuePreview = GetValuePreview(val);
 			var variableKey = BuildUniqueVariableKey(SuggestVariableKey(path));
 			var variableType = InferVariableType(path, val);
-			var item = new TemplateExtractFieldItem(scope, path, valuePreview, variableKey, tokens)
+			var isRecommended = IsRecommendedPath(path);
+			var item = new TemplateExtractFieldItem(scope, path, valuePreview, variableKey, tokens, isRecommended)
 			{
-				IsSelected = IsRecommendedPath(path),
+				IsSelected = isRecommended,
 				VariableType = variableType
 			};
 			_allFields.Add(item);
@@ -252,6 +409,11 @@ public partial class TemplateExtractPage : ContentPage
 	{
 		var keyword = (FieldSearchBar.Text ?? string.Empty).Trim();
 		IEnumerable<TemplateExtractFieldItem> src = _allFields;
+		if (!_showNonRecommended)
+		{
+			src = src.Where(s => s.IsRecommended);
+		}
+
 		if (!string.IsNullOrWhiteSpace(keyword))
 		{
 			src = src.Where(s =>
@@ -270,6 +432,42 @@ public partial class TemplateExtractPage : ContentPage
 	private void FieldSearchBar_TextChanged(object sender, TextChangedEventArgs e)
 	{
 		ApplyFilter();
+	}
+
+	private void ShowNonRecommendedSwitch_Toggled(object sender, ToggledEventArgs e)
+	{
+		_showNonRecommended = e.Value;
+		ApplyFilter();
+	}
+
+	private void ClipItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+	{
+		if (e.PropertyName != nameof(TemplateClipItem.IsSelected))
+		{
+			return;
+		}
+
+		RebuildExtractableFields();
+	}
+
+	private void SelectAllClips_Clicked(object sender, EventArgs e)
+	{
+		foreach (var clip in _clips)
+		{
+			clip.IsSelected = true;
+		}
+
+		RebuildExtractableFields();
+	}
+
+	private void ClearClips_Clicked(object sender, EventArgs e)
+	{
+		foreach (var clip in _clips)
+		{
+			clip.IsSelected = false;
+		}
+
+		RebuildExtractableFields();
 	}
 
 	private void ClearSelection_Clicked(object sender, EventArgs e)
@@ -302,22 +500,29 @@ public partial class TemplateExtractPage : ContentPage
 			return;
 		}
 
+		var selectedClipCount = _clips.Count(c => c.IsSelected);
+		if (_clips.Count > 0 && selectedClipCount <= 0)
+		{
+			await DisplayAlertAsync(Localized._Info, Localized.DraftPage_SelectOneOrManyToContinue, Localized._OK);
+			return;
+		}
+
 		var selected = _allFields.Where(f => f.IsSelected).ToList();
 		if (selected.Count == 0)
 		{
-			await DisplayAlertAsync("提示", "请至少选择一个要挖空的字段。", "确定");
+			await DisplayAlertAsync(Localized._Info, Localized.TemplateExtractPage_SelectBlankToContinue, Localized._OK);
 			return;
 		}
 
 		if (selected.Any(s => string.IsNullOrWhiteSpace(s.VariableKey)))
 		{
-			await DisplayAlertAsync("提示", "变量名不能为空。", "确定");
+			await DisplayAlertAsync(Localized._Info, Localized.TemplateExtractPage_VarNameNotNull, Localized._OK);
 			return;
 		}
 
 		if (selected.GroupBy(s => s.VariableKey.Trim(), StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1))
 		{
-			await DisplayAlertAsync("提示", "变量名不能重复。", "确定");
+			await DisplayAlertAsync(Localized._Info, Localized.TemplateExtractPage_VarNameNotSame, Localized._OK);
 			return;
 		}
 
@@ -325,7 +530,7 @@ public partial class TemplateExtractPage : ContentPage
 		{
 			SetBusy(true);
 			var projectClone = JsonNode.Parse(_projectNode.ToJsonString()) as JsonObject ?? new JsonObject();
-			var draftClone = JsonNode.Parse(_draftNode.ToJsonString()) as JsonObject ?? new JsonObject();
+			var draftClone = JsonNode.Parse(BuildDraftNodeForSelectedClips().ToJsonString()) as JsonObject ?? new JsonObject();
 			var vars = new Dictionary<string, string?>();
 			var variableDefinitions = new Dictionary<string, TemplateVariableDefinition>(StringComparer.OrdinalIgnoreCase);
 
@@ -335,7 +540,7 @@ public partial class TemplateExtractPage : ContentPage
 				var root = string.Equals(field.Scope, "Project", StringComparison.OrdinalIgnoreCase) ? projectClone : draftClone;
 				if (!TryReplaceNodeValue(root, field.Tokens, placeholder))
 				{
-					throw new InvalidOperationException($"无法替换字段: {field.PathDisplay}");
+					throw new InvalidOperationException($"Cannot to replace field: {field.PathDisplay}");
 				}
 
 				var key = field.VariableKey.Trim();
@@ -348,11 +553,11 @@ public partial class TemplateExtractPage : ContentPage
 			}
 
 			var project = projectClone.Deserialize<ProjectJSONStructure>(DraftPage.DraftJSONOption)
-				?? throw new InvalidOperationException("模板中的 Project 结构无效。");
+				?? throw new InvalidOperationException("Invalid draft");
 			var draft = draftClone.Deserialize<DraftStructureJSON>(DraftPage.DraftJSONOption)
-				?? throw new InvalidOperationException("模板中的 Draft 结构无效。");
+                ?? throw new InvalidOperationException("Invalid draft");
 
-			var template = new JSONBasedTemplateStructure
+            var template = new JSONBasedTemplateStructure
 			{
 				TemplateVersion = 1,
 				Project = project,
@@ -373,18 +578,18 @@ public partial class TemplateExtractPage : ContentPage
 			var savePath = await FileSystemService.SaveAFile($"{safeName}_template.json", ms);
 			if (string.IsNullOrWhiteSpace(savePath))
 			{
-				await DisplayAlertAsync("提示", "已取消保存。", "确定");
+				await DisplayAlertAsync(Localized._Info, Localized.DraftPage_Tasks_Status_Canceled, Localized._OK);
 				return;
 			}
 
-			await DisplayAlertAsync("成功", $"模板已保存到:\n{savePath}", "确定");
+			await DisplayAlertAsync(Localized._Info, SettingsManager.SettingLocalizedResources.Advanced_Success, Localized._OK);
 			await Navigation.PopAsync();
 		}
 		catch (Exception ex)
 		{
-			await DisplayAlertAsync("错误", $"导出模板失败: {ex.Message}", "确定");
-		}
-		finally
+            await DisplayAlertAsync(Localized._Error, $"{Localized.TemplateCreatePage_InvalidTemplate}{Environment.NewLine}{Environment.NewLine}{Localized._ExceptionTemplate(ex)})", Localized._OK);
+        }
+        finally
 		{
 			SetBusy(false);
 		}
@@ -455,6 +660,8 @@ public partial class TemplateExtractPage : ContentPage
 		SaveButton.IsEnabled = !isBusy;
 		FieldSearchBar.IsEnabled = !isBusy;
 		FieldsCollectionView.IsEnabled = !isBusy;
+		ClipsCollectionView.IsEnabled = !isBusy;
+		ShowNonRecommendedSwitch.IsEnabled = !isBusy;
 	}
 
 	private void FieldItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -467,35 +674,54 @@ public partial class TemplateExtractPage : ContentPage
 
 	private void RefreshStats()
 	{
+		var selectedClipCount = _clips.Count(c => c.IsSelected);
 		var count = _allFields.Count(f => f.IsSelected);
-		StatsLabel.Text = count <= 0
-			? $"可挖空字段: {_allFields.Count}，未选择"
-			: $"可挖空字段: {_allFields.Count}，已选择: {count}";
+		StatsLabel.Text = Localized.TemplateExtractPage_ClipStatus(count, selectedClipCount, _clips.Count,_allFields.Count);
+		//StatsLabel.Text = count <= 0
+		//	? $"Clip: {selectedClipCount}/{_clips.Count}，可挖空字段: {_allFields.Count}，未选择"
+		//	: $"Clip: {selectedClipCount}/{_clips.Count}，可挖空字段: {_allFields.Count}，已选择: {count}";
 	}
 
 	private sealed record PathToken(string? PropertyName, int? ArrayIndex);
 
-	private sealed class TemplateExtractFieldItem(string scope, string pathDisplay, string valuePreview, string variableKey, IReadOnlyList<PathToken> tokens) : INotifyPropertyChanged
+	private sealed class TemplateClipItem(string clipId, string displayName, bool isSelected) : INotifyPropertyChanged
+	{
+		private bool _isSelected = isSelected;
+
+		public string ClipId { get; } = clipId;
+		public string DisplayName { get; } = displayName;
+		public string ClipIdShort => ClipId.Length <= 8 ? ClipId : ClipId[..8];
+
+		public bool IsSelected
+		{
+			get => _isSelected;
+			set
+			{
+				if (_isSelected == value)
+				{
+					return;
+				}
+
+				_isSelected = value;
+				PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
+			}
+		}
+
+		public event PropertyChangedEventHandler? PropertyChanged;
+	}
+
+	private sealed class TemplateExtractFieldItem(string scope, string pathDisplay, string valuePreview, string variableKey, IReadOnlyList<PathToken> tokens, bool isRecommended) : INotifyPropertyChanged
 	{
 		private bool _isSelected;
 		private string _variableKey = variableKey;
 		private TemplateVariableType _variableType = TemplateVariableType.String;
 
-		private static readonly IReadOnlyList<string> _variableTypeOptions =
-		[
-			"字符串",
-			"数字",
-			"整数",
-			"布尔",
-			"文件",
-			"JSON"
-		];
-
 		public string Scope { get; } = scope;
 		public string PathDisplay { get; } = pathDisplay;
 		public string ValuePreview { get; } = valuePreview;
 		public IReadOnlyList<PathToken> Tokens { get; } = tokens;
-		public IReadOnlyList<string> VariableTypeOptions => _variableTypeOptions;
+		public bool IsRecommended { get; } = isRecommended;
+		public IReadOnlyList<string> VariableTypeOptions => GetVariableTypeOptions();
 
 		public TemplateVariableType VariableType
 		{
@@ -587,6 +813,27 @@ public partial class TemplateExtractPage : ContentPage
 				4 => TemplateVariableType.File,
 				5 => TemplateVariableType.Json,
 				_ => TemplateVariableType.String
+			};
+		}
+
+		private static IReadOnlyList<string> GetVariableTypeOptions()
+		{
+			var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+			return lang switch
+			{
+				"zh" => ["字符串", "数字", "整数", "布尔", "文件", "JSON"],
+				"ja" => ["文字列", "数値", "整数", "真偽値", "ファイル", "JSON"],
+				"ko" => ["문자열", "숫자", "정수", "불리언", "파일", "JSON"],
+				"fr" => ["Chaine", "Nombre", "Entier", "Booleen", "Fichier", "JSON"],
+				"de" => ["Zeichenfolge", "Zahl", "Ganzzahl", "Boolesch", "Datei", "JSON"],
+				"es" => ["Cadena", "Numero", "Entero", "Booleano", "Archivo", "JSON"],
+				"it" => ["Stringa", "Numero", "Intero", "Booleano", "File", "JSON"],
+				"pl" => ["Lancuch", "Liczba", "Calkowita", "Logiczna", "Plik", "JSON"],
+				"pt" => ["Texto", "Numero", "Inteiro", "Booleano", "Arquivo", "JSON"],
+				"ru" => ["Stroka", "Chislo", "Tseloe", "Bulovo", "Fail", "JSON"],
+				"tr" => ["Metin", "Sayi", "Tam sayi", "Mantiksal", "Dosya", "JSON"],
+				"ar" => ["نص", "رقم", "عدد صحيح", "منطقي", "ملف", "JSON"],
+				_ => ["String", "Number", "Integer", "Boolean", "File", "JSON"]
 			};
 		}
 

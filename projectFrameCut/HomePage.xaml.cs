@@ -79,8 +79,8 @@ public partial class HomePage : ContentPage
                 return;
             }
             await ShowManyAlertsAsync();
-            HasAlreadyLaunchedFromFile = true;
             if (!HasAlreadyLaunchedFromFile) await LaunchFromFile();
+            HasAlreadyLaunchedFromFile = true;
 
             try
             {
@@ -141,6 +141,7 @@ public partial class HomePage : ContentPage
 
     public async Task LaunchFromFile()
     {
+        HasAlreadyLaunchedFromFile = true;
         var origCont = Content;
         Dispatcher.Dispatch(() =>
         {
@@ -511,7 +512,7 @@ public partial class HomePage : ContentPage
             }
             else
             {
-                await Dispatcher.DispatchAsync(async () => await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK));
+                await Dispatcher.DispatchAsync(async () => await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}", Localized._OK));
                 await Dispatcher.DispatchAsync(async () => Content = origContent);
                 return;
             }
@@ -519,7 +520,7 @@ public partial class HomePage : ContentPage
         catch (Exception ex)
         {
             Log(ex, "get project info", this);
-            await Dispatcher.DispatchAsync(async () => await DisplayAlertAsync(Localized._Warn, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n({ex.Message})", Localized._OK));
+            await Dispatcher.DispatchAsync(async () => await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_GoDraft_DraftBroken_InvaildInfo}\r\n({ex.Message})", Localized._OK));
             await Dispatcher.DispatchAsync(async () => Content = origContent);
             return;
         }
@@ -1106,6 +1107,7 @@ public partial class HomePage : ContentPage
         catch (Exception ex)
         {
             Log(ex, "delete project", this);
+            await DisplayAlertAsync(Localized._Error, Localized.HomePage_ProjectContextMenu_Delete_Fail(pvm.Name, ex), Localized._OK);
         }
     }
 
