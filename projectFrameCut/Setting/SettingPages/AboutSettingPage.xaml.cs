@@ -65,6 +65,10 @@ public partial class AboutSettingPage : ContentPage
 
         }
 
+#else
+        AppLogoIcon.GestureRecognizers.Add(pinch);
+        AppVersionLabel.Text = $"Version {Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}";
+#endif
         try
         {
             var renderType = typeof(Renderer).Assembly;
@@ -84,13 +88,6 @@ public partial class AboutSettingPage : ContentPage
                 """;
         }
         catch { }
-
-#else
-        AppLogoIcon.GestureRecognizers.Add(pinch);
-        AppVersionLabel.Text = $"Version {Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "Unknown"}";
-
-
-#endif
     }
 
     private async void AboutSettingPage_Loaded(object? sender, EventArgs e)

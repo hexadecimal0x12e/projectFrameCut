@@ -5,13 +5,6 @@
              BackgroundColor="Transparent"
              InputTransparent="False">
     <AbsoluteLayout x:Name="EditorCanvas" BackgroundColor="Transparent" InputTransparent="False" ZIndex="100">
-        <ContentView x:Name="DynamicPreviewHost"
-                 BackgroundColor="Transparent"
-                 InputTransparent="True"
-                 ZIndex="100"
-                 AbsoluteLayout.LayoutBounds="0,0,1,1"
-                 AbsoluteLayout.LayoutFlags="All" />
-
         <Border x:Name="ClipVisual"
                 Stroke="Yellow"
                 StrokeThickness="2"

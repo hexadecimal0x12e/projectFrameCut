@@ -1,4 +1,5 @@
-﻿using projectFrameCut.Render.Plugin;
+﻿using projectFrameCut.Asset;
+using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
@@ -30,7 +31,6 @@ public partial class TemplateCreatePage : ContentView
     {
         InitializeComponent();
         VariablesCollectionView.ItemsSource = _filteredVariables;
-        TemplatePathLabel.Text = Localized.TemplateCreatePage_TemplatePath("未选择");
         ConfigureForProjectCreationMode();
         RefreshStats();
     }
@@ -40,7 +40,7 @@ public partial class TemplateCreatePage : ContentView
         InitializeComponent();
         ImportControlGrid.IsVisible = false;
         VariablesCollectionView.ItemsSource = _filteredVariables;
-        TemplatePathLabel.Text = Localized.TemplateCreatePage_TemplatePath("?");
+        TemplatePathLabel.Text = template.TemplateName;
         LoadTemplateFromStructureAsync(template, template.TemplateName ?? template.TemplateID.ToString());
     }
 
@@ -52,7 +52,6 @@ public partial class TemplateCreatePage : ContentView
         ProjectNameEntry.Placeholder = Localized.TemplateCreatePage_ProjectNamePlaceholder;
         CreateButton.Text = Localized.TemplateCreatePage_CreateProject;
         CancelButton.Text = Localized._Cancel;
-        TemplatePathLabel.Text = Localized.TemplateCreatePage_TemplatePath("?");
     }
 
     public async Task<Dictionary<string, string?>?> PromptTemplateValuesAsync(JSONBasedTemplateStructure template, string? templateLabel = null)
@@ -60,10 +59,8 @@ public partial class TemplateCreatePage : ContentView
         _isTemplateInputMode = true;
         ImportTemplateButton.IsVisible = false;
         ProjectNameEntry.IsVisible = false;
-        CreateButton.Text = "应用变量";
-        CancelButton.Text = Localized._Cancel;
 
-        await LoadTemplateFromStructureAsync(template, templateLabel ?? "模板文件：已选择");
+        await LoadTemplateFromStructureAsync(template, templateLabel ?? "");
 
         _templateInputCompletion = new TaskCompletionSource<Dictionary<string, string?>?>(TaskCreationOptions.RunContinuationsAsynchronously);
         return await _templateInputCompletion.Task;
@@ -220,8 +217,8 @@ public partial class TemplateCreatePage : ContentView
             firstPath,
             string.Join("; ", item.Paths.Take(3)),
             def.Type,
-            item.DefaultValue,
-            item.DefaultValue ?? string.Empty);
+            item.Type != TemplateVariableType.File ? item.DefaultValue : "",
+            item.Type != TemplateVariableType.File ? item.DefaultValue : "");
             _allVariables.Add(variable);
         }
 
@@ -393,6 +390,32 @@ public partial class TemplateCreatePage : ContentView
         }
     }
 
+    private async void PickAssetForVariable_Clicked(object sender, EventArgs e)
+    {
+        if (sender is not Button { BindingContext: TemplateVariableItem item })
+        {
+            return;
+        }
+
+        var selectedAsset = await PickAssetWithPickerPageAsync();
+        if (string.IsNullOrWhiteSpace(selectedAsset?.AssetId))
+        {
+            return;
+        }
+
+        item.Value = "$" + selectedAsset.AssetId;
+    }
+
+    private void ClearVariableValue_Clicked(object sender, EventArgs e)
+    {
+        if (sender is not Button { BindingContext: TemplateVariableItem item })
+        {
+            return;
+        }
+
+        item.Value = string.Empty;
+    }
+
     private async void Cancel_Clicked(object sender, EventArgs e)
     {
         if (_isTemplateInputMode)
@@ -434,26 +457,21 @@ public partial class TemplateCreatePage : ContentView
                 await RequestCloseAsync();
                 return;
             }
+            var projectName = "";
+            if (!ImportControlGrid.IsVisible)
+            {
+                var page = FindHostPage();
+                if (page is not null)
+                {
+                    projectName = await page.DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, _template.TemplateName, 1024, null, _template.TemplateName);
+                    if (projectName is null) return;
 
-            var projectName = (ProjectNameEntry.Text ?? string.Empty).Trim();
+                }
+            }
             if (string.IsNullOrWhiteSpace(projectName))
             {
-                if (!ImportControlGrid.IsVisible)
-                {
-                    var page = FindHostPage();
-                    if(page is not null)
-                    {
-                        projectName = await page.DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, "Untitled Project 1", 1024, null, "Untitled Project 1");
-                        if (projectName is null) return;
-
-                    }
-                }
-                if (string.IsNullOrWhiteSpace(projectName))
-                {
-                    await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
-                    return;
-                }
-
+                await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+                return;
             }
 
             if (Path.GetInvalidPathChars().Any(projectName.Contains) || Path.GetInvalidFileNameChars().Any(projectName.Contains))
@@ -569,7 +587,7 @@ public partial class TemplateCreatePage : ContentView
         var list = new List<string>();
         foreach (var item in items)
         {
-            if (TryResolveVariable(item.Key, values, defaults, definitions, out var resolved, out _) && resolved is not null)
+            if (TryResolveVariable(item.Key, values, defaults, definitions, out var resolved, out _) && !string.IsNullOrWhiteSpace(resolved))
             {
                 continue;
             }
@@ -684,6 +702,8 @@ public partial class TemplateCreatePage : ContentView
         switch (type)
         {
             case TemplateVariableType.String:
+                return JsonValue.Create(value);
+
             case TemplateVariableType.File:
                 return JsonValue.Create(value);
 
@@ -749,6 +769,105 @@ public partial class TemplateCreatePage : ContentView
         FieldSearchBar.IsEnabled = !isBusy;
         VariablesCollectionView.IsEnabled = !isBusy;
         ProjectNameEntry.IsEnabled = !isBusy;
+    }
+
+    private async Task<AssetItem?> PickAssetWithPickerPageAsync()
+    {
+
+
+        var picker = new AssetPicker();
+        var tcs = new TaskCompletionSource<AssetItem?>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        var okButton = new Button
+        {
+            Text = Localized._OK,
+            IsEnabled = false
+        };
+
+        var cancelButton = new Button
+        {
+            Text = Localized._Cancel
+        };
+
+        ContentPage? modal = null;
+
+        async Task CloseModalAsync()
+        {
+            await Navigation.PopAsync();
+
+        }
+
+        picker.SelectedAssetChanged += (_, selected) =>
+        {
+            okButton.IsEnabled = selected is not null && !string.IsNullOrWhiteSpace(selected.AssetId);
+        };
+
+        picker.AssetDoubleTapped += async (_, selected) =>
+        {
+            if (string.IsNullOrWhiteSpace(selected.AssetId))
+            {
+                return;
+            }
+
+            tcs.TrySetResult(selected);
+            await CloseModalAsync();
+        };
+
+        okButton.Clicked += async (_, _) =>
+        {
+            if (picker.SelectedAsset is null || string.IsNullOrWhiteSpace(picker.SelectedAsset.AssetId))
+            {
+                return;
+            }
+
+            tcs.TrySetResult(picker.SelectedAsset);
+            await CloseModalAsync();
+        };
+
+        cancelButton.Clicked += async (_, _) =>
+        {
+            tcs.TrySetResult(null);
+            await CloseModalAsync();
+        };
+
+        var grid = new Grid
+        {
+            RowDefinitions = new RowDefinitionCollection
+            {
+                new RowDefinition { Height = GridLength.Star },
+                new RowDefinition { Height = GridLength.Auto }
+            },
+        };
+
+        grid.Add(picker, 0, 0);
+        grid.Add(
+            new HorizontalStackLayout
+            {
+                HorizontalOptions = LayoutOptions.End,
+                Spacing = 8,
+                Padding = new Thickness(12, 8, 12, 12),
+                Children =
+                {
+                    cancelButton,
+                    okButton
+                }
+            },
+            0, 1);
+
+
+        modal = new ContentPage
+        {
+            Title = Localized.AssetPage_Info,
+            Content = grid
+        };
+
+        modal.Disappearing += (_, _) =>
+        {
+            tcs.TrySetResult(null);
+        };
+
+        await Navigation.PushAsync(modal);
+        return await tcs.Task;
     }
 
     private void RefreshStats()

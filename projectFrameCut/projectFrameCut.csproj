@@ -72,8 +72,6 @@
 		<RunAOTCompilation>False</RunAOTCompilation>
 		<PublishTrimmed>False</PublishTrimmed>
 		<JavaMaximumHeapSize>16G</JavaMaximumHeapSize>
-		<AndroidKeyStore>False</AndroidKeyStore>
-		<AndroidCreatePackagePerAbi>True</AndroidCreatePackagePerAbi>
 		<AndroidEnableMultiDex>True</AndroidEnableMultiDex>
 	</PropertyGroup>
 
@@ -165,6 +163,7 @@
 
 	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 		<ProjectReference Include="..\projectFrameCut.Render.AndroidOpenGL\projectFrameCut.Render.AndroidOpenGL.csproj" />
+		<AndroidLibrary Include="Resources\Assembly\fishnet-1.1.0.aar" />
 		<Reference Include="Resources\Assembly\FishnetBinding.dll" />
 		<AndroidNativeLibrary Include="..\..\playground\FFmpeg\android\**\*.so" />
 		<Compile Update="AppShell_Android.xaml.cs">
@@ -175,6 +174,19 @@
 		</Compile>
 	</ItemGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Debug|net10.0-android'">
+		<AndroidKeyStore>False</AndroidKeyStore>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Release|net10.0-android'">
+		<AndroidKeyStore>True</AndroidKeyStore>
+		<AndroidSigningKeyStore>0x12e.keystore</AndroidSigningKeyStore>
+		<AndroidSigningKeyAlias>123456</AndroidSigningKeyAlias>
+		<AndroidSigningKeyPass>123456</AndroidSigningKeyPass>
+		<AndroidSigningStorePass>123456</AndroidSigningStorePass>
+		<AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<MauiXaml Update="AIAssistance\AssistanceChatView.xaml">
 			<Generator>MSBuild:Compile</Generator>
@@ -182,8 +194,14 @@
 		<MauiXaml Update="AssetsLibraryPage.xaml">
 			<Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
+		<MauiXaml Update="Asset\AssetPicker.xaml">
+		  <Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
 		<MauiXaml Update="Asset\ProjectAssetView.xaml">
 			<Generator>MSBuild:Compile</Generator>
+		</MauiXaml>
+		<MauiXaml Update="CreatePage.xaml">
+		  <Generator>MSBuild:Compile</Generator>
 		</MauiXaml>
 		<MauiXaml Update="DraftStuff\DraftEffectBindingView.xaml">
 			<Generator>MSBuild:Compile</Generator>

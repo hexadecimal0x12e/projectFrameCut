@@ -1,8 +1,6 @@
 using Microsoft.Maui.Controls.Shapes;
 using projectFrameCut.Shared;
-using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -17,7 +15,7 @@ namespace projectFrameCut.InteractableEditor
 {
     public partial class InteractableEditor : ContentView
     {
-        private ClipElementUI? _currentClip;
+        private projectFrameCut.DraftStuff.ClipElementUI? _currentClip;
         private AssetItem? _currentAsset;
         private Action? _updateCallback;
 
@@ -42,9 +40,7 @@ namespace projectFrameCut.InteractableEditor
         private PanGestureRecognizer? _trPan;
         private PanGestureRecognizer? _blPan;
         private PanGestureRecognizer? _brPan;
-        private readonly DynamicPreview _editorDynamicPreview = new();
-        private Func<DraftStructureJSON>? _previewDraftFactory;
-        private Func<uint>? _previewFrameFactory;
+        private Func<Task>? _previewRefreshCallback;
         private long _lastPreviewRefreshTick;
         private int _isPreviewRefreshRunning;
 
@@ -53,52 +49,18 @@ namespace projectFrameCut.InteractableEditor
         public InteractableEditor()
         {
             InitializeComponent();
-            DynamicPreviewHost.Content = _editorDynamicPreview;
             InitGestures();
         }
 
-        public void ConfigureDynamicPreview(Func<DraftStructureJSON>? draftFactory, Func<uint>? frameFactory = null)
+        public void ConfigurePreviewRefresh(Func<Task>? refreshCallback)
         {
-            _previewDraftFactory = draftFactory;
-            _previewFrameFactory = frameFactory;
-        }
-
-        public async Task SyncDynamicPreview(DraftStructureJSON draft, uint frameIndex)
-        {
-            await _editorDynamicPreview.UpdateDraft(draft);
-            _editorDynamicPreview.SetPreferredClipId(_currentClip?.Id);
-            await RefreshDynamicPreviewFrame(frameIndex);
-        }
-
-        public async Task<bool> RefreshDynamicPreviewFrame(uint frameIndex)
-        {
-            _editorDynamicPreview.SetPreferredClipId(_currentClip?.Id);
-            if (_currentClip is null)
-            {
-                _editorDynamicPreview.IsVisible = false;
-                return false;
-            }
-
-            var width = Math.Max(1, (int)Math.Round(_videoWidth));
-            var height = Math.Max(1, (int)Math.Round(_videoHeight));
-            return await _editorDynamicPreview.RenderFrame(frameIndex, width, height);
+            _previewRefreshCallback = refreshCallback;
         }
 
         protected override void OnSizeAllocated(double width, double height)
         {
             base.OnSizeAllocated(width, height);
-            
-            // 在 MultiWindowItem 中需要考虑容器的布局影响
-            var (offsetX, offsetY) = GetContainerOffset();
-            double adjustedHeight = height;
-            
-            // 如果在 MultiWindowItem 中，需要减去标题栏的高度影响
-            if (offsetY > 0)
-            {
-                // 这里不需要调整 height，因为 OnSizeAllocated 给出的已经是内容区域的尺寸
-            }
-            
-            UpdateCanvasSize(width, adjustedHeight);
+            UpdateCanvasSize(width, height);
         }
 
         public void Init(Action updateCallback, double videoWidth, double videoHeight)
@@ -122,16 +84,14 @@ namespace projectFrameCut.InteractableEditor
             UpdateVisuals();
         }
 
-        public void SetClip(ClipElementUI? clip, AssetItem? asset)
+        public void SetClip(projectFrameCut.DraftStuff.ClipElementUI? clip, AssetItem? asset)
         {
             _currentClip = clip;
             _currentAsset = asset;
-            _editorDynamicPreview.SetPreferredClipId(clip?.Id);
             if (clip == null)
             {
                 this.IsVisible = false;
                 this.InputTransparent = true;
-                _editorDynamicPreview.IsVisible = false;
                 return;
             }
             this.IsVisible = true;
@@ -193,11 +153,6 @@ namespace projectFrameCut.InteractableEditor
             
             // 确保手势识别器在新的容器环境中正确工作
             RefreshGestureRecognizers();
-
-            if (_previewFrameFactory is not null)
-            {
-                _ = RefreshDynamicPreviewFrame(_previewFrameFactory());
-            }
         }
 
         private void RequestInteractivePreviewRefresh()
@@ -228,14 +183,10 @@ namespace projectFrameCut.InteractableEditor
         {
             try
             {
-                if (_previewDraftFactory is not null)
+                if (_previewRefreshCallback is not null)
                 {
-                    var snapshot = _previewDraftFactory();
-                    await _editorDynamicPreview.UpdateDraft(snapshot);
+                    await _previewRefreshCallback();
                 }
-
-                var frame = _previewFrameFactory?.Invoke() ?? 0u;
-                await RefreshDynamicPreviewFrame(frame);
             }
             catch (Exception ex)
             {
@@ -353,20 +304,26 @@ namespace projectFrameCut.InteractableEditor
             {
                 case GestureStatus.Started:
                     GetCurrentRect(out _startX, out _startY, out _startW, out _startH);
-                    // 调试输出初始位置
-                    System.Diagnostics.Debug.WriteLine($"Pan Started: StartX={_startX}, StartY={_startY}");
+                    System.Diagnostics.Debug.WriteLine($"[Pan] Started: Pos=({_startX:F1}, {_startY:F1}), Size=({_startW:F1}, {_startH:F1})");
                     break;
-                case GestureStatus.Running:
-                    Rect renderRect = GetRenderRect();
-                    double scale = renderRect.Width / _videoWidth;
-
-                    // 简化坐标计算，直接使用手势的相对偏移
-                    double newVisualX = _startX + e.TotalX / scale;
-                    double newVisualY = _startY + e.TotalY / scale;
                     
-                    // 调试信息（可以在发布版本中删除）
-                    System.Diagnostics.Debug.WriteLine($"Pan Running: TotalX={e.TotalX}, TotalY={e.TotalY}, Scale={scale}, NewX={newVisualX}, NewY={newVisualY}");
-
+                case GestureStatus.Running:
+                    // Get the render rectangle (video viewport on canvas)
+                    Rect renderRect = GetRenderRect();
+                    if (renderRect.Width <= 0 || renderRect.Height <= 0) break;
+                    
+                    // Scale factor from screen to video coordinates
+                    double scale = Math.Max(renderRect.Width, 0.001) / _videoWidth;
+                    if (scale <= 0.001) break;
+                    
+                    // Convert gesture pan amount to video coordinates
+                    double deltaX = e.TotalX / scale;
+                    double deltaY = e.TotalY / scale;
+                    
+                    // Calculate new position in video space
+                    double newVisualX = _startX + deltaX;
+                    double newVisualY = _startY + deltaY;
+                    
                     if (_isTextClip)
                     {
                         UpdateTextEntryPosition(newVisualX, newVisualY);
@@ -375,10 +332,14 @@ namespace projectFrameCut.InteractableEditor
                     {
                         UpdateClipEffects(newVisualX, newVisualY, _startW, _startH);
                     }
+                    
                     UpdateVisuals();
                     RequestInteractivePreviewRefresh();
                     break;
+                    
                 case GestureStatus.Completed:
+                    GetCurrentRect(out var finalX, out var finalY, out _, out _);
+                    System.Diagnostics.Debug.WriteLine($"[Pan] Completed: FinalPos=({finalX:F1}, {finalY:F1})");
                     _updateCallback?.Invoke();
                     break;
             }
@@ -390,57 +351,67 @@ namespace projectFrameCut.InteractableEditor
             var handle = sender as BoxView;
             if (handle == null) return;
 
-            if (_isTextClip) return;  //can't resize a TextClip, it'll cause a serious problem with mixturing
+            if (_isTextClip) return;  // Can't resize a TextClip
 
             switch (e.StatusType)
             {
                 case GestureStatus.Started:
                     GetCurrentRect(out _startX, out _startY, out _startW, out _startH);
-                    System.Diagnostics.Debug.WriteLine($"Resize Started: StartX={_startX}, StartY={_startY}, StartW={_startW}, StartH={_startH}");
+                    System.Diagnostics.Debug.WriteLine($"[Resize] Started: Pos=({_startX:F1}, {_startY:F1}), Size=({_startW:F1}x{_startH:F1})");
                     break;
+                    
                 case GestureStatus.Running:
+                    // Get the render rectangle (video viewport on canvas)
                     Rect renderRect = GetRenderRect();
-                    double scale = renderRect.Width / _videoWidth;
-
-                    // 简化坐标计算，直接使用手势的相对偏移
+                    if (renderRect.Width <= 0 || renderRect.Height <= 0) break;
+                    
+                    // Scale factor from screen to video coordinates
+                    double scale = Math.Max(renderRect.Width, 0.001) / _videoWidth;
+                    if (scale <= 0.001) break;
+                    
+                    // Convert gesture delta to video coordinates
                     double dx = e.TotalX / scale;
                     double dy = e.TotalY / scale;
                     
-                    // 调试信息（可以在发布版本中删除）
-                    System.Diagnostics.Debug.WriteLine($"Resize Running: TotalX={e.TotalX}, TotalY={e.TotalY}, Scale={scale}, DX={dx}, DY={dy}");
-
                     double newX = _startX, newY = _startY, newW = _startW, newH = _startH;
 
                     if (handle == HandleTL)
                     {
-                        newW = Math.Max(10, _startW - dx);
-                        newH = Math.Max(10, _startH - dy);
+                        // Top-Left: resize from top-left corner
+                        newW = Math.Max(MinSize, _startW - dx);
+                        newH = Math.Max(MinSize, _startH - dy);
                         newX = _startX + (_startW - newW);
                         newY = _startY + (_startH - newH);
                     }
                     else if (handle == HandleTR)
                     {
-                        newW = Math.Max(10, _startW + dx);
-                        newH = Math.Max(10, _startH - dy);
+                        // Top-Right: resize from top-right corner
+                        newW = Math.Max(MinSize, _startW + dx);
+                        newH = Math.Max(MinSize, _startH - dy);
                         newY = _startY + (_startH - newH);
                     }
                     else if (handle == HandleBL)
                     {
-                        newW = Math.Max(10, _startW - dx);
-                        newH = Math.Max(10, _startH + dy);
+                        // Bottom-Left: resize from bottom-left corner
+                        newW = Math.Max(MinSize, _startW - dx);
+                        newH = Math.Max(MinSize, _startH + dy);
                         newX = _startX + (_startW - newW);
                     }
                     else if (handle == HandleBR)
                     {
-                        newW = Math.Max(10, _startW + dx);
-                        newH = Math.Max(10, _startH + dy);
+                        // Bottom-Right: resize from bottom-right corner
+                        newW = Math.Max(MinSize, _startW + dx);
+                        newH = Math.Max(MinSize, _startH + dy);
                     }
 
                     UpdateClipEffects(newX, newY, newW, newH);
                     UpdateVisuals();
                     RequestInteractivePreviewRefresh();
                     break;
+                    
                 case GestureStatus.Completed:
+                    GetCurrentRect(out var finalX, out var finalY, out var finalW, out var finalH);
+                    System.Diagnostics.Debug.WriteLine($"[Resize] Completed: Pos=({finalX:F1}, {finalY:F1}), Size=({finalW:F1}x{finalH:F1})");
                     _updateCallback?.Invoke();
                     break;
             }
@@ -470,25 +441,24 @@ namespace projectFrameCut.InteractableEditor
             {
                 if (_currentClip.Effects.TryGetValue(InternalPlaceKey, out var p) && p is PlaceEffect_ImageSharp place)
                 {
-                    x = place.StartX;
-                    y = place.StartY;
-                    if (place.RelativeWidth > 0 && place.RelativeHeight > 0)
-                    {
-                        x = (double)place.StartX * _videoWidth / place.RelativeWidth;
-                        y = (double)place.StartY * _videoHeight / place.RelativeHeight;
-                    }
+                    // Always work in current video coordinate space
+                    int relW = place.RelativeWidth > 0 ? place.RelativeWidth : (int)_videoWidth;
+                    int relH = place.RelativeHeight > 0 ? place.RelativeHeight : (int)_videoHeight;
+                    
+                    // Convert from relative coordinates to current video coordinates
+                    x = (double)place.StartX * _videoWidth / relW;
+                    y = (double)place.StartY * _videoHeight / relH;
                 }
 
                 // For size, prefer internal Resize (scale) over internal Crop (clip). We still fallback to Crop for legacy data.
                 if (_currentClip.Effects.TryGetValue(InternalResizeKey, out var r) && r is ResizeEffect_ImageSharp resize)
                 {
-                    if (resize.Width > 0) w = resize.Width;
-                    if (resize.Height > 0) h = resize.Height;
-                    if (resize.RelativeWidth > 0 && resize.RelativeHeight > 0)
-                    {
-                        w = (double)resize.Width * _videoWidth / resize.RelativeWidth;
-                        h = (double)resize.Height * _videoHeight / resize.RelativeHeight;
-                    }
+                    int relW = resize.RelativeWidth > 0 ? resize.RelativeWidth : (int)_videoWidth;
+                    int relH = resize.RelativeHeight > 0 ? resize.RelativeHeight : (int)_videoHeight;
+                    
+                    // Convert from relative coordinates to current video coordinates
+                    w = (double)resize.Width * _videoWidth / relW;
+                    h = (double)resize.Height * _videoHeight / relH;
                 }
 
             }
@@ -556,25 +526,16 @@ namespace projectFrameCut.InteractableEditor
             int relW = (int)Math.Round(_videoWidth);
             int relH = (int)Math.Round(_videoHeight);
 
-            // Place
+            // Place - Always store in current video coordinate space
             if (_currentClip.Effects.TryGetValue(InternalPlaceKey, out var p) && p is PlaceEffect_ImageSharp place)
             {
-                int newX = (int)Math.Round(x);
-                int newY = (int)Math.Round(y);
-
-                // Normalize to relative coordinate space (current video resolution)
-                if (place.RelativeWidth > 0 && place.RelativeHeight > 0)
-                {
-                    newX = (int)Math.Round(x * place.RelativeWidth / _videoWidth);
-                    newY = (int)Math.Round(y * place.RelativeHeight / _videoHeight);
-                    relW = place.RelativeWidth;
-                    relH = place.RelativeHeight;
-                }
+                relW = place.RelativeWidth > 0 ? place.RelativeWidth : relW;
+                relH = place.RelativeHeight > 0 ? place.RelativeHeight : relH;
 
                 _currentClip.Effects["__Internal_Place__"] = new PlaceEffect_ImageSharp
                 {
-                    StartX = newX,
-                    StartY = newY,
+                    StartX = (int)Math.Round(x * relW / _videoWidth),
+                    StartY = (int)Math.Round(y * relH / _videoHeight),
                     Enabled = place.Enabled,
                     Index = place.Index,
                     Name = string.IsNullOrWhiteSpace(place.Name) ? InternalPlaceKey : place.Name,
@@ -589,7 +550,7 @@ namespace projectFrameCut.InteractableEditor
                     StartX = (int)Math.Round(x),
                     StartY = (int)Math.Round(y),
                     Enabled = true,
-                    Index = int.MaxValue -100,
+                    Index = int.MaxValue - 100,
                     Name = InternalPlaceKey,
                     RelativeWidth = relW,
                     RelativeHeight = relH
@@ -600,23 +561,13 @@ namespace projectFrameCut.InteractableEditor
             {
                 if (_currentClip.Effects.TryGetValue(InternalResizeKey, out var r) && r is ResizeEffect_ImageSharp resize)
                 {
-                    int newW = (int)Math.Round(w, MidpointRounding.AwayFromZero);
-                    int newH = (int)Math.Round(h, MidpointRounding.AwayFromZero);
-
-                    int resizeRelW = relW;
-                    int resizeRelH = relH;
-                    if (resize.RelativeWidth > 0 && resize.RelativeHeight > 0)
-                    {
-                        newW = (int)Math.Round(w * resize.RelativeWidth / _videoWidth, MidpointRounding.AwayFromZero);
-                        newH = (int)Math.Round(h * resize.RelativeHeight / _videoHeight, MidpointRounding.AwayFromZero);
-                        resizeRelW = resize.RelativeWidth;
-                        resizeRelH = resize.RelativeHeight;
-                    }
+                    int resizeRelW = resize.RelativeWidth > 0 ? resize.RelativeWidth : relW;
+                    int resizeRelH = resize.RelativeHeight > 0 ? resize.RelativeHeight : relH;
 
                     _currentClip.Effects[InternalResizeKey] = new ResizeEffect_ImageSharp
                     {
-                        Width = newW,
-                        Height = newH,
+                        Width = (int)Math.Round(w * resizeRelW / _videoWidth, MidpointRounding.AwayFromZero),
+                        Height = (int)Math.Round(h * resizeRelH / _videoHeight, MidpointRounding.AwayFromZero),
                         PreserveAspectRatio = false,
                         Enabled = resize.Enabled,
                         Index = resize.Index,
@@ -643,54 +594,6 @@ namespace projectFrameCut.InteractableEditor
         }
 
         /// <summary>
-        /// 获取相对于父容器的坐标偏移量，用于处理在 MultiWindowItem 中的坐标转换
-        /// </summary>
-        private (double offsetX, double offsetY) GetContainerOffset()
-        {
-            try
-            {
-                // 检查是否在 MultiWindowItem 中
-                var parent = this.Parent;
-                while (parent != null)
-                {
-                    if (parent.GetType().Name == "MultiWindowItem")
-                    {
-                        // 通过实际测量获取更准确的偏移
-                        return GetActualContainerOffset(parent as View);
-                    }
-                    parent = (parent as Element)?.Parent;
-                }
-                return (0, 0);
-            }
-            catch
-            {
-                return (0, 0);
-            }
-        }
-        
-        /// <summary>
-        /// 通过实际测量获取容器偏移
-        /// </summary>
-        private (double offsetX, double offsetY) GetActualContainerOffset(View? container)
-        {
-            if (container == null) return (0, 0);
-            
-            try
-            {
-                // MultiWindowItem 的布局结构：Grid(Padding=5) -> Border -> Grid(RowDefinitions="32, *")
-                // 标题栏在第0行，内容在第1行
-                // 所以实际偏移应该包括：外层Grid的Padding(5) + 标题栏高度(32) + Border的边框等
-                
-                // 更保守的估算：5(padding) + 32(title) + 1(border) + 一些额外的间距
-                return (5, 38);
-            }
-            catch
-            {
-                return (0, 32); // 回退到之前的估计值
-            }
-        }
-
-        /// <summary>
         /// 强制更新手势识别器以避免与父容器的手势冲突
         /// </summary>
         public void RefreshGestureRecognizers()
@@ -704,50 +607,6 @@ namespace projectFrameCut.InteractableEditor
             
             // 重新初始化
             InitGestures();
-        }
-        
-        /// <summary>
-        /// 调试方法：获取当前控件在屏幕上的实际位置
-        /// </summary>
-        public (double x, double y) GetScreenPosition()
-        {
-            try
-            {
-                // 使用 MAUI 的实际可用属性
-                System.Diagnostics.Debug.WriteLine($"InteractableEditor - X: {this.X}, Y: {this.Y}, Width: {this.Width}, Height: {this.Height}");
-                
-                // 尝试获取相对于窗口的位置
-                var parent = this.Parent;
-                double totalOffsetX = this.X;
-                double totalOffsetY = this.Y;
-                
-                while (parent != null)
-                {
-                    if (parent is View view)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Parent {parent.GetType().Name} - X: {view.X}, Y: {view.Y}, Width: {view.Width}, Height: {view.Height}");
-                        
-                        totalOffsetX += view.X;
-                        totalOffsetY += view.Y;
-                        
-                        if (parent.GetType().Name == "MultiWindowItem")
-                        {
-                            // 找到了 MultiWindowItem，记录其位置信息
-                            System.Diagnostics.Debug.WriteLine($"Found MultiWindowItem at: X={view.X}, Y={view.Y}, W={view.Width}, H={view.Height}");
-                            break;
-                        }
-                    }
-                    parent = (parent as Element)?.Parent;
-                }
-                
-                System.Diagnostics.Debug.WriteLine($"Total calculated offset: X={totalOffsetX}, Y={totalOffsetY}");
-                return (totalOffsetX, totalOffsetY);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"GetScreenPosition error: {ex.Message}");
-                return (0, 0);
-            }
         }
     }
 }

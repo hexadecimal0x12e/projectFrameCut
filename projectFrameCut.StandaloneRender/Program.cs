@@ -278,6 +278,7 @@ namespace projectFrameCut.StandaloneRender
             ffmpeg.RootPath = switches.GetOrAdd("FFmpegLibraryPath", AppContext.BaseDirectory);
             FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
             FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize();
+            FFmpegHelper.SetupFFmpegLogging();
             Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}");
 
             var outputOptions = switches["output_options"].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

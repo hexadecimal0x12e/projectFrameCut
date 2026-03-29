@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using static projectFrameCut.Render.EncodeAndDecode.FFmpegHelper;
 
 namespace projectFrameCut.Render.EncodeAndDecode
 {
@@ -50,7 +51,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public int? ResultBitPerPixel => 8;
 
-        public bool EnableLock { get; set; } = false;
+        private readonly Dictionary<uint, Picture8bpp> _frameCache = new();
+        private uint _cachedFrameIndex = uint.MaxValue;
+        private AVPixelFormat _cachedPixelFormat = AVPixelFormat.AV_PIX_FMT_NONE;
+
+        public bool EnableLock { get; set; } = true;
         public bool StrictMode { get; set; }
         private Lock locker = new();
 
@@ -76,7 +81,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     var averr = ffmpeg.avformat_open_input(fmtPtr, _path, null, null);
                     if (averr != 0)
                     {
-                        FFmpegHelper.DetectWhyCannotOpenVideo(_path, averr);
+                        DetectWhyCannotOpenVideo(_path, averr);
                     }
                 }
 
@@ -221,7 +226,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         [DebuggerNonUserCode()]
         public IPicture GetFrame(uint targetFrame, bool hasAlpha)
         {
-            if (EnableLock) locker.Enter();
+            locker.Enter();
             if (targetFrame < _currentFrameNumber)
             {
                 ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
@@ -229,12 +234,21 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 _currentFrameNumber = 0;
                 _eof = false;
                 flushSent = false;
+
+                // Check frame cache first
+                if (_frameCache.TryGetValue(targetFrame, out var cachedFrame))
+                {
+                    locker.Exit();
+                    Index++;
+                    return cachedFrame;
+                }
             }
 
             while (true)
             {
                 if (!_eof)
                 {
+                    if (IsPointerAddressesNotValid(_fmt) || IsPointerAddressesNotValid(_fmt->pb)) throw new InvalidDataException($"Video stream is invalid when trying to read frame {targetFrame}.");
                     if (ffmpeg.av_read_frame(_fmt, _pkt) < 0)
                     {
                         _eof = true;
@@ -283,7 +297,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             }
 
         not_found:
-            if (EnableLock) locker.Exit();
+            locker.Exit();
             if (Math.Abs(targetFrame - TotalFrames) < 5)
             {
                 return GetFrame(targetFrame - 1, hasAlpha);
@@ -330,8 +344,25 @@ namespace projectFrameCut.Render.EncodeAndDecode
                     _rgb->linesize);
             }
 
-            if (EnableLock) locker.Exit();
-            return PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame);
+            try
+            {
+                var picture = PixelsToPicture(_rgb->data[0], _rgb->linesize[0], _width, _height, hasAlpha, _path, targetFrame);
+
+                // Cache the frame (keep last 3 frames)
+                if (_frameCache.Count >= 3)
+                {
+                    var oldest = _frameCache.Keys.First();
+                    _frameCache.Remove(oldest);
+                }
+                _frameCache[targetFrame] = picture;
+
+                return picture;
+            }
+            finally
+            {
+                locker.Exit();
+            }
+
         }
 
         private bool IsHWFormat(AVPixelFormat fmt)
@@ -347,6 +378,13 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
         {
+            // Validate input parameters
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+            if (width <= 0 || height <= 0)
+                throw new ArgumentException($"Invalid dimensions: {width}x{height}");
+            if (stride <= 0 || stride < width * 3)
+                throw new ArgumentException($"Invalid stride {stride} for width {width} (expected at least {width * 3})");
             var size = width * height;
             var result = new Picture8bpp(width, height)
             {
@@ -373,6 +411,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 {
                     idx = baseIndex + x;
                     offset = x * 3;
+                    // Boundary check: ensure we don't read beyond stride
+                    if (offset + 2 >= stride)
+                    {
+                        throw new OverflowException($"Buffer overflow: stride={stride}, attempting to access at offset={offset + 2} (width={width}, height={height}, y={y}, x={x})");
+                    }
                     result.r[idx] = srcRow[offset + 2];
                     result.g[idx] = srcRow[offset + 1];
                     result.b[idx] = srcRow[offset + 0];
@@ -386,6 +429,9 @@ namespace projectFrameCut.Render.EncodeAndDecode
         {
             if (Disposed) return;
             Disposed = true;
+
+            // Clear cache
+            _frameCache.Clear();
 
             if (_rgbBuffer != null) { ffmpeg.av_free(_rgbBuffer); _rgbBuffer = null; }
             if (_rgb != null) { AVFrame* tmp = _rgb; _rgb = null; ffmpeg.av_frame_free(&tmp); }

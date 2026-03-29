@@ -49,7 +49,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// <summary>
         /// Some project-wide properties defined by user.
         /// </summary>
-        public Dictionary<string, string> UserDefinedProperties = new();
+        public Dictionary<string, string> UserDefinedProperties { get => field ?? new(); set; } //= new();
         /// <summary>
         /// Gets or sets the file system path to the thumbnail image associated with the item.
         /// </summary>

@@ -16,6 +16,13 @@ public partial class TemplateExtractPage : ContentPage
 	private readonly ObservableCollection<TemplateExtractFieldItem> _allFields = [];
 	private readonly ObservableCollection<TemplateExtractFieldItem> _filteredFields = [];
 	private readonly ObservableCollection<TemplateClipItem> _clips = [];
+	private static readonly IReadOnlyList<TemplateScope> ScopeValues =
+	[
+		TemplateScope.Any,
+		TemplateScope.Project,
+		TemplateScope.Clips,
+		TemplateScope.Tracks
+	];
 	private JsonObject _projectNode = new();
 	private JsonObject _draftNode = new();
 	private JsonObject _draftSourceNode = new();
@@ -28,8 +35,24 @@ public partial class TemplateExtractPage : ContentPage
 		_projectVm = projectVm;
 		FieldsCollectionView.ItemsSource = _filteredFields;
 		ClipsCollectionView.ItemsSource = _clips;
+		ScopePicker.ItemsSource = GetScopeOptions();
+		ScopePicker.SelectedIndex = 0;
 		ProjectNameLabel.Text = Localized.TemplateExtractPage_ProjectName(projectVm.Name);
 		Loaded += TemplateExtractPage_Loaded;
+	}
+
+	private static List<string> GetScopeOptions() => [Localized.TemplateExtractPage_Scope_Any, Localized.TemplateExtractPage_Scope_Project, Localized.TemplateExtractPage_Scope_Clip, Localized.TemplateExtractPage_Scope_Track];
+
+
+	private TemplateScope GetSelectedScope()
+	{
+		var index = ScopePicker.SelectedIndex;
+		if (index < 0 || index >= ScopeValues.Count)
+		{
+			return TemplateScope.Any;
+		}
+
+		return ScopeValues[index];
 	}
 
 	private async void TemplateExtractPage_Loaded(object? sender, EventArgs e)
@@ -400,9 +423,10 @@ public partial class TemplateExtractPage : ContentPage
 
 	private static bool IsRecommendedPath(string path)
 	{
-		return path.EndsWith(".Name", StringComparison.OrdinalIgnoreCase)
+		return !path.StartsWith("project")
+            && (path.EndsWith(".Name", StringComparison.OrdinalIgnoreCase)
 			|| path.EndsWith(".FilePath", StringComparison.OrdinalIgnoreCase)
-			|| path.EndsWith(".ProjectName", StringComparison.OrdinalIgnoreCase);
+			|| path.EndsWith(".ProjectName", StringComparison.OrdinalIgnoreCase));
 	}
 
 	private void ApplyFilter()
@@ -557,9 +581,14 @@ public partial class TemplateExtractPage : ContentPage
 			var draft = draftClone.Deserialize<DraftStructureJSON>(DraftPage.DraftJSONOption)
                 ?? throw new InvalidOperationException("Invalid draft");
 
+            var projectName = await DisplayPromptAsync(Localized._Info, Localized.TemplateExtractPage_InputName, Localized._OK, null, _projectVm.Name, 1024, null, _projectVm.Name);
+
+
             var template = new JSONBasedTemplateStructure
 			{
-				TemplateVersion = 1,
+				TemplateName = projectName,
+                TemplateVersion = 1,
+				Scope = GetSelectedScope(),
 				Project = project,
 				Draft = draft,
 				Variables = vars,
@@ -569,7 +598,7 @@ public partial class TemplateExtractPage : ContentPage
 			var json = JsonSerializer.Serialize(template, DraftPage.DraftJSONOption);
 			using var ms = new MemoryStream(Encoding.UTF8.GetBytes(json));
 
-			var safeName = new string(_projectVm.Name.Select(c => char.IsAsciiLetterOrDigit(c) ? c : '_').ToArray());
+			var safeName = new string(projectName.Select(c => char.IsAsciiLetterOrDigit(c) ? c : '_').ToArray());
 			if (string.IsNullOrWhiteSpace(safeName))
 			{
 				safeName = "template";
@@ -662,6 +691,7 @@ public partial class TemplateExtractPage : ContentPage
 		FieldsCollectionView.IsEnabled = !isBusy;
 		ClipsCollectionView.IsEnabled = !isBusy;
 		ShowNonRecommendedSwitch.IsEnabled = !isBusy;
+		ScopePicker.IsEnabled = !isBusy;
 	}
 
 	private void FieldItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)

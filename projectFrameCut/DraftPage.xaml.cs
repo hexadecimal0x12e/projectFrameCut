@@ -87,6 +87,7 @@ public partial class DraftPage : ContentPage
     const string MaterialIconPlay = "\ue037";
     const string MaterialIconPause = "\ue034";
     const string MaterialIconClose = "\ue5cd";
+    const string MainMultiWindowViewStatePropertyKey = "__DraftPage_MainMultiWindowView_State_v1";
     public const int SubTrackOffset = 10000;
 
     public readonly string[] DirectoriesNeeded =
@@ -127,6 +128,31 @@ public partial class DraftPage : ContentPage
 
 
     private Size WindowSize = new(500, 500);
+    private bool _hasTriedRestoreMainMultiWindowViewState = false;
+
+    private sealed class MainMultiWindowWindowState
+    {
+        public required string WindowKey { get; init; }
+        public bool IsOpen { get; init; }
+        public bool IsVisible { get; init; }
+        public bool IsMaximized { get; init; }
+        public bool IsMinimized { get; init; }
+        public double TranslationX { get; init; }
+        public double TranslationY { get; init; }
+        public double WidthRequest { get; init; }
+        public double HeightRequest { get; init; }
+        public int Column { get; init; }
+        public int Row { get; init; }
+        public int ColumnSpan { get; init; }
+        public int RowSpan { get; init; }
+        public int ZIndex { get; init; }
+    }
+
+    private sealed class MainMultiWindowStateEnvelope
+    {
+        public List<MainMultiWindowWindowState> Windows { get; init; } = [];
+        public string? ActiveWindowKey { get; set; }
+    }
 
     private const double SnapGridPixels = 10.0;
     private const double SnapThresholdPixels = 8.0;
@@ -134,6 +160,11 @@ public partial class DraftPage : ContentPage
     private Func<int, double, ClipElementUI>? _pendingClipPlacementFactory = null;
     private string? _pendingClipPlacementName = null;
     private Predicate<int>? _pendingClipPlacementTrackFilter = null;
+    private readonly Dictionary<string, (int Track, double X)> _keyboardMoveOriginalPlacement = new();
+    private List<ClipElementUI> _keyboardMoveClips = [];
+    private bool _keyboardMoveHasMoved = false;
+    private int _keyboardMoveTrackDelta = 0;
+    private double _keyboardMovePixelDelta = 0;
 
 
     DenoiseHelper Xdenoiser = new(), Ydenoiser = new();
@@ -156,7 +187,21 @@ public partial class DraftPage : ContentPage
 
     public bool _ShouldShowClipMoveControlInCenterInfoBar => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is null : true;
     public bool _ShouldShowCenterCompactControlGrid => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is not null : false;
+    private bool _isClipMoving = false;
+    public bool IsClipMoving
+    {
+        get => _isClipMoving;
+        set
+        {
+            if (_isClipMoving == value)
+            {
+                return;
+            }
 
+            _isClipMoving = value;
+            OnPropertyChanged(nameof(IsClipMoving));
+        }
+    }
     private sealed class TimelineClipboardItem
     {
         public required ClipDraftDTO Dto { get; init; }
@@ -178,7 +223,7 @@ public partial class DraftPage : ContentPage
     public bool IsPopupClosableByTapBackground { get; set; } = true;
 
     public bool SelectedAnyClip => _selected is not null || _selectedClipIds.Count > 0;
-    public ProjectJSONStructure ProjectInfo { get; set; } = new();
+    public ProjectJSONStructure ProjectInfo { get; set; }
     public ConcurrentDictionary<string, ClipElementUI> Clips = new();
     public ConcurrentDictionary<int, AbsoluteLayout> Tracks = new();
     public ConcurrentDictionary<string, AssetItem> Assets = new();
@@ -196,6 +241,7 @@ public partial class DraftPage : ContentPage
     public ICommand SettingsCommand { get; private set; }
     public ICommand UndoCommand { get; private set; }
     public ICommand RedoCommand { get; private set; }
+    public ICommand SelectCommand { get; private set; }
     public ICommand UnselectCommand { get; private set; }
     public ICommand ShowClipInfoPanelCommand { get; private set; }
     public ICommand SpiltCommand { get; private set; }
@@ -206,18 +252,24 @@ public partial class DraftPage : ContentPage
     public ICommand CopyCommand { get; private set; }
     public ICommand CutCommand { get; private set; }
     public ICommand PasteCommand { get; private set; }
+    public ICommand DuplicateCommand { get; private set; }
     public ICommand SaveCommand { get; private set; }
     public ICommand GotoCommand { get; private set; }
     public ICommand ManageJobsCommand { get; private set; }
     public ICommand ClosePopupCommand { get; private set; }
     public ICommand PlayPauseCommand { get; private set; }
     public ICommand CleanRenderCacheCommand { get; private set; }
-    public ICommand PlayheadMoveRightCommand { get; private set; }
-    public ICommand PlayheadMoveLeftCommand { get; private set; }
+    public ICommand ArrowRightCommand { get; private set; }
+    public ICommand ArrowLeftCommand { get; private set; }
+    public ICommand ArrowUpCommand { get; private set; }
+    public ICommand ArrowDownCommand { get; private set; }
+    public ICommand ReturnCommand { get; private set; }
     public ICommand ExitNoSaveCommand { get; private set; }
+    public ICommand ExitCommand { get; private set; }
     public ICommand ManageWindowCommand { get; private set; }
     public ICommand ResetMultiWindowViewCommand { get; private set; }
     public ICommand AddTransformToNeighborsCommand { get; private set; }
+    public ICommand ZoomCommand { get; private set; }
 
     public ClipElementUI? SelectedClip => _selected;
     public event EventHandler? SelectedClipChanged;
@@ -262,15 +314,16 @@ public partial class DraftPage : ContentPage
     {
         RegisterCommands();
         InitializeComponent();
+        DisableTabFocusOnWindows(AddTrackButton);
         SetPlayPauseIconToPlay();
         SetStateBusy();
         SetStatusText(Localized.DraftPage_PleaseWait);
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview { IsVisible = false, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill, InputTransparent = true };
         ClipEditorHost.Content = ClipEditor;
-        LivePreviewerHost.Content = DynamicPreviewProvider;
+        LivePreviewerHost.Content = EnsureRealtimePreviewHost();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
-        ClipEditor.ConfigureDynamicPreview(() => DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false), () => (uint)_currentFrame);
+        ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
         OverlayLayer.IsVisible = false;
 #if ANDROID
         OverlayLayer.InputTransparent = false;
@@ -283,6 +336,7 @@ public partial class DraftPage : ContentPage
         var page = this;
         AddClipView = new ProjectAddClipView(ref page);
         ChatSessionsView.GlobalToolCallFactories = AIAssistance.AITools.BuildToolCalls(ref page, OnClipPropertiesChanged);
+        AddATrack(0);
 
 
     }
@@ -290,19 +344,24 @@ public partial class DraftPage : ContentPage
     public DraftPage(ProjectJSONStructure info, ConcurrentDictionary<string, ClipElementUI> clips, ConcurrentDictionary<string, AssetItem> assets, int initialTrackCount, string workingDir, string title = "Untitled draft", bool isReadonly = false)
 #pragma warning restore CS8618
     {
+        ArgumentNullException.ThrowIfNull(info, nameof(info));
+        ArgumentNullException.ThrowIfNull(clips, nameof(clips));
         BindingContext = this;
+        ProjectInfo = info;
+        ProjectInfo.UserDefinedProperties ??= new();
         if (Directory.Exists(workingDir)) Environment.CurrentDirectory = workingDir;
         RegisterCommands();
         InitializeComponent();
+        DisableTabFocusOnWindows(AddTrackButton);
         SetPlayPauseIconToPlay();
         SetStateBusy();
         SetStatusText(Localized.DraftPage_PleaseWait);
         ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview { IsVisible = false, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill, InputTransparent = true };
         ClipEditorHost.Content = ClipEditor;
-        LivePreviewerHost.Content = DynamicPreviewProvider;
+        LivePreviewerHost.Content = EnsureRealtimePreviewHost();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
-        ClipEditor.ConfigureDynamicPreview(() => DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false), () => (uint)_currentFrame);
+        ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
         OverlayLayer.IsVisible = false;
 #if ANDROID
         OverlayLayer.InputTransparent = false;
@@ -316,8 +375,24 @@ public partial class DraftPage : ContentPage
         TrackCalculator.HeightPerTrack = ClipHeight;
 
         Clips = clips;
-        Assets = assets;
+        Assets = assets ?? new();
         Tracks = new ConcurrentDictionary<int, AbsoluteLayout>();
+
+        trackCount = initialTrackCount;
+        var maxMainTrack = Clips.Values.Where(c => c.origTrack < SubTrackOffset).Select(c => c.origTrack ?? 0).DefaultIfEmpty(0).Max();
+        for (int i = 0; i <= maxMainTrack; i++)
+        {
+            AddATrack(i);
+        }
+        if (Clips.Values.Any(c => c.origTrack >= SubTrackOffset))
+        {
+            var maxSubTrack = Clips.Values.Where(c => c.origTrack >= SubTrackOffset).Select(c => c.origTrack ?? 0).DefaultIfEmpty(SubTrackOffset).Max();
+            for (int i = SubTrackOffset; i <= maxSubTrack; i++)
+            {
+                AddASubTrack(i);
+            }
+        }
+
 
         foreach (var kv in Clips.OrderBy(kv => kv.Value.origTrack ?? 0).ThenBy(kv => kv.Value.origX))
         {
@@ -328,8 +403,7 @@ public partial class DraftPage : ContentPage
             RegisterClip(item, true);
         }
 
-        trackCount = initialTrackCount;
-        ProjectInfo.ProjectName = title;
+        ProjectInfo.ProjectName ??= title;
         SecondsPerFrame = 1d / ProjectInfo.TargetFrameRate;
         IsReadonly = isReadonly;
     }
@@ -342,6 +416,7 @@ public partial class DraftPage : ContentPage
         SettingsCommand = new Command(() => SettingsClick(this, EventArgs.Empty));
         UndoCommand = new Command(() => UndoChanges());
         RedoCommand = new Command(() => RedoChanges());
+        SelectCommand = new Command(async () => await SelectAClip());
         UnselectCommand = new Command(() => UnSelectTapGesture_Tapped(this, null!));
         ShowClipInfoPanelCommand = new Command(async () => { if (_selectedClipIds.Count == 1) await ShowAPopup(clip: _selected, border: _selected?.Clip); else SetStateFail(Localized.DraftPage_SelectExactlyOneToContinue); });
         SpiltCommand = new Command(() => Split_Clicked(this, EventArgs.Empty));
@@ -352,17 +427,45 @@ public partial class DraftPage : ContentPage
         CopyCommand = new Command(() => CaptureSelectionToClipboard(false));
         CutCommand = new Command(async () => await CutSelectionAsync());
         PasteCommand = new Command(async () => await PasteClipboardAsync());
+        DuplicateCommand = new Command(async () => await DuplicateSelectionAsync());
         SaveCommand = new Command(() => OnRefreshButtonClicked(this, EventArgs.Empty));
         GotoCommand = new Command(async () => await GotoButtonClicked());
         ManageJobsCommand = new Command(async () => await OnManageJobsClicked());
-        ClosePopupCommand = new Command(async () => { if (_pendingClipPlacementFactory is not null) CancelPendingClipPlacement(); else await HidePopup(); });
         PlayPauseCommand = new Command(async () => PlayPauseButton_Clicked(this, EventArgs.Empty));
         CleanRenderCacheCommand = new Command(async () => await CleanRenderCache());
-        PlayheadMoveLeftCommand = new Command(async () => await MovePlayhead(-10));
-        PlayheadMoveRightCommand = new Command(async () => await MovePlayhead(10));
+        ArrowLeftCommand = new Command(async () => await HandleMoveArrowAsync(-SnapGridPixels, 0));
+        ArrowRightCommand = new Command(async () => await HandleMoveArrowAsync(SnapGridPixels, 0));
+        ArrowUpCommand = new Command(async () => await HandleMoveArrowAsync(0, -1));
+        ArrowDownCommand = new Command(async () => await HandleMoveArrowAsync(0, 1));
+        ReturnCommand = new Command(async () => await ConfirmKeyboardMoveAsync());
         ExitNoSaveCommand = new Command(async () => await ExitButNoSave());
+        ExitCommand = new Command(async () => await Navigation.PopToRootAsync());
         ManageWindowCommand = new Command<string?>(ExecuteManageWindowCommand);
         ResetMultiWindowViewCommand = new Command(() => ResetLayout());
+        ZoomCommand = new Command<string?>(async (param) => await Task.FromResult(param switch { "+" => PerformZoom(1.2), "0" => PerformZoom(1.0 / tracksZoomOffest), "-" => PerformZoom(1.0 / 1.2), _ => -1 }));
+        ClosePopupCommand = new Command(async () => { if (IsClipMoving) { CancelPendingClipPlacement(); SetStateOK(); SetStatusText(Localized.DraftPage_Tasks_Status_Canceled); } else if (_pendingClipPlacementFactory is not null) { CancelPendingClipPlacement(); } else { await HidePopup(); } });
+
+    }
+
+    private static void DisableTabFocusOnWindows(View? view)
+    {
+#if WINDOWS
+        if (view is null)
+        {
+            return;
+        }
+
+        void Apply()
+        {
+            if (view.Handler?.PlatformView is Microsoft.UI.Xaml.FrameworkElement fe)
+            {
+                fe.IsTabStop = false;
+            }
+        }
+
+        view.HandlerChanged += (_, _) => Apply();
+        Apply();
+#endif
     }
 
     private bool Inited = false;
@@ -615,6 +718,7 @@ public partial class DraftPage : ContentPage
         UpdatePlayheadHeight();
 
         AssisstantSubWindow.Content = ChatSessionsView;
+        //TryRestoreMainMultiWindowViewState();
         AddClipView.ClipAdded += async (s, args) =>
         {
             this.Popup.Content = null;
@@ -628,6 +732,182 @@ public partial class DraftPage : ContentPage
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
+    }
+
+    private string? GetMainMultiWindowItemKey(MultiWindowItem window)
+    {
+        if (ReferenceEquals(window, PreviewSubwindow)) return nameof(PreviewSubwindow);
+        if (ReferenceEquals(window, PropertiesSubwindow)) return nameof(PropertiesSubwindow);
+        if (ReferenceEquals(window, AssisstantSubWindow)) return nameof(AssisstantSubWindow);
+        return null;
+    }
+
+    private bool TryGetMainMultiWindowItemByKey(string? key, out MultiWindowItem window)
+    {
+        switch (key)
+        {
+            case nameof(PreviewSubwindow):
+                window = PreviewSubwindow;
+                return true;
+            case nameof(PropertiesSubwindow):
+                window = PropertiesSubwindow;
+                return true;
+            case nameof(AssisstantSubWindow):
+                window = AssisstantSubWindow;
+                return true;
+            default:
+                window = PreviewSubwindow;
+                return false;
+        }
+    }
+
+    private static bool IsWindowLikelyMinimized(MultiWindowItem window)
+        => window.HeightRequest > 0 && window.HeightRequest <= 40;
+
+    private static bool IsWindowLikelyMaximized(MultiWindowItem window)
+        => window.HorizontalOptions.Alignment == LayoutAlignment.Fill
+           && window.VerticalOptions.Alignment == LayoutAlignment.Fill
+           && window.WidthRequest <= 0
+           && window.HeightRequest <= 0;
+
+    private MainMultiWindowStateEnvelope CaptureMainMultiWindowState()
+    {
+        var state = new MainMultiWindowStateEnvelope();
+        var windows = new[] { PreviewSubwindow, PropertiesSubwindow, AssisstantSubWindow };
+
+        foreach (var window in windows)
+        {
+            var key = GetMainMultiWindowItemKey(window);
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                continue;
+            }
+
+            var isOpen = MainMultiWindowView.Children.Contains(window);
+            state.Windows.Add(new MainMultiWindowWindowState
+            {
+                WindowKey = key,
+                IsOpen = isOpen,
+                IsVisible = window.IsVisible,
+                IsMaximized = IsWindowLikelyMaximized(window),
+                IsMinimized = IsWindowLikelyMinimized(window),
+                TranslationX = window.TranslationX,
+                TranslationY = window.TranslationY,
+                WidthRequest = window.WidthRequest,
+                HeightRequest = window.HeightRequest,
+                Column = Grid.GetColumn(window),
+                Row = Grid.GetRow(window),
+                ColumnSpan = Grid.GetColumnSpan(window),
+                RowSpan = Grid.GetRowSpan(window),
+                ZIndex = window.ZIndex
+            });
+        }
+
+        state.ActiveWindowKey = MainMultiWindowView.ActiveWindow is MultiWindowItem active
+            ? GetMainMultiWindowItemKey(active)
+            : null;
+
+        return state;
+    }
+
+    private void SaveMainMultiWindowViewStateToProjectInfo()
+    {
+        try
+        {
+            ProjectInfo.UserDefinedProperties ??= new();
+            var state = CaptureMainMultiWindowState();
+            ProjectInfo.UserDefinedProperties[MainMultiWindowViewStatePropertyKey] = JsonSerializer.Serialize(state, savingOpts);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Save MainMultiWindowView state", this);
+        }
+    }
+
+    private void TryRestoreMainMultiWindowViewState()
+    {
+        if (_hasTriedRestoreMainMultiWindowViewState)
+        {
+            return;
+        }
+
+        _hasTriedRestoreMainMultiWindowViewState = true;
+
+        if (UseCompactLayout ?? (DeviceInfo.Idiom == DeviceIdiom.Phone))
+        {
+            return;
+        }
+
+        if (!(ProjectInfo.UserDefinedProperties?.TryGetValue(MainMultiWindowViewStatePropertyKey, out var rawState) ?? false)
+            || string.IsNullOrWhiteSpace(rawState))
+        {
+            return;
+        }
+
+        try
+        {
+            var state = JsonSerializer.Deserialize<MainMultiWindowStateEnvelope>(rawState, savingOpts);
+            if (state is null)
+            {
+                return;
+            }
+
+            foreach (var item in state.Windows)
+            {
+                if (!TryGetMainMultiWindowItemByKey(item.WindowKey, out var window))
+                {
+                    continue;
+                }
+
+                if (!item.IsOpen)
+                {
+                    if (window.IsClosable && MainMultiWindowView.Children.Contains(window))
+                    {
+                        MainMultiWindowView.CloseWindow(window);
+                    }
+                    continue;
+                }
+
+                if (!MainMultiWindowView.Children.Contains(window))
+                {
+                    MainMultiWindowView.AddWindow(window);
+                }
+
+                window.HorizontalOptions = LayoutOptions.Start;
+                window.VerticalOptions = LayoutOptions.Start;
+
+                window.TranslationX = Math.Max(0, item.TranslationX);
+                window.TranslationY = Math.Max(0, item.TranslationY);
+                window.WidthRequest = item.WidthRequest;
+                window.HeightRequest = item.HeightRequest;
+                Grid.SetColumn(window, Math.Max(0, item.Column));
+                Grid.SetRow(window, Math.Max(0, item.Row));
+                Grid.SetColumnSpan(window, Math.Max(1, item.ColumnSpan));
+                Grid.SetRowSpan(window, Math.Max(1, item.RowSpan));
+                window.ZIndex = item.ZIndex;
+                window.IsVisible = item.IsVisible;
+
+                if (item.IsMaximized)
+                {
+                    window.Maximize();
+                }
+
+                if (item.IsMinimized && !IsWindowLikelyMinimized(window))
+                {
+                    window.Minimize();
+                }
+            }
+
+            if (TryGetMainMultiWindowItemByKey(state.ActiveWindowKey, out var active)
+                && MainMultiWindowView.Children.Contains(active))
+            {
+                MainMultiWindowView.BringToFront(active);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Restore MainMultiWindowView state", this);
+        }
     }
 
     #endregion
@@ -852,11 +1132,222 @@ public partial class DraftPage : ContentPage
         OnClipChanged?.Invoke(this, new ClipUpdateEventArgs { Reason = ClipUpdateReason.TrackAdd, SourceId = newId.ToString() });
     }
 
+    private int RecalculateMainTrackCount()
+    {
+        trackCount = Tracks.Keys.Count(k => k < SubTrackOffset);
+        return trackCount;
+    }
+
+    private int? GetTrackIdFromHeaderBorder(Border? headerBorder)
+    {
+        if (headerBorder?.Content is not Grid grid)
+        {
+            return null;
+        }
+
+        var label = grid.Children.OfType<Label>().FirstOrDefault();
+        return label?.BindingContext is int trackId ? trackId : null;
+    }
+
+    private void SetTrackIdToHeaderBorder(Border? headerBorder, int trackId)
+    {
+        if (headerBorder?.Content is not Grid grid)
+        {
+            return;
+        }
+
+        var label = grid.Children.OfType<Label>().FirstOrDefault();
+        if (label is null)
+        {
+            return;
+        }
+
+        label.BindingContext = trackId;
+        label.Text = BuildTrackHeaderText(trackId);
+    }
+
+    private void EnsureTrackExistsById(int trackId)
+    {
+        if (trackId < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(trackId));
+        }
+
+        while (!Tracks.ContainsKey(trackId))
+        {
+            if (trackId >= SubTrackOffset)
+            {
+                AddASubTrack(trackId);
+            }
+            else
+            {
+                AddATrack(trackId);
+            }
+        }
+    }
+
+    private void EnsureContinuousTrackIndices()
+    {
+        var remap = new Dictionary<int, int>();
+
+        var mainContents = TrackContentLayout.Children.OfType<Border>().ToList();
+        var mainHeaders = TrackHeadLayout.Children.OfType<Border>().ToList();
+        for (int i = 0; i < mainContents.Count; i++)
+        {
+            var content = mainContents[i];
+            var oldId = content.BindingContext is int oldTrackId ? oldTrackId : i;
+            var newId = i;
+            remap[oldId] = newId;
+
+            content.BindingContext = newId;
+            if (content.Content is AbsoluteLayout track)
+            {
+                track.BindingContext = newId;
+            }
+
+            if (i < mainHeaders.Count)
+            {
+                SetTrackIdToHeaderBorder(mainHeaders[i], newId);
+            }
+        }
+
+        var subContents = SubTrackContentLayout.Children.OfType<Border>().ToList();
+        var subHeaders = SubTrackHeadLayout.Children.OfType<Border>().ToList();
+        for (int i = 0; i < subContents.Count; i++)
+        {
+            var content = subContents[i];
+            var oldId = content.BindingContext is int oldTrackId ? oldTrackId : (SubTrackOffset + i);
+            var newId = SubTrackOffset + i;
+            remap[oldId] = newId;
+
+            content.BindingContext = newId;
+            if (content.Content is AbsoluteLayout track)
+            {
+                track.BindingContext = newId;
+            }
+
+            if (i < subHeaders.Count)
+            {
+                SetTrackIdToHeaderBorder(subHeaders[i], newId);
+            }
+        }
+
+        var rebuiltTracks = new ConcurrentDictionary<int, AbsoluteLayout>();
+        foreach (var content in mainContents.Concat(subContents))
+        {
+            if (content.BindingContext is int tid && content.Content is AbsoluteLayout track)
+            {
+                rebuiltTracks[tid] = track;
+            }
+        }
+        Tracks = rebuiltTracks;
+
+        foreach (var clip in Clips.Values)
+        {
+            if (clip.origTrack is int oldTrack && remap.TryGetValue(oldTrack, out var mappedTrack))
+            {
+                clip.origTrack = mappedTrack;
+            }
+
+            if (remap.TryGetValue(clip.SubLayerIndex, out var mappedSubLayer))
+            {
+                clip.SubLayerIndex = mappedSubLayer;
+            }
+        }
+
+        foreach (var clipId in _keyboardMoveOriginalPlacement.Keys.ToList())
+        {
+            var placement = _keyboardMoveOriginalPlacement[clipId];
+            if (remap.TryGetValue(placement.Track, out var mappedTrack))
+            {
+                _keyboardMoveOriginalPlacement[clipId] = (mappedTrack, placement.X);
+            }
+        }
+
+        RecalculateMainTrackCount();
+        UpdateTrackHeaderLayoutForViewport();
+        UpdatePlayheadHeight();
+        UpdateTimelineWidth();
+        _ = UpdateAdjacencyForTrack();
+    }
+
+    private void RemoveTrackAndReindex(int trackId)
+    {
+        if (!Tracks.TryGetValue(trackId, out var trackLayout))
+        {
+            return;
+        }
+
+        var clipsToDelete = Clips.Values
+            .Where(c => c is not null && c.origTrack == trackId)
+            .ToList();
+
+        foreach (var clip in clipsToDelete)
+        {
+            RemoveClipFromSelection(clip);
+            trackLayout.Children.Remove(clip.Clip);
+            Clips.TryRemove(clip.Id, out _);
+            try
+            {
+                RemoveTransformsReferencingClip(clip.Id);
+            }
+            catch { }
+        }
+
+        if (trackId >= SubTrackOffset)
+        {
+            var head = SubTrackHeadLayout.Children
+                .OfType<Border>()
+                .FirstOrDefault(b => GetTrackIdFromHeaderBorder(b) == trackId);
+            var content = SubTrackContentLayout.Children
+                .OfType<Border>()
+                .FirstOrDefault(b => b.BindingContext is int tid && tid == trackId);
+
+            if (head is not null) SubTrackHeadLayout.Children.Remove(head);
+            if (content is not null) SubTrackContentLayout.Children.Remove(content);
+        }
+        else
+        {
+            var head = TrackHeadLayout.Children
+                .OfType<Border>()
+                .FirstOrDefault(b => GetTrackIdFromHeaderBorder(b) == trackId);
+            var content = TrackContentLayout.Children
+                .OfType<Border>()
+                .FirstOrDefault(b => b.BindingContext is int tid && tid == trackId);
+
+            if (head is not null) TrackHeadLayout.Children.Remove(head);
+            if (content is not null) TrackContentLayout.Children.Remove(content);
+        }
+
+        Tracks.TryRemove(trackId, out _);
+        EnsureContinuousTrackIndices();
+        _ = RefreshSelectionUiAsync();
+    }
+
     public void AddATrack(int trackId)
     {
+        if (trackId < 0)
+        {
+            trackId = 0;
+        }
+
         if (trackId >= SubTrackOffset)
         {
             AddASubTrack(trackId);
+            return;
+        }
+
+        var nextMainTrackId = Tracks.Keys.Where(k => k < SubTrackOffset).DefaultIfEmpty(-1).Max() + 1;
+        if (trackId > nextMainTrackId)
+        {
+            for (int missing = nextMainTrackId; missing < trackId; missing++)
+            {
+                AddATrack(missing);
+            }
+        }
+
+        if (Tracks.ContainsKey(trackId))
+        {
             return;
         }
 
@@ -867,6 +1358,7 @@ public partial class DraftPage : ContentPage
             HeightRequest = 16
 
         };
+        DisableTabFocusOnWindows(removeBtn);
 
         ImageButton optsBtn = new ImageButton
         {
@@ -940,25 +1432,7 @@ public partial class DraftPage : ContentPage
 
         removeBtn.Clicked += (s, e) =>
         {
-            while (Tracks[currentTrack].Children.FirstOrDefault((IView)null) != null)
-            {
-                Tracks[currentTrack].Children.Remove(Tracks[currentTrack].Children.First());
-            }
-            Dictionary<string, ClipElementUI> dictionary = Clips.Where(c => Tracks[currentTrack].Children.Contains(c.Value.Clip)).ToDictionary();
-            while (dictionary.Count != 0)
-            {
-                string key = dictionary.First().Key;
-                Clips.Remove(key, out var _);
-                dictionary.Remove(key);
-                if (dictionary.Count <= 0)
-                {
-                    break;
-                }
-            }
-            TrackHeadLayout.Children.Remove(head);
-            TrackContentLayout.Children.Remove(content);
-            Tracks.TryRemove(currentTrack, out _);
-            UpdatePlayheadHeight();
+            RemoveTrackAndReindex(currentTrack);
         };
 
         optsBtn.Clicked += (s, e) =>
@@ -971,13 +1445,27 @@ public partial class DraftPage : ContentPage
 
         TrackHeadLayout.Children.Insert(TrackHeadLayout.Count, head);
         TrackContentLayout.Children.Add(content);
-        trackCount++;
+        RecalculateMainTrackCount();
         UpdateTrackHeaderLayoutForViewport();
         UpdatePlayheadHeight();
     }
 
     public void AddASubTrack(int trackId)
     {
+        if (trackId < SubTrackOffset)
+        {
+            trackId = SubTrackOffset;
+        }
+
+        var nextSubTrackId = Tracks.Keys.Where(k => k >= SubTrackOffset).DefaultIfEmpty(SubTrackOffset - 1).Max() + 1;
+        if (trackId > nextSubTrackId)
+        {
+            for (int missing = nextSubTrackId; missing < trackId; missing++)
+            {
+                AddASubTrack(missing);
+            }
+        }
+
         if (Tracks.ContainsKey(trackId)) return;
 
         ImageButton removeBtn = new ImageButton
@@ -987,6 +1475,7 @@ public partial class DraftPage : ContentPage
             HeightRequest = 16
 
         };
+        DisableTabFocusOnWindows(removeBtn);
 
         ImageButton optsBtn = new ImageButton
         {
@@ -1056,27 +1545,7 @@ public partial class DraftPage : ContentPage
 
         removeBtn.Clicked += (s, e) =>
         {
-            if (!Tracks.ContainsKey(currentTrack)) return;
-
-            while (Tracks[currentTrack].Children.FirstOrDefault((IView)null) != null)
-            {
-                Tracks[currentTrack].Children.Remove(Tracks[currentTrack].Children.First());
-            }
-            Dictionary<string, ClipElementUI> dictionary = Clips.Where(c => Tracks[currentTrack].Children.Contains(c.Value.Clip)).ToDictionary();
-            while (dictionary.Count != 0)
-            {
-                string key = dictionary.First().Key;
-                Clips.Remove(key, out var _);
-                dictionary.Remove(key);
-                if (dictionary.Count <= 0)
-                {
-                    break;
-                }
-            }
-            SubTrackHeadLayout.Children.Remove(head);
-            SubTrackContentLayout.Children.Remove(content);
-            Tracks.TryRemove(currentTrack, out _);
-            UpdatePlayheadHeight();
+            RemoveTrackAndReindex(currentTrack);
         };
 
         optsBtn.Clicked += (s, e) =>
@@ -1182,12 +1651,21 @@ public partial class DraftPage : ContentPage
             MultiSelectCheckBox.IsVisible = false;
         });
 
-        LeftInfoLabel.Text = Localized.DraftPage_AddClipView_ClickToPlace(name ?? "Clip", !(UseCompactLayout ?? false));
-        SetStatusText(Localized.DraftPage_AddClipView_ClickToPlace(name ?? "Clip", true));
+        LeftInfoLabel.Text = (UseCompactLayout ?? false) ? Localized.DraftPage_AddClipView_ClickToPlace_Compact(name ?? "Clip") : Localized.DraftPage_AddClipView_ClickToPlace(name ?? "Clip");
+        SetStatusText(Localized.DraftPage_AddClipView_ClickToPlace(name ?? "Clip"));
     }
 
-    public void CancelPendingClipPlacement(string? statusText = null)
+    public void CancelPendingClipPlacement(string? statusText = null, bool restoreKeyboardPreview = true)
     {
+        if (IsClipMoving)
+        {
+            if (restoreKeyboardPreview)
+            {
+                RestoreKeyboardMovePreview();
+            }
+            EndKeyboardMoveSession();
+        }
+
         _pendingClipPlacementFactory = null;
         _pendingClipPlacementTrackFilter = null;
         Dispatcher.Dispatch(() =>
@@ -1208,6 +1686,12 @@ public partial class DraftPage : ContentPage
 
     private async void TimelineTrackTapGesture_Tapped(object? sender, TappedEventArgs e)
     {
+        if (IsClipMoving && _keyboardMoveHasMoved)
+        {
+            SetStatusText(Localized.DraftPage_KeyboardMove_Enabled);
+            return;
+        }
+
         if (_pendingClipPlacementFactory is null)
         {
             UnSelectTapGesture_Tapped(sender, e);
@@ -1254,6 +1738,10 @@ public partial class DraftPage : ContentPage
             SetStateOK();
             SetStatusText(Localized.DraftPage_AddClipView_ClickToPlace_Done(clip.DisplayName));
             await RefreshSelectionUiAsync();
+            if (IsClipMoving)
+            {
+                EndKeyboardMoveSession();
+            }
         }
         catch (Exception ex)
         {
@@ -1370,7 +1858,7 @@ public partial class DraftPage : ContentPage
             ClipEditor.SetClip(clip, Assets.TryGetValue(clip.Id, out var asset) ? asset : null);
             SetTimelineScrollEnabled(false);
             RightContentBorder.Content = await BuildPropertyPanel(clip);
-            await RefreshDynamicPreviewOverlay();
+            await RefreshPreviewFromCurrentProviderAsync();
             SelectedClipChanged?.Invoke(this, EventArgs.Empty);
             return;
         }
@@ -1491,6 +1979,14 @@ public partial class DraftPage : ContentPage
         }
     }
 
+    private async Task SelectAClip()
+    {
+        var clipsKVP = Clips.ToDictionary(c => $"{c.Value.DisplayName} ({(string.IsNullOrWhiteSpace(c.Value.TypeName) ? c.Value.ClipType.ToString() : c.Value.TypeName)},{c.Value.Id})", c => c.Value);
+        var selection = await DisplayActionSheetAsync(Localized.DraftPage_MenuBar_Edit_Select, Localized._Cancel, null, clipsKVP.Keys.ToArray());
+        if (string.IsNullOrWhiteSpace(selection) || !clipsKVP.TryGetValue(selection, out var c)) return;
+        SelectTapGesture_Tapped(c.Clip, null!);
+    }
+
     private void UnSelectTapGesture_Tapped(object? sender, TappedEventArgs e)
     {
         if (_selectedClipIds.Count == 0) return;
@@ -1576,6 +2072,16 @@ public partial class DraftPage : ContentPage
     {
         if (sender is not Border border) return;
         if (border.BindingContext is not ClipElementUI clip) return;
+
+        if (IsClipMoving)
+        {
+            if (e.StatusType == GestureStatus.Started)
+            {
+                SetStatusText(Localized.DraftPage_KeyboardMove_Enabled);
+            }
+            return;
+        }
+
         if (clip.MovingStatus == ClipMovingStatus.Resize) return;
         var cid = clip.Id;
 
@@ -2041,14 +2547,14 @@ public partial class DraftPage : ContentPage
 
         if (_timelineClipboard.Count == 0)
         {
-            SetStateFail("No clips can be copied.");
+            SetStateFail(Localized.DraftPage_ClipboardNoContent);
             return 0;
         }
 
         SetStateOK();
         SetStatusText(fromCut
-            ? $"Cut {_timelineClipboard.Count} clip(s)."
-            : $"Copied {_timelineClipboard.Count} clip(s).");
+            ? Localized.DraftPage_CopyPaste_Cutted(_timelineClipboard.First().Dto.Name ?? "Clip")
+            : Localized.DraftPage_CopyPaste_Copied(_timelineClipboard.First().Dto.Name ?? "Clip"));
 
         return _timelineClipboard.Count;
     }
@@ -2075,7 +2581,7 @@ public partial class DraftPage : ContentPage
     {
         if (_timelineClipboard.Count == 0)
         {
-            SetStatusText("Clipboard is empty.");
+            SetStatusText(Localized.DraftPage_ClipboardNoContent);
             return;
         }
 
@@ -2099,6 +2605,22 @@ public partial class DraftPage : ContentPage
             placementName);
 
         await Task.CompletedTask;
+    }
+
+    private async Task DuplicateSelectionAsync()
+    {
+        var origPasteboard = new List<TimelineClipboardItem>(_timelineClipboard);
+        var origFromCut = _timelineClipboardFromCut.ToString();
+        var copied = CaptureSelectionToClipboard(false);
+        if (copied <= 0)
+        {
+            return;
+        }
+
+        await PasteClipboardAsync();
+        _timelineClipboard.Clear();
+        _timelineClipboard.AddRange(origPasteboard);
+        _timelineClipboardFromCut = bool.Parse(origFromCut);
     }
 
     private ClipElementUI PlaceClipboardAt(int clickedTrack, double clickedStartX, List<TimelineClipboardItem> orderedItems, int minTrack, double minStartPx)
@@ -2197,26 +2719,14 @@ public partial class DraftPage : ContentPage
         }
 
         SetStateOK();
-        SetStatusText($"Pasted {pastedClips.Count} clip(s).");
+        SetStatusText(Localized.DraftPage_CopyPaste_Pasted(pastedClips.First().DisplayName));
 
         return pastedClips.First();
     }
 
     private void EnsureTrackForPaste(int trackId)
     {
-        if (Tracks.ContainsKey(trackId))
-        {
-            return;
-        }
-
-        if (trackId >= SubTrackOffset)
-        {
-            AddASubTrack(trackId);
-        }
-        else
-        {
-            AddATrack(trackId);
-        }
+        EnsureTrackExistsById(trackId);
     }
 
     public async Task MoveSelection()
@@ -2281,19 +2791,7 @@ public partial class DraftPage : ContentPage
 
         void EnsurePlacementTrackExists(int trackId)
         {
-            if (Tracks.ContainsKey(trackId))
-            {
-                return;
-            }
-
-            if (trackId >= SubTrackOffset)
-            {
-                AddASubTrack(trackId);
-            }
-            else
-            {
-                AddATrack(trackId);
-            }
+            EnsureTrackExistsById(trackId);
         }
 
         BeginClipPlacement(
@@ -2369,8 +2867,388 @@ public partial class DraftPage : ContentPage
             },
             CanPlaceSelectionAtTrack,
             placementName);
+
+        StartKeyboardMoveSession(orderedClips);
         UnselectClip(null);
         await Task.CompletedTask;
+    }
+
+    private void StartKeyboardMoveSession(List<ClipElementUI> clips)
+    {
+        _keyboardMoveOriginalPlacement.Clear();
+        _keyboardMoveClips = clips
+            .Where(c => c.origTrack is not null)
+            .DistinctBy(c => c.Id)
+            .ToList();
+
+        foreach (var clip in _keyboardMoveClips)
+        {
+            _keyboardMoveOriginalPlacement[clip.Id] = (clip.origTrack!.Value, clip.Clip.TranslationX);
+        }
+
+        _keyboardMoveTrackDelta = 0;
+        _keyboardMovePixelDelta = 0;
+        _keyboardMoveHasMoved = false;
+        IsClipMoving = true;
+    }
+
+    private void EndKeyboardMoveSession()
+    {
+        _keyboardMoveOriginalPlacement.Clear();
+        _keyboardMoveClips = [];
+        _keyboardMoveTrackDelta = 0;
+        _keyboardMovePixelDelta = 0;
+        _keyboardMoveHasMoved = false;
+        IsClipMoving = false;
+    }
+
+    private async Task<bool> TryStartKeyboardMoveFromPendingPlacementAsync()
+    {
+        var clipFactory = _pendingClipPlacementFactory;
+        var trackFilter = _pendingClipPlacementTrackFilter;
+        if (clipFactory is null)
+        {
+            return false;
+        }
+
+        var trackCandidates = Tracks.Keys
+            .OrderBy(trackId => trackId)
+            .Where(trackId => trackFilter?.Invoke(trackId) ?? true)
+            .ToList();
+
+        int targetTrackId;
+        if (trackCandidates.Count > 0)
+        {
+            targetTrackId = trackCandidates[0];
+        }
+        else
+        {
+            // Fall back to creating a common default track when placement starts from keyboard.
+            targetTrackId = (trackFilter?.Invoke(0) ?? true) ? 0 : SubTrackOffset;
+            if (trackFilter is not null && !trackFilter(targetTrackId))
+            {
+                SetStateFail("No available track for keyboard placement.");
+                return false;
+            }
+
+            EnsureTrackExistsById(targetTrackId);
+        }
+
+        _pendingClipPlacementFactory = null;
+        _pendingClipPlacementTrackFilter = null;
+
+        try
+        {
+            var startFrame = (uint)Math.Max(0, _currentFrame);
+            double startX = Math.Max(0, SnapPixels(FrameToPixel(startFrame)));
+            var clip = clipFactory(targetTrackId, startX);
+
+            OnClipChanged?.Invoke(this, new ClipUpdateEventArgs
+            {
+                SourceId = clip.Id,
+                Reason = ClipUpdateReason.Unknown
+            });
+
+            StartKeyboardMoveSession([clip]);
+            UnselectClip(null);
+            SetStateOK();
+            SetStatusText(Localized.DraftPage_KeyboardMove_Enabled);
+            await RefreshSelectionUiAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _pendingClipPlacementFactory = clipFactory;
+            _pendingClipPlacementTrackFilter = trackFilter;
+            Log(ex, "TryStartKeyboardMoveFromPendingPlacementAsync", this);
+            SetStateFail("Failed to place the clip");
+            return false;
+        }
+    }
+
+    private async Task HandleMoveArrowAsync(double pixelDelta, int trackDelta)
+    {
+        if (!IsClipMoving)
+        {
+            if (_pendingClipPlacementFactory is not null)
+            {
+                if (!await TryStartKeyboardMoveFromPendingPlacementAsync())
+                {
+                    return;
+                }
+            }
+            else
+            {
+                if (trackDelta == 0)
+                {
+                    await MovePlayhead(pixelDelta < 0 ? -10 : 10);
+                }
+                return;
+            }
+        }
+
+        if (_keyboardMoveClips.Count == 0)
+        {
+            EndKeyboardMoveSession();
+            return;
+        }
+
+        int nextTrackDelta = _keyboardMoveTrackDelta + trackDelta;
+        if (_keyboardMoveClips.Any(c => (_keyboardMoveOriginalPlacement[c.Id].Track + nextTrackDelta) < 0))
+        {
+            return;
+        }
+
+        _keyboardMoveTrackDelta = nextTrackDelta;
+        _keyboardMovePixelDelta += pixelDelta;
+        _keyboardMoveHasMoved = true;
+
+        if (_pendingClipPlacementFactory is not null)
+        {
+            _pendingClipPlacementFactory = null;
+            _pendingClipPlacementTrackFilter = null;
+            SetStatusText(Localized.DraftPage_KeyboardMove_Enabled);
+        }
+
+        ApplyKeyboardMovePreview();
+        await FollowKeyboardMoveViewportAsync();
+    }
+
+    private async Task FollowKeyboardMoveViewportAsync()
+    {
+        if (_keyboardMoveClips.Count == 0)
+        {
+            return;
+        }
+
+        const double horizontalMargin = 80;
+        const double verticalMargin = 20;
+
+        double minX = double.MaxValue;
+        double maxX = double.MinValue;
+        double minY = double.MaxValue;
+        double maxY = double.MinValue;
+
+        var layoutAbs = GetAbsolutePosition(TracksAndClipsLayout, null!);
+
+        foreach (var clip in _keyboardMoveClips)
+        {
+            double width = clip.Clip.Width > 0 ? clip.Clip.Width : clip.Clip.WidthRequest;
+            if (width <= 0)
+            {
+                width = Math.Max(MinClipWidth, clip.origLength);
+            }
+
+            double startX = clip.Clip.TranslationX;
+            minX = Math.Min(minX, startX);
+            maxX = Math.Max(maxX, startX + width);
+
+            var locatedTrack = Tracks.FirstOrDefault(kv => kv.Value.Children.Contains(clip.Clip));
+            if (locatedTrack.Value is null)
+            {
+                continue;
+            }
+
+            var trackAbs = GetAbsolutePosition(locatedTrack.Value, null!);
+            double clipYInViewport = trackAbs.Y - layoutAbs.Y + clip.Clip.TranslationY;
+            double clipHeight = clip.Clip.Height > 0 ? clip.Clip.Height : clip.Clip.HeightRequest;
+            if (clipHeight <= 0)
+            {
+                clipHeight = ClipHeight;
+            }
+
+            minY = Math.Min(minY, clipYInViewport);
+            maxY = Math.Max(maxY, clipYInViewport + clipHeight);
+        }
+
+        if (minX < double.MaxValue && maxX > double.MinValue)
+        {
+            double currentScrollX = TimelineScrollView.ScrollX;
+            double viewportWidth = TimelineScrollView.Width;
+            if (viewportWidth > 0)
+            {
+                double targetX = currentScrollX;
+                if (minX < currentScrollX + horizontalMargin)
+                {
+                    targetX = Math.Max(0, minX - horizontalMargin);
+                }
+                else if (maxX > currentScrollX + viewportWidth - horizontalMargin)
+                {
+                    targetX = Math.Max(0, maxX - viewportWidth + horizontalMargin);
+                }
+
+                if (Math.Abs(targetX - currentScrollX) > 0.5)
+                {
+                    await TimelineScrollView.ScrollToAsync(targetX, 0, true);
+                }
+            }
+        }
+
+        if (minY < double.MaxValue && maxY > double.MinValue)
+        {
+            double currentScrollY = TracksAndClipsLayout.ScrollY;
+            double viewportHeight = TracksAndClipsLayout.Height;
+            if (viewportHeight > 0)
+            {
+                double targetY = currentScrollY;
+                if (minY < verticalMargin)
+                {
+                    targetY = Math.Max(0, currentScrollY + minY - verticalMargin);
+                }
+                else if (maxY > viewportHeight - verticalMargin)
+                {
+                    targetY = Math.Max(0, currentScrollY + maxY - (viewportHeight - verticalMargin));
+                }
+
+                if (Math.Abs(targetY - currentScrollY) > 0.5)
+                {
+                    await TracksAndClipsLayout.ScrollToAsync(0, targetY, true);
+                }
+            }
+        }
+    }
+
+    private void ApplyKeyboardMovePreview()
+    {
+        var movePlans = _keyboardMoveClips
+            .Select(clip =>
+            {
+                var basePlacement = _keyboardMoveOriginalPlacement[clip.Id];
+                return new
+                {
+                    Clip = clip,
+                    TargetTrack = basePlacement.Track + _keyboardMoveTrackDelta,
+                    DesiredX = Math.Max(0, SnapPixels(basePlacement.X + _keyboardMovePixelDelta)),
+                    Width = Math.Max(MinClipWidth, clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength)
+                };
+            })
+            .ToList();
+
+        foreach (var targetTrack in movePlans.Select(plan => plan.TargetTrack).Distinct())
+        {
+            EnsureTrackExistsById(targetTrack);
+        }
+
+        foreach (var clip in _keyboardMoveClips)
+        {
+            foreach (var track in Tracks.Values)
+            {
+                track.Children.Remove(clip.Clip);
+            }
+        }
+
+        foreach (var trackGroup in movePlans.GroupBy(plan => plan.TargetTrack))
+        {
+            double groupStartX = trackGroup.Min(plan => plan.DesiredX);
+            double groupEndX = trackGroup.Max(plan => plan.DesiredX + plan.Width);
+            double groupWidth = Math.Max(MinClipWidth, groupEndX - groupStartX);
+            double resolvedGroupStartX = ResolveOverlapStartPixels(trackGroup.Key, $"keyboard_move_{Guid.NewGuid()}", groupStartX, groupWidth);
+            double groupOffset = resolvedGroupStartX - groupStartX;
+
+            foreach (var plan in trackGroup.OrderBy(plan => plan.DesiredX))
+            {
+                double finalX = Math.Max(0, SnapPixels(plan.DesiredX + groupOffset));
+                plan.Clip.Clip.TranslationX = finalX;
+                plan.Clip.Clip.TranslationY = 0;
+                Tracks[trackGroup.Key].Children.Add(plan.Clip.Clip);
+            }
+        }
+
+        _ = UpdateAdjacencyForTrack();
+        UpdateTimelineWidth();
+    }
+
+    private void RestoreKeyboardMovePreview()
+    {
+        if (_keyboardMoveOriginalPlacement.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var clip in _keyboardMoveClips)
+        {
+            if (!_keyboardMoveOriginalPlacement.TryGetValue(clip.Id, out var basePlacement))
+            {
+                continue;
+            }
+
+            if (!Tracks.ContainsKey(basePlacement.Track))
+            {
+                EnsureTrackExistsById(basePlacement.Track);
+            }
+
+            foreach (var track in Tracks.Values)
+            {
+                track.Children.Remove(clip.Clip);
+            }
+
+            clip.Clip.TranslationX = basePlacement.X;
+            clip.Clip.TranslationY = 0;
+            Tracks[basePlacement.Track].Children.Add(clip.Clip);
+        }
+
+        _ = UpdateAdjacencyForTrack();
+        UpdateTimelineWidth();
+    }
+
+    private async Task ConfirmKeyboardMoveAsync()
+    {
+        if (!IsClipMoving)
+        {
+            return;
+        }
+
+        if (_keyboardMoveClips.Count == 0)
+        {
+            EndKeyboardMoveSession();
+            return;
+        }
+
+        if (!_keyboardMoveHasMoved)
+        {
+            CancelPendingClipPlacement();
+            return;
+        }
+
+        var changedCount = 0;
+        foreach (var clip in _keyboardMoveClips)
+        {
+            foreach (var track in Tracks)
+            {
+                if (!track.Value.Children.Contains(clip.Clip))
+                {
+                    continue;
+                }
+
+                clip.origTrack = track.Key;
+                clip.SubLayerIndex = track.Key;
+                clip.origX = clip.Clip.TranslationX;
+                clip.layoutX = clip.Clip.TranslationX;
+                clip.layoutY = 0;
+                clip.defaultY = 0;
+                clip.MovingStatus = ClipMovingStatus.Free;
+                clip.ShouldDisplayInUI = true;
+                clip.Clip.IsVisible = true;
+
+                OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
+                {
+                    SourceId = clip.Id,
+                    Reason = ClipUpdateReason.ClipItselfMove
+                });
+
+                changedCount++;
+                break;
+            }
+        }
+
+        CleanupGhostAndShadow();
+        _ = UpdateAdjacencyForTrack();
+        UpdateTimelineWidth();
+
+        CancelPendingClipPlacement(restoreKeyboardPreview: false);
+        SetStateOK();
+        SetStatusText(Localized._Done);
+        await RefreshSelectionUiAsync();
     }
 
     #endregion
@@ -2737,22 +3615,22 @@ public partial class DraftPage : ContentPage
     {
         if (clip?.Clip == null) return clip?.origLength ?? 0;
 
-        // 计算所有clips的最大结束位置（以像素为单位）
-        double maxEndPixel = clip.Clip.TranslationX + (clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength);
+        //// 计算所有clips的最大结束位置（以像素为单位）
+        //double maxEndPixel = clip.Clip.TranslationX + (clip.Clip.WidthRequest > 0 ? clip.Clip.WidthRequest : clip.origLength);
 
-        foreach (var otherClip in Clips.Values)
-        {
-            if (otherClip == null || !ShouldParticipateInTimelineLayout(otherClip)) continue;
-            if (otherClip.Id == clip.Id) continue;
+        //foreach (var otherClip in Clips.Values)
+        //{
+        //    if (otherClip == null || !ShouldParticipateInTimelineLayout(otherClip)) continue;
+        //    if (otherClip.Id == clip.Id) continue;
 
-            double otherWidth = otherClip.Clip.WidthRequest > 0 ? otherClip.Clip.WidthRequest : otherClip.origLength;
-            double otherEnd = otherClip.Clip.TranslationX + otherWidth;
-            if (otherEnd > maxEndPixel) maxEndPixel = otherEnd;
-        }
+        //    double otherWidth = otherClip.Clip.WidthRequest > 0 ? otherClip.Clip.WidthRequest : otherClip.origLength;
+        //    double otherEnd = otherClip.Clip.TranslationX + otherWidth;
+        //    if (otherEnd > maxEndPixel) maxEndPixel = otherEnd;
+        //}
 
-        // clip的宽度 = 项目末尾到clip起始位置的距离
-        // 添加一些余量（50像素）以确保能延伸到整个项目
-        double desiredWidth = Math.Max(MinClipWidth, maxEndPixel + 50 - clip.Clip.TranslationX);
+        //// clip的宽度 = 项目末尾到clip起始位置的距离
+        //// 添加一些余量（50像素）以确保能延伸到整个项目
+        double desiredWidth = Math.Max(MinClipWidth, TrackContentLayout.Width + 50);
         return desiredWidth;
     }
 
@@ -3404,6 +4282,9 @@ public partial class DraftPage : ContentPage
                                 clip.Clip.WidthRequest = extendedWidth;
                                 clip.LeftHandle.IsVisible = false;
                                 clip.RightHandle.IsVisible = false;
+                                clip.Clip.StrokeShape = new Rectangle
+                                {
+                                };
 
                                 // ExtendToWholeDraft 的 clip 不允许拖动或拉伸，移除所有 Pan 手势
                                 RemovePanGestures(clip.Clip);
@@ -3412,6 +4293,12 @@ public partial class DraftPage : ContentPage
                             }
                             else
                             {
+                                clip.LeftHandle.IsVisible = true;
+                                clip.RightHandle.IsVisible = true;
+                                clip.Clip.StrokeShape = new RoundRectangle
+                                {
+                                    CornerRadius = new Microsoft.Maui.CornerRadius(20)
+                                };
                                 // 关闭 ExtendToWholeDraft 后恢复可拖动/拉伸的 Pan 手势
                                 if (!HasPanGesture(clip.Clip))
                                 {
@@ -4596,12 +5483,23 @@ public partial class DraftPage : ContentPage
 
     #region live preview
     SemaphoreSlim renderingLock = new(1, 1);
+    private async Task RefreshPreviewFromCurrentProviderAsync()
+    {
+        if (UseRealtimePreview)
+        {
+            await RefreshDynamicPreviewOverlay();
+            return;
+        }
+
+        await RenderOneFrame((uint)_currentFrame);
+    }
+
     private async Task<bool> RefreshDynamicPreviewOverlay()
     {
         DynamicPreviewProvider.SetPreferredClipId(_selected?.Id);
-        var rendered = await DynamicPreviewProvider.RenderFrame((uint)_currentFrame, ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
-        await ClipEditor.RefreshDynamicPreviewFrame((uint)_currentFrame);
-        return rendered;
+        var targetWidth = Math.Max(1, previewWidth);
+        var targetHeight = Math.Max(1, previewHeight);
+        return await DynamicPreviewProvider.RenderFrame((uint)_currentFrame, targetWidth, targetHeight);
     }
 
     private async Task RenderOneFrame(uint duration, int? width = null, int? height = null)
@@ -4648,6 +5546,13 @@ public partial class DraftPage : ContentPage
             }
             else
             {
+                await Dispatcher.DispatchAsync(() =>
+                {
+                    LivePreviewerHost.Content = EnsureRealtimePreviewHost();
+                    LivePreviewPlayer.IsVisible = false;
+                    DynamicPreviewProvider.IsVisible = false;
+                });
+
                 string path = string.Empty;
                 await Task.Run(() =>
                 {
@@ -4661,8 +5566,6 @@ public partial class DraftPage : ContentPage
                 {
                     PreviewOverlayImage.IsVisible = true;
                 });
-
-                await RefreshDynamicPreviewOverlay();
             }
 
 
@@ -4863,8 +5766,9 @@ public partial class DraftPage : ContentPage
 
             await Dispatcher.DispatchAsync(() =>
             {
-                LivePreviewerHost.Content = LivePreviewPlayer;
+                LivePreviewerHost.Content = EnsureRealtimePreviewHost();
                 LivePreviewPlayer.IsVisible = true;
+                DynamicPreviewProvider.IsVisible = false;
                 LivePreviewPlayer.Opacity = 1;
                 LivePreviewPlayer.HeightRequest = -1;
                 LivePreviewPlayer.WidthRequest = -1;
@@ -4958,20 +5862,14 @@ public partial class DraftPage : ContentPage
             }
             catch { }
             LivePreviewPlayer.IsVisible = false;
-            if (UseRealtimePreview)
-            {
-                // Keep DynamicPreviewProvider inside realtime host to avoid WinUI re-parent exceptions.
-                LivePreviewerHost.Content = EnsureRealtimePreviewHost();
-            }
-            else
-            {
-                LivePreviewerHost.Content = DynamicPreviewProvider;
-            }
+            // Keep preview elements inside a single host to avoid WinUI re-parent exceptions.
+            LivePreviewerHost.Content = EnsureRealtimePreviewHost();
+            DynamicPreviewProvider.IsVisible = UseRealtimePreview;
             PreviewOverlayImage.IsVisible = true;
             SetPlayPauseIconToPlay();
         });
 
-        await RefreshDynamicPreviewOverlay();
+        await RefreshPreviewFromCurrentProviderAsync();
 
 
         _nextPlaybackPath = null;
@@ -5100,8 +5998,7 @@ public partial class DraftPage : ContentPage
             ProjectDuration = Math.Max(d.Duration, d.AudioDuration);
             await previewer.UpdateDraft(d);
             await DynamicPreviewProvider.UpdateDraft(d);
-            await ClipEditor.SyncDynamicPreview(d, (uint)_currentFrame);
-            await RefreshDynamicPreviewOverlay();
+            await RefreshPreviewFromCurrentProviderAsync();
             SetStatusText(Localized.DraftPage_ChangesApplied);
             SetStateOK();
         }
@@ -5127,13 +6024,20 @@ public partial class DraftPage : ContentPage
         var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
         await previewer.UpdateDraft(d);
         await DynamicPreviewProvider.UpdateDraft(d);
-        await ClipEditor.SyncDynamicPreview(d, (uint)_currentFrame);
-
 
         var currentX = PlayheadLine.TranslationX - TrackHeadLayout.Width;
         if (currentX < 0) currentX = 0;
         var duration = PixelToFrame(currentX);
-        await RenderOneFrame(duration);
+        _currentFrame = duration;
+
+        if (UseRealtimePreview)
+        {
+            await RefreshDynamicPreviewOverlay();
+        }
+        else
+        {
+            await RenderOneFrame(duration);
+        }
     }
 
 
@@ -5365,6 +6269,8 @@ public partial class DraftPage : ContentPage
 
         }
 
+        //SaveMainMultiWindowViewStateToProjectInfo();
+
         ProjectDuration = draft.Duration;
         ProjectInfo.LastChanged = DateTime.Now;
         ProjectInfo.LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion;
@@ -5455,6 +6361,8 @@ public partial class DraftPage : ContentPage
                 AddAClip(item);
                 RegisterClip(item, true);
             }
+
+            EnsureContinuousTrackIndices();
             CurrentSaveSlotIndex = slotIndex;
             DraftChanged(this, new() { NoSave = true });
             SetStateOK(Localized.DraftPage_RedoAndUndo_Success(draftJson.SavedAt));
@@ -5806,6 +6714,7 @@ public partial class DraftPage : ContentPage
     private async void ResolutionPicker_SelectedIndexChanged(object sender, EventArgs e)
     {
         var picker = sender as Picker;
+        var requireCustomResolution = false;
         if (picker != null)
         {
             if (picker.SelectedItem is string picked)
@@ -5813,7 +6722,6 @@ public partial class DraftPage : ContentPage
                 if (picked == Localized.DraftPage_DynamicPreview)
                 {
                     UseRealtimePreview = true;
-                    return;
                 }
                 else
                 {
@@ -5827,24 +6735,42 @@ public partial class DraftPage : ContentPage
                         previewWidth = w1;
                         previewHeight = h1;
                         ClipEditor.UpdateVideoResolution(w1, h1);
-                        return;
+                    }
+                    else
+                    {
+                        requireCustomResolution = true;
                     }
                 }
             }
         }
 
-        var widthInput = await DisplayPromptAsync(Localized._Info, Localized.DraftPage_PrevResultion_Custom_InputWidth, initialValue: "1920");
-        var heightInput = await DisplayPromptAsync(Localized._Info, Localized.DraftPage_PrevResultion_Custom_InputHeight, initialValue: "1080");
-        if (int.TryParse(widthInput, out int w) && int.TryParse(heightInput, out int h))
+        if (requireCustomResolution)
         {
-            SetStatusText(Localized.DraftPage_PrevResultion_Seted(w, h));
-            previewWidth = w;
-            previewHeight = h;
-            ClipEditor.UpdateVideoResolution(w, h);
-
-
+            var widthInput = await DisplayPromptAsync(Localized._Info, Localized.DraftPage_PrevResultion_Custom_InputWidth, initialValue: "1920");
+            var heightInput = await DisplayPromptAsync(Localized._Info, Localized.DraftPage_PrevResultion_Custom_InputHeight, initialValue: "1080");
+            if (int.TryParse(widthInput, out int w) && int.TryParse(heightInput, out int h))
+            {
+                SetStatusText(Localized.DraftPage_PrevResultion_Seted(w, h));
+                previewWidth = w;
+                previewHeight = h;
+                ClipEditor.UpdateVideoResolution(w, h);
+            }
         }
+
+        await Dispatcher.DispatchAsync(() =>
+        {
+            LivePreviewerHost.Content = EnsureRealtimePreviewHost();
+            LivePreviewPlayer.IsVisible = false;
+            DynamicPreviewProvider.IsVisible = UseRealtimePreview;
+            if (!UseRealtimePreview)
+            {
+                PreviewOverlayImage.IsVisible = true;
+            }
+        });
+
+        await RefreshPreviewFromCurrentProviderAsync();
         OnPropertyChanged(nameof(UseRealtimePreview));
+
     }
 
     private void ZoomOutButton_Clicked(object sender, EventArgs e)
@@ -5865,7 +6791,8 @@ public partial class DraftPage : ContentPage
         PerformZoom(1.0 / 1.2);
     }
 
-    private void PerformZoom(double delta)
+    /// <returns>A meaningless value. This allow to put this method in ... switch { ... => ..., } expression</returns>
+    private int PerformZoom(double delta)
     {
         double oldZoom = tracksZoomOffest;
         double newZoom = tracksZoomOffest * delta;
@@ -5874,7 +6801,7 @@ public partial class DraftPage : ContentPage
         if (newZoom < 0.01) newZoom = 0.01;
         if (newZoom > 100) newZoom = 100;
 
-        if (Math.Abs(newZoom - oldZoom) < 0.0001) return;
+        if (Math.Abs(newZoom - oldZoom) < 0.0001) return -1;
 
         tracksZoomOffest = newZoom;
         double ratio = oldZoom / newZoom;
@@ -5900,6 +6827,7 @@ public partial class DraftPage : ContentPage
         PlayheadLine.TranslationX = currentPlayheadX + TrackHeadLayout.Width;
 
         UpdateTimelineWidth();
+        return -1; //allow to put this method in <var> switch { <case> } expression 
     }
 
     private Size GetScreenSizeInDp()
@@ -6004,6 +6932,8 @@ public partial class DraftPage : ContentPage
             this.Window.SizeChanged -= Window_SizeChanged;
         }
         MyLoggerExtensions.OnExceptionLog -= MyLoggerExtensions_OnExceptionLog;
+
+        //SaveMainMultiWindowViewStateToProjectInfo();
 
 
         foreach (var item in PluginManager.LoadedPlugins)

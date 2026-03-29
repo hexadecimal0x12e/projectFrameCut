@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using static projectFrameCut.Render.EncodeAndDecode.FFmpegHelper;
 
 namespace projectFrameCut.Render.EncodeAndDecode
 {
@@ -44,7 +45,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
         public string[] PreferredExtension => [".mkv"];
         public int? ResultBitPerPixel => 8;
 
-        public bool EnableLock { get; set; } = false;
+    public bool EnableLock { get; set; } = true;
         public bool StrictMode { get; set; }
         private Lock locker = new();
 
@@ -191,6 +192,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 ffmpeg.avcodec_flush_buffers(_codec);
                 _currentFrameNumber = 0;
             }
+            if (IsPointerAddressesNotValid(_fmt) || IsPointerAddressesNotValid(_pkt)) throw new InvalidDataException($"Video stream is invalid when trying to read frame {targetFrame}.");
 
             while (ffmpeg.av_read_frame(_fmt, _pkt) >= 0)
             {
@@ -259,6 +261,13 @@ namespace projectFrameCut.Render.EncodeAndDecode
         [DebuggerNonUserCode()]
         private static Picture16bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
         {
+            // Validate input parameters
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+            if (width <= 0 || height <= 0)
+                throw new ArgumentException($"Invalid dimensions: {width}x{height}");
+            if (stride <= 0 || stride < width * 3)
+                throw new ArgumentException($"Invalid stride {stride} for width {width} (expected at least {width * 3})");
             var size = width * height;
             var result = new Picture16bpp(width, height)
             {
@@ -353,7 +362,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public int? ResultBitPerPixel => 8;
 
-        public bool EnableLock { get; set; } = false;
+    public bool EnableLock { get; set; } = true;
         public bool StrictMode { get; set; }
         private Lock locker = new();
 
@@ -533,6 +542,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
             {
                 if (!_eof)
                 {
+                    if (IsPointerAddressesNotValid(_fmt) || IsPointerAddressesNotValid(_pkt)) throw new InvalidDataException($"Video stream is invalid when trying to read frame {targetFrame}.");
                     if (ffmpeg.av_read_frame(_fmt, _pkt) < 0)
                     {
                         _eof = true;
@@ -607,6 +617,13 @@ namespace projectFrameCut.Render.EncodeAndDecode
         //[DebuggerNonUserCode()]
         private static Picture8bpp PixelsToPicture(byte* data, int stride, int width, int height, bool hasAlpha = false, string filePath = "", uint frameIdx = 0)
         {
+            // Validate input parameters
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
+            if (width <= 0 || height <= 0)
+                throw new ArgumentException($"Invalid dimensions: {width}x{height}");
+            if (stride <= 0 || stride < width * 3)
+                throw new ArgumentException($"Invalid stride {stride} for width {width} (expected at least {width * 3})");
             var size = width * height;
             var result = new Picture8bpp(width, height)
             {

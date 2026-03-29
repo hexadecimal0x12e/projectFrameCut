@@ -27,6 +27,8 @@ using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Render.TemplateSystem;
 using projectFrameCut.Template;
+using projectFrameCut.Render.EncodeAndDecode;
+
 
 
 
@@ -726,6 +728,7 @@ namespace projectFrameCut
                 Log($"FFmpeg library root path: {ffmpeg.RootPath}");
                 FFmpeg.AutoGen.DynamicallyLoadedBindings.ThrowErrorIfFunctionNotFound = true;
                 FFmpeg.AutoGen.DynamicallyLoadedBindings.Initialize();
+                FFmpegHelper.SetupFFmpegLogging(File.Exists(Path.Combine(BasicDataPath, "trace.logging")) ? ffmpeg.AV_LOG_DEBUG : ffmpeg.AV_LOG_INFO);
                 Log($"internal FFmpeg library: version {ffmpeg.av_version_info()}, {ffmpeg.avcodec_license()}\r\nconfiguration:{ffmpeg.avcodec_configuration()}");
             }
             catch (Exception ex)

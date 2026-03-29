@@ -1790,6 +1790,8 @@ namespace projectFrameCut.DraftStuff
                             ppb.AddEntry(controlId, PluginManager.GetLocalizationItem($"_{paramName}", paramName), valStr, "");
                         }
                     }
+                    ppb.AddSeparator();
+                    ppb.AddCustomChild("Implement type", new Label { Text = effect.ImplementType.ToString() });
                     if (effect is IBindableArgumentEffect be)
                     {
                         ppb.AddSeparator();
@@ -2212,8 +2214,10 @@ namespace projectFrameCut.DraftStuff
             }
             else
             {
+                var extendToWhole = ReadExtendToWholeDraft(clip);
+
                 // ── 无限长度：使用文本框手动输入 ────────────────────────────
-                if (!clip.isInfiniteLength)
+                if (!extendToWhole)
                 {
                     uint initFrames = clip.lengthInFrame > 0
                     ? clip.lengthInFrame
@@ -2272,9 +2276,8 @@ namespace projectFrameCut.DraftStuff
                     stack.Children.Add(secHintLabel);
                     stack.Children.Add(applyBtn);
                 }
-                else if ((clip.origTrack ?? -1) >= DraftPage.SubTrackOffset)
+                if ((clip.origTrack ?? -1) >= DraftPage.SubTrackOffset)
                 {
-                    bool isExtended = ReadExtendToWholeDraft(clip);
                     bool hasOtherClipsInTrack = page.Clips.Values.Any(c =>
                         c is not null
                         && c.Id != clip.Id
@@ -2293,17 +2296,18 @@ namespace projectFrameCut.DraftStuff
 
                     var extendSwitch = new Switch
                     {
-                        IsToggled = isExtended,
+                        IsToggled = extendToWhole,
                         HorizontalOptions = LayoutOptions.End,
-                        VerticalOptions = LayoutOptions.Center
+                        VerticalOptions = LayoutOptions.Center,
+                        IsEnabled = !hasOtherClipsInTrack
                     };
 
                     extendSwitch.Toggled += (s, e) =>
                     {
                         clip.ExtraData ??= new Dictionary<string, object>();
                         clip.ExtraData["ExtendToWholeDraft"] = e.Value;
-                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("ExtendToWholeDraft", e.Value, isExtended));
-                        isExtended = e.Value;
+                        handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("ExtendToWholeDraft", e.Value, extendToWhole));
+                        extendToWhole = e.Value;
                     };
 
                     var row = new Grid
@@ -2323,7 +2327,6 @@ namespace projectFrameCut.DraftStuff
                         FontSize = 13,
                         TextColor = Colors.White,
                         VerticalOptions = LayoutOptions.Center,
-                        IsEnabled = !hasOtherClipsInTrack
                     }, 0, 0);
                     row.Add(extendSwitch, 1, 0);
 

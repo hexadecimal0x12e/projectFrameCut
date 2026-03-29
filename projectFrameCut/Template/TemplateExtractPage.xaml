@@ -120,14 +120,22 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" VerticalOptions="Center">
+        <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="10" VerticalOptions="Center">
             <Label x:Name="StatsLabel"
                Text="{l:Localized Key=TemplateExtractPage_Stats_NoFieldSelected}"
                    VerticalOptions="Center" />
-            <Button Grid.Column="1"
+            <Label Grid.Column="1"
+                   Text="{l:Localized Key=TemplateExtractPage_Scope}"
+                   VerticalOptions="Center"
+                   FontSize="12" />
+            <Picker Grid.Column="2"
+                    x:Name="ScopePicker"
+                    WidthRequest="120"
+                    VerticalOptions="Center" />
+            <Button Grid.Column="3"
                 Text="{l:Localized Key=_Cancel}"
                     Clicked="Cancel_Clicked" />
-            <Button Grid.Column="2"
+            <Button Grid.Column="4"
                     x:Name="SaveButton"
                 Text="{l:Localized Key=TemplateExtractPage_SaveTemplate}"
                     Clicked="Save_Clicked" />

@@ -34,6 +34,23 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Advanced_ClearPrefs",
+        "Value": "\u6E05\u7A7A\u5E73\u53F0\u9996\u9009\u9879\uFF08\u5305\u62EC\u5B89\u5168\u5B58\u50A8\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_ClearPrefs_Warn2",
+        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\u3002\u6240\u6709\u7684\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u5C06\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\u6B64\u64CD\u4F5C\u65E0\u6CD5\u88AB\u64A4\u9500\uFF0C\u6240\u6709\u7684\u5E73\u53F0\u9996\u9009\u9879\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\r\u4F60\u786E\u8BA4\u5417\uFF1F\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201Cyes\u201D\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Advanced_DedicatedLogWindow",
         "Value": "\u542F\u7528\u72EC\u7ACB\u65E5\u5FD7\u7A97\u53E3",
         "Mode": "ConstString",
@@ -63,6 +80,15 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_EnableProcessStack",
+        "Value": "\u8BB0\u5F55\u8BE6\u7EC6 IPicture \u5904\u7406\u65E5\u5FD7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u2018IPicture\u2019",
         "HasValidationErrors": false
       },
       {
@@ -98,6 +124,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Advanced_Globalization",
+        "Value": "\u672C\u5730\u5316/\u5168\u7403\u5316",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Advanced_KeyBox_Hint",
         "Value": "\u8F93\u5165\u8BBE\u7F6E\u7684\u952E\uFF0C\u7136\u540E\u4F1A\u81EA\u52A8\u586B\u5145\u503C",
         "Mode": "ConstString",
@@ -114,6 +148,14 @@
         "HasValidationErrors": false
       },
       {
+        "Id": "Advanced_Logging",
+        "Value": "\u65E5\u5FD7",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
         "Id": "Advanced_LogUIMessageToLogger",
         "Value": "\u8BB0\u5F55\u7F16\u8F91\u754C\u9762\u7684\u72B6\u6001\u680F\u6D88\u606F\u5230\u65E5\u5FD7",
         "Mode": "ConstString",
@@ -124,6 +166,14 @@
       {
         "Id": "Advanced_ManualEditSetting",
         "Value": "\u624B\u52A8\u914D\u7F6E\u8BBE\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_Recover",
+        "Value": "\u6062\u590D",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -167,6 +217,23 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_TestCodec",
+        "Value": "\u6D4B\u8BD5\u7F16\u89E3\u7801\u5668",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "Advanced_TraceIPictureObject",
+        "Value": "\u8DDF\u8E2A IPicture \u5BF9\u8C61",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u2018IPicture\u2019",
         "HasValidationErrors": false
       },
       {
@@ -2117,73 +2184,6 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Advanced_EnableProcessStack",
-        "Value": "\u8BB0\u5F55\u8BE6\u7EC6 IPicture \u5904\u7406\u65E5\u5FD7",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u2018IPicture\u2019",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Advanced_TraceIPictureObject",
-        "Value": "\u8DDF\u8E2A IPicture \u5BF9\u8C61",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u2018IPicture\u2019",
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Advanced_TestCodec",
-        "Value": "\u6D4B\u8BD5\u7F16\u89E3\u7801\u5668",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Advanced_Globalization",
-        "Value": "\u672C\u5730\u5316/\u5168\u7403\u5316",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Advanced_Logging",
-        "Value": "\u65E5\u5FD7",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Advanced_Recover",
-        "Value": "\u6062\u590D",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Advanced_ClearPrefs",
-        "Value": "\u6E05\u7A7A\u5E73\u53F0\u9996\u9009\u9879\uFF08\u5305\u62EC\u5B89\u5168\u5B58\u50A8\uFF09",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false
-      },
-      {
-        "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\u3002\u6240\u6709\u7684\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u5C06\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\u6B64\u64CD\u4F5C\u65E0\u6CD5\u88AB\u64A4\u9500\uFF0C\u6240\u6709\u7684\u5E73\u53F0\u9996\u9009\u9879\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\r\u4F60\u786E\u8BA4\u5417\uFF1F\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201Cyes\u201D\uFF0C\u8FD9\u662F\u7528\u6237\u8981\u8F93\u5165\u7684\u4E1C\u897F",
         "HasValidationErrors": false
       }
     ],
@@ -4468,119 +4468,119 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Value": "Default length (frames) for invalid length clips",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_EnableClipInfoPopup",
-        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Value": "Allow double-clicking a clip to open the properties panel.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_AudioComposeBufferSize",
-        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Value": "Audio synthesis buffer size\r(The larger the buffer, the faster the audio synthesis speed; the smaller the buffer, the higher the possible precision)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AISetting_ModelHint2",
-        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Value": "On this page, unless you actively click \u0027Save\u0027, none of the changes will take effect.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UseDynamicPreview",
-        "Value": "Unset localization item:Edit_UseDynamicPreview()",
+        "Value": "Use dynamic preview",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Unset localization item:Advanced_EnableProcessStack()",
+        "Value": "Enable detailed IPicture processing logs",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TraceIPictureObject",
-        "Value": "Unset localization item:Advanced_TraceIPictureObject()",
+        "Value": "Trace IPicture object",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TestCodec",
-        "Value": "Unset localization item:Advanced_TestCodec()",
+        "Value": "Test Codec",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Globalization",
-        "Value": "Unset localization item:Advanced_Globalization()",
+        "Value": "Localization/Globalization",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Logging",
-        "Value": "Unset localization item:Advanced_Logging()",
+        "Value": "Logs",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Recover",
-        "Value": "Unset localization item:Advanced_Recover()",
+        "Value": "Recover",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs",
-        "Value": "Unset localization item:Advanced_ClearPrefs()",
+        "Value": "Clear platform preferences (including secure storage)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Unset localization item:Advanced_ClearPrefs_Warn2()",
+        "Value": "This operation cannot be undone. All settings and securely stored content will be permanently lost.\r\nThis operation is irreversible. All platform preferences will be permanently lost.\r\n\r\nAre you sure? Type \u0022yes\u0022 to confirm.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Note: \u0022yes\u0022 is not translated as it is a user input requirement.",
         "HasValidationErrors": false
       }
     ],
@@ -6865,119 +6865,119 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Value": "\u7121\u6548\u9577\u5EA6\u7247\u6BB5\u7684\u9810\u8A2D\u9577\u5EA6 (\u5E40)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_EnableClipInfoPopup",
-        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Value": "\u5141\u8A31\u900F\u904E\u96D9\u64CA\u7247\u6BB5\u4F86\u5F48\u51FA\u5C6C\u6027\u9762\u677F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_AudioComposeBufferSize",
-        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Value": "\u97F3\u8A0A\u5408\u6210\u7DE9\u885D\u5340\u5927\u5C0F\r(\u8D8A\u5927\u5408\u6210\u97F3\u8A0A\u7684\u901F\u5EA6\u8D8A\u5FEB\uFF1B\u8D8A\u5C0F\u5408\u6210\u97F3\u8A0A\u7684\u7CBE\u78BA\u5EA6\u53EF\u80FD\u66F4\u9AD8)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AISetting_ModelHint2",
-        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Value": "\u5728\u6B64\u9801\u9762\u4E2D\uFF0C\u9664\u975E\u4F60\u4E3B\u52D5\u9EDE\u64CA\u300C\u5132\u5B58\u300D\uFF0C\u5426\u5247\u6240\u6709\u7684\u66F4\u6539\u90FD\u4E0D\u6703\u751F\u6548\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UseDynamicPreview",
-        "Value": "Unset localization item:Edit_UseDynamicPreview()",
+        "Value": "\u4F7F\u7528\u52D5\u614B\u9810\u89BD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Unset localization item:Advanced_EnableProcessStack()",
+        "Value": "\u8A18\u9304\u8A73\u7D30 IPicture \u8655\u7406\u65E5\u8A8C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TraceIPictureObject",
-        "Value": "Unset localization item:Advanced_TraceIPictureObject()",
+        "Value": "\u8DDF\u8E64 IPicture \u7269\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TestCodec",
-        "Value": "Unset localization item:Advanced_TestCodec()",
+        "Value": "\u6E2C\u8A66\u7DE8\u89E3\u78BC\u5668",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Globalization",
-        "Value": "Unset localization item:Advanced_Globalization()",
+        "Value": "\u672C\u5730\u5316/\u5168\u7403\u5316",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Logging",
-        "Value": "Unset localization item:Advanced_Logging()",
+        "Value": "\u65E5\u8A8C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Recover",
-        "Value": "Unset localization item:Advanced_Recover()",
+        "Value": "\u6062\u5FA9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs",
-        "Value": "Unset localization item:Advanced_ClearPrefs()",
+        "Value": "\u6E05\u9664\u5E73\u53F0\u9996\u9078\u9805\uFF08\u5305\u542B\u5B89\u5168\u5132\u5B58\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Unset localization item:Advanced_ClearPrefs_Warn2()",
+        "Value": "\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\u3002\u6240\u6709\u7684\u8A2D\u5B9A\u3001\u5B89\u5168\u5132\u5B58\u5167\u5BB9\u5C07\u6703\u6C38\u4E45\u6D88\u5931\u3002\r\n\u6B64\u64CD\u4F5C\u7121\u6CD5\u88AB\u64A4\u92B7\uFF0C\u6240\u6709\u7684\u5E73\u53F0\u9996\u9078\u9805\u76EE\u6703\u6C38\u4E45\u6D88\u5931\u3002\r\n\r\n\u4F60\u78BA\u8A8D\u55CE\uFF1F\u8F38\u5165\u300Cyes\u300D\u4F86\u78BA\u8A8D\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -9263,119 +9263,119 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Value": "\u7121\u52B9\u306A\u9577\u3055\u306E\u30D5\u30E9\u30B0\u30E1\u30F3\u30C8\u306E\u30C7\u30D5\u30A9\u30EB\u30C8\u9577\uFF08\u30D5\u30EC\u30FC\u30E0\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_EnableClipInfoPopup",
-        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Value": "\u30C0\u30D6\u30EB\u30AF\u30EA\u30C3\u30AF\u3067\u30AF\u30EA\u30C3\u30D7\u306E\u30D7\u30ED\u30D1\u30C6\u30A3\u30D1\u30CD\u30EB\u3092\u30DD\u30C3\u30D7\u30A2\u30C3\u30D7\u8868\u793A\u3059\u308B\u3053\u3068\u3092\u8A31\u53EF",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_AudioComposeBufferSize",
-        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Value": "\u97F3\u58F0\u5408\u6210\u30D0\u30C3\u30D5\u30A1\u30B5\u30A4\u30BA\r(\u5927\u304D\u3044\u307B\u3069\u5408\u6210\u901F\u5EA6\u304C\u901F\u304F\u3001\u5C0F\u3055\u3044\u307B\u3069\u5408\u6210\u7CBE\u5EA6\u304C\u9AD8\u304F\u306A\u308B\u53EF\u80FD\u6027\u304C\u3042\u308A\u307E\u3059)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AISetting_ModelHint2",
-        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Value": "\u3053\u306E\u30DA\u30FC\u30B8\u3067\u306F\u3001\u3042\u306A\u305F\u304C\u300C\u4FDD\u5B58\u300D\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u306A\u3044\u9650\u308A\u3001\u3059\u3079\u3066\u306E\u5909\u66F4\u306F\u53CD\u6620\u3055\u308C\u307E\u305B\u3093\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UseDynamicPreview",
-        "Value": "Unset localization item:Edit_UseDynamicPreview()",
+        "Value": "\u52D5\u7684\u30D7\u30EC\u30D3\u30E5\u30FC\u3092\u4F7F\u7528",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Unset localization item:Advanced_EnableProcessStack()",
+        "Value": "\u8A73\u7D30\u306A IPicture \u51E6\u7406\u30ED\u30B0\u3092\u8A18\u9332\u3059\u308B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TraceIPictureObject",
-        "Value": "Unset localization item:Advanced_TraceIPictureObject()",
+        "Value": "IPicture \u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u3092\u8FFD\u8DE1",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TestCodec",
-        "Value": "Unset localization item:Advanced_TestCodec()",
+        "Value": "\u30B3\u30FC\u30C7\u30C3\u30AF\u306E\u30C6\u30B9\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Globalization",
-        "Value": "Unset localization item:Advanced_Globalization()",
+        "Value": "\u30ED\u30FC\u30AB\u30E9\u30A4\u30BC\u30FC\u30B7\u30E7\u30F3/\u30B0\u30ED\u30FC\u30D0\u30EA\u30BC\u30FC\u30B7\u30E7\u30F3",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Logging",
-        "Value": "Unset localization item:Advanced_Logging()",
+        "Value": "\u30ED\u30B0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Recover",
-        "Value": "Unset localization item:Advanced_Recover()",
+        "Value": "\u5FA9\u5143",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs",
-        "Value": "Unset localization item:Advanced_ClearPrefs()",
+        "Value": "\u30D7\u30E9\u30C3\u30C8\u30D5\u30A9\u30FC\u30E0\u306E\u512A\u5148\u8A2D\u5B9A\u3092\u30AF\u30EA\u30A2\uFF08\u5B89\u5168\u306A\u30B9\u30C8\u30EC\u30FC\u30B8\u3092\u542B\u3080\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Unset localization item:Advanced_ClearPrefs_Warn2()",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002\u3059\u3079\u3066\u306E\u8A2D\u5B9A\u3068\u5B89\u5168\u306B\u4FDD\u5B58\u3055\u308C\u305F\u5185\u5BB9\u304C\u6C38\u4E45\u306B\u5931\u308F\u308C\u307E\u3059\u3002\r\n\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u305A\u3001\u3059\u3079\u3066\u306E\u30D7\u30E9\u30C3\u30C8\u30D5\u30A9\u30FC\u30E0\u306E\u512A\u5148\u8A2D\u5B9A\u304C\u6C38\u4E45\u306B\u5931\u308F\u308C\u307E\u3059\u3002\r\n\r\n\u78BA\u8A8D\u3057\u307E\u3059\u304B\uFF1F\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u30E6\u30FC\u30B6\u30FC\u304C\u5165\u529B\u3059\u308B\u300Cyes\u300D\u306F\u7FFB\u8A33\u3057\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002",
         "HasValidationErrors": false
       }
     ],
@@ -11661,119 +11661,119 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Value": "\uC720\uD6A8\uD558\uC9C0 \uC54A\uC740 \uAE38\uC774 \uD074\uB9BD\uC758 \uAE30\uBCF8 \uAE38\uC774 (\uD504\uB808\uC784)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_EnableClipInfoPopup",
-        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Value": "\uD074\uB9BD \uB354\uBE14\uD074\uB9AD\uC73C\uB85C \uC18D\uC131 \uD328\uB110 \uD31D\uC5C5 \uD5C8\uC6A9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_AudioComposeBufferSize",
-        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Value": "\uC624\uB514\uC624 \uD569\uC131 \uBC84\uD37C \uD06C\uAE30\r(\uBC84\uD37C\uAC00 \uD074\uC218\uB85D \uC624\uB514\uC624 \uD569\uC131 \uC18D\uB3C4\uAC00 \uBE60\uB974\uACE0, \uC791\uC744\uC218\uB85D \uD569\uC131 \uC815\uBC00\uB3C4\uAC00 \uB354 \uB192\uC744 \uC218 \uC788\uC74C)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AISetting_ModelHint2",
-        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Value": "\uC774 \uD398\uC774\uC9C0\uC5D0\uC11C\uB294 \uC0AC\uC6A9\uC790\uAC00 \uC9C1\uC811 \u0027\uC800\uC7A5\u0027\uC744 \uD074\uB9AD\uD558\uC9C0 \uC54A\uB294 \uD55C \uBAA8\uB4E0 \uBCC0\uACBD \uC0AC\uD56D\uC774 \uC801\uC6A9\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UseDynamicPreview",
-        "Value": "Unset localization item:Edit_UseDynamicPreview()",
+        "Value": "\uB3D9\uC801 \uBBF8\uB9AC \uBCF4\uAE30 \uC0AC\uC6A9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Unset localization item:Advanced_EnableProcessStack()",
+        "Value": "IPicture \uCC98\uB9AC \uC0C1\uC138 \uB85C\uADF8 \uAE30\uB85D",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TraceIPictureObject",
-        "Value": "Unset localization item:Advanced_TraceIPictureObject()",
+        "Value": "IPicture \uAC1D\uCCB4 \uCD94\uC801",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TestCodec",
-        "Value": "Unset localization item:Advanced_TestCodec()",
+        "Value": "\uCF54\uB371 \uD14C\uC2A4\uD2B8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Globalization",
-        "Value": "Unset localization item:Advanced_Globalization()",
+        "Value": "\uC9C0\uC5ED\uD654/\uC138\uACC4\uD654",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Logging",
-        "Value": "Unset localization item:Advanced_Logging()",
+        "Value": "\uB85C\uADF8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Recover",
-        "Value": "Unset localization item:Advanced_Recover()",
+        "Value": "\uBCF5\uAD6C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs",
-        "Value": "Unset localization item:Advanced_ClearPrefs()",
+        "Value": "\uD50C\uB7AB\uD3FC \uAE30\uBCF8 \uC124\uC815 \uC9C0\uC6B0\uAE30 (\uC548\uC804 \uC800\uC7A5 \uD3EC\uD568)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Unset localization item:Advanced_ClearPrefs_Warn2()",
+        "Value": "\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uBAA8\uB4E0 \uC124\uC815\uACFC \uC548\uC804 \uC800\uC7A5 \uB0B4\uC6A9\uC774 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AC\uB77C\uC9D1\uB2C8\uB2E4.\r\n\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC73C\uBA70, \uBAA8\uB4E0 \uD50C\uB7AB\uD3FC \uAE30\uBCF8 \uC124\uC815\uC774 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AC\uB77C\uC9D1\uB2C8\uB2E4.\r\n\r\n\uD655\uC2E4\uD569\uB2C8\uAE4C? \uD655\uC778\uD558\uB824\uBA74 \u0022yes\u0022\uB97C \uC785\uB825\uD558\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -14059,119 +14059,119 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Value": "Longueur par d\u00E9faut des clips de longueur invalide (images)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_EnableClipInfoPopup",
-        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Value": "Permettre d\u0027afficher le panneau des propri\u00E9t\u00E9s en double-cliquant sur un fragment.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_AudioComposeBufferSize",
-        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Value": "Taille du tampon de synth\u00E8se audio\r(Plus la taille est grande, plus la synth\u00E8se audio est rapide ; plus elle est petite, plus la pr\u00E9cision peut \u00EAtre \u00E9lev\u00E9e)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AISetting_ModelHint2",
-        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Value": "Sur cette page, toutes les modifications ne prendront effet que si vous cliquez manuellement sur \u0022Enregistrer\u0022.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UseDynamicPreview",
-        "Value": "Unset localization item:Edit_UseDynamicPreview()",
+        "Value": "Utiliser l\u0027aper\u00E7u dynamique",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Unset localization item:Advanced_EnableProcessStack()",
+        "Value": "Enregistrer le journal de traitement d\u00E9taill\u00E9 IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TraceIPictureObject",
-        "Value": "Unset localization item:Advanced_TraceIPictureObject()",
+        "Value": "Suivre l\u0027objet IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TestCodec",
-        "Value": "Unset localization item:Advanced_TestCodec()",
+        "Value": "Testeur de codec",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Globalization",
-        "Value": "Unset localization item:Advanced_Globalization()",
+        "Value": "Localisation/Globalisation",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Logging",
-        "Value": "Unset localization item:Advanced_Logging()",
+        "Value": "Journal",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Recover",
-        "Value": "Unset localization item:Advanced_Recover()",
+        "Value": "R\u00E9cup\u00E9rer",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs",
-        "Value": "Unset localization item:Advanced_ClearPrefs()",
+        "Value": "Effacer les pr\u00E9f\u00E9rences de la plateforme (y compris le stockage s\u00E9curis\u00E9)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Unset localization item:Advanced_ClearPrefs_Warn2()",
+        "Value": "Cette action est irr\u00E9versible. Tous les param\u00E8tres et contenus stock\u00E9s de mani\u00E8re s\u00E9curis\u00E9e seront d\u00E9finitivement perdus.\r\nCette op\u00E9ration ne peut pas \u00EAtre annul\u00E9e, toutes les pr\u00E9f\u00E9rences par d\u00E9faut de la plateforme seront d\u00E9finitivement supprim\u00E9es.\r\n\r\n\u00CAtes-vous s\u00FBr ? Tapez \u0022yes\u0022 pour confirmer.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -16457,119 +16457,119 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Value": "\u65E0\u6548\u7247\u6BB5\u4E4B\u9884\u8BBE\u957F\u5EA6\uFF08\u5E27\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_EnableClipInfoPopup",
-        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Value": "\u5141\u8BB8\u901A\u8FC7\u53CC\u51FB\u7247\u6BB5\u6765\u5F39\u51FA\u5C5E\u6027\u9762\u677F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_AudioComposeBufferSize",
-        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Value": "\u97F3\u9891\u5408\u5236\u7F13\u51B2\u533A\u4E4B\u5927\u5C0F\r(\u5927\u5219\u5408\u5236\u97F3\u9891\u6108\u901F\uFF1B\u5C0F\u5219\u5408\u5236\u97F3\u9891\u4E4B\u7CBE\u5EA6\u6216\u6108\u9AD8)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u5C06\u73B0\u4EE3\u6280\u672F\u672F\u8BED\u8F6C\u5316\u4E3A\u6587\u8A00\u6587\u8868\u8FBE\uFF0C\u4FDD\u6301\u539F\u610F\u4E0D\u53D8\u3002\u0027\u5408\u6210\u0027\u8BD1\u4E3A\u0027\u5408\u5236\u0027\uFF0C\u0027\u7F13\u51B2\u533A\u0027\u4FDD\u7559\u73B0\u4EE3\u672F\u8BED\uFF0C\u0027\u7CBE\u5EA6\u53EF\u80FD\u66F4\u9AD8\u0027\u8BD1\u4E3A\u0027\u7CBE\u5EA6\u6216\u6108\u9AD8\u0027\u4EE5\u7B26\u5408\u6587\u8A00\u6587\u8BED\u6C14\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "AISetting_ModelHint2",
-        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Value": "\u4E8E\u6B64\u9875\u4E2D\uFF0C\u82E5\u975E\u6C5D\u4EB2\u51FB\u2018\u5B58\u4E4B\u2019\uFF0C\u5219\u8BF8\u822C\u66F4\u6539\u7686\u65E0\u6548\u4E5F\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u610F\u4E3A\u2018\u5728\u6B64\u9875\u9762\u4E2D\uFF0C\u9664\u975E\u4F60\u4E3B\u52A8\u70B9\u51FB\u2018\u4FDD\u5B58\u2019\uFF0C\u5426\u5219\u6240\u6709\u7684\u66F4\u6539\u90FD\u4E0D\u4F1A\u751F\u6548\u3002\u2019",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UseDynamicPreview",
-        "Value": "Unset localization item:Edit_UseDynamicPreview()",
+        "Value": "\u4F7F\u7528\u52A8\u6001\u9884\u89C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Unset localization item:Advanced_EnableProcessStack()",
+        "Value": "\u8BE6\u5F55IPicture\u5904\u7F6E\u4E4B\u65E5\u5FD7",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u6B64\u5904\u0027IPicture\u0027\u4E3A\u4E13\u540D\uFF0C\u4F9D\u5907\u6CE8\u672A\u8BD1\u3002\u0027\u5904\u7F6E\u0027\u5BF9\u5E94\u0027\u5904\u7406\u0027\uFF0C\u0027\u4E4B\u0027\u8868\u6240\u5C5E\uFF0C\u4F7F\u53E5\u5F0F\u6587\u96C5\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TraceIPictureObject",
-        "Value": "Unset localization item:Advanced_TraceIPictureObject()",
+        "Value": "\u8FFD\u8E2A IPicture \u7269",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TestCodec",
-        "Value": "Unset localization item:Advanced_TestCodec()",
+        "Value": "\u8BD5\u7F16\u89E3\u7801\u4E4B\u5668",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Globalization",
-        "Value": "Unset localization item:Advanced_Globalization()",
+        "Value": "\u672C\u5730\u5316\u4E0E\u5168\u7403\u5316",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u76EE\u6807\u8BED\u8A00\u4E3A\u6587\u8A00\u6587\uFF0C\u7136\u0027\u672C\u5730\u5316\u0027\u4E0E\u0027\u5168\u7403\u5316\u0027\u7CFB\u73B0\u4EE3\u672F\u8BED\uFF0C\u6587\u8A00\u4E2D\u65E0\u786E\u5207\u5BF9\u5E94\u3002\u6B64\u5904\u53D6\u610F\u8BD1\uFF0C\u4EE5\u6D45\u8FD1\u6587\u8A00\u98CE\u683C\u5448\u73B0\uFF0C\u610F\u4E3A\u0027\u9002\u5E94\u672C\u5730\u4E0E\u901A\u884C\u5168\u7403\u4E4B\u8BBE\u7F6E\u0027\u3002\u82E5\u9700\u4E25\u683C\u6587\u8A00\u8868\u8FBE\uFF0C\u8BF7\u63D0\u4F9B\u66F4\u591A\u4E0A\u4E0B\u6587\u6216\u8003\u8651\u53D8\u66F4\u76EE\u6807\u8BED\u8A00\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Logging",
-        "Value": "Unset localization item:Advanced_Logging()",
+        "Value": "\u8BB0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u5C06\u73B0\u4EE3\u6C49\u8BED\u0027\u65E5\u5FD7\u0027\u8BD1\u4E3A\u6587\u8A00\u6587\u0027\u8BB0\u0027\uFF0C\u53D6\u5176\u0027\u8BB0\u5F55\u0027\u3001\u0027\u8BB0\u8F7D\u0027\u4E4B\u610F\uFF0C\u7B26\u5408\u8F6F\u4EF6\u529F\u80FD\u540D\u79F0\u4E4B\u8BED\u5883\u3002",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Recover",
-        "Value": "Unset localization item:Advanced_Recover()",
+        "Value": "\u6062\u590D",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs",
-        "Value": "Unset localization item:Advanced_ClearPrefs()",
+        "Value": "\u6E05\u7A7A\u5E73\u53F0\u9996\u9009\u4E4B\u9879\uFF08\u542B\u5B89\u5168\u5B58\u50A8\uFF09",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Unset localization item:Advanced_ClearPrefs_Warn2()",
+        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u53EF\u9006\u3002\u6240\u6709\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u4E4B\u7269\u5C06\u6C38\u901D\u3002\n\u6B64\u64CD\u4F5C\u65E0\u6CD5\u64A4\u9500\uFF0C\u6240\u6709\u5E73\u53F0\u9996\u9009\u4E4B\u9879\u5C06\u6C38\u5931\u3002\n\n\u5C14\u786E\u8BA4\u4E4E\uFF1F\u8F93\u5165\u201Cyes\u201D\u4EE5\u786E\u8BA4\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u7559\u7528\u6237\u8F93\u5165\u5173\u952E\u8BCD\u201Cyes\u201D\u3002",
         "HasValidationErrors": false
       }
     ],
@@ -18855,119 +18855,119 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Value": "\u0627\u0644\u0637\u0648\u0644 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0644\u0645\u0642\u0637\u0639 \u0627\u0644\u0637\u0648\u0644 \u063A\u064A\u0631 \u0627\u0644\u0635\u0627\u0644\u062D (\u0625\u0637\u0627\u0631)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_EnableClipInfoPopup",
-        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Value": "\u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0627\u0644\u0646\u0642\u0631 \u0627\u0644\u0645\u0632\u062F\u0648\u062C \u0639\u0644\u0649 \u0627\u0644\u0645\u0642\u0637\u0639 \u0644\u0625\u0638\u0647\u0627\u0631 \u0644\u0648\u062D\u0629 \u0627\u0644\u062E\u0635\u0627\u0626\u0635",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_AudioComposeBufferSize",
-        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Value": "\u062D\u062C\u0645 \u0645\u062E\u0632\u0646 \u0645\u0624\u0642\u062A \u0644\u062A\u062C\u0645\u064A\u0639 \u0627\u0644\u0635\u0648\u062A\r(\u0643\u0644\u0645\u0627 \u0632\u0627\u062F \u0627\u0644\u062D\u062C\u0645\u060C \u0632\u0627\u062F\u062A \u0633\u0631\u0639\u0629 \u062A\u062C\u0645\u064A\u0639 \u0627\u0644\u0635\u0648\u062A\u061B \u0643\u0644\u0645\u0627 \u0642\u0644 \u0627\u0644\u062D\u062C\u0645\u060C \u0632\u0627\u062F\u062A \u062F\u0642\u0629 \u062A\u062C\u0645\u064A\u0639 \u0627\u0644\u0635\u0648\u062A \u0627\u0644\u0645\u062D\u062A\u0645\u0644\u0629)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AISetting_ModelHint2",
-        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Value": "\u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u0635\u0641\u062D\u0629\u060C \u0644\u0646 \u062A\u0635\u0628\u062D \u0623\u064A \u062A\u063A\u064A\u064A\u0631\u0627\u062A \u0646\u0627\u0641\u0630\u0629 \u0625\u0644\u0627 \u0625\u0630\u0627 \u0642\u0645\u062A \u0628\u0627\u0644\u0646\u0642\u0631 \u0639\u0644\u0649 \u0022\u062D\u0641\u0638\u0022 \u0628\u0646\u0641\u0633\u0643.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UseDynamicPreview",
-        "Value": "Unset localization item:Edit_UseDynamicPreview()",
+        "Value": "\u0627\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0645\u0639\u0627\u064A\u0646\u0629 \u0627\u0644\u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0629",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Unset localization item:Advanced_EnableProcessStack()",
+        "Value": "\u0633\u062C\u0644 \u0645\u0639\u0627\u0644\u062C\u0629 IPicture \u0627\u0644\u0645\u0641\u0635\u0651\u0644",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TraceIPictureObject",
-        "Value": "Unset localization item:Advanced_TraceIPictureObject()",
+        "Value": "\u062A\u062A\u0628\u0639 \u0643\u0627\u0626\u0646 IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TestCodec",
-        "Value": "Unset localization item:Advanced_TestCodec()",
+        "Value": "\u0627\u062E\u062A\u0628\u0627\u0631 \u062C\u0647\u0627\u0632 \u0627\u0644\u062A\u0631\u0645\u064A\u0632",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Globalization",
-        "Value": "Unset localization item:Advanced_Globalization()",
+        "Value": "\u0627\u0644\u062A\u0648\u0637\u064A\u0646/\u0627\u0644\u0639\u0648\u0644\u0645\u0629",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Logging",
-        "Value": "Unset localization item:Advanced_Logging()",
+        "Value": "\u0633\u062C\u0644",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Recover",
-        "Value": "Unset localization item:Advanced_Recover()",
+        "Value": "\u0627\u0633\u062A\u0639\u0627\u062F\u0629",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs",
-        "Value": "Unset localization item:Advanced_ClearPrefs()",
+        "Value": "\u0645\u0633\u062D \u062A\u0641\u0636\u064A\u0644\u0627\u062A \u0627\u0644\u0645\u0646\u0635\u0629 (\u0628\u0645\u0627 \u0641\u064A \u0630\u0644\u0643 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0622\u0645\u0646)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Unset localization item:Advanced_ClearPrefs_Warn2()",
+        "Value": "\u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646\u0647. \u062C\u0645\u064A\u0639 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0648\u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u062E\u0632\u0646 \u0628\u0623\u0645\u0627\u0646 \u0633\u064A\u062A\u0645 \u0641\u0642\u062F\u0647\u0627 \u0628\u0634\u0643\u0644 \u062F\u0627\u0626\u0645.\n\u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0644\u0627 \u064A\u0645\u0643\u0646 \u0625\u0644\u063A\u0627\u0624\u0647\u060C \u0648\u0633\u062A\u062E\u062A\u0641\u064A \u062C\u0645\u064A\u0639 \u062E\u064A\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0646\u0635\u0629 \u0627\u0644\u0645\u0641\u0636\u0644\u0629 \u0628\u0634\u0643\u0644 \u062F\u0627\u0626\u0645.\n\n\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F\u061F \u0627\u0643\u062A\u0628 \u0022yes\u0022 \u0644\u0644\u062A\u0623\u0643\u064A\u062F.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -21253,119 +21253,119 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Value": "Standardl\u00E4nge f\u00FCr ung\u00FCltige L\u00E4ngensegmente (Frames)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_EnableClipInfoPopup",
-        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Value": "Eigenschaften-Panel durch Doppelklick auf Clip \u00F6ffnen erlauben",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_AudioComposeBufferSize",
-        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Value": "Gr\u00F6\u00DFe des Audiozusammensetzungspuffers\r(Je gr\u00F6\u00DFer, desto schneller die Audiomischung; je kleiner, m\u00F6glicherweise h\u00F6here Genauigkeit)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AISetting_ModelHint2",
-        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Value": "Auf dieser Seite werden alle \u00C4nderungen erst wirksam, wenn Sie aktiv auf \u0022Speichern\u0022 klicken.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UseDynamicPreview",
-        "Value": "Unset localization item:Edit_UseDynamicPreview()",
+        "Value": "Dynamische Vorschau verwenden",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Unset localization item:Advanced_EnableProcessStack()",
+        "Value": "Detaillierte IPicture-Verarbeitungsprotokolle aufzeichnen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TraceIPictureObject",
-        "Value": "Unset localization item:Advanced_TraceIPictureObject()",
+        "Value": "IPicture-Objekt verfolgen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TestCodec",
-        "Value": "Unset localization item:Advanced_TestCodec()",
+        "Value": "Codec testen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Globalization",
-        "Value": "Unset localization item:Advanced_Globalization()",
+        "Value": "Lokalisierung/Globalisierung",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Logging",
-        "Value": "Unset localization item:Advanced_Logging()",
+        "Value": "Protokollierung",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Recover",
-        "Value": "Unset localization item:Advanced_Recover()",
+        "Value": "Wiederherstellen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs",
-        "Value": "Unset localization item:Advanced_ClearPrefs()",
+        "Value": "Plattformpr\u00E4ferenzen l\u00F6schen (einschlie\u00DFlich sicherer Speicherung)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Unset localization item:Advanced_ClearPrefs_Warn2()",
+        "Value": "Diese Aktion kann nicht r\u00FCckg\u00E4ngig gemacht werden. Alle Einstellungen und sicher gespeicherten Inhalte werden dauerhaft gel\u00F6scht.\r\nDiese Aktion ist unwiderruflich, alle Plattformpr\u00E4ferenzen gehen dauerhaft verloren.\r\n\r\nBist du sicher? Gib \u0022yes\u0022 zur Best\u00E4tigung ein.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -23651,119 +23651,119 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Value": "Duraci\u00F3n predeterminada (fotogramas) para clips de longitud no v\u00E1lida",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_EnableClipInfoPopup",
-        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Value": "Permitir abrir el panel de propiedades haciendo doble clic en el fragmento",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_AudioComposeBufferSize",
-        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Value": "Tama\u00F1o del b\u00FAfer de composici\u00F3n de audio\r(Cuanto m\u00E1s grande, m\u00E1s r\u00E1pida la composici\u00F3n de audio; cuanto m\u00E1s peque\u00F1o, posiblemente mayor precisi\u00F3n)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AISetting_ModelHint2",
-        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Value": "En esta p\u00E1gina, a menos que hagas clic activamente en \u0022Guardar\u0022, todos los cambios no se aplicar\u00E1n.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UseDynamicPreview",
-        "Value": "Unset localization item:Edit_UseDynamicPreview()",
+        "Value": "Usar vista previa din\u00E1mica",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Unset localization item:Advanced_EnableProcessStack()",
+        "Value": "Registrar registros detallados de procesamiento de IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TraceIPictureObject",
-        "Value": "Unset localization item:Advanced_TraceIPictureObject()",
+        "Value": "Seguir objeto IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TestCodec",
-        "Value": "Unset localization item:Advanced_TestCodec()",
+        "Value": "Probador de c\u00F3decs",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Globalization",
-        "Value": "Unset localization item:Advanced_Globalization()",
+        "Value": "Localizaci\u00F3n/Globalizaci\u00F3n",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Logging",
-        "Value": "Unset localization item:Advanced_Logging()",
+        "Value": "Registro",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Recover",
-        "Value": "Unset localization item:Advanced_Recover()",
+        "Value": "Recuperar",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs",
-        "Value": "Unset localization item:Advanced_ClearPrefs()",
+        "Value": "Borrar preferencias de la plataforma (incluye almacenamiento seguro)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Unset localization item:Advanced_ClearPrefs_Warn2()",
+        "Value": "Esta acci\u00F3n no se puede deshacer. Toda la configuraci\u00F3n y el contenido almacenado de forma segura se perder\u00E1n permanentemente.\r\nEsta acci\u00F3n es irreversible. Todas las opciones preferidas de la plataforma se perder\u00E1n permanentemente.\r\n\r\n\u00BFEst\u00E1s seguro? Escribe \u0022yes\u0022 para confirmar.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -26049,119 +26049,119 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Value": "Lunghezza predefinita per frammenti di lunghezza non valida (fotogrammi)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_EnableClipInfoPopup",
-        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Value": "Abilita il pannello delle propriet\u00E0 con doppio clic sul clip",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_AudioComposeBufferSize",
-        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Value": "Dimensione buffer di composizione audio\r(Pi\u00F9 grande \u00E8 il buffer, pi\u00F9 veloce \u00E8 la composizione audio; pi\u00F9 piccolo \u00E8 il buffer, maggiore pu\u00F2 essere la precisione)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AISetting_ModelHint2",
-        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Value": "In questa pagina, a meno che non si faccia clic su \u0022Salva\u0022, tutte le modifiche non avranno effetto.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UseDynamicPreview",
-        "Value": "Unset localization item:Edit_UseDynamicPreview()",
+        "Value": "Usa anteprima dinamica",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Unset localization item:Advanced_EnableProcessStack()",
+        "Value": "Registra i log dettagliati di elaborazione IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "Non tradurre \u0027IPicture\u0027",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TraceIPictureObject",
-        "Value": "Unset localization item:Advanced_TraceIPictureObject()",
+        "Value": "Traccia oggetto IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TestCodec",
-        "Value": "Unset localization item:Advanced_TestCodec()",
+        "Value": "Test codec",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Globalization",
-        "Value": "Unset localization item:Advanced_Globalization()",
+        "Value": "Localizzazione/Globalizzazione",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Logging",
-        "Value": "Unset localization item:Advanced_Logging()",
+        "Value": "Registro",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Recover",
-        "Value": "Unset localization item:Advanced_Recover()",
+        "Value": "Ripristina",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs",
-        "Value": "Unset localization item:Advanced_ClearPrefs()",
+        "Value": "Cancella le preferenze (inclusa la memoria sicura)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Unset localization item:Advanced_ClearPrefs_Warn2()",
+        "Value": "Questa operazione non pu\u00F2 essere annullata. Tutte le impostazioni e i contenuti memorizzati in modo sicuro andranno persi permanentemente.\r\nQuesta operazione \u00E8 irreversibile, tutte le preferenze della piattaforma andranno perse per sempre.\r\n\r\nSei sicuro? Digita \u0022yes\u0022 per confermare.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -28447,119 +28447,119 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Value": "Domy\u015Blna d\u0142ugo\u015B\u0107 klipu o nieprawid\u0142owej d\u0142ugo\u015Bci (klatki)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_EnableClipInfoPopup",
-        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Value": "Zezwalaj na wy\u015Bwietlanie panelu w\u0142a\u015Bciwo\u015Bci poprzez dwukrotne klikni\u0119cie fragmentu",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_AudioComposeBufferSize",
-        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Value": "Rozmiar bufora kompozycji audio\r(wi\u0119kszy bufor = szybsza kompozycja audio; mniejszy bufor = potencjalnie wy\u017Csza precyzja audio)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AISetting_ModelHint2",
-        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Value": "Na tej stronie, chyba \u017Ce klikniesz \u0022Zapisz\u0022 aktywnie, wszystkie zmiany nie b\u0119d\u0105 obowi\u0105zywa\u0107.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UseDynamicPreview",
-        "Value": "Unset localization item:Edit_UseDynamicPreview()",
+        "Value": "U\u017Cyj dynamicznego podgl\u0105du",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Unset localization item:Advanced_EnableProcessStack()",
+        "Value": "Rejestruj szczeg\u00F3\u0142owy dziennik przetwarzania IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TraceIPictureObject",
-        "Value": "Unset localization item:Advanced_TraceIPictureObject()",
+        "Value": "\u015Aledzenie obiektu IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TestCodec",
-        "Value": "Unset localization item:Advanced_TestCodec()",
+        "Value": "Testuj kodek",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Globalization",
-        "Value": "Unset localization item:Advanced_Globalization()",
+        "Value": "Lokalizacja/Globalizacja",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Logging",
-        "Value": "Unset localization item:Advanced_Logging()",
+        "Value": "Dziennik",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Recover",
-        "Value": "Unset localization item:Advanced_Recover()",
+        "Value": "Odzyskaj",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs",
-        "Value": "Unset localization item:Advanced_ClearPrefs()",
+        "Value": "Wyczy\u015B\u0107 preferencje platformy (w tym bezpieczne przechowywanie)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Unset localization item:Advanced_ClearPrefs_Warn2()",
+        "Value": "Tej operacji nie mo\u017Cna cofn\u0105\u0107. Wszystkie ustawienia i bezpiecznie przechowywane tre\u015Bci zostan\u0105 trwale utracone.\r\nTej operacji nie mo\u017Cna cofn\u0105\u0107, wszystkie preferencje platformy zostan\u0105 trwale utracone.\r\n\r\nCzy na pewno? Wpisz \u201Eyes\u201D, aby potwierdzi\u0107.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -30845,119 +30845,119 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Value": "Comprimento padr\u00E3o para clipes de comprimento inv\u00E1lido (quadros)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_EnableClipInfoPopup",
-        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Value": "Permitir exibir o painel de propriedades ao clicar duas vezes no clipe",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_AudioComposeBufferSize",
-        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Value": "Tamanho do buffer de composi\u00E7\u00E3o de \u00E1udio\r(Quanto maior, mais r\u00E1pida a composi\u00E7\u00E3o de \u00E1udio; quanto menor, possivelmente maior a precis\u00E3o da composi\u00E7\u00E3o de \u00E1udio)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AISetting_ModelHint2",
-        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Value": "Nesta p\u00E1gina, todas as altera\u00E7\u00F5es n\u00E3o ter\u00E3o efeito a menos que voc\u00EA clique em \u0022Salvar\u0022 ativamente.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UseDynamicPreview",
-        "Value": "Unset localization item:Edit_UseDynamicPreview()",
+        "Value": "Usar visualiza\u00E7\u00E3o din\u00E2mica",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Unset localization item:Advanced_EnableProcessStack()",
+        "Value": "Registrar log detalhado de processamento IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TraceIPictureObject",
-        "Value": "Unset localization item:Advanced_TraceIPictureObject()",
+        "Value": "Rastrear objeto IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TestCodec",
-        "Value": "Unset localization item:Advanced_TestCodec()",
+        "Value": "Testar codec",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Globalization",
-        "Value": "Unset localization item:Advanced_Globalization()",
+        "Value": "Localiza\u00E7\u00E3o/Globaliza\u00E7\u00E3o",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Logging",
-        "Value": "Unset localization item:Advanced_Logging()",
+        "Value": "Registro",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Recover",
-        "Value": "Unset localization item:Advanced_Recover()",
+        "Value": "Recuperar",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs",
-        "Value": "Unset localization item:Advanced_ClearPrefs()",
+        "Value": "Limpar prefer\u00EAncias da plataforma (incluindo armazenamento seguro)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Unset localization item:Advanced_ClearPrefs_Warn2()",
+        "Value": "Esta opera\u00E7\u00E3o n\u00E3o pode ser desfeita. Todas as configura\u00E7\u00F5es e conte\u00FAdos armazenados com seguran\u00E7a ser\u00E3o permanentemente perdidos.\r\nEsta opera\u00E7\u00E3o \u00E9 irrevers\u00EDvel. Todas as op\u00E7\u00F5es preferidas da plataforma ser\u00E3o permanentemente perdidas.\r\n\r\nTem certeza? Digite \u0022yes\u0022 para confirmar.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -33243,119 +33243,119 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Value": "\u0414\u043B\u0438\u043D\u0430 \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E \u0434\u043B\u044F \u043D\u0435\u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0433\u043E \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0430 (\u043A\u0430\u0434\u0440\u044B)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_EnableClipInfoPopup",
-        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Value": "\u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u044C \u0432\u0441\u043F\u043B\u044B\u0432\u0430\u044E\u0449\u0443\u044E \u043F\u0430\u043D\u0435\u043B\u044C \u0441\u0432\u043E\u0439\u0441\u0442\u0432 \u043F\u0440\u0438 \u0434\u0432\u043E\u0439\u043D\u043E\u043C \u0449\u0435\u043B\u0447\u043A\u0435 \u043D\u0430 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442\u0435",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_AudioComposeBufferSize",
-        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Value": "\u0420\u0430\u0437\u043C\u0435\u0440 \u0431\u0443\u0444\u0435\u0440\u0430 \u0441\u0438\u043D\u0442\u0435\u0437\u0430 \u0430\u0443\u0434\u0438\u043E\r(\u0427\u0435\u043C \u0431\u043E\u043B\u044C\u0448\u0435, \u0442\u0435\u043C \u0431\u044B\u0441\u0442\u0440\u0435\u0435 \u0441\u0438\u043D\u0442\u0435\u0437; \u0447\u0435\u043C \u043C\u0435\u043D\u044C\u0448\u0435, \u0442\u0435\u043C \u0432\u044B\u0448\u0435 \u0432\u043E\u0437\u043C\u043E\u0436\u043D\u0430\u044F \u0442\u043E\u0447\u043D\u043E\u0441\u0442\u044C)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AISetting_ModelHint2",
-        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Value": "\u041D\u0430 \u044D\u0442\u043E\u0439 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0435 \u0432\u0441\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u044F \u043D\u0435 \u0432\u0441\u0442\u0443\u043F\u044F\u0442 \u0432 \u0441\u0438\u043B\u0443, \u043F\u043E\u043A\u0430 \u0432\u044B \u043D\u0435 \u043D\u0430\u0436\u043C\u0451\u0442\u0435 \u00AB\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C\u00BB.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UseDynamicPreview",
-        "Value": "Unset localization item:Edit_UseDynamicPreview()",
+        "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0434\u0438\u043D\u0430\u043C\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043F\u0440\u0435\u0434\u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Unset localization item:Advanced_EnableProcessStack()",
+        "Value": "\u0412\u0435\u0441\u0442\u0438 \u043F\u043E\u0434\u0440\u043E\u0431\u043D\u044B\u0439 \u0436\u0443\u0440\u043D\u0430\u043B \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438 IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TraceIPictureObject",
-        "Value": "Unset localization item:Advanced_TraceIPictureObject()",
+        "Value": "\u041E\u0442\u0441\u043B\u0435\u0436\u0438\u0432\u0430\u043D\u0438\u0435 \u043E\u0431\u044A\u0435\u043A\u0442\u0430 IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TestCodec",
-        "Value": "Unset localization item:Advanced_TestCodec()",
+        "Value": "\u0422\u0435\u0441\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0435 \u043A\u043E\u0434\u0435\u043A\u043E\u0432",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Globalization",
-        "Value": "Unset localization item:Advanced_Globalization()",
+        "Value": "\u041B\u043E\u043A\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F/\u0413\u043B\u043E\u0431\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Logging",
-        "Value": "Unset localization item:Advanced_Logging()",
+        "Value": "\u0416\u0443\u0440\u043D\u0430\u043B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Recover",
-        "Value": "Unset localization item:Advanced_Recover()",
+        "Value": "\u0412\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs",
-        "Value": "Unset localization item:Advanced_ClearPrefs()",
+        "Value": "\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u043F\u043B\u0430\u0442\u0444\u043E\u0440\u043C\u044B (\u0432\u043A\u043B\u044E\u0447\u0430\u044F \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Unset localization item:Advanced_ClearPrefs_Warn2()",
+        "Value": "\u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043D\u0435\u043B\u044C\u0437\u044F \u043E\u0442\u043C\u0435\u043D\u0438\u0442\u044C. \u0412\u0441\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0438 \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D\u043D\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435 \u0431\u0443\u0434\u0443\u0442 \u0443\u0434\u0430\u043B\u0435\u043D\u044B \u043D\u0430\u0432\u0441\u0435\u0433\u0434\u0430.\r\n\u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043D\u0435\u043E\u0431\u0440\u0430\u0442\u0438\u043C\u043E, \u0432\u0441\u0435 \u043E\u0441\u043D\u043E\u0432\u043D\u044B\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B \u043F\u043B\u0430\u0442\u0444\u043E\u0440\u043C\u044B \u0431\u0443\u0434\u0443\u0442 \u0431\u0435\u0437\u0432\u043E\u0437\u0432\u0440\u0430\u0442\u043D\u043E \u0443\u0442\u0435\u0440\u044F\u043D\u044B.\r\n\r\n\u0412\u044B \u0443\u0432\u0435\u0440\u0435\u043D\u044B? \u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u00AByes\u00BB \u0434\u043B\u044F \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u044F.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ],
@@ -35641,119 +35641,119 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "Unset localization item:Edit_DefaultInfLengthClipLength()",
+        "Value": "Ge\u00E7ersiz uzunluktaki klibin varsay\u0131lan uzunlu\u011Fu (kare)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_EnableClipInfoPopup",
-        "Value": "Unset localization item:Edit_EnableClipInfoPopup()",
+        "Value": "Par\u00E7a \u00F6zellikleri panelini \u00E7ift t\u0131klama ile a\u00E7maya izin ver",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Render_AudioComposeBufferSize",
-        "Value": "Unset localization item:Render_AudioComposeBufferSize()",
+        "Value": "Ses Birle\u015Ftirme Arabellek Boyutu\r(Ne kadar b\u00FCy\u00FCkse ses birle\u015Ftirme h\u0131z\u0131 o kadar h\u0131zl\u0131; ne kadar k\u00FC\u00E7\u00FCkse ses birle\u015Ftirme hassasiyeti o kadar y\u00FCksek olabilir)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "AISetting_ModelHint2",
-        "Value": "Unset localization item:AISetting_ModelHint2()",
+        "Value": "Bu sayfada, \u0027Kaydet\u0027 butonuna aktif olarak t\u0131klamad\u0131\u011F\u0131n\u0131z s\u00FCrece yap\u0131lan t\u00FCm de\u011Fi\u015Fiklikler ge\u00E7erli olmayacakt\u0131r.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Edit_UseDynamicPreview",
-        "Value": "Unset localization item:Edit_UseDynamicPreview()",
+        "Value": "Dinamik \u00D6nizleme Kullan",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Unset localization item:Advanced_EnableProcessStack()",
+        "Value": "Detayl\u0131 IPicture i\u015Fleme g\u00FCnl\u00FC\u011F\u00FCn\u00FC kaydet",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TraceIPictureObject",
-        "Value": "Unset localization item:Advanced_TraceIPictureObject()",
+        "Value": "IPicture nesnesini izleme",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_TestCodec",
-        "Value": "Unset localization item:Advanced_TestCodec()",
+        "Value": "Kodek Testi",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Globalization",
-        "Value": "Unset localization item:Advanced_Globalization()",
+        "Value": "Yerelle\u015Ftirme/K\u00FCreselle\u015Ftirme",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Logging",
-        "Value": "Unset localization item:Advanced_Logging()",
+        "Value": "G\u00FCnl\u00FCk",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_Recover",
-        "Value": "Unset localization item:Advanced_Recover()",
+        "Value": "Kurtar",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs",
-        "Value": "Unset localization item:Advanced_ClearPrefs()",
+        "Value": "Platform tercihlerini temizle (g\u00FCvenli depolama dahil)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Unset localization item:Advanced_ClearPrefs_Warn2()",
+        "Value": "Bu i\u015Flem geri al\u0131namaz. T\u00FCm ayarlar ve g\u00FCvenli depolama i\u00E7eri\u011Fi kal\u0131c\u0131 olarak kaybolacak.\r\nBu i\u015Flem geri al\u0131namaz, t\u00FCm platform tercihleri kal\u0131c\u0131 olarak kaybolacak.\r\n\r\nOnayl\u0131yor musunuz? Onaylamak i\u00E7in \u0022yes\u0022 yaz\u0131n.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "HasValidationErrors": false
       }
     ]

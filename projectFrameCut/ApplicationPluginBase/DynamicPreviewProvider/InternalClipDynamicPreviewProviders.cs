@@ -60,6 +60,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
         {
             return BuildFallbackLabel("Video source is unavailable.");
         }
+        clip.Decoder?.EnableLock = true;
 
         var contextKey = new VideoPrefetchContextKey(clip.Id, canvasWidth, canvasHeight);
         var frameKey = new VideoFrameCacheKey(clip.Id, canvasWidth, canvasHeight, targetFrame);

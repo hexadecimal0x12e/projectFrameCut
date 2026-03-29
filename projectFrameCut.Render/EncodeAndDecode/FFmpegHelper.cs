@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 
 namespace projectFrameCut.Render.EncodeAndDecode
 {
@@ -15,6 +16,65 @@ namespace projectFrameCut.Render.EncodeAndDecode
     {
         public const int INTERNAL_FFMPEG_ERRCODE_NOSTREAMFOUND = int.MaxValue - 1;
         public const int INTERNAL_FFMPEG_ERRCODE_UNSUPPORTFORMAT = int.MaxValue - 2;
+
+        private static int _ffmpegLogHooked = 0;
+        private static av_log_set_callback_callback? _ffmpegLogCallback;
+
+        public static bool IsPointerAddressesValid<TPointerType>(TPointerType* ptr) where TPointerType : unmanaged => ptr != null;
+        public static bool IsPointerAddressesNotValid<TPointerType>(TPointerType* ptr) where TPointerType : unmanaged => ptr == null;
+
+        public static void SetupFFmpegLogging(int minLogLevel = ffmpeg.AV_LOG_INFO)
+        {
+            if (Interlocked.Exchange(ref _ffmpegLogHooked, 1) == 1) return;
+
+            _ffmpegLogCallback = new av_log_set_callback_callback(OnFFmpegLog);
+            ffmpeg.av_log_set_level(minLogLevel);
+            ffmpeg.av_log_set_callback(_ffmpegLogCallback);
+            Log($"FFmpeg log callback registered. minLevel={minLogLevel}", "info");
+        }
+
+        private static void OnFFmpegLog(void* ptr, int level, string format, byte* vl)
+        {
+            if (level > ffmpeg.av_log_get_level()) return;
+
+            try
+            {
+                const int lineBufferSize = 4096;
+                byte* lineBuffer = stackalloc byte[lineBufferSize];
+                int printPrefix = 1;
+                ffmpeg.av_log_format_line2(ptr, level, format, vl, lineBuffer, lineBufferSize, &printPrefix);
+
+                var raw = Marshal.PtrToStringAnsi((IntPtr)lineBuffer) ?? format ?? string.Empty;
+                if (raw.Length == 0) return;
+
+                // FFmpeg format strings can contain trailing newlines and placeholders.
+                var msg = raw.Replace("\r", string.Empty).Replace("\n", string.Empty).Trim();
+                if (msg.Length == 0) return;
+#if DEBUG
+                if (File.Exists(Path.Combine(AppContext.BaseDirectory, "ffmpeg.log")))
+                {
+                    File.AppendAllText(Path.Combine(AppContext.BaseDirectory, "ffmpeg.log"), $"[{MapFFmpegLogLevel(level)}] {msg}\r\n");
+                }
+#endif
+                Log(msg, MapFFmpegLogLevel(level));
+            }
+            catch
+            {
+                // Keep logging callback non-throwing, FFmpeg calls this from native context.
+            }
+        }
+
+        private static string MapFFmpegLogLevel(int level)
+        {
+            if (level <= ffmpeg.AV_LOG_PANIC || level <= ffmpeg.AV_LOG_FATAL || level <= ffmpeg.AV_LOG_ERROR)
+                return "FFmpeg @ error";
+            if (level <= ffmpeg.AV_LOG_WARNING)
+                return "FFmpeg @ warning";
+            if (level <= ffmpeg.AV_LOG_INFO)
+                return "FFmpeg @ info";
+            return "FFmpeg @ diag";
+        }
+
 
         public static void Throw(int err, string api)
         {
