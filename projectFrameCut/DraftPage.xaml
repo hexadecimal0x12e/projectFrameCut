@@ -280,9 +280,9 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <HorizontalStackLayout Grid.Column="0" x:Name="LeftMenuBar">
-
                     <Button x:Name="AddClip" IsVisible="{Binding _ShouldShowClipMoveControlInCenterInfoBar}"  FontFamily="Icons" Text="&#xe145;" FontSize="24" ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" SemanticProperties.Description="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}" Clicked="AddClip_Clicked" Margin="2,0,0,0" />
                     <Button x:Name="AssetPanelButton" IsVisible="{Binding _ShouldShowClipMoveControlInCenterInfoBar}"  Text="&#xe413;" FontSize="24"  FontFamily="Icons" ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_Asset}" SemanticProperties.Description="{l:Localized Key=DraftPage_CenterMenuBar_Asset}" Margin="8,0,0,0" Clicked="AssetPanelButton_Clicked"/>
+                    <Button x:Name="AssistantToggleButton" Text="&#xe0b7;" FontSize="24" FontFamily="Icons" Margin="0,0,0,0" Clicked="AssistantToggleButton_Clicked" ToolTipProperties.Text="{l:Localized Key=AIAssistant_ChatViewTitle}" SemanticProperties.Description="{l:Localized Key=AIAssistant_ChatViewTitle}" />
                     <HorizontalStackLayout IsEnabled="{Binding SelectedAnyClip}" IsVisible="{Binding UnNullUseCompactLayout, Converter={toolkit:InvertedBoolConverter}}"  HorizontalOptions="{Binding UnNullUseCompactLayout, Converter={toolkit:BoolToObjectConverter TrueObject=End, FalseObject=Start}}" Margin="{Binding UnNullUseCompactLayout, Converter={toolkit:BoolToObjectConverter TrueObject='0,0,0,0', FalseObject='8,0,0,0'}}">
                         <BoxView WidthRequest="1" Margin="8,0,4,0" BackgroundColor="#80aaaaaa" />
                         <Button Text="&#xf71e;" FontSize="24" Margin="4,0,4,0" FontFamily="Icons" Command="{Binding MoveCommand}" SemanticProperties.Description="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" ToolTipProperties.Text="{l:Localized Key=DraftPage_MenuBar_Edit_Move}" />

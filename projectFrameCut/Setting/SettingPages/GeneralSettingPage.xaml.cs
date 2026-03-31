@@ -25,8 +25,6 @@ public partial class GeneralSettingPage : ContentPage
     public GeneralSettingPage()
     {
         Title = Localized.MainSettingsPage_Tab_General;
-        locates = new List<string>([$"{Localized._Default} / Default", "English (US)"]).Concat(ISimpleLocalizerBase.GetMapping().Where(c => c.Key != "en-US").Select(l => l.Value._LocateDisplayName).OrderDescending()).ToArray();
-        locateDisplayNameMapping = new(ISimpleLocalizerBase.GetMapping().ToDictionary(k => k.Value._LocateDisplayName, v => v.Key).Append(new KeyValuePair<string, string>("OS Default", "default")));
         FFmpegProviderDisplayNameMapping =
             new Dictionary<string, string>
             { {SettingLocalizedResources.GeneralCodec_SelectProvider_Internal, "disable" } }
@@ -43,6 +41,8 @@ public partial class GeneralSettingPage : ContentPage
     {
         Content = new VerticalStackLayout();
         Title = Localized.MainSettingsPage_Tab_General;
+        locates = new List<string>([$"{Localized._Default} / Default", "English (US)"]).Concat(ISimpleLocalizerBase.GetMapping().Where(c => c.Key != "en-US").Select(l => l.Value._LocateDisplayName).OrderDescending()).ToArray();
+        locateDisplayNameMapping = new(ISimpleLocalizerBase.GetMapping().ToDictionary(k => k.Value._LocateDisplayName, v => v.Key).Append(new KeyValuePair<string, string>("OS Default", "default")));
 
         themeOpts = new Dictionary<string, string>
         {
@@ -89,8 +89,23 @@ public partial class GeneralSettingPage : ContentPage
             .AddButton("userDataSelectButton", SettingLocalizedResources.General_UserData_SelectPath)
 #endif
             .AddButton("openUserDataButton", SettingLocalizedResources.General_UserData_Open(MauiProgram.DataPath))
-            //.AddButton(SettingLocalizedResources.General_UserData_ManagePageOpen, async (s, e) => await Navigation.PushAsync(new UserDataManagePage())) //todo
+            .AddButton(SettingLocalizedResources.General_UserData_ManagePageOpen, async (s, e) => await Navigation.PushAsync(new UserDataManagePage()))
+             .AddButton(SettingLocalizedResources.Misc_ClearCache, async (s, e) =>
+             {
+                 var files = Directory.GetFiles(FileSystem.CacheDirectory, "*", SearchOption.AllDirectories).Concat(Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "RenderCache"), "*", SearchOption.AllDirectories)).Concat(Directory.GetFiles(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"), "*", SearchOption.AllDirectories));
+                 var size = Math.Round(files.Sum(f => new FileInfo(f).Length) / 1024.0 / 1024.0, 2);
+                 if (!await DisplayAlertAsync(Localized._Info, SettingLocalizedResources.Misc_ClearCache_Confirm((ulong)files.Count(), size), Localized._Confirm, Localized._Cancel)) return;
+                 foreach (var item in files)
+                 {
+                     try
+                     {
+                         File.Delete(item);
+                     }
+                     catch { }
+                 }
 
+                 await DisplayAlertAsync(Localized._Info, Localized._Done, Localized._OK);
+             })
             .ListenToChanges(SettingInvoker);
         Content = rootPPB.BuildWithScrollView();
     }

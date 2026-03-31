@@ -102,6 +102,20 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     } = 0;
 
+    public bool ShowAllTemplates
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+                _ = Task.Run(async () => await FilterAssets());
+            }
+        }
+    } = false;
+
     public string AIPrompt
     {
         get;
@@ -471,6 +485,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         LoadTemplates();
         LoadTransforms();
         InitializeTextStyles();
+        await FilterAssets();
         var neighbors = _draftPage.FindNeighbors(_draftPage.SelectedClip);
         IsApplicableToLeft = neighbors.left != null;
         IsApplicableToRight = neighbors.right != null;
@@ -487,7 +502,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
     {
         AvailableTemplates.Clear();
 
-        foreach (var kv in TemplateStore.Templates.Where(c => c.Value.Scope == TemplateScope.Any || c.Value.Scope == TemplateScope.Clips))
+        foreach (var kv in TemplateStore.Templates)
         {
             var template = kv.Value;
             var item = new TemplateItemViewModel(this)
@@ -507,6 +522,15 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             AvailableTemplates.Add(item);
         }
+    }
+
+    private bool ShouldShowTemplateByScope(TemplateItemViewModel template)
+    {
+        if (ShowAllTemplates)
+            return true;
+
+        return string.Equals(template.Scope, TemplateScope.Any.ToString(), StringComparison.OrdinalIgnoreCase)
+            || string.Equals(template.Scope, TemplateScope.Clips.ToString(), StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task LoadAssets()
@@ -688,50 +712,25 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             var allStarts = clipDtos.Select(c => c.StartFrame).Concat(soundtrackDtos.Select(s => s.StartFrame)).ToArray();
             var minStart = allStarts.Length > 0 ? allStarts.Min() : 0u;
-            var shift = (long)_draftPage.CurrentFrame - minStart;
 
-            uint nextMainTrack = (uint)(_draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(-1).Max() + 1);
-            uint nextSubTrack = (uint)(Math.Max(DraftPage.SubTrackOffset, _draftPage.Tracks.Keys.Where(k => k >= DraftPage.SubTrackOffset).DefaultIfEmpty(DraftPage.SubTrackOffset - 1).Max() + 1));
-
-            var mainLayers = clipDtos.Where(c => c.LayerIndex < DraftPage.SubTrackOffset).Select(c => c.LayerIndex)
-                .Concat(soundtrackDtos.Where(s => s.LayerIndex < DraftPage.SubTrackOffset).Select(s => s.LayerIndex))
-                .Distinct()
-                .OrderBy(v => v)
-                .ToArray();
-            var subLayers = clipDtos.Where(c => c.LayerIndex >= DraftPage.SubTrackOffset).Select(c => c.LayerIndex)
-                .Concat(soundtrackDtos.Where(s => s.LayerIndex >= DraftPage.SubTrackOffset).Select(s => s.LayerIndex))
-                .Distinct()
-                .OrderBy(v => v)
-                .ToArray();
-
-            var mainMap = new Dictionary<uint, uint>();
-            for (int i = 0; i < mainLayers.Length; i++)
+            static uint NormalizeStart(uint value, uint minValue)
             {
-                mainMap[mainLayers[i]] = nextMainTrack + (uint)i;
-            }
+                if (value <= minValue)
+                {
+                    return 0u;
+                }
 
-            var subMap = new Dictionary<uint, uint>();
-            for (int i = 0; i < subLayers.Length; i++)
-            {
-                subMap[subLayers[i]] = nextSubTrack + (uint)i;
-            }
-
-            static uint ShiftStart(uint value, long offset)
-            {
-                var shifted = (long)value + offset;
-                return shifted <= 0 ? 0u : (uint)shifted;
+                return value - minValue;
             }
 
             foreach (var c in clipDtos)
             {
-                c.LayerIndex = c.LayerIndex >= DraftPage.SubTrackOffset ? subMap[c.LayerIndex] : mainMap[c.LayerIndex];
-                c.StartFrame = ShiftStart(c.StartFrame, shift);
+                c.StartFrame = NormalizeStart(c.StartFrame, minStart);
             }
 
             foreach (var s in soundtrackDtos)
             {
-                s.LayerIndex = s.LayerIndex >= DraftPage.SubTrackOffset ? subMap[s.LayerIndex] : mainMap[s.LayerIndex];
-                s.StartFrame = ShiftStart(s.StartFrame, shift);
+                s.StartFrame = NormalizeStart(s.StartFrame, minStart);
             }
 
             var importDraft = new DraftStructureJSON
@@ -744,30 +743,151 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             var (importedClips, _) = DraftImportAndExportHelper.ImportFromJSON(importDraft, _draftPage.ProjectInfo);
 
-            foreach (var track in importedClips.Values.Select(v => v.origTrack).OfType<int>().Distinct().OrderBy(v => v))
-            {
-                if (_draftPage.Tracks.ContainsKey(track))
-                {
-                    continue;
-                }
+            var templateClips = importedClips.Values
+                .Where(c => c.origTrack is not null)
+                .OrderBy(c => c.origTrack ?? 0)
+                .ThenBy(c => c.origX)
+                .ToList();
 
-                if (track >= DraftPage.SubTrackOffset)
-                {
-                    _draftPage.AddASubTrack(track);
-                }
-                else
-                {
-                    _draftPage.AddATrack(track);
-                }
+            if (templateClips.Count == 0)
+            {
+                await _draftPage.DisplayAlertAsync(Localized._Info, "This template has no valid timeline clips.", Localized._OK);
+                return;
             }
 
-            foreach (var kv in importedClips.OrderBy(k => k.Value.origTrack ?? 0).ThenBy(k => k.Value.origX))
+            var minTemplateX = templateClips.Min(c => c.origX);
+            var mainTemplateTracks = templateClips
+                .Select(c => c.origTrack ?? 0)
+                .Where(track => track < DraftPage.SubTrackOffset)
+                .Distinct()
+                .OrderBy(track => track)
+                .ToArray();
+            var subTemplateTracks = templateClips
+                .Select(c => c.origTrack ?? 0)
+                .Where(track => track >= DraftPage.SubTrackOffset)
+                .Distinct()
+                .OrderBy(track => track)
+                .ToArray();
+
+            var hasMainTrackClip = mainTemplateTracks.Length > 0;
+            var hasSubTrackClip = subTemplateTracks.Length > 0;
+
+            if (hasMainTrackClip && !hasSubTrackClip)
             {
-                _draftPage.RegisterClip(kv.Value, true);
-                _draftPage.AddAClip(kv.Value);
+                EnsurePlacementTrackExists(false);
+            }
+            else if (!hasMainTrackClip && hasSubTrackClip)
+            {
+                EnsurePlacementTrackExists(true);
+            }
+            else
+            {
+                EnsurePlacementTrackExists(false);
+                EnsurePlacementTrackExists(true);
             }
 
-            await _draftPage.UpdateAdjacencyForTrack();
+            Predicate<int>? trackFilter = null;
+            if (hasMainTrackClip && !hasSubTrackClip)
+            {
+                trackFilter = trackId => trackId < DraftPage.SubTrackOffset;
+            }
+            else if (!hasMainTrackClip && hasSubTrackClip)
+            {
+                trackFilter = trackId => trackId >= DraftPage.SubTrackOffset;
+            }
+
+            bool hasPlacedTemplate = false;
+            _draftPage.BeginClipPlacement((targetTrack, targetStartX) =>
+            {
+                if (hasPlacedTemplate)
+                {
+                    throw new InvalidOperationException("Template placement has already been committed.");
+                }
+
+                hasPlacedTemplate = true;
+                var xOffset = targetStartX - minTemplateX;
+
+                var mainTrackMap = new Dictionary<int, int>();
+                if (hasMainTrackClip)
+                {
+                    var mainAnchorTrack = targetTrack < DraftPage.SubTrackOffset
+                        ? targetTrack
+                        : _draftPage.Tracks.Keys.Where(k => k < DraftPage.SubTrackOffset).DefaultIfEmpty(-1).Max() + 1;
+                    if (mainAnchorTrack < 0)
+                    {
+                        mainAnchorTrack = 0;
+                    }
+
+                    for (int i = 0; i < mainTemplateTracks.Length; i++)
+                    {
+                        mainTrackMap[mainTemplateTracks[i]] = mainAnchorTrack + i;
+                    }
+                }
+
+                var subTrackMap = new Dictionary<int, int>();
+                if (hasSubTrackClip)
+                {
+                    var subAnchorTrack = targetTrack >= DraftPage.SubTrackOffset
+                        ? targetTrack
+                        : Math.Max(
+                            DraftPage.SubTrackOffset,
+                            _draftPage.Tracks.Keys.Where(k => k >= DraftPage.SubTrackOffset).DefaultIfEmpty(DraftPage.SubTrackOffset - 1).Max() + 1);
+
+                    for (int i = 0; i < subTemplateTracks.Length; i++)
+                    {
+                        subTrackMap[subTemplateTracks[i]] = subAnchorTrack + i;
+                    }
+                }
+
+                foreach (var trackId in mainTrackMap.Values.Concat(subTrackMap.Values).Distinct().OrderBy(v => v))
+                {
+                    if (_draftPage.Tracks.ContainsKey(trackId))
+                    {
+                        continue;
+                    }
+
+                    if (trackId >= DraftPage.SubTrackOffset)
+                    {
+                        _draftPage.AddASubTrack(trackId);
+                    }
+                    else
+                    {
+                        _draftPage.AddATrack(trackId);
+                    }
+                }
+
+                ClipElementUI? firstClip = null;
+                foreach (var sourceClip in templateClips)
+                {
+                    if (sourceClip.origTrack is not int sourceTrack)
+                    {
+                        continue;
+                    }
+
+                    var mappedTrack = sourceTrack >= DraftPage.SubTrackOffset
+                        ? subTrackMap[sourceTrack]
+                        : mainTrackMap[sourceTrack];
+                    var mappedX = Math.Max(0, sourceClip.origX + xOffset);
+
+                    sourceClip.origTrack = mappedTrack;
+                    sourceClip.SubLayerIndex = mappedTrack;
+                    sourceClip.origX = mappedX;
+                    sourceClip.layoutX = mappedX;
+                    sourceClip.layoutY = 0;
+                    sourceClip.defaultY = 0;
+                    sourceClip.Clip.TranslationX = mappedX;
+                    sourceClip.Clip.TranslationY = 0;
+
+                    _draftPage.RegisterClip(sourceClip, true);
+                    _draftPage.AddAClip(sourceClip);
+
+                    firstClip ??= sourceClip;
+                }
+
+                _ = _draftPage.UpdateAdjacencyForTrack();
+                return firstClip ?? throw new InvalidOperationException("No clip could be placed from template.");
+            }, trackFilter, templateViewModel.Name);
+
             ClipAdded?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
@@ -790,7 +910,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         {
             _draftPage.IsPopupClosableByTapBackground = false;
             var inputTask = inputView.PromptTemplateValuesAsync(template, $"???{templateName ?? "???"}");
-            await _draftPage.ShowAPopup(new ScrollView { Content = inputView }, mode: "dialog");
+            await _draftPage.ShowAPopup(inputView, mode: "dialog");
             return await inputTask;
         }
         finally
@@ -1377,7 +1497,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             localFiltered.AddRange(LocalAssets);
             sharedFiltered.AddRange(SharedAssets);
             reuseableFiltered.AddRange(ReuseableAssets);
-            templateFiltered.AddRange(AvailableTemplates);
+            templateFiltered.AddRange(AvailableTemplates.Where(ShouldShowTemplateByScope));
         }
         else
         {
@@ -1415,6 +1535,11 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             foreach (var template in AvailableTemplates)
             {
+                if (!ShouldShowTemplateByScope(template))
+                {
+                    continue;
+                }
+
                 if (template.Name.ToLower().Contains(searchLower)
                     || template.TemplateType.ToLower().Contains(searchLower)
                     || template.Scope.ToLower().Contains(searchLower))
@@ -2478,7 +2603,7 @@ public class TemplateItemViewModel
     public int TrackCount { get; set; }
     public ITemplateStructure Template { get; set; } = default!;
 
-    public string Summary => $"{ClipCount} Clips / {TrackCount} Tracks";
+    public string Summary => Localized.DraftPage_AssetPanel_Templates_Summary(ClipCount, TrackCount);
 
     public Command AddTemplateCommand { get; set; }
 

@@ -4,10 +4,8 @@ using System.Text;
 
 namespace projectFrameCut.Render.RenderAPIBase.Project
 {
-    internal interface IAssemblyBasedTemplate
+    internal interface IAssemblyBasedTemplate : ITemplateStructure
     {
-        public string Name { get; }
-        public string Description { get; }
-        public DraftStructureJSON Build(IReadOnlyDictionary<string, DraftStructureJSON> data);
+        public DraftStructureJSON Build();
     }
 }

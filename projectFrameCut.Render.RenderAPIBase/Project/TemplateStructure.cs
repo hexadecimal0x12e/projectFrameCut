@@ -13,6 +13,11 @@
         TemplateType TemplateType { get; }
 
         /// <summary>
+        /// Indicates whether the template has an associated asset, such as a file or resource. If true, it means there is an asset linked to this template; if false, there is no associated asset.
+        /// </summary>   
+        bool HaveAsset { get; }
+
+        /// <summary>
         /// Get the scope of the template, which indicates the applicable range of the template. It can be project-level, clip-level, track-level, or any level.
         /// </summary>
         TemplateScope Scope { get; set; }
@@ -36,6 +41,54 @@
         /// Typed variable definitions. Key uses placeholder body without brackets.
         /// </summary>
         public Dictionary<string, TemplateVariableDefinition> VariableDefinitions { get; set; }
+
+        /// <summary>
+        /// Get or set the asset hash table, which maps asset identifiers to their corresponding hash values. 
+        /// Enabled when <see cref="HaveAsset"/> is true. 
+        /// This allows for tracking and managing assets associated with the template, ensuring that the correct assets are used when materializing the template.
+        /// </summary>
+        public Dictionary<string, string>? AssetHashTable { get; set; }
+    }
+
+    /// <summary>
+    /// Defines a single template variable.
+    /// </summary>
+    public class TemplateVariableDefinition
+    {
+        /// <summary>
+        /// Variable value kind.
+        /// </summary>
+        public TemplateVariableType Type { get; set; } = TemplateVariableType.String;
+
+        /// <summary>
+        /// Optional default value for the variable.
+        /// </summary>
+        public string? DefaultValue { get; set; }
+
+        /// <summary>
+        /// A user-friendly name for the variable, used for display purposes when prompting users to fill in variable values. 
+        /// It does not affect the functionality of the template and is purely for improving user experience.
+        /// </summary>
+        public string? UserFriendlyName { get; set; }
+
+        /// <summary>
+        /// A description for the variable, used for display purposes when prompting users to fill in variable values. 
+        /// </summary>
+        public string? Description { get; set; }    
+    }
+
+    /// <summary>
+    /// Supported value kinds for a template variable.
+    /// </summary>
+    public enum TemplateVariableType
+    {
+        Auto = 0,
+        String = 1,
+        Number = 2,
+        Integer = 3,
+        Boolean = 4,
+        File = 5,
+        Json = 6
     }
 
     /// <summary>

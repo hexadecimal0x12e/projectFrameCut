@@ -139,7 +139,15 @@ public partial class AssetPicker : ContentView
 			}
 			else if (GetHostPage() is Page page)
 			{
-				await page.Navigation.PushAsync(new AssetPlaybackPage(currentAsset));
+				var playbackPage = new AssetPlaybackPage(currentAsset);
+				try
+				{
+					await page.Navigation.PushAsync(playbackPage);
+				}
+				catch
+				{
+					await page.Navigation.PushModalAsync(playbackPage);
+				}
 			}
 		}
 		catch (Exception ex)

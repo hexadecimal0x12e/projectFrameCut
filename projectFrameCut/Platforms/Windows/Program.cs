@@ -3,6 +3,8 @@
 // in MAUI, if the namespace for WinUI's base is not '$(RootNamespace).WinUI', it will let whole App not working.
 #nullable enable
 
+using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
@@ -238,7 +240,12 @@ If you want to help the development of this application, please consider to subm
                 string appInfo = $"Application: {Assembly.GetExecutingAssembly().GetName().FullName}";
                 try
                 {
-                    appInfo = $"Application: {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} Packaged:{WinUI.App.IsPackaged()}";
+                    appInfo = 
+$"""
+{Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "unknown"}: {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config"}@{new string((Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Skip(6).ToArray())}  
+Assembly: {AppInfo.PackageName},{AppInfo.VersionString} on {AppContext.TargetFrameworkName} Packaged:{WinUI.App.IsPackaged()}
+IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
+""";
                 }
                 catch { }
                 var content =

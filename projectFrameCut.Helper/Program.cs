@@ -63,7 +63,7 @@ namespace projectFrameCut.Helper
         }
 
         [STAThread]
-        public static void FrozenMain(object? obj)
+        public static void FrozenMain()
         {
             SimpleLocalizerBaseGeneratedHelper.Localized ??= SimpleLocalizer_Helper.Init();
 
@@ -180,6 +180,9 @@ namespace projectFrameCut.Helper
 
         public static void Cleanup()
         {
+            CloseSplash();
+            CloseLog();
+            CloseFrozenDiag();
             Application.Exit();
         }
 

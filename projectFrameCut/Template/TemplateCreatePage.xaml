@@ -2,18 +2,12 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:l="clr-namespace:LocalizedResources"
+             xmlns:asset="clr-namespace:projectFrameCut.Asset"
              x:Class="projectFrameCut.Template.TemplateCreatePage">
     <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="10" Padding="12">
-        <VerticalStackLayout Grid.Row="0" Spacing="4">
             <Label Text="{l:Localized Key=TemplateCreatePage_Description}"
-                   FontSize="13"
-                   Opacity="0.85" />
-            <Label x:Name="TemplatePathLabel"
-                     Text=""
-                   FontSize="12"
-                   Opacity="0.75"
-                   LineBreakMode="TailTruncation" />
-        </VerticalStackLayout>
+                FontSize="13"
+                Opacity="0.85" />
 
         <Grid x:Name="ImportControlGrid" Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="8">
             <Button x:Name="ImportTemplateButton"
@@ -66,26 +60,20 @@
                                     Opacity="0.85"
                                     LineBreakMode="TailTruncation" />
                             </Grid>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                <Label Text="{l:Localized Key=AssetPage_Info_Type}"
-                                       FontSize="11"
-                                       Opacity="0.75"
-                                       VerticalOptions="Center" />
-                                <Grid Grid.Column="1" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-                                    <Entry Text="{Binding Value}"
-                                           Placeholder="{l:Localized Key=TemplateCreatePage_VariableValuePlaceholder}"
-                                           Keyboard="{Binding InputKeyboard}"
-                                           ClearButtonVisibility="WhileEditing" />
-                                    <Button Grid.Column="1"
-                                            Text="{l:Localized Key=TemplateCreatePage_SelectFile}"
-                                            IsVisible="{Binding IsFileType}"
-                                            Clicked="PickFileForVariable_Clicked" />
-                                    <Button Grid.Column="2"
-                                            Text="{l:Localized Key=TemplateCreatePage_SelectAsset}"
-                                            IsVisible="{Binding IsFileType}"
-                                            Clicked="PickAssetForVariable_Clicked" />
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                                <Entry Text="{Binding Value}"
+                                        Placeholder="{l:Localized Key=TemplateCreatePage_VariableValuePlaceholder}"
+                                        Keyboard="{Binding InputKeyboard}"
+                                        ClearButtonVisibility="WhileEditing" />
+                                <Button Grid.Column="1"
+                                        Text="{l:Localized Key=TemplateCreatePage_SelectFile}"
+                                        IsVisible="{Binding IsFileType}"
+                                        Clicked="PickFileForVariable_Clicked" />
+                                <Button Grid.Column="2"
+                                        Text="{l:Localized Key=TemplateCreatePage_SelectAsset}"
+                                        IsVisible="{Binding IsFileType}"
+                                        Clicked="PickAssetForVariable_Clicked" />
 
-                                </Grid>
                             </Grid>
                         </VerticalStackLayout>
                     </Border>
@@ -105,6 +93,37 @@
                     x:Name="CreateButton"
                 Text="{l:Localized Key=TemplateCreatePage_CreateProject}"
                     Clicked="CreateProject_Clicked" />
+        </Grid>
+
+        <Grid x:Name="AssetPickerOverlay"
+              Grid.RowSpan="5"
+              IsVisible="False"
+              BackgroundColor="#80000000">
+            <Border StrokeThickness="1"
+                    Padding="10"
+                    Margin="8"
+                    BackgroundColor="{AppThemeBinding Light=White, Dark=#1F1F1F}">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
+                    <Label Text="{l:Localized Key=TemplateCreatePage_SelectAsset}"
+                           FontAttributes="Bold"
+                           FontSize="16" />
+
+                    <asset:AssetPicker x:Name="InlineAssetPicker"
+                                       Grid.Row="1" />
+
+                    <HorizontalStackLayout Grid.Row="2"
+                                           HorizontalOptions="End"
+                                           Spacing="8">
+                        <Button x:Name="AssetPickerCancelButton"
+                                Text="{l:Localized Key=_Cancel}"
+                                Clicked="AssetPickerCancel_Clicked" />
+                        <Button x:Name="AssetPickerConfirmButton"
+                                Text="{l:Localized Key=_OK}"
+                                IsEnabled="False"
+                                Clicked="AssetPickerConfirm_Clicked" />
+                    </HorizontalStackLayout>
+                </Grid>
+            </Border>
         </Grid>
     </Grid>
 </ContentView>

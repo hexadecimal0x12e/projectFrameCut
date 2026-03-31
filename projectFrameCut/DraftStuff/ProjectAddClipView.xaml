@@ -194,79 +194,97 @@
             </CollectionView>
         </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AssetPanel_Templates}" Tag="Templates" x:Name="TemplatesTab" x:FieldModifier="public">
-            <CollectionView x:Name="TemplateCollectionView"
+            <Grid RowDefinitions="Auto,*">
+                <Border Grid.Row="0"
+                         IsEnabled="{Binding IsGeneratingAITransition, Converter={toolkit:InvertedBoolConverter}}"
+                         BackgroundColor="{AppThemeBinding Light=#E8F4FD, Dark=#1A3A5C}"
+                         Padding="12,0"
+                         Margin="8,8,8,-4"
+                         StrokeThickness="0"
+                         StrokeShape="RoundRectangle 6">
+                    <Grid>
+                        <Label HorizontalOptions="Start" VerticalOptions="Center"  TextColor="{AppThemeBinding Light=#1A5276, Dark=#85C1E9}" Text="{l:Localized Key=DraftPage_AssetPanel_Templates_Hint}"/>
+                        <HorizontalStackLayout Grid.Row="0" VerticalOptions="Center" HorizontalOptions="End">
+                            <CheckBox IsChecked="{Binding ShowAllTemplates}" VerticalOptions="Center"/>
+                            <Label Text="{l:Localized Key=DraftPage_AssetPanel_Templates_ShowAll}" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                    </Grid>
+                </Border>
+                <CollectionView x:Name="TemplateCollectionView"
+                            Grid.Row="1"
                             ItemsSource="{Binding FilteredAvailableTemplates}"
                             SelectionMode="None"
                             Margin="8"
                             SizeChanged="OnCollectionViewSizeChanged">
-                <CollectionView.ItemsLayout>
-                    <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
-                </CollectionView.ItemsLayout>
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical" Span="4" VerticalItemSpacing="8" HorizontalItemSpacing="8"/>
+                    </CollectionView.ItemsLayout>
 
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="viewmodels:TemplateItemViewModel">
-                        <Border StrokeThickness="1"
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="viewmodels:TemplateItemViewModel">
+                            <Border StrokeThickness="1"
                                 Stroke="{AppThemeBinding Light=#C7D2FE, Dark=#374151}"
                                 BackgroundColor="{AppThemeBinding Light=#EEF2FF, Dark=#111827}"
                                 HeightRequest="160"
                                 WidthRequest="180"
                                 StrokeShape="RoundRectangle 8">
-                            <Grid RowDefinitions="*,Auto">
-                                <VerticalStackLayout Grid.Row="0" Padding="10" Spacing="4">
-                                    <Label Text="{Binding Name}"
+                                <Grid RowDefinitions="*,Auto">
+                                    <VerticalStackLayout Grid.Row="0" Padding="10" Spacing="4">
+                                        <Label Text="{Binding Name}"
                                            FontSize="14"
                                            FontAttributes="Bold"
                                            LineBreakMode="TailTruncation"
                                            MaxLines="2" />
-                                    <Label Text="{Binding Summary}"
+                                        <Label Text="{Binding Summary}"
                                            FontSize="12"
                                            TextColor="{AppThemeBinding Light=#374151, Dark=#D1D5DB}"
                                            LineBreakMode="TailTruncation"
                                            MaxLines="1" />
-                                    <Label Text="{Binding Scope}"
+                                        <Label Text="{Binding Scope}"
                                            FontSize="12"
                                            TextColor="{AppThemeBinding Light=#4B5563, Dark=#9CA3AF}"
                                            LineBreakMode="TailTruncation"
                                            MaxLines="1" />
-                                    <Label Text="{Binding TemplateType}"
+                                        <Label Text="{Binding TemplateType}"
                                            FontSize="12"
                                            TextColor="{AppThemeBinding Light=#4B5563, Dark=#9CA3AF}"
                                            LineBreakMode="TailTruncation"
                                            MaxLines="1" />
-                                </VerticalStackLayout>
+                                    </VerticalStackLayout>
 
-                                <Grid Grid.Row="1"
+                                    <Grid Grid.Row="1"
                                       BackgroundColor="{AppThemeBinding Light=#E0E7FF, Dark=#1F2937}"
                                       ColumnDefinitions="*,50"
                                       Padding="4">
-                                    <Label Grid.Column="0"
+                                        <Label Grid.Column="0"
                                            Text="{Binding Name}"
                                            Margin="4,0,0,0"
                                            FontSize="12"
                                            VerticalOptions="Center"
                                            LineBreakMode="TailTruncation"
                                            MaxLines="1"/>
-                                    <Button Grid.Column="1"
+                                        <Button Grid.Column="1"
                                             Text="➕"
                                             HorizontalOptions="End"
                                             FontSize="16"
                                             CornerRadius="4"
                                             ToolTipProperties.Text="{l:Localized Key=DraftPage_CenterMenuBar_AddClip}"
                                             Command="{Binding AddTemplateCommand}"/>
+                                    </Grid>
                                 </Grid>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
 
-                <CollectionView.EmptyView>
-                    <Label Text="{l:Localized Key=AssetPage_SearchNoResult}"
+                    <CollectionView.EmptyView>
+                        <Label Text="{l:Localized Key=AssetPage_SearchNoResult}"
                            FontSize="14"
                            HorizontalOptions="Center"
                            VerticalOptions="Center"
                            Margin="20"/>
-                </CollectionView.EmptyView>
-            </CollectionView>
+                    </CollectionView.EmptyView>
+                </CollectionView>
+            </Grid>
         </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="AIGC" Tag="AIGeneratedContent" x:Name="AIGeneratedContentTab" x:FieldModifier="public">
             <VerticalStackLayout>
@@ -369,18 +387,18 @@
         </tv:TabbedViewItem>
         <tv:TabbedViewItem Header="{l:Localized Key=DraftPage_AddClipView_AddTransform}" Tag="Transform" x:Name="TransformTab" x:FieldModifier="public">
             <Grid RowDefinitions="Auto,Auto,*">
-                 <Border Grid.Row="0"
+                <Border Grid.Row="0"
                          IsEnabled="{Binding IsGeneratingAITransition, Converter={toolkit:InvertedBoolConverter}}"
                          BackgroundColor="{AppThemeBinding Light=#E8F4FD, Dark=#1A3A5C}"
                          Padding="12,8"
                          Margin="8,8,8,-4 "
                          StrokeThickness="0"
                          StrokeShape="RoundRectangle 6">
-                     <Grid>
-                         <Label Text="{Binding TransformAddHintText}"
+                    <Grid>
+                        <Label Text="{Binding TransformAddHintText}"
                                 FontSize="12"
                                 TextColor="{AppThemeBinding Light=#1A5276, Dark=#85C1E9}"/>
-                         <Button IsVisible="{x:OnIdiom Phone=true, Default=false}"
+                        <Button IsVisible="{x:OnIdiom Phone=true, Default=false}"
                                  IsEnabled="{Binding IsDraftSelectedAnyClip}"
                                  Background="{Binding IsSideDetermined, Converter={StaticResource IsValidConverter}}"
                                  Text="{l:Localized Key=DraftPage_AddClipView_AddTransform_RenderPreview}"              
@@ -390,8 +408,8 @@
                                  Margin="8,0,0,0"
                                  WidthRequest="120"
                                  HeightRequest="34" />
-                     </Grid>
-                 </Border>
+                    </Grid>
+                </Border>
                 <Border Grid.Row="1"
                         BackgroundColor="{AppThemeBinding Light=#FFF8E1, Dark=#3E2723}"
                         Padding="12,8"
@@ -490,7 +508,7 @@
                     </VerticalStackLayout>
                 </Border>
 
-               
+
 
                 <CollectionView x:Name="TransformCollectionView"
                                 Grid.Row="2"

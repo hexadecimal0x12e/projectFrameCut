@@ -4,35 +4,6 @@ using System.Text;
 
 namespace projectFrameCut.Render.RenderAPIBase.Project
 {
-    /// <summary>
-    /// Supported value kinds for a template variable.
-    /// </summary>
-    public enum TemplateVariableType
-    {
-        Auto = 0,
-        String = 1,
-        Number = 2,
-        Integer = 3,
-        Boolean = 4,
-        File = 5,
-        Json = 6
-    }
-
-    /// <summary>
-    /// Defines a single template variable.
-    /// </summary>
-    public class TemplateVariableDefinition
-    {
-        /// <summary>
-        /// Variable value kind.
-        /// </summary>
-        public TemplateVariableType Type { get; set; } = TemplateVariableType.String;
-
-        /// <summary>
-        /// Optional default value for the variable.
-        /// </summary>
-        public string? DefaultValue { get; set; }
-    }
 
     /// <summary>
     /// Represents a template package containing project and draft information.
@@ -64,6 +35,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// Typed variable definitions. Key uses placeholder body without brackets.
         /// </summary>
         public Dictionary<string, TemplateVariableDefinition> VariableDefinitions { get; set; } = new Dictionary<string, TemplateVariableDefinition>();
+
+        public bool HaveAsset {get; set; } = false;
+
+        public Dictionary<string, string>? AssetHashTable { get; set; } = null;
     }
 
 

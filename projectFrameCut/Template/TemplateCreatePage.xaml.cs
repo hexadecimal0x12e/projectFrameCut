@@ -24,6 +24,7 @@ public partial class TemplateCreatePage : ContentView
     private bool _isBusy;
     private bool _isTemplateInputMode;
     private TaskCompletionSource<Dictionary<string, string?>?>? _templateInputCompletion;
+    private TaskCompletionSource<AssetItem?>? _assetPickerCompletion;
 
     public event EventHandler? CloseRequested;
 
@@ -31,6 +32,7 @@ public partial class TemplateCreatePage : ContentView
     {
         InitializeComponent();
         VariablesCollectionView.ItemsSource = _filteredVariables;
+        WireInlineAssetPicker();
         ConfigureForProjectCreationMode();
         RefreshStats();
     }
@@ -40,8 +42,14 @@ public partial class TemplateCreatePage : ContentView
         InitializeComponent();
         ImportControlGrid.IsVisible = false;
         VariablesCollectionView.ItemsSource = _filteredVariables;
-        TemplatePathLabel.Text = template.TemplateName;
+        WireInlineAssetPicker();
         LoadTemplateFromStructureAsync(template, template.TemplateName ?? template.TemplateID.ToString());
+    }
+
+    private void WireInlineAssetPicker()
+    {
+        InlineAssetPicker.SelectedAssetChanged += InlineAssetPicker_SelectedAssetChanged;
+        InlineAssetPicker.AssetDoubleTapped += InlineAssetPicker_AssetDoubleTapped;
     }
 
     public void ConfigureForProjectCreationMode()
@@ -223,7 +231,6 @@ public partial class TemplateCreatePage : ContentView
         }
 
         ApplyFilter();
-        TemplatePathLabel.Text = sourceLabel;
 
         var projectName = _template.Project.ProjectName;
         if (string.IsNullOrWhiteSpace(projectName))
@@ -418,6 +425,12 @@ public partial class TemplateCreatePage : ContentView
 
     private async void Cancel_Clicked(object sender, EventArgs e)
     {
+        if (AssetPickerOverlay.IsVisible)
+        {
+            CloseInlineAssetPicker(null);
+            return;
+        }
+
         if (_isTemplateInputMode)
         {
             _templateInputCompletion?.TrySetResult(null);
@@ -769,105 +782,62 @@ public partial class TemplateCreatePage : ContentView
         FieldSearchBar.IsEnabled = !isBusy;
         VariablesCollectionView.IsEnabled = !isBusy;
         ProjectNameEntry.IsEnabled = !isBusy;
+        AssetPickerCancelButton.IsEnabled = !isBusy;
+        AssetPickerConfirmButton.IsEnabled = !isBusy && InlineAssetPicker.SelectedAsset is not null && !string.IsNullOrWhiteSpace(InlineAssetPicker.SelectedAsset.AssetId);
     }
 
     private async Task<AssetItem?> PickAssetWithPickerPageAsync()
     {
-
-
-        var picker = new AssetPicker();
-        var tcs = new TaskCompletionSource<AssetItem?>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        var okButton = new Button
+        if (_assetPickerCompletion is not null)
         {
-            Text = Localized._OK,
-            IsEnabled = false
-        };
-
-        var cancelButton = new Button
-        {
-            Text = Localized._Cancel
-        };
-
-        ContentPage? modal = null;
-
-        async Task CloseModalAsync()
-        {
-            await Navigation.PopAsync();
-
+            return await _assetPickerCompletion.Task;
         }
 
-        picker.SelectedAssetChanged += (_, selected) =>
+        _assetPickerCompletion = new TaskCompletionSource<AssetItem?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        InlineAssetPicker.SelectedAsset = null;
+        AssetPickerConfirmButton.IsEnabled = false;
+        AssetPickerOverlay.IsVisible = true;
+        return await _assetPickerCompletion.Task;
+    }
+
+    private void InlineAssetPicker_SelectedAssetChanged(object? sender, AssetItem? selected)
+    {
+        AssetPickerConfirmButton.IsEnabled = !_isBusy && selected is not null && !string.IsNullOrWhiteSpace(selected.AssetId);
+    }
+
+    private void InlineAssetPicker_AssetDoubleTapped(object? sender, AssetItem selected)
+    {
+        if (string.IsNullOrWhiteSpace(selected.AssetId))
         {
-            okButton.IsEnabled = selected is not null && !string.IsNullOrWhiteSpace(selected.AssetId);
-        };
+            return;
+        }
 
-        picker.AssetDoubleTapped += async (_, selected) =>
+        CloseInlineAssetPicker(selected);
+    }
+
+    private void AssetPickerCancel_Clicked(object sender, EventArgs e)
+    {
+        CloseInlineAssetPicker(null);
+    }
+
+    private void AssetPickerConfirm_Clicked(object sender, EventArgs e)
+    {
+        if (InlineAssetPicker.SelectedAsset is null || string.IsNullOrWhiteSpace(InlineAssetPicker.SelectedAsset.AssetId))
         {
-            if (string.IsNullOrWhiteSpace(selected.AssetId))
-            {
-                return;
-            }
+            return;
+        }
 
-            tcs.TrySetResult(selected);
-            await CloseModalAsync();
-        };
+        CloseInlineAssetPicker(InlineAssetPicker.SelectedAsset);
+    }
 
-        okButton.Clicked += async (_, _) =>
-        {
-            if (picker.SelectedAsset is null || string.IsNullOrWhiteSpace(picker.SelectedAsset.AssetId))
-            {
-                return;
-            }
-
-            tcs.TrySetResult(picker.SelectedAsset);
-            await CloseModalAsync();
-        };
-
-        cancelButton.Clicked += async (_, _) =>
-        {
-            tcs.TrySetResult(null);
-            await CloseModalAsync();
-        };
-
-        var grid = new Grid
-        {
-            RowDefinitions = new RowDefinitionCollection
-            {
-                new RowDefinition { Height = GridLength.Star },
-                new RowDefinition { Height = GridLength.Auto }
-            },
-        };
-
-        grid.Add(picker, 0, 0);
-        grid.Add(
-            new HorizontalStackLayout
-            {
-                HorizontalOptions = LayoutOptions.End,
-                Spacing = 8,
-                Padding = new Thickness(12, 8, 12, 12),
-                Children =
-                {
-                    cancelButton,
-                    okButton
-                }
-            },
-            0, 1);
-
-
-        modal = new ContentPage
-        {
-            Title = Localized.AssetPage_Info,
-            Content = grid
-        };
-
-        modal.Disappearing += (_, _) =>
-        {
-            tcs.TrySetResult(null);
-        };
-
-        await Navigation.PushAsync(modal);
-        return await tcs.Task;
+    private void CloseInlineAssetPicker(AssetItem? result)
+    {
+        AssetPickerOverlay.IsVisible = false;
+        AssetPickerConfirmButton.IsEnabled = false;
+        var tcs = _assetPickerCompletion;
+        _assetPickerCompletion = null;
+        tcs?.TrySetResult(result);
+        InlineAssetPicker.SelectedAsset = null;
     }
 
     private void RefreshStats()

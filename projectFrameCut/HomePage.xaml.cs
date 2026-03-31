@@ -739,7 +739,7 @@ public partial class HomePage : ContentPage
                                 IsReadonly = isReadonly,
                                 Denoise = SettingsManager.IsBoolSettingTrue("Edit_Denoise"),
                                 PreferredPopupMode = SettingsManager.GetSetting("Edit_PreferredPopupMode", "right"),
-                                MaximumSaveSlot = int.TryParse(SettingsManager.GetSetting("Edit_MaximumSaveSlot"), out var slotCount) ? slotCount : 10,
+                                MaximumSaveSlot = SettingsManager.GetSettingAs("Edit_MaximumSaveSlot", 50, 50),
                                 AlwaysShowToolbarBtns = SettingsManager.IsBoolSettingTrue("Edit_AlwaysShowToolbarButtons"),
                                 ShowBackendConsole = SettingsManager.IsBoolSettingTrue("render_ShowBackendConsole"),
                                 LiveVideoPreviewBufferLength = int.TryParse(SettingsManager.GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), out var bufferLen) ? bufferLen : 240,

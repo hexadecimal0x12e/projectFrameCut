@@ -32,6 +32,26 @@ namespace projectFrameCut.Services
 
         public static async Task AddAPlugin(string pluginPath, Page currentPage)
         {
+            void CleanupTempPluginDirectory(string tempDir)
+            {
+                if (string.IsNullOrWhiteSpace(tempDir))
+                {
+                    return;
+                }
+
+                try
+                {
+                    if (Directory.Exists(tempDir))
+                    {
+                        Directory.Delete(tempDir, true);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log(ex, $"Failed to clean temporary plugin directory: {tempDir}");
+                }
+            }
+
             IPluginBase? pluginInstance = null;
             PluginMetadata metadata = null!;
             string failReason = string.Empty;
@@ -247,17 +267,7 @@ namespace projectFrameCut.Services
 
             if (pluginInstance is null)
             {
-                try
-                {
-                    if (pluginInstance is null)
-                    {
-                        if (!string.IsNullOrEmpty(pluginRoot) && Directory.Exists(pluginRoot))
-                        {
-                            Directory.Delete(pluginRoot, true);
-                        }
-                    }
-                }
-                catch { }
+                CleanupTempPluginDirectory(pluginRoot);
                 await currentPage.DisplayAlertAsync(Localized._Error, SettingsManager.SettingLocalizedResources.Plugin_FailLoad_FailedBeacuse(failReason), Localized._OK);
                 return;
             }
@@ -303,6 +313,10 @@ namespace projectFrameCut.Services
                     {
                         PluginManager.LoadFrom(newInstance);
                     }
+                }
+                else
+                {
+                    CleanupTempPluginDirectory(pluginRoot);
                 }
             }
 

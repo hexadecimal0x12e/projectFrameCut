@@ -7,7 +7,12 @@ namespace projectFrameCut.Template
 {
     public static class TemplateStore
     {
-        public static Dictionary<Guid, ITemplateStructure> Templates { get; } = new Dictionary<Guid, ITemplateStructure>();
+        static TemplateStore()
+        {
+            Templates = new Dictionary<Guid, ITemplateStructure>();
+        }
+       
+        public static Dictionary<Guid, ITemplateStructure> Templates { get; private set; }
 
         public static ITemplateStructure? GetTemplate(Guid TemplateID)
         {

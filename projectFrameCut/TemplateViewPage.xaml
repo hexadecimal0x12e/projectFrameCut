@@ -103,7 +103,7 @@
 
                 <VerticalStackLayout Grid.Column="1" HorizontalOptions="End" VerticalOptions="Center" Spacing="8">
                     <Button Text="{l:Localized Key=AssetPage_ShowPreview}" Clicked="PreviewTemplate_Clicked" MinimumWidthRequest="120" />
-                    <Button Text="{l:Localized Key=TemplateViewPage_CreateVideo}" Clicked="CreateVideo_Clicked" MinimumWidthRequest="120" />
+                    <Button Text="{l:Localized Key=TemplateViewPage_CreateVideo}" IsEnabled="{Binding SelectedTemplate.IsSupportProject}" ToolTipProperties.Text="{Binding Path=IsEnabled, Converter={toolkit:BoolToObjectConverter TrueObject='', FalseObject='unsupport scope'}}" Clicked="CreateVideo_Clicked" MinimumWidthRequest="120" />
                 </VerticalStackLayout>
             </Grid>
         </Border>

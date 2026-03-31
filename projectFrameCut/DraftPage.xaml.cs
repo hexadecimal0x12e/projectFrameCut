@@ -718,6 +718,7 @@ public partial class DraftPage : ContentPage
         UpdatePlayheadHeight();
 
         AssisstantSubWindow.Content = ChatSessionsView;
+        MainMultiWindowView.CloseWindow(AssisstantSubWindow);
         //TryRestoreMainMultiWindowViewState();
         AddClipView.ClipAdded += async (s, args) =>
         {
@@ -726,10 +727,10 @@ public partial class DraftPage : ContentPage
             _transformMenuActivatedHandle = "none";
             await HidePopup();
         };
-        DraftChanged(sender, new ClipUpdateEventArgs { NoSave = true });
         OnPropertyChanged(nameof(UnNullUseCompactLayout));
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
+        DraftChanged(sender, new ClipUpdateEventArgs { NoSave = true });
         SetStateOK();
         SetStatusText(Localized.DraftPage_EverythingFine);
     }
@@ -5233,6 +5234,18 @@ public partial class DraftPage : ContentPage
         MainMultiWindowView.BringToFront(window);
     }
 
+    private void ToggleAssistantSubWindow()
+    {
+        var isOpened = MainMultiWindowView.Children.Contains(AssisstantSubWindow);
+        if (isOpened && AssisstantSubWindow.IsVisible)
+        {
+            MainMultiWindowView.CloseWindow(AssisstantSubWindow);
+            return;
+        }
+
+        ActivateMultiWindowItem(AssisstantSubWindow);
+    }
+
     private void ExecuteManageWindowCommand(string? action)
     {
         switch (action)
@@ -5257,6 +5270,9 @@ public partial class DraftPage : ContentPage
             //case "assistant":
             //    ActivateMultiWindowItem(AssisstantSubWindow);
             //    break;
+            case "assistant-toggle":
+                ToggleAssistantSubWindow();
+                break;
             case "close-extra":
                 foreach (var window in MainMultiWindowView.Children.OfType<MultiWindowItem>().Where(x => x.IsClosable).ToList())
                 {
@@ -5264,6 +5280,11 @@ public partial class DraftPage : ContentPage
                 }
                 break;
         }
+    }
+
+    private void AssistantToggleButton_Clicked(object sender, EventArgs e)
+    {
+        ExecuteManageWindowCommand("assistant-toggle");
     }
 
 

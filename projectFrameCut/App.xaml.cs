@@ -104,7 +104,7 @@ namespace projectFrameCut
             try
             {
                 var watchdogService = Handler?.MauiContext?.Services.GetService<UIThreadWatchdogService>();
-                if (watchdogService != null)
+                if (watchdogService != null && !SettingsManager.IsBoolSettingTrue("ui_DisableUIThreadWatchdog") && !Environment.GetCommandLineArgs().Contains("--noUIWatchdog"))
                 {
 #if WINDOWS
                     int count = 0;

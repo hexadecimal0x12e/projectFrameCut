@@ -7,6 +7,7 @@ using projectFrameCut.Render.TemplateSystem;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Template;
+using System.Diagnostics.CodeAnalysis;
 
 namespace projectFrameCut;
 
@@ -528,13 +529,13 @@ public partial class TemplateViewPage : ContentPage
             return true;
         }
 
-        private static List<TemplateItem> BuildTemplates() => Template.TemplateStore.Templates.Values.OfType<JSONBasedTemplateStructure>().Where(c => c.Scope == TemplateScope.Any || c.Scope == TemplateScope.Project).Select(C => new TemplateItem(C)).ToList();
+        private static List<TemplateItem> BuildTemplates() => Template.TemplateStore.Templates.Values.OfType<JSONBasedTemplateStructure>().Select(c => new TemplateItem(c)).ToList();
 
     }
 
     private sealed class TemplateItem
     {
-        public JSONBasedTemplateStructure Structure { get; init; }
+        public required JSONBasedTemplateStructure Structure { get; init; }
 
         public string TemplateId { get; }
         public string Name { get; }
@@ -549,7 +550,9 @@ public partial class TemplateViewPage : ContentPage
 
         public string TagsText => string.Join("  ", Tags.Select(t => $"#{t}"));
         public string UsageText => Localized.TemplateViewPage_UsageDisplay(UsageCount);
+        public bool IsSupportProject => Structure.Scope == TemplateScope.Project || Structure.Scope == TemplateScope.Any;
 
+        [SetsRequiredMembers]
         public TemplateItem(JSONBasedTemplateStructure structure)
         {
             Structure = structure;
@@ -581,18 +584,18 @@ public partial class TemplateViewPage : ContentPage
                 : "";
         }
 
-        public TemplateItem(string templateId, string name, string category, string durationText, string description, IReadOnlyList<string> tags, int usageCount, DateTime createdAt, Color accentColor, string previewVideoPath)
-        {
-            TemplateId = templateId ?? throw new ArgumentNullException(nameof(templateId));
-            Name = name ?? throw new ArgumentNullException(nameof(name));
-            Category = category ?? throw new ArgumentNullException(nameof(category));
-            DurationText = durationText ?? throw new ArgumentNullException(nameof(durationText));
-            Description = description ?? throw new ArgumentNullException(nameof(description));
-            Tags = tags ?? throw new ArgumentNullException(nameof(tags));
-            UsageCount = usageCount;
-            CreatedAt = createdAt;
-            AccentColor = accentColor ?? throw new ArgumentNullException(nameof(accentColor));
-            PreviewVideoPath = previewVideoPath ?? throw new ArgumentNullException(nameof(previewVideoPath));
-        }
+        //public TemplateItem(string templateId, string name, string category, string durationText, string description, IReadOnlyList<string> tags, int usageCount, DateTime createdAt, Color accentColor, string previewVideoPath)
+        //{
+        //    TemplateId = templateId ?? throw new ArgumentNullException(nameof(templateId));
+        //    Name = name ?? throw new ArgumentNullException(nameof(name));
+        //    Category = category ?? throw new ArgumentNullException(nameof(category));
+        //    DurationText = durationText ?? throw new ArgumentNullException(nameof(durationText));
+        //    Description = description ?? throw new ArgumentNullException(nameof(description));
+        //    Tags = tags ?? throw new ArgumentNullException(nameof(tags));
+        //    UsageCount = usageCount;
+        //    CreatedAt = createdAt;
+        //    AccentColor = accentColor ?? throw new ArgumentNullException(nameof(accentColor));
+        //    PreviewVideoPath = previewVideoPath ?? throw new ArgumentNullException(nameof(previewVideoPath));
+        //}
     }
 }

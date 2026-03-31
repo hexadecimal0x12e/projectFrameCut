@@ -606,6 +606,12 @@ public partial class RenderPage : ContentPage
                 "8bit" => IPicture.PicturePixelMode.BytePicture,
                 _ => IPicture.PicturePixelMode.UShortPicture
             };
+            bool dumpDiagData = SettingsManager.IsBoolSettingTrue("render_DumpDiagData");
+
+            if (dumpDiagData && PictureLifecycleTracker.Enabled)
+            {
+                PictureLifecycleTracker.Clear();
+            }
 
             await SubProgress.ProgressTo(0, 250, Easing.Linear);
 
@@ -704,7 +710,7 @@ public partial class RenderPage : ContentPage
                 MaxThreads = parallelThreadCount,
                 LogState = false,
                 LogStatToLogger = true,
-                LogProcessStack = SettingsManager.IsBoolSettingTrue("render_DumpDiagData"),
+                LogProcessStack = dumpDiagData,
                 GCOption = gcOption,
                 Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture
             };
@@ -804,8 +810,9 @@ public partial class RenderPage : ContentPage
 
             Log($"All done! Total elapsed {sw1}.");
 
-            if (SettingsManager.IsBoolSettingTrue("render_DumpDiagData"))
+            if (dumpDiagData)
             {
+                string renderCheckpointPath = Path.Combine(MauiProgram.DataPath, "RenderCheckpoint");
                 Guid SessionId = Guid.NewGuid();
                 Render.Benchmark.DiagReportExporter.ExportCsv(Path.Combine(MauiProgram.DataPath, "RenderCheckpoint"), renderer);
                 int idx = 0, count = 0;
@@ -821,6 +828,8 @@ public partial class RenderPage : ContentPage
                     count++;
                     if (count > 2500) sw = null;
                 }
+
+                await ExportPictureLifecycleTrackerSnapshots(renderCheckpointPath, SessionId);
             }
 
 
@@ -1160,6 +1169,84 @@ public partial class RenderPage : ContentPage
 #endif
 
         return "render  " + string.Join(" ", args.Select(s => $"\"{s}\""));
+    }
+
+    private async Task ExportPictureLifecycleTrackerSnapshots(string outputDirectory, Guid sessionId)
+    {
+        try
+        {
+            if (!PictureLifecycleTracker.Enabled)
+            {
+                Log("PictureLifecycleTracker is disabled. Skipped lifecycle snapshot export.");
+                return;
+            }
+
+            var snapshots = PictureLifecycleTracker.GetSnapshots(includeDisposed: true);
+            Directory.CreateDirectory(outputDirectory);
+
+            string outputPath = Path.Combine(outputDirectory, $"PictureLifecycle_{sessionId}_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            await using var stream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+            await using var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+
+            await writer.WriteLineAsync(string.Join(',',
+            [
+                "Id",
+                "TypeName",
+                "BitPerPixel",
+                "Width",
+                "Height",
+                "Pixels",
+                "CreatedAtUtc",
+                "DisposedAtUtc",
+                "CollectedAtUtc",
+                "IsDisposed",
+                "IsCollected",
+                "LifetimeToDisposeMs",
+                "LifetimeToCollectMs"
+            ]));
+
+            foreach (var snapshot in snapshots)
+            {
+                await writer.WriteLineAsync(string.Join(',',
+                [
+                    EscapeCsv(snapshot.Id.ToString(CultureInfo.InvariantCulture)),
+                    EscapeCsv(snapshot.TypeName),
+                    EscapeCsv(snapshot.BitPerPixel.ToString()),
+                    EscapeCsv(snapshot.Width.ToString(CultureInfo.InvariantCulture)),
+                    EscapeCsv(snapshot.Height.ToString(CultureInfo.InvariantCulture)),
+                    EscapeCsv(snapshot.Pixels.ToString(CultureInfo.InvariantCulture)),
+                    EscapeCsv(snapshot.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)),
+                    EscapeCsv(snapshot.DisposedAtUtc?.ToString("O", CultureInfo.InvariantCulture)),
+                    EscapeCsv(snapshot.CollectedAtUtc?.ToString("O", CultureInfo.InvariantCulture)),
+                    EscapeCsv(snapshot.IsDisposed ? "true" : "false"),
+                    EscapeCsv(snapshot.IsCollected ? "true" : "false"),
+                    EscapeCsv(snapshot.LifetimeToDispose?.TotalMilliseconds.ToString(CultureInfo.InvariantCulture)),
+                    EscapeCsv(snapshot.LifetimeToCollect?.TotalMilliseconds.ToString(CultureInfo.InvariantCulture))
+                ]));
+            }
+
+            await writer.FlushAsync();
+            Log($"Exported PictureLifecycleTracker snapshots: {snapshots.Count} records, {outputPath}");
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "export PictureLifecycleTracker snapshots", this);
+        }
+    }
+
+    private static string EscapeCsv(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        if (value.Contains(',') || value.Contains('"') || value.Contains('\n') || value.Contains('\r'))
+        {
+            return $"\"{value.Replace("\"", "\"\"")}\"";
+        }
+
+        return value;
     }
 
 }
