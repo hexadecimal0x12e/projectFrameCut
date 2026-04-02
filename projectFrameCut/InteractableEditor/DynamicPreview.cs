@@ -86,7 +86,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 		_currentFrame = frameIndex;
 		var renderVersion = Interlocked.Increment(ref _renderVersion);
 		var requests = ResolveRequests(frameIndex);
-		var prepared = await PrepareRequestsAsync(requests, targetWidth, targetHeight, frameIndex).ConfigureAwait(false);
+		var prepared = await PrepareRequestsAsync(requests, targetWidth, targetHeight, targetWidth, targetHeight, frameIndex).ConfigureAwait(false);
 
 		if (Dispatcher.IsDispatchRequired)
 		{
@@ -103,7 +103,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 		_outputHost.Content = null;
 	}
 
-	private static async Task<IReadOnlyList<PreparedPreview>> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int targetWidth, int targetHeight, uint frameIndex)
+	private static async Task<IReadOnlyList<PreparedPreview>> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex)
 	{
 		if (requests.Count == 0)
 		{
@@ -112,7 +112,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 
 		var preparationTasks = requests
 			.Reverse()
-			.Select(request => Task.Run(() => GenerateClipPreviewPrepared(request, targetWidth, targetHeight, frameIndex)))
+			.Select(request => Task.Run(() => GenerateClipPreviewPrepared(request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex)))
 			.ToArray();
 
 		return await Task.WhenAll(preparationTasks).ConfigureAwait(false);
@@ -186,9 +186,9 @@ public sealed class DynamicPreview : ContentView, IDisposable
 		return finalView is not null;
 	}
 
-	private static PreparedPreview GenerateClipPreviewPrepared(PreviewRequest request, int targetWidth, int targetHeight, uint frameIndex)
+	private static PreparedPreview GenerateClipPreviewPrepared(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex)
 	{
-		var generatedView = GenerateClipPreview(request, targetWidth, targetHeight, frameIndex, out var message);
+		var generatedView = GenerateClipPreview(request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, out var message);
 		return new PreparedPreview(generatedView, message, request.Clip);
 	}
 
@@ -221,7 +221,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 			.ToArray();
 	}
 
-	private static View? GenerateClipPreview(PreviewRequest request, int targetWidth, int targetHeight, uint frameIndex, out string? message)
+	private static View? GenerateClipPreview(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, out string? message)
 	{
 		message = null;
 		var clip = request.Clip;
@@ -235,7 +235,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 		{
 			try
 			{
-				generatedView = request.Provider.Generate(clip, targetWidth, targetHeight, frameIndex);
+				generatedView = request.Provider.Generate(clip, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex);
 			}
 			catch (Exception ex)
 			{
@@ -247,7 +247,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 		{
 			try
 			{
-				generatedView = GenerateFrameFallbackView(clip, targetWidth, targetHeight, frameIndex);
+				generatedView = GenerateFrameFallbackView(clip, canvasWidth, canvasHeight, frameIndex);
 			}
 			catch (Exception ex)
 			{
@@ -266,7 +266,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 			.Where(e => e.Enabled)
 			.OrderBy(e => e.Index))
 		{
-			generatedView = ApplyEffectPreview(generatedView, effect, targetWidth, targetHeight, frameIndex);
+			generatedView = ApplyEffectPreview(generatedView, effect, canvasWidth, canvasHeight, frameIndex);
 		}
 
 		return generatedView;

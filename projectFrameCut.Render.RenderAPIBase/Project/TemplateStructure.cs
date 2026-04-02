@@ -15,7 +15,7 @@
         /// <summary>
         /// Indicates whether the template has an associated asset, such as a file or resource. If true, it means there is an asset linked to this template; if false, there is no associated asset.
         /// </summary>   
-        bool HaveAsset { get; }
+        bool HaveAsset { get; set; }
 
         /// <summary>
         /// Get the scope of the template, which indicates the applicable range of the template. It can be project-level, clip-level, track-level, or any level.
@@ -59,6 +59,13 @@
         /// Variable value kind.
         /// </summary>
         public TemplateVariableType Type { get; set; } = TemplateVariableType.String;
+
+        /// <summary>
+        /// The kind of asset when <see cref="Type"/> is <see cref="TemplateVariableType.File"/>.
+        /// Use <see cref="AssetType.Other"/> for any type of asset, or null for non-asset file variables.
+        /// Keep it null if <see cref="Type"/> is not <see cref="TemplateVariableType.File"/>.
+        /// </summary>
+        public AssetType? TypeOfAsset { get; set; } = null;
 
         /// <summary>
         /// Optional default value for the variable.
@@ -129,7 +136,7 @@
     {
         JSON = 0,
         Assembly = 1,
-        Underfined = -1
+        Undefined = -1
     }
 
     public enum TemplateScope

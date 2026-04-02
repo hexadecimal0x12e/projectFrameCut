@@ -1,4 +1,3 @@
-using Microsoft.Maui.Handlers;
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
@@ -8,7 +7,6 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 
 namespace projectFrameCut.ApplicationPluginBase.Effect
 {
@@ -20,7 +18,14 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
-        public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+        public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>
+        {
+            { "R", (ushort)0 },
+            { "G", (ushort)0 },
+            { "B", (ushort)0 },
+            { "A", ushort.MaxValue },
+            { "Tolerance", (ushort)1200 },
+        };
 
         public List<string> ParametersNeeded => new List<string>
         {
@@ -60,7 +65,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public string InputAnchorDisplayName => string.Empty;
         public string[]? InputAnchorsDisplayName => null;
         public string OutputAnchorDisplayName => string.Empty;
-        public bool Enabled { get; set; }
+        public bool Enabled { get; set; } = true;
 
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
@@ -74,41 +79,36 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public PropertyPanelBuilder CreateUI()
         {
-            var ppb = new PropertyPanelBuilder();
+            ushort r = EffectBundleUiHelper.GetUShort(Parameters, "R", 0);
+            ushort g = EffectBundleUiHelper.GetUShort(Parameters, "G", 0);
+            ushort b = EffectBundleUiHelper.GetUShort(Parameters, "B", 0);
+            ushort a = EffectBundleUiHelper.GetUShort(Parameters, "A", ushort.MaxValue);
+            ushort tolerance = EffectBundleUiHelper.GetUShort(Parameters, "Tolerance", 1200);
 
-            foreach (var paramName in ParametersNeeded)
-            {
-                if (!ParametersType.TryGetValue(paramName, out var paramType)) continue;
-
-                var currentVal = Parameters != null && Parameters.ContainsKey(paramName) ? Parameters[paramName] : null;
-                if (currentVal is JsonElement je)
-                {
-                    if (je.ValueKind == JsonValueKind.Number)
-                        currentVal = je.ToString(); // Simply convert to string for display
-                    else if (je.ValueKind == JsonValueKind.String)
-                        currentVal = je.GetString();
-                    else
-                        currentVal = je.ToString();
-                }
-
-                string valStr = currentVal?.ToString() ?? "0";
-                
-                // For ushort values, we use a simple entry. 
-                // In a more advanced UI, we might use a color picker if R/G/B combine to a color, 
-                // but checking the interface, these are individual fields.
-                ppb.AddEntry(paramName, PluginManager.GetLocalizationItem($"_{paramName}", paramName), valStr, "");
-            }
-            return ppb;
+            var panel = new PropertyPanelBuilder();
+            EffectBundleUiHelper.AddNumericEntry(panel, "R", EffectBundleUiHelper.ParamLabel("R"), r.ToString(), "0");
+            EffectBundleUiHelper.AddNumericEntry(panel, "G", EffectBundleUiHelper.ParamLabel("G"), g.ToString(), "0");
+            EffectBundleUiHelper.AddNumericEntry(panel, "B", EffectBundleUiHelper.ParamLabel("B"), b.ToString(), "0");
+            EffectBundleUiHelper.AddNumericEntry(panel, "A", EffectBundleUiHelper.ParamLabel("A"), a.ToString(), ushort.MaxValue.ToString());
+            panel.AddSlider(
+                "Tolerance",
+                EffectBundleUiHelper.ParamLabel("Tolerance"),
+                0,
+                ushort.MaxValue,
+                tolerance,
+                null,
+                SliderUpdateEventCallMode.OnValueChanged);
+            return panel;
         }
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            if (Parameters == null) Parameters = new Dictionary<string, object>();
-            
-            if (ushort.TryParse(args.Value as string, out var val))
+            if ((args.Id == "R" || args.Id == "G" || args.Id == "B" || args.Id == "A" || args.Id == "Tolerance")
+                && EffectBundleUiHelper.TrySetUShort(Parameters, args.Id, args.Value))
             {
-                Parameters[args.Id] = val;
+                return Parameters;
             }
+
             return Parameters;
         }
 
@@ -116,8 +116,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return new EffectBundleDisplayItem
             {
-                Name = PluginManager.GetLocalizationItem("DisplayName_Effect_RemoveColor", "Remove Color"),
-                Description = PluginManager.GetLocalizationItem("Description_Effect_RemoveColor", "Remove a specific color from the image based on tolerance."),
+                Name = EffectBundleUiHelper.L("DisplayName_Effect_RemoveColor", "Remove Color"),
+                Description = EffectBundleUiHelper.L("Description_Effect_RemoveColor", "Remove a specific color from the image based on tolerance."),
                 Thumbnail = ImageHelper.LoadFromAsset("icon_effect_remove_color")
             };
         }

@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 
 namespace projectFrameCut.Render.Effect
 {
@@ -23,6 +24,7 @@ namespace projectFrameCut.Render.Effect
         public int StartY { get; init; }
         public int Height { get; init; }
         public int Width { get; init; }
+        public float Angle { get; init; }
 
         public Dictionary<string, object> Parameters => new Dictionary<string, object>
         {
@@ -30,6 +32,7 @@ namespace projectFrameCut.Render.Effect
             {"StartY", StartY },
             {"Height", Height },
             {"Width", Width },
+            {"Angle", Angle },
         };
 
         public string? NeedComputer => null;
@@ -43,6 +46,12 @@ namespace projectFrameCut.Render.Effect
             "StartY",
             "Height",
             "Width",
+            "Angle"
+        };
+
+        public static List<string> OptionalParameters { get; } = new List<string>
+        {
+            "Angle",
         };
 
         public static Dictionary<string, string> ParametersType { get; } = new Dictionary<string, string>
@@ -51,6 +60,7 @@ namespace projectFrameCut.Render.Effect
             {"StartY", "int" },
             {"Height", "int" },
             {"Width", "int" },
+            {"Angle", "float" },
         };
 
         public string TypeName => "Crop";
@@ -58,14 +68,18 @@ namespace projectFrameCut.Render.Effect
         public static IEffect FromParametersDictionary(Dictionary<string, object> parameters, EffectImplementType implementType = EffectImplementType.ImageSharp)
         {
             ArgumentNullException.ThrowIfNull(parameters);
-            if (!ParametersNeeded.All(parameters.ContainsKey))
+            if (!ParametersNeeded.Except(OptionalParameters).All(parameters.ContainsKey))
             {
                 throw new ArgumentException($"Missing parameters: {string.Join(", ", ParametersNeeded.Where(p => !parameters.ContainsKey(p)))}");
             }
-            if (parameters.Count != ParametersNeeded.Count)
+
+            var unsupportedParameters = parameters.Keys.Except(ParametersNeeded).Except(OptionalParameters).ToList();
+            if (unsupportedParameters.Count > 0)
             {
-                throw new ArgumentException("Too many parameters provided.");
+                throw new ArgumentException($"Unsupported parameters: {string.Join(", ", unsupportedParameters)}");
             }
+
+            float angle = parameters.TryGetValue("Angle", out var angleVal) ? Convert.ToSingle(angleVal) : 0f;
 
             return new CropEffect_ImageSharp
             {
@@ -73,6 +87,7 @@ namespace projectFrameCut.Render.Effect
                 StartY = Convert.ToInt32(parameters["StartY"]),
                 Height = Convert.ToInt32(parameters["Height"]),
                 Width = Convert.ToInt32(parameters["Width"]),
+                Angle = angle,
                 ImplementType = implementType,
             };
         }
@@ -89,7 +104,23 @@ namespace projectFrameCut.Render.Effect
 
         public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()
         {
-            return imgCtx => imgCtx.Crop(new Rectangle(StartX, StartY, Width, Height));
+            return imgCtx =>
+            {
+                var safeRect = BuildSafeCropRect(StartX, StartY, Width, Height, imgCtx.GetCurrentSize());
+                if (Math.Abs(Angle) <= float.Epsilon)
+                {
+                    return imgCtx.Crop(safeRect);
+                }
+
+                float centerX = safeRect.X + safeRect.Width / 2f;
+                float centerY = safeRect.Y + safeRect.Height / 2f;
+                var transformBuilder = new AffineTransformBuilder()
+                    .AppendTranslation(new Vector2(-centerX, -centerY))
+                    .AppendRotationDegrees(-Angle)
+                    .AppendTranslation(new Vector2(centerX, centerY));
+
+                return imgCtx.Transform(transformBuilder).Crop(safeRect);
+            };
         }
 
         public IPictureProcessStep GetStep(IPicture source, int targetWidth, int targetHeight)
@@ -108,7 +139,25 @@ namespace projectFrameCut.Render.Effect
             }
 
 
-            return new CropProcessStep(startX, startY, width, height);
+            return new CropProcessStep(startX, startY, width, height, Angle);
+        }
+
+        private static Rectangle BuildSafeCropRect(int startX, int startY, int width, int height, Size currentSize)
+        {
+            if (width <= 0 || height <= 0)
+            {
+                throw new ArgumentException("Width and Height must be positive");
+            }
+
+            var requestedRect = new Rectangle(startX, startY, width, height);
+            var sourceRect = new Rectangle(0, 0, currentSize.Width, currentSize.Height);
+            var safeRect = Rectangle.Intersect(requestedRect, sourceRect);
+            if (safeRect.Width <= 0 || safeRect.Height <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(startX), "Crop rectangle must overlap source bounds.");
+            }
+
+            return safeRect;
         }
 
         public string? BindedEffectGroupID { get; set; }
@@ -125,26 +174,53 @@ namespace projectFrameCut.Render.Effect
         public int StartY { get; init; }
         public int Width { get; init; }
         public int Height { get; init; }
+        public float Angle { get; init; }
 
-        public CropProcessStep(int startX, int startY, int width, int height)
+        public CropProcessStep(int startX, int startY, int width, int height, float angle = 0f)
         {
             StartX = startX;
             StartY = startY;
             Width = width;
             Height = height;
+            Angle = angle;
             Properties = new Dictionary<string, object?>
             {
                 { nameof(StartX), StartX },
                 { nameof(StartY), StartY },
                 { nameof(Width), Width },
-                { nameof(Height), Height }
+                { nameof(Height), Height },
+                { nameof(Angle), Angle }
             };
         }
 
         public IPicture Process(IPicture source)
         {
             var sw = Stopwatch.StartNew();
-            var result = EffectHelper.CropPicture(source, StartX, StartY, Width, Height, "Crop", typeof(CropProcessStep));
+            IPicture result;
+            if (Math.Abs(Angle) <= float.Epsilon)
+            {
+                result = EffectHelper.CropPicture(source, StartX, StartY, Width, Height, "Crop", typeof(CropProcessStep));
+            }
+            else
+            {
+                var img = source.SaveToSixLaborsImage();
+                var safeRect = BuildSafeCropRect(StartX, StartY, Width, Height, img.Size);
+                float centerX = safeRect.X + safeRect.Width / 2f;
+                float centerY = safeRect.Y + safeRect.Height / 2f;
+                var transformBuilder = new AffineTransformBuilder()
+                    .AppendTranslation(new Vector2(-centerX, -centerY))
+                    .AppendRotationDegrees(-Angle)
+                    .AppendTranslation(new Vector2(centerX, centerY));
+
+                var transformed = img.Clone(ctx => ctx.Transform(transformBuilder).Crop(safeRect));
+                result = (int)source.bitPerPixel switch
+                {
+                    8 => new Picture8bpp(transformed),
+                    16 => new Picture16bpp(transformed),
+                    _ => throw new NotSupportedException("Specific pixel-mode is not supported.")
+                };
+            }
+
             sw.Stop();
             _elapsed = sw.Elapsed;
             result.ProcessStack = source.ProcessStack.Append(GetProcessStack()).ToList();
@@ -153,7 +229,41 @@ namespace projectFrameCut.Render.Effect
 
         public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()
         {
-            return imgCtx => imgCtx.Crop(new Rectangle(StartX, StartY, Width, Height));
+            return imgCtx =>
+            {
+                var safeRect = BuildSafeCropRect(StartX, StartY, Width, Height, imgCtx.GetCurrentSize());
+                if (Math.Abs(Angle) <= float.Epsilon)
+                {
+                    return imgCtx.Crop(safeRect);
+                }
+
+                float centerX = safeRect.X + safeRect.Width / 2f;
+                float centerY = safeRect.Y + safeRect.Height / 2f;
+                var transformBuilder = new AffineTransformBuilder()
+                    .AppendTranslation(new Vector2(-centerX, -centerY))
+                    .AppendRotationDegrees(-Angle)
+                    .AppendTranslation(new Vector2(centerX, centerY));
+
+                return imgCtx.Transform(transformBuilder).Crop(safeRect);
+            };
+        }
+
+        private static Rectangle BuildSafeCropRect(int startX, int startY, int width, int height, Size currentSize)
+        {
+            if (width <= 0 || height <= 0)
+            {
+                throw new ArgumentException("Width and Height must be positive");
+            }
+
+            var requestedRect = new Rectangle(startX, startY, width, height);
+            var sourceRect = new Rectangle(0, 0, currentSize.Width, currentSize.Height);
+            var safeRect = Rectangle.Intersect(requestedRect, sourceRect);
+            if (safeRect.Width <= 0 || safeRect.Height <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(startX), "Crop rectangle must overlap source bounds.");
+            }
+
+            return safeRect;
         }
 
         public PictureProcessStack GetProcessStack() => new PictureProcessStack
@@ -168,7 +278,8 @@ namespace projectFrameCut.Render.Effect
                 { nameof(StartX), StartX },
                 { nameof(StartY), StartY },
                 { nameof(Width), Width },
-                { nameof(Height), Height }
+                { nameof(Height), Height },
+                { nameof(Angle), Angle }
             }
         };
     }
@@ -195,6 +306,7 @@ namespace projectFrameCut.Render.Effect
             {"StartY", "int" },
             {"Height", "int" },
             {"Width", "int" },
+            {"Angle", "float" },
         };
 
         public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };

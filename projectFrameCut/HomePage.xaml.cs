@@ -1,31 +1,36 @@
 using LocalizedResources;
 using Microsoft.Maui.Dispatching;
 using Microsoft.Maui.Graphics;
+using Microsoft.Maui.Platform;
+using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
+using projectFrameCut.Asset;
 using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.Plugin;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
 using projectFrameCut.Setting.SettingManager;
 using projectFrameCut.Shared;
+using projectFrameCut.Template;
 using projectFrameCut.ViewModels;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Compression;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using static System.Net.Mime.MediaTypeNames;
 using IPicture = projectFrameCut.Shared.IPicture;
-using projectFrameCut.Asset;
-using Microsoft.Maui.Platform;
-using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
-using projectFrameCut.ApplicationAPIBase.Helpers;
-using System.Globalization;
-using System.Reflection;
-using projectFrameCut.Render.RenderAPIBase.Plugins;
-using projectFrameCut.ApplicationAPIBase.Plugins;
-using projectFrameCut.Template;
+using Application = Microsoft.Maui.Controls.Application;
+using projectFrameCut.Setting.SettingPages;
+
+
 
 
 #if WINDOWS
@@ -55,6 +60,7 @@ public partial class HomePage : ContentPage
     {
         InitializeComponent();
         WelcomeLabel.Text = Localized.HomePage_Welcome();
+        if (DateTime.Now.Month == 4 && DateTime.Now.Day == 1 && int.TryParse(Preferences.Get("LastAprilFoolsDayEasterEggTriggerYear", "0000"), out var y) && y != DateTime.Now.Year) Method1();
         _viewModel = new ProjectsListViewModel();
         BindingContext = _viewModel;
         Loaded += async (s, e) =>
@@ -1200,7 +1206,7 @@ public partial class HomePage : ContentPage
                 Shell.SetTabBarIsVisible(renderPage, false);
                 Shell.SetNavBarIsVisible(renderPage, true);
 #if WINDOWS
-                AppShell.instance.HideNavView(); 
+                AppShell.instance.HideNavView();
 #endif
                 await Navigation.PushAsync(renderPage);
             });
@@ -1347,6 +1353,8 @@ public partial class HomePage : ContentPage
     {
         if (vmItem._name == CreateButtonName)
         {
+            if (DateTime.Now.Month == 4 && DateTime.Now.Day == 1) Method1();
+
             return;
         }
 
@@ -1537,6 +1545,80 @@ public partial class HomePage : ContentPage
             Thread.Sleep(50);
             Window?.Width = Window.Width + 8;
         });
+
+    }
+
+    public void Method1()
+    {
+        try
+        {
+            Preferences.Set("LastAprilFoolsDayEasterEggTriggerYear", DateTime.Now.Year.ToString());
+
+            var projName = "Untitled";
+
+            var draftSourcePath = Path.Combine(MauiProgram.DataPath, "My Drafts", $"apfd-{DateTime.Now.Year}.pjfc");
+
+
+            Directory.CreateDirectory(draftSourcePath);
+
+            var ProjectInfo = new ProjectJSONStructure
+            {
+                ProjectName = projName,
+                NormallyExited = true,
+                LastChanged = DateTime.Now,
+                LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion,
+                LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown",
+                PluginUsed = []
+            };
+
+            Dictionary<string, TextClipEntry> template = new();
+            EditSettingPage.LoadTextTemplates(ref template);
+
+            DraftPage _draftPage = new();
+            var element = _draftPage.CreateAndAddClip(
+                startX: 0,
+                width: _draftPage.FrameToPixel(300),
+                trackIndex: 0,
+                id: null,
+                labelText: "???",
+                background: new Microsoft.Maui.Controls.SolidColorBrush(Colors.MediumPurple),
+                resolveOverlap: true,
+                relativeStart: 0,
+                maxFrames: 0
+            );
+
+            element.ClipType = ClipMode.TextClip;
+            element.FromPlugin = "projectFrameCut.Render.Plugins.InternalPluginBase";
+            element.isInfiniteLength = true;
+            element.maxFrameCount = 0;
+            element.ExtraData = new();
+            element.ExtraData["TextEntries"] = new List<TextClipEntry>
+            {
+                template.First().Value with { text = $"Happy April fools day!" }
+            };
+
+            File.WriteAllText(
+                Path.Combine(draftSourcePath, "timeline.json"),
+                JsonSerializer.Serialize(new DraftStructureJSON
+                {
+                    Clips = new List<ClipDraftDTO>
+                    {
+                        DraftImportAndExportHelper.ExportClipElementFromDraftPage(_draftPage, element, false)
+                    }.Cast<object>().ToArray(),
+                }));
+            File.WriteAllText(
+                Path.Combine(draftSourcePath, "assets.json"),
+                JsonSerializer.Serialize(Array.Empty<AssetItem>()));
+            File.WriteAllText(
+                Path.Combine(draftSourcePath, "project.pjfc"),
+                JsonSerializer.Serialize(ProjectInfo));
+
+        }
+        catch (Exception ex)
+        {
+            return;
+        }
+
 
     }
 }

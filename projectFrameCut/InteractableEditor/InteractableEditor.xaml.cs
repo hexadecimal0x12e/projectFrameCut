@@ -17,11 +17,13 @@ namespace projectFrameCut.InteractableEditor
     {
         private projectFrameCut.DraftStuff.ClipElementUI? _currentClip;
         private AssetItem? _currentAsset;
-        private Action? _updateCallback;
+        private Func<Task>? _updateCallback;
 
         private const string InternalPlaceKey = "__Internal_Place__";
         private const string InternalResizeKey = "__Internal_Resize__";
-        private const string InternalCropKey = "__Internal_Crop__";
+        private const string SolidColorOutputWidthKey = "SolidColorOutputWidth";
+        private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
+        private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
 
         private double _canvasWidth = 800;
         private double _canvasHeight = 240;
@@ -43,8 +45,15 @@ namespace projectFrameCut.InteractableEditor
         private Func<Task>? _previewRefreshCallback;
         private long _lastPreviewRefreshTick;
         private int _isPreviewRefreshRunning;
+        private int _hasPendingPreviewRefresh;
+        private int _isCommitUpdateRunning;
+        private int _hasPendingCommitUpdate;
 
-        private const int PreviewRefreshThrottleMs = 120;
+        private CancellationTokenSource? _commitUpdateDebounceCts;
+        private readonly object _commitUpdateDebounceLock = new();
+
+        private const int PreviewRefreshThrottleMs = 180;
+        private const int CommitUpdateDebounceMs = 220;
 
         public InteractableEditor()
         {
@@ -63,7 +72,7 @@ namespace projectFrameCut.InteractableEditor
             UpdateCanvasSize(width, height);
         }
 
-        public void Init(Action updateCallback, double videoWidth, double videoHeight)
+        public void Init(Func<Task> updateCallback, double videoWidth, double videoHeight)
         {
             _updateCallback = updateCallback;
             _videoWidth = videoWidth;
@@ -86,12 +95,15 @@ namespace projectFrameCut.InteractableEditor
 
         public void SetClip(projectFrameCut.DraftStuff.ClipElementUI? clip, AssetItem? asset)
         {
+            CancelPendingCommitUpdate();
+
             _currentClip = clip;
             _currentAsset = asset;
             if (clip == null)
             {
                 this.IsVisible = false;
                 this.InputTransparent = true;
+                Interlocked.Exchange(ref _hasPendingPreviewRefresh, 0);
                 return;
             }
             this.IsVisible = true;
@@ -157,35 +169,42 @@ namespace projectFrameCut.InteractableEditor
 
         private void RequestInteractivePreviewRefresh()
         {
-            if (_currentClip is null)
+            if (_currentClip is null || _previewRefreshCallback is null)
             {
                 return;
             }
 
-            var now = Environment.TickCount64;
-            var last = Interlocked.Read(ref _lastPreviewRefreshTick);
-            if (now - last < PreviewRefreshThrottleMs)
+            Interlocked.Exchange(ref _hasPendingPreviewRefresh, 1);
+
+            if (Interlocked.CompareExchange(ref _isPreviewRefreshRunning, 1, 0) == 0)
             {
-                return;
+                _ = RefreshInteractivePreviewCoreAsync();
             }
-
-            if (Interlocked.CompareExchange(ref _isPreviewRefreshRunning, 1, 0) != 0)
-            {
-                return;
-            }
-
-            Interlocked.Exchange(ref _lastPreviewRefreshTick, now);
-
-            _ = RefreshInteractivePreviewCoreAsync();
         }
 
         private async Task RefreshInteractivePreviewCoreAsync()
         {
             try
             {
-                if (_previewRefreshCallback is not null)
+                while (Interlocked.Exchange(ref _hasPendingPreviewRefresh, 0) == 1)
                 {
-                    await _previewRefreshCallback();
+                    var now = Environment.TickCount64;
+                    var last = Interlocked.Read(ref _lastPreviewRefreshTick);
+                    var waitMs = PreviewRefreshThrottleMs - (int)(now - last);
+                    if (waitMs > 0)
+                    {
+                        await Task.Delay(waitMs);
+                    }
+
+                    Interlocked.Exchange(ref _lastPreviewRefreshTick, Environment.TickCount64);
+
+                    var callback = _previewRefreshCallback;
+                    if (callback is null || _currentClip is null)
+                    {
+                        break;
+                    }
+
+                    await callback();
                 }
             }
             catch (Exception ex)
@@ -195,23 +214,48 @@ namespace projectFrameCut.InteractableEditor
             finally
             {
                 Interlocked.Exchange(ref _isPreviewRefreshRunning, 0);
+
+                // Handle race where a new request arrives between loop exit and flag reset.
+                if (Volatile.Read(ref _hasPendingPreviewRefresh) == 1
+                    && Interlocked.CompareExchange(ref _isPreviewRefreshRunning, 1, 0) == 0)
+                {
+                    _ = RefreshInteractivePreviewCoreAsync();
+                }
             }
         }
 
         private void InitGestures()
         {
-            // Important: Do NOT recreate gesture recognizers on every frame/UI update.
-            _clipPan ??= new PanGestureRecognizer();
-            _tlPan ??= new PanGestureRecognizer();
-            _trPan ??= new PanGestureRecognizer();
-            _blPan ??= new PanGestureRecognizer();
-            _brPan ??= new PanGestureRecognizer();
+            // Important: subscribe only once; repeated subscriptions duplicate pan updates.
+            if (_clipPan is null)
+            {
+                _clipPan = new PanGestureRecognizer();
+                _clipPan.PanUpdated += OnClipPanUpdated;
+            }
 
-            _clipPan.PanUpdated += OnClipPanUpdated;
-            _tlPan.PanUpdated += OnResizePanUpdated;
-            _trPan.PanUpdated += OnResizePanUpdated;
-            _blPan.PanUpdated += OnResizePanUpdated;
-            _brPan.PanUpdated += OnResizePanUpdated;
+            if (_tlPan is null)
+            {
+                _tlPan = new PanGestureRecognizer();
+                _tlPan.PanUpdated += OnResizePanUpdated;
+            }
+
+            if (_trPan is null)
+            {
+                _trPan = new PanGestureRecognizer();
+                _trPan.PanUpdated += OnResizePanUpdated;
+            }
+
+            if (_blPan is null)
+            {
+                _blPan = new PanGestureRecognizer();
+                _blPan.PanUpdated += OnResizePanUpdated;
+            }
+
+            if (_brPan is null)
+            {
+                _brPan = new PanGestureRecognizer();
+                _brPan.PanUpdated += OnResizePanUpdated;
+            }
 
             ClipVisual.GestureRecognizers.Clear();
             ClipVisual.GestureRecognizers.Add(_clipPan);
@@ -225,6 +269,21 @@ namespace projectFrameCut.InteractableEditor
             HandleTR.GestureRecognizers.Add(_trPan);
             HandleBL.GestureRecognizers.Add(_blPan);
             HandleBR.GestureRecognizers.Add(_brPan);
+        }
+
+        private BoxView? ResolveResizeHandle(object? sender)
+        {
+            if (sender is BoxView bv)
+            {
+                return bv;
+            }
+
+            if (ReferenceEquals(sender, _tlPan)) return HandleTL;
+            if (ReferenceEquals(sender, _trPan)) return HandleTR;
+            if (ReferenceEquals(sender, _blPan)) return HandleBL;
+            if (ReferenceEquals(sender, _brPan)) return HandleBR;
+
+            return null;
         }
 
         private Rect GetRenderRect()
@@ -294,6 +353,17 @@ namespace projectFrameCut.InteractableEditor
             HandleTR.IsVisible = showHandles;
             HandleBL.IsVisible = showHandles;
             HandleBR.IsVisible = showHandles;
+
+            if (_currentClip.ClipType == ClipMode.SolidColorClip)
+            {
+                SolidColorSizeLabel.Text = $"{Math.Round(w)} x {Math.Round(h)}";
+                SolidColorSizeLabel.IsVisible = true;
+                AbsoluteLayout.SetLayoutBounds(SolidColorSizeLabel, new Rect(displayX + 4, displayY + 4, AbsoluteLayout.AutoSize, AbsoluteLayout.AutoSize));
+            }
+            else
+            {
+                SolidColorSizeLabel.IsVisible = false;
+            }
         }
 
         private void OnClipPanUpdated(object? sender, PanUpdatedEventArgs e)
@@ -338,9 +408,10 @@ namespace projectFrameCut.InteractableEditor
                     break;
                     
                 case GestureStatus.Completed:
+                case GestureStatus.Canceled:
                     GetCurrentRect(out var finalX, out var finalY, out _, out _);
                     System.Diagnostics.Debug.WriteLine($"[Pan] Completed: FinalPos=({finalX:F1}, {finalY:F1})");
-                    _updateCallback?.Invoke();
+                    RequestCommitUpdate();
                     break;
             }
         }
@@ -348,7 +419,7 @@ namespace projectFrameCut.InteractableEditor
         private void OnResizePanUpdated(object? sender, PanUpdatedEventArgs e)
         {
             if (_currentClip == null) return;
-            var handle = sender as BoxView;
+            var handle = ResolveResizeHandle(sender);
             if (handle == null) return;
 
             if (_isTextClip) return;  // Can't resize a TextClip
@@ -410,11 +481,127 @@ namespace projectFrameCut.InteractableEditor
                     break;
                     
                 case GestureStatus.Completed:
+                case GestureStatus.Canceled:
                     GetCurrentRect(out var finalX, out var finalY, out var finalW, out var finalH);
                     System.Diagnostics.Debug.WriteLine($"[Resize] Completed: Pos=({finalX:F1}, {finalY:F1}), Size=({finalW:F1}x{finalH:F1})");
-                    _updateCallback?.Invoke();
+                    RequestCommitUpdate();
                     break;
             }
+        }
+
+        private void RequestCommitUpdate()
+        {
+            var callback = _updateCallback;
+            if (callback is null)
+            {
+                return;
+            }
+
+            CancellationTokenSource currentCts;
+            lock (_commitUpdateDebounceLock)
+            {
+                _commitUpdateDebounceCts?.Cancel();
+                _commitUpdateDebounceCts?.Dispose();
+                _commitUpdateDebounceCts = new CancellationTokenSource();
+                currentCts = _commitUpdateDebounceCts;
+            }
+
+            _ = DispatchCommitUpdateAfterDelayAsync(currentCts);
+        }
+
+        private async Task DispatchCommitUpdateAfterDelayAsync(CancellationTokenSource debounceCts)
+        {
+            try
+            {
+                await Task.Delay(CommitUpdateDebounceMs, debounceCts.Token);
+                QueueCommitUpdateExecution();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Commit update dispatch failed: {ex.Message}");
+            }
+        }
+
+        private void QueueCommitUpdateExecution()
+        {
+            Interlocked.Exchange(ref _hasPendingCommitUpdate, 1);
+
+            if (Interlocked.CompareExchange(ref _isCommitUpdateRunning, 1, 0) == 0)
+            {
+                _ = ExecuteCommitUpdateLoopAsync();
+            }
+        }
+
+        private async Task ExecuteCommitUpdateLoopAsync()
+        {
+            try
+            {
+                while (Interlocked.Exchange(ref _hasPendingCommitUpdate, 0) == 1)
+                {
+                    var callback = _updateCallback;
+                    if (callback is null)
+                    {
+                        break;
+                    }
+
+                    await InvokeUpdateCallbackAsync(callback);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Commit update execution failed: {ex.Message}");
+            }
+            finally
+            {
+                Interlocked.Exchange(ref _isCommitUpdateRunning, 0);
+
+                // Handle race where a request arrives between loop exit and running flag reset.
+                if (Volatile.Read(ref _hasPendingCommitUpdate) == 1
+                    && Interlocked.CompareExchange(ref _isCommitUpdateRunning, 1, 0) == 0)
+                {
+                    _ = ExecuteCommitUpdateLoopAsync();
+                }
+            }
+        }
+
+        private async Task InvokeUpdateCallbackAsync(Func<Task> callback)
+        {
+            if (!Dispatcher.IsDispatchRequired)
+            {
+                await callback();
+                return;
+            }
+
+            var tcs = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Dispatcher.Dispatch(async () =>
+            {
+                try
+                {
+                    await callback();
+                    tcs.TrySetResult(null);
+                }
+                catch (Exception ex)
+                {
+                    tcs.TrySetException(ex);
+                }
+            });
+
+            await tcs.Task;
+        }
+
+        private void CancelPendingCommitUpdate()
+        {
+            lock (_commitUpdateDebounceLock)
+            {
+                _commitUpdateDebounceCts?.Cancel();
+                _commitUpdateDebounceCts?.Dispose();
+                _commitUpdateDebounceCts = null;
+            }
+
+            Interlocked.Exchange(ref _hasPendingCommitUpdate, 0);
         }
 
         private void GetCurrentRect(out double x, out double y, out double w, out double h)
@@ -451,7 +638,12 @@ namespace projectFrameCut.InteractableEditor
                 }
 
                 // For size, prefer internal Resize (scale) over internal Crop (clip). We still fallback to Crop for legacy data.
-                if (_currentClip.Effects.TryGetValue(InternalResizeKey, out var r) && r is ResizeEffect_ImageSharp resize)
+                if (_currentClip.ClipType == ClipMode.SolidColorClip)
+                {
+                    w = ReadSolidColorSize(_currentClip.ExtraData, SolidColorOutputWidthKey, (int)Math.Round(w));
+                    h = ReadSolidColorSize(_currentClip.ExtraData, SolidColorOutputHeightKey, (int)Math.Round(h));
+                }
+                else if (_currentClip.Effects.TryGetValue(InternalResizeKey, out var r) && r is ResizeEffect_ImageSharp resize)
                 {
                     int relW = resize.RelativeWidth > 0 ? resize.RelativeWidth : (int)_videoWidth;
                     int relH = resize.RelativeHeight > 0 ? resize.RelativeHeight : (int)_videoHeight;
@@ -559,6 +751,16 @@ namespace projectFrameCut.InteractableEditor
 
             if (!_isTextClip)
             {
+                if (_currentClip.ClipType == ClipMode.SolidColorClip)
+                {
+                    _currentClip.ExtraData ??= new Dictionary<string, object>();
+                    _currentClip.ExtraData[SolidColorOutputWidthKey] = Math.Max(1, (int)Math.Round(w, MidpointRounding.AwayFromZero));
+                    _currentClip.ExtraData[SolidColorOutputHeightKey] = Math.Max(1, (int)Math.Round(h, MidpointRounding.AwayFromZero));
+                    _currentClip.ExtraData[SolidColorUseFixedOutputSizeKey] = true;
+                    _currentClip.Effects.Remove(InternalResizeKey);
+                    return;
+                }
+
                 if (_currentClip.Effects.TryGetValue(InternalResizeKey, out var r) && r is ResizeEffect_ImageSharp resize)
                 {
                     int resizeRelW = resize.RelativeWidth > 0 ? resize.RelativeWidth : relW;
@@ -591,6 +793,24 @@ namespace projectFrameCut.InteractableEditor
                     };
                 }
             }
+        }
+
+        private static int ReadSolidColorSize(Dictionary<string, object>? data, string key, int fallback)
+        {
+            if (data != null && data.TryGetValue(key, out var raw) && raw is not null)
+            {
+                if (raw is int i) return Math.Max(1, i);
+                if (raw is long l) return Math.Max(1, (int)Math.Min(int.MaxValue, l));
+                if (raw is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var jn)) return Math.Max(1, jn);
+                    if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var js)) return Math.Max(1, js);
+                }
+
+                if (int.TryParse(raw.ToString(), out var parsed)) return Math.Max(1, parsed);
+            }
+
+            return Math.Max(1, fallback);
         }
 
         /// <summary>

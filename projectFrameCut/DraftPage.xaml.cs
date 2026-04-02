@@ -129,6 +129,7 @@ public partial class DraftPage : ContentPage
 
     private Size WindowSize = new(500, 500);
     private bool _hasTriedRestoreMainMultiWindowViewState = false;
+    private bool _hasAppliedDefaultMainMultiWindowLayout = false;
 
     private sealed class MainMultiWindowWindowState
     {
@@ -209,6 +210,17 @@ public partial class DraftPage : ContentPage
         public required double WidthPx { get; init; }
         public required int TrackIndex { get; init; }
     }
+
+    private static View CreatePropertiesPlaceholder(string text)
+        => new Label
+        {
+            Text = text,
+            TextColor = Colors.White,
+            HorizontalOptions = LayoutOptions.Center,
+            VerticalOptions = LayoutOptions.Center,
+            Opacity = 0.85,
+            Margin = new Thickness(12)
+        };
 
     #endregion
 
@@ -573,25 +585,27 @@ public partial class DraftPage : ContentPage
                 ClipEditor?.HeightRequest = PreviewAreaHeight - 10;
             }
 
-            if (previewGrid.ColumnDefinitions.Count < 2)
+            // MultiWindowView uses translation + WidthRequest for window layout; forcing Grid columns
+            // here shifts window origins and can push snapped windows outside of the viewport.
+            if (previewGrid is not MultiWindowView && previewGrid.ColumnDefinitions.Count < 2)
             {
                 previewGrid.ColumnDefinitions.Clear();
                 previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             }
-            else
+            else if (previewGrid is not MultiWindowView)
             {
                 previewGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
                 previewGrid.ColumnDefinitions[1].Width = new GridLength(1, GridUnitType.Star);
-            }
 
-            int colIndex = 0;
-            foreach (var child in previewGrid.Children)
-            {
-                if (child.GetType().Name == "MultiWindowItem" && colIndex < 2)
+                int colIndex = 0;
+                foreach (var child in previewGrid.Children)
                 {
-                    Grid.SetColumn((BindableObject)child, colIndex);
-                    colIndex++;
+                    if (child.GetType().Name == "MultiWindowItem" && colIndex < 2)
+                    {
+                        Grid.SetColumn((BindableObject)child, colIndex);
+                        colIndex++;
+                    }
                 }
             }
         }
@@ -720,6 +734,7 @@ public partial class DraftPage : ContentPage
         AssisstantSubWindow.Content = ChatSessionsView;
         MainMultiWindowView.CloseWindow(AssisstantSubWindow);
         //TryRestoreMainMultiWindowViewState();
+        ApplyDefaultMainMultiWindowLayout();
         AddClipView.ClipAdded += async (s, args) =>
         {
             this.Popup.Content = null;
@@ -908,6 +923,41 @@ public partial class DraftPage : ContentPage
         catch (Exception ex)
         {
             Log(ex, "Restore MainMultiWindowView state", this);
+        }
+    }
+
+    private void ApplyDefaultMainMultiWindowLayout()
+    {
+        if (_hasAppliedDefaultMainMultiWindowLayout)
+        {
+            return;
+        }
+
+        if (UseCompactLayout ?? (DeviceInfo.Idiom == DeviceIdiom.Phone))
+        {
+            return;
+        }
+
+        if (MainMultiWindowView.Width <= 0 || MainMultiWindowView.Height <= 0)
+        {
+            return;
+        }
+
+        if (!MainMultiWindowView.Children.Contains(PreviewSubwindow) || !MainMultiWindowView.Children.Contains(PropertiesSubwindow))
+        {
+            return;
+        }
+
+        PreviewSubwindow.IsTitleBarVisible = false;
+        PreviewSubwindow.IsResizable = false;
+        PropertiesSubwindow.HorizontalOptions = LayoutOptions.Fill;
+        PropertiesSubwindow.VerticalOptions = LayoutOptions.Fill;
+
+        if (MainMultiWindowView.SnapWindow(PreviewSubwindow, WindowSnapZone.LeftHalf, bringToFront: false)
+            & MainMultiWindowView.SnapWindow(PropertiesSubwindow, WindowSnapZone.RightHalf))
+        {
+            MainMultiWindowView.BringToFront(PropertiesSubwindow);
+            _hasAppliedDefaultMainMultiWindowLayout = true;
         }
     }
 
@@ -1840,7 +1890,7 @@ public partial class DraftPage : ContentPage
             SetStatusText(Localized.DraftPage_EverythingFine);
             ClipEditor.SetClip(null, null);
             SetTimelineScrollEnabled(true);
-            RightContentBorder.Content = new Label { Text = Localized.DraftPage_PropertyPanel_SelectToContinue, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
+            RightContentBorder.Content = CreatePropertiesPlaceholder(Localized.DraftPage_PropertyPanel_SelectToContinue);
             SelectedClipChanged?.Invoke(this, EventArgs.Empty);
             return;
         }
@@ -1936,6 +1986,7 @@ public partial class DraftPage : ContentPage
             ClearSelectionInternal();
             AddClipToSelection(clip);
         }
+
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
         await RefreshSelectionUiAsync();
@@ -3741,8 +3792,19 @@ public partial class DraftPage : ContentPage
 
     public async void RefreshPropertyPanel(ClipElementUI clip)
     {
-        Popup.Content = new ScrollView { Content = await BuildPropertyPanel(clip) };
+        var popupPanel = await BuildPropertyPanel(clip);
+        Popup.Content = WrapPropertyPanelContent(clip, popupPanel);
         RightContentBorder.Content = await BuildPropertyPanel(clip);
+    }
+
+    private static View WrapPropertyPanelContent(ClipElementUI clip, View panel)
+    {
+        if (clip.ClipType == ClipMode.VideoClip || clip.ClipType == ClipMode.PhotoClip)
+        {
+            return panel;
+        }
+
+        return new ScrollView { Content = panel };
     }
 
 
@@ -4597,6 +4659,7 @@ public partial class DraftPage : ContentPage
     public async Task ShowAPopup(View? content = null, Border? border = null, ClipElementUI? clip = null, string mode = "")
     {
         content ??= (border != null && clip != null) ? await BuildPropertyPanel(clip) : new Label { Text = $"No content to show. This SHOULD is a bug, please feedback.\r\n{Environment.StackTrace.Split(Environment.NewLine).Skip(1).Aggregate((a, b) => $"{a}{Environment.NewLine}{b}")}" };
+        bool disablePopupScrollWrapping = clip?.ClipType == ClipMode.VideoClip || clip?.ClipType == ClipMode.PhotoClip;
 
         OverlayLayer.IsVisible = true;
 
@@ -4620,17 +4683,17 @@ public partial class DraftPage : ContentPage
             {
                 case "right":
                     {
-                        await ShowAFullscreenPopupInRight(WindowSize.Height * 0.75, content);
+                        await ShowAFullscreenPopupInRight(WindowSize.Height * 0.75, content, disablePopupScrollWrapping);
                         break;
                     }
                 case "bottom":
                     {
-                        await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, content);
+                        await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, content, disablePopupScrollWrapping);
                         break;
                     }
                 case "dialog":
                     {
-                        await ShowACenteredPopup(WindowSize.Height / 1.5, WindowSize.Width / 2, content);
+                        await ShowACenteredPopup(WindowSize.Height / 1.5, WindowSize.Width / 2, content, disablePopupScrollWrapping);
                         break;
                     }
                 case "window":
@@ -4650,7 +4713,7 @@ public partial class DraftPage : ContentPage
                         if (border is not null && clip is not null)
                             await ShowClipPopup(border, clip);
                         else
-                            await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, content);
+                            await ShowAFullscreenPopupInBottom(WindowSize.Height / 1.2, content, disablePopupScrollWrapping);
                         break;
                     }
             }
@@ -4826,7 +4889,7 @@ public partial class DraftPage : ContentPage
             StrokeShape = new RoundRectangle { CornerRadius = 4 },
             Padding = new Thickness(2),
             Opacity = 0.95,
-            Content = new ScrollView { Content = await BuildPropertyPanel(clip) }
+            Content = WrapPropertyPanelContent(clip, await BuildPropertyPanel(clip))
         };
 
         frame.GestureRecognizers.Add(nopGesture);
@@ -4937,7 +5000,7 @@ public partial class DraftPage : ContentPage
 
     }
 
-    private async Task ShowAFullscreenPopupInBottom(double height, View content)
+    private async Task ShowAFullscreenPopupInBottom(double height, View content, bool disableScrollWrapping = false)
     {
         popupShowingDirection = "bottom";
 
@@ -4966,12 +5029,15 @@ public partial class DraftPage : ContentPage
         if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
         {
             // 使用 CommunityToolkit Popup
-            var popupContentView = new ScrollView
-            {
-                Content = content,
-                WidthRequest = size.Width - 40,
-                HeightRequest = height
-            };
+            View popupContentView = disableScrollWrapping
+                ? content
+                : new ScrollView
+                {
+                    Content = content
+                };
+
+            popupContentView.WidthRequest = size.Width - 40;
+            popupContentView.HeightRequest = height;
 
             _currentCommunityToolkitPopup = new CommunityToolkit.Maui.Views.Popup
             {
@@ -5005,7 +5071,7 @@ public partial class DraftPage : ContentPage
         }
     }
 
-    private async Task ShowAFullscreenPopupInRight(double width, View content)
+    private async Task ShowAFullscreenPopupInRight(double width, View content, bool disableScrollWrapping = false)
     {
         popupShowingDirection = "right";
 
@@ -5034,12 +5100,15 @@ public partial class DraftPage : ContentPage
         if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
         {
             // 使用 CommunityToolkit Popup
-            var popupContentView = new ScrollView
-            {
-                Content = content,
-                WidthRequest = size.Width - width,
-                HeightRequest = size.Height * 0.85
-            };
+            View popupContentView = disableScrollWrapping
+                ? content
+                : new ScrollView
+                {
+                    Content = content
+                };
+
+            popupContentView.WidthRequest = size.Width - width;
+            popupContentView.HeightRequest = size.Height * 0.85;
 
             _currentCommunityToolkitPopup = new CommunityToolkit.Maui.Views.Popup
             {
@@ -5072,7 +5141,7 @@ public partial class DraftPage : ContentPage
         }
     }
 
-    public async Task ShowACenteredPopup(double desiredHeight, double desiredWidth, View content)
+    public async Task ShowACenteredPopup(double desiredHeight, double desiredWidth, View content, bool disableScrollWrapping = false)
     {
         popupShowingDirection = "dialog";
 
@@ -5129,12 +5198,15 @@ public partial class DraftPage : ContentPage
         if (UseCommunityToolkitPopupInsteadOfOverlayLayer)
         {
             // 使用 CommunityToolkit Popup
-            var popupContentView = new ScrollView
-            {
-                Content = content,
-                WidthRequest = popupWidth,
-                HeightRequest = popupHeight
-            };
+            View popupContentView = disableScrollWrapping
+                ? content
+                : new ScrollView
+                {
+                    Content = content
+                };
+
+            popupContentView.WidthRequest = popupWidth;
+            popupContentView.HeightRequest = popupHeight;
 
             _currentCommunityToolkitPopup = new CommunityToolkit.Maui.Views.Popup
             {
@@ -5298,17 +5370,25 @@ public partial class DraftPage : ContentPage
         {
             previewGrid.HeightRequest = 250;
             ClipEditor?.HeightRequest = 240;
-            previewGrid.ColumnDefinitions.Clear();
-            previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-            int colIndex = 0;
-            foreach (var child in previewGrid.Children)
+            if (previewGrid is MultiWindowView)
             {
-                if (child.GetType().Name == "MultiWindowItem" && colIndex < 2)
+                _hasAppliedDefaultMainMultiWindowLayout = false;
+                ApplyDefaultMainMultiWindowLayout();
+            }
+            else
+            {
+                previewGrid.ColumnDefinitions.Clear();
+                previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                previewGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+                int colIndex = 0;
+                foreach (var child in previewGrid.Children)
                 {
-                    Grid.SetColumn((BindableObject)child, colIndex);
-                    colIndex++;
+                    if (child.GetType().Name == "MultiWindowItem" && colIndex < 2)
+                    {
+                        Grid.SetColumn((BindableObject)child, colIndex);
+                        colIndex++;
+                    }
                 }
             }
         }
@@ -5540,6 +5620,7 @@ public partial class DraftPage : ContentPage
 
             if (UseRealtimePreview)
             {
+                if (DynamicPreviewProvider.Clips is null) return;
                 await Dispatcher.DispatchAsync(() =>
                 {
                     LivePreviewerHost.Content = EnsureRealtimePreviewHost();
@@ -5567,6 +5648,7 @@ public partial class DraftPage : ContentPage
             }
             else
             {
+                if (previewer.Clips is null) return;
                 await Dispatcher.DispatchAsync(() =>
                 {
                     LivePreviewerHost.Content = EnsureRealtimePreviewHost();
@@ -6038,7 +6120,7 @@ public partial class DraftPage : ContentPage
 
     }
 
-    private async void OnClipEditorUpdate()
+    private async Task OnClipEditorUpdate()
     {
         if (AlreadyDisappeared) return;
 
@@ -6891,7 +6973,7 @@ public partial class DraftPage : ContentPage
         WindowSize = new Size(w, h);
 
         OverlayLayer.InputTransparent = true;
-        RightContentBorder.Content = new Label { Text = Localized.DraftPage_PropertyPanel_SelectToContinue, HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
+        RightContentBorder.Content = CreatePropertiesPlaceholder(Localized.DraftPage_PropertyPanel_SelectToContinue);
 
     }
 
@@ -6903,7 +6985,7 @@ public partial class DraftPage : ContentPage
 
         try
         {
-            foreach (var item in MainMultiWindowView.Children.Cast<MultiWindowItem>().ToList())
+            foreach (var item in MainMultiWindowView.Children.OfType<MultiWindowItem>().ToList())
             {
                 try
                 {
@@ -6997,6 +7079,7 @@ public partial class DraftPage : ContentPage
         UpdateTrackHeaderLayoutForViewport();
         UpdateTimelineWidth();
         UpdatePlayheadPosition();
+        ApplyDefaultMainMultiWindowLayout();
     }
 
     private bool ignoreRunningTasks = false;

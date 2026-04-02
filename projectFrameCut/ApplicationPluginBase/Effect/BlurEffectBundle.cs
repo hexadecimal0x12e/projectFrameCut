@@ -1,13 +1,12 @@
 using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
-using projectFrameCut.ApplicationAPIBase.Helpers;
-using projectFrameCut.Shared;
 
 namespace projectFrameCut.ApplicationPluginBase.Effect
 {
@@ -21,7 +20,7 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>
         {
-            {"Sigma", 0f }
+            {"Sigma", 4f }
         };
 
         public List<string> ParametersNeeded => new List<string>
@@ -64,47 +63,41 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public IEffectFactory[] Create()
         {
             var factory = new BlurEffectFactory();
-            this.ConfigureFactory(factory); 
+            this.ConfigureFactory(factory);
             return new IEffectFactory[] { factory };
         }
 
         public PropertyPanelBuilder CreateUI()
         {
-            var ppb = new PropertyPanelBuilder();
-
-            // Default value handling
-            float currentSigma = 0;
-            if (Parameters != null && Parameters.TryGetValue("Sigma", out var val))
+            float sigma = EffectBundleUiHelper.GetFloat(Parameters, "Sigma", 4f);
+            if (sigma < 0f)
             {
-                 if (val is JsonElement je)
-                 {
-                    if (je.ValueKind == JsonValueKind.Number)
-                        currentSigma = je.GetSingle();
-                    else if(float.TryParse(je.ToString(), out var parsed))
-                        currentSigma = parsed;
-                 }
-                 else
-                 {
-                    try { currentSigma = Convert.ToSingle(val); } catch { }
-                 }
+                sigma = 0f;
             }
 
-            ppb.AddEntry("Sigma", PluginManager.GetLocalizationItem("Property_Sigma", "Sigma (Blur Radius)"), currentSigma.ToString(), "0");
-
-            return ppb;
+            var panel = new PropertyPanelBuilder();
+            panel.AddSlider(
+                "Sigma",
+                EffectBundleUiHelper.L("Property_Sigma", "Sigma"),
+                0,
+                128,
+                sigma,
+                null,
+                SliderUpdateEventCallMode.OnValueChanged);
+            return panel;
         }
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            if (Parameters == null) Parameters = new Dictionary<string, object>();
-            
-            if (args.Id == "Sigma")
+            if (args.Id == "Sigma" && EffectBundleUiHelper.TrySetFloat(Parameters, "Sigma", args.Value))
             {
-                if (float.TryParse(args.Value as string, out var val))
+                float sigma = EffectBundleUiHelper.GetFloat(Parameters, "Sigma", 4f);
+                if (sigma < 0f)
                 {
-                    Parameters["Sigma"] = val;
+                    Parameters["Sigma"] = 0f;
                 }
             }
+
             return Parameters;
         }
 
@@ -112,9 +105,9 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return new EffectBundleDisplayItem
             {
-                Name = PluginManager.GetLocalizationItem("DisplayName_Effect_Blur", "Blur"),
-                Description = PluginManager.GetLocalizationItem("Description_Effect_Blur", "Apply Gaussian blur to the image."),
-                Thumbnail = ImageHelper.LoadFromAsset("icon_effect_blur") // Assuming an icon exists or will be added, or fallback
+                Name = EffectBundleUiHelper.L("DisplayName_Effect_Blur", "Blur"),
+                Description = EffectBundleUiHelper.L("Description_Effect_Blur", "Apply Gaussian blur to the image."),
+                Thumbnail = ImageHelper.LoadFromAsset("icon_effect_blur")
             };
         }
     }

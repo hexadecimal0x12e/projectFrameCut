@@ -170,18 +170,38 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public ushort B { get; init; }
         public float? A { get; init; } = null;
 
+        public bool UseFixedOutputSize { get; init; } = true;
+        public int OutputWidth { get; init; } = 1920;
+        public int OutputHeight { get; init; } = 1080;
+
+        [JsonIgnore]
+        public bool EffectiveUseFixedOutputSize => ResolveConfiguredBool("SolidColorUseFixedOutputSize", UseFixedOutputSize);
+
+        [JsonIgnore]
+        public int EffectiveOutputWidth => ResolveConfiguredInt("SolidColorOutputWidth", OutputWidth > 0 ? OutputWidth : targetWidth);
+
+        [JsonIgnore]
+        public int EffectiveOutputHeight => ResolveConfiguredInt("SolidColorOutputHeight", OutputHeight > 0 ? OutputHeight : targetHeight);
+
         public int targetWidth { get; init; } = 1920;
         public int targetHeight { get; init; } = 1080;
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize) => Picture16bpp.GenerateSolidColor(tWidth, tHeight, R, G, B, A);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize)
+        {
+            var width = EffectiveUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth);
+            var height = EffectiveUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight);
+            return Picture16bpp.GenerateSolidColor(width, height, R, G, B, A);
+        }
+
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => targetPPB.Value switch
         {
-            16 => Picture16bpp.GenerateSolidColor(tWidth, tHeight, R, G, B, A),
-            8 => Picture8bpp.GenerateSolidColor(tWidth, tHeight, (byte)(R / 257), (byte)(G / 257), (byte)(B / 257), A),
+            16 => Picture16bpp.GenerateSolidColor(EffectiveUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth), EffectiveUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight), R, G, B, A),
+            8 => Picture8bpp.GenerateSolidColor(EffectiveUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth), EffectiveUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight), (byte)(R / 257), (byte)(G / 257), (byte)(B / 257), A),
             _ => throw new NotSupportedException($"Unsupported target pixel mode {targetPPB}.")
         };
 
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex) => Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, R, G, B, A);
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
+            => Picture16bpp.GenerateSolidColor(EffectiveOutputWidth, EffectiveOutputHeight, R, G, B, A);
 
         public SolidColorClip()
         {
@@ -203,6 +223,67 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
         {
+        }
+
+        private int ResolveConfiguredInt(string key, int fallback)
+        {
+            if (ExtraData != null && ExtraData.TryGetValue(key, out var raw) && raw is not null)
+            {
+                if (raw is int i)
+                {
+                    return Math.Max(1, i);
+                }
+
+                if (raw is long l)
+                {
+                    return Math.Max(1, (int)Math.Min(int.MaxValue, l));
+                }
+
+                if (raw is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var jn))
+                    {
+                        return Math.Max(1, jn);
+                    }
+
+                    if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var js))
+                    {
+                        return Math.Max(1, js);
+                    }
+                }
+
+                if (int.TryParse(raw.ToString(), out var parsed))
+                {
+                    return Math.Max(1, parsed);
+                }
+            }
+
+            return Math.Max(1, fallback);
+        }
+
+        private bool ResolveConfiguredBool(string key, bool fallback)
+        {
+            if (ExtraData != null && ExtraData.TryGetValue(key, out var raw) && raw is not null)
+            {
+                if (raw is bool b)
+                {
+                    return b;
+                }
+
+                if (raw is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.True) return true;
+                    if (je.ValueKind == JsonValueKind.False) return false;
+                    if (je.ValueKind == JsonValueKind.String && bool.TryParse(je.GetString(), out var jb)) return jb;
+                }
+
+                if (bool.TryParse(raw.ToString(), out var parsed))
+                {
+                    return parsed;
+                }
+            }
+
+            return fallback;
         }
     }
 

@@ -20,7 +20,7 @@ namespace projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider
         /// </summary>
         /// <param name="target"></param>
         /// <returns></returns>
-        public View Generate(IClip target, int canvasWidth, int canvasHeight, uint targetFrame);
+        public View Generate(IClip target, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint targetFrame);
     }
     public interface IEffectDynamicPreviewProvider
     {

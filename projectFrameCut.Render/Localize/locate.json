@@ -1069,6 +1069,24 @@
         ],
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "\u4F4D\u7F6E\u548C\u5927\u5C0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "\u88C1\u5207",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -2229,6 +2247,26 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "Unset localization item:Tabs_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "Unset localization item:General_Crop()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -3393,6 +3431,26 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "Unset localization item:Tabs_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "Unset localization item:General_Crop()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "ja-JP": [
@@ -4553,6 +4611,26 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "Unset localization item:Tabs_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "Unset localization item:General_Crop()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -5717,6 +5795,26 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "Unset localization item:Tabs_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "Unset localization item:General_Crop()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -6877,6 +6975,26 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "Unset localization item:Tabs_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "Unset localization item:General_Crop()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -8041,6 +8159,26 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "Unset localization item:Tabs_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "Unset localization item:General_Crop()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -9201,6 +9339,26 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "Unset localization item:Tabs_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "Unset localization item:General_Crop()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -10365,6 +10523,26 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "Unset localization item:Tabs_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "Unset localization item:General_Crop()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -11525,6 +11703,26 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "Unset localization item:Tabs_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "Unset localization item:General_Crop()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -12689,6 +12887,26 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "Unset localization item:Tabs_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "Unset localization item:General_Crop()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -13849,6 +14067,26 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "Unset localization item:Tabs_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "Unset localization item:General_Crop()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -15013,6 +15251,26 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "Unset localization item:Tabs_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "Unset localization item:General_Crop()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "ru-RU": [
@@ -16175,6 +16433,26 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "Unset localization item:Tabs_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "Unset localization item:General_Crop()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -17335,6 +17613,26 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "Tabs_SizeAndPosition",
+        "Value": "Unset localization item:Tabs_SizeAndPosition()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Crop",
+        "Value": "Unset localization item:General_Crop()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }

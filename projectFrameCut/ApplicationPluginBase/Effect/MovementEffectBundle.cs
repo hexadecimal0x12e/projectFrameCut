@@ -1,4 +1,5 @@
 ﻿using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
@@ -6,27 +7,27 @@ using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace projectFrameCut.ApplicationPluginBase.Effect
 {
     public class MovementEffectBundle : IEffectBundle
     {
-        private List<string> s_ParametersNeeded = new List<string>
-        {
+        private static readonly List<string> s_ParametersNeeded =
+        [
             "StartX",
             "StartY",
             "EndX",
             "EndY",
-            "Duration",
-        };
-        private Dictionary<string, string> s_ParametersType = new Dictionary<string, string>
+            "Duration"
+        ];
+
+        private static readonly Dictionary<string, string> s_ParametersType = new Dictionary<string, string>
         {
-            {"StartX", "int" },
-            {"StartY", "int" },
-            {"EndX", "int" },
-            {"EndY", "int" },
-            {"Duration", "int" },
+            { "StartX", "int" },
+            { "StartY", "int" },
+            { "EndX", "int" },
+            { "EndY", "int" },
+            { "Duration", "int" }
         };
 
         public string TypeName => "Movement";
@@ -44,13 +45,13 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         public EffectTarget Target => EffectTarget.Video;
 
         public Guid Id { get; set; } = Guid.NewGuid();
-        public string Name { get; set; }
+        public string Name { get; set; } = "Movement";
 
         public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
         public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
         public List<Guid>? BindedInputIds { get; set; }
         public bool IsMultiInput => false;
-        public bool Enabled { get; set; }
+        public bool Enabled { get; set; } = true;
 
         public string InputAnchorDisplayName => string.Empty;
         public string[]? InputAnchorsDisplayName => null;
@@ -61,11 +62,11 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>
         {
-            { "StartX", 0d },
-            { "StartY", 0d },
-            { "EndX", 0d },
-            { "EndY", 0d },
-
+            { "StartX", 0 },
+            { "StartY", 0 },
+            { "EndX", 200 },
+            { "EndY", 0 },
+            { "Duration", 1000 },
         };
 
         public List<string> ParametersNeeded => s_ParametersNeeded;
@@ -74,38 +75,60 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
 
         public IEffectFactory[] Create()
         {
-            var id = Guid.NewGuid().ToString();
-            var prod = new StraightLineMovementValueProducerFactory()
+            string movementProducerId = Guid.NewGuid().ToString();
+            var producerFactory = new StraightLineMovementValueProducerFactory
             {
-                ID = id
+                ID = movementProducerId
             };
-            var move = new PointPlacerFactory()
+
+            var pointPlacerFactory = new PointPlacerFactory
             {
                 ID = this.Id.ToString(),
-                BindedInputID = id
+                BindedInputID = movementProducerId
             };
-            
-            // We do not use ConfigureFactory(move) because it would overwrite BindedInputID which is internal here.
-            // But we do set ID.
-            
-            return [prod, move];
+
+            return [producerFactory, pointPlacerFactory];
         }
 
         public PropertyPanelBuilder CreateUI()
         {
-            PropertyPanelBuilder ppb = new();
-            ppb.AddEntry("StartX", "Start X", Parameters["StartX"].ToString() ?? "0", "The starting X position.");
-            ppb.AddEntry("StartY", "Start Y", Parameters["StartY"].ToString() ?? "0", "The starting Y position.");
-            ppb.AddEntry("EndX", "End X", Parameters["EndX"].ToString() ?? "0", "The ending X position.");
-            ppb.AddEntry("EndY", "End Y", Parameters["EndY"].ToString() ?? "0", "The ending Y position.");
-            ppb.AddSlider("Duration", "Duration of movement", 1000, 100, 10000);
+            int startX = EffectBundleUiHelper.GetInt(Parameters, "StartX", 0);
+            int startY = EffectBundleUiHelper.GetInt(Parameters, "StartY", 0);
+            int endX = EffectBundleUiHelper.GetInt(Parameters, "EndX", 200);
+            int endY = EffectBundleUiHelper.GetInt(Parameters, "EndY", 0);
+            int duration = Math.Max(100, EffectBundleUiHelper.GetInt(Parameters, "Duration", 1000));
 
-            return ppb;
+            var panel = new PropertyPanelBuilder();
+            EffectBundleUiHelper.AddNumericEntry(panel, "StartX", EffectBundleUiHelper.ParamLabel("StartX"), startX.ToString(), "0");
+            EffectBundleUiHelper.AddNumericEntry(panel, "StartY", EffectBundleUiHelper.ParamLabel("StartY"), startY.ToString(), "0");
+            EffectBundleUiHelper.AddNumericEntry(panel, "EndX", EffectBundleUiHelper.ParamLabel("EndX"), endX.ToString(), "200");
+            EffectBundleUiHelper.AddNumericEntry(panel, "EndY", EffectBundleUiHelper.ParamLabel("EndY"), endY.ToString(), "0");
+            panel.AddSlider(
+                "Duration",
+                EffectBundleUiHelper.L("Effect_Movement_Duration", "Duration"),
+                100,
+                20000,
+                duration,
+                null,
+                SliderUpdateEventCallMode.OnValueChanged);
+            return panel;
         }
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            Parameters[args.Id] = double.Parse(args.Value as string);
+            if (!ParametersType.ContainsKey(args.Id))
+            {
+                return Parameters;
+            }
+
+            if (EffectBundleUiHelper.TrySetInt(Parameters, args.Id, args.Value))
+            {
+                if (args.Id == "Duration")
+                {
+                    Parameters["Duration"] = Math.Max(100, EffectBundleUiHelper.GetInt(Parameters, "Duration", 1000));
+                }
+            }
+
             return Parameters;
         }
 
@@ -113,9 +136,9 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return new EffectBundleDisplayItem
             {
-                Name = Name,
-                Description = "Moves an element from a starting position to an ending position over a specified duration.",
-                Thumbnail = null,
+                Name = EffectBundleUiHelper.L("DisplayName_Effect_Movement", "Movement"),
+                Description = EffectBundleUiHelper.L("Description_Effect_Movement", "Move an element from the start point to the end point."),
+                Thumbnail = ImageHelper.LoadFromAsset("icon_add"),
                 VideoThumbnail = null
             };
         }

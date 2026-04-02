@@ -160,22 +160,38 @@ namespace projectFrameCut.Helper
         public static void CloseSplash()
         {
             Thread.Sleep(1500);
-            splash?.Invoke(new Action(() =>
+            try
             {
-                splash?.Close();
-            }));
-            SplashShowing = false;
-            splash = null;
+                splash?.Invoke(new Action(() =>
+                {
+                    splash?.Close();
+                }));
+            }
+            catch { }
+            finally
+            {
+                SplashShowing = false;
+                splash = null;
+            }
         }
+
         public static void CloseLog()
         {
             Thread.Sleep(1500);
-            log?.Invoke(() => log?.Close());
+            try
+            {
+                log?.Invoke(() => log?.Close());
+            }
+            catch { }
         }
         public static void CloseFrozenDiag()
         {
             Thread.Sleep(1500);
-            froze?.Invoke(() => froze?.Close());
+            try
+            {
+                froze?.Invoke(() => froze?.Close());
+            }
+            catch { }
         }
 
         public static void Cleanup()

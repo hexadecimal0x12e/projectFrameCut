@@ -31,6 +31,19 @@
         <BoxView x:Name="HandleBR" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" ZIndex="102" AbsoluteLayout.LayoutFlags="None">
 
         </BoxView>
+
+        <Label x:Name="SolidColorSizeLabel"
+               IsVisible="False"
+               Opacity="0.95"
+               InputTransparent="True"
+               TextColor="White"
+               BackgroundColor="#88000000"
+               Padding="6,2"
+               FontSize="10"
+               LineBreakMode="NoWrap"
+               HorizontalOptions="Start"
+               VerticalOptions="Start"
+               ZIndex="103"/>
         
         <Label x:Name="MeasurementLabel" IsVisible="True" Opacity="0" InputTransparent="True" LineBreakMode="NoWrap" HorizontalOptions="Start" VerticalOptions="Start"/>
     </AbsoluteLayout>

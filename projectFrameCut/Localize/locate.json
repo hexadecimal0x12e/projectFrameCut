@@ -740,7 +740,7 @@
       },
       {
         "Id": "AssetPage_SearchNoResult",
-        "Value": "\u6CA1\u6709\u53EF\u4F9B\u663E\u793A\u7684\u5185\u5BB9\u3002\u8BD5\u8BD5\u770B\u6362\u4E00\u4E2A\u5173\u952E\u8BCD\uFF1F",
+        "Value": "\u6CA1\u6709\u53EF\u4F9B\u663E\u793A\u7684\u5185\u5BB9\u3002\u8BD5\u8BD5\u770B\u66F4\u6539\u7B5B\u9009\u6761\u4EF6\uFF1F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -822,7 +822,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_AddSketch_DrawHere",
-        "Value": "\u63D0\u793A\uFF1A\u4F60\u53EF\u4EE5\u5728\u4E0B\u9762\u7ED8\u5236\u5185\u5BB9\u3002",
+        "Value": "\u4E0B\u9762\u7ED8\u5236\u4F60\u8981\u6DFB\u52A0\u7684\u5185\u5BB9\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1208,7 +1208,7 @@
       },
       {
         "Id": "DraftPage_AddClipView_ClickToPlace",
-        "Value": "\u4F60\u53EF\u4EE5\u76F4\u63A5\u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u300C{name}\u300D\u3002\r\u4F60\u8FD8\u53EF\u4EE5\u4F7F\u7528\u952E\u76D8\u4E0A\u7684\u4E0A\u4E0B\u5DE6\u53F3\u952E\u6765\u79FB\u52A8\uFF0C\u6309Enter\u6765\u786E\u5B9A\u4F4D\u7F6E\u3002\r\u6309Esc\u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002",
+        "Value": "\u6B63\u5728\u6DFB\u52A0\u300C{name}\u300D\u3002\u4F60\u53EF\u4EE5\uFF1A\r- \u70B9\u51FB\u8F68\u9053\u4E0A\u7A7A\u95F2\u7684\u5730\u65B9\u6765\u5728\u70B9\u51FB\u7684\u4F4D\u7F6E\u6DFB\u52A0\u3002\r- \u4F7F\u7528\u952E\u76D8\u4E0A\u7684\u4E0A\u4E0B\u5DE6\u53F3\u952E\u6765\u79FB\u52A8\uFF0C\u6309Enter\u6765\u786E\u5B9A\u4F4D\u7F6E\u3002\r- \u6309Esc\u6765\u53D6\u6D88\u6B64\u64CD\u4F5C\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1473,7 +1473,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Reference_Desc",
-        "Value": "\u4E0D\u590D\u5236\u6E90\u6587\u4EF6\uFF0C\u76F4\u63A5\u5F15\u7528\u4ED6\u3002\u5982\u679C\u6E90\u6587\u4EF6\u88AB\u5220\u9664\uFF0C\u4F60\u5C06\u65E0\u6CD5\u6E32\u67D3\u9879\u76EE\u3002",
+        "Value": "\u76F4\u63A5\u5F15\u7528\u4F4D\u4E8E\u78C1\u76D8\u4E0A\u7684\u539F\u59CB\u6587\u4EF6\u3002\r\u5982\u679C\u6E90\u6587\u4EF6\u88AB\u5220\u9664\uFF0C\u4F60\u5C06\u65E0\u6CD5\u6E32\u67D3\u9879\u76EE\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1518,7 +1518,7 @@
       },
       {
         "Id": "DraftPage_AssetPanel_Templates_Summary",
-        "Value": "\u5305\u542B {c} \u4E2A\u7247\u6BB5\u548C {t} \u4E2A\u97F3\u8F68",
+        "Value": "\u5305\u542B\u4E86 {c} \u4E2A\u7247\u6BB5\u548C {t} \u4E2A\u97F3\u8F68",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1540,15 +1540,6 @@
             "Value": "\u97F3\u8F68\u6570"
           }
         ],
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "\u9519\u8BEF\uFF1A\u540E\u7AEF\u610F\u5916\u9000\u51FA\u4E86\u3002\u70B9\u51FB\u0022\u597D\u7684\u0022\u6765\u91CD\u542F\u5B83\uFF0C\u6216\u8005\u70B9\u51FB\u0022\u53D6\u6D88\u0022\u6765\u5FFD\u7565\u5B83\u3002\u5982\u679C\u4F60\u60F3\u8981\u4E86\u89E3\u66F4\u591A\uFF0C\u8BF7\u67E5\u770B\u65E5\u5FD7\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
         "HasValidationErrors": false,
         "DontTranslate": false
       },
@@ -1663,7 +1654,7 @@
       },
       {
         "Id": "DraftPage_ClipPropertyUpdated",
-        "Value": "\u6210\u529F\u7684\u66F4\u65B0\u300C{name}\u300D\u7684\u5C5E\u6027",
+        "Value": "\u6210\u529F\u7684\u66F4\u65B0\u4E86\u300C{name}\u300D\u7684\u5C5E\u6027",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1804,7 +1795,7 @@
       },
       {
         "Id": "DraftPage_DuplicatedAsset",
-        "Value": "\u7D20\u6750{newAsset}\u4F3C\u4E4E\u548C{existed}\u91CD\u590D\u4E86{Environment.NewLine}\u4F60\u60F3\u8981\u505A\u4EC0\u4E48\uFF1F",
+        "Value": "\u7D20\u6750{newAsset}\u4F3C\u4E4E\u548C{existed}\u91CD\u590D\u4E86\u3002\r\u8BF7\u9009\u62E9\u4E00\u4E2A\u884C\u4E3A\uFF1A",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3187,7 +3178,7 @@
       },
       {
         "Id": "HomePage_GoDraft_DraftBroken_Success",
-        "Value": "\u6210\u529F\u7684\u6062\u590D\u4E86\u4F60\u7684\u8349\u7A3F\u3002\u4F60\u53EF\u80FD\u9700\u8981\u5728\u8FDB\u5165\u7F16\u8F91\u754C\u9762\u4E4B\u540E\u624B\u52A8\u4FDD\u5B58\uFF0C\u66F4\u6539\u624D\u4F1A\u88AB\u5199\u5165\u78C1\u76D8\u3002",
+        "Value": "\u6210\u529F\u7684\u6062\u590D\u4E86\u4F60\u7684\u8349\u7A3F\u3002\r\u66F4\u6539\u5C1A\u672A\u88AB\u5199\u5165\u78C1\u76D8\uFF0C\u8BF7\u8FDB\u884C\u201C\u4FDD\u5B58\u5E76\u540C\u6B65\u201D\u6765\u6C38\u4E45\u7684\u4FDD\u5B58\u6062\u590D\u7684\u6570\u636E\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3215,7 +3206,7 @@
       },
       {
         "Id": "HomePage_GoDraft_ResumeLastTimeWarning",
-        "Value": "\u4E0A\u4E00\u6B21\u7A0B\u5E8F\u4F3C\u4E4E\u6CA1\u6709\u6B63\u786E\u7684\u5173\u95ED\uFF0C\u6211\u4EEC\u5C06\u4ECE\u6700\u540E\u4E00\u6B21\u6210\u529F\u7684\u4FDD\u5B58\u7684\u69FD\u4F4D(\u4FDD\u5B58\u4E8E{timespan:G})\u4E2D\u7684\u8349\u7A3F\u6765\u7EE7\u7EED\u3002\u64A4\u9500/\u8FD8\u539F\u529F\u80FD\u5C06\u7EE7\u7EED\u53EF\u7528\uFF0C\u5982\u679C\u6570\u636E\u6CA1\u6709\u88AB\u635F\u574F\u3002",
+        "Value": "\u4E0A\u4E00\u6B21\u7A0B\u5E8F\u4F3C\u4E4E\u6CA1\u6709\u6B63\u786E\u7684\u5173\u95ED\uFF0C\u6211\u4EEC\u5C06\u4ECE\u6700\u540E\u4E00\u6B21\u6210\u529F\u7684\u4FDD\u5B58\u7684\u69FD\u4F4D (\u4FDD\u5B58\u4E8E{timespan:G}) \u4E2D\u7684\u8349\u7A3F\u6765\u7EE7\u7EED\u3002\u64A4\u9500/\u8FD8\u539F\u529F\u80FD\u5C06\u7EE7\u7EED\u53EF\u7528\uFF0C\u5982\u679C\u6570\u636E\u6CA1\u6709\u88AB\u635F\u574F\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3545,7 +3536,7 @@
       },
       {
         "Id": "HomePage_ProjectContextMenu_Delete_Confirm1",
-        "Value": "\u4F60\u786E\u8BA4\u8981\u5220\u9664\u300C{name}\u300D\u5417\uFF1F{Environment.NewLine}\u6B64\u64CD\u4F5C\u65E0\u6CD5\u64A4\u9500\uFF01",
+        "Value": "\u4F60\u786E\u8BA4\u8981\u5220\u9664\u300C{name}\u300D\u5417\uFF1F\r\u6B64\u64CD\u4F5C\u65E0\u6CD5\u64A4\u9500\uFF01",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3583,7 +3574,7 @@
       },
       {
         "Id": "HomePage_ProjectContextMenu_Delete_Confirm2Input",
-        "Value": "\u4F60\u786E\u8BA4\u8981\u6C38\u4E45\u5220\u9664\u9879\u76EE\u300C{name}\u300D\u5417\uFF1F\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF0C\u8FD9\u4E2A\u9879\u76EE\u6240\u4F7F\u7528\u7684\u7D20\u6750\u548C\u6A21\u677F\u5C06\u4F1A\u6C38\u4E45\u6D88\u5931\uFF01\r\r\u5728\u4E0B\u9762\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u4F60\u7684\u64CD\u4F5C\u3002",
+        "Value": "\u4F60\u786E\u8BA4\u8981\u6C38\u4E45\u5220\u9664\u300C{name}\u300D\u5417\uFF1F\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF0C\u300C{name}\u300D\u7684\u6570\u636E\u5C06\u4F1A\u6C38\u4E45\u6D88\u5931\uFF01\r\r\u5728\u4E0B\u9762\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u4F60\u7684\u64CD\u4F5C\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3731,7 +3722,7 @@
       },
       {
         "Id": "HomePage_SourceNotFound",
-        "Value": "\u6211\u4EEC\u627E\u4E0D\u5230\u4EE5\u4E0B\u7247\u6BB5\u7684\u6E90\uFF0C\u8BF7\u68C0\u67E5\u4ED6\u4EEC\u3002",
+        "Value": "\u4EE5\u4E0B\u7247\u6BB5\u7684\u6E90\u4F3C\u4E4E\u4E22\u5931\u6216\u8005\u4E0D\u53EF\u7528\uFF1A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3758,7 +3749,7 @@
       },
       {
         "Id": "HomePage_SourceNotFound_RemoveThem_Conf",
-        "Value": "\u4F60\u786E\u8BA4\u8981\u4ECE\u9879\u76EE\u91CC\u79FB\u9664\u4ED6\u4EEC\u5417\uFF1F\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF01\r\u5728\u4E0B\u9762\u8F93\u5165\u0027yes\u0027\u6765\u786E\u8BA4\u3002",
+        "Value": "\u4F60\u786E\u8BA4\u8981\u4ECE\u9879\u76EE\u91CC\u79FB\u9664\u8FD9\u4E9B\u7247\u6BB5\u5417\uFF1F\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF01\r\u5728\u4E0B\u9762\u8F93\u5165\u0027yes\u0027\u6765\u786E\u8BA4\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3768,7 +3759,7 @@
       },
       {
         "Id": "HomePage_SourceNotFound_Title",
-        "Value": "\u4E00\u4E2A\u6216\u8005\u591A\u4E2A\u7247\u6BB5\u7684\u6E90\u6D88\u5931\u4E86",
+        "Value": "\u4E00\u4E2A\u6216\u8005\u591A\u4E2A\u7247\u6BB5\u7684\u6E90\u4E0D\u53EF\u7528",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3777,7 +3768,7 @@
       },
       {
         "Id": "HomePage_UserdataPathNotFoundWarn",
-        "Value": "\u4F60\u7684\u7528\u6237\u6570\u636E\u76EE\u5F55 ({path}) \u4E0D\u5B58\u5728\uFF0C\u7CFB\u7EDF\u5DF2\u7ECF\u4E3A\u4F60\u4E34\u65F6\u6062\u590D\u4E86\u9ED8\u8BA4\u503C\u3002\u5982\u679C\u4F60\u624B\u52A8\u79FB\u52A8\u4E86\u6570\u636E\u76EE\u5F55\uFF0C\u4F60\u53EF\u4EE5\u5728\u8BBE\u7F6E\u9875\u9762\u91CD\u65B0\u8BBE\u7F6E\u5B83\u3002",
+        "Value": "\u4F60\u7684\u7528\u6237\u6570\u636E\u76EE\u5F55 ({path}) \u5F53\u524D\u65E0\u6CD5\u8BBF\u95EE\uFF0C\u7CFB\u7EDF\u5DF2\u7ECF\u4E3A\u4F60\u4E34\u65F6\u6062\u590D\u4E86\u9ED8\u8BA4\u503C\u3002\r\u5982\u679C\u4F60\u624B\u52A8\u79FB\u52A8\u4E86\u6570\u636E\u76EE\u5F55\uFF0C\u4F60\u53EF\u4EE5\u5728\u8BBE\u7F6E\u9875\u9762\u91CD\u65B0\u8BBE\u7F6E\u5B83\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -4606,7 +4597,7 @@
       },
       {
         "Id": "TemplateCreatePage_MissingKeys",
-        "Value": "\u4EE5\u4E0B\u53D8\u91CF\u672A\u586B\u5199\u4E14\u65E0\u9ED8\u8BA4\u503C:\r{string.Join(Environment.NewLine, missingKeys.Take(10))}",
+        "Value": "\u4EE5\u4E0B\u53D8\u91CF\u672A\u586B\u5199\uFF0C\u4E14\u65E0\u9ED8\u8BA4\u503C:\r{string.Join(Environment.NewLine, missingKeys)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -4652,7 +4643,7 @@
       },
       {
         "Id": "TemplateCreatePage_SelectFile",
-        "Value": "\u9009\u62E9\u6587\u4EF6",
+        "Value": "\u6D4F\u89C8...",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -5221,6 +5212,24 @@
         "ArgsComment": [],
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "\u4F60\u7684\u8BBE\u5907\u4E0A\u6CA1\u6709\u53D7\u652F\u6301\u7684\u786C\u4EF6\u52A0\u901F\u786C\u4EF6\u3002\r\u8BF7\u5C1D\u8BD5\u68C0\u67E5\u4F60\u7684\u8BBE\u5907\u548C\u9A71\u52A8\uFF1B\u6709\u5173\u66F4\u591A\u8BE6\u60C5\uFF0C\u8BF7\u53C2\u9605\u6587\u6863\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "\u67E5\u770B\u652F\u6301\u6587\u6863",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -5439,16 +5448,6 @@
         ],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "Error: Backend exited unexpectedly. Click \u0022OK\u0022 to restart it, or click \u0022Cancel\u0022 to ignore it. If you want to know more, please check the logs.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Error prompt when backend process exits unexpectedly, providing user with restart or ignore options",
         "HasValidationErrors": false,
         "DontTranslate": false
       },
@@ -10874,6 +10873,26 @@
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "Unset localization item:HomePage_NoSupportAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "Unset localization item:HomePage_NoSupportAccel_SeeSupport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -11647,16 +11666,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "\u932F\u8AA4\uFF1A\u5F8C\u7AEF\u610F\u5916\u7D50\u675F\u4E86\u3002\u9EDE\u64CA\u300C\u597D\u7684\u300D\u4F86\u91CD\u555F\u5B83\uFF0C\u6216\u8005\u9EDE\u64CA\u300C\u53D6\u6D88\u300D\u4F86\u7565\u904E\u3002\u5982\u679C\u4F60\u60F3\u8981\u77AD\u89E3\u66F4\u591A\uFF0C\u8ACB\u67E5\u770B\u65E5\u8A8C\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Backend exited unexpectedly prompt message",
         "HasValidationErrors": false,
         "DontTranslate": false
       },
@@ -16526,6 +16535,26 @@
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "Unset localization item:HomePage_NoSupportAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "Unset localization item:HomePage_NoSupportAccel_SeeSupport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "ja-JP": [
@@ -16749,16 +16778,6 @@
         ],
         "ArgsComment": [],
         "Comment": "Added asset successfully",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "\u30A8\u30E9\u30FC\uFF1A\u30D0\u30C3\u30AF\u30A8\u30F3\u30C9\u304C\u4E88\u671F\u305B\u305A\u7D42\u4E86\u3057\u307E\u3057\u305F\u3002\u300COK\u300D\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u518D\u8D77\u52D5\u3059\u308B\u304B\u3001\u300C\u30AD\u30E3\u30F3\u30BB\u30EB\u300D\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u7121\u8996\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u8A73\u7D30\u306B\u3064\u3044\u3066\u306F\u3001\u30ED\u30B0\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Backend unexpected exit error message with user action options",
         "HasValidationErrors": false,
         "DontTranslate": false
       },
@@ -22184,6 +22203,26 @@
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "Unset localization item:HomePage_NoSupportAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "Unset localization item:HomePage_NoSupportAccel_SeeSupport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -22407,16 +22446,6 @@
         ],
         "ArgsComment": [],
         "Comment": "Asset successfully added confirmation message",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "\uC624\uB958: \uBC31\uC5D4\uB4DC\uAC00 \uC608\uAE30\uCE58 \uC54A\uAC8C \uC885\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \u0027\uD655\uC778\u0027\uC744 \uD074\uB9AD\uD558\uC5EC \uC7AC\uC2DC\uC791\uD558\uAC70\uB098, \u0027\uCDE8\uC18C\u0027\uB97C \uD074\uB9AD\uD558\uC5EC \uBB34\uC2DC\uD558\uC2ED\uC2DC\uC624. \uC790\uC138\uD55C \uB0B4\uC6A9\uC744 \uC6D0\uD558\uC2DC\uBA74 \uB85C\uADF8\uB97C \uD655\uC778\uD574 \uC8FC\uC138\uC694.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\uBC31\uC5D4\uB4DC \uBE44\uC815\uC0C1 \uC885\uB8CC \uC2DC \uC0AC\uC6A9\uC790 \uC870\uCE58 \uC548\uB0B4 \uBA54\uC2DC\uC9C0",
         "HasValidationErrors": false,
         "DontTranslate": false
       },
@@ -27842,6 +27871,26 @@
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "Unset localization item:HomePage_NoSupportAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "Unset localization item:HomePage_NoSupportAccel_SeeSupport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -28060,16 +28109,6 @@
         ],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "Erreur : Le service principal s\u0027est arr\u00EAt\u00E9 de mani\u00E8re inattendue. Cliquez sur \u0022OK\u0022 pour le red\u00E9marrer, ou sur \u0022Cancel\u0022 pour l\u0027ignorer. Si vous souhaitez en savoir plus, veuillez consulter les journaux.",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Message d\u0027erreur lorsque le processus backend se termine de mani\u00E8re inattendue, offrant \u00E0 l\u0027utilisateur des options de red\u00E9marrage ou d\u0027ignorance",
         "HasValidationErrors": false,
         "DontTranslate": false
       },
@@ -33495,6 +33534,26 @@
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "Unset localization item:HomePage_NoSupportAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "Unset localization item:HomePage_NoSupportAccel_SeeSupport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -34922,16 +34981,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "\u8BEF\uFF1A\u540E\u7AEF\u907D\u9000\u3002\u51FB\u300C\u5584\u300D\u4EE5\u91CD\u5174\u4E4B\uFF0C\u6216\u51FB\u300C\u7F62\u300D\u4EE5\u5FFD\u4E4B\u3002\u82E5\u6B32\u8BE6\u77E5\uFF0C\u8BF7\u9605\u65E5\u5FD7\u3002",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Converted modern Chinese error message to classical Chinese style while preserving technical terms and interactive elements",
         "HasValidationErrors": false,
         "DontTranslate": false
       },
@@ -39151,6 +39200,26 @@
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "Unset localization item:HomePage_NoSupportAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "Unset localization item:HomePage_NoSupportAccel_SeeSupport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -40574,16 +40643,6 @@
       {
         "Id": "DraftPage_AssetPanel_SharedAssets",
         "Value": "\u0627\u0644\u0623\u0635\u0648\u0644 \u0627\u0644\u0645\u0634\u062A\u0631\u0643\u0629",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "\u062E\u0637\u0623: \u0627\u0644\u062E\u0644\u0641\u064A\u0629 \u062E\u0631\u062C\u062A \u0628\u0634\u0643\u0644 \u063A\u064A\u0631 \u0645\u062A\u0648\u0642\u0639. \u0627\u0646\u0642\u0631 \u0639\u0644\u0649 \u0022\u062D\u0633\u0646\u064B\u0627\u0022 \u0644\u0625\u0639\u0627\u062F\u0629 \u062A\u0634\u063A\u064A\u0644\u0647\u0627\u060C \u0623\u0648 \u0627\u0646\u0642\u0631 \u0639\u0644\u0649 \u0022\u0625\u0644\u063A\u0627\u0621\u0022 \u0644\u062A\u062C\u0627\u0647\u0644\u0647\u0627. \u0625\u0630\u0627 \u0643\u0646\u062A \u062A\u0631\u063A\u0628 \u0641\u064A \u0645\u0639\u0631\u0641\u0629 \u0627\u0644\u0645\u0632\u064A\u062F\u060C \u064A\u0631\u062C\u0649 \u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u0633\u062C\u0644\u0627\u062A.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -44809,6 +44868,26 @@
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "Unset localization item:HomePage_NoSupportAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "Unset localization item:HomePage_NoSupportAccel_SeeSupport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -46232,16 +46311,6 @@
       {
         "Id": "DraftPage_AssetPanel_SharedAssets",
         "Value": "Gemeinsame Assets",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "FEHLER: Das Backend wurde unerwartet beendet. Klicken Sie auf \u0022OK\u0022, um es neu zu starten, oder auf \u0022Abbrechen\u0022, um dies zu ignorieren. Wenn Sie mehr erfahren m\u00F6chten, sehen Sie bitte in den Protokollen nach.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -50467,6 +50536,26 @@
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "Unset localization item:HomePage_NoSupportAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "Unset localization item:HomePage_NoSupportAccel_SeeSupport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -51890,16 +51979,6 @@
       {
         "Id": "DraftPage_AssetPanel_SharedAssets",
         "Value": "Recursos compartidos",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "ERROR: El backend se cerr\u00F3 inesperadamente. Haz clic en \u0022Aceptar\u0022 para reiniciarlo, o en \u0022Cancelar\u0022 para ignorarlo. Si deseas m\u00E1s informaci\u00F3n, consulta los registros.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -56125,6 +56204,26 @@
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "Unset localization item:HomePage_NoSupportAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "Unset localization item:HomePage_NoSupportAccel_SeeSupport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -57548,16 +57647,6 @@
       {
         "Id": "DraftPage_AssetPanel_SharedAssets",
         "Value": "Risorse condivise",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "ERRORE: Il backend \u00E8 uscito inaspettatamente. Clicca \u0022OK\u0022 per riavviarlo, oppure clicca \u0022Annulla\u0022 per ignorarlo. Se desideri maggiori informazioni, consulta i log.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -61783,6 +61872,26 @@
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "Unset localization item:HomePage_NoSupportAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "Unset localization item:HomePage_NoSupportAccel_SeeSupport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -63206,16 +63315,6 @@
       {
         "Id": "DraftPage_AssetPanel_SharedAssets",
         "Value": "Udost\u0119pnione zasoby",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "B\u0142\u0105d: Proces zaplecza zako\u0144czy\u0142 si\u0119 nieoczekiwanie. Kliknij \u0022OK\u0022, aby go ponownie uruchomi\u0107, lub \u0022Anuluj\u0022, aby zignorowa\u0107. Je\u015Bli chcesz dowiedzie\u0107 si\u0119 wi\u0119cej, sprawd\u017A dziennik.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -67441,6 +67540,26 @@
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "Unset localization item:HomePage_NoSupportAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "Unset localization item:HomePage_NoSupportAccel_SeeSupport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -68864,16 +68983,6 @@
       {
         "Id": "DraftPage_AssetPanel_SharedAssets",
         "Value": "Ativos Compartilhados",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "ERRO: O backend saiu inesperadamente. Clique em \u0022OK\u0022 para reinici\u00E1-lo ou clique em \u0022Cancelar\u0022 para ignorar. Se quiser saber mais, consulte os logs.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -73099,6 +73208,26 @@
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "Unset localization item:HomePage_NoSupportAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "Unset localization item:HomePage_NoSupportAccel_SeeSupport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "ru-RU": [
@@ -74522,16 +74651,6 @@
       {
         "Id": "DraftPage_AssetPanel_SharedAssets",
         "Value": "\u041E\u0431\u0449\u0438\u0435 \u0440\u0435\u0441\u0443\u0440\u0441\u044B",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "\u041E\u0428\u0418\u0411\u041A\u0410: \u0421\u0435\u0440\u0432\u0435\u0440 \u043D\u0435\u043E\u0436\u0438\u0434\u0430\u043D\u043D\u043E \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u043B \u0440\u0430\u0431\u043E\u0442\u0443. \u041D\u0430\u0436\u043C\u0438\u0442\u0435 \u00AB\u041E\u041A\u00BB, \u0447\u0442\u043E\u0431\u044B \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C \u0435\u0433\u043E, \u0438\u043B\u0438 \u00AB\u041E\u0442\u043C\u0435\u043D\u0430\u00BB, \u0447\u0442\u043E\u0431\u044B \u043F\u0440\u043E\u0438\u0433\u043D\u043E\u0440\u0438\u0440\u043E\u0432\u0430\u0442\u044C. \u0415\u0441\u043B\u0438 \u0432\u044B \u0445\u043E\u0442\u0438\u0442\u0435 \u0443\u0437\u043D\u0430\u0442\u044C \u0431\u043E\u043B\u044C\u0448\u0435, \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0436\u0443\u0440\u043D\u0430\u043B \u0441\u043E\u0431\u044B\u0442\u0438\u0439.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -78757,6 +78876,26 @@
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "Unset localization item:HomePage_NoSupportAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "Unset localization item:HomePage_NoSupportAccel_SeeSupport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -80180,16 +80319,6 @@
       {
         "Id": "DraftPage_AssetPanel_SharedAssets",
         "Value": "Payla\u015F\u0131lan Varl\u0131klar",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_BackendExited",
-        "Value": "HATA: Arka plan beklenmedik \u015Fekilde sonland\u0131. Yeniden ba\u015Flatmak i\u00E7in \u0027Tamam\u0027 veya g\u00F6rmezden gelmek i\u00E7in \u0027\u0130ptal\u0027 d\u00FC\u011Fmesine t\u0131klay\u0131n. Daha fazla bilgi i\u00E7in l\u00FCtfen g\u00FCnl\u00FCkleri kontrol edin.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -84412,6 +84541,26 @@
             "Value": "\u97F3\u8F68\u6570"
           }
         ],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel",
+        "Value": "Unset localization item:HomePage_NoSupportAccel()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "HomePage_NoSupportAccel_SeeSupport",
+        "Value": "Unset localization item:HomePage_NoSupportAccel_SeeSupport()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false

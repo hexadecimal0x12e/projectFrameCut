@@ -49,7 +49,7 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\u3002\u6240\u6709\u7684\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u5C06\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\u6B64\u64CD\u4F5C\u65E0\u6CD5\u88AB\u64A4\u9500\uFF0C\u6240\u6709\u7684\u5E73\u53F0\u9996\u9009\u9879\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\r\u4F60\u786E\u8BA4\u5417\uFF1F\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u3002",
+        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\u3002\u6240\u6709\u7684\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u5C06\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\r\u4F60\u786E\u8BA4\u5417\uFF1F\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -105,7 +105,7 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "\u5BFC\u51FA\u63D2\u4EF6",
+        "Value": "\u5BFC\u51FA\u7528\u6237\u63D2\u4EF6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -854,7 +854,7 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "\u9879\u76EE\u7F16\u8F91\u5668 - \u4E2A\u6027\u5316",
+        "Value": "\u4E2A\u6027\u5316",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -926,7 +926,7 @@
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "\u6742\u9879",
+        "Value": "\u5176\u4ED6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -1208,7 +1208,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "\u6253\u5F00\u7528\u6237\u6570\u636E\u76EE\u5F55 ({path})",
+        "Value": "\u6253\u5F00\u7528\u6237\u6570\u636E\u76EE\u5F55",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1227,7 +1227,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "\u5982\u679C\u6CA1\u6709\u4EFB\u4F55\u7A0B\u5E8F\u88AB\u6253\u5F00\uFF0C\u4F60\u53EF\u4EE5\u6253\u5F00\u8BBE\u5907\u4E0A\u7684\u6587\u4EF6\u7BA1\u7406\u5668 \uFF0C\u8F6C\u5230 \u5185\u90E8\u5B58\u50A8-\u003EAndroid-\u003Edata-\u003E{pfm}\uFF0C\u5373\u53EF\u627E\u5230\u7528\u6237\u6570\u636E\u3002",
+        "Value": "\u5982\u679C\u6CA1\u6709\u4EFB\u4F55\u7A0B\u5E8F\u88AB\u6253\u5F00\uFF0C\u4F60\u53EF\u4EE5\u6253\u5F00\u8BBE\u5907\u4E0A\u7684\u6587\u4EF6\u7BA1\u7406\u5668 \uFF0C\u8F6C\u5230 \u5185\u90E8\u5B58\u50A8-\u003EAndroid-\u003Edata-\u003E{pfm}\uFF0C\u5373\u53EF\u627E\u5230\u7528\u6237\u6570\u636E\u3002\r\u5982\u679C\u4F60\u4ECD\u7136\u627E\u4E0D\u5230\u7528\u6237\u6570\u636E\uFF0C\u8BF7\u53C2\u9605\u652F\u6301\u6587\u6863\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1246,7 +1246,7 @@
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "\u6253\u5F00\u8BBE\u5907\u4E0A\u7684\u201C\u6587\u4EF6\u201D\u5E94\u7528\u7A0B\u5E8F\uFF0C\u8F6C\u5230 \u0027\u6211\u7684{idiom}\u0027-\u003E{Localized.AppBrand}\uFF0C\u5373\u53EF\u627E\u5230\u7528\u6237\u6570\u636E\u3002",
+        "Value": "\u6253\u5F00\u8BBE\u5907\u4E0A\u7684\u201C\u6587\u4EF6\u201D\u5E94\u7528\u7A0B\u5E8F\uFF0C\u8F6C\u5230 \u0027\u6211\u7684{idiom}-\u003E{Localized.AppBrand}\u0027\uFF0C\u5373\u53EF\u627E\u5230\u7528\u6237\u6570\u636E\u3002\r\u5982\u679C\u4F60\u627E\u4E0D\u5230\u201C\u6587\u4EF6\u201D\u5E94\u7528\u7A0B\u5E8F\uFF0C\u8BF7\u5C1D\u8BD5\u4ECEApp Store\u4E0B\u8F7D\u5B83\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -1320,7 +1320,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "\u6210\u529F\u7684\u5B8C\u6210\u4E86\u8FC1\u79FB\u64CD\u4F5C\uFF0C\u6E90\u6587\u4EF6\u5939\u53EF\u4EE5\u5B89\u5168\u7684\u88AB\u5220\u9664\u4E86\u3002\r\u70B9\u51FB{Localized._OK}\u6765\u5220\u9664\u5B83\u3002",
+        "Value": "\u6210\u529F\u7684\u5B8C\u6210\u4E86\u8FC1\u79FB\u64CD\u4F5C\uFF0C\u4E0B\u8F7D\u53EF\u4EE5\u5B89\u5168\u7684\u5220\u9664\u6E90\u6587\u4EF6\u5939\u4E86\u3002\r\u70B9\u51FB{Localized._OK}\u6765\u5220\u9664\u5B83\u3002",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -2369,7 +2369,7 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "\u9009\u62E9\u7528\u4E8E\u7F16\u8F91\u65F6\u786C\u4EF6\u52A0\u901F\u7684GPU",
+        "Value": "\u9009\u62E9\u7528\u4E8E\u7F16\u8F91/\u9884\u89C8\u65F6\uFF0C\u7528\u4E8E\u786C\u4EF6\u52A0\u901F\u7684GPU",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="projectFrameCut.InteractableEditor.ClipCropConfiguratorView">
+    <Border StrokeThickness="0" Padding="12">
+        <VerticalStackLayout Spacing="10">
+            <Grid Grid.Column="0"  VerticalOptions="Center">
+                <HorizontalStackLayout HorizontalOptions="Start">
+                    <Label Text="Enabled" x:Name="EnableSwitchText" TextColor="#D0D0D0" VerticalOptions="Center"/>
+                    <Switch x:Name="EnabledSwitch" Margin="8,0,0,0" IsToggled="True" Toggled="EnabledSwitch_Toggled"/>
+                </HorizontalStackLayout>
+                <Label HorizontalOptions="End" Margin="8,0,8,0"  x:Name="SummaryLabel" FontSize="12" VerticalOptions="Center" TextColor="#D0D0D0"/>
+            </Grid>
+            <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto" ColumnSpacing="8">
+                <Label Grid.Column="0" x:Name="AngleSliderText" Text="Angle" TextColor="#D0D0D0" VerticalOptions="Center" FontSize="12"/>
+                <Slider Grid.Column="1" x:Name="AngleSlider" Minimum="-180" Maximum="180" Value="0" ValueChanged="AngleSlider_ValueChanged"/>
+                <Label Grid.Column="2" x:Name="AngleValueLabel" Text="0°" TextColor="#D0D0D0" VerticalOptions="Center" FontSize="12" MinimumWidthRequest="40" HorizontalTextAlignment="End"/>
+            </Grid>
+            <Border 
+                 StrokeThickness="0"
+                 Padding="0"
+                 VerticalOptions="Fill"
+                 HorizontalOptions="Fill"
+                 HeightRequest="220">
+                <AbsoluteLayout x:Name="CropCanvas"
+                          SizeChanged="CropCanvas_SizeChanged"
+                          InputTransparent="False">
+                    <BoxView x:Name="CropViewport"
+                       Color="#222226"
+                       AbsoluteLayout.LayoutFlags="None"/>
+
+                    <Border x:Name="CropSelection"
+                      Stroke="Yellow"
+                      StrokeThickness="2"
+                      BackgroundColor="#22FFFF00"
+                      AbsoluteLayout.LayoutFlags="None"
+                      InputTransparent="False">
+                    </Border>
+
+                    <BoxView x:Name="HandleTL"
+                       Color="Cyan"
+                       WidthRequest="14"
+                       HeightRequest="14"
+                       CornerRadius="2"
+                       AbsoluteLayout.LayoutFlags="None"
+                       InputTransparent="False"/>
+
+                    <BoxView x:Name="HandleTR"
+                       Color="Cyan"
+                       WidthRequest="14"
+                       HeightRequest="14"
+                       CornerRadius="2"
+                       AbsoluteLayout.LayoutFlags="None"
+                       InputTransparent="False"/>
+
+                    <BoxView x:Name="HandleBL"
+                       Color="Cyan"
+                       WidthRequest="14"
+                       HeightRequest="14"
+                       CornerRadius="2"
+                       AbsoluteLayout.LayoutFlags="None"
+                       InputTransparent="False"/>
+
+                    <BoxView x:Name="HandleBR"
+                       Color="Cyan"
+                       WidthRequest="14"
+                       HeightRequest="14"
+                       CornerRadius="2"
+                       AbsoluteLayout.LayoutFlags="None"
+                       InputTransparent="False"/>
+
+                    <BoxView x:Name="HandleRotate"
+                       Color="#FF9F1A"
+                       WidthRequest="16"
+                       HeightRequest="16"
+                       CornerRadius="8"
+                       AbsoluteLayout.LayoutFlags="None"
+                       InputTransparent="False"/>
+                </AbsoluteLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </Border>
+</ContentView>

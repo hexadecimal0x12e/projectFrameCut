@@ -3,8 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="projectFrameCut.Template.TemplateExtractPage"
              xmlns:l="clr-namespace:LocalizedResources"
+             x:Name="RootPage"
              Title="{l:Localized Key=TemplateExtractPage_Title}">
-    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="10" Padding="12">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10" Padding="12">
         <VerticalStackLayout Grid.Row="0" Spacing="4">
             <Label x:Name="ProjectNameLabel"
                    FontAttributes="Bold"
@@ -13,47 +14,14 @@
                  <Label Text="{l:Localized Key=TemplateExtractPage_Description}"
                    FontSize="12"
                    Opacity="0.8" />
+            <Label x:Name="StepHeaderLabel"
+                   Text="步骤 1/2：选择要挖空的 Clip 与字段"
+                   FontSize="13"
+                   FontAttributes="Bold"
+                   Opacity="0.85" />
         </VerticalStackLayout>
 
-        <Border Grid.Row="1" StrokeThickness="1" Padding="8">
-            <VerticalStackLayout Spacing="8">
-                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                        <Label Text="{l:Localized Key=TemplateExtractPage_SelectExportClips}"
-                           VerticalOptions="Center"
-                           FontAttributes="Bold" />
-                    <Button Grid.Column="1"
-                            Text="{l:Localized Key=TemplateExtractPage_SelectAll}"
-                            Clicked="SelectAllClips_Clicked" />
-                    <Button Grid.Column="2"
-                            Text="{l:Localized Key=TemplateExtractPage_Clear}"
-                            Clicked="ClearClips_Clicked" />
-                </Grid>
-                <CollectionView x:Name="ClipsCollectionView"
-                                SelectionMode="None"
-                                HeightRequest="150">
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate>
-                            <Grid ColumnDefinitions="Auto,*,Auto"
-                                  ColumnSpacing="8"
-                                  Padding="0,2">
-                                <CheckBox IsChecked="{Binding IsSelected}" VerticalOptions="Center" />
-                                <Label Grid.Column="1"
-                                       Text="{Binding DisplayName}"
-                                       LineBreakMode="TailTruncation"
-                                       VerticalOptions="Center" />
-                                <Label Grid.Column="2"
-                                       Text="{Binding ClipIdShort}"
-                                       FontSize="11"
-                                       Opacity="0.7"
-                                       VerticalOptions="Center" />
-                            </Grid>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                </CollectionView>
-            </VerticalStackLayout>
-        </Border>
-
-        <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+        <Grid Grid.Row="1" x:Name="StepOneFiltersGrid" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
             <SearchBar x:Name="FieldSearchBar"
                        Placeholder="{l:Localized Key=TemplateExtractPage_FieldSearchPlaceholder}"
                        TextChanged="FieldSearchBar_TextChanged" />
@@ -74,57 +42,150 @@
                     Clicked="ClearSelection_Clicked" />
         </Grid>
 
-        <CollectionView Grid.Row="3" x:Name="FieldsCollectionView" SelectionMode="None">
-            <CollectionView.ItemTemplate>
-                <DataTemplate>
-                    <Border StrokeThickness="1"
-                            Padding="8"
-                            Margin="0,0,0,6">
-                        <VerticalStackLayout Spacing="6">
-                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                                <CheckBox IsChecked="{Binding IsSelected}" VerticalOptions="Center" />
-                                <Label Grid.Column="1"
-                                       Text="{Binding PathDisplay}"
-                                       LineBreakMode="TailTruncation"
-                                       VerticalOptions="Center" />
-                                <Label Grid.Column="2"
-                                       Text="{Binding Scope}"
-                                       FontSize="11"
-                                       Opacity="0.75"
-                                       VerticalOptions="Center" />
-                            </Grid>
-                            <Label Text="{Binding ValuePreview}"
-                                   FontSize="12"
-                                   Opacity="0.75"
-                                   LineBreakMode="TailTruncation" />
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                <Label Text="{l:Localized Key=TemplateExtractPage_VariableName}"
-                                    VerticalOptions="Center"
-                                    FontSize="12" />
-                                <Entry Grid.Column="1"
-                                    Text="{Binding VariableKey}"
-                                    Placeholder="{l:Localized Key=TemplateExtractPage_VariableName}" />
-                            </Grid>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                <Label Text="{l:Localized Key=TemplateExtractPage_VariableType}"
-                                    VerticalOptions="Center"
-                                    FontSize="12" />
-                                <Picker Grid.Column="1"
-                                     ItemsSource="{Binding VariableTypeOptions}"
-                                     SelectedIndex="{Binding VariableTypeIndex}"
-                                     IsEnabled="{Binding IsSelected}" />
-                            </Grid>
-                        </VerticalStackLayout>
-                    </Border>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+        <Grid Grid.Row="2">
+            <VerticalStackLayout x:Name="StepOnePanel" Spacing="10">
+                <Border StrokeThickness="1" Padding="8">
+                    <VerticalStackLayout Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                            <Label Text="{l:Localized Key=TemplateExtractPage_SelectExportClips}"
+                               VerticalOptions="Center"
+                               FontAttributes="Bold" />
+                            <Button Grid.Column="1"
+                                Text="{l:Localized Key=TemplateExtractPage_SelectAll}"
+                                Clicked="SelectAllClips_Clicked" />
+                            <Button Grid.Column="2"
+                                Text="{l:Localized Key=TemplateExtractPage_Clear}"
+                                Clicked="ClearClips_Clicked" />
+                        </Grid>
+                        <CollectionView x:Name="ClipsCollectionView"
+                            SelectionMode="None"
+                            HeightRequest="150">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="Auto,*,Auto"
+                                      ColumnSpacing="8"
+                                      Padding="0,2">
+                                        <CheckBox IsChecked="{Binding IsSelected}" VerticalOptions="Center" />
+                                        <Label Grid.Column="1"
+                                           Text="{Binding DisplayName}"
+                                           LineBreakMode="TailTruncation"
+                                           VerticalOptions="Center" />
+                                        <Label Grid.Column="2"
+                                           Text="{Binding ClipIdShort}"
+                                           FontSize="11"
+                                           Opacity="0.7"
+                                           VerticalOptions="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Border>
 
-        <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                <CollectionView x:Name="FieldsCollectionView" SelectionMode="None">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border StrokeThickness="1"
+                                Padding="8"
+                                Margin="0,0,0,6">
+                                <VerticalStackLayout Spacing="6">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                        <CheckBox IsChecked="{Binding IsSelected}" VerticalOptions="Center" />
+                                        <Label Grid.Column="1"
+                                           Text="{Binding PathDisplay}"
+                                           LineBreakMode="TailTruncation"
+                                           VerticalOptions="Center" />
+                                        <Label Grid.Column="2"
+                                           Text="{Binding Scope}"
+                                           FontSize="11"
+                                           Opacity="0.75"
+                                           VerticalOptions="Center" />
+                                    </Grid>
+                                    <Label Text="{Binding ValuePreview}"
+                                       FontSize="12"
+                                       Opacity="0.75"
+                                       LineBreakMode="TailTruncation" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout x:Name="StepTwoPanel" Spacing="10" IsVisible="False">
+                <Label Text="步骤 2：配置每个挖空变量的属性"
+                       FontAttributes="Bold"
+                       FontSize="14"
+                       Opacity="0.9" />
+                <CollectionView x:Name="ConfigFieldsCollectionView" SelectionMode="None">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border StrokeThickness="1"
+                                    Padding="8"
+                                    Margin="0,0,0,6">
+                                <VerticalStackLayout Spacing="6">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <Label Text="{Binding PathDisplay}"
+                                               LineBreakMode="TailTruncation"
+                                               VerticalOptions="Center" />
+                                        <Label Grid.Column="1"
+                                               Text="{Binding Scope}"
+                                               FontSize="11"
+                                               Opacity="0.75"
+                                               VerticalOptions="Center" />
+                                    </Grid>
+                                    <Label Text="{Binding ValuePreview}"
+                                           FontSize="12"
+                                           Opacity="0.75"
+                                           LineBreakMode="TailTruncation" />
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                        <Label Text="{l:Localized Key=TemplateExtractPage_VariableName}"
+                                               VerticalOptions="Center"
+                                               FontSize="12" />
+                                        <Entry Grid.Column="1"
+                                               Text="{Binding VariableKey}"
+                                               Placeholder="{l:Localized Key=TemplateExtractPage_VariableName}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                        <Label Text="{l:Localized Key=TemplateExtractPage_VariableType}"
+                                               VerticalOptions="Center"
+                                               FontSize="12" />
+                                        <Picker Grid.Column="1"
+                                                ItemsSource="{Binding VariableTypeOptions}"
+                                                SelectedIndex="{Binding VariableTypeIndex}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                        <Label Text="User Friendly Name"
+                                               VerticalOptions="Center"
+                                               FontSize="12" />
+                                        <Entry Grid.Column="1"
+                                               Text="{Binding UserFriendlyName}"
+                                               Placeholder="用于给用户看的变量显示名" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                        <Label Text="Description"
+                                               VerticalOptions="Center"
+                                               FontSize="12" />
+                                        <Editor Grid.Column="1"
+                                                Text="{Binding Description}"
+                                                AutoSize="TextChanges"
+                                                Placeholder="变量描述（可选）"
+                                                MinimumHeightRequest="56" />
+                                    </Grid>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </Grid>
+
+        <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10" VerticalOptions="Center">
             <Label x:Name="StatsLabel"
                Text="{l:Localized Key=TemplateExtractPage_Stats_NoFieldSelected}"
                    VerticalOptions="Center" />
             <Label Grid.Column="1"
+                   x:Name="ScopeLabel"
                    Text="{l:Localized Key=TemplateExtractPage_Scope}"
                    VerticalOptions="Center"
                    FontSize="12" />
@@ -135,9 +196,19 @@
             <Button Grid.Column="3"
                 Text="{l:Localized Key=_Cancel}"
                     Clicked="Cancel_Clicked" />
-            <Button Grid.Column="4"
+                <Button Grid.Column="4"
+                    x:Name="PreviousStepButton"
+                    Text="上一步"
+                    IsVisible="False"
+                    Clicked="PreviousStep_Clicked" />
+                <Button Grid.Column="5"
+                    x:Name="NextStepButton"
+                    Text="下一步"
+                    Clicked="NextStep_Clicked" />
+                <Button Grid.Column="6"
                     x:Name="SaveButton"
-                Text="{l:Localized Key=TemplateExtractPage_SaveTemplate}"
+                    IsVisible="False"
+                    Text="{l:Localized Key=TemplateExtractPage_SaveTemplate}"
                     Clicked="Save_Clicked" />
         </Grid>
     </Grid>

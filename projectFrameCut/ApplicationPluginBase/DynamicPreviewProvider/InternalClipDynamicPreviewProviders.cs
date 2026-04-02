@@ -17,7 +17,7 @@ internal abstract class InternalClipDynamicPreviewProviderBase : IClipDynamicPre
 
     public abstract bool IsAvailable(IClip target);
 
-    public abstract View Generate(IClip target, int canvasWidth, int canvasHeight, uint targetFrame);
+    public abstract View Generate(IClip target, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint targetFrame);
 
     protected static Label BuildFallbackLabel(string text)
     {
@@ -54,7 +54,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
             && File.Exists(target.FilePath);
     }
 
-    public override View Generate(IClip target, int canvasWidth, int canvasHeight, uint targetFrame)
+    public override View Generate(IClip target, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint targetFrame)
     {
         if (target is not VideoClip clip || string.IsNullOrWhiteSpace(clip.FilePath) || !File.Exists(clip.FilePath))
         {
@@ -266,7 +266,7 @@ internal sealed class PhotoClipDynamicPreviewProvider : InternalClipDynamicPrevi
             && File.Exists(target.FilePath);
     }
 
-    public override View Generate(IClip target, int canvasWidth, int canvasHeight, uint targetFrame)
+    public override View Generate(IClip target, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint targetFrame)
     {
         if (target is not PhotoClip clip || string.IsNullOrWhiteSpace(clip.FilePath) || !File.Exists(clip.FilePath))
         {
@@ -293,20 +293,31 @@ internal sealed class SolidColorClipDynamicPreviewProvider : InternalClipDynamic
             && target.FromPlugin == InternalPluginBase.InternalPluginBaseID;
     }
 
-    public override View Generate(IClip target, int canvasWidth, int canvasHeight, uint targetFrame)
+    public override View Generate(IClip target, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint targetFrame)
     {
         if (target is not SolidColorClip clip)
         {
             return BuildFallbackLabel("Solid color clip is unavailable.");
         }
+
+        var previewWidth = Math.Min(canvasWidth, Math.Max(1, clip.EffectiveOutputWidth));
+        var previewHeight = Math.Min(canvasHeight, Math.Max(1, clip.EffectiveOutputHeight));
         var alpha = clip.A.HasValue ? Math.Clamp(clip.A.Value, 0f, 1f) : 1f;
-        return new BoxView
+        return new Grid
         {
-            Color = Color.FromRgba((byte)(clip.R / 257), (byte)(clip.G / 257), (byte)(clip.B / 257), alpha),
-            WidthRequest = canvasWidth,
-            HeightRequest = canvasHeight,
             HorizontalOptions = LayoutOptions.Fill,
             VerticalOptions = LayoutOptions.Fill,
+            Children =
+            {
+                new BoxView
+                {
+                    Color = Color.FromRgba((byte)(clip.R / 257), (byte)(clip.G / 257), (byte)(clip.B / 257), alpha),
+                    WidthRequest = previewWidth,
+                    HeightRequest = previewHeight,
+                    HorizontalOptions = LayoutOptions.Center,
+                    VerticalOptions = LayoutOptions.Center,
+                }
+            }
         };
     }
 }
@@ -322,7 +333,7 @@ internal sealed class TextClipDynamicPreviewProvider : InternalClipDynamicPrevie
             && !t.TextEntries.Any(c => c.UseVerticalLayout || c.applyKerning || c.strokeWidth > 0 || c.dpi is not null);
     }
 
-    public override View Generate(IClip target, int canvasWidth, int canvasHeight, uint targetFrame)
+    public override View Generate(IClip target, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint targetFrame)
     {
         if (target is not TextClip clip)
         {

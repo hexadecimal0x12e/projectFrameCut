@@ -1,4 +1,4 @@
-﻿using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.Effect;
@@ -10,76 +10,78 @@ using System.Collections.Generic;
 
 namespace projectFrameCut.ApplicationPluginBase.Effect
 {
-    public class ZoominEffectBundle : IEffectBundle
+    public class RotationEffectBundle : IEffectBundle
     {
         public Guid Id { get; set; } = Guid.NewGuid();
-
-        public string Name { get; set; } = "ZoomIn";
-
+        public string Name { get; set; } = "Rotation";
         public string FromPlugin => InternalPluginBase.InternalPluginBaseID;
 
         public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>
         {
-            { "TargetX", 960 },
-            { "TargetY", 540 },
+            { "Angle", 0f },
+            { "ExpandCanvas", false },
         };
 
-        public List<string> ParametersNeeded => ZoomInContinuousEffectFactory.s_ParametersNeeded;
+        public List<string> ParametersNeeded => RotationEffect_ImageSharp.ParametersNeeded;
+        public Dictionary<string, string> ParametersType => RotationEffect_ImageSharp.ParametersType;
 
-        public Dictionary<string, string> ParametersType => ZoomInContinuousEffectFactory.s_ParametersType;
-
-        public string TypeName => "ZoomIn";
-
-        public bool IsNormalEffect => false;
-
-        public bool IsContinuousEffect => true;
-
+        public string TypeName => "Rotation";
+        public bool IsNormalEffect => true;
+        public bool IsContinuousEffect => false;
         public bool IsBindableEffect => false;
-
-        public EffectType TypeOfEffect => EffectType.ContinuousEffect;
-
+        public EffectType TypeOfEffect => EffectType.NormalEffect;
         public EffectTarget Target => EffectTarget.Video;
 
         public Guid BindedInputId { get; set; } = IEffectBundle.InputAnchorGUID;
         public Guid BindedOutputId { get; set; } = IEffectBundle.OutputAnchorGUID;
         public List<Guid>? BindedInputIds { get; set; }
         public bool IsMultiInput => false;
-        public bool Enabled { get; set; } = true;
-
         public string InputAnchorDisplayName => string.Empty;
         public string[]? InputAnchorsDisplayName => null;
         public string OutputAnchorDisplayName => string.Empty;
 
+        public bool Enabled { get; set; } = true;
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
 
         public IEffectFactory[] Create()
         {
-            var factory = new ZoomInContinuousEffectFactory();
+            var factory = new RotationEffectFactory();
             this.ConfigureFactory(factory);
             return [factory];
         }
 
         public PropertyPanelBuilder CreateUI()
         {
-            int targetX = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "TargetX", 960));
-            int targetY = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "TargetY", 540));
+            float angle = EffectBundleUiHelper.GetFloat(Parameters, "Angle", 0f);
+            bool expandCanvas = EffectBundleUiHelper.GetBool(Parameters, "ExpandCanvas", false);
 
             var panel = new PropertyPanelBuilder();
-            EffectBundleUiHelper.AddNumericEntry(panel, "TargetX", EffectBundleUiHelper.ParamLabel("TargetX"), targetX.ToString(), "960");
-            EffectBundleUiHelper.AddNumericEntry(panel, "TargetY", EffectBundleUiHelper.ParamLabel("TargetY"), targetY.ToString(), "540");
+            panel.AddSlider(
+                "Angle",
+                EffectBundleUiHelper.ParamLabel("Angle"),
+                -180,
+                180,
+                angle,
+                null,
+                SliderUpdateEventCallMode.OnValueChanged);
+            panel.AddCheckbox(
+                "ExpandCanvas",
+                EffectBundleUiHelper.L("Effect_Rotation_ExpandCanvas", "Expand Canvas"),
+                expandCanvas);
+
             return panel;
         }
 
         public Dictionary<string, object> HandlePropertyPanelChange(PropertyPanelPropertyChangedEventArgs args)
         {
-            if (args.Id == "TargetX" && EffectBundleUiHelper.TrySetInt(Parameters, "TargetX", args.Value))
+            if (args.Id == "Angle")
             {
-                Parameters["TargetX"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "TargetX", 960));
+                EffectBundleUiHelper.TrySetFloat(Parameters, "Angle", args.Value);
             }
-            else if (args.Id == "TargetY" && EffectBundleUiHelper.TrySetInt(Parameters, "TargetY", args.Value))
+            else if (args.Id == "ExpandCanvas")
             {
-                Parameters["TargetY"] = Math.Max(1, EffectBundleUiHelper.GetInt(Parameters, "TargetY", 540));
+                EffectBundleUiHelper.TrySetBool(Parameters, "ExpandCanvas", args.Value);
             }
 
             return Parameters;
@@ -89,8 +91,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
         {
             return new EffectBundleDisplayItem
             {
-                Name = EffectBundleUiHelper.L("DisplayName_Effect_ZoomIn", "Zoom In"),
-                Description = EffectBundleUiHelper.L("Description_Effect_ZoomIn", "Zoom in from the source frame size to the target size over time."),
+                Name = EffectBundleUiHelper.L("DisplayName_Effect_Rotation", "Rotation"),
+                Description = EffectBundleUiHelper.L("Description_Effect_Rotation", "Rotate the frame by angle and optionally expand canvas."),
                 Thumbnail = ImageHelper.LoadFromAsset("icon_add")
             };
         }

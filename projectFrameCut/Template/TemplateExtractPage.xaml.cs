@@ -15,6 +15,7 @@ public partial class TemplateExtractPage : ContentPage
 	private readonly ViewModels.ProjectsViewModel _projectVm;
 	private readonly ObservableCollection<TemplateExtractFieldItem> _allFields = [];
 	private readonly ObservableCollection<TemplateExtractFieldItem> _filteredFields = [];
+	private readonly ObservableCollection<TemplateExtractFieldItem> _configFields = [];
 	private readonly ObservableCollection<TemplateClipItem> _clips = [];
 	private static readonly IReadOnlyList<TemplateScope> ScopeValues =
 	[
@@ -28,16 +29,19 @@ public partial class TemplateExtractPage : ContentPage
 	private JsonObject _draftSourceNode = new();
 	private bool _isBusy;
 	private bool _showNonRecommended;
+	private int _currentStep = 1;
 
 	public TemplateExtractPage(ViewModels.ProjectsViewModel projectVm)
 	{
 		InitializeComponent();
 		_projectVm = projectVm;
 		FieldsCollectionView.ItemsSource = _filteredFields;
+		ConfigFieldsCollectionView.ItemsSource = _configFields;
 		ClipsCollectionView.ItemsSource = _clips;
 		ScopePicker.ItemsSource = GetScopeOptions();
 		ScopePicker.SelectedIndex = 0;
 		ProjectNameLabel.Text = Localized.TemplateExtractPage_ProjectName(projectVm.Name);
+		UpdateStepUI();
 		Loaded += TemplateExtractPage_Loaded;
 	}
 
@@ -156,12 +160,16 @@ public partial class TemplateExtractPage : ContentPage
 			{
 				item.IsSelected = prev.IsSelected;
 				item.VariableType = prev.VariableType;
+				item.VariableKey = prev.VariableKey;
+				item.UserFriendlyName = prev.UserFriendlyName;
+				item.Description = prev.Description;
 			}
 
 			item.PropertyChanged += FieldItem_PropertyChanged;
 		}
 
 		ApplyFilter();
+		RefreshConfigFields();
 		RefreshStats();
 	}
 
@@ -464,6 +472,15 @@ public partial class TemplateExtractPage : ContentPage
 		ApplyFilter();
 	}
 
+	private void RefreshConfigFields()
+	{
+		_configFields.Clear();
+		foreach (var item in _allFields.Where(f => f.IsSelected))
+		{
+			_configFields.Add(item);
+		}
+	}
+
 	private void ClipItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
 	{
 		if (e.PropertyName != nameof(TemplateClipItem.IsSelected))
@@ -500,6 +517,7 @@ public partial class TemplateExtractPage : ContentPage
 		{
 			item.IsSelected = false;
 		}
+		RefreshConfigFields();
 		RefreshStats();
 	}
 
@@ -509,7 +527,49 @@ public partial class TemplateExtractPage : ContentPage
 		{
 			item.IsSelected = IsRecommendedPath(item.PathDisplay);
 		}
+		RefreshConfigFields();
 		RefreshStats();
+	}
+
+	private async void NextStep_Clicked(object sender, EventArgs e)
+	{
+		if (_clips.Count > 0 && _clips.All(c => !c.IsSelected))
+		{
+			await DisplayAlertAsync(Localized._Info, Localized.DraftPage_SelectOneOrManyToContinue, Localized._OK);
+			return;
+		}
+
+		if (_allFields.All(f => !f.IsSelected))
+		{
+			await DisplayAlertAsync(Localized._Info, Localized.TemplateExtractPage_SelectBlankToContinue, Localized._OK);
+			return;
+		}
+
+		RefreshConfigFields();
+		_currentStep = 2;
+		UpdateStepUI();
+	}
+
+	private void PreviousStep_Clicked(object sender, EventArgs e)
+	{
+		_currentStep = 1;
+		UpdateStepUI();
+	}
+
+	private void UpdateStepUI()
+	{
+		var isStepTwo = _currentStep == 2;
+		StepOnePanel.IsVisible = !isStepTwo;
+		StepOneFiltersGrid.IsVisible = !isStepTwo;
+		StepTwoPanel.IsVisible = isStepTwo;
+		PreviousStepButton.IsVisible = isStepTwo;
+		NextStepButton.IsVisible = !isStepTwo;
+		SaveButton.IsVisible = isStepTwo;
+		ScopeLabel.IsVisible = isStepTwo;
+		ScopePicker.IsVisible = isStepTwo;
+		StepHeaderLabel.Text = isStepTwo
+			? "步骤 2/2：配置每个挖空变量的属性并导出"
+			: "步骤 1/2：选择要挖空的 Clip 与字段";
 	}
 
 	private async void Cancel_Clicked(object sender, EventArgs e)
@@ -520,6 +580,11 @@ public partial class TemplateExtractPage : ContentPage
 	private async void Save_Clicked(object sender, EventArgs e)
 	{
 		if (_isBusy)
+		{
+			return;
+		}
+
+		if (_currentStep != 2)
 		{
 			return;
 		}
@@ -572,7 +637,9 @@ public partial class TemplateExtractPage : ContentPage
 				variableDefinitions[key] = new TemplateVariableDefinition
 				{
 					Type = field.VariableType,
-					DefaultValue = field.ValuePreview
+					DefaultValue = field.ValuePreview,
+					UserFriendlyName = NormalizeOptionalText(field.UserFriendlyName),
+					Description = NormalizeOptionalText(field.Description)
 				};
 			}
 
@@ -582,6 +649,11 @@ public partial class TemplateExtractPage : ContentPage
                 ?? throw new InvalidOperationException("Invalid draft");
 
             var projectName = await DisplayPromptAsync(Localized._Info, Localized.TemplateExtractPage_InputName, Localized._OK, null, _projectVm.Name, 1024, null, _projectVm.Name);
+			if (string.IsNullOrWhiteSpace(projectName))
+			{
+				await DisplayAlertAsync(Localized._Info, Localized.DraftPage_Tasks_Status_Canceled, Localized._OK);
+				return;
+			}
 
 
             var template = new JSONBasedTemplateStructure
@@ -687,8 +759,11 @@ public partial class TemplateExtractPage : ContentPage
 	{
 		_isBusy = isBusy;
 		SaveButton.IsEnabled = !isBusy;
+		NextStepButton.IsEnabled = !isBusy;
+		PreviousStepButton.IsEnabled = !isBusy;
 		FieldSearchBar.IsEnabled = !isBusy;
 		FieldsCollectionView.IsEnabled = !isBusy;
+		ConfigFieldsCollectionView.IsEnabled = !isBusy;
 		ClipsCollectionView.IsEnabled = !isBusy;
 		ShowNonRecommendedSwitch.IsEnabled = !isBusy;
 		ScopePicker.IsEnabled = !isBusy;
@@ -698,8 +773,19 @@ public partial class TemplateExtractPage : ContentPage
 	{
 		if (e.PropertyName == nameof(TemplateExtractFieldItem.IsSelected))
 		{
+			RefreshConfigFields();
 			RefreshStats();
 		}
+	}
+
+	private static string? NormalizeOptionalText(string? text)
+	{
+		if (string.IsNullOrWhiteSpace(text))
+		{
+			return null;
+		}
+
+		return text.Trim();
 	}
 
 	private void RefreshStats()
@@ -745,6 +831,8 @@ public partial class TemplateExtractPage : ContentPage
 		private bool _isSelected;
 		private string _variableKey = variableKey;
 		private TemplateVariableType _variableType = TemplateVariableType.String;
+		private string? _userFriendlyName;
+		private string? _description;
 
 		public string Scope { get; } = scope;
 		public string PathDisplay { get; } = pathDisplay;
@@ -813,6 +901,36 @@ public partial class TemplateExtractPage : ContentPage
 				}
 
 				_variableKey = normalized;
+				OnPropertyChanged();
+			}
+		}
+
+		public string? UserFriendlyName
+		{
+			get => _userFriendlyName;
+			set
+			{
+				if (string.Equals(_userFriendlyName, value, StringComparison.Ordinal))
+				{
+					return;
+				}
+
+				_userFriendlyName = value;
+				OnPropertyChanged();
+			}
+		}
+
+		public string? Description
+		{
+			get => _description;
+			set
+			{
+				if (string.Equals(_description, value, StringComparison.Ordinal))
+				{
+					return;
+				}
+
+				_description = value;
 				OnPropertyChanged();
 			}
 		}

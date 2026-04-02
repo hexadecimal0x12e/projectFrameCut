@@ -38,6 +38,7 @@ using CornerRadius = Microsoft.Maui.CornerRadius;
 using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
 using projectFrameCut.ApplicationAPIBase.Helpers;
+using projectFrameCut.InteractableEditor;
 
 
 #if WINDOWS
@@ -54,6 +55,13 @@ namespace projectFrameCut.DraftStuff
 {
     public class ClipInfoBuilder
     {
+        private const string InternalPlaceID = "__Internal_Place__";
+        private const string InternalResizeID = "__Internal_Resize__";
+        private const string InternalRotationID = "__Internal_Rotation__";
+        private const string InternalCropID = "__Internal_Crop__";
+        private const string SolidColorOutputWidthKey = "SolidColorOutputWidth";
+        private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
+        private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
         #region init
         DraftPage page;
 
@@ -73,6 +81,24 @@ namespace projectFrameCut.DraftStuff
                 projectFrameCut.Shared.ClipMode.SolidColorClip => Colors.OrangeRed.ToArgbHex(),
                 _ => Colors.Gray.ToArgbHex(),
             };
+        }
+
+        private static int ReadIntExtraData(Dictionary<string, object>? data, string key, int fallback)
+        {
+            if (data != null && data.TryGetValue(key, out var raw) && raw is not null)
+            {
+                if (raw is int i) return Math.Max(1, i);
+                if (raw is long l) return Math.Max(1, (int)Math.Min(int.MaxValue, l));
+                if (raw is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var jn)) return Math.Max(1, jn);
+                    if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var js)) return Math.Max(1, js);
+                }
+
+                if (int.TryParse(raw.ToString(), out var parsed)) return Math.Max(1, parsed);
+            }
+
+            return Math.Max(1, fallback);
         }
 
 
@@ -106,6 +132,14 @@ namespace projectFrameCut.DraftStuff
                 {
                     Header = PPLocalizedResources.Tabs_Timing,
                     Content = BuildTimingTab(clip, handler)
+                });
+            }
+            if (clip.ClipType == ClipMode.VideoClip || clip.ClipType == ClipMode.PhotoClip)
+            {
+                t.TabItems.Add(new TabbedViewItem
+                {
+                    Header = PPLocalizedResources.Tabs_SizeAndPosition,
+                    Content = BuildSizeAndPositionTab(clip, handler)
                 });
             }
             if (clip.ClipType != ClipMode.MarkingClip)
@@ -150,7 +184,7 @@ namespace projectFrameCut.DraftStuff
 
             if (clip.Effects != null)
             {
-                if (clip.Effects.TryGetValue("__Internal_Place__", out var e) && e is PlaceEffect_ImageSharp p)
+                if (clip.Effects.TryGetValue(InternalPlaceID, out var e) && e is PlaceEffect_ImageSharp p)
                 {
                     valX = p.StartX;
                     valY = p.StartY;
@@ -160,7 +194,7 @@ namespace projectFrameCut.DraftStuff
                         valY = (int)(p.StartY * ((double)page.ProjectInfo.RelativeHeight / p.RelativeHeight));
                     }
                 }
-                if (clip.Effects.TryGetValue("__Internal_Resize__", out var e2) && e2 is ResizeEffect_ImageSharp r)
+                if (clip.Effects.TryGetValue(InternalResizeID, out var e2) && e2 is ResizeEffect_ImageSharp r)
                 {
                     valW = r.Width;
                     valH = r.Height;
@@ -170,6 +204,12 @@ namespace projectFrameCut.DraftStuff
                         valH = (int)(r.Height * ((double)page.ProjectInfo.RelativeHeight / r.RelativeHeight));
                     }
                 }
+            }
+
+            if (clip.ClipType == ClipMode.SolidColorClip)
+            {
+                valW = ReadIntExtraData(clip.ExtraData, SolidColorOutputWidthKey, valW);
+                valH = ReadIntExtraData(clip.ExtraData, SolidColorOutputHeightKey, valH);
             }
 
             var ppb = new PropertyPanelBuilder()
@@ -282,7 +322,7 @@ namespace projectFrameCut.DraftStuff
                 return layout;
             }, "clipColor", currentColorHex)
             .AddSeparator(null)
-            .AppendWhen(clip.ClipType == ClipMode.VideoClip || clip.ClipType == ClipMode.PhotoClip || clip.ClipType == ClipMode.SolidColorClip,
+                .AppendWhen(clip.ClipType == ClipMode.SolidColorClip,
             (c) => c.AddText(new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 20))
                     .AddEntry("placeX", PPLocalizedResources.General_LocationX, valX.ToString(), "0", null, default)
                     .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
@@ -326,7 +366,7 @@ namespace projectFrameCut.DraftStuff
                         int currentX = 0, currentY = 0;
 
                         PlaceEffect_ImageSharp? existingP = null;
-                        if (clip.Effects.TryGetValue("__Internal_Place__", out var eff) && eff is PlaceEffect_ImageSharp pe)
+                        if (clip.Effects.TryGetValue(InternalPlaceID, out var eff) && eff is PlaceEffect_ImageSharp pe)
                         {
                             existingP = pe;
                             currentX = pe.StartX;
@@ -351,17 +391,39 @@ namespace projectFrameCut.DraftStuff
                             RelativeWidth = page.ProjectInfo.RelativeWidth,
                             RelativeHeight = page.ProjectInfo.RelativeHeight,
                             Enabled = existingP?.Enabled ?? true,
-                            Name = existingP?.Name ?? "__Internal_Place__",
+                            Name = existingP?.Name ?? InternalPlaceID,
                             Index = existingP?.Index ?? (int.MaxValue - 100)
                         };
-                        clip.Effects["__Internal_Place__"] = newP;
+                        clip.Effects[InternalPlaceID] = newP;
                     }
                     else if (e.Id.StartsWith("resize"))
                     {
+                        if (clip.ClipType == ClipMode.SolidColorClip)
+                        {
+                            clip.ExtraData ??= new Dictionary<string, object>();
+
+                            int solidCurrentW = ReadIntExtraData(clip.ExtraData, SolidColorOutputWidthKey, page.ProjectInfo.RelativeWidth);
+                            int solidCurrentH = ReadIntExtraData(clip.ExtraData, SolidColorOutputHeightKey, page.ProjectInfo.RelativeHeight);
+
+                            if (e.Id == "resizeW" && int.TryParse(e.Value?.ToString(), out var sw)) solidCurrentW = sw;
+                            else if (ppb.Properties.TryGetValue("resizeW", out var uiW) && int.TryParse(uiW.ToString(), out var uiWInt)) solidCurrentW = uiWInt;
+
+                            if (e.Id == "resizeH" && int.TryParse(e.Value?.ToString(), out var sh)) solidCurrentH = sh;
+                            else if (ppb.Properties.TryGetValue("resizeH", out var uiH) && int.TryParse(uiH.ToString(), out var uiHInt)) solidCurrentH = uiHInt;
+
+                            clip.ExtraData[SolidColorOutputWidthKey] = Math.Max(1, solidCurrentW);
+                            clip.ExtraData[SolidColorOutputHeightKey] = Math.Max(1, solidCurrentH);
+                            clip.ExtraData[SolidColorUseFixedOutputSizeKey] = true;
+                            clip.Effects.Remove(InternalResizeID);
+
+                            handler?.Invoke(s, e);
+                            return;
+                        }
+
                         int currentW = page.ProjectInfo.RelativeWidth, currentH = page.ProjectInfo.RelativeHeight;
                         ResizeEffect_ImageSharp? existingR = null;
 
-                        if (clip.Effects.TryGetValue("__Internal_Resize__", out var eff) && eff is ResizeEffect_ImageSharp re)
+                        if (clip.Effects.TryGetValue(InternalResizeID, out var eff) && eff is ResizeEffect_ImageSharp re)
                         {
                             existingR = re;
                             currentW = re.Width;
@@ -386,11 +448,11 @@ namespace projectFrameCut.DraftStuff
                             RelativeWidth = page.ProjectInfo.RelativeWidth,
                             RelativeHeight = page.ProjectInfo.RelativeHeight,
                             Enabled = existingR?.Enabled ?? true,
-                            Name = existingR?.Name ?? "__Internal_Resize__",
+                            Name = existingR?.Name ?? InternalResizeID,
                             Index = existingR?.Index ?? (int.MinValue + 50),
                             PreserveAspectRatio = existingR?.PreserveAspectRatio ?? false
                         };
-                        clip.Effects["__Internal_Resize__"] = newR;
+                        clip.Effects[InternalResizeID] = newR;
                     }
 
                     handler?.Invoke(s, e);
@@ -404,13 +466,13 @@ namespace projectFrameCut.DraftStuff
                         {
                             Angle = (float)deg,
                             Enabled = true,
-                            Name = "__Internal_Rotation__",
+                            Name = InternalRotationID,
                             Index = int.MinValue + 100,
                             RelativeWidth = page.ProjectInfo.RelativeWidth,
                             RelativeHeight = page.ProjectInfo.RelativeHeight,
                             ExpandCanvas = false
                         };
-                        clip.Effects["__Internal_Rotation__"] = newR;
+                        clip.Effects[InternalRotationID] = newR;
                     }
 
                 }
@@ -465,6 +527,341 @@ namespace projectFrameCut.DraftStuff
             };
             return ppb.BuildWithScrollView();
         }
+
+        public View BuildSizeAndPositionTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
+        {
+            clip.Effects ??= new Dictionary<string, IEffect>();
+
+            int valX = 0, valY = 0;
+            int valW = page.ProjectInfo.RelativeWidth;
+            int valH = page.ProjectInfo.RelativeHeight;
+            double rotationDeg = 0;
+
+            if (clip.Effects.TryGetValue(InternalPlaceID, out var placeEff) && placeEff is PlaceEffect_ImageSharp p)
+            {
+                valX = p.StartX;
+                valY = p.StartY;
+                if (p.RelativeWidth > 0 && p.RelativeWidth != page.ProjectInfo.RelativeWidth)
+                {
+                    valX = (int)Math.Round(p.StartX * ((double)page.ProjectInfo.RelativeWidth / p.RelativeWidth));
+                    valY = (int)Math.Round(p.StartY * ((double)page.ProjectInfo.RelativeHeight / p.RelativeHeight));
+                }
+            }
+
+            if (clip.Effects.TryGetValue(InternalResizeID, out var resizeEff) && resizeEff is ResizeEffect_ImageSharp r)
+            {
+                valW = r.Width;
+                valH = r.Height;
+                if (r.RelativeWidth > 0 && r.RelativeWidth != page.ProjectInfo.RelativeWidth)
+                {
+                    valW = (int)Math.Round(r.Width * ((double)page.ProjectInfo.RelativeWidth / r.RelativeWidth));
+                    valH = (int)Math.Round(r.Height * ((double)page.ProjectInfo.RelativeHeight / r.RelativeHeight));
+                }
+            }
+
+            if (clip.Effects.TryGetValue(InternalRotationID, out var rotEff) && rotEff is RotationEffect_ImageSharp rot)
+            {
+                rotationDeg = rot.Angle;
+            }
+
+            CropEffect_ImageSharp? existingCrop = null;
+            if (clip.Effects.TryGetValue(InternalCropID, out var cropEff) && cropEff is CropEffect_ImageSharp c)
+            {
+                existingCrop = c;
+            }
+
+            var cropView = new ClipCropConfiguratorView
+            {
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Start,
+                Margin = new(8, 0, 8, 0),
+            };
+
+            cropView.LoadFromEffect(existingCrop ?? new CropEffect_ImageSharp
+            {
+                Enabled = false,
+                StartX = 0,
+                StartY = 0,
+                Width = page.ProjectInfo.RelativeWidth,
+                Height = page.ProjectInfo.RelativeHeight,
+                RelativeWidth = page.ProjectInfo.RelativeWidth,
+                RelativeHeight = page.ProjectInfo.RelativeHeight,
+                Name = InternalCropID,
+                Id = InternalCropID,
+                Index = int.MinValue + 40,
+                ImplementType = EffectImplementType.ImageSharp
+            });
+            cropView.RelativeWidth = page.ProjectInfo.RelativeWidth;
+            cropView.RelativeHeight = page.ProjectInfo.RelativeHeight;
+
+            var transformPpb = new PropertyPanelBuilder()
+                .AddText(new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 25))
+                .AddEntry("placeX", PPLocalizedResources.General_LocationX, valX.ToString(), "0", null, default)
+                .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
+                .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
+                .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default)
+                .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, rotationDeg)
+                .AddText(new SingleLineLabel(PPLocalizedResources.General_Crop, 25))
+                .AddEntry("cropStartX", PPLocalizedResources._StartX, cropView.StartX.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
+                .AddEntry("cropStartY", PPLocalizedResources._StartY, cropView.StartY.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
+                .AddEntry("cropWidth", PPLocalizedResources._Width, cropView.CropWidth.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
+                .AddEntry("cropHeight", PPLocalizedResources._Height, cropView.CropHeight.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange);
+
+            cropView.ConfigurationChanged += (s, effect) =>
+            {
+                clip.Effects ??= new Dictionary<string, IEffect>();
+                if (effect is CropEffect_ImageSharp crop)
+                {
+                    crop.RelativeWidth = page.ProjectInfo.RelativeWidth;
+                    crop.RelativeHeight = page.ProjectInfo.RelativeHeight;
+                    clip.Effects[InternalCropID] = crop;
+                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("crop", crop, existingCrop));
+                    existingCrop = crop;
+                    SyncCropInputsFromView();
+                }
+            };
+
+            bool syncingCropInputs = false;
+
+            transformPpb.PropertyChanged += (s, e) =>
+            {
+                clip.Effects ??= new Dictionary<string, IEffect>();
+
+                if (e.Id.StartsWith("place"))
+                {
+                    int currentX = 0, currentY = 0;
+
+                    PlaceEffect_ImageSharp? existingP = null;
+                    if (clip.Effects.TryGetValue(InternalPlaceID, out var eff) && eff is PlaceEffect_ImageSharp pe)
+                    {
+                        existingP = pe;
+                        currentX = pe.StartX;
+                        currentY = pe.StartY;
+                        if (pe.RelativeWidth > 0 && pe.RelativeWidth != page.ProjectInfo.RelativeWidth)
+                        {
+                            currentX = (int)Math.Round(pe.StartX * ((double)page.ProjectInfo.RelativeWidth / pe.RelativeWidth));
+                            currentY = (int)Math.Round(pe.StartY * ((double)page.ProjectInfo.RelativeHeight / pe.RelativeHeight));
+                        }
+                    }
+
+                    if (e.Id == "placeX" && int.TryParse(e.Value?.ToString(), out var vx)) currentX = vx;
+                    else if (transformPpb.Properties.TryGetValue("placeX", out var uiX) && int.TryParse(uiX.ToString(), out var uiXInt)) currentX = uiXInt;
+
+                    if (e.Id == "placeY" && int.TryParse(e.Value?.ToString(), out var vy)) currentY = vy;
+                    else if (transformPpb.Properties.TryGetValue("placeY", out var uiY) && int.TryParse(uiY.ToString(), out var uiYInt)) currentY = uiYInt;
+
+                    clip.Effects[InternalPlaceID] = new PlaceEffect_ImageSharp
+                    {
+                        StartX = currentX,
+                        StartY = currentY,
+                        RelativeWidth = page.ProjectInfo.RelativeWidth,
+                        RelativeHeight = page.ProjectInfo.RelativeHeight,
+                        Enabled = existingP?.Enabled ?? true,
+                        Name = existingP?.Name ?? InternalPlaceID,
+                        Index = existingP?.Index ?? (int.MaxValue - 100)
+                    };
+
+                    handler?.Invoke(s, e);
+                    return;
+                }
+
+                if (e.Id.StartsWith("resize"))
+                {
+                    int currentW = page.ProjectInfo.RelativeWidth, currentH = page.ProjectInfo.RelativeHeight;
+                    ResizeEffect_ImageSharp? existingR = null;
+
+                    if (clip.Effects.TryGetValue(InternalResizeID, out var eff) && eff is ResizeEffect_ImageSharp re)
+                    {
+                        existingR = re;
+                        currentW = re.Width;
+                        currentH = re.Height;
+                        if (re.RelativeWidth > 0 && re.RelativeWidth != page.ProjectInfo.RelativeWidth)
+                        {
+                            currentW = (int)Math.Round(re.Width * ((double)page.ProjectInfo.RelativeWidth / re.RelativeWidth));
+                            currentH = (int)Math.Round(re.Height * ((double)page.ProjectInfo.RelativeHeight / re.RelativeHeight));
+                        }
+                    }
+
+                    if (e.Id == "resizeW" && int.TryParse(e.Value?.ToString(), out var vw)) currentW = vw;
+                    else if (transformPpb.Properties.TryGetValue("resizeW", out var uiW) && int.TryParse(uiW.ToString(), out var uiWInt)) currentW = uiWInt;
+
+                    if (e.Id == "resizeH" && int.TryParse(e.Value?.ToString(), out var vh)) currentH = vh;
+                    else if (transformPpb.Properties.TryGetValue("resizeH", out var uiH) && int.TryParse(uiH.ToString(), out var uiHInt)) currentH = uiHInt;
+
+                    clip.Effects[InternalResizeID] = new ResizeEffect_ImageSharp
+                    {
+                        Width = currentW,
+                        Height = currentH,
+                        RelativeWidth = page.ProjectInfo.RelativeWidth,
+                        RelativeHeight = page.ProjectInfo.RelativeHeight,
+                        Enabled = existingR?.Enabled ?? true,
+                        Name = existingR?.Name ?? InternalResizeID,
+                        Index = existingR?.Index ?? (int.MinValue + 50),
+                        PreserveAspectRatio = existingR?.PreserveAspectRatio ?? false
+                    };
+
+                    handler?.Invoke(s, e);
+                    return;
+                }
+
+                if (e.Id == "rotationDeg")
+                {
+                    if (e.Value is double deg)
+                    {
+                        RotationEffect_ImageSharp? existingRotation = null;
+                        if (clip.Effects.TryGetValue(InternalRotationID, out var existingRot) && existingRot is RotationEffect_ImageSharp oldRot)
+                        {
+                            existingRotation = oldRot;
+                        }
+
+                        clip.Effects[InternalRotationID] = new RotationEffect_ImageSharp
+                        {
+                            Angle = (float)deg,
+                            Enabled = existingRotation?.Enabled ?? true,
+                            Name = existingRotation?.Name ?? InternalRotationID,
+                            Index = existingRotation?.Index ?? (int.MinValue + 100),
+                            RelativeWidth = page.ProjectInfo.RelativeWidth,
+                            RelativeHeight = page.ProjectInfo.RelativeHeight,
+                            ExpandCanvas = existingRotation?.ExpandCanvas ?? false,
+                            ImplementType = existingRotation?.ImplementType ?? EffectImplementType.ImageSharp,
+                            Id = string.IsNullOrWhiteSpace(existingRotation?.Id) ? InternalRotationID : existingRotation.Id
+                        };
+                    }
+
+                    handler?.Invoke(s, e);
+                    return;
+                }
+
+                if (!syncingCropInputs)
+                {
+                    if (e.Id == "cropStartX" && int.TryParse(e.Value?.ToString(), out var sx))
+                    {
+                        cropView.StartX = sx;
+                    }
+                    else if (e.Id == "cropStartY" && int.TryParse(e.Value?.ToString(), out var sy))
+                    {
+                        cropView.StartY = sy;
+                    }
+                    else if (e.Id == "cropWidth" && int.TryParse(e.Value?.ToString(), out var w))
+                    {
+                        cropView.CropWidth = w;
+                    }
+                    else if (e.Id == "cropHeight" && int.TryParse(e.Value?.ToString(), out var h))
+                    {
+                        cropView.CropHeight = h;
+                    }
+                }
+
+                handler?.Invoke(s, e);
+            };
+
+
+
+            void SetCropEntryText(string id, int value)
+            {
+                if (transformPpb is null)
+                {
+                    return;
+                }
+
+                if (transformPpb.Components.TryGetValue(id, out var component) && component is Entry entry)
+                {
+                    var text = value.ToString();
+                    if (entry.Text != text)
+                    {
+                        entry.Text = text;
+                    }
+                    transformPpb.Properties[id] = text;
+                }
+            }
+
+            void SyncCropInputsFromView()
+            {
+                syncingCropInputs = true;
+                try
+                {
+                    SetCropEntryText("cropStartX", cropView.StartX);
+                    SetCropEntryText("cropStartY", cropView.StartY);
+                    SetCropEntryText("cropWidth", cropView.CropWidth);
+                    SetCropEntryText("cropHeight", cropView.CropHeight);
+                }
+                finally
+                {
+                    syncingCropInputs = false;
+                }
+            }
+
+            var transformTabView = transformPpb.BuildWithScrollView();
+
+            var transformButton = new Button
+            {
+                Text = PPLocalizedResources.General_LocationAndSize,
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Center,
+                CornerRadius = 8,
+                FontSize = 13,
+                Padding = new Thickness(10, 6)
+            };
+            var cropButton = new Button
+            {
+                Text = PPLocalizedResources.General_Crop,
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Center,
+                CornerRadius = 8,
+                FontSize = 13,
+                Padding = new Thickness(10, 6)
+            };
+
+            void SetTab(bool showCrop)
+            {
+                transformTabView.IsVisible = !showCrop;
+                cropView.IsVisible = showCrop;
+
+                transformButton.BackgroundColor = showCrop ? Color.FromArgb("#1F1F22") : Color.FromArgb("#3A3A40");
+                cropButton.BackgroundColor = showCrop ? Color.FromArgb("#3A3A40") : Color.FromArgb("#1F1F22");
+                transformButton.TextColor = showCrop ? Color.FromArgb("#C8C8CC") : Colors.White;
+                cropButton.TextColor = showCrop ? Colors.White : Color.FromArgb("#C8C8CC");
+            }
+
+            transformButton.Clicked += (_, _) => SetTab(false);
+            cropButton.Clicked += (_, _) => SetTab(true);
+
+            var root = new Grid
+            {
+                RowDefinitions =
+                {
+                    new RowDefinition(GridLength.Auto),
+                    new RowDefinition(GridLength.Star)
+                },
+                RowSpacing = 8
+            };
+
+            var switchRow = new Grid
+            {
+                ColumnDefinitions =
+                {
+                    new ColumnDefinition(GridLength.Star),
+                    new ColumnDefinition(GridLength.Star)
+                },
+                ColumnSpacing = 8,
+                Padding = new Thickness(10, 10, 10, 0)
+            };
+            switchRow.Add(transformButton, 0, 0);
+            switchRow.Add(cropButton, 1, 0);
+
+            var contentHost = new Grid
+            {
+                transformTabView,
+                cropView
+            };
+
+            root.Add(switchRow, 0, 0);
+            root.Add(contentHost, 0, 1);
+            SyncCropInputsFromView();
+            SetTab(false);
+            return root;
+        }
+
 
         #endregion
 
