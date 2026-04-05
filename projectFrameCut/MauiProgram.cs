@@ -90,7 +90,7 @@ namespace projectFrameCut
             {
                 try
                 {
-                    CmdlineArgs = Environment.GetCommandLineArgs();
+                    CmdlineArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
                 }
                 catch { } //safe to ignore it
             }

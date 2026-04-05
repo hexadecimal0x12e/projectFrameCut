@@ -11,7 +11,7 @@ using System.Linq;
 
 namespace projectFrameCut.Render.Effect
 {
-    public class PlaceEffect_ImageSharp : INormalEffect
+    public class PlaceEffect_IPicture : INormalEffect
     {
         public bool Enabled { get; set; } = true;
         public int Index { get; set; }
@@ -34,7 +34,7 @@ namespace projectFrameCut.Render.Effect
         public string? NeedComputer => null;
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
         public bool YieldProcessStep => true;
-        public EffectImplementType ImplementType { get; init; } = EffectImplementType.ImageSharp;
+        public EffectImplementType ImplementType { get; init; } = EffectImplementType.IPicture;
 
         public static List<string> ParametersNeeded { get; } = new List<string>
         {
@@ -63,7 +63,7 @@ namespace projectFrameCut.Render.Effect
             }
 
 
-            return new PlaceEffect_ImageSharp
+            return new PlaceEffect_IPicture
             {
                 StartX = Convert.ToInt32(parameters["StartX"]),
                 StartY = Convert.ToInt32(parameters["StartY"]),
@@ -184,7 +184,7 @@ namespace projectFrameCut.Render.Effect
             {"StartY", "int"},
         };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.IPicture };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -195,15 +195,14 @@ namespace projectFrameCut.Render.Effect
 
             return implementType switch
             {
-                EffectImplementType.ImageSharp => PlaceEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
-                EffectImplementType.IPicture => PlaceEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
+                EffectImplementType.IPicture => PlaceEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>(), implementType),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };
         }
 
         public IEffect BuildWithDefaultType(Dictionary<string, object>? parameters)
         {
-            return PlaceEffect_ImageSharp.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
+            return PlaceEffect_IPicture.FromParametersDictionary(parameters ?? new Dictionary<string, object>());
         }
     }
 }

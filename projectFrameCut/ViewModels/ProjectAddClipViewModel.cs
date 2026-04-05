@@ -2427,7 +2427,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             // ?????????
             var lastFrameIndex = clipData.Duration > 0 ? clipData.Duration - 1 : 0;
-            var frame = clipData.GetFrameRelativeToStartPointOfSource(lastFrameIndex, 1280, 720, false);
+            var frame = clipData.GetFrameRelativeToStartPointOfSource(lastFrameIndex, 1280, 720, 8);
 
             return frame;
         }
@@ -2445,7 +2445,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
             var clipData = ConvertClipElementToIClip(clipElement);
             if (clipData == null) return null;
 
-            var frame = clipData.GetFrameRelativeToStartPointOfSource(0, 1280, 720, false);
+            var frame = clipData.GetFrameRelativeToStartPointOfSource(0, 1280, 720, 8);
 
             return frame;
         }

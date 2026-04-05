@@ -26,7 +26,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
+        public uint Duration { get; set; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
 
@@ -46,6 +46,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
 
         public string BindedSoundTrack { get; init; } = "";
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
 
         public VideoClip()
         {
@@ -77,7 +81,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
+        public uint Duration { get; set; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
 
@@ -101,6 +105,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
         public IEffect[]? EffectsInstances { get; set; }
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
 
         public PhotoClip()
         {
@@ -146,7 +154,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
+        public uint Duration { get; set; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
 
@@ -185,6 +193,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public int targetWidth { get; init; } = 1920;
         public int targetHeight { get; init; } = 1080;
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize)
         {
@@ -285,6 +297,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
             return fallback;
         }
+
     }
 
     public class TextClip : IClip
@@ -295,7 +308,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
+        public uint Duration { get; set; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
 
@@ -317,14 +330,25 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public List<TextClipEntry> TextEntries { get; init; } = new List<TextClipEntry>();
 
         public string FontPath { get; set; } = string.Empty;
+        private const int MaxTextFrameCacheEntries = 16;
+        private readonly object textFrameCacheLock = new();
+        private readonly Dictionary<string, IPicture> textFrameCache = new(StringComparer.Ordinal);
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize)
             => GetFrameRelativeToStartPointOfSource(frameIndex, targetWidth, targetHeight, forceResize, IPicture.PicturePixelMode.BytePicture);
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
         {
-            Image<Rgba64> canvas = new(targetWidth, targetHeight);
             var entriesToRender = ResolveTextEntriesForRender();
+            string serializedEntries = JsonSerializer.Serialize(entriesToRender, JsonSerializerOptions.Web);
+            string cacheKey = BuildFrameCacheKey(targetWidth, targetHeight, forceResize, targetPPB, serializedEntries);
+
+            if (TryGetFrameFromCache(cacheKey, out var cachedFrame))
+            {
+                return cachedFrame;
+            }
+
+            using Image<Rgba64> canvas = new(targetWidth, targetHeight);
 
             foreach (var entry in entriesToRender)
             {
@@ -437,18 +461,21 @@ namespace projectFrameCut.Render.ClipsAndTracks
                         StepUsed = null,
                         Properties = new Dictionary<string, object>
                         {
-                            { "TextEntries", JsonSerializer.Serialize(entriesToRender, JsonSerializerOptions.Web) },
+                            { "TextEntries", serializedEntries },
                             { "FontPath", FontPath }
                         }
                     }
                 };
 
-            return targetPPB.Value switch
+            IPicture rendered = targetPPB.Value switch
             {
                 8 => new Picture8bpp(canvas) { ProcessStack = stack },
                 16 => new Picture16bpp(canvas) { ProcessStack = stack },
                 _ => throw new NotSupportedException($"Unsupported target pixel mode {targetPPB}.")
             };
+
+            CacheRenderedFrame(cacheKey, rendered);
+            return rendered.DeepCopy();
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex)
@@ -463,6 +490,8 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
         {
+            ClearFrameCache();
+
             if (!string.IsNullOrWhiteSpace(FontPath))
             {
                 fontsCache.Add(FontPath);
@@ -473,7 +502,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public void Dispose()
         {
-
+            ClearFrameCache();
         }
 
         public uint? GetClipLength() => Duration;
@@ -482,6 +511,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
         private static FontCollection fontsCache = new();
         private static bool hasGetFontCache = false;
         public static FontCollection FontsCache { get { return fontsCache; } }
+
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
+
         public static FontCollection GetFont(bool force = false)
         {
             if (hasGetFontCache && !force) return fontsCache;
@@ -493,6 +528,66 @@ namespace projectFrameCut.Render.ClipsAndTracks
             hasGetFontCache = true;
             return fontsCache;
 
+        }
+
+        private string BuildFrameCacheKey(int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB, string serializedEntries)
+            => $"{targetWidth}x{targetHeight}|forceResize={forceResize}|ppb={targetPPB.Value}|font={FontPath}|entries={serializedEntries}";
+
+        private bool TryGetFrameFromCache(string cacheKey, out IPicture picture)
+        {
+            lock (textFrameCacheLock)
+            {
+                if (textFrameCache.TryGetValue(cacheKey, out var cachedFrame))
+                {
+                    if (!cachedFrame.Disposed)
+                    {
+                        picture = cachedFrame.DeepCopy();
+                        return true;
+                    }
+
+                    textFrameCache.Remove(cacheKey);
+                    try { cachedFrame.Dispose(true); } catch { }
+                }
+            }
+
+            picture = null!;
+            return false;
+        }
+
+        private void CacheRenderedFrame(string cacheKey, IPicture picture)
+        {
+            lock (textFrameCacheLock)
+            {
+                if (!textFrameCache.ContainsKey(cacheKey) && textFrameCache.Count >= MaxTextFrameCacheEntries)
+                {
+                    ClearFrameCacheUnsafe();
+                }
+
+                if (textFrameCache.TryGetValue(cacheKey, out var oldFrame))
+                {
+                    try { oldFrame.Dispose(true); } catch { }
+                }
+
+                picture.CanBeDisposed = false;
+                textFrameCache[cacheKey] = picture;
+            }
+        }
+
+        private void ClearFrameCache()
+        {
+            lock (textFrameCacheLock)
+            {
+                ClearFrameCacheUnsafe();
+            }
+        }
+
+        private void ClearFrameCacheUnsafe()
+        {
+            foreach (var frame in textFrameCache.Values)
+            {
+                try { frame.Dispose(true); } catch { }
+            }
+            textFrameCache.Clear();
         }
 
         private IReadOnlyList<TextClipEntry> ResolveTextEntriesForRender()
@@ -642,7 +737,7 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
+        public uint Duration { get; set; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
@@ -653,6 +748,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
 
         public bool NeedFilePath => false;
+
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
 
         public string? MarkData;
         public Guid MarkID;
@@ -684,6 +784,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         public void ReInit(IPicture.PicturePixelMode targetPPB)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
         {
             throw new NotImplementedException();
         }

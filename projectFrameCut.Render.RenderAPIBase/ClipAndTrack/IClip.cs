@@ -61,7 +61,25 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// <summary>
         /// The original (in 1x speed ratio) duration of this clip in the draft.
         /// </summary>
-        public uint Duration { get; init; }
+        public uint Duration { get; set; }
+
+        /// <summary>
+        /// The target width of this clip. Related to <see cref="Project.ProjectJSONStructure.RelativeWidth"/>.
+        /// </summary>
+        public int TargetWidth { get; set; }
+        /// <summary>
+        /// The target height of this clip. Related to <see cref="Project.ProjectJSONStructure.RelativeHeight"/>.
+        /// </summary>
+        public int TargetHeight { get; set; }
+        /// <summary>
+        /// The target X-axis position of this clip in left-top corner. Related to <see cref="Project.ProjectJSONStructure.RelativeWidth"/>.
+        /// </summary>
+        public int TargetX { get; set; }
+        /// <summary>
+        /// The target Y-axis position of this clip in left-top corner. Related to <see cref="Project.ProjectJSONStructure.RelativeHeight"/>.
+        /// </summary>
+        public int TargetY { get; set; }
+
         /// <summary>
         /// The source's frame time (1 / frame rate) of this clip, in seconds.
         /// </summary>
@@ -90,10 +108,10 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// </summary>
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
 
-        [JsonIgnore]
         /// <summary>
         /// The actual effects applied to this clip.
         /// </summary>
+        [JsonIgnore]
         public IEffect[]? EffectsInstances { get; set; }
 
         /// <summary>
@@ -116,10 +134,21 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         /// If you don't do these, it may cause an unexcepted result.
         /// </remarks>
         /// <param name="frameIndex">frame index related to the source.</param>
-        /// <param name="forceResize">Try force resize. Mostly used in <see cref="IPicture.Resize(int, int, bool)"/>'s param preserveAspect.</param>
-        /// <returns>the frame (<paramref name="frameIndex"/>) in <b>SOURCE, WITH SPECIFIC SIZE IN <paramref name="targetWidth"/> * <paramref name="targetHeight"/>.</b></returns>
-        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB);
+        /// <returns>the frame (<paramref name="frameIndex"/>) in <b>SOURCE, WITH SPECIFIC SIZE IN <paramref name="requiredWidth"/> * <paramref name="requiredHeight"/>.</b></returns>
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, bool forceResize, IPicture.PicturePixelMode targetPPB);
 
+        /// <summary>
+        /// Gets a frame relative to source start point. Kept for compatibility.
+        /// </summary>
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
+            => GetFrameRelativeToStartPointOfSource(frameIndex, requiredWidth, requiredHeight, true, targetPPB);
+
+        /// <summary>
+        /// Gets a frame at draft-global frame index.
+        /// </summary>
+        [DebuggerNonUserCode()]
+        public IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
+            => GetFrameRelativeToStartPointOfSource(GetRelativeFrameIndex(targetFrame) ?? Duration, targetWidth, targetHeight, forceResize, targetPPB);
 
 
         /// <summary>
@@ -163,46 +192,10 @@ namespace projectFrameCut.Render.RenderAPIBase.ClipAndTrack
         }
 
         /// <summary>
-        /// Get the frame at the specified index relative to the start of the clip's source with the specific size.
-        /// </summary>
-        /// <remarks>
-        /// <b>DON'T DO any frame index mapping, AND PLEASE MAKE SURE result <see cref="IPicture"/> has the correct size defined in parameters.</b>
-        /// If you don't do these, it may cause an unexcepted result.
-        /// </remarks>
-        /// <param name="frameIndex">frame index related to the source.</param>
-        /// <param name="forceResize">Try force resize. Mostly used in <see cref="IPicture.Resize(int, int, bool)"/>'s param preserveAspect.</param>
-        /// <returns>the frame (<paramref name="frameIndex"/>) in <b>SOURCE, WITH SPECIFIC SIZE IN <paramref name="targetWidth"/> * <paramref name="targetHeight"/>.</b></returns>
-        [Obsolete("Consider to use GetFrameRelativeToStartPointOfSource(uint, int, int, bool, IPicture.PicturePixelMode) instead to avoid any unnecessary format converting. This method will be never called, and it'll be removed in future.", false)]
-        public virtual IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize) => GetFrameRelativeToStartPointOfSource(frameIndex, targetWidth, targetHeight, forceResize, IPicture.PicturePixelMode.BytePicture);
-
-        /// <summary>
-        /// Get the frame at the specified index relative to the start of the draft, with specified size.
-        /// </summary>
-        /// <param name="targetFrame">the frame in the whole clip you'd like to get</param>
-        /// <param name="targetWidth">target width, clip will be resized automatically.</param>
-        /// <param name="targetHeight">target height, clip will be resized automatically.</param>
-        /// <param name="forceResize">force to resize result frame</param>
-        /// <returns>the target clip,or be the last frame if the frame you want is 1 frame longer than the range (probably because of little overlap caused by rounding)</returns>
-        /// <remarks>you may override this method if the source is infinite length, avoiding unnecessary calculation.</remarks>
-        /// <exception cref="IndexOutOfRangeException">Frame is not exist in this clip.</exception>
-        public virtual IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
-            => GetFrameRelativeToStartPointOfSource(GetRelativeFrameIndex(targetFrame) ?? Duration, targetWidth, targetHeight, forceResize, targetPPB);
-
-        [Obsolete("Consider to use GetFrame(uint, int, int, bool, IPicture.PicturePixelMode) instead to avoid any unnecessary format converting.", false)]
-        public virtual IPicture GetFrame(uint targetFrame, int targetWidth, int targetHeight, bool forceResize = false)
-            => GetFrame(targetFrame, targetWidth, (int)targetHeight, forceResize, IPicture.PicturePixelMode.BytePicture);
-
-
-        /// <summary>
         /// Re-initialize the clip. Call this function when the source file is changed and you want to reload it.
         /// </summary>
         public void ReInit(IPicture.PicturePixelMode targetPPB);
 
-        /// <summary>
-        /// Re-initialize the clip. Call this function when the source file is changed and you want to reload it.
-        /// </summary>
-        [Obsolete("Consider to use ReInit(IPicture.PicturePixelMode) instead to avoid any unnecessary format converting.", false)]
-        public virtual void ReInit() => ReInit(IPicture.PicturePixelMode.BytePicture);
 
         /// <summary>
         /// The ExtraData/Metadata from the <see cref="projectFrameCut.Render.RenderAPIBase.Project.ClipDraftDTO.MetaData"/>

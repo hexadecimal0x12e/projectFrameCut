@@ -60,7 +60,7 @@ public partial class HomePage : ContentPage
     {
         InitializeComponent();
         WelcomeLabel.Text = Localized.HomePage_Welcome();
-        if (DateTime.Now.Month == 4 && DateTime.Now.Day == 1 && int.TryParse(Preferences.Get("LastAprilFoolsDayEasterEggTriggerYear", "0000"), out var y) && y != DateTime.Now.Year) Method1();
+        if (DateTime.Now.Month == 4 && DateTime.Now.Day == 1 && int.TryParse(Preferences.Get("LastAprilFoolsDayEasterEggTriggerYear", "0000"), out var y) && y != DateTime.Now.Year) EasterEgg();
         _viewModel = new ProjectsListViewModel();
         BindingContext = _viewModel;
         Loaded += async (s, e) =>
@@ -162,7 +162,7 @@ public partial class HomePage : ContentPage
         {
             string path = "";
 
-            var args = MauiProgram.CmdlineArgs.Skip(1).ToArray();
+            var args = MauiProgram.CmdlineArgs.ToArray();
             if (args.ArrayAny())
             {
                 var maybePath = args.OrderByDescending(s => s.Length).First();
@@ -187,7 +187,7 @@ public partial class HomePage : ContentPage
                     {
                         if (Directory.Exists(path))
                         {
-                            await GoDraft(path, (Path.GetDirectoryName(path) ?? "Project").Split('.')?.FirstOrDefault("Project")!, false, false);
+                            await GoDraft(path, new DirectoryInfo(path)?.Name ?? "Project", skipAskForRecover: args.Any(c => c.StartsWith("--fromCrashHandler")));
                         }
                         if (File.Exists(path))
                         {
@@ -196,9 +196,9 @@ public partial class HomePage : ContentPage
                                 try
                                 {
                                     var draft = JsonSerializer.Deserialize<ProjectJSONStructure>(File.ReadAllText(path), DraftPage.DraftJSONOption);
-                                    if (draft is ProjectJSONStructure)
+                                    if (draft is ProjectJSONStructure && Path.GetDirectoryName(path) is string p)
                                     {
-                                        await GoDraft(Path.GetDirectoryName(path), draft.ProjectName ?? "Project", false, false);
+                                        await GoDraft(p, draft.ProjectName ?? "Project", skipAskForRecover: args.Any(c => c.StartsWith("--fromCrashHandler")));
                                         return;
 
                                     }
@@ -209,7 +209,10 @@ public partial class HomePage : ContentPage
                                 }
 
                             }
-                            await ImportDraft(path);
+                            else
+                            {
+                                await ImportDraft(path);
+                            }
                         }
                         break;
                     }
@@ -372,7 +375,7 @@ public partial class HomePage : ContentPage
         File.WriteAllText(
             Path.Combine(draftSourcePath, "project.pjfc"),
             JsonSerializer.Serialize(ProjectInfo));
-
+        await Task.Delay(1500);
         await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
 
 
@@ -904,6 +907,9 @@ public partial class HomePage : ContentPage
 
         if (!cancelled && page != null && project != null)
         {
+#if WINDOWS
+            TryEnableCrashAutoRestart(draftSourcePath);
+#endif
             await Dispatcher.DispatchAsync(async () =>
             {
 
@@ -938,6 +944,23 @@ public partial class HomePage : ContentPage
     }
 
 #if WINDOWS
+    private void TryEnableCrashAutoRestart(string draftSourcePath)
+    {
+        try
+        {
+            if (SettingsManager.IsBoolSettingTrue("General_NoRebootAfterCrash")) return;
+            if (string.IsNullOrWhiteSpace(draftSourcePath) || !Directory.Exists(draftSourcePath)) return;
+
+            projectFrameCut.Helper.CrashHandler.BootHandler(Path.GetFullPath(draftSourcePath));
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "Enable crash auto restart", this);
+        }
+    }
+#endif
+
+#if WINDOWS
     UserActivitySession _previousSession;
 #endif
 
@@ -956,20 +979,22 @@ public partial class HomePage : ContentPage
         catch { }
 #if WINDOWS
         await projectFrameCut.WinUI.App.BringToForeground();
-#endif
-
-#if WINDOWS || ANDROID
         AppShell.instance.ShowNavView();
+        try
+        {
+            if (!Helper.CrashHandler.Handler?.HasExited ?? false)
+            {
+                Helper.CrashHandler.Handler?.Kill();
+            }
+        }
+        catch { }
 #elif iDevices
         if (OperatingSystem.IsMacCatalyst())
         {
             AppShell_MacCatalyst.instance.ShowNavView();
         }
-        else
-        {
-            AppShell.instance.ShowNavView();
-        }
 #endif
+
 
         await _viewModel.LoadDrafts(Path.Combine(MauiProgram.DataPath, "My Drafts"));
         if (_viewModel.LoadFailed)
@@ -1067,7 +1092,9 @@ public partial class HomePage : ContentPage
 
         PictureProcesser.EnableLogProcessStack = !SettingsManager.IsSettingExists("diag_EnableProcessStack") || SettingsManager.IsBoolSettingTrue("diag_EnableProcessStack");
         PictureLifecycleTracker.Enabled = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
-
+#if DEBUG
+        PictureLifecycleTracker.TrackCollection = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
+#endif
 #if WINDOWS
         if (IContextMenuBuilder.Default is null) IContextMenuBuilder.Default = new WindowsContextMenuBuilder();
 #endif
@@ -1353,7 +1380,7 @@ public partial class HomePage : ContentPage
     {
         if (vmItem._name == CreateButtonName)
         {
-            if (DateTime.Now.Month == 4 && DateTime.Now.Day == 1) Method1();
+            if (DateTime.Now.Month == 4 && DateTime.Now.Day == 1) EasterEgg();
 
             return;
         }
@@ -1548,7 +1575,7 @@ public partial class HomePage : ContentPage
 
     }
 
-    public void Method1()
+    public void EasterEgg()
     {
         try
         {

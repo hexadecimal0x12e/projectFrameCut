@@ -123,6 +123,10 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         public long? SourceDuration { get; set; } // in frames, null for infinite length source
         public bool IsInfiniteLength { get; set; }
         public bool ShouldDisplayInUI { get; set; } = true;
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
         public EffectAndMixtureJSONStructure[]? Effects { get; set; }
         public EffectBundleJSONStructure[]? EffectBundles { get; set; }
 

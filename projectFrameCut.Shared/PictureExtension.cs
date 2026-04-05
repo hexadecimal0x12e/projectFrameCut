@@ -478,50 +478,31 @@ namespace projectFrameCut.Shared
         bool IsDisposed,
         bool IsCollected,
         TimeSpan? LifetimeToDispose,
-        TimeSpan? LifetimeToCollect);
+        TimeSpan? LifetimeToCollect,
+        StackTrace CreateStack,
+        StackTrace? DisposeStack);
 
     /// <summary>
     /// Centralized lifecycle tracker for <see cref="IPicture"/> objects.
     /// </summary>
     public static class PictureLifecycleTracker
     {
-        private sealed class PictureIdentity
-        {
-            public PictureIdentity(long id)
-            {
-                Id = id;
-            }
+        private sealed record PictureIdentity(long Id);
 
-            public long Id { get; }
-        }
-
-        private sealed class PictureLifecycleState
+        private sealed record PictureLifecycleState(long Id, string TypeName, IPicture.PicturePixelMode BitPerPixel, int Width, int Height, int Pixels, DateTime CreatedAtUtc, StackTrace CreateStack)
         {
             private long _disposedAtTicks;
             private long _collectedAtTicks;
+            private StackTrace? DisposedStack;
 
-            public PictureLifecycleState(long id, IPicture picture)
+            public PictureLifecycleState(long id, IPicture picture) : this(id, picture.GetType().FullName ?? picture.GetType().Name, picture.bitPerPixel, picture.Width, picture.Height, picture.Pixels, DateTime.UtcNow, new StackTrace(true))
             {
-                Id = id;
-                TypeName = picture.GetType().FullName ?? picture.GetType().Name;
-                BitPerPixel = picture.bitPerPixel;
-                Width = picture.Width;
-                Height = picture.Height;
-                Pixels = picture.Pixels;
-                CreatedAtUtc = DateTime.UtcNow;
             }
-
-            public long Id { get; }
-            public string TypeName { get; }
-            public IPicture.PicturePixelMode BitPerPixel { get; }
-            public int Width { get; }
-            public int Height { get; }
-            public int Pixels { get; }
-            public DateTime CreatedAtUtc { get; }
 
             public void MarkDisposed()
             {
                 Interlocked.CompareExchange(ref _disposedAtTicks, DateTime.UtcNow.Ticks, 0);
+                Interlocked.Exchange(ref DisposedStack, new StackTrace(true));
             }
 
             public void MarkCollected()
@@ -549,7 +530,9 @@ namespace projectFrameCut.Shared
                     disposedAt.HasValue,
                     collectedAt.HasValue,
                     disposedAt?.Subtract(CreatedAtUtc),
-                    collectedAt?.Subtract(CreatedAtUtc));
+                    collectedAt?.Subtract(CreatedAtUtc),
+                    CreateStack,
+                    DisposedStack);
             }
         }
 
@@ -569,7 +552,6 @@ namespace projectFrameCut.Shared
         }
 
         private static long _nextId;
-        private static bool _enabled;
         private static readonly ConcurrentDictionary<long, PictureLifecycleState> States = new();
         private static readonly ConditionalWeakTable<IPicture, PictureIdentity> Identities = new();
         private static readonly ConditionalWeakTable<IPicture, FinalizationSentinel> Sentinels = new();
@@ -579,8 +561,8 @@ namespace projectFrameCut.Shared
         /// </summary>
         public static bool Enabled
         {
-            get => Volatile.Read(ref _enabled);
-            set => Volatile.Write(ref _enabled, value);
+            get => Volatile.Read(ref field);
+            set => Volatile.Write(ref field, value);
         }
 
         /// <summary>

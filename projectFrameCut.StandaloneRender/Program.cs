@@ -395,14 +395,9 @@ namespace projectFrameCut.StandaloneRender
             var GCOption = 0;
             if (switches.TryGetValue("GCOptions", out var gcopt))
             {
-                if (!int.TryParse(gcopt, out GCOption))
+                if (!int.TryParse(gcopt, out GCOption) || (GCOption < 0 || GCOption > 2))
                 {
-                    Log("Invalid GCOptions consoleCanceller, must be 0, 1 or 2. Default to 0.");
-                    GCOption = 0;
-                }
-                if (GCOption < 0 || GCOption > 2)
-                {
-                    Log("Invalid GCOptions consoleCanceller, must be 0, 1 or 2. Default to 0.");
+                    Log($"Invalid GCOptions option '{gcopt}', must be 0, 1 or 2. Default to 0.");
                     GCOption = 0;
                 }
             }
@@ -411,6 +406,8 @@ namespace projectFrameCut.StandaloneRender
             {
                 GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
             }
+
+            Log($"GC Option:{GCOption}");
 
             ConcurrentDictionary<string, AssetItem> assets = new();
 
@@ -435,6 +432,10 @@ namespace projectFrameCut.StandaloneRender
 
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
             InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
+
+            bool trace = switches.ContainsKey("--trace");
+            PictureLifecycleTracker.Enabled = trace && !Renderer.IsProfilerAttached;
+            PictureLifecycleTracker.TrackCollection = trace && !Renderer.IsProfilerAttached;
 
             #endregion
 
@@ -870,7 +871,7 @@ namespace projectFrameCut.StandaloneRender
 
                 builder.AppendLine(
                     """
-                    The standalone render is a part of projectFrameCut. To use this standalone render, you MUST have a license/permission to use the projectFrameCut itself.
+                    The standalone render is the part of projectFrameCut. To use this standalone render, you MUST have a license/permission to use the projectFrameCut itself.
                     Most of the project, and this standalone render is licensed under Apache License.
                     The use of other open-source project can be found in readme of the repository:
                     https://github.com/hexadecimal0x12e/projectFrameCut/

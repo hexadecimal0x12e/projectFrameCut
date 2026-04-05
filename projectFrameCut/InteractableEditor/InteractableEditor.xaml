@@ -5,45 +5,35 @@
              BackgroundColor="Transparent"
              InputTransparent="False">
     <AbsoluteLayout x:Name="EditorCanvas" BackgroundColor="Transparent" InputTransparent="False" ZIndex="100">
-        <Border x:Name="ClipVisual"
-                Stroke="Yellow"
-                StrokeThickness="2"
-                BackgroundColor="#33FFFF00"
-                InputTransparent="False"
-                ZIndex="101"
-                AbsoluteLayout.LayoutFlags="None">
+        <Border x:Name="RenderRectVisual"
+            IsVisible="False"
+            Stroke="#FF4D6D"
+            StrokeThickness="2"
+            BackgroundColor="Transparent"
+            InputTransparent="True"
+            ZIndex="100"
+            AbsoluteLayout.LayoutFlags="None">
 
         </Border>
 
-        <!-- Resize Handles -->
-        <BoxView x:Name="HandleTL" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" ZIndex="102" AbsoluteLayout.LayoutFlags="None">
-
-        </BoxView>
-
-        <BoxView x:Name="HandleTR" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" ZIndex="102" AbsoluteLayout.LayoutFlags="None">
-
-        </BoxView>
-
-        <BoxView x:Name="HandleBL" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" ZIndex="102" AbsoluteLayout.LayoutFlags="None">
-
-        </BoxView>
-
-        <BoxView x:Name="HandleBR" Color="Cyan" WidthRequest="15" HeightRequest="15" InputTransparent="False" ZIndex="102" AbsoluteLayout.LayoutFlags="None">
-
-        </BoxView>
-
-        <Label x:Name="SolidColorSizeLabel"
+        <Label x:Name="RenderRectLabel"
                IsVisible="False"
                Opacity="0.95"
                InputTransparent="True"
-               TextColor="White"
-               BackgroundColor="#88000000"
+               TextColor="#FF4D6D"
+               BackgroundColor="#AA000000"
                Padding="6,2"
                FontSize="10"
                LineBreakMode="NoWrap"
                HorizontalOptions="Start"
                VerticalOptions="Start"
                ZIndex="103"/>
+
+        <AbsoluteLayout x:Name="ClipStatesHost"
+                BackgroundColor="Transparent"
+                InputTransparent="False"
+                ZIndex="101"
+                AbsoluteLayout.LayoutFlags="None" />
         
         <Label x:Name="MeasurementLabel" IsVisible="True" Opacity="0" InputTransparent="True" LineBreakMode="NoWrap" HorizontalOptions="Start" VerticalOptions="Start"/>
     </AbsoluteLayout>

@@ -75,12 +75,12 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public string Id { get; init; }
         public string Name { get; init; }
-        public string? BindedSoundTrack { get => SoundTrack?.Id; init { throw new NotSupportedException(); } }
+        public string BindedSoundTrack { get; init; }
         public uint LayerIndex { get; init; }
         public uint SubLayerIndex { get; init; }
         public uint StartFrame { get; init; }
         public uint RelativeStartFrame { get; init; }
-        public uint Duration { get; init; }
+        public uint Duration { get; set; }
         public float FrameTime { get; init; }
         public float SecondPerFrameRatio { get; init; }
         public EffectAndMixtureJSONStructure[]? Effects { get; init; }
@@ -89,6 +89,10 @@ namespace projectFrameCut.Render.ClipsAndTracks
         public bool NeedFilePath => true;
         public Dictionary<string, object> ExtraData { get; set; }
         public bool ExtendToWholeDraft { get; set; }
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
+        public int TargetX { get; set; }
+        public int TargetY { get; set; }
 
 
         public ISoundTrack SoundTrack { get; set; }
@@ -111,6 +115,11 @@ namespace projectFrameCut.Render.ClipsAndTracks
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int targetWidth, int targetHeight, bool forceResize, IPicture.PicturePixelMode targetPPB)
+        {
+            throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
+        }
+
+        public IPicture GetFrameRelativeToStartPointOfSource(uint frameIndex, int requiredWidth, int requiredHeight, IPicture.PicturePixelMode targetPPB)
         {
             throw new NotSupportedException("It's impossible to get a Picture for a Soundtrack.");
         }

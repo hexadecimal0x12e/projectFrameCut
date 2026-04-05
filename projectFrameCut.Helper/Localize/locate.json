@@ -173,6 +173,15 @@
         "ArgsComment": [],
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u5D29\u6E83\u4E86\u3002\r\u7A0B\u5E8F\u5C06\u81EA\u52A8\u91CD\u542F\uFF0C\u4F60\u7684\u9879\u76EE\u5C06\u4F1A\u88AB\u81EA\u52A8\u6062\u590D\u3002\r\u8981\u7981\u7528\u6B64\u529F\u80FD\uFF0C\u8BF7\u8F6C\u5230 \u8BBE\u7F6E-\u901A\u7528-\u5D29\u6E83\u540E\u4E0D\u91CD\u542F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -353,6 +362,16 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -537,6 +556,16 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "ja-JP": [
@@ -717,6 +746,16 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -901,6 +940,16 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -1081,6 +1130,16 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -1265,6 +1324,16 @@
         "Comment": "\u7A0B\u5E8F\u65E0\u54CD\u5E94\u4E4B\u63D0\u793A\uFF0C\u6587\u8A00\u8BD1\u6CD5\u6C42\u7B80\u96C5\uFF0C\u6280\u672F\u8BCD\u7A0D\u4F5C\u8F6C\u5316\u3002",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -1445,6 +1514,16 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -1629,6 +1708,16 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -1809,6 +1898,16 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -1993,6 +2092,16 @@
         "Comment": "\u63D0\u793A\u7528\u6237\u5E94\u7528\u7A0B\u5E8F\u65E0\u54CD\u5E94\u65F6\u7684\u64CD\u4F5C\u9009\u9879",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -2173,6 +2282,16 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -2357,6 +2476,16 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "ru-RU": [
@@ -2539,6 +2668,16 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -2719,6 +2858,16 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }

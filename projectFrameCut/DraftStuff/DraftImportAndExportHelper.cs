@@ -22,6 +22,12 @@ namespace projectFrameCut.DraftStuff
 {
     internal static class DraftImportAndExportHelper
     {
+        private const string InternalPlaceEffectName = "__Internal_Place__";
+        private const string InternalResizeEffectName = "__Internal_Resize__";
+        private const string SolidColorOutputWidthKey = "SolidColorOutputWidth";
+        private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
+        private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
+
         [return: NotNullIfNotNull(nameof(page))]
         [return: NotNullIfNotNull(nameof(element))]
         public static ClipDraftDTO ExportClipElementFromDraftPage(projectFrameCut.DraftPage? page, ClipElementUI? element, bool wrapSoundtrackAsClip = true)
@@ -219,6 +225,10 @@ namespace projectFrameCut.DraftStuff
                     IsInfiniteLength = elem.isInfiniteLength,
                     ShouldDisplayInUI = elem.ShouldDisplayInUI,
                     SecondPerFrameRatio = elem.SecondPerFrameRatio,
+                    TargetWidth = elem.TargetWidth,
+                    TargetHeight = elem.TargetHeight,
+                    TargetX = elem.TargetX,
+                    TargetY = elem.TargetY,
                     MetaData = normalizedMeta,
                     Effects = null
                 };
@@ -258,6 +268,10 @@ namespace projectFrameCut.DraftStuff
                 IsInfiniteLength = elem.isInfiniteLength,
                 ShouldDisplayInUI = elem.ShouldDisplayInUI,
                 SecondPerFrameRatio = elem.SecondPerFrameRatio,
+                TargetWidth = elem.TargetWidth,
+                TargetHeight = elem.TargetHeight,
+                TargetX = elem.TargetX,
+                TargetY = elem.TargetY,
                 MetaData = normalizedMeta2,
                 Effects = elem.Effects?.Select((kv) =>
                 {
@@ -444,6 +458,181 @@ namespace projectFrameCut.DraftStuff
             return new ConcurrentDictionary<string, AssetItem>(assetDict);
         }
 
+        private static bool HasExplicitTargetRect(ClipDraftDTO clip)
+            => clip.TargetX != 0 || clip.TargetY != 0 || clip.TargetWidth > 0 || clip.TargetHeight > 0;
+
+        private static bool IsLegacyInternalPlaceEffect(EffectAndMixtureJSONStructure effect)
+        {
+            if (string.Equals(effect.Name, InternalPlaceEffectName, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            return string.IsNullOrWhiteSpace(effect.Name)
+                && string.Equals(effect.TypeName, "Place", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsLegacyInternalResizeEffect(EffectAndMixtureJSONStructure effect)
+        {
+            if (string.Equals(effect.Name, InternalResizeEffectName, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            return string.IsNullOrWhiteSpace(effect.Name)
+                && string.Equals(effect.TypeName, "Resize", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static int ScaleLegacyValue(int value, int sourceRelative, int targetRelative, bool clampPositive)
+        {
+            int scaled = value;
+            if (sourceRelative > 0 && targetRelative > 0 && sourceRelative != targetRelative)
+            {
+                scaled = (int)Math.Round(value * ((double)targetRelative / sourceRelative), MidpointRounding.AwayFromZero);
+            }
+
+            return clampPositive ? Math.Max(1, scaled) : scaled;
+        }
+
+        private static bool TryReadInt(object? raw, out int value)
+        {
+            switch (raw)
+            {
+                case int i:
+                    value = i;
+                    return true;
+                case long l when l <= int.MaxValue && l >= int.MinValue:
+                    value = (int)l;
+                    return true;
+                case uint ui when ui <= int.MaxValue:
+                    value = (int)ui;
+                    return true;
+                case short s:
+                    value = s;
+                    return true;
+                case ushort us:
+                    value = us;
+                    return true;
+                case double d when d <= int.MaxValue && d >= int.MinValue:
+                    value = (int)Math.Round(d, MidpointRounding.AwayFromZero);
+                    return true;
+                case float f when f <= int.MaxValue && f >= int.MinValue:
+                    value = (int)Math.Round(f, MidpointRounding.AwayFromZero);
+                    return true;
+                case JsonElement je when je.ValueKind == JsonValueKind.Number:
+                    if (je.TryGetInt32(out var num))
+                    {
+                        value = num;
+                        return true;
+                    }
+
+                    if (je.TryGetDouble(out var dbl) && dbl <= int.MaxValue && dbl >= int.MinValue)
+                    {
+                        value = (int)Math.Round(dbl, MidpointRounding.AwayFromZero);
+                        return true;
+                    }
+                    break;
+                case JsonElement je when je.ValueKind == JsonValueKind.String:
+                    if (int.TryParse(je.GetString(), out var strNum))
+                    {
+                        value = strNum;
+                        return true;
+                    }
+                    break;
+            }
+
+            if (int.TryParse(raw?.ToString(), out var parsed))
+            {
+                value = parsed;
+                return true;
+            }
+
+            value = 0;
+            return false;
+        }
+
+        private static bool TryReadEffectParameterInt(EffectAndMixtureJSONStructure effect, string key, out int value)
+        {
+            value = 0;
+            if (effect.Parameters == null || !effect.Parameters.TryGetValue(key, out var raw))
+            {
+                return false;
+            }
+
+            return TryReadInt(raw, out value);
+        }
+
+        private static void MigrateLegacyPlaceResizeToTargetRect(ClipDraftDTO dto, ProjectJSONStructure proj)
+        {
+            if (dto.Effects == null || dto.Effects.Length == 0)
+            {
+                return;
+            }
+
+            var placeEffect = dto.Effects.FirstOrDefault(IsLegacyInternalPlaceEffect);
+            var resizeEffect = dto.Effects.FirstOrDefault(IsLegacyInternalResizeEffect);
+
+            if (placeEffect == null && resizeEffect == null)
+            {
+                return;
+            }
+
+            int projectWidth = Math.Max(1, proj.RelativeWidth);
+            int projectHeight = Math.Max(1, proj.RelativeHeight);
+
+            if (!HasExplicitTargetRect(dto))
+            {
+                if (placeEffect != null)
+                {
+                    int placeRelativeWidth = placeEffect.RelativeWidth > 0 ? placeEffect.RelativeWidth : projectWidth;
+                    int placeRelativeHeight = placeEffect.RelativeHeight > 0 ? placeEffect.RelativeHeight : projectHeight;
+
+                    if (TryReadEffectParameterInt(placeEffect, "StartX", out var startX))
+                    {
+                        dto.TargetX = ScaleLegacyValue(startX, placeRelativeWidth, projectWidth, false);
+                    }
+
+                    if (TryReadEffectParameterInt(placeEffect, "StartY", out var startY))
+                    {
+                        dto.TargetY = ScaleLegacyValue(startY, placeRelativeHeight, projectHeight, false);
+                    }
+                }
+
+                if (resizeEffect != null)
+                {
+                    int resizeRelativeWidth = resizeEffect.RelativeWidth > 0 ? resizeEffect.RelativeWidth : projectWidth;
+                    int resizeRelativeHeight = resizeEffect.RelativeHeight > 0 ? resizeEffect.RelativeHeight : projectHeight;
+
+                    if (TryReadEffectParameterInt(resizeEffect, "Width", out var width))
+                    {
+                        dto.TargetWidth = ScaleLegacyValue(width, resizeRelativeWidth, projectWidth, true);
+                    }
+
+                    if (TryReadEffectParameterInt(resizeEffect, "Height", out var height))
+                    {
+                        dto.TargetHeight = ScaleLegacyValue(height, resizeRelativeHeight, projectHeight, true);
+                    }
+                }
+            }
+
+            dto.Effects = dto.Effects
+                .Where(e => !IsLegacyInternalPlaceEffect(e) && !IsLegacyInternalResizeEffect(e))
+                .ToArray();
+
+            if (dto.Effects.Length == 0)
+            {
+                dto.Effects = null;
+            }
+
+            if (dto.ClipType == ClipMode.SolidColorClip && (dto.TargetWidth > 0 || dto.TargetHeight > 0))
+            {
+                dto.MetaData ??= new Dictionary<string, object>();
+                if (dto.TargetWidth > 0) dto.MetaData[SolidColorOutputWidthKey] = dto.TargetWidth;
+                if (dto.TargetHeight > 0) dto.MetaData[SolidColorOutputHeightKey] = dto.TargetHeight;
+                dto.MetaData[SolidColorUseFixedOutputSizeKey] = true;
+            }
+        }
+
         public static (ConcurrentDictionary<string, ClipElementUI>, int) ImportFromJSON(DraftStructureJSON draft, ProjectJSONStructure proj)
         {
             if (draft == null) throw new ArgumentNullException(nameof(draft));
@@ -465,6 +654,11 @@ namespace projectFrameCut.DraftStuff
                         dtos.Add(dto);
                         break;
                 }
+            }
+
+            foreach (var dto in dtos)
+            {
+                MigrateLegacyPlaceResizeToTargetRect(dto, proj);
             }
 
             int trackCount = dtos.Count == 0 ? 1 : (int)(dtos.Max(d => (int)d.LayerIndex) + 1);
@@ -505,6 +699,10 @@ namespace projectFrameCut.DraftStuff
                 element.ExtraData = dto.MetaData ?? new();
                 element.sourceSecondPerFrame = dto.FrameTime;
                 element.SecondPerFrameRatio = dto.SecondPerFrameRatio;
+                element.TargetWidth = dto.TargetWidth;
+                element.TargetHeight = dto.TargetHeight;
+                element.TargetX = dto.TargetX;
+                element.TargetY = dto.TargetY;
                 element.ApplySpeedRatio();
                 element.TypeName = dto.TypeName;
                 element.FromPlugin = dto.FromPlugin;
@@ -744,6 +942,10 @@ namespace projectFrameCut.DraftStuff
             element.ExtraData = clip.MetaData ?? new();
             element.sourceSecondPerFrame = clip.FrameTime;
             element.SecondPerFrameRatio = clip.SecondPerFrameRatio;
+            element.TargetWidth = clip.TargetWidth;
+            element.TargetHeight = clip.TargetHeight;
+            element.TargetX = clip.TargetX;
+            element.TargetY = clip.TargetY;
 
             // Apply visual properties
             element.ApplySpeedRatio();

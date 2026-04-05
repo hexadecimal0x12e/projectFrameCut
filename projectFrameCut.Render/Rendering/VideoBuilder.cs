@@ -292,7 +292,8 @@ namespace projectFrameCut.Render.Rendering
 
             while (Cache.TryRemove(index, out var frame))
             {
-                WriteFrame(index, frame,  $"[VideoBuilder] Frame #{index} wrote during interrupt drain." );
+                WriteFrame(index, frame);
+                Log($"[VideoBuilder] Frame #{index} wrote during interrupt drain.");
             }
 
             var remainingFrameIndexes = Cache.Keys.OrderBy(frameIndex => frameIndex).ToArray();
@@ -304,7 +305,9 @@ namespace projectFrameCut.Render.Rendering
                 {
                     if (Cache.TryRemove(frameIndex, out var remainingFrame))
                     {
-                        WriteFrame(frameIndex, remainingFrame, $"[VideoBuilder] Frame #{frameIndex} wrote during interrupt drain." );
+                        WriteFrame(frameIndex, remainingFrame);
+                        Log($"[VideoBuilder] Non-contiguous frame #{frameIndex} wrote during interrupt drain.");
+
                     }
                 }
             }

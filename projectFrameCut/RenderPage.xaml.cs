@@ -555,6 +555,7 @@ public partial class RenderPage : ContentPage
 
     double totalProg = 0, lastProg = 0;
     string _currentSubProgText = "";
+    VideoBuilder? builder = null;
     void SetSubProg(string s)
     {
         lastProg = totalProg;
@@ -692,7 +693,7 @@ public partial class RenderPage : ContentPage
             int fps = (int)Math.Round(double.Parse(vm.Framerate));
             var gcOption = int.TryParse(SettingsManager.GetSetting("render_GCOption", "0"), out var value1) ? value1 : 0;
 
-            VideoBuilder builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt)
+            builder = new VideoBuilder(outputPath, width, height, fps, enc, fmt)
             {
                 EnablePreview = true,
                 DoGCAfterEachWrite = gcOption > 0,
@@ -706,6 +707,8 @@ public partial class RenderPage : ContentPage
             {
                 builder = builder,
                 Clips = clips,
+                TargetWidth = width,
+                TargetHeight = height,
                 Duration = duration,
                 MaxThreads = parallelThreadCount,
                 LogState = false,
@@ -1041,6 +1044,7 @@ public partial class RenderPage : ContentPage
         var sure = await DisplayAlertAsync(Localized._Warn, Localized.RenderPage_CancelRender_Warn, Localized._OK, Localized._Cancel);
         if (sure)
         {
+            builder?.Interrupt();
             _cts.Cancel();
             _logUpdateTimer?.Stop();
             _screenSaverTimer?.Stop();

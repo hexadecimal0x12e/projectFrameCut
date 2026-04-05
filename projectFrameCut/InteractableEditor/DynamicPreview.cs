@@ -19,12 +19,16 @@ namespace projectFrameCut.InteractableEditor;
 
 public sealed class DynamicPreview : ContentView, IDisposable
 {
+	public sealed record PreparedPreview(string ClipId, View? View, string? ErrorMessage, IClip? Source);
+
 	private readonly ContentView _outputHost;
 	private readonly Label _placeholder;
 	private IClip[]? _clips;
 	private string? _preferredClipId;
 	private uint _currentFrame;
 	private long _renderVersion;
+	private int _viewportWidth;
+	private int _viewportHeight;
 
 	public DynamicPreview()
 	{
@@ -68,12 +72,34 @@ public sealed class DynamicPreview : ContentView, IDisposable
 
 	public uint CurrentFrame => _currentFrame;
 
+	public async Task<IReadOnlyList<PreparedPreview>> PrepareFrameAsync(uint frameIndex, int targetWidth, int targetHeight)
+	{
+		_currentFrame = frameIndex;
+		var requests = ResolveRequests(frameIndex);
+		var canvasWidth = ResolveCanvasSize(_outputHost.Width, Width, _viewportWidth, targetWidth);
+		var canvasHeight = ResolveCanvasSize(_outputHost.Height, Height, _viewportHeight, targetHeight);
+		return await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex).ConfigureAwait(false);
+	}
+
 	public async Task UpdateDraft(DraftStructureJSON json)
 	{
 		ArgumentNullException.ThrowIfNull(json);
 
 		DisposeClips();
 		_clips = await Task.Run(() => DraftImportAndExportHelper.JSONToIClips(json, true, 8));
+	}
+
+	public void UpdateCanvasSize(double width, double height)
+	{
+		if (width > 0)
+		{
+			_viewportWidth = Math.Max(1, (int)Math.Round(width, MidpointRounding.AwayFromZero));
+		}
+
+		if (height > 0)
+		{
+			_viewportHeight = Math.Max(1, (int)Math.Round(height, MidpointRounding.AwayFromZero));
+		}
 	}
 
 	public void SetPreferredClipId(string? clipId)
@@ -86,14 +112,16 @@ public sealed class DynamicPreview : ContentView, IDisposable
 		_currentFrame = frameIndex;
 		var renderVersion = Interlocked.Increment(ref _renderVersion);
 		var requests = ResolveRequests(frameIndex);
+		var viewportWidth = ResolveCanvasSize(_outputHost.Width, Width, _viewportWidth, targetWidth);
+		var viewportHeight = ResolveCanvasSize(_outputHost.Height, Height, _viewportHeight, targetHeight);
 		var prepared = await PrepareRequestsAsync(requests, targetWidth, targetHeight, targetWidth, targetHeight, frameIndex).ConfigureAwait(false);
 
 		if (Dispatcher.IsDispatchRequired)
 		{
-			return await Dispatcher.DispatchAsync(() => ApplyPreparedRequests(prepared, renderVersion));
+			return await Dispatcher.DispatchAsync(() => ApplyPreparedRequests(prepared, renderVersion, viewportWidth, viewportHeight, targetWidth, targetHeight));
 		}
 
-		return ApplyPreparedRequests(prepared, renderVersion);
+		return ApplyPreparedRequests(prepared, renderVersion, viewportWidth, viewportHeight, targetWidth, targetHeight);
 	}
 
 	public void Dispose()
@@ -118,7 +146,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 		return await Task.WhenAll(preparationTasks).ConfigureAwait(false);
 	}
 
-	private bool ApplyPreparedRequests(IReadOnlyList<PreparedPreview> prepared, long renderVersion)
+	private bool ApplyPreparedRequests(IReadOnlyList<PreparedPreview> prepared, long renderVersion, int viewportWidth, int viewportHeight, int targetWidth, int targetHeight)
 	{
 		if (renderVersion != Interlocked.Read(ref _renderVersion))
 		{
@@ -157,8 +185,6 @@ public sealed class DynamicPreview : ContentView, IDisposable
 				continue;
 			}
 
-			generatedView.HorizontalOptions = LayoutOptions.Fill;
-			generatedView.VerticalOptions = LayoutOptions.Fill;
 			generatedView.ZIndex = (int)((result.Source?.LayerIndex ?? 1) * 100);
 			composite.Children.Add(generatedView);
 			renderedCount++;
@@ -177,19 +203,114 @@ public sealed class DynamicPreview : ContentView, IDisposable
 			finalView = composite as Microsoft.Maui.Controls.View;
 		}
 
-		_outputHost.Content = finalView;
-		_outputHost.IsVisible = finalView is not null;
+		var alignedView = BuildViewportAlignedView(finalView, viewportWidth, viewportHeight, targetWidth, targetHeight);
+		_outputHost.Content = alignedView;
+		_outputHost.IsVisible = alignedView is not null;
 		_placeholder.Text = lastErrorMessage ?? string.Empty;
-		_placeholder.IsVisible = finalView is null && !string.IsNullOrWhiteSpace(lastErrorMessage);
-		IsVisible = finalView is not null || _placeholder.IsVisible;
+		_placeholder.IsVisible = alignedView is null && !string.IsNullOrWhiteSpace(lastErrorMessage);
+		IsVisible = alignedView is not null || _placeholder.IsVisible;
 
-		return finalView is not null;
+		return alignedView is not null;
+	}
+
+	private static int ResolveCanvasSize(double hostSize, double selfSize, int cachedSize, int fallbackSize)
+	{
+		if (hostSize > 0)
+		{
+			return Math.Max(1, (int)Math.Round(hostSize, MidpointRounding.AwayFromZero));
+		}
+
+		if (selfSize > 0)
+		{
+			return Math.Max(1, (int)Math.Round(selfSize, MidpointRounding.AwayFromZero));
+		}
+
+		if (cachedSize > 0)
+		{
+			return cachedSize;
+		}
+
+		return Math.Max(1, fallbackSize);
+	}
+
+	private static View? BuildViewportAlignedView(View? view, int viewportWidth, int viewportHeight, int targetWidth, int targetHeight)
+	{
+		if (view is null)
+		{
+			return null;
+		}
+
+		var logicalWidth = Math.Max(1, targetWidth);
+		var logicalHeight = Math.Max(1, targetHeight);
+		var viewportRect = CalculateAspectFitRect(Math.Max(1, viewportWidth), Math.Max(1, viewportHeight), logicalWidth, logicalHeight);
+		var scale = viewportRect.Width / logicalWidth;
+		if (double.IsNaN(scale) || double.IsInfinity(scale) || scale <= 0)
+		{
+			scale = 1d;
+		}
+
+		var logicalCanvas = new Grid
+		{
+			WidthRequest = logicalWidth,
+			HeightRequest = logicalHeight,
+			HorizontalOptions = LayoutOptions.Start,
+			VerticalOptions = LayoutOptions.Start,
+			InputTransparent = true
+		};
+		logicalCanvas.Children.Add(view);
+
+		return new ContentView
+		{
+			Content = logicalCanvas,
+			WidthRequest = logicalWidth,
+			HeightRequest = logicalHeight,
+			HorizontalOptions = LayoutOptions.Start,
+			VerticalOptions = LayoutOptions.Start,
+			InputTransparent = true,
+			AnchorX = 0,
+			AnchorY = 0,
+			Scale = scale,
+			TranslationX = viewportRect.X,
+			TranslationY = viewportRect.Y
+		};
+	}
+
+	private static Rect CalculateAspectFitRect(int viewportWidth, int viewportHeight, int targetWidth, int targetHeight)
+	{
+		if (viewportWidth <= 0 || viewportHeight <= 0 || targetWidth <= 0 || targetHeight <= 0)
+		{
+			return new Rect(0, 0, Math.Max(1, viewportWidth), Math.Max(1, viewportHeight));
+		}
+
+		double ratioViewport = (double)viewportWidth / viewportHeight;
+		double ratioTarget = (double)targetWidth / targetHeight;
+		double drawW;
+		double drawH;
+		double offX;
+		double offY;
+
+		if (ratioTarget > ratioViewport)
+		{
+			drawW = viewportWidth;
+			drawH = drawW / ratioTarget;
+			offX = 0;
+			offY = (viewportHeight - drawH) / 2d;
+		}
+		else
+		{
+			drawH = viewportHeight;
+			drawW = drawH * ratioTarget;
+			offX = (viewportWidth - drawW) / 2d;
+			offY = 0;
+		}
+
+		return new Rect(offX, offY, drawW, drawH);
 	}
 
 	private static PreparedPreview GenerateClipPreviewPrepared(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex)
 	{
 		var generatedView = GenerateClipPreview(request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, out var message);
-		return new PreparedPreview(generatedView, message, request.Clip);
+		return new PreparedPreview(request.Clip.Id, generatedView, message, request.Clip);
 	}
 
 	private IReadOnlyList<PreviewRequest> ResolveRequests(uint frameIndex)
@@ -256,20 +377,99 @@ public sealed class DynamicPreview : ContentView, IDisposable
 			}
 		}
 
+		if (generatedView is null)
+		{
+			return null;
+		}
+
+		if (clip.EffectsInstances?.Any() == true)
+		{
+			foreach (var effect in clip.EffectsInstances
+				.Where(e => e.Enabled)
+				.OrderBy(e => e.Index))
+			{
+				if (HasExplicitTargetRect(clip) && IsLegacyInternalLayoutEffect(effect))
+				{
+					continue;
+				}
+
+				generatedView = ApplyEffectPreview(generatedView, effect, canvasWidth, canvasHeight, frameIndex);
+			}
+		}
+
+		return ApplyClipTargetLayoutPreview(generatedView, clip, canvasWidth, canvasHeight);
+	}
+
+	private static View ApplyClipTargetLayoutPreview(View input, IClip clip, int canvasWidth, int canvasHeight)
+	{
+		if (!HasExplicitTargetRect(clip))
+		{
+			return ApplyImplicitClipAutoCenterPreview(input, clip, canvasHeight);
+		}
+
+		var width = clip.TargetWidth > 0 ? clip.TargetWidth : Math.Max(1, canvasWidth);
+		var height = clip.TargetHeight > 0 ? clip.TargetHeight : Math.Max(1, canvasHeight);
+
+		input.WidthRequest = Math.Max(1, width);
+		input.HeightRequest = Math.Max(1, height);
+		input.HorizontalOptions = LayoutOptions.Start;
+		input.VerticalOptions = LayoutOptions.Start;
+		//input.TranslationX += clip.TargetX;
+		//input.TranslationY += clip.TargetY;
+		return input;
+	}
+
+	private static View ApplyImplicitClipAutoCenterPreview(View input, IClip clip, int canvasHeight)
+	{
+		if (HasExplicitTargetRect(clip) || HasLegacyInternalPlaceResizeEffects(clip))
+		{
+			return input;
+		}
+
+		if (Math.Abs(input.TranslationY) > 0.01d)
+		{
+			return input;
+		}
+
+		var requestedHeight = input.HeightRequest;
+		if (requestedHeight <= 0 || requestedHeight >= canvasHeight)
+		{
+			return input;
+		}
+
+		input.TranslationY += (canvasHeight - requestedHeight) / 2d;
+		return input;
+	}
+
+	private static bool HasExplicitTargetRect(IClip clip)
+		=> clip.TargetX != 0 || clip.TargetY != 0 || clip.TargetWidth > 0 || clip.TargetHeight > 0;
+
+	private static bool HasLegacyInternalPlaceResizeEffects(IClip clip)
+	{
 		if (clip.EffectsInstances?.Any() != true)
 		{
-			return generatedView;
+			return false;
 		}
 
+		return clip.EffectsInstances.Any(IsLegacyInternalLayoutEffect);
+	}
 
-		foreach (var effect in clip.EffectsInstances
-			.Where(e => e.Enabled)
-			.OrderBy(e => e.Index))
+	private static bool IsLegacyInternalLayoutEffect(IEffect effect)
+	{
+		if (string.Equals(effect.Name, "__Internal_Place__", StringComparison.Ordinal)
+			|| string.Equals(effect.Name, "__Internal_Resize__", StringComparison.Ordinal))
 		{
-			generatedView = ApplyEffectPreview(generatedView, effect, canvasWidth, canvasHeight, frameIndex);
+			return true;
 		}
 
-		return generatedView;
+		if (string.IsNullOrWhiteSpace(effect.Name)
+			&& (string.Equals(effect.TypeName, "Place", StringComparison.OrdinalIgnoreCase)
+				|| string.Equals(effect.TypeName, "Resize", StringComparison.OrdinalIgnoreCase)))
+		{
+			return true;
+		}
+
+		return false;
 	}
 
 	private IClip? TryGetPreferredClip(uint frameIndex)
@@ -464,5 +664,4 @@ public sealed class DynamicPreview : ContentView, IDisposable
 
 	private sealed record PreviewRequest(IClip Clip, IClipDynamicPreviewProvider? Provider);
 
-	private sealed record PreparedPreview(Microsoft.Maui.IView? View, string? ErrorMessage, IClip? Source);
 }

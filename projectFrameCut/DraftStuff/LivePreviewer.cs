@@ -23,7 +23,7 @@ namespace projectFrameCut.LivePreview
         public ISoundTrack[]? SoundTracks;
         public int targetFrameRate = 60;
         public uint TotalDuration;
-        public string TempPath;
+        public string TempPath = string.Empty;
         public string? ProxyRoot;
         public event Action<double, TimeSpan>? OnProgressChanged;
 
@@ -38,6 +38,7 @@ namespace projectFrameCut.LivePreview
         public string RenderFrame(uint frameIndex, int targetWidth, int targetHeight)
         {
             ArgumentNullException.ThrowIfNull(Clips, "Clips not set yet.");
+            (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
             LogDiagnostic($"[LiveRender] RenderOne request: frame #{frameIndex}");
             var frameHash = Timeline.GetFrameHash(Clips, frameIndex);
             var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{frameHash}.png");
@@ -52,7 +53,7 @@ namespace projectFrameCut.LivePreview
                 LogDiagnostic($"[LiveRender] Generating frame #{frameIndex} ({frameHash})...");
             }
             var layers = Timeline.GetFramesInOneFrame(Clips, frameIndex, targetWidth, targetHeight, true);
-            var pic = Timeline.MixtureLayers(layers, frameIndex, targetWidth, targetHeight);
+            var pic = Timeline.MixtureLayers(layers, frameIndex, targetWidth, targetHeight, autoCenterImplicitClip: true);
             pic.SaveAsPng8bpp(destPath, encoder);
             return destPath;
         }
@@ -60,8 +61,9 @@ namespace projectFrameCut.LivePreview
         public IPicture GetFrame(uint frameIndex, int targetWidth, int targetHeight)
         {
             ArgumentNullException.ThrowIfNull(Clips, "Clips");
+            (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
             var layers = Timeline.GetFramesInOneFrame(Clips, frameIndex, targetWidth, targetHeight, true);
-            var pic = Timeline.MixtureLayers(layers, frameIndex, targetWidth, targetHeight);
+            var pic = Timeline.MixtureLayers(layers, frameIndex, targetWidth, targetHeight, autoCenterImplicitClip: true);
             return pic;
         }
 
@@ -192,14 +194,15 @@ namespace projectFrameCut.LivePreview
         public async Task<string> RenderSomeFrames(int startIndex, int length, int targetWidth, int targetFramerate, int targetHeight, CancellationToken token)
         {
 
-            var encodeWidth = (targetWidth % 2 == 0) ? targetWidth : targetWidth - 1;
-            var encodeHeight = (targetHeight % 2 == 0) ? targetHeight : targetHeight - 1;
+            (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
+
+            var (encodeWidth, encodeHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: true);
 
             var id = Guid.NewGuid();
             var resultPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}_result.mp4");
             var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}.mp4");
             var audDestPath = Path.Combine(TempPath, $"projectFrameCut_Render_{id}.wav");
-            LogDiagnostic($"[LiveRender] RenderSomeFrames request: frame #{startIndex}, length {length}, adjusted output size {targetWidth}x{targetHeight}");
+            LogDiagnostic($"[LiveRender] RenderSomeFrames request: frame #{startIndex}, length {length}, output {targetWidth}x{targetHeight}, encode {encodeWidth}x{encodeHeight}");
             using var builder = new VideoBuilder(destPath, encodeWidth, encodeHeight, targetFramerate, "libx264", "AV_PIX_FMT_YUV420P")
             {
                 Duration = uint.MaxValue,
@@ -212,6 +215,7 @@ namespace projectFrameCut.LivePreview
                 builder = builder,
                 Clips = Clips,
                 Use16Bit = false,
+                AutoCenterImplicitClip = true,
                 MaxThreads = 1,
 
             };
@@ -242,5 +246,30 @@ namespace projectFrameCut.LivePreview
         {
             BitDepth = PngBitDepth.Bit8,
         };
+
+        private static (int width, int height) NormalizeTargetSize(int width, int height, bool requireEven)
+        {
+            var normalizedWidth = Math.Max(1, width);
+            var normalizedHeight = Math.Max(1, height);
+
+            if (!requireEven)
+            {
+                return (normalizedWidth, normalizedHeight);
+            }
+
+            if ((normalizedWidth & 1) == 1)
+            {
+                normalizedWidth++;
+            }
+
+            if ((normalizedHeight & 1) == 1)
+            {
+                normalizedHeight++;
+            }
+
+            normalizedWidth = Math.Max(2, normalizedWidth);
+            normalizedHeight = Math.Max(2, normalizedHeight);
+            return (normalizedWidth, normalizedHeight);
+        }
     }
 }

@@ -89,13 +89,9 @@ namespace projectFrameCut.WinUI
                 {
                     Log(ex, "Read channel");
                 }
-                if (args.Length == 1)
+                if (args.Length > 0 && args[0].StartsWith("pjfc:", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (args[0].StartsWith("pjfc:"))
-                    {
-                        args = args[0].Substring(5).Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-                        Log("Params read from protocol: " + string.Join(' ', args));
-                    }
+                    args = ParseProtocolArgs(args);
                 }
                 if (args.Any(c => c.StartsWith("--overrideCulture")))
                 {
@@ -142,6 +138,7 @@ namespace projectFrameCut.WinUI
                     var userDataPath = args.First(c => c.StartsWith("--userData")).Split('=', 2)[1];
                     UserDataPathOverride = userDataPath;
                 }
+                MauiProgram.CmdlineArgs = args;
             }
             catch
             {
@@ -158,6 +155,7 @@ namespace projectFrameCut.WinUI
                     new App();
                 });
                 Log("Application exited.");
+                Helper.CrashHandler.Handler?.Kill(true);
                 _ = SettingsManager.FlushAndStopAsync();
                 Helper.HelperProgram.Cleanup();
                 MauiProgram.LogWriter.Flush();
@@ -186,6 +184,97 @@ namespace projectFrameCut.WinUI
             }
 
 
+        }
+
+        private static string[] ParseProtocolArgs(string[] args)
+        {
+            var protocolPayload = args[0].Substring(5);
+
+            if (TryParseFileProtocolPayload(protocolPayload, out var filePath, out var queryArgs))
+            {
+                var parsedArgs = new List<string> { filePath };
+                parsedArgs.AddRange(queryArgs);
+                parsedArgs.AddRange(args.Skip(1));
+
+                Log("Params read from protocol URI: " + string.Join(' ', parsedArgs.Select(c => $"'{c}'")));
+                return parsedArgs.ToArray();
+            }
+
+            // Keep legacy behavior for protocol payloads like "pjfc:--log --noSplash".
+            var fallbackArgs = protocolPayload
+                .Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Concat(args.Skip(1))
+                .ToArray();
+            Log("Params read from protocol: " + string.Join(' ', fallbackArgs.Select(c => $"'{c}'")));
+            return fallbackArgs;
+        }
+
+        private static bool TryParseFileProtocolPayload(string payload, out string filePath, out string[] queryArgs)
+        {
+            filePath = string.Empty;
+            queryArgs = Array.Empty<string>();
+
+            if (!payload.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var queryStartIndex = payload.IndexOf('?');
+            var fileUriText = queryStartIndex >= 0 ? payload[..queryStartIndex] : payload;
+            var query = queryStartIndex >= 0 ? payload[(queryStartIndex + 1)..] : string.Empty;
+
+            if (!Uri.TryCreate(fileUriText, UriKind.Absolute, out var fileUri) ||
+                !string.Equals(fileUri.Scheme, Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            filePath = fileUri.LocalPath;
+            if (OperatingSystem.IsWindows() && filePath.Length >= 3 && filePath[0] == '/' && char.IsLetter(filePath[1]) && filePath[2] == ':')
+            {
+                filePath = filePath[1..];
+            }
+
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                return false;
+            }
+
+            queryArgs = ParseQueryArguments(query).ToArray();
+            return true;
+        }
+
+        private static IEnumerable<string> ParseQueryArguments(string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                yield break;
+            }
+
+            foreach (var segment in query.Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var equalsIndex = segment.IndexOf('=');
+                if (equalsIndex < 0)
+                {
+                    var decodedSingle = Uri.UnescapeDataString(segment.Replace('+', ' '));
+                    if (!string.IsNullOrWhiteSpace(decodedSingle))
+                    {
+                        yield return decodedSingle;
+                    }
+                    continue;
+                }
+
+                var keyPart = segment[..equalsIndex];
+                if (string.IsNullOrWhiteSpace(keyPart))
+                {
+                    continue;
+                }
+
+                var valuePart = segment[(equalsIndex + 1)..];
+                var decodedKey = Uri.UnescapeDataString(keyPart.Replace('+', ' '));
+                var decodedValue = Uri.UnescapeDataString(valuePart.Replace('+', ' '));
+                yield return $"{decodedKey}={decodedValue}";
+            }
         }
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
@@ -287,6 +376,16 @@ Current directory: {Environment.CurrentDirectory}
                     File.WriteAllText(logPath, logMessage);
                 }
                 Thread.Sleep(100);
+                try
+                {
+                    if(!Helper.CrashHandler.Handler?.HasExited ?? false)
+                    {
+                        //let handler handle it
+                        Environment.FailFast(logMessage, ex);
+                        Environment.Exit(ex.HResult);
+                    }
+                }
+                catch { }
                 if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.dll")))
                 {
                     try
@@ -327,25 +426,11 @@ Current directory: {Environment.CurrentDirectory}
 
         public static void RebootApp()
         {
-            string path = "pjfc:";
-            var script =
-$$"""
-
-Clear-Host;Start-Process "{{path}}";exit
-
-""";
             var proc = new Process();
-            proc.StartInfo.FileName = "powershell.exe";
+            proc.StartInfo.FileName = "pjfc.exe";
             proc.StartInfo.UseShellExecute = false;
-            proc.StartInfo.RedirectStandardInput = true;
             proc.StartInfo.CreateNoWindow = true;
             proc.Start();
-            var procWriter = proc.StandardInput;
-            if (procWriter != null)
-            {
-                procWriter.AutoFlush = true;
-                procWriter.WriteLine(script);
-            }
         }
 
     }

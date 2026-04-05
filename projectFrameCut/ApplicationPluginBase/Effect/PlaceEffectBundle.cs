@@ -22,8 +22,8 @@ namespace projectFrameCut.ApplicationPluginBase.Effect
             { "StartY", 0 },
         };
 
-        public List<string> ParametersNeeded => PlaceEffect_ImageSharp.ParametersNeeded;
-        public Dictionary<string, string> ParametersType => PlaceEffect_ImageSharp.ParametersType;
+        public List<string> ParametersNeeded => PlaceEffect_IPicture.ParametersNeeded;
+        public Dictionary<string, string> ParametersType => PlaceEffect_IPicture.ParametersType;
 
         public string TypeName => "Place";
         public bool IsNormalEffect => true;

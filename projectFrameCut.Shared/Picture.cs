@@ -482,7 +482,7 @@ namespace projectFrameCut.Shared
             {
                 new PictureProcessStack
                 {
-                    OperationDisplayName = "Created from SixLabors.ImageSharp.Image",
+                    OperationDisplayName = "Converted from SixLabors.ImageSharp.Image",
                     Operator = this.GetType(),
                     Elapsed = sw.Elapsed,
                     ProcessingFuncStackTrace = new StackTrace(true),
@@ -1073,7 +1073,7 @@ namespace projectFrameCut.Shared
             {
                 new PictureProcessStack
                 {
-                    OperationDisplayName = "Created from SixLabors.ImageSharp.Image",
+                    OperationDisplayName = "Converted from SixLabors.ImageSharp.Image",
                     Operator = this.GetType(),
                     ProcessingFuncStackTrace = new StackTrace(true),
                     Elapsed = sw.Elapsed,

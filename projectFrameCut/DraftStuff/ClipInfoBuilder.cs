@@ -55,6 +55,7 @@ namespace projectFrameCut.DraftStuff
 {
     public class ClipInfoBuilder
     {
+        #region id const
         private const string InternalPlaceID = "__Internal_Place__";
         private const string InternalResizeID = "__Internal_Resize__";
         private const string InternalRotationID = "__Internal_Rotation__";
@@ -62,6 +63,9 @@ namespace projectFrameCut.DraftStuff
         private const string SolidColorOutputWidthKey = "SolidColorOutputWidth";
         private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
         private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
+        private const string LegacyPlaceResizeSettingKey = "Edit_UseLegacyPlaceResizeEffects";
+        #endregion
+
         #region init
         DraftPage page;
 
@@ -99,6 +103,68 @@ namespace projectFrameCut.DraftStuff
             }
 
             return Math.Max(1, fallback);
+        }
+
+        private bool ShouldUseLegacyPlaceResizeEffects()
+            => SettingsManager.IsBoolSettingTrue(LegacyPlaceResizeSettingKey);
+
+        private static bool HasExplicitTargetRect(ClipElementUI clip)
+            => clip.TargetX != 0 || clip.TargetY != 0 || clip.TargetWidth > 0 || clip.TargetHeight > 0;
+
+        private static void ReadLegacyPlaceResizeFromEffects(ClipElementUI clip, int relativeWidth, int relativeHeight, ref int x, ref int y, ref int w, ref int h)
+        {
+            if (clip.Effects == null)
+            {
+                return;
+            }
+
+            if (clip.Effects.TryGetValue(InternalPlaceID, out var e) && e is PlaceEffect_IPicture p)
+            {
+                x = p.StartX;
+                y = p.StartY;
+                if (p.RelativeWidth > 0 && p.RelativeWidth != relativeWidth)
+                {
+                    x = (int)Math.Round(p.StartX * ((double)relativeWidth / p.RelativeWidth));
+                    y = (int)Math.Round(p.StartY * ((double)relativeHeight / p.RelativeHeight));
+                }
+            }
+
+            if (clip.Effects.TryGetValue(InternalResizeID, out var e2) && e2 is ResizeEffect_ImageSharp r)
+            {
+                w = r.Width;
+                h = r.Height;
+                if (r.RelativeWidth > 0 && r.RelativeWidth != relativeWidth)
+                {
+                    w = (int)Math.Round(r.Width * ((double)relativeWidth / r.RelativeWidth));
+                    h = (int)Math.Round(r.Height * ((double)relativeHeight / r.RelativeHeight));
+                }
+            }
+        }
+
+        private static int ResolvePanelInt(PropertyPanelBuilder panel, string changedId, object? changedValue, string targetId, int fallback)
+        {
+            if (changedId == targetId && int.TryParse(changedValue?.ToString(), out var changed))
+            {
+                return changed;
+            }
+
+            if (panel.Properties.TryGetValue(targetId, out var uiValue) && int.TryParse(uiValue?.ToString(), out var parsed))
+            {
+                return parsed;
+            }
+
+            return fallback;
+        }
+
+        private static void RemoveLegacyPlaceResizeEffects(ClipElementUI clip)
+        {
+            if (clip.Effects == null)
+            {
+                return;
+            }
+
+            clip.Effects.Remove(InternalPlaceID);
+            clip.Effects.Remove(InternalResizeID);
         }
 
 
@@ -181,35 +247,39 @@ namespace projectFrameCut.DraftStuff
             int valX = 0, valY = 0;
             int valW = page.ProjectInfo.RelativeWidth;
             int valH = page.ProjectInfo.RelativeHeight;
+            bool useLegacyPlaceResize = ShouldUseLegacyPlaceResizeEffects();
 
-            if (clip.Effects != null)
+            if (!useLegacyPlaceResize && HasExplicitTargetRect(clip))
             {
-                if (clip.Effects.TryGetValue(InternalPlaceID, out var e) && e is PlaceEffect_ImageSharp p)
-                {
-                    valX = p.StartX;
-                    valY = p.StartY;
-                    if (p.RelativeWidth > 0 && p.RelativeWidth != page.ProjectInfo.RelativeWidth)
-                    {
-                        valX = (int)(p.StartX * ((double)page.ProjectInfo.RelativeWidth / p.RelativeWidth));
-                        valY = (int)(p.StartY * ((double)page.ProjectInfo.RelativeHeight / p.RelativeHeight));
-                    }
-                }
-                if (clip.Effects.TryGetValue(InternalResizeID, out var e2) && e2 is ResizeEffect_ImageSharp r)
-                {
-                    valW = r.Width;
-                    valH = r.Height;
-                    if (r.RelativeWidth > 0 && r.RelativeWidth != page.ProjectInfo.RelativeWidth)
-                    {
-                        valW = (int)(r.Width * ((double)page.ProjectInfo.RelativeWidth / r.RelativeWidth));
-                        valH = (int)(r.Height * ((double)page.ProjectInfo.RelativeHeight / r.RelativeHeight));
-                    }
-                }
+                valX = clip.TargetX;
+                valY = clip.TargetY;
+                if (clip.TargetWidth > 0) valW = clip.TargetWidth;
+                if (clip.TargetHeight > 0) valH = clip.TargetHeight;
+            }
+            else
+            {
+                ReadLegacyPlaceResizeFromEffects(clip, page.ProjectInfo.RelativeWidth, page.ProjectInfo.RelativeHeight, ref valX, ref valY, ref valW, ref valH);
             }
 
             if (clip.ClipType == ClipMode.SolidColorClip)
             {
-                valW = ReadIntExtraData(clip.ExtraData, SolidColorOutputWidthKey, valW);
-                valH = ReadIntExtraData(clip.ExtraData, SolidColorOutputHeightKey, valH);
+                if (!useLegacyPlaceResize && clip.TargetWidth > 0)
+                {
+                    valW = clip.TargetWidth;
+                }
+                else
+                {
+                    valW = ReadIntExtraData(clip.ExtraData, SolidColorOutputWidthKey, valW);
+                }
+
+                if (!useLegacyPlaceResize && clip.TargetHeight > 0)
+                {
+                    valH = clip.TargetHeight;
+                }
+                else
+                {
+                    valH = ReadIntExtraData(clip.ExtraData, SolidColorOutputHeightKey, valH);
+                }
             }
 
             var ppb = new PropertyPanelBuilder()
@@ -360,13 +430,54 @@ namespace projectFrameCut.DraftStuff
                 {
                     clip.Effects ??= new Dictionary<string, IEffect>();
 
+                    if (!ShouldUseLegacyPlaceResizeEffects())
+                    {
+                        if (e.Id.StartsWith("place"))
+                        {
+                            int currentX = ResolvePanelInt(ppb, e.Id, e.Value, "placeX", clip.TargetX);
+                            int currentY = ResolvePanelInt(ppb, e.Id, e.Value, "placeY", clip.TargetY);
+                            clip.TargetX = currentX;
+                            clip.TargetY = currentY;
+                            RemoveLegacyPlaceResizeEffects(clip);
+                            handler?.Invoke(s, e);
+                            return;
+                        }
+
+                        if (e.Id.StartsWith("resize"))
+                        {
+                            if (clip.ClipType == ClipMode.SolidColorClip)
+                            {
+                                int solidCurrentW = ResolvePanelInt(ppb, e.Id, e.Value, "resizeW", clip.TargetWidth > 0 ? clip.TargetWidth : ReadIntExtraData(clip.ExtraData, SolidColorOutputWidthKey, page.ProjectInfo.RelativeWidth));
+                                int solidCurrentH = ResolvePanelInt(ppb, e.Id, e.Value, "resizeH", clip.TargetHeight > 0 ? clip.TargetHeight : ReadIntExtraData(clip.ExtraData, SolidColorOutputHeightKey, page.ProjectInfo.RelativeHeight));
+
+                                clip.TargetWidth = Math.Max(1, solidCurrentW);
+                                clip.TargetHeight = Math.Max(1, solidCurrentH);
+                                clip.ExtraData ??= new Dictionary<string, object>();
+                                clip.ExtraData[SolidColorOutputWidthKey] = clip.TargetWidth;
+                                clip.ExtraData[SolidColorOutputHeightKey] = clip.TargetHeight;
+                                clip.ExtraData[SolidColorUseFixedOutputSizeKey] = true;
+                                RemoveLegacyPlaceResizeEffects(clip);
+                                handler?.Invoke(s, e);
+                                return;
+                            }
+
+                            int currentW = ResolvePanelInt(ppb, e.Id, e.Value, "resizeW", clip.TargetWidth > 0 ? clip.TargetWidth : page.ProjectInfo.RelativeWidth);
+                            int currentH = ResolvePanelInt(ppb, e.Id, e.Value, "resizeH", clip.TargetHeight > 0 ? clip.TargetHeight : page.ProjectInfo.RelativeHeight);
+                            clip.TargetWidth = Math.Max(1, currentW);
+                            clip.TargetHeight = Math.Max(1, currentH);
+                            RemoveLegacyPlaceResizeEffects(clip);
+                            handler?.Invoke(s, e);
+                            return;
+                        }
+                    }
+
                     if (e.Id.StartsWith("place"))
                     {
                         // Get current values (normalized to current project resolution) from UI or Effect
                         int currentX = 0, currentY = 0;
 
-                        PlaceEffect_ImageSharp? existingP = null;
-                        if (clip.Effects.TryGetValue(InternalPlaceID, out var eff) && eff is PlaceEffect_ImageSharp pe)
+                        PlaceEffect_IPicture? existingP = null;
+                        if (clip.Effects.TryGetValue(InternalPlaceID, out var eff) && eff is PlaceEffect_IPicture pe)
                         {
                             existingP = pe;
                             currentX = pe.StartX;
@@ -384,7 +495,7 @@ namespace projectFrameCut.DraftStuff
                         if (e.Id == "placeY" && int.TryParse(e.Value?.ToString(), out var vy)) currentY = vy;
                         else if (ppb.Properties.TryGetValue("placeY", out var uiY) && int.TryParse(uiY.ToString(), out var uiYInt)) currentY = uiYInt;
 
-                        var newP = new PlaceEffect_ImageSharp
+                        var newP = new PlaceEffect_IPicture
                         {
                             StartX = currentX,
                             StartY = currentY,
@@ -536,27 +647,18 @@ namespace projectFrameCut.DraftStuff
             int valW = page.ProjectInfo.RelativeWidth;
             int valH = page.ProjectInfo.RelativeHeight;
             double rotationDeg = 0;
+            bool useLegacyPlaceResize = ShouldUseLegacyPlaceResizeEffects();
 
-            if (clip.Effects.TryGetValue(InternalPlaceID, out var placeEff) && placeEff is PlaceEffect_ImageSharp p)
+            if (!useLegacyPlaceResize && HasExplicitTargetRect(clip))
             {
-                valX = p.StartX;
-                valY = p.StartY;
-                if (p.RelativeWidth > 0 && p.RelativeWidth != page.ProjectInfo.RelativeWidth)
-                {
-                    valX = (int)Math.Round(p.StartX * ((double)page.ProjectInfo.RelativeWidth / p.RelativeWidth));
-                    valY = (int)Math.Round(p.StartY * ((double)page.ProjectInfo.RelativeHeight / p.RelativeHeight));
-                }
+                valX = clip.TargetX;
+                valY = clip.TargetY;
+                if (clip.TargetWidth > 0) valW = clip.TargetWidth;
+                if (clip.TargetHeight > 0) valH = clip.TargetHeight;
             }
-
-            if (clip.Effects.TryGetValue(InternalResizeID, out var resizeEff) && resizeEff is ResizeEffect_ImageSharp r)
+            else
             {
-                valW = r.Width;
-                valH = r.Height;
-                if (r.RelativeWidth > 0 && r.RelativeWidth != page.ProjectInfo.RelativeWidth)
-                {
-                    valW = (int)Math.Round(r.Width * ((double)page.ProjectInfo.RelativeWidth / r.RelativeWidth));
-                    valH = (int)Math.Round(r.Height * ((double)page.ProjectInfo.RelativeHeight / r.RelativeHeight));
-                }
+                ReadLegacyPlaceResizeFromEffects(clip, page.ProjectInfo.RelativeWidth, page.ProjectInfo.RelativeHeight, ref valX, ref valY, ref valW, ref valH);
             }
 
             if (clip.Effects.TryGetValue(InternalRotationID, out var rotEff) && rotEff is RotationEffect_ImageSharp rot)
@@ -629,10 +731,19 @@ namespace projectFrameCut.DraftStuff
 
                 if (e.Id.StartsWith("place"))
                 {
+                    if (!ShouldUseLegacyPlaceResizeEffects())
+                    {
+                        clip.TargetX = ResolvePanelInt(transformPpb, e.Id, e.Value, "placeX", clip.TargetX);
+                        clip.TargetY = ResolvePanelInt(transformPpb, e.Id, e.Value, "placeY", clip.TargetY);
+                        RemoveLegacyPlaceResizeEffects(clip);
+                        handler?.Invoke(s, e);
+                        return;
+                    }
+
                     int currentX = 0, currentY = 0;
 
-                    PlaceEffect_ImageSharp? existingP = null;
-                    if (clip.Effects.TryGetValue(InternalPlaceID, out var eff) && eff is PlaceEffect_ImageSharp pe)
+                    PlaceEffect_IPicture? existingP = null;
+                    if (clip.Effects.TryGetValue(InternalPlaceID, out var eff) && eff is PlaceEffect_IPicture pe)
                     {
                         existingP = pe;
                         currentX = pe.StartX;
@@ -650,7 +761,7 @@ namespace projectFrameCut.DraftStuff
                     if (e.Id == "placeY" && int.TryParse(e.Value?.ToString(), out var vy)) currentY = vy;
                     else if (transformPpb.Properties.TryGetValue("placeY", out var uiY) && int.TryParse(uiY.ToString(), out var uiYInt)) currentY = uiYInt;
 
-                    clip.Effects[InternalPlaceID] = new PlaceEffect_ImageSharp
+                    clip.Effects[InternalPlaceID] = new PlaceEffect_IPicture
                     {
                         StartX = currentX,
                         StartY = currentY,
@@ -667,6 +778,17 @@ namespace projectFrameCut.DraftStuff
 
                 if (e.Id.StartsWith("resize"))
                 {
+                    if (!ShouldUseLegacyPlaceResizeEffects())
+                    {
+                        int w = ResolvePanelInt(transformPpb, e.Id, e.Value, "resizeW", clip.TargetWidth > 0 ? clip.TargetWidth : page.ProjectInfo.RelativeWidth);
+                        int h = ResolvePanelInt(transformPpb, e.Id, e.Value, "resizeH", clip.TargetHeight > 0 ? clip.TargetHeight : page.ProjectInfo.RelativeHeight);
+                        clip.TargetWidth = Math.Max(1, w);
+                        clip.TargetHeight = Math.Max(1, h);
+                        RemoveLegacyPlaceResizeEffects(clip);
+                        handler?.Invoke(s, e);
+                        return;
+                    }
+
                     int currentW = page.ProjectInfo.RelativeWidth, currentH = page.ProjectInfo.RelativeHeight;
                     ResizeEffect_ImageSharp? existingR = null;
 

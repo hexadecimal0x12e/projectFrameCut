@@ -42,6 +42,8 @@ using ITransform = projectFrameCut.Render.RenderAPIBase.ClipAndTrack.ITransform;
 using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System.Reflection;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
+using System.Runtime.InteropServices;
+
 
 
 
@@ -69,7 +71,6 @@ using projectFrameCut.Render.AndroidOpenGL;
 using Microsoft.Maui.Platform;
 using Android.Content.Res;
 using CommunityToolkit.Maui.Extensions;
-using static Java.Util.Jar.Attributes;
 using Google.Android.Material.Chip;
 
 #endif
@@ -336,6 +337,7 @@ public partial class DraftPage : ContentPage
         LivePreviewerHost.Content = EnsureRealtimePreviewHost();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
+        HookPreviewSurfaceSizeSync();
         OverlayLayer.IsVisible = false;
 #if ANDROID
         OverlayLayer.InputTransparent = false;
@@ -374,6 +376,7 @@ public partial class DraftPage : ContentPage
         LivePreviewerHost.Content = EnsureRealtimePreviewHost();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
+        HookPreviewSurfaceSizeSync();
         OverlayLayer.IsVisible = false;
 #if ANDROID
         OverlayLayer.InputTransparent = false;
@@ -418,6 +421,45 @@ public partial class DraftPage : ContentPage
         ProjectInfo.ProjectName ??= title;
         SecondsPerFrame = 1d / ProjectInfo.TargetFrameRate;
         IsReadonly = isReadonly;
+    }
+
+    private void HookPreviewSurfaceSizeSync()
+    {
+        PreviewOverlayLayer.SizeChanged += PreviewSurface_SizeChanged;
+        ClipEditorHost.SizeChanged += PreviewSurface_SizeChanged;
+        LivePreviewerHost.SizeChanged += PreviewSurface_SizeChanged;
+        SyncPreviewSurfaceSize();
+    }
+
+    private void PreviewSurface_SizeChanged(object? sender, EventArgs e)
+    {
+        SyncPreviewSurfaceSize();
+    }
+
+    private void SyncPreviewSurfaceSize()
+    {
+        var width = PreviewOverlayLayer.Width;
+        var height = PreviewOverlayLayer.Height;
+
+        if (width <= 0 || height <= 0)
+        {
+            width = ClipEditorHost.Width;
+            height = ClipEditorHost.Height;
+        }
+
+        if (width <= 0 || height <= 0)
+        {
+            width = LivePreviewerHost.Width;
+            height = LivePreviewerHost.Height;
+        }
+
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        ClipEditor.UpdateCanvasSize(width, height);
+        DynamicPreviewProvider.UpdateCanvasSize(width, height);
     }
 
     private void RegisterCommands()
@@ -2722,6 +2764,10 @@ public partial class DraftPage : ContentPage
             pasted.Clip.IsVisible = dto.ShouldDisplayInUI;
             pasted.sourceSecondPerFrame = dto.FrameTime;
             pasted.SecondPerFrameRatio = dto.SecondPerFrameRatio > 0 ? dto.SecondPerFrameRatio : 1f;
+            pasted.TargetWidth = dto.TargetWidth;
+            pasted.TargetHeight = dto.TargetHeight;
+            pasted.TargetX = dto.TargetX;
+            pasted.TargetY = dto.TargetY;
             pasted.ExtraData = dto.MetaData?.ToDictionary(kv => kv.Key, kv => kv.Value) ?? new Dictionary<string, object>();
             pasted.Effects = dto.Effects?.ToDictionary(
                 e => string.IsNullOrWhiteSpace(e.Name) ? $"Effect-{Guid.NewGuid()}" : e.Name,
@@ -5600,7 +5646,8 @@ public partial class DraftPage : ContentPage
         DynamicPreviewProvider.SetPreferredClipId(_selected?.Id);
         var targetWidth = Math.Max(1, previewWidth);
         var targetHeight = Math.Max(1, previewHeight);
-        return await DynamicPreviewProvider.RenderFrame((uint)_currentFrame, targetWidth, targetHeight);
+        var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, targetWidth, targetHeight);
+        return await ClipEditor.ApplyPreparedPreviewsAsync(preparedPreviews);
     }
 
     private async Task RenderOneFrame(uint duration, int? width = null, int? height = null)
@@ -6771,8 +6818,30 @@ public partial class DraftPage : ContentPage
                     GC.WaitForPendingFinalizers();
                     GC.Collect();
                 })
+            },
+            {
+                "Debug_Crash", new Command(async () =>
+                {
+                    var type = await DisplayActionSheetAsync("Choose a favor you'd like", "Cancel", null, "Environment.FailFast", "Native(null pointer)", "Managed(NullReferenceException)");
+                    switch (type)
+                    {
+                        case "Native(null pointer)":
+            #if ANDROID
+                            throw new Java.Lang.NullPointerException("test crash from native code");
+            #elif WINDOWS
+                            IntPtr ptr = IntPtr.Zero;
+                            Marshal.WriteInt32(ptr, 42);
+            #endif
+                            break;
+                        case "Managed(NullReferenceException)":
+                            throw new NullReferenceException("test crash");
+                        case "Environment.FailFast":
+                            Environment.FailFast("test crash");
+                            break;
+                    }
+                })
             }
-                };
+        };
         //List<string> verbs = [];
         //if (SettingsManager.IsBoolSettingTrue("DeveloperMode")) verbs.AddRange(debugActionsPair.Keys);
 
@@ -7076,6 +7145,7 @@ public partial class DraftPage : ContentPage
         double h = this.Window?.Height ?? 0;
         WindowSize = new(w, h);
         LogDiagnostic($"Window size changed: {w:F0} x {h:F0} (DIP)");
+        SyncPreviewSurfaceSize();
         UpdateTrackHeaderLayoutForViewport();
         UpdateTimelineWidth();
         UpdatePlayheadPosition();

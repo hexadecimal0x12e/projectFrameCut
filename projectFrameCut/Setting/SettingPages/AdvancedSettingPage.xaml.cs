@@ -130,12 +130,16 @@ public partial class AdvancedSettingPage : ContentPage
         .AddSwitch("AutoRecoverDraft", SettingLocalizedResources.Advanced_AutoRecoverDraft, SettingsManager.IsBoolSettingTrue("AutoRecoverDraft"))
         .AddSeparator()
 
+        .AddText(Localized.AppShell_ProjectsTab, fontSize: 20)
+        .AddSwitch("Edit_UseLegacyPlaceResizeEffects", SettingLocalizedResources.Edit_UseLegacyPlaceResizeEffects, SettingsManager.IsBoolSettingTrue("Edit_UseLegacyPlaceResizeEffects"))
+        .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
+        .AddSeparator()
+
         .AddText(SettingLocalizedResources.Misc_DiagOptions, fontSize: 20)
         .AddSwitch("diag_EnableProcessStack", SettingLocalizedResources.Advanced_EnableProcessStack, SettingsManager.IsBoolSettingTrue("diag_EnableProcessStack"))
         .AddSwitch("diag_TraceIPictureObject", SettingLocalizedResources.Advanced_TraceIPictureObject, SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject"))
         .AddSwitch("render_SaveCheckpoint", SettingLocalizedResources.Render_SaveCheckpoint, IsBoolSettingTrue("render_SaveCheckpoint"), null)
         .AddSwitch("render_DumpDiagData", SettingLocalizedResources.Render_DumpDiagData, IsBoolSettingTrue("render_DumpDiagData"), null)
-        .AddSwitch("edit_ShowAllEffects", SettingLocalizedResources.Edit_ShowAllEffects, SettingsManager.IsBoolSettingTrue("edit_ShowAllEffects"), null)
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.Advanced_Globalization, fontSize: 20)

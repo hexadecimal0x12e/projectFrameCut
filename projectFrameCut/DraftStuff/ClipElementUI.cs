@@ -54,6 +54,10 @@ namespace projectFrameCut.DraftStuff
         public string FromPlugin { get; set; } = string.Empty;
         public string TypeName { get; set; } = string.Empty;
         public string? SourcePath { get; set; } = null;
+        public int TargetWidth { get; set; } = 0;
+        public int TargetHeight { get; set; } = 0;
+        public int TargetX { get; set; } = 0;
+        public int TargetY { get; set; } = 0;
         public int SubLayerIndex { get; set; } = 0;
         public int SubTrackIndex
         {

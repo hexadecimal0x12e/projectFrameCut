@@ -105,7 +105,7 @@ namespace projectFrameCut.Helper
                 }
             }
 #endif
-            SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
+            SimpleLocalizerBaseGeneratedHelper.Localized ??= SimpleLocalizer_Helper.Init();
 
             if (args.Length > 1)
             {
@@ -113,14 +113,13 @@ namespace projectFrameCut.Helper
                 switch (mode)
                 {
                     case "crashForm":
-                        SimpleLocalizerBaseGeneratedHelper.Localized = SimpleLocalizer_Helper.Init();
                         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
                         Application.EnableVisualStyles();
                         Application.SetCompatibleTextRenderingDefault(false);
                         Application.Run(new CrashForm());
                         return;
-                    case "uriCallback":
-                        //todo
+                    case "crashHandler":
+                        CrashHandler.CrashHandlerMain(args.Skip(1).ToArray());
                         return;
                 }
             }
@@ -212,6 +211,6 @@ namespace projectFrameCut.Helper
         }
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
+        public static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
     }
 }

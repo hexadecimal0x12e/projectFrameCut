@@ -1114,6 +1114,15 @@
         "DontTranslate": false
       },
       {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "\u4F7F\u7528\u65E7\u7248\uFF08v1.4.0.0\u6216\u8005\u66F4\u65E7\uFF09\u7684\u4F4D\u7F6E\u5904\u7406\u7CFB\u7EDF",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
         "Id": "General_Language",
         "Value": "\u8BED\u8A00/Language",
         "Mode": "ConstString",
@@ -2453,6 +2462,15 @@
         "Id": "RenderEffectImplement_Unknown",
         "Value": "\u672A\u77E5",
         "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "\u5D29\u6E83\u540E\u4E0D\u81EA\u52A8\u91CD\u542F {Localized.AppBrand}",
+        "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false,
@@ -5126,6 +5144,26 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -7793,6 +7831,26 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -10465,6 +10523,26 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -13133,6 +13211,26 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -15805,6 +15903,26 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "\u6587\u8A00\u6587": [
@@ -18473,6 +18591,26 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -21145,6 +21283,26 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -23813,6 +23971,26 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -26485,6 +26663,26 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -29153,6 +29351,26 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -31825,6 +32043,26 @@
         "Comment": "",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -34493,6 +34731,26 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }
@@ -37165,6 +37423,26 @@
         "Comment": "\u041F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u0435 \u043E\u0447\u0438\u0441\u0442\u043A\u0438 \u043A\u044D\u0448\u0430. \u0423\u0434\u0430\u043B\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u0431\u043B\u0438\u0437\u0438\u0442\u0435\u043B\u044C\u043D\u043E n \u0444\u0430\u0439\u043B\u043E\u0432 \u043E\u0431\u0449\u0438\u043C \u0440\u0430\u0437\u043C\u0435\u0440\u043E\u043C size \u041C\u0411.",
         "HasValidationErrors": false,
         "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -39833,6 +40111,26 @@
           }
         ],
         "Comment": "",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "Edit_UseLegacyPlaceResizeEffects",
+        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_NoRebootAfterCrash",
+        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "HasValidationErrors": false,
         "DontTranslate": false
       }

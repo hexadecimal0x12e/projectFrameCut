@@ -155,8 +155,7 @@ namespace projectFrameCut.Render.Effect
 
         public Func<IImageProcessingContext, IImageProcessingContext>? GetSixLaborsImageSharpProcess()
         {
-            // 注意：此处的 lambda 仅在不需要 ExpandCanvas 裁剪时直接可组合；
-            // 复杂路径（居中裁剪）在 Process() 中处理。
+            if (ExpandCanvas) return null;
             return ctx => ctx.Rotate(Angle);
         }
 

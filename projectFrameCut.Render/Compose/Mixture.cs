@@ -1,4 +1,5 @@
 ﻿using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut.Render.Effect;
 using projectFrameCut.Shared;
 using System;
 using System.Buffers;
@@ -15,11 +16,71 @@ namespace projectFrameCut.Render.Compose
         public static string? ComputerId => "OverlayComputer";
 
         public static IPicture Mix(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB)
+            => MixInternal(basePicture, topPicture, computer, targetPPB, resizeTopWhenDimensionMismatch: true);
+
+        public static IPicture Mix(
+            IPicture basePicture,
+            IPicture topPicture,
+            IComputer? computer,
+            IPicture.PicturePixelMode targetPPB,
+            int topStartX,
+            int topStartY,
+            int targetWidth,
+            int targetHeight)
+        {
+            if (targetWidth <= 0 || targetHeight <= 0)
+            {
+                throw new ArgumentException("targetWidth and targetHeight must be positive.");
+            }
+
+            IPicture? normalizedBase = null;
+            IPicture? normalizedTop = null;
+            try
+            {
+                if (basePicture.Width != targetWidth || basePicture.Height != targetHeight)
+                {
+                    normalizedBase = EffectHelper.PlacePicture(
+                        basePicture,
+                        0,
+                        0,
+                        targetWidth,
+                        targetHeight,
+                        "Overlay normalize base",
+                        typeof(OverlayMixture));
+                    basePicture = normalizedBase;
+                }
+
+                if (topStartX != 0 || topStartY != 0 || topPicture.Width != targetWidth || topPicture.Height != targetHeight)
+                {
+                    normalizedTop = EffectHelper.PlacePicture(
+                        topPicture,
+                        topStartX,
+                        topStartY,
+                        targetWidth,
+                        targetHeight,
+                        "Overlay place top",
+                        typeof(OverlayMixture));
+                    topPicture = normalizedTop;
+                }
+
+                return MixInternal(basePicture, topPicture, computer, targetPPB, resizeTopWhenDimensionMismatch: false);
+            }
+            finally
+            {
+                try { normalizedBase?.Dispose(); } catch { }
+                try { normalizedTop?.Dispose(); } catch { }
+            }
+        }
+
+        private static IPicture MixInternal(IPicture basePicture, IPicture topPicture, IComputer? computer, IPicture.PicturePixelMode targetPPB, bool resizeTopWhenDimensionMismatch)
         {
             if (computer is null)
             {
                 throw new ArgumentNullException(nameof(computer), "OverlayMixture requires a computer.");
             }
+            IPicture? resizedTop = null;
+            try
+            {
             var sw = Stopwatch.StartNew();
             OverlayedPictureProcessStack procStack = new OverlayedPictureProcessStack
             {
@@ -30,9 +91,10 @@ namespace projectFrameCut.Render.Compose
                 ProcessingFuncStackTrace = new(true),
             };
 
-            if (topPicture.Width != basePicture.Width || topPicture.Height != basePicture.Height)
+            if (resizeTopWhenDimensionMismatch && (topPicture.Width != basePicture.Width || topPicture.Height != basePicture.Height))
             {
-                topPicture = topPicture.Resize(basePicture.Width, basePicture.Height, false);
+                resizedTop = topPicture.Resize(basePicture.Width, basePicture.Height, false);
+                topPicture = resizedTop;
             }
 
             static bool HasValidChannels(IPicture pic)
@@ -299,6 +361,11 @@ namespace projectFrameCut.Render.Compose
 #else
             return result;
 #endif
+            }
+            finally
+            {
+                try { resizedTop?.Dispose(); } catch { }
+            }
         }
     }
 

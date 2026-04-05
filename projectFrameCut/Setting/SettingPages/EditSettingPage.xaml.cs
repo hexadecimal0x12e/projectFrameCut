@@ -424,6 +424,7 @@ public partial class EditSettingPage : ContentPage
 
             .AddText(new TitleAndDescriptionLineLabel(SettingLocalizedResources.Edit_PreviewOption, SettingLocalizedResources.Edit_PreviewOption_Subtitle))
             .AddSwitch("Edit_UseDynamicPreview", SettingLocalizedResources.Edit_UseDynamicPreview, IsBoolSettingTrue("Edit_UseDynamicPreview"), null)
+            .AddSwitch("Edit_UseLegacyPlaceResizeEffects", "Use legacy Place/Resize effects in InteractableEditor", IsBoolSettingTrue("Edit_UseLegacyPlaceResizeEffects"), null)
             .AppendWhen(!IsBoolSettingTrue("Edit_UseDynamicPreview"), 
                 c => c.AddPicker("Edit_LiveVideoPreviewDefaultResolution", SettingLocalizedResources.Edit_LiveVideoPreviewDefaultResolution, resolutions, GetSetting("Edit_LiveVideoPreviewDefaultResolution", "1280x720"), null)
                       .AddEntry("Edit_LiveVideoPreviewBufferLength", SettingLocalizedResources.Edit_LiveVideoPreviewBufferLength, GetSetting("Edit_LiveVideoPreviewBufferLength", "240"), "240")

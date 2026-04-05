@@ -44,6 +44,12 @@ namespace projectFrameCut.Render.Rendering
         public bool LogStatToLogger = false;
         public bool LogProcessStack = false;
         public bool Use16Bit { get; set; } = true;
+        public bool AutoCenterImplicitClip { get; set; } = false;
+
+        public int ProjectRelativeWidth { get; set; }
+        public int ProjectRelativeHeight { get; set; }
+        public int TargetWidth { get; set; }
+        public int TargetHeight { get; set; }
 
         private bool IsAndroid => OperatingSystem.IsAndroid();
         private int GetOptimalMaxThreads()
@@ -99,7 +105,7 @@ namespace projectFrameCut.Render.Rendering
         private ThreadLocal<Dictionary<string, IComputer>> _threadLocalComputerCache =
             new ThreadLocal<Dictionary<string, IComputer>>(() => new Dictionary<string, IComputer>());
 
-        private static bool IsProfilerAttached =>
+        public static bool IsProfilerAttached =>
             string.Equals(Environment.GetEnvironmentVariable("COR_ENABLE_PROFILING"), "1", StringComparison.Ordinal);
 
         ConcurrentQueue<uint> PreparedFrames = new(), BlankFrames = new();
@@ -107,15 +113,15 @@ namespace projectFrameCut.Render.Rendering
 
         int TotalEnqueued = 0;
         volatile bool PreparerFinished = false;
-        private int _width;
-        private int _height;
+
+
         private int _ppb;
 
         private IPicture BlankFrame = null!;
 
         // Thread-local: PlaceEffect_ImageSharp has mutable state and is not thread-safe
-        private ThreadLocal<PlaceEffect_ImageSharp> _threadLocalBlankPlace =
-            new(() => new PlaceEffect_ImageSharp { StartX = 0, StartY = 0 });
+        private ThreadLocal<PlaceEffect_IPicture> _threadLocalBlankPlace =
+            new(() => new PlaceEffect_IPicture { StartX = 0, StartY = 0 });
 
         // Per-clip lock objects to serialize effect processing for the same clip across threads
         // (IEffect instances in EffectCache are shared and may be stateful)
@@ -140,7 +146,7 @@ namespace projectFrameCut.Render.Rendering
                     if (token.IsCancellationRequested) return;
 
 
-                    if ((item.StartFrame <= idx && item.Duration * item.SecondPerFrameRatio + item.StartFrame >= idx) || (item.ExtendToWholeDraft && item.LayerIndex > SubTrackOffset))
+                    if ((item.StartFrame <= idx && item.Duration * item.SecondPerFrameRatio + item.StartFrame > idx) || (item.ExtendToWholeDraft && item.LayerIndex > SubTrackOffset))
                     {
                         found = true;
                         ClipNeedForFrame.AddOrUpdate(
@@ -198,6 +204,8 @@ namespace projectFrameCut.Render.Rendering
                     if (ClipNeedForFrame[idx].Contains(item, clipEquabilityComparer))
                     {
                         IPicture frame = null!;
+                        int clipTargetWidth = ResolveClipOutputWidth(item, TargetWidth);
+                        int clipTargetHeight = ResolveClipOutputHeight(item, TargetHeight);
                         if (item.ClipType == ClipMode.TransformClip && item is TransformContainer c)
                         {
                             if (c.Transform is not ITransform t) throw new NullReferenceException($"Transform for clip {c.Id} is null");
@@ -209,13 +217,13 @@ namespace projectFrameCut.Render.Rendering
                             if (!IndexedClipList.TryGetValue(t.BindedLeftClip, out IClip? leftClip)) throw new NullReferenceException($"Transform {t.Name}({t.TypeName})'s left input for clip {c.Id} is null");
 
 
-                            frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, _width, _height, idx, ppb);
+                            frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, clipTargetWidth, clipTargetHeight, idx, ppb);
 
 
                         }
                         else
                         {
-                            frame = item.GetFrame(idx, _width, _height, true, ppb);
+                            frame = item.GetFrame(idx, clipTargetWidth, clipTargetHeight, true, ppb);
                         }
                         if (frame != null)
                         {
@@ -265,8 +273,8 @@ namespace projectFrameCut.Render.Rendering
             ConcurrentQueue<Exception> exceptions = new();
 
             _ppb = Use16Bit ? 16 : 8;
-            _width = builder.Width;
-            _height = builder.Height;
+            TargetWidth = builder.Width;
+            TargetHeight = builder.Height;
 
             InitializeRenderCaches();
             if (ClipNeedForFrame.IsEmpty && BlankFrames.IsEmpty && Volatile.Read(ref TotalEnqueued) == 0)
@@ -503,8 +511,8 @@ namespace projectFrameCut.Render.Rendering
             Log("[Renderer] BlockWrite enabled: switching to single-threaded, synchronous render.", "info");
 
             _ppb = Use16Bit ? 16 : 8;
-            _width = builder.Width;
-            _height = builder.Height;
+            TargetWidth = builder.Width;
+            TargetHeight = builder.Height;
 
             BlankFrame = Use16Bit
                 ? Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0)
@@ -649,7 +657,7 @@ namespace projectFrameCut.Render.Rendering
             var clipsNeed = new List<IClip>();
             foreach (var item in Clips ?? Array.Empty<IClip>())
             {
-                if (item.StartFrame <= targetFrame && item.Duration * item.SecondPerFrameRatio + item.StartFrame >= targetFrame)
+                if (item.StartFrame <= targetFrame && item.Duration * item.SecondPerFrameRatio + item.StartFrame > targetFrame)
                 {
                     clipsNeed.Add(item);
                 }
@@ -661,6 +669,8 @@ namespace projectFrameCut.Render.Rendering
             foreach (var clip in clipsNeed)
             {
                 IPicture frame = null!;
+                int clipTargetWidth = ResolveClipOutputWidth(clip, TargetWidth);
+                int clipTargetHeight = ResolveClipOutputHeight(clip, TargetHeight);
                 if (clip.ClipType == ClipMode.TransformClip && clip is TransformContainer c)
                 {
                     if (c.Transform == null)
@@ -674,11 +684,11 @@ namespace projectFrameCut.Render.Rendering
                     if (!IndexedClipList.TryGetValue(t.BindedLeftClip, out IClip? leftClip)) throw new NullReferenceException($"Transform {t.Name}({t.TypeName})'s left input for clip {c.Id} is null");
 
 
-                    frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, _width, _height, targetFrame, _ppb);
+                    frame = TransformProcessing.ProcessTransform(leftClip, rightClip, t, clipTargetWidth, clipTargetHeight, targetFrame, _ppb);
                 }
                 else
                 {
-                    frame = clip.GetFrame(targetFrame, _width, _height, true, _ppb);
+                    frame = clip.GetFrame(targetFrame, clipTargetWidth, clipTargetHeight, true, _ppb);
                 }
                 if (frame == null)
                 {
@@ -766,15 +776,15 @@ namespace projectFrameCut.Render.Rendering
                                 {
                                     case EffectType.NormalEffect:
                                         if (item is not INormalEffect e) goto notdefined;
-                                        EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, e, computer, _width, _height);
+                                        EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, e, computer, TargetWidth, TargetHeight);
                                         continue;
                                     case EffectType.ContinuousEffect:
                                         if (item is not IContinuousEffect c) goto notdefined;
-                                        EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c, _width, _height);
+                                        EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c, TargetWidth, TargetHeight);
                                         continue;
                                     case EffectType.BindableEffect:
                                         if (item is not IBindableArgumentEffect b) goto notdefined;
-                                        if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, steps, ref lastIsProcessStep, b, computer, _width, _height))
+                                        if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, steps, ref lastIsProcessStep, b, computer, TargetWidth, TargetHeight))
                                         {
                                             effectCopy.Remove(item);
                                             effectsChanged = true;
@@ -804,7 +814,7 @@ namespace projectFrameCut.Render.Rendering
                             Log($"[Render] Effect {item.Name} of clip {clip.Id} has an not static defined type.", "warn");
                             if (item is IBindableArgumentEffect be)
                             {
-                                if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, steps, ref lastIsProcessStep, be, computer, _width, _height))
+                                if (EffectProcessing.ProcessBindableArgsEffect(targetFrame, ref frame, ref BindableEffectResultCache, frameLocalCache, clip, steps, ref lastIsProcessStep, be, computer, TargetWidth, TargetHeight))
                                 {
                                     effectCopy.Remove(item);
                                     effectsChanged = true;
@@ -812,11 +822,11 @@ namespace projectFrameCut.Render.Rendering
                             }
                             else if (item is IContinuousEffect c)
                             {
-                                EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c, _width, _height);
+                                EffectProcessing.ProcessContinuousEffect(targetFrame, clip, computer, ref frame, steps, ref lastIsProcessStep, item, c, TargetWidth, TargetHeight);
                             }
                             else if (item is INormalEffect n)
                             {
-                                EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, n, computer, _width, _height);
+                                EffectProcessing.ProcessEffect(ref frame, steps, ref lastIsProcessStep, n, computer, TargetWidth, TargetHeight);
                             }
                             else
                             {
@@ -838,22 +848,36 @@ namespace projectFrameCut.Render.Rendering
                     } // end lock (clipLock)
                 }
 
+                int clipX = clip.TargetX;
+                int clipY = clip.TargetY;
+                if (AutoCenterImplicitClip && ShouldAutoCenterImplicitClip(clip) && clipY == 0 && frame.Height < TargetHeight)
+                {
+                    clipY += (TargetHeight - frame.Height) / 2;
+                }
+                bool needsPlacement = clipX != 0 || clipY != 0 || frame.Width != TargetWidth || frame.Height != TargetHeight;
+
                 if (result is null)
                 {
-                    // Single-clip (first clip): result takes ownership of the frame.
-                    // In async mode (usedFrames == null), the caller must NOT dispose this frame –
-                    // the builder queue owns it and will dispose it after the write completes.
-                    result = frame;
+                    if (!needsPlacement)
+                    {
+                        // Single-clip fast path: ownership stays with builder queue.
+                        result = frame;
+                    }
+                    else
+                    {
+                        var threadMixComputer = GetOrCreateComputer(OverlayMixture.ComputerId);
+                        result = OverlayMixture.Mix(BlankFrame, frame, threadMixComputer, _ppb, clipX, clipY, TargetWidth, TargetHeight);
+                        if (usedFrames is null)
+                            try { frame.Dispose(); } catch { }
+                    }
                 }
                 else
                 {
-                    // Multi-clip blending: merge current frame into result.
+                    // Multi-clip blending with per-clip position in the target canvas.
                     var threadMixComputer = GetOrCreateComputer(OverlayMixture.ComputerId);
-                    var temp = OverlayMixture.Mix(result, frame, threadMixComputer, _ppb).Resize(_width, _height, false);
-                    result.Dispose();  // dispose previous merged result
-                    result = temp;     // result is now a new allocation, safe to pass to builder
-                                       // Dispose the original clip frame now that it has been merged.
-                                       // In sync mode usedFrames tracks these for deferred disposal, skip here to avoid double-dispose.
+                    var temp = OverlayMixture.Mix(result, frame, threadMixComputer, _ppb, clipX, clipY, TargetWidth, TargetHeight);
+                    result.Dispose();
+                    result = temp;
                     if (usedFrames is null)
                         try { frame.Dispose(); } catch { }
                 }
@@ -863,14 +887,14 @@ namespace projectFrameCut.Render.Rendering
             {
                 result = BlankFrame;
             }
-            else if (result.Width < _width || result.Height < _height)
+            else if (result.Width < TargetWidth || result.Height < TargetHeight)
             {
                 // Bug fix: BlankPlace was a shared instance, not thread-safe under concurrent render
-                result = _threadLocalBlankPlace.Value!.Render(result, null, _width, _height);
+                result = _threadLocalBlankPlace.Value!.Render(result, null, TargetWidth, TargetHeight);
             }
-            else if (result.Width > _width || result.Height > _height)
+            else if (result.Width > TargetWidth || result.Height > TargetHeight)
             {
-                result = result.Resize(_width, _height, false);
+                result = result.Resize(TargetWidth, TargetHeight, false);
             }
 
             builder!.Append(targetFrame, result);
@@ -891,6 +915,58 @@ namespace projectFrameCut.Render.Rendering
 
         #region misc
 
+        private static int ResolveClipOutputWidth(IClip clip, int fallbackWidth)
+            => clip.TargetWidth > 0 ? clip.TargetWidth : Math.Max(1, fallbackWidth);
+
+        private static int ResolveClipOutputHeight(IClip clip, int fallbackHeight)
+            => clip.TargetHeight > 0 ? clip.TargetHeight : Math.Max(1, fallbackHeight);
+
+        private static bool ShouldAutoCenterImplicitClip(IClip clip)
+        {
+            if (HasExplicitTargetRect(clip))
+            {
+                return false;
+            }
+
+            return !HasLegacyInternalPlaceResizeEffects(clip);
+        }
+
+        private static bool HasExplicitTargetRect(IClip clip)
+            => clip.TargetX != 0 || clip.TargetY != 0 || clip.TargetWidth > 0 || clip.TargetHeight > 0;
+
+        private static bool HasLegacyInternalPlaceResizeEffects(IClip clip)
+        {
+            if (clip.Effects is null || clip.Effects.Length == 0)
+            {
+                return false;
+            }
+
+            return clip.Effects.Any(effect => effect is not null
+                && (string.Equals(effect.Name, "__Internal_Place__", StringComparison.Ordinal)
+                    || string.Equals(effect.Name, "__Internal_Resize__", StringComparison.Ordinal)
+                    || (string.IsNullOrWhiteSpace(effect.Name)
+                        && (string.Equals(effect.TypeName, "Place", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(effect.TypeName, "Resize", StringComparison.OrdinalIgnoreCase)))));
+        }
+
+        private static bool IsLegacyInternalLayoutEffect(IEffect effect)
+        {
+            if (string.Equals(effect.Name, "__Internal_Place__", StringComparison.Ordinal)
+                || string.Equals(effect.Name, "__Internal_Resize__", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (string.IsNullOrWhiteSpace(effect.Name)
+                && (string.Equals(effect.TypeName, "Place", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(effect.TypeName, "Resize", StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         private void InitializeRenderCaches()
         {
             _ppb = Use16Bit ? 16 : 8;
@@ -908,6 +984,12 @@ namespace projectFrameCut.Render.Rendering
                 if (isAI) IsClipGeneratedByAI.TryAdd(item.Id, isAI);
                 if (!item.Effects.ArrayAny()) continue;
                 var effectInstances = EffectHelper.GetEffectsInstances(item.Effects);
+
+                if (HasExplicitTargetRect(item))
+                {
+                    effectInstances = effectInstances.Where(effect => effect is not null && !IsLegacyInternalLayoutEffect(effect)).ToArray();
+                }
+
                 EffectCache.AddOrUpdate(item.Id, effectInstances, (_, _) => effectInstances);
                 foreach (var effect in effectInstances)
                 {
@@ -921,7 +1003,7 @@ namespace projectFrameCut.Render.Rendering
 
             mixComputer = GetOrCreateComputer(OverlayMixture.ComputerId) ?? throw new NullReferenceException("Can't create computer for global mixer.");
 
-            IndexedClipList = Clips.ToDictionary(c => Guid.TryParse(c.Id, out var result) ? result : throw new InvalidDataException($"Clip {c.Name}({c.Id}) has an invalid Id. Id should be an GUID."));
+            IndexedClipList = (Clips ?? Array.Empty<IClip>()).ToDictionary(c => Guid.TryParse(c.Id, out var result) ? result : throw new InvalidDataException($"Clip {c.Name}({c.Id}) has an invalid Id. Id should be an GUID."));
 
         }
 
