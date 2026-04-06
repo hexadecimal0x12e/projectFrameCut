@@ -337,45 +337,33 @@ namespace projectFrameCut
             var appWindow = Current?.Windows[0];
             if (NativeWindow != null && appWindow != null)
             {
-                NativeWindow.Content.InvalidateMeasure();
-                await Task.Delay(50);
-                NativeWindow.Content.InvalidateArrange();
-                await Task.Delay(50);
-                NativeWindow.ExtendsContentIntoTitleBar = false;
-                await Task.Delay(150);
-                NativeWindow.ExtendsContentIntoTitleBar = true;
-                //await Task.Delay(150);
-                //appWindow.Width = appWindow.Width - 8; //avoid the contents go inside navigation bar
-                //await Task.Delay(150);
-                //appWindow.Width = appWindow.Width + 8;
+                try
+                {
+                    NativeWindow.Content.InvalidateMeasure();
+                    NativeWindow.Content.InvalidateArrange();
+                    NativeWindow.ExtendsContentIntoTitleBar = false;
+                    await Task.Delay(150);
+                    NativeWindow.ExtendsContentIntoTitleBar = true;
+                }
+                catch { }
             }
         }
         public static async Task ShowNavBar()
         {
-            if (MainNavView != null)
-                MainNavView.IsPaneVisible = true;
-
+            MainNavView?.IsPaneVisible = true;
             await Task.Delay(50);
-            //if (appWindow != null)
-            //{
-            //    appWindow.Width = appWindow.Width - 8; //avoid the contents go inside navigation bar
-            //    await Task.Delay(50);
-            //    appWindow.Width = appWindow.Width + 8;
-            //}
             var appWindow = Current?.Windows[0];
             if (NativeWindow != null && appWindow != null)
             {
-                NativeWindow.Content.InvalidateMeasure();
-                await Task.Delay(50);
-                NativeWindow.Content.InvalidateArrange();
-                await Task.Delay(50);
-                NativeWindow.ExtendsContentIntoTitleBar = false;
-                await Task.Delay(150);
-                NativeWindow.ExtendsContentIntoTitleBar = true;
-                //await Task.Delay(150);
-                //appWindow.Width = appWindow.Width - 8; //avoid the contents go inside navigation bar
-                //await Task.Delay(150);
-                //appWindow.Width = appWindow.Width + 8;
+                try
+                {
+                    NativeWindow.Content.InvalidateMeasure();
+                    NativeWindow.Content.InvalidateArrange();
+                    NativeWindow.ExtendsContentIntoTitleBar = false;
+                    await Task.Delay(150);
+                    NativeWindow.ExtendsContentIntoTitleBar = true;
+                }
+                catch { }
             }
         }
 

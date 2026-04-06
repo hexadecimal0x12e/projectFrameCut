@@ -6,12 +6,15 @@ using Microsoft.Maui.Layouts;
 using Microsoft.Maui.Platform;
 using projectFrameCut.AIAssistance;
 using projectFrameCut.ApplicationAPIBase.Effect;
+using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.ApplicationAPIBase.Plugins;
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
+using projectFrameCut.ApplicationAPIBase.Views.Pickers;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.ApplicationAPIBase.Views.TabbedView;
 using projectFrameCut.Asset;
 using projectFrameCut.Controls;
+using projectFrameCut.InteractableEditor;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.Plugin;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
@@ -26,19 +29,16 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using static LocalizedResources.SimpleLocalizerBaseGeneratedHelper_PropertyPanel;
+using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
+using ContentView = Microsoft.Maui.Controls.ContentView;
+using CornerRadius = Microsoft.Maui.CornerRadius;
 using DataTemplate = Microsoft.Maui.Controls.DataTemplate;
 using Environment = System.Environment;
 using GridLength = Microsoft.Maui.GridLength;
 using GridUnitType = Microsoft.Maui.GridUnitType;
 using Switch = Microsoft.Maui.Controls.Switch;
-using Thickness = Microsoft.Maui.Thickness;
-using ContentView = Microsoft.Maui.Controls.ContentView;
 using TextAlignment = Microsoft.Maui.TextAlignment;
-using CornerRadius = Microsoft.Maui.CornerRadius;
-using projectFrameCut.ApplicationAPIBase.Views.Pickers;
-using static projectFrameCut.ApplicationAPIBase.Helpers.TextHelper;
-using projectFrameCut.ApplicationAPIBase.Helpers;
-using projectFrameCut.InteractableEditor;
+using Thickness = Microsoft.Maui.Thickness;
 
 
 #if WINDOWS
@@ -63,6 +63,7 @@ namespace projectFrameCut.DraftStuff
         private const string SolidColorOutputWidthKey = "SolidColorOutputWidth";
         private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
         private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
+        private const string AllowFreeScaleResizeKey = "AllowFreeScaleResize";
         private const string LegacyPlaceResizeSettingKey = "Edit_UseLegacyPlaceResizeEffects";
         #endregion
 
@@ -154,6 +155,106 @@ namespace projectFrameCut.DraftStuff
             }
 
             return fallback;
+        }
+
+        private static bool ReadBoolExtraData(Dictionary<string, object>? data, string key, bool fallback)
+        {
+            if (data != null && data.TryGetValue(key, out var raw) && raw is not null)
+            {
+                if (raw is bool b)
+                {
+                    return b;
+                }
+
+                if (raw is JsonElement je)
+                {
+                    if (je.ValueKind == JsonValueKind.True) return true;
+                    if (je.ValueKind == JsonValueKind.False) return false;
+                    if (je.ValueKind == JsonValueKind.String && bool.TryParse(je.GetString(), out var parsedFromJe)) return parsedFromJe;
+                }
+
+                if (bool.TryParse(raw.ToString(), out var parsed))
+                {
+                    return parsed;
+                }
+            }
+
+            return fallback;
+        }
+
+        private static bool IsAllowFreeScaleResizeEnabled(ClipElementUI clip)
+        {
+            var fromExtraData = ReadBoolExtraData(clip.ExtraData, AllowFreeScaleResizeKey, false);
+            if (clip.ExtraData != null && clip.ExtraData.ContainsKey(AllowFreeScaleResizeKey))
+            {
+                return fromExtraData;
+            }
+
+            if (clip.Effects != null
+                && clip.Effects.TryGetValue(InternalResizeID, out var effect)
+                && effect is ResizeEffect_ImageSharp resize)
+            {
+                return !resize.PreserveAspectRatio;
+            }
+
+            return false;
+        }
+
+        private bool TryGetSourceAspectRatio(ClipElementUI clip, out double aspect)
+        {
+            aspect = 0;
+
+            if (clip.ClipType is not (ClipMode.VideoClip or ClipMode.PhotoClip))
+            {
+                return false;
+            }
+
+            AssetItem? asset = null;
+
+            if (!string.IsNullOrWhiteSpace(clip.SourcePath) && clip.SourcePath.StartsWith("$"))
+            {
+                var assetId = clip.SourcePath.Substring(1);
+                if (page.Assets.TryGetValue(assetId, out var byPathAsset))
+                {
+                    asset = byPathAsset;
+                }
+            }
+
+            if (asset == null && page.Assets.TryGetValue(clip.Id, out var byClipAsset))
+            {
+                asset = byClipAsset;
+            }
+
+            if (asset != null && asset.Width > 0 && asset.Height > 0)
+            {
+                aspect = (double)asset.Width / asset.Height;
+                return aspect > 0;
+            }
+            else if (File.Exists(clip.SourcePath))
+            {
+                if (clip.ClipType == ClipMode.PhotoClip)
+                {
+                    try
+                    {
+                        using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba64>(clip.SourcePath);
+                        aspect = (double)img.Width / img.Height;
+                        return aspect > 0;
+                    }
+                    catch { }
+                }
+                if (clip.ClipType == ClipMode.VideoClip)
+                {
+                    try
+                    {
+                        var vid = PluginManager.CreateVideoSource(clip.SourcePath, 8);
+                        if (vid.Height != 0) aspect = (double)vid.Width / vid.Height;
+                        return aspect > 0;
+                    }
+                    catch { }
+                }
+            }
+
+            return false;
         }
 
         private static void RemoveLegacyPlaceResizeEffects(ClipElementUI clip)
@@ -639,6 +740,10 @@ namespace projectFrameCut.DraftStuff
             return ppb.BuildWithScrollView();
         }
 
+        #endregion
+
+        #region size and pos
+
         public View BuildSizeAndPositionTab(ClipElementUI clip, EventHandler<PropertyPanelPropertyChangedEventArgs> handler)
         {
             clip.Effects ??= new Dictionary<string, IEffect>();
@@ -648,6 +753,7 @@ namespace projectFrameCut.DraftStuff
             int valH = page.ProjectInfo.RelativeHeight;
             double rotationDeg = 0;
             bool useLegacyPlaceResize = ShouldUseLegacyPlaceResizeEffects();
+            bool allowFreeScaleResize = IsAllowFreeScaleResizeEnabled(clip);
 
             if (!useLegacyPlaceResize && HasExplicitTargetRect(clip))
             {
@@ -702,6 +808,7 @@ namespace projectFrameCut.DraftStuff
                 .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
                 .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
                 .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default)
+                .AddCheckbox("allowFreeScaleResize", "任意比例缩放", allowFreeScaleResize)
                 .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, rotationDeg)
                 .AddText(new SingleLineLabel(PPLocalizedResources.General_Crop, 25))
                 .AddEntry("cropStartX", PPLocalizedResources._StartX, cropView.StartX.ToString(), "0", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
@@ -725,9 +832,120 @@ namespace projectFrameCut.DraftStuff
 
             bool syncingCropInputs = false;
 
+            void SetTransformEntryText(string id, int value)
+            {
+                if (transformPpb.Components.TryGetValue(id, out var component) && component is Entry entry)
+                {
+                    var text = value.ToString();
+                    if (entry.Text != text)
+                    {
+                        entry.Text = text;
+                    }
+
+                    transformPpb.Properties[id] = text;
+                }
+            }
+
+            void ApplyResizeToModelWithCurrentMode(int width, int height)
+            {
+                width = Math.Max(1, width);
+                height = Math.Max(1, height);
+
+                if (!ShouldUseLegacyPlaceResizeEffects())
+                {
+                    clip.TargetWidth = width;
+                    clip.TargetHeight = height;
+                    RemoveLegacyPlaceResizeEffects(clip);
+                    return;
+                }
+
+                ResizeEffect_ImageSharp? existingR = null;
+                if (clip.Effects.TryGetValue(InternalResizeID, out var eff) && eff is ResizeEffect_ImageSharp re)
+                {
+                    existingR = re;
+                }
+
+                clip.Effects[InternalResizeID] = new ResizeEffect_ImageSharp
+                {
+                    Width = width,
+                    Height = height,
+                    RelativeWidth = page.ProjectInfo.RelativeWidth,
+                    RelativeHeight = page.ProjectInfo.RelativeHeight,
+                    Enabled = existingR?.Enabled ?? true,
+                    Name = existingR?.Name ?? InternalResizeID,
+                    Index = existingR?.Index ?? (int.MinValue + 50),
+                    PreserveAspectRatio = existingR?.PreserveAspectRatio ?? !IsAllowFreeScaleResizeEnabled(clip)
+                };
+            }
+
+            void SnapSizeBackToSourceAspectIfNeeded()
+            {
+                if (!TryGetSourceAspectRatio(clip, out var sourceAspect) || sourceAspect <= 0)
+                {
+                    return;
+                }
+
+                int currentW = ResolvePanelInt(transformPpb, "resizeW", transformPpb.Properties.GetValueOrDefault("resizeW"), "resizeW", clip.TargetWidth > 0 ? clip.TargetWidth : page.ProjectInfo.RelativeWidth);
+                int currentH = ResolvePanelInt(transformPpb, "resizeH", transformPpb.Properties.GetValueOrDefault("resizeH"), "resizeH", clip.TargetHeight > 0 ? clip.TargetHeight : page.ProjectInfo.RelativeHeight);
+
+                currentW = Math.Max(1, currentW);
+                currentH = Math.Max(1, currentH);
+
+                int snappedW;
+                int snappedH;
+                if (Math.Abs(((double)currentW / currentH) - sourceAspect) < 1e-6)
+                {
+                    snappedW = currentW;
+                    snappedH = currentH;
+                }
+                else
+                {
+                    snappedW = currentW;
+                    snappedH = Math.Max(1, (int)Math.Round(currentW / sourceAspect, MidpointRounding.AwayFromZero));
+                }
+
+                SetTransformEntryText("resizeW", snappedW);
+                SetTransformEntryText("resizeH", snappedH);
+                ApplyResizeToModelWithCurrentMode(snappedW, snappedH);
+            }
+
             transformPpb.PropertyChanged += (s, e) =>
             {
                 clip.Effects ??= new Dictionary<string, IEffect>();
+
+                if (e.Id == "allowFreeScaleResize")
+                {
+                    bool allowFreeScale = e.Value is bool b
+                        ? b
+                        : bool.TryParse(e.Value?.ToString(), out var parsed) && parsed;
+
+                    clip.ExtraData ??= new Dictionary<string, object>();
+                    clip.ExtraData[AllowFreeScaleResizeKey] = allowFreeScale;
+
+                    if (clip.Effects.TryGetValue(InternalResizeID, out var resizeEff) && resizeEff is ResizeEffect_ImageSharp existingResize)
+                    {
+                        clip.Effects[InternalResizeID] = new ResizeEffect_ImageSharp
+                        {
+                            Width = existingResize.Width,
+                            Height = existingResize.Height,
+                            RelativeWidth = existingResize.RelativeWidth,
+                            RelativeHeight = existingResize.RelativeHeight,
+                            Enabled = existingResize.Enabled,
+                            Name = existingResize.Name,
+                            Index = existingResize.Index,
+                            PreserveAspectRatio = !allowFreeScale,
+                            Id = existingResize.Id
+                        };
+                    }
+
+                    if (!allowFreeScale)
+                    {
+                        SnapSizeBackToSourceAspectIfNeeded();
+                    }
+
+                    handler?.Invoke(s, e);
+                    return;
+                }
 
                 if (e.Id.StartsWith("place"))
                 {
@@ -819,7 +1037,7 @@ namespace projectFrameCut.DraftStuff
                         Enabled = existingR?.Enabled ?? true,
                         Name = existingR?.Name ?? InternalResizeID,
                         Index = existingR?.Index ?? (int.MinValue + 50),
-                        PreserveAspectRatio = existingR?.PreserveAspectRatio ?? false
+                        PreserveAspectRatio = existingR?.PreserveAspectRatio ?? !IsAllowFreeScaleResizeEnabled(clip)
                     };
 
                     handler?.Invoke(s, e);

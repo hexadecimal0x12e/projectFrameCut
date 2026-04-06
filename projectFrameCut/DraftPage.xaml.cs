@@ -132,29 +132,7 @@ public partial class DraftPage : ContentPage
     private bool _hasTriedRestoreMainMultiWindowViewState = false;
     private bool _hasAppliedDefaultMainMultiWindowLayout = false;
 
-    private sealed class MainMultiWindowWindowState
-    {
-        public required string WindowKey { get; init; }
-        public bool IsOpen { get; init; }
-        public bool IsVisible { get; init; }
-        public bool IsMaximized { get; init; }
-        public bool IsMinimized { get; init; }
-        public double TranslationX { get; init; }
-        public double TranslationY { get; init; }
-        public double WidthRequest { get; init; }
-        public double HeightRequest { get; init; }
-        public int Column { get; init; }
-        public int Row { get; init; }
-        public int ColumnSpan { get; init; }
-        public int RowSpan { get; init; }
-        public int ZIndex { get; init; }
-    }
 
-    private sealed class MainMultiWindowStateEnvelope
-    {
-        public List<MainMultiWindowWindowState> Windows { get; init; } = [];
-        public string? ActiveWindowKey { get; set; }
-    }
 
     private const double SnapGridPixels = 10.0;
     private const double SnapThresholdPixels = 8.0;
@@ -212,16 +190,29 @@ public partial class DraftPage : ContentPage
         public required int TrackIndex { get; init; }
     }
 
-    private static View CreatePropertiesPlaceholder(string text)
-        => new Label
-        {
-            Text = text,
-            TextColor = Colors.White,
-            HorizontalOptions = LayoutOptions.Center,
-            VerticalOptions = LayoutOptions.Center,
-            Opacity = 0.85,
-            Margin = new Thickness(12)
-        };
+    private sealed class MainMultiWindowWindowState
+    {
+        public required string WindowKey { get; init; }
+        public bool IsOpen { get; init; }
+        public bool IsVisible { get; init; }
+        public bool IsMaximized { get; init; }
+        public bool IsMinimized { get; init; }
+        public double TranslationX { get; init; }
+        public double TranslationY { get; init; }
+        public double WidthRequest { get; init; }
+        public double HeightRequest { get; init; }
+        public int Column { get; init; }
+        public int Row { get; init; }
+        public int ColumnSpan { get; init; }
+        public int RowSpan { get; init; }
+        public int ZIndex { get; init; }
+    }
+
+    private sealed class MainMultiWindowStateEnvelope
+    {
+        public List<MainMultiWindowWindowState> Windows { get; init; } = [];
+        public string? ActiveWindowKey { get; set; }
+    }
 
     #endregion
 
@@ -335,6 +326,7 @@ public partial class DraftPage : ContentPage
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview { IsVisible = false, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill, InputTransparent = true };
         ClipEditorHost.Content = ClipEditor;
         LivePreviewerHost.Content = EnsureRealtimePreviewHost();
+        ApplyClipEditorPreviewOverlayMode();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
         HookPreviewSurfaceSizeSync();
@@ -374,6 +366,7 @@ public partial class DraftPage : ContentPage
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview { IsVisible = false, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill, InputTransparent = true };
         ClipEditorHost.Content = ClipEditor;
         LivePreviewerHost.Content = EnsureRealtimePreviewHost();
+        ApplyClipEditorPreviewOverlayMode();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
         HookPreviewSurfaceSizeSync();
@@ -462,6 +455,12 @@ public partial class DraftPage : ContentPage
         DynamicPreviewProvider.UpdateCanvasSize(width, height);
     }
 
+    private void ApplyClipEditorPreviewOverlayMode()
+    {
+        ClipEditor.ShowRenderRectOverlay = UseRealtimePreview;
+        ClipEditor.ShowClipPreviewOverlays = UseRealtimePreview;
+    }
+
     private void RegisterCommands()
     {
         AddCommand = new Command(() => AddClip_Clicked(this, EventArgs.Empty));
@@ -546,6 +545,8 @@ public partial class DraftPage : ContentPage
     {
         if (Inited) return;
         Inited = true;
+
+        ApplyClipEditorPreviewOverlayMode();
 
         previewWidth = ProjectInfo.RelativeWidth;
         previewHeight = ProjectInfo.RelativeHeight;
@@ -5450,6 +5451,22 @@ public partial class DraftPage : ContentPage
     [DebuggerNonUserCode()]
     public double FrameToPixel(uint f) => f / (FramePerPixel * tracksZoomOffest);
 
+    private void SyncClipEditorCurrentFrame()
+    {
+        if (ClipEditor is null)
+        {
+            return;
+        }
+
+        var frame = _currentFrame;
+        if (double.IsNaN(frame) || double.IsInfinity(frame) || frame < 0)
+        {
+            frame = 0;
+        }
+
+        ClipEditor.SetCurrentFrame((uint)frame);
+    }
+
     private Point GetAbsolutePosition(VisualElement element, VisualElement ancestor)
     {
         double x = element.X + element.TranslationX;
@@ -5654,6 +5671,7 @@ public partial class DraftPage : ContentPage
     {
         await renderingLock.WaitAsync();
         _currentFrame = duration;
+        SyncClipEditorCurrentFrame();
         SetStateBusy();
         SetStatusText(Localized.DraftPage_RenderOneFrame((int)duration, TimeSpan.FromSeconds(duration * SecondsPerFrame)));
         try
@@ -5947,6 +5965,7 @@ public partial class DraftPage : ContentPage
                     _nextPlaybackPath = await RenderSomeFrames(nextStart, _playbackCts.Token);
 
                     _currentFrame = (uint)nextStart;
+                    SyncClipEditorCurrentFrame();
                     LogDiagnostic($"Next preview is ready. Path:{_nextPlaybackPath}");
                     while (!playbackDone && !token.IsCancellationRequested) await Task.Delay(100, token);
                     LogDiagnostic("Previewer is ready!");
@@ -6064,6 +6083,7 @@ public partial class DraftPage : ContentPage
                 var loopTimer = Stopwatch.StartNew();
 
                 _currentFrame = frame;
+                SyncClipEditorCurrentFrame();
                 await RefreshDynamicPreviewOverlay();
                 await Dispatcher.DispatchAsync(async () =>
                 {
@@ -6114,6 +6134,17 @@ public partial class DraftPage : ContentPage
             previewer.OnProgressChanged -= progChanged;
         }
     }
+
+    private static View CreatePropertiesPlaceholder(string text)
+    => new Label
+    {
+        Text = text,
+        TextColor = Colors.White,
+        HorizontalOptions = LayoutOptions.Center,
+        VerticalOptions = LayoutOptions.Center,
+        Opacity = 0.85,
+        Margin = new Thickness(12)
+    };
     #endregion
 
     #region handle changes
@@ -6146,6 +6177,8 @@ public partial class DraftPage : ContentPage
         try
         {
             ProjectDuration = Math.Max(d.Duration, d.AudioDuration);
+            await ClipEditor.UpdateClips(Clips);
+            ClipEditor.SetCurrentFrame((uint)Math.Max(0, _currentFrame));
             await previewer.UpdateDraft(d);
             await DynamicPreviewProvider.UpdateDraft(d);
             await RefreshPreviewFromCurrentProviderAsync();
@@ -6179,6 +6212,7 @@ public partial class DraftPage : ContentPage
         if (currentX < 0) currentX = 0;
         var duration = PixelToFrame(currentX);
         _currentFrame = duration;
+        SyncClipEditorCurrentFrame();
 
         if (UseRealtimePreview)
         {
@@ -6217,6 +6251,7 @@ public partial class DraftPage : ContentPage
             {
                 var duration = PixelToFrame(clampedX - TrackHeadLayout.Width + TimelineScrollView.ScrollX);
                 _currentFrame = duration;
+                SyncClipEditorCurrentFrame();
                 UpdatePlayheadPosition();
                 CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(duration * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss}";
                 try
@@ -6235,6 +6270,24 @@ public partial class DraftPage : ContentPage
             Log(ex, "playhead tap", this);
         }
     }
+
+        private async Task SyncClipsToMultiClipEditorMode(uint currentFrame)
+        {
+            try
+            {
+                if (Clips == null || Clips.Count == 0)
+                {
+                    return;
+                }
+
+                await ClipEditor.UpdateClips(Clips);
+                ClipEditor.SetCurrentFrame(currentFrame);
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic($"Failed to sync clips to ClipEditor: {ex.Message}");
+            }
+        }
 
     private void TimelineScrollView_Scrolled(object sender, ScrolledEventArgs e)
     {
@@ -6256,6 +6309,7 @@ public partial class DraftPage : ContentPage
         var targetFrame = _currentFrame + deltaFrames;
         if (targetFrame < 0) targetFrame = 0;
         _currentFrame = targetFrame;
+        SyncClipEditorCurrentFrame();
 
         UpdatePlayheadPosition();
 
@@ -6638,6 +6692,7 @@ public partial class DraftPage : ContentPage
             }
 
             _currentFrame = result;
+            SyncClipEditorCurrentFrame();
             UnSelectTapGesture_Tapped(null!, null!);
             SetTimelineScrollEnabled(true);
             UpdatePlayheadPosition();
@@ -6939,6 +6994,8 @@ public partial class DraftPage : ContentPage
                 PreviewOverlayImage.IsVisible = true;
             }
         });
+
+        ApplyClipEditorPreviewOverlayMode();
 
         await RefreshPreviewFromCurrentProviderAsync();
         OnPropertyChanged(nameof(UseRealtimePreview));

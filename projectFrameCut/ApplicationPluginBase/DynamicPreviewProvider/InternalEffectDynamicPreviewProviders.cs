@@ -161,8 +161,8 @@ namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider
         {
             if (input is Image image)
             {
-                // MAUI lacks a built-in color-key filter; keep input and hint transparency in preview.
-                image.Opacity = 0.95;
+                // Keep clip preview fully opaque; fake global opacity makes VideoClip appear unintentionally translucent.
+                image.Opacity = 1d;
             }
             return input;
         }

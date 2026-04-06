@@ -88,6 +88,7 @@ internal sealed class VideoClipDynamicPreviewProvider : InternalClipDynamicPrevi
         return new Image
         {
             Source = source,
+            Aspect = Aspect.Fill,
             HorizontalOptions = LayoutOptions.Fill,
             VerticalOptions = LayoutOptions.Fill,
         };
@@ -276,7 +277,7 @@ internal sealed class PhotoClipDynamicPreviewProvider : InternalClipDynamicPrevi
         return new Image
         {
             Source = ImageSource.FromFile(clip.FilePath),
-            Aspect = Aspect.AspectFit,
+            Aspect = Aspect.Fill,
             HorizontalOptions = LayoutOptions.Fill,
             VerticalOptions = LayoutOptions.Fill,
         };

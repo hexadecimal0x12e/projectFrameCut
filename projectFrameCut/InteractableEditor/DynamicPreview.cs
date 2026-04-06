@@ -573,7 +573,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 		return new Image
 		{
 			Source = frame.ToImageSource(),
-			Aspect = Aspect.AspectFit,
+			Aspect = Aspect.Fill,
 			HorizontalOptions = LayoutOptions.Fill,
 			VerticalOptions = LayoutOptions.Fill,
 		};

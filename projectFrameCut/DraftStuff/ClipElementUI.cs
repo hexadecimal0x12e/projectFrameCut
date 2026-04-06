@@ -2,6 +2,7 @@
 using projectFrameCut.ApplicationAPIBase.Effect;
 using projectFrameCut.Converters;
 using projectFrameCut.Render;
+using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
 using System.ComponentModel;
@@ -97,7 +98,52 @@ namespace projectFrameCut.DraftStuff
             }
         }
 
+        public bool IsExtraDataOptionIsTrue(string option) => ExtraData.TryGetValue(option, out var o) && IsObjectTrue(o);
 
+        public bool IsClipFallInRange(uint targetFrame, DraftPage workingPage)
+        {
+            var extend = IsExtraDataOptionIsTrue("ExtendToWholeDraft");
+            if (workingPage is null || extend)
+            {
+                return extend;
+            }
+
+            double startPx = (Clip is not null) ? Clip.TranslationX : layoutX;
+            if (double.IsNaN(startPx) || double.IsInfinity(startPx))
+            {
+                startPx = layoutX;
+            }
+            startPx = Math.Max(0d, startPx);
+
+            uint startFrame = workingPage.PixelToFrame(startPx);
+
+            uint effectiveLength = lengthInFrame;
+            if (effectiveLength == 0)
+            {
+                double widthPx = origLength;
+                if (Clip is not null)
+                {
+                    widthPx = Clip.WidthRequest > 0 ? Clip.WidthRequest : Clip.Width;
+                }
+
+                effectiveLength = Math.Max(1u, workingPage.PixelToFrame(Math.Max(0d, widthPx)));
+            }
+
+            ulong start = startFrame;
+            ulong endExclusive = start + Math.Max(1u, effectiveLength);
+            ulong frame = targetFrame;
+
+            return frame >= start && frame < endExclusive;
+        }
+
+        private static bool IsObjectTrue(object? input)
+        {
+            if (input is null) return false;
+            if (input is bool b) return b;
+            if (input is string s) return bool.TryParse(s, out b) && b;
+            if (input is JsonElement e) return e.ValueKind == JsonValueKind.True;
+            return false;
+        }
 
         [SetsRequiredMembers]
 #pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
