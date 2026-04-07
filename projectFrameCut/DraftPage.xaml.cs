@@ -96,7 +96,6 @@ public partial class DraftPage : ContentPage
         "saveSlots",
         "thumbs",
         "assets",
-        "export",
         "proxy"
     ];
 
@@ -164,9 +163,6 @@ public partial class DraftPage : ContentPage
 
 
     DateTime lastSyncTime = DateTime.MinValue;
-
-    public bool _ShouldShowClipMoveControlInCenterInfoBar => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is null : true;
-    public bool _ShouldShowCenterCompactControlGrid => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is not null : false;
     private bool _isClipMoving = false;
     public bool IsClipMoving
     {
@@ -226,6 +222,8 @@ public partial class DraftPage : ContentPage
     public ProjectAddClipView AddClipView = null!;
     public bool IsPopupClosableByTapBackground { get; set; } = true;
 
+    public bool _ShouldShowClipMoveControlInCenterInfoBar => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is null : true;
+    public bool _ShouldShowCenterCompactControlGrid => (UseCompactLayout ?? DeviceInfo.Idiom == DeviceIdiom.Phone) ? SelectedClip is not null : false;
     public bool SelectedAnyClip => _selected is not null || _selectedClipIds.Count > 0;
     public ProjectJSONStructure ProjectInfo { get; set; }
     public ConcurrentDictionary<string, ClipElementUI> Clips = new();
@@ -306,8 +304,6 @@ public partial class DraftPage : ContentPage
     public bool? UseCompactLayout { get; set; } = null;
     public bool LockScrollViewAfterSelection { get; set; }
     public bool EnableClipInfoPopup { get; set; }
-
-
     public bool UseCommunityToolkitPopupInsteadOfOverlayLayer { get { return (OperatingSystem.IsMacCatalyst() || OperatingSystem.IsIOS()) || field; } set; }
 
     #endregion
@@ -329,6 +325,8 @@ public partial class DraftPage : ContentPage
         ApplyClipEditorPreviewOverlayMode();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
+        ClipEditor.ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync);
+        ClipEditor.ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync);
         HookPreviewSurfaceSizeSync();
         OverlayLayer.IsVisible = false;
 #if ANDROID
@@ -369,6 +367,8 @@ public partial class DraftPage : ContentPage
         ApplyClipEditorPreviewOverlayMode();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
+        ClipEditor.ConfigureOverlayClipTap(OnClipEditorOverlayTappedAsync);
+        ClipEditor.ConfigureBlankAreaTap(OnClipEditorBlankAreaTappedAsync);
         HookPreviewSurfaceSizeSync();
         OverlayLayer.IsVisible = false;
 #if ANDROID
@@ -717,6 +717,7 @@ public partial class DraftPage : ContentPage
         }
         else
         {
+            PreviewSubwindow.IsTitleBarVisible = true;
             RightMenuBar.IsVisible = true;
             RightContentBorder.IsVisible = true;
 
@@ -776,6 +777,8 @@ public partial class DraftPage : ContentPage
 
         AssisstantSubWindow.Content = ChatSessionsView;
         MainMultiWindowView.CloseWindow(AssisstantSubWindow);
+        HistorySubWindow.Content = new DraftSettingPage(this).BuildHistoryTab();
+        MainMultiWindowView.CloseWindow(HistorySubWindow);
         //TryRestoreMainMultiWindowViewState();
         ApplyDefaultMainMultiWindowLayout();
         AddClipView.ClipAdded += async (s, args) =>
@@ -991,7 +994,7 @@ public partial class DraftPage : ContentPage
             return;
         }
 
-        PreviewSubwindow.IsTitleBarVisible = false;
+        PreviewSubwindow.IsTitleBarVisible = true;
         PreviewSubwindow.IsResizable = false;
         PropertiesSubwindow.HorizontalOptions = LayoutOptions.Fill;
         PropertiesSubwindow.VerticalOptions = LayoutOptions.Fill;
@@ -1218,12 +1221,33 @@ public partial class DraftPage : ContentPage
 
 
 
+    private static string GetClipNameForChangeReason(ClipElementUI? clip, string? fallbackId = null)
+    {
+        if (!string.IsNullOrWhiteSpace(clip?.DisplayName))
+        {
+            return clip.DisplayName.Trim();
+        }
+
+        if (!string.IsNullOrWhiteSpace(clip?.Id))
+        {
+            return clip.Id.Trim();
+        }
+
+        return string.IsNullOrWhiteSpace(fallbackId) ? "Unknown Clip" : fallbackId.Trim();
+    }
+
     private void AddTrackButton_Clicked(object sender, EventArgs e)
     {
         int newId = Tracks.Keys.Where(k => k < SubTrackOffset).DefaultIfEmpty(-1).Max() + 1;
         AddATrack(newId);
 
-        OnClipChanged?.Invoke(this, new ClipUpdateEventArgs { Reason = ClipUpdateReason.TrackAdd, SourceId = newId.ToString() });
+        OnClipChanged?.Invoke(this, new ClipUpdateEventArgs
+        {
+            Reason = ClipUpdateReason.TrackAdd,
+            SourceId = newId.ToString(),
+            SourceName = $"Track {newId}",
+            DetailInfo = ClipUpdateEventArgs.BuildChangeReason(ClipUpdateReason.TrackAdd, details: $"Track {newId} created")
+        });
     }
 
     private int RecalculateMainTrackCount()
@@ -1822,11 +1846,17 @@ public partial class DraftPage : ContentPage
         {
             double startX = Math.Max(0, SnapPixels(position.Value.X));
             var clip = clipFactory(trackId, startX);
+            string clipName = GetClipNameForChangeReason(clip, clip.Id);
 
             OnClipChanged?.Invoke(this, new ClipUpdateEventArgs
             {
                 SourceId = clip.Id,
-                Reason = ClipUpdateReason.Unknown
+                SourceName = clipName,
+                Reason = ClipUpdateReason.ClipAdded,
+                DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                    ClipUpdateReason.ClipAdded,
+                    clipName,
+                    $"Placed at track {trackId}, x={Math.Round(startX, 2)}")
             });
 
             SetStateOK();
@@ -2033,6 +2063,31 @@ public partial class DraftPage : ContentPage
         OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
         OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
         await RefreshSelectionUiAsync();
+    }
+
+    private Task OnClipEditorOverlayTappedAsync(string clipId)
+    {
+        if (string.IsNullOrWhiteSpace(clipId) || MultiSelectEnabled || !Clips.TryGetValue(clipId, out var clip) || clip.MovingStatus != ClipMovingStatus.Free)
+        {
+            return Task.CompletedTask;
+        }
+
+        ClearSelectionInternal();
+        AddClipToSelection(clip);
+        OnPropertyChanged(nameof(_ShouldShowClipMoveControlInCenterInfoBar));
+        OnPropertyChanged(nameof(_ShouldShowCenterCompactControlGrid));
+        return RefreshSelectionUiAsync();
+    }
+
+    private Task OnClipEditorBlankAreaTappedAsync()
+    {
+        if (_selectedClipIds.Count == 0 && _selected is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        ClearSelectionInternal();
+        return RefreshSelectionUiAsync();
     }
 
     private void ContextSelectTapGesture_Tapped(object? sender, TappedEventArgs e)
@@ -2449,10 +2504,16 @@ public partial class DraftPage : ContentPage
 
 
         LogDiagnostic($"{cid} moved to {border.TranslationX},{border.TranslationY} in track:{clip.origTrack} ");
+        string movedClipName = GetClipNameForChangeReason(clip, cid);
         OnClipChanged?.Invoke(cid, new ClipUpdateEventArgs
         {
             SourceId = cid,
-            Reason = ClipUpdateReason.ClipItselfMove
+            SourceName = movedClipName,
+            Reason = ClipUpdateReason.ClipItselfMove,
+            DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                ClipUpdateReason.ClipItselfMove,
+                movedClipName,
+                $"Moved to track {(clip.origTrack?.ToString() ?? "unknown")}, x={Math.Round(border.TranslationX, 2)}")
         });
 
 
@@ -2541,7 +2602,7 @@ public partial class DraftPage : ContentPage
         Clips.AddOrUpdate("shadow_" + cid, shadowElement, (_, _) => shadowElement);
     }
 
-    private void DeleteAClip(ClipElementUI? clip = null)
+    private void DeleteAClip(ClipElementUI? clip = null, bool suppressClipChangedEvent = false)
     {
         List<ClipElementUI> clipsToDelete = [];
 
@@ -2564,6 +2625,8 @@ public partial class DraftPage : ContentPage
 
         if (clipsToDelete.Count == 0) return;
 
+        var deletedNames = new List<string>(clipsToDelete.Count);
+
         foreach (var target in clipsToDelete)
         {
             RemoveClipFromSelection(target);
@@ -2574,6 +2637,7 @@ public partial class DraftPage : ContentPage
             }
 
             Clips.TryRemove(target.Id, out _);
+            deletedNames.Add(GetClipNameForChangeReason(target, target.Id));
             LogDiagnostic($"clip {target.Id} deleted.");
 
             try
@@ -2581,6 +2645,20 @@ public partial class DraftPage : ContentPage
                 RemoveTransformsReferencingClip(target.Id);
             }
             catch { }
+        }
+
+        if (!suppressClipChangedEvent)
+        {
+            var previewNames = string.Join(",", deletedNames.Take(3));
+            var detail = deletedNames.Count <= 3
+                ? $"Deleted {deletedNames.Count} clip(s): {previewNames}"
+                : $"Deleted {deletedNames.Count} clip(s): {previewNames}, ...";
+
+            OnClipChanged?.Invoke(this, new ClipUpdateEventArgs
+            {
+                Reason = ClipUpdateReason.ClipDeleted,
+                DetailInfo = ClipUpdateEventArgs.BuildChangeReason(ClipUpdateReason.ClipDeleted, details: detail)
+            });
         }
 
         SetStatusText(Localized.DraftPage_Removed);
@@ -2662,13 +2740,16 @@ public partial class DraftPage : ContentPage
             return;
         }
 
-        DeleteAClip();
+        DeleteAClip(suppressClipChangedEvent: true);
         await UpdateAdjacencyForTrack();
         UpdateTimelineWidth();
 
         OnClipChanged?.Invoke(this, new ClipUpdateEventArgs
         {
-            Reason = ClipUpdateReason.Unknown
+            Reason = ClipUpdateReason.ClipDeleted,
+            DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                ClipUpdateReason.ClipDeleted,
+                details: $"Cut {copied} clip(s) from timeline")
         });
     }
 
@@ -2801,11 +2882,17 @@ public partial class DraftPage : ContentPage
             pasted.ApplyClipColor();
             AddClipToSelection(pasted);
             pastedClips.Add(pasted);
+            string pastedName = GetClipNameForChangeReason(pasted, pasted.Id);
 
             OnClipChanged?.Invoke(this, new ClipUpdateEventArgs
             {
                 SourceId = pasted.Id,
-                Reason = ClipUpdateReason.Unknown
+                SourceName = pastedName,
+                Reason = ClipUpdateReason.ClipPasted,
+                DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                    ClipUpdateReason.ClipPasted,
+                    pastedName,
+                    $"Pasted to track {targetTrack}, x={Math.Round(desiredStartPx, 2)}")
             });
         }
 
@@ -2949,11 +3036,17 @@ public partial class DraftPage : ContentPage
                         clip.Clip.IsVisible = true;
 
                         Tracks[trackGroup.Key].Children.Add(clip.Clip);
+                        string movedGroupClipName = GetClipNameForChangeReason(clip, clip.Id);
 
                         OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
                         {
                             SourceId = clip.Id,
-                            Reason = ClipUpdateReason.ClipItselfMove
+                            SourceName = movedGroupClipName,
+                            Reason = ClipUpdateReason.ClipItselfMove,
+                            DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                                ClipUpdateReason.ClipItselfMove,
+                                movedGroupClipName,
+                                $"Moved as group to track {trackGroup.Key}, x={Math.Round(finalX, 2)}")
                         });
                     }
                 }
@@ -3041,11 +3134,17 @@ public partial class DraftPage : ContentPage
             var startFrame = (uint)Math.Max(0, _currentFrame);
             double startX = Math.Max(0, SnapPixels(FrameToPixel(startFrame)));
             var clip = clipFactory(targetTrackId, startX);
+            string clipName = GetClipNameForChangeReason(clip, clip.Id);
 
             OnClipChanged?.Invoke(this, new ClipUpdateEventArgs
             {
                 SourceId = clip.Id,
-                Reason = ClipUpdateReason.Unknown
+                SourceName = clipName,
+                Reason = ClipUpdateReason.ClipAdded,
+                DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                    ClipUpdateReason.ClipAdded,
+                    clipName,
+                    $"Placed by keyboard at track {targetTrackId}, frame {startFrame}, x={Math.Round(startX, 2)}")
             });
 
             StartKeyboardMoveSession([clip]);
@@ -3328,11 +3427,17 @@ public partial class DraftPage : ContentPage
                 clip.MovingStatus = ClipMovingStatus.Free;
                 clip.ShouldDisplayInUI = true;
                 clip.Clip.IsVisible = true;
+                string keyboardMoveClipName = GetClipNameForChangeReason(clip, clip.Id);
 
                 OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
                 {
                     SourceId = clip.Id,
-                    Reason = ClipUpdateReason.ClipItselfMove
+                    SourceName = keyboardMoveClipName,
+                    Reason = ClipUpdateReason.ClipItselfMove,
+                    DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                        ClipUpdateReason.ClipItselfMove,
+                        keyboardMoveClipName,
+                        $"Keyboard move committed to track {track.Key}, x={Math.Round(clip.Clip.TranslationX, 2)}")
                 });
 
                 changedCount++;
@@ -3417,7 +3522,17 @@ public partial class DraftPage : ContentPage
                 prev.origLength = newPrevWidth;
                 prev.lengthInFrame = PixelToFrame(newPrevWidth);
                 // keep prev.Clip.TranslationX unchanged (shrinking from right)
-                OnClipChanged?.Invoke(prev.Id, new ClipUpdateEventArgs { SourceId = prev.Id, Reason = ClipUpdateReason.ClipResized });
+                string prevName = GetClipNameForChangeReason(prev, prev.Id);
+                OnClipChanged?.Invoke(prev.Id, new ClipUpdateEventArgs
+                {
+                    SourceId = prev.Id,
+                    SourceName = prevName,
+                    Reason = ClipUpdateReason.ClipResized,
+                    DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                        ClipUpdateReason.ClipResized,
+                        prevName,
+                        $"Adjusted for transform insertion, new width={Math.Round(newPrevWidth, 2)}")
+                });
             }
 
             if (next is not null)
@@ -3430,7 +3545,17 @@ public partial class DraftPage : ContentPage
                 next.Clip.WidthRequest = newNextWidth;
                 next.origLength = newNextWidth;
                 next.lengthInFrame = PixelToFrame(newNextWidth);
-                OnClipChanged?.Invoke(next.Id, new ClipUpdateEventArgs { SourceId = next.Id, Reason = ClipUpdateReason.ClipResized });
+                string nextName = GetClipNameForChangeReason(next, next.Id);
+                OnClipChanged?.Invoke(next.Id, new ClipUpdateEventArgs
+                {
+                    SourceId = next.Id,
+                    SourceName = nextName,
+                    Reason = ClipUpdateReason.ClipResized,
+                    DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                        ClipUpdateReason.ClipResized,
+                        nextName,
+                        $"Adjusted for transform insertion, shifted by {Math.Round(half, 2)} px, new width={Math.Round(newNextWidth, 2)}")
+                });
             }
             ElementSetter?.Invoke(elem);
 
@@ -3622,10 +3747,16 @@ public partial class DraftPage : ContentPage
                 if ((ulong)newRel > maxRelAllowed) newRel = maxRelAllowed;
                 clip.relativeStartFrame = (uint)newRel;
                 clip.Clip.BatchCommit();
+                string leftResizeClipName = GetClipNameForChangeReason(clip, clip.Id);
                 OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
                 {
                     SourceId = clip.Id,
-                    Reason = ClipUpdateReason.ClipResized
+                    SourceName = leftResizeClipName,
+                    Reason = ClipUpdateReason.ClipResized,
+                    DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                        ClipUpdateReason.ClipResized,
+                        leftResizeClipName,
+                        $"Left handle resize, lengthFrames={clip.lengthInFrame}, relativeStartFrame={clip.relativeStartFrame}")
                 });
                 clip.MovingStatus = ClipMovingStatus.Free;
                 LogDiagnostic($"clip {clip.Id} resized. x:{border.TranslationX} width:{border.WidthRequest}");
@@ -3669,10 +3800,16 @@ public partial class DraftPage : ContentPage
                 HandleStartWidth.TryRemove(clip.Id, out _);
                 clip.Clip.BatchCommit();
                 clip.lengthInFrame = PixelToFrame((clip.Clip.WidthRequest > 0) ? clip.Clip.WidthRequest : clip.Clip.Width);
+                string rightResizeClipName = GetClipNameForChangeReason(clip, clip.Id);
                 OnClipChanged?.Invoke(clip.Id, new ClipUpdateEventArgs
                 {
                     SourceId = clip.Id,
-                    Reason = ClipUpdateReason.ClipResized
+                    SourceName = rightResizeClipName,
+                    Reason = ClipUpdateReason.ClipResized,
+                    DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                        ClipUpdateReason.ClipResized,
+                        rightResizeClipName,
+                        $"Right handle resize, lengthFrames={clip.lengthInFrame}, relativeStartFrame={clip.relativeStartFrame}")
                 });
                 clip.MovingStatus = ClipMovingStatus.Free;
                 LogDiagnostic("clip {clip.Id} resized. x:{border.TranslationX} width:{border.WidthRequest}");
@@ -3778,7 +3915,6 @@ public partial class DraftPage : ContentPage
             Clips[clip.Id] = clip;
             await ReRenderUI();
             RefreshPropertyPanel(clip);
-            DraftChanged(sender, new());
             return;
         }
 
@@ -3829,6 +3965,10 @@ public partial class DraftPage : ContentPage
         SetStatusText($"{clip.DisplayName}'s property '{e.Id}' changed from {e.OriginValue} to {e.Value}");
 
         Clips[clip.Id] = clip;
+
+        OnClipChanged?.Invoke(this, new ClipUpdateEventArgs { Reason = ClipUpdateReason.PropertyChanged , SourceId = clip.Id, SourceName = clip.DisplayName, DetailInfo = e.Id, NoSave = false});
+        HistorySubWindow.Content = new DraftSettingPage(this).BuildHistoryTab();
+
 
         await ReRenderUI();
 
@@ -4127,11 +4267,17 @@ public partial class DraftPage : ContentPage
         await UpdateAdjacencyForTrack(targetLayer);
         await ReRenderUI();
         await RefreshSelectionUiAsync();
+        string markerName = GetClipNameForChangeReason(marker, marker.Id);
 
         OnClipChanged?.Invoke(marker.Id, new ClipUpdateEventArgs
         {
             SourceId = marker.Id,
-            Reason = ClipUpdateReason.ClipItselfMove
+            SourceName = markerName,
+            Reason = ClipUpdateReason.ClipGrouped,
+            DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                ClipUpdateReason.ClipGrouped,
+                markerName,
+                $"Grouped {located.Count} clips into marker on track {targetLayer}")
         });
 
         SetStateOK();
@@ -4199,6 +4345,7 @@ public partial class DraftPage : ContentPage
 
         int fallbackTrack = marker.origTrack ?? marker.SubLayerIndex;
         int restoredCount = 0;
+        string markerNameForUngroup = GetClipNameForChangeReason(marker, marker.Id);
 
         foreach (var clipId in groupedIds)
         {
@@ -4235,11 +4382,17 @@ public partial class DraftPage : ContentPage
             groupedClip.ShouldDisplayInUI = true;
             groupedClip.Clip.IsVisible = true;
             restoredCount++;
+            string groupedClipName = GetClipNameForChangeReason(groupedClip, groupedClip.Id);
 
             OnClipChanged?.Invoke(groupedClip.Id, new ClipUpdateEventArgs
             {
                 SourceId = groupedClip.Id,
-                Reason = ClipUpdateReason.ClipItselfMove
+                SourceName = groupedClipName,
+                Reason = ClipUpdateReason.ClipUngrouped,
+                DetailInfo = ClipUpdateEventArgs.BuildChangeReason(
+                    ClipUpdateReason.ClipUngrouped,
+                    groupedClipName,
+                    $"Ungrouped from marker {markerNameForUngroup} to track {targetTrack}")
             });
         }
 
@@ -5353,16 +5506,16 @@ public partial class DraftPage : ContentPage
         MainMultiWindowView.BringToFront(window);
     }
 
-    private void ToggleAssistantSubWindow()
+    private void ToggleAssistantSubWindow(MultiWindowItem item)
     {
         var isOpened = MainMultiWindowView.Children.Contains(AssisstantSubWindow);
-        if (isOpened && AssisstantSubWindow.IsVisible)
+        if (isOpened && item.IsVisible)
         {
-            MainMultiWindowView.CloseWindow(AssisstantSubWindow);
+            MainMultiWindowView.CloseWindow(item);
             return;
         }
 
-        ActivateMultiWindowItem(AssisstantSubWindow);
+        ActivateMultiWindowItem(item);
     }
 
     private void ExecuteManageWindowCommand(string? action)
@@ -5380,6 +5533,10 @@ public partial class DraftPage : ContentPage
             case "active":
                 if (MainMultiWindowView?.ActiveWindow?.IsClosable ?? false) MainMultiWindowView?.ActiveWindow?.Close(false);
                 break;
+            case "history":
+                ToggleAssistantSubWindow(HistorySubWindow);
+
+                break;
             //case "preview":
             //    ActivateMultiWindowItem(PreviewSubwindow);
             //    break;
@@ -5390,7 +5547,7 @@ public partial class DraftPage : ContentPage
             //    ActivateMultiWindowItem(AssisstantSubWindow);
             //    break;
             case "assistant-toggle":
-                ToggleAssistantSubWindow();
+                ToggleAssistantSubWindow(AssisstantSubWindow);
                 break;
             case "close-extra":
                 foreach (var window in MainMultiWindowView.Children.OfType<MultiWindowItem>().Where(x => x.IsClosable).ToList())
@@ -6168,7 +6325,16 @@ public partial class DraftPage : ContentPage
                 SetStateFail($"Clip {item.Key} has a invalid length {item.Value.lengthInFrame} frames, larger than it's source {item.Value.maxFrameCount}.");
             }
         }
-        if (!e?.NoSave ?? false) await Save();
+        if (!e?.NoSave ?? false)
+        {
+            await Save(false, e);
+            try
+            {
+                HistorySubWindow.Content = new DraftSettingPage(this).BuildHistoryTab();
+            }
+            catch { }
+        }
+
         UpdatePlayheadHeight();
         var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
         SetStateBusy();
@@ -6203,6 +6369,8 @@ public partial class DraftPage : ContentPage
     private async Task OnClipEditorUpdate()
     {
         if (AlreadyDisappeared) return;
+
+        OnClipChanged?.Invoke(this, new ClipUpdateEventArgs { Reason = ClipUpdateReason.ClipPositionMoved, SourceId = _selected?.Id ?? Guid.NewGuid().ToString(), SourceName = _selected?.DisplayName ?? "Clip", DetailInfo = "Size and position", NoSave = false });
 
         var d = DraftImportAndExportHelper.ExportFromDraftPage(this, includeUiOnlyClips: false);
         await previewer.UpdateDraft(d);
@@ -6271,23 +6439,23 @@ public partial class DraftPage : ContentPage
         }
     }
 
-        private async Task SyncClipsToMultiClipEditorMode(uint currentFrame)
+    private async Task SyncClipsToMultiClipEditorMode(uint currentFrame)
+    {
+        try
         {
-            try
+            if (Clips == null || Clips.Count == 0)
             {
-                if (Clips == null || Clips.Count == 0)
-                {
-                    return;
-                }
+                return;
+            }
 
-                await ClipEditor.UpdateClips(Clips);
-                ClipEditor.SetCurrentFrame(currentFrame);
-            }
-            catch (Exception ex)
-            {
-                LogDiagnostic($"Failed to sync clips to ClipEditor: {ex.Message}");
-            }
+            await ClipEditor.UpdateClips(Clips);
+            ClipEditor.SetCurrentFrame(currentFrame);
         }
+        catch (Exception ex)
+        {
+            LogDiagnostic($"Failed to sync clips to ClipEditor: {ex.Message}");
+        }
+    }
 
     private void TimelineScrollView_Scrolled(object sender, ScrolledEventArgs e)
     {
@@ -6395,7 +6563,7 @@ public partial class DraftPage : ContentPage
         UpdateAllExtendToWholeDraftClips();
     }
 
-    public async Task Save(bool noSlot = false)
+    public async Task Save(bool noSlot = false, ClipUpdateEventArgs? args = null)
     {
         if (string.IsNullOrEmpty(WorkingPath))
         {
@@ -6456,6 +6624,10 @@ public partial class DraftPage : ContentPage
             saveLocker.Enter();
             try
             {
+                if (args is not null)
+                {
+                    draft.ChangeReason = args.ToString();
+                }
                 Directory.CreateDirectory(Path.Combine(WorkingPath, "saveSlots", slot));
                 await File.WriteAllTextAsync(Path.Combine(WorkingPath, "saveSlots", slot, "timeline.json"), JsonSerializer.Serialize(draft, savingOpts), default);
                 await File.WriteAllTextAsync(Path.Combine(WorkingPath, "saveSlots", slot, "assets.json"), JsonSerializer.Serialize(assets, savingOpts), default);
@@ -6530,7 +6702,7 @@ public partial class DraftPage : ContentPage
         ApplySlot(nextSlot);
     }
 
-    private void ApplySlot(int slotIndex)
+    public void ApplySlot(int slotIndex)
     {
         try
         {

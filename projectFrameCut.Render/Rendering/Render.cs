@@ -982,7 +982,6 @@ namespace projectFrameCut.Render.Rendering
                     else if (aiMark is JsonElement je && je.ValueKind == JsonValueKind.True) isAI = true;
                 }
                 if (isAI) IsClipGeneratedByAI.TryAdd(item.Id, isAI);
-                if (!item.Effects.ArrayAny()) continue;
                 var effectInstances = EffectHelper.GetEffectsInstances(item.Effects);
 
                 if (HasExplicitTargetRect(item))
@@ -1003,7 +1002,7 @@ namespace projectFrameCut.Render.Rendering
 
             mixComputer = GetOrCreateComputer(OverlayMixture.ComputerId) ?? throw new NullReferenceException("Can't create computer for global mixer.");
 
-            IndexedClipList = (Clips ?? Array.Empty<IClip>()).ToDictionary(c => Guid.TryParse(c.Id, out var result) ? result : throw new InvalidDataException($"Clip {c.Name}({c.Id}) has an invalid Id. Id should be an GUID."));
+            IndexedClipList = (Clips ?? Array.Empty<IClip>()).ToDictionary(c => Guid.TryParse(c.Id, out var result) ? result : throw new InvalidDataException($"Clip {c.Name}({c.Id}) has an invalid Id. Id should be a GUID."));
 
         }
 
@@ -1068,19 +1067,6 @@ namespace projectFrameCut.Render.Rendering
 
                 FrameCache.Clear();
                 ClipNeedForFrame.Clear();
-
-                //try
-                //{
-                //    foreach (var mix in MixtureCache.Values)
-                //    {
-                //        if (mix is IDisposable d)
-                //        {
-                //            try { d.Dispose(); } catch { }
-                //        }
-                //    }
-                //}
-                //catch { }
-                //MixtureCache.Clear();
 
                 try
                 {

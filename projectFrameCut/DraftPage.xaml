@@ -68,6 +68,12 @@
                                 Key="Y" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_History}" Command="{Binding ManageWindowCommand}" CommandParameter="history">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
+                                Key="H" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
             <MenuFlyoutSeparator/>
             <MenuFlyoutItem Text="{Binding IsClipMoving, Converter={toolkit:BoolToObjectConverter TrueObject={l:Localized Key=DraftPage_MenuBar_Edit_MoveLeft}, FalseObject={l:Localized Key=DraftPage_MenuBar_Edit_PlayheadMoveLeft}}}" Command="{Binding ArrowLeftCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
@@ -278,6 +284,9 @@
                     <Border x:Name="RightContentBorder" StrokeThickness="0" HorizontalOptions="Fill" VerticalOptions="Fill" />
                 </mw:MultiWindowItem>
                 <mw:MultiWindowItem x:Name="AssisstantSubWindow" Title="Assistant P" HeightRequest="500" WidthRequest="400" IsPopOutVisible="True">
+
+                </mw:MultiWindowItem>
+                <mw:MultiWindowItem x:Name="HistorySubWindow" Title="{l:Localized Key=DraftPage_MenuBar_Edit_History}" HeightRequest="500" WidthRequest="400" IsPopOutVisible="True">
 
                 </mw:MultiWindowItem>
             </mw:MultiWindowView>

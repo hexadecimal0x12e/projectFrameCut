@@ -562,7 +562,7 @@ namespace projectFrameCut.DraftStuff
             return TryReadInt(raw, out value);
         }
 
-        private static void MigrateLegacyPlaceResizeToTargetRect(ClipDraftDTO dto, ProjectJSONStructure proj)
+        internal static void MigrateLegacyPlaceResizeToTargetRect(ClipDraftDTO dto, ProjectJSONStructure proj)
         {
             if (dto.Effects == null || dto.Effects.Length == 0)
             {

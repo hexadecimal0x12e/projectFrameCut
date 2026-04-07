@@ -44,6 +44,10 @@ namespace projectFrameCut.DraftStuff
         public double origX { get; set; } = 0;
 
         public uint lengthInFrame { get; set; } = 0;
+        /// <summary>
+        /// Indicates whether a clip's <b>SOURCE</b> is infinite length.
+        /// <b>NOT MEANS The Clip itself is infinite length</b> when this prop is true.
+        /// </summary>
         public bool isInfiniteLength { get; set; } = false;
         public uint maxFrameCount { get; set; } = 0;
         public uint relativeStartFrame { get; set; } = 0u;
@@ -332,9 +336,44 @@ namespace projectFrameCut.DraftStuff
 
         public string? SourceId { get; set; }
 
+        public string? SourceName { get; set; }
+
         public ClipUpdateReason? Reason { get; set; }
 
+        public string? DetailInfo { get; set; }
+
         public bool NoSave { get; set; } = false;
+
+        public static string BuildChangeReason(ClipUpdateReason? reason, string? sourceName = null, string? details = null)
+        {
+            try
+            {
+                if (reason == ClipUpdateReason.PropertyChanged) return Localized.ClipUpdateReason_PropertyChanged(sourceName ?? "Clip", details ?? "Unknown");
+
+                if (Localized.IsItemExist($"ClipUpdateReason_{reason}"))
+                    return Localized.DynamicLookupWithArgs($"ClipUpdateReason_{reason}", sourceName ?? "Clip");
+            }
+            catch { }
+
+            return reason switch
+            {
+                ClipUpdateReason.ClipItselfMove => $"Clip {sourceName} moved",
+                ClipUpdateReason.ClipResized => $"Clip {sourceName} resized",
+                ClipUpdateReason.TrackAdd => "Track added",
+                ClipUpdateReason.ClipAdded => $"Clip {sourceName} added",
+                ClipUpdateReason.ClipDeleted => $"Clip {sourceName} deleted",
+                ClipUpdateReason.ClipPasted => $"Clip {sourceName} pasted",
+                ClipUpdateReason.ClipGrouped => $"Clip {sourceName} grouped",
+                ClipUpdateReason.ClipUngrouped => $"Clip {sourceName} ungrouped",
+                ClipUpdateReason.Unknown or null => "Unknown clip change",
+                _ => reason?.ToString() ?? "Unknown clip change"
+            };
+
+        }
+        /// <summary>
+        /// Get a user-friendly change reason.
+        /// </summary>
+        public override string ToString() => BuildChangeReason(Reason, SourceName, DetailInfo);
     }
 
     public enum ClipUpdateReason
@@ -342,7 +381,14 @@ namespace projectFrameCut.DraftStuff
         Unknown,
         ClipItselfMove,
         ClipResized,
-        TrackAdd
+        TrackAdd,
+        ClipAdded,
+        ClipDeleted,
+        ClipPasted,
+        ClipGrouped,
+        ClipUngrouped,
+        PropertyChanged,
+        ClipPositionMoved
     }
 
     public enum ClipMovingStatus

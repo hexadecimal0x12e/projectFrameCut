@@ -76,6 +76,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// <summary>
         /// The target frame rate of the draft.
         /// </summary>
+        [Obsolete("Use ProjectInfo.TargetFrameRate instead.", false)]
         public uint TargetFrameRate { get; set; } = 60;
 
         /// <summary>
@@ -100,6 +101,12 @@ namespace projectFrameCut.Render.RenderAPIBase.Project
         /// Get when this draft was last saved.
         /// </summary>
         public DateTime SavedAt { get; set; } = DateTime.MinValue;
+
+        /// <summary>
+        /// Indicates why the draft was changed. 
+        /// Used in history management and undo/redo system.
+        /// </summary>
+        public string ChangeReason { get; set; } = string.Empty;
     }
 
     /// <summary>

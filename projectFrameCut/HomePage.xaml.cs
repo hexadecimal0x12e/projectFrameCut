@@ -185,12 +185,25 @@ public partial class HomePage : ContentPage
             {
                 case ".pjfc":
                     {
-                        if (Directory.Exists(path))
+                        if (File.Exists(path) || Directory.Exists(path))
                         {
-                            await GoDraft(path, new DirectoryInfo(path)?.Name ?? "Project", skipAskForRecover: args.Any(c => c.StartsWith("--fromCrashHandler")));
-                        }
-                        if (File.Exists(path))
-                        {
+                            if (Directory.Exists(path))
+                            {
+                                if(File.Exists(Path.Combine(path, "project.pjfc")))
+                                {
+                                    path = Path.Combine(path, "project.pjfc");
+                                }
+                                else if (File.Exists(Path.Combine(path, "project.json")))
+                                {
+                                    path = Path.Combine(path, "project.json");
+                                }
+                                else
+                                {
+                                    await DisplayAlertAsync(Localized._Error, $"Cannot find a valid project file in the directory '{path}'.", Localized._OK);
+                                    return;
+                                }
+                            }
+
                             if (new FileInfo(path).OpenRead().ReadByte() == '{')
                             {
                                 try
@@ -327,9 +340,11 @@ public partial class HomePage : ContentPage
     {
         string draftSourcePath = Path.Combine(MauiProgram.DataPath, "My Drafts");
 
-        var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, "Untitled Project 1", 1024, null, "Untitled Project 1");
-        if (projName is null) return;
-
+        var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, "Untitled Project", 1024, null, $"Untitled Project {DateTime.Now:yyyy\\-M\\-dd}");
+        if (projName is null || string.IsNullOrWhiteSpace(projName))
+        {
+            return;
+        }
         if (Path.GetInvalidPathChars().Any(projName.Contains) || Path.GetInvalidFileNameChars().Any(projName.Contains))
         {
             await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
@@ -337,6 +352,12 @@ public partial class HomePage : ContentPage
         }
 
         draftSourcePath = Path.Combine(draftSourcePath, projName + ".pjfc");
+        if (Path.GetInvalidPathChars().Any(draftSourcePath.Contains) || Path.GetInvalidFileNameChars().Any(draftSourcePath.Contains) || draftSourcePath.Length > 65535)
+        {
+            await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+            return;
+        }
+
         if (Directory.Exists(draftSourcePath))
         {
             await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
@@ -387,21 +408,49 @@ public partial class HomePage : ContentPage
 
         var projName = await DisplayPromptAsync(Localized._Info, Localized.HomePage_CreateAProject_InputName, Localized._OK, Localized._Cancel, viewModel.Name + " (2)", 1024, null, viewModel.Name + " (2)");
         if (projName is null) return;
+        if (projName is null || string.IsNullOrWhiteSpace(projName))
+        {
+            return;
+        }
+        if (Path.GetInvalidPathChars().Any(projName.Contains) || Path.GetInvalidFileNameChars().Any(projName.Contains))
+        {
+            await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+            return;
+        }
+
         draftSourcePath = Path.Combine(draftSourcePath, projName + ".pjfc");
+        if (Path.GetInvalidPathChars().Any(draftSourcePath.Contains) || Path.GetInvalidFileNameChars().Any(draftSourcePath.Contains) || draftSourcePath.Length > 65535)
+        {
+            await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
+            return;
+        }
         if (Directory.Exists(draftSourcePath))
         {
             await DisplayAlertAsync(Localized._Info, Localized.HomePage_CreateAProject_Exists, Localized._OK);
             return;
         }
-        Directory.CreateDirectory(draftSourcePath);
 
-        CopyDirectory(viewModel._projectPath, draftSourcePath);
+        try
+        {
+            Directory.CreateDirectory(draftSourcePath);
+            CopyDirectory(viewModel._projectPath, draftSourcePath);
+
+        }
+        catch(Exception ex)
+        {
+            Log(ex, "clone draft", this);
+            await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_CreateAProject_InvalidName}{Environment.NewLine}{Localized._ExceptionTemplate(ex)}", Localized._OK);
+            return;
+        }
 
         var ProjectInfo = new ProjectJSONStructure
         {
             ProjectName = projName,
             NormallyExited = true,
-            LastChanged = DateTime.Now
+            LastChanged = DateTime.Now,
+            LastOpenAPIBaseVersion = IPluginBase.CurrentPluginAPIVersion,
+            LastOpenAppVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown",
+            PluginUsed = []
         };
 
         File.WriteAllText(

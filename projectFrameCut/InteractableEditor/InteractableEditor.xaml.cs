@@ -45,6 +45,7 @@ namespace projectFrameCut.InteractableEditor
         private double _startX, _startY, _startW, _startH;
         private Rect _baseRect;
         private bool _isTextClip = false;
+        private bool _isClipPanInProgress;
         private bool _isHandleResizeInProgress;
 
         private const double HandleSize = 15;
@@ -54,6 +55,8 @@ namespace projectFrameCut.InteractableEditor
         private readonly Dictionary<string, object> _previewSourceClips = new(StringComparer.Ordinal);
         private ClipOverlayState? _activeState;
         private Func<Task>? _previewRefreshCallback;
+        private Func<string, Task>? _overlayClipTappedCallback;
+        private Func<Task>? _blankAreaTappedCallback;
         private long _lastPreviewRefreshTick;
         private int _isPreviewRefreshRunning;
         private int _hasPendingPreviewRefresh;
@@ -101,15 +104,21 @@ namespace projectFrameCut.InteractableEditor
         {
             InitializeComponent();
             UseLegacyPlaceResizeEffects = SettingsManager.IsBoolSettingTrue("Edit_UseLegacyPlaceResizeEffects");
+
+            var canvasTap = new TapGestureRecognizer();
+            canvasTap.Tapped += OnEditorCanvasTapped;
+            EditorCanvas.GestureRecognizers.Add(canvasTap);
         }
 
         private sealed class ClipOverlayState
         {
             private readonly InteractableEditor _owner;
+            public string ClipId { get; init; }
 
-            public ClipOverlayState(InteractableEditor owner)
+            public ClipOverlayState(InteractableEditor owner, string clipId)
             {
                 _owner = owner;
+                ClipId = clipId;
                 Root = new AbsoluteLayout
                 {
                     InputTransparent = true,
@@ -144,7 +153,7 @@ namespace projectFrameCut.InteractableEditor
                 HandleBL = CreateHandle();
                 HandleBR = CreateHandle();
 
-                SolidColorSizeLabel = new Label
+                SizeLabel = new Label
                 {
                     IsVisible = false,
                     Opacity = 0.95,
@@ -174,6 +183,10 @@ namespace projectFrameCut.InteractableEditor
                 BrPan = new PanGestureRecognizer();
                 BrPan.PanUpdated += (_, e) => _owner.OnResizePanUpdated(this, ResizeHandle.BottomRight, e);
 
+                var rootTap = new TapGestureRecognizer();
+                rootTap.Tapped += (_, _) => _owner.OnClipOverlayTapped(this);
+                Root.GestureRecognizers.Add(rootTap);
+
                 ClipVisual.GestureRecognizers.Add(ClipPan);
                 HandleTL.GestureRecognizers.Add(TlPan);
                 HandleTR.GestureRecognizers.Add(TrPan);
@@ -186,7 +199,7 @@ namespace projectFrameCut.InteractableEditor
                 Root.Children.Add(HandleTR);
                 Root.Children.Add(HandleBL);
                 Root.Children.Add(HandleBR);
-                Root.Children.Add(SolidColorSizeLabel);
+                Root.Children.Add(SizeLabel);
 
             }
 
@@ -197,7 +210,7 @@ namespace projectFrameCut.InteractableEditor
             public BoxView HandleTR { get; }
             public BoxView HandleBL { get; }
             public BoxView HandleBR { get; }
-            public Label SolidColorSizeLabel { get; }
+            public Label SizeLabel { get; }
             public PanGestureRecognizer ClipPan { get; }
             public PanGestureRecognizer TlPan { get; }
             public PanGestureRecognizer TrPan { get; }
@@ -212,7 +225,7 @@ namespace projectFrameCut.InteractableEditor
                     WidthRequest = HandleSize,
                     HeightRequest = HandleSize,
                     InputTransparent = false,
-                    ZIndex = 2
+                    ZIndex = int.MaxValue
                 };
             }
 
@@ -238,6 +251,8 @@ namespace projectFrameCut.InteractableEditor
                 AbsoluteLayout.SetLayoutBounds(ClipVisual, new Rect(0, 0, displayW, displayH));
                 ClipVisual.IsVisible = showClipVisual;
                 UpdatePreviewHostLayout(displayW, displayH, logicalW, logicalH);
+                Root.InputTransparent = !_owner.ShouldAllowOverlayTapSelection(this)
+                    || (!ClipVisual.IsVisible && !PreviewHost.IsVisible);
 
                 double handleSize = HandleSize;
                 AbsoluteLayout.SetLayoutBounds(HandleTL, new Rect(-handleSize / 2, -handleSize / 2, handleSize, handleSize));
@@ -252,14 +267,14 @@ namespace projectFrameCut.InteractableEditor
 
                 if (showSizeLabel)
                 {
-                    SolidColorSizeLabel.Text = sizeText ?? string.Empty;
-                    SolidColorSizeLabel.IsVisible = !string.IsNullOrWhiteSpace(SolidColorSizeLabel.Text);
-                    AbsoluteLayout.SetLayoutBounds(SolidColorSizeLabel, new Rect(4, 4, AbsoluteLayout.AutoSize, AbsoluteLayout.AutoSize));
+                    SizeLabel.Text = sizeText ?? string.Empty;
+                    SizeLabel.IsVisible = !string.IsNullOrWhiteSpace(SizeLabel.Text);
+                    AbsoluteLayout.SetLayoutBounds(SizeLabel, new Rect(4, 4, AbsoluteLayout.AutoSize, AbsoluteLayout.AutoSize));
                 }
                 else
                 {
-                    SolidColorSizeLabel.Text = string.Empty;
-                    SolidColorSizeLabel.IsVisible = false;
+                    SizeLabel.Text = string.Empty;
+                    SizeLabel.IsVisible = false;
                 }
             }
 
@@ -268,7 +283,7 @@ namespace projectFrameCut.InteractableEditor
                 Root.IsVisible = false;
                 PreviewHost.IsVisible = false;
                 PreviewHost.Content = null;
-                SolidColorSizeLabel.IsVisible = false;
+                SizeLabel.IsVisible = false;
             }
 
             public bool HasPreviewView => PreviewHost.Content is not null;
@@ -313,13 +328,28 @@ namespace projectFrameCut.InteractableEditor
 
             private void UpdatePreviewHostVisibility()
             {
-                PreviewHost.IsVisible = _owner.ShowClipPreviewOverlays && PreviewHost.Content is not null;
+                PreviewHost.IsVisible = _owner.ShouldShowPreviewHost(this) && PreviewHost.Content is not null;
             }
         }
 
         public void ConfigurePreviewRefresh(Func<Task>? refreshCallback)
         {
             _previewRefreshCallback = refreshCallback;
+        }
+
+        public void ConfigureOverlayClipTap(Func<string, Task>? tapCallback)
+        {
+            _overlayClipTappedCallback = tapCallback;
+            foreach (var state in _clipStates.Values)
+            {
+                state.RefreshPreviewVisibility();
+            }
+            UpdateVisuals();
+        }
+
+        public void ConfigureBlankAreaTap(Func<Task>? tapCallback)
+        {
+            _blankAreaTappedCallback = tapCallback;
         }
 
         protected override void OnSizeAllocated(double width, double height)
@@ -359,10 +389,125 @@ namespace projectFrameCut.InteractableEditor
                 return state;
             }
 
-            state = new ClipOverlayState(this);
+            state = new ClipOverlayState(this, clipId);
             _clipStates[clipId] = state;
             ClipStatesHost.Children.Add(state.Root);
             return state;
+        }
+
+        private bool ShouldAllowOverlayTapSelection(ClipOverlayState state)
+        {
+            if (_overlayClipTappedCallback is null)
+            {
+                return false;
+            }
+
+            return !_isHandleResizeInProgress
+                && !string.IsNullOrWhiteSpace(state.ClipId);
+        }
+
+        private bool ShouldShowPreviewHost(ClipOverlayState state)
+        {
+            if (!ShowClipPreviewOverlays)
+            {
+                return false;
+            }
+
+            return !ShouldSuppressPreviewForResize(state.ClipId);
+        }
+
+        private void OnClipOverlayTapped(ClipOverlayState state)
+        {
+            if (!ShouldAllowOverlayTapSelection(state))
+            {
+                return;
+            }
+
+            var callback = _overlayClipTappedCallback;
+            if (callback is null)
+            {
+                return;
+            }
+
+            _ = InvokeOverlayClipTappedAsync(callback, state.ClipId);
+        }
+
+        private void OnEditorCanvasTapped(object? sender, TappedEventArgs e)
+        {
+            var callback = _blankAreaTappedCallback;
+            if (callback is null)
+            {
+                return;
+            }
+
+            var tapPoint = e.GetPosition(EditorCanvas);
+            if (tapPoint is null)
+            {
+                return;
+            }
+
+            if (IsPointInsideAnyVisibleClipState(tapPoint.Value))
+            {
+                return;
+            }
+
+            _ = InvokeBlankAreaTappedAsync(callback);
+        }
+
+        private bool IsPointInsideAnyVisibleClipState(Point tapPoint)
+        {
+            var hostOffsetX = ClipStatesHost.X;
+            var hostOffsetY = ClipStatesHost.Y;
+
+            foreach (var state in _clipStates.Values)
+            {
+                if (!state.Root.IsVisible)
+                {
+                    continue;
+                }
+
+                var bounds = AbsoluteLayout.GetLayoutBounds(state.Root);
+                if (bounds.Width <= 0 || bounds.Height <= 0)
+                {
+                    continue;
+                }
+
+                var left = hostOffsetX + bounds.X;
+                var top = hostOffsetY + bounds.Y;
+                var right = left + bounds.Width;
+                var bottom = top + bounds.Height;
+
+                if (tapPoint.X >= left && tapPoint.X <= right && tapPoint.Y >= top && tapPoint.Y <= bottom)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private async Task InvokeOverlayClipTappedAsync(Func<string, Task> callback, string clipId)
+        {
+            try
+            {
+                await callback(clipId);
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic($"Overlay clip tap callback failed: {ex.Message}");
+            }
+        }
+
+        private async Task InvokeBlankAreaTappedAsync(Func<Task> callback)
+        {
+            try
+            {
+                await callback();
+            }
+            catch (Exception ex)
+            {
+                LogDiagnostic($"Blank area tap callback failed: {ex.Message}");
+            }
         }
 
         private void SetActiveState(ClipOverlayState? state)
@@ -384,7 +529,7 @@ namespace projectFrameCut.InteractableEditor
                 previous.HandleTR.IsVisible = false;
                 previous.HandleBL.IsVisible = false;
                 previous.HandleBR.IsVisible = false;
-                previous.SolidColorSizeLabel.IsVisible = false;
+                previous.SizeLabel.IsVisible = false;
             }
 
             _activeState = state;
@@ -414,6 +559,7 @@ namespace projectFrameCut.InteractableEditor
 
             _currentClip = clip;
             _currentAsset = asset;
+            _isClipPanInProgress = false;
             _isHandleResizeInProgress = false;
             if (clip == null)
             {
@@ -676,6 +822,8 @@ namespace projectFrameCut.InteractableEditor
                     showSizeLabel ? $"{Math.Round(w)} x {Math.Round(h)}" : null,
                     isCurrentClip);
             }
+
+            ReorderClipStateRootsByZIndex();
         }
 
         public async Task<bool> ApplyPreparedPreviewsAsync(IReadOnlyList<DynamicPreview.PreparedPreview> preparedPreviews)
@@ -692,15 +840,31 @@ namespace projectFrameCut.InteractableEditor
         {
             if (preparedPreviews.Count == 0)
             {
-                foreach (var state in _clipStates.Values)
+                if (IsInteractiveManipulationInProgress)
                 {
-                    state.SetPreviewView(null);
+                    var hasPreviewView = false;
+                    foreach (var state in _clipStates.Values)
+                    {
+                        var keepExisting = ShouldKeepExistingPreviewFrame(state.ClipId);
+                        state.SetPreviewView(null, keepExistingWhenNull: keepExisting);
+                        hasPreviewView |= state.HasPreviewView;
+                    }
+
+                    UpdateVisuals();
+                    return hasPreviewView;
                 }
+                else
+                {
+                    foreach (var state in _clipStates.Values)
+                    {
+                        state.SetPreviewView(null);
+                    }
 
-                _previewSourceClips.Clear();
+                    _previewSourceClips.Clear();
 
-                UpdateVisuals();
-                return false;
+                    UpdateVisuals();
+                    return false;
+                }
             }
 
             var knownStates = new HashSet<string>(StringComparer.Ordinal);
@@ -719,17 +883,35 @@ namespace projectFrameCut.InteractableEditor
                 }
 
                 var state = GetOrCreateClipState(prepared.ClipId);
+                var suppressPreviewForResize = ShouldSuppressPreviewForResize(prepared.ClipId);
 
                 knownStates.Add(prepared.ClipId);
+                if (suppressPreviewForResize)
+                {
+                    state.SetPreviewView(null);
+                    continue;
+                }
+
                 if (prepared.View is not null)
                 {
-                    state.SetPreviewView(prepared.View);
-                    hasVisiblePreview = true;
+                    var shouldDeferViewSwap = ShouldKeepExistingPreviewFrame(prepared.ClipId)
+                        && state.HasPreviewView;
+                    if (shouldDeferViewSwap)
+                    {
+                        // Keep current frame during drag/resize to avoid visible blink from replacing image views.
+                        state.SetPreviewView(null, keepExistingWhenNull: true);
+                        hasVisiblePreview |= state.HasPreviewView;
+                    }
+                    else
+                    {
+                        state.SetPreviewView(prepared.View);
+                        hasVisiblePreview = true;
+                    }
                 }
                 else
                 {
                     // Keep the last good preview frame to avoid visible blink on transient null results.
-                    state.SetPreviewView(null, keepExistingWhenNull: true);
+                    state.SetPreviewView(null, keepExistingWhenNull: ShouldKeepExistingPreviewFrame(prepared.ClipId));
                     hasVisiblePreview |= state.HasPreviewView;
                 }
             }
@@ -738,8 +920,12 @@ namespace projectFrameCut.InteractableEditor
             {
                 if (!knownStates.Contains(entry.Key))
                 {
-                    entry.Value.SetPreviewView(null);
-                    _previewSourceClips.Remove(entry.Key);
+                    var keepExisting = ShouldKeepExistingPreviewFrame(entry.Key);
+                    entry.Value.SetPreviewView(null, keepExistingWhenNull: keepExisting);
+                    if (!keepExisting)
+                    {
+                        _previewSourceClips.Remove(entry.Key);
+                    }
                 }
             }
 
@@ -921,6 +1107,8 @@ namespace projectFrameCut.InteractableEditor
                     state.Hide();
                 }
             }
+
+            ReorderClipStateRootsByZIndex();
         }
 
         private void UpdateClipStateZIndex(ClipOverlayState state, string clipId)
@@ -941,23 +1129,59 @@ namespace projectFrameCut.InteractableEditor
                 && sourceClip is ClipElementUI previewClip)
             {
                 state.Root.ZIndex = ResolveClipOverlayZIndex(previewClip);
+                return;
             }
+
+            state.Root.ZIndex = int.MinValue;
         }
 
         private static int ResolveClipOverlayZIndex(ClipElementUI clip)
         {
-            // Keep ordering stable: higher layer/sub-layer should render above lower ones.
+            // Keep overlay order aligned with timeline track order (lower track index on top).
             var layer = Math.Max(0, clip.origTrack ?? 0);
             var subLayer = Math.Max(0, clip.SubLayerIndex);
             var composite = (long)layer * 10000L + Math.Min(9999, subLayer);
-            return composite > int.MaxValue ? int.MaxValue : (int)composite;
+            var zIndex = composite >= int.MaxValue ? int.MinValue : -((int)composite);
+            LogDiagnostic($"For clip {clip.Id}/{clip.DisplayName}, track:{layer}, sub:{subLayer}, ZIndex is {zIndex}");
+            return zIndex;
+        }
+
+        private void ReorderClipStateRootsByZIndex()
+        {
+            if (_clipStates.Count <= 1 || ClipStatesHost.Children.Count <= 1)
+            {
+                return;
+            }
+
+            var orderedRoots = _clipStates.Values
+                .Select(state => state.Root)
+                .Where(root => ClipStatesHost.Children.Contains(root))
+                .OrderBy(root => root.ZIndex)
+                .ToList();
+
+            if (orderedRoots.Count <= 1)
+            {
+                return;
+            }
+
+            var currentRoots = ClipStatesHost.Children.ToList();
+            if (currentRoots.Count == orderedRoots.Count
+                && !currentRoots.Where((root, index) => !ReferenceEquals(root, orderedRoots[index])).Any())
+            {
+                return;
+            }
+
+            foreach (var root in orderedRoots)
+            {
+                ClipStatesHost.Children.Remove(root);
+                ClipStatesHost.Children.Add(root);
+            }
         }
 
         private bool IsClipVisibleInCurrentFrame(ClipElementUI clip)
         {
-            if (clip.isInfiniteLength)
+            if (clip.IsExtraDataOptionIsTrue("ExtendToWholeDraft"))
             {
-                // 无限长度的clips始终可见
                 return true;
             }
 
@@ -1037,6 +1261,7 @@ namespace projectFrameCut.InteractableEditor
             switch (e.StatusType)
             {
                 case GestureStatus.Started:
+                    _isClipPanInProgress = true;
                     GetCurrentRect(out _startX, out _startY, out _startW, out _startH);
                     LogDiagnostic($"[Pan] Started: Pos=({_startX:F1}, {_startY:F1}), Size=({_startW:F1}, {_startH:F1})");
                     break;
@@ -1068,11 +1293,12 @@ namespace projectFrameCut.InteractableEditor
                     }
 
                     UpdateVisuals();
-                    RequestInteractivePreviewRefresh();
+                    RequestInteractivePreviewRefreshIfMissing(state);
                     break;
 
                 case GestureStatus.Completed:
                 case GestureStatus.Canceled:
+                    _isClipPanInProgress = false;
                     GetCurrentRect(out var finalX, out var finalY, out _, out _);
                     LogDiagnostic($"[Pan] Completed: FinalPos=({finalX:F1}, {finalY:F1})");
                     RequestCommitUpdate();
@@ -1092,6 +1318,7 @@ namespace projectFrameCut.InteractableEditor
                     _isHandleResizeInProgress = true;
                     GetCurrentRect(out _startX, out _startY, out _startW, out _startH);
                     LogDiagnostic($"[Resize] Started: Pos=({_startX:F1}, {_startY:F1}), Size=({_startW:F1}x{_startH:F1})");
+                    state.SetPreviewView(null);
                     UpdateVisuals();
                     break;
 
@@ -1148,7 +1375,6 @@ namespace projectFrameCut.InteractableEditor
 
                     UpdateClipEffects(newX, newY, newW, newH);
                     UpdateVisuals();
-                    RequestInteractivePreviewRefresh();
                     break;
 
                 case GestureStatus.Completed:
@@ -1156,10 +1382,36 @@ namespace projectFrameCut.InteractableEditor
                     _isHandleResizeInProgress = false;
                     GetCurrentRect(out var finalX, out var finalY, out var finalW, out var finalH);
                     LogDiagnostic($"[Resize] Completed: Pos=({finalX:F1}, {finalY:F1}), Size=({finalW:F1}x{finalH:F1})");
+                    state.SetPreviewView(null);
                     UpdateVisuals();
+                    RequestInteractivePreviewRefresh();
                     RequestCommitUpdate();
                     break;
             }
+        }
+
+        private bool IsInteractiveManipulationInProgress
+            => _isClipPanInProgress || _isHandleResizeInProgress;
+
+        private bool ShouldKeepExistingPreviewFrame(string clipId)
+            => _isClipPanInProgress
+                && !_isHandleResizeInProgress
+                && _currentClip is not null
+                && string.Equals(_currentClip.Id, clipId, StringComparison.Ordinal);
+
+        private bool ShouldSuppressPreviewForResize(string clipId)
+            => _isHandleResizeInProgress
+                && _currentClip is not null
+                && string.Equals(_currentClip.Id, clipId, StringComparison.Ordinal);
+
+        private void RequestInteractivePreviewRefreshIfMissing(ClipOverlayState state)
+        {
+            if (state.HasPreviewView)
+            {
+                return;
+            }
+
+            RequestInteractivePreviewRefresh();
         }
 
         private void ApplyAspectLockedResize(ResizeHandle handle, ref double x, ref double y, ref double w, ref double h)

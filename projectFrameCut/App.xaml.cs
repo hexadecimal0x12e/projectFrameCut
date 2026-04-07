@@ -332,15 +332,17 @@ namespace projectFrameCut
 
         public static async void HideNavBar()
         {
+            if (MainNavView?.IsPaneVisible == false) return;
             MainNavView?.IsPaneVisible = false;
             await Task.Delay(50);
-            var appWindow = Current?.Windows[0];
-            if (NativeWindow != null && appWindow != null)
+            if (NativeWindow != null)
             {
                 try
                 {
                     NativeWindow.Content.InvalidateMeasure();
+                    await Task.Delay(50);
                     NativeWindow.Content.InvalidateArrange();
+                    await Task.Delay(50);
                     NativeWindow.ExtendsContentIntoTitleBar = false;
                     await Task.Delay(150);
                     NativeWindow.ExtendsContentIntoTitleBar = true;
@@ -350,15 +352,17 @@ namespace projectFrameCut
         }
         public static async Task ShowNavBar()
         {
+            if (MainNavView?.IsPaneVisible == true) return;
             MainNavView?.IsPaneVisible = true;
             await Task.Delay(50);
-            var appWindow = Current?.Windows[0];
-            if (NativeWindow != null && appWindow != null)
+            if (NativeWindow != null)
             {
                 try
                 {
                     NativeWindow.Content.InvalidateMeasure();
+                    await Task.Delay(50);
                     NativeWindow.Content.InvalidateArrange();
+                    await Task.Delay(50);
                     NativeWindow.ExtendsContentIntoTitleBar = false;
                     await Task.Delay(150);
                     NativeWindow.ExtendsContentIntoTitleBar = true;
