@@ -1,5 +1,9 @@
 using Microsoft.Maui.Controls;
+using projectFrameCut.ApplicationAPIBase.Plugins;
+using projectFrameCut.Render.RenderAPIBase.Plugins;
+using projectFrameCut.Render.Rendering;
 using projectFrameCut.Setting.SettingPages;
+using projectFrameCut.Shared;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
@@ -64,7 +68,34 @@ namespace projectFrameCut
         }
         private async void OnAboutSettingClicked(object sender, EventArgs e)
         {
+#if Avalonia
+            try
+            {
+                var renderType = typeof(Renderer).Assembly;
+                string renderHash = "";
+                try
+                {
+                    renderHash = !renderType.IsDynamic && Path.Exists(renderType.Location) ? HashServices.ComputeFileHash(renderType.Location) : "unknown";
+                }
+                catch { renderHash = "unknown"; }
+
+                var info =
+                    $"""
+                This edition of {Localized.AppBrand} is powered by Avalonia.Controls.Maui.
+
+                IPluginBase API: v{IPluginBase.CurrentPluginAPIVersion} | IApplicationPluginBase API: v{IApplicationPluginBase.CurrentAppLevelPluginAPIVersion}
+
+                CoreRender library: v{renderType.GetName().Version} hash:{renderHash}
+
+                {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyTitleAttribute>()?.Title ?? "unknown"}: {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration ?? "unknown config"}@{new string((Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.1.2+unknown commit").Skip(6).ToArray())}  
+                """;
+                await DisplayAlertAsync(Localized.MainSettingsPage_Tab_About, info, Localized._OK);
+
+            }
+            catch { }
+#else
             await NavigateAsync(new AboutSettingPage());
+#endif
         }
 
         private async void AdvancedSettingButton_Clicked(object sender, EventArgs e)
@@ -115,7 +146,7 @@ namespace projectFrameCut
                 }
 #if WINDOWS
                 WinUI.Program.RebootApp();
-#endif  
+#endif
                 Environment.Exit(0);
 
             }

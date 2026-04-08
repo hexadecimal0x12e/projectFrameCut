@@ -6,7 +6,7 @@ public partial class SetupPage : ContentPage
 {
     public SetupPage()
     {
-#if WINDOWS
+#if WINDOWS && !Avalonia
         App.HideNavBar();
 #endif
         SettingsManager.WriteSetting("ui_ShowWelcomePage", "false");
@@ -16,8 +16,10 @@ public partial class SetupPage : ContentPage
 
     private async void Button_Clicked(object sender, EventArgs e)
     {
-#if WINDOWS
+#if WINDOWS && !Avalonia
         await App.ShowNavBar();
+#endif
+#if WINDOWS
         if (CreateDesktopShortcutCheckbox.IsChecked)
         {
             try

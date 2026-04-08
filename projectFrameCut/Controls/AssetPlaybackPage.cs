@@ -13,7 +13,7 @@ namespace projectFrameCut.Controls;
 /// </summary>
 public partial class AssetPlaybackPage : ContentPage
 {
-    private static MediaElement? _currentMediaPlayer;
+    private static CompatMediaElement? _currentMediaPlayer;
 
     /// <summary>
     /// Creates the popup content view for the given asset
@@ -136,7 +136,7 @@ public partial class AssetPlaybackPage : ContentPage
     {
         if (!string.IsNullOrWhiteSpace(asset.Path) && File.Exists(asset.Path))
         {
-            _currentMediaPlayer = new MediaElement
+            _currentMediaPlayer = new CompatMediaElement
             {
                 Source = MediaSource.FromFile(asset.Path),
                 ShouldAutoPlay = true,
@@ -179,7 +179,7 @@ public partial class AssetPlaybackPage : ContentPage
                 content.Add(imageViewer, 0, 0);
             }
 
-            _currentMediaPlayer = new MediaElement
+            _currentMediaPlayer = new CompatMediaElement
             {
                 Source = MediaSource.FromFile(asset.Path),
                 ShouldAutoPlay = true,

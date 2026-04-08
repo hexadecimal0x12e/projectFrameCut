@@ -63,6 +63,11 @@ public partial class HomePage : ContentPage
         if (DateTime.Now.Month == 4 && DateTime.Now.Day == 1 && int.TryParse(Preferences.Get("LastAprilFoolsDayEasterEggTriggerYear", "0000"), out var y) && y != DateTime.Now.Year) EasterEgg();
         _viewModel = new ProjectsListViewModel();
         BindingContext = _viewModel;
+#if Avalonia
+        ToolbarItems.Add(new ToolbarItem { Text = Localized.HomePage_CreateAProject, Command = new Command(async () => await CreateDraft()) });
+#else
+        AvaloniaCompatibilityOpenButton.IsVisible = false;
+#endif
         Loaded += async (s, e) =>
         {
 #if WINDOWS
@@ -140,6 +145,20 @@ public partial class HomePage : ContentPage
 
 
 #endif
+
+#if Avalonia
+            var drafts = await _viewModel.GetViewModels(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+            var kvp = drafts.Where(c => c.Success).DistinctBy(c => c.Name).ToDictionary(c => c.Name);
+            var path = await DisplayActionSheetAsync("Select a project:", Localized._Cancel, Localized.HomePage_CreateAProject, kvp.Keys.ToArray());
+            if (!string.IsNullOrWhiteSpace(path) && kvp.TryGetValue(path, out var value))
+            {
+                await GoDraft(value, false, false);
+            }
+            else if (path == Localized.HomePage_CreateAProject)
+            {
+                await CreateDraft();
+            }
+#endif
         };
 
 
@@ -189,7 +208,7 @@ public partial class HomePage : ContentPage
                         {
                             if (Directory.Exists(path))
                             {
-                                if(File.Exists(Path.Combine(path, "project.pjfc")))
+                                if (File.Exists(Path.Combine(path, "project.pjfc")))
                                 {
                                     path = Path.Combine(path, "project.pjfc");
                                 }
@@ -352,7 +371,7 @@ public partial class HomePage : ContentPage
         }
 
         draftSourcePath = Path.Combine(draftSourcePath, projName + ".pjfc");
-        if (Path.GetInvalidPathChars().Any(draftSourcePath.Contains) || Path.GetInvalidFileNameChars().Any(draftSourcePath.Contains) || draftSourcePath.Length > 65535)
+        if (Path.GetInvalidPathChars().Any(draftSourcePath.Contains) || draftSourcePath.Length > 65535)
         {
             await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
             return;
@@ -436,7 +455,7 @@ public partial class HomePage : ContentPage
             CopyDirectory(viewModel._projectPath, draftSourcePath);
 
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Log(ex, "clone draft", this);
             await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_CreateAProject_InvalidName}{Environment.NewLine}{Localized._ExceptionTemplate(ex)}", Localized._OK);
@@ -967,7 +986,7 @@ public partial class HomePage : ContentPage
                     try
                     {
                         App.Current?.Windows?[0]?.Title = $"{Localized.AppBrand} - {project.ProjectName}";
-                        AppShell.instance.HideNavView();
+                        AppShell.instance?.HideNavView();
                         Shell.SetTabBarIsVisible(page, false);
                         Shell.SetNavBarIsVisible(page, true);
                         lastPage = page;
@@ -1329,6 +1348,9 @@ public partial class HomePage : ContentPage
 
     private async void ItemBorder_Loaded(object? sender, EventArgs e)
     {
+#if Avalonia
+        return;
+#endif
         if (sender is Microsoft.Maui.Controls.Border border && border.BindingContext is ProjectsViewModel vmItem)
         {
             foreach (var gr in border.GestureRecognizers.ToList())
@@ -1697,6 +1719,32 @@ public partial class HomePage : ContentPage
 
 
     }
+
+    private async void ProjectsCollection_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+#if Avalonia
+        if (sender is Microsoft.Maui.Controls.Border border && border.BindingContext is ProjectsViewModel vmItem)
+        {
+            await GoDraft(vmItem, false, false);
+        }
+
+#endif
+    }
+
+    private async void AvaloniaCompatibilityOpenButton_Clicked(object sender, EventArgs e)
+    {
+        var drafts = await _viewModel.GetViewModels(Path.Combine(MauiProgram.DataPath, "My Drafts"));
+        var kvp = drafts.Where(c => c.Success).DistinctBy(c => c.Name).ToDictionary(c => c.Name);
+        var path = await DisplayActionSheetAsync("Select a project:", Localized._Cancel, Localized.HomePage_CreateAProject, kvp.Keys.ToArray());
+        if (!string.IsNullOrWhiteSpace(path) && kvp.TryGetValue(path, out var value))
+        {
+            await GoDraft(value, false, false);
+        }
+        else if (path == Localized.HomePage_CreateAProject)
+        {
+            await CreateDraft();
+        }
+    }
 }
 
 public class ProjectsListViewModel
@@ -1711,20 +1759,22 @@ public class ProjectsListViewModel
 
     }
 
-    public async Task LoadDrafts(string sourcePath)
+    public async Task<List<ProjectsViewModel>> GetViewModels(string sourcePath)
     {
         List<ProjectsViewModel> projects = new();
         List<ProjectsViewModel> failedProjects = new();
         try
         {
             if (!Directory.Exists(sourcePath))
-                return;
+                return [];
             Projects.Clear();
+#if !Avalonia
             Projects.Add(new ProjectsViewModel
             {
                 _name = "!!CreateButton!!",
                 _thumbPath = "!!CreateButton!!"
             });
+#endif
             foreach (var item in Directory.GetDirectories(sourcePath, "*"))
             {
                 ProjectJSONStructure? proj = null;
@@ -1736,9 +1786,10 @@ public class ProjectsListViewModel
                     if (proj is not null)
                     {
                         var thumb = Path.Combine(item, "thumbs", "_project.png");
-                        projects.Add(new ProjectsViewModel(proj.ProjectName, proj.LastChanged ?? DateTime.MinValue, thumb)
+                        projects.Add(new ProjectsViewModel(proj?.ProjectName ?? "Project", proj.LastChanged ?? DateTime.MinValue, thumb)
                         {
-                            _projectPath = item
+                            _projectPath = item,
+                            Success = true
                         });
                     }
                     else goto fail;
@@ -1753,7 +1804,8 @@ public class ProjectsListViewModel
             fail:
                 failedProjects.Add(new ProjectsViewModel(proj?.ProjectName ?? "Unknown project", null, "")
                 {
-                    _projectPath = item
+                    _projectPath = item,
+                    Success = false
                 });
                 continue;
 
@@ -1765,13 +1817,27 @@ public class ProjectsListViewModel
         {
             if (MyLoggerExtensions.LoggingDiagnosticInfo) Log(ex, "load draft", this);
         }
-        finally
+        return projects.Concat(failedProjects).ToList();
+    }
+
+    public async Task LoadDrafts(string sourcePath)
+    {
+        var vms = await GetViewModels(sourcePath);
+        var projects = vms.Where(C => C.Success);
+        var failedProjects = vms.Where(c => !c.Success);
+
         {
             try
             {
                 foreach (var item in projects.OrderByDescending(x => x._lastChanged))
                 {
+#if Avalonia
+                    Projects.Add(item);
+
+#else
                     Projects.Insert(Projects.Count - 1, item);
+
+#endif
                 }
                 // Insert failed (invalid) projects after valid ones, so they appear closer to the bottom
                 foreach (var f in failedProjects)

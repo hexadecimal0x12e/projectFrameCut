@@ -27,6 +27,7 @@ using projectFrameCut.LivePreview;
 using CommunityToolkit.Maui.Views;
 using CommunityToolkit.Maui.Core;
 using projectFrameCut.Services;
+using projectFrameCut.Controls;
 using projectFrameCut.Render.EncodeAndDecode;
 using projectFrameCut.Asset;
 using projectFrameCut.ViewModels;
@@ -5967,8 +5968,8 @@ public partial class DraftPage : ContentPage
         }
 
     }
-    MediaElement LivePreviewPlayer = new();
-    MediaElement DynamicPreviewAudioProvider = new();
+    CompatMediaElement LivePreviewPlayer = new();
+    CompatMediaElement DynamicPreviewAudioProvider = new();
 
     private Grid EnsureRealtimePreviewHost()
     {
@@ -6003,7 +6004,7 @@ public partial class DraftPage : ContentPage
                 }
 
                 playbackDone = false;
-                DynamicPreviewAudioProvider = new MediaElement
+                DynamicPreviewAudioProvider = new CompatMediaElement
                 {
                     Source = MediaSource.FromFile(nextAudioPath),
                     ShouldAutoPlay = true,

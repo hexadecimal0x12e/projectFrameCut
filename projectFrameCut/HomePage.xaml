@@ -19,10 +19,12 @@
           x:Name="WelcomeLabel"
          VerticalOptions="Center" 
          HorizontalOptions="Center" />
+            <Button Text="Open" x:Name="AvaloniaCompatibilityOpenButton" Clicked="AvaloniaCompatibilityOpenButton_Clicked"/>
             <CollectionView 
                         x:Name="ProjectsCollection"
                         ItemsSource="{Binding Projects}"
                         SelectionMode="Single"
+                        SelectionChanged="ProjectsCollection_SelectionChanged"
                         Margin="12">
                 <CollectionView.GestureRecognizers>
                     <DropGestureRecognizer AllowDrop="True" Drop="DropGestureRecognizer_Drop"/>

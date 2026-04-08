@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material 3 semantic color roles -->
+    <color name="colorPrimary">#FFD272</color>
+    <color name="colorOnPrimary">#2B1C00</color>
+    <color name="colorSecondary">#B3A997</color>
+    <color name="colorOnSecondary">#1F1B16</color>
+    <color name="colorSurface">#FFF8F0</color>
+    <color name="colorOnSurface">#1F1B16</color>
+
+    <!-- Keep legacy aliases for older code references. -->
+    <color name="colorPrimaryDark">#FFD272</color>
+    <color name="colorAccent">#B3A997</color>
+</resources>

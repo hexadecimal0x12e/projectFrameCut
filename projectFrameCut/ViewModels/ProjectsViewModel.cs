@@ -16,6 +16,7 @@ namespace projectFrameCut.ViewModels
         public DateTime? _lastChanged;
         public string _thumbPath = string.Empty;
         public string _projectPath = string.Empty;
+        public bool Success { get; set; } = true;
 
         public ProjectsViewModel(string name, DateTime? lastChanged, string thumbPath)
         {

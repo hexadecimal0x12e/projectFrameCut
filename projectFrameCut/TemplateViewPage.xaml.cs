@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using CommunityToolkit.Maui.Views;
+using projectFrameCut.Controls;
 using projectFrameCut.Render.TemplateSystem;
 using projectFrameCut.Render.RenderAPIBase.Project;
 using projectFrameCut.Services;
@@ -190,7 +191,7 @@ public partial class TemplateViewPage : ContentPage
     private static void StopTemplatePreview(Border border)
     {
         var host = border.FindByName<Grid>("TemplatePreviewHost");
-        var previewPlayer = host?.Children.OfType<MediaElement>().FirstOrDefault();
+        var previewPlayer = host?.Children.OfType<CompatMediaElement>().FirstOrDefault();
         if (previewPlayer is null)
         {
             return;
@@ -207,10 +208,10 @@ public partial class TemplateViewPage : ContentPage
         }
     }
 
-    private static MediaElement? GetOrCreatePreviewPlayer(Border border)
+    private static CompatMediaElement? GetOrCreatePreviewPlayer(Border border)
     {
         var host = border.FindByName<Grid>("TemplatePreviewHost");
-        var existing = host?.Children.OfType<MediaElement>().FirstOrDefault();
+        var existing = host?.Children.OfType<CompatMediaElement>().FirstOrDefault();
         if (existing is not null)
         {
             return existing;
@@ -221,7 +222,7 @@ public partial class TemplateViewPage : ContentPage
             return null;
         }
 
-        var previewPlayer = new MediaElement
+        var previewPlayer = new CompatMediaElement
         {
             Aspect = Aspect.AspectFill,
             ShouldAutoPlay = false,

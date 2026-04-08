@@ -7,6 +7,7 @@
              xmlns:basePickers="clr-namespace:projectFrameCut.ApplicationAPIBase.Views.Pickers;assembly=projectFrameCut.ApplicationAPIBase"
              xmlns:l="clr-namespace:LocalizedResources"
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:controls="clr-namespace:projectFrameCut.Controls"
              xmlns:converters="clr-namespace:projectFrameCut.Converters"
              x:DataType="viewmodels:ProjectAddClipViewModel">
     <ContentView.Resources>
@@ -533,7 +534,7 @@
                                     <TapGestureRecognizer Command="{Binding SelectTransformForPreviewCommand}" />
                                 </Border.GestureRecognizers>
                                 <Grid RowDefinitions="*,Auto,Auto">
-                                    <toolkit:MediaElement Grid.Row="0"
+                                     <controls:CompatMediaElement Grid.Row="0"
                                            Source="{Binding PreviewVideoPath}"
                                            Aspect="AspectFit" 
                                            Margin="4"

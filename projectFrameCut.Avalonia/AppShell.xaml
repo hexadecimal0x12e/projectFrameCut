@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="projectFrameCut.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:projectFrameCut"
+    xmlns:l="clr-namespace:LocalizedResources"
+    Shell.NavBarIsVisible="True"
+    Title="projectFrameCut">
+
+    <TabBar x:Name="MainTabBar">
+        <Tab x:Name="ProjectsTab" Icon="icon_project" Title="{l:Localized Key=AppShell_ProjectsTab}">
+            <ShellContent
+                Route="home"
+                ContentTemplate="{DataTemplate local:HomePage}"
+                Title="{l:Localized Key=AppShell_ProjectsTab}" />
+        </Tab>
+
+        <Tab x:Name="TemplateStartTab" Icon="icon_template" Title="{l:Localized Key=AppShell_TemplateTab}">
+            <ShellContent 
+                Route="template"
+                ContentTemplate="{DataTemplate local:TemplateViewPage}"
+                Title="{l:Localized Key=AppShell_TemplateTab}" />
+        </Tab>
+
+        <Tab x:Name="AssetsTab" Icon="icon_asset" Title="{l:Localized Key=AppShell_AssetsTab}">
+            <ShellContent
+                Route="assets"
+                ContentTemplate="{DataTemplate local:AssetsLibraryPage}"
+                Title="{l:Localized Key=AppShell_AssetsTab}" />
+        </Tab>
+
+        <Tab x:Name="SettingTab" Icon="icon_setting" Title="{l:Localized Key=_Settings}">
+            <ShellContent
+            Route="options"
+            ContentTemplate="{DataTemplate local:MainSettingsPage}"
+            Title="{l:Localized Key=_Settings}" />
+        </Tab>
+
+    </TabBar>
+
+</Shell>
