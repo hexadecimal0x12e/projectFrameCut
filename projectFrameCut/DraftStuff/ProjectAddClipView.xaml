@@ -202,13 +202,16 @@
                          Margin="8,8,8,-4"
                          StrokeThickness="0"
                          StrokeShape="RoundRectangle 6">
-                    <Grid>
-                        <Label HorizontalOptions="Start" VerticalOptions="Center"  TextColor="{AppThemeBinding Light=#1A5276, Dark=#85C1E9}" Text="{l:Localized Key=DraftPage_AssetPanel_Templates_Hint}"/>
-                        <HorizontalStackLayout Grid.Row="0" VerticalOptions="Center" HorizontalOptions="End">
+                    <HorizontalStackLayout>
+                        <HorizontalStackLayout Grid.Row="0" VerticalOptions="Center" HorizontalOptions="Start">
+                            <CheckBox IsChecked="{Binding NotAddTemplateAsGroup}" VerticalOptions="Center"/>
+                            <Label Text="{l:Localized Key=DraftPage_AssetPanel_Templates_NotAsGroup}" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout Grid.Row="0" VerticalOptions="Center" Margin="8,0,0,0">
                             <CheckBox IsChecked="{Binding ShowAllTemplates}" VerticalOptions="Center"/>
                             <Label Text="{l:Localized Key=DraftPage_AssetPanel_Templates_ShowAll}" VerticalOptions="Center"/>
                         </HorizontalStackLayout>
-                    </Grid>
+                    </HorizontalStackLayout>
                 </Border>
                 <CollectionView x:Name="TemplateCollectionView"
                             Grid.Row="1"

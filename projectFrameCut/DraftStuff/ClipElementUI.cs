@@ -4,6 +4,7 @@ using projectFrameCut.Converters;
 using projectFrameCut.Render;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
+using projectFrameCut;
 using projectFrameCut.Shared;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -17,8 +18,35 @@ using Path = System.IO.Path;
 namespace projectFrameCut.DraftStuff
 {
     [DebuggerDisplay("{displayName}, {ClipType} ({Id})")]
-    public class ClipElementUI
+    public class ClipElementUI : IClipElementUI
     {
+        static ClipElementUI()
+        {
+            ClipUpdateEventArgs.LocalizedChangeReasonBuilder = BuildLocalizedChangeReason;
+        }
+
+        private static string? BuildLocalizedChangeReason(ClipUpdateReason? reason, string? sourceName, string? details)
+        {
+            try
+            {
+                if (reason == ClipUpdateReason.PropertyChanged)
+                {
+                    return Localized.ClipUpdateReason_PropertyChanged(sourceName ?? "Clip", details ?? "Unknown");
+                }
+
+                if (Localized.IsItemExist($"ClipUpdateReason_{reason}"))
+                {
+                    return Localized.DynamicLookupWithArgs($"ClipUpdateReason_{reason}", sourceName ?? "Clip");
+                }
+            }
+            catch
+            {
+                return null;
+            }
+
+            return null;
+        }
+
         public required string Id { get; set; }
         [JsonIgnore]
         public required Border Clip { get; set; }
@@ -104,7 +132,7 @@ namespace projectFrameCut.DraftStuff
 
         public bool IsExtraDataOptionIsTrue(string option) => ExtraData.TryGetValue(option, out var o) && IsObjectTrue(o);
 
-        public bool IsClipFallInRange(uint targetFrame, DraftPage workingPage)
+        public bool IsClipFallInRange(uint targetFrame, IDraftPage workingPage)
         {
             var extend = IsExtraDataOptionIsTrue("ExtendToWholeDraft");
             if (workingPage is null || extend)
@@ -328,75 +356,4 @@ namespace projectFrameCut.DraftStuff
         }
 
     }
-
-
-    public class ClipUpdateEventArgs : EventArgs
-    {
-        public ClipUpdateEventArgs() { }
-
-        public string? SourceId { get; set; }
-
-        public string? SourceName { get; set; }
-
-        public ClipUpdateReason? Reason { get; set; }
-
-        public string? DetailInfo { get; set; }
-
-        public bool NoSave { get; set; } = false;
-
-        public static string BuildChangeReason(ClipUpdateReason? reason, string? sourceName = null, string? details = null)
-        {
-            try
-            {
-                if (reason == ClipUpdateReason.PropertyChanged) return Localized.ClipUpdateReason_PropertyChanged(sourceName ?? "Clip", details ?? "Unknown");
-
-                if (Localized.IsItemExist($"ClipUpdateReason_{reason}"))
-                    return Localized.DynamicLookupWithArgs($"ClipUpdateReason_{reason}", sourceName ?? "Clip");
-            }
-            catch { }
-
-            return reason switch
-            {
-                ClipUpdateReason.ClipItselfMove => $"Clip {sourceName} moved",
-                ClipUpdateReason.ClipResized => $"Clip {sourceName} resized",
-                ClipUpdateReason.TrackAdd => "Track added",
-                ClipUpdateReason.ClipAdded => $"Clip {sourceName} added",
-                ClipUpdateReason.ClipDeleted => $"Clip {sourceName} deleted",
-                ClipUpdateReason.ClipPasted => $"Clip {sourceName} pasted",
-                ClipUpdateReason.ClipGrouped => $"Clip {sourceName} grouped",
-                ClipUpdateReason.ClipUngrouped => $"Clip {sourceName} ungrouped",
-                ClipUpdateReason.Unknown or null => "Unknown clip change",
-                _ => reason?.ToString() ?? "Unknown clip change"
-            };
-
-        }
-        /// <summary>
-        /// Get a user-friendly change reason.
-        /// </summary>
-        public override string ToString() => BuildChangeReason(Reason, SourceName, DetailInfo);
-    }
-
-    public enum ClipUpdateReason
-    {
-        Unknown,
-        ClipItselfMove,
-        ClipResized,
-        TrackAdd,
-        ClipAdded,
-        ClipDeleted,
-        ClipPasted,
-        ClipGrouped,
-        ClipUngrouped,
-        PropertyChanged,
-        ClipPositionMoved
-    }
-
-    public enum ClipMovingStatus
-    {
-        Free,
-        Move,
-        Resize
-    }
-
-
 }

@@ -2,7 +2,7 @@ codename 'projectFrameCut' について
 
 著作権 (c) hexadecimal0x12e 2025。
 
-projectFrameCut は GNU GPL v2（またはそれ以降）で公開されたオープンソースプロジェクトです。ソースコードは次のリンクで確認できます： https://github.com/hexadecimal0x12e/projectFrameCut
+projectFrameCut は Apache License（またはそれ以降）で公開されたオープンソースプロジェクトです。ソースコードは次のリンクで確認できます： https://github.com/hexadecimal0x12e/projectFrameCut
 
 projectFrameCut はまだ開発中です — 本番環境での使用は避けてください。本ソフトウェアによりワークフローが中断された場合でも、いかなる保証もいたしません。
 

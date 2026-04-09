@@ -709,6 +709,8 @@ public partial class RenderPage : ContentPage
                 Clips = clips,
                 TargetWidth = width,
                 TargetHeight = height,
+                ProjectRelativeWidth = Math.Max(1, _project.RelativeWidth),
+                ProjectRelativeHeight = Math.Max(1, _project.RelativeHeight),
                 Duration = duration,
                 MaxThreads = parallelThreadCount,
                 LogState = false,
@@ -725,10 +727,10 @@ public partial class RenderPage : ContentPage
                 Dispatcher.Dispatch(async () =>
                 {
                     await SubProgress.ProgressTo(p, 250, Easing.Linear);
-                    SubProgLabel.Text = $"{_currentSubProgText} ({Localized.RenderPage_LongStat(p, timeStr, fpsStr)})";
+                    SubProgLabel.Text = $"{_currentSubProgText} ({(fps > 5 ? Localized.RenderPage_LongStat(p, timeStr, fpsStr) : Localized.RenderPage_LongStat_SecondPerFrame(p, timeStr, renderer.CurrentFps > 0 ? $"{(1 / renderer.CurrentFps):n2}" : "--"))})";
                     if (ScreenSaverOverlay.IsVisible)
                     {
-                        HintLabel.Text = $"{Localized.RenderPage_ClickToShowUI}{Environment.NewLine}{Localized.RenderPage_Stat(p, timeStr)} | {fpsStr}";
+                        HintLabel.Text = $"{Localized.RenderPage_ClickToShowUI}{Environment.NewLine}{Localized.RenderPage_Stat(p, timeStr)} | {fpsStr}fps";
                     }
                 });
             };
@@ -784,7 +786,21 @@ public partial class RenderPage : ContentPage
 
                 SetSubProg("WriteVideo");
                 Log("Finish writing video...");
-                builder?.Finish((i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), duration);
+                int projectRelativeWidth = Math.Max(1, _project.RelativeWidth);
+                int projectRelativeHeight = Math.Max(1, _project.RelativeHeight);
+                builder?.Finish((i) => Timeline.MixtureLayers(
+                    Timeline.GetFramesInOneFrame(
+                        clips,
+                        i,
+                        width,
+                        height,
+                        projectRelativeWidth: projectRelativeWidth,
+                        projectRelativeHeight: projectRelativeHeight),
+                    i,
+                    width,
+                    height,
+                    projectRelativeWidth: projectRelativeWidth,
+                    projectRelativeHeight: projectRelativeHeight), duration);
 
             }
 

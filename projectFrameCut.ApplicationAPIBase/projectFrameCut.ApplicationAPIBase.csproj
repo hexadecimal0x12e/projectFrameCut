@@ -74,4 +74,9 @@
 		</None>
 	</ItemGroup>
 
+
+	<ItemGroup>
+	  <Folder Include="Project\" />
+	</ItemGroup>
+
 </Project>

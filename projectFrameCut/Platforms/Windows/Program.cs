@@ -154,11 +154,9 @@ namespace projectFrameCut.WinUI
                     SynchronizationContext.SetSynchronizationContext(context);
                     new App();
                 });
-                Log("Application exited.");
                 Helper.CrashHandler.Handler?.Kill(true);
                 _ = SettingsManager.FlushAndStopAsync();
                 Helper.HelperProgram.Cleanup();
-                MauiProgram.LogWriter.Flush();
                 try
                 {
                     foreach (var item in Render.Plugin.PluginManager.LoadedPlugins)
@@ -171,6 +169,8 @@ namespace projectFrameCut.WinUI
                     }
                 }
                 catch { }
+                Log("Application exited.");
+                MauiProgram.LogWriter.Flush();
                 Environment.Exit(0);
                 return;
             }
@@ -284,7 +284,6 @@ namespace projectFrameCut.WinUI
         public static void Crash(Exception ex)
         {
             MauiProgram.LogWriter?.Flush();
-
 #if DEBUG
             if (Debugger.IsAttached)
             {
@@ -300,6 +299,14 @@ namespace projectFrameCut.WinUI
 
             }
             catch (Exception) { }
+            try
+            {
+                if (!Helper.CrashHandler.Handler?.HasExited ?? false) //let handler handle it
+                {
+                    Environment.Exit(ex.HResult);
+                }
+            }
+            catch { }
             finally
             {
                 string innerExceptionInfo = "None";
@@ -376,16 +383,7 @@ Current directory: {Environment.CurrentDirectory}
                     File.WriteAllText(logPath, logMessage);
                 }
                 Thread.Sleep(100);
-                try
-                {
-                    if(!Helper.CrashHandler.Handler?.HasExited ?? false)
-                    {
-                        //let handler handle it
-                        Environment.FailFast(logMessage, ex);
-                        Environment.Exit(ex.HResult);
-                    }
-                }
-                catch { }
+  
                 if (File.Exists(Path.Combine(AppContext.BaseDirectory, "projectFrameCut.Helper.dll")))
                 {
                     try

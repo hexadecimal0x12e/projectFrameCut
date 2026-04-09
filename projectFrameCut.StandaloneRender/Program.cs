@@ -513,7 +513,14 @@ namespace projectFrameCut.StandaloneRender
                 {
                     renderer.OnProgressChanged += (s, e) =>
                     {
-                        Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2} \r");
+                        if(renderer.CurrentFps > 5)
+                        {
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2} \r");
+                        }
+                        else
+                        {
+                            Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, {(1 / renderer.CurrentFps):n2} second per frame \r");
+                        }
                     };
                 }
 

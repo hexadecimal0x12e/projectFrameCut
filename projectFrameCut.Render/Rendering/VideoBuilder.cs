@@ -12,7 +12,7 @@ namespace projectFrameCut.Render.Rendering
     public class VideoBuilder : IDisposable
     {
         string outputPath;
-        IVideoWriter builder;
+        IVideoWriter writer;
         uint index;
         bool running = true, stopped = false, buildStarted = false;
         ConcurrentDictionary<uint, IPicture> Cache = new();
@@ -66,9 +66,9 @@ namespace projectFrameCut.Render.Rendering
         /// The duration (in frames) of the video to be built.
         /// </summary>
         public uint Duration { get; set; }
-        public int Width => builder.Width;
-        public int Height => builder.Height;
-        public IVideoWriter Writer => builder;
+        public int Width => writer.Width;
+        public int Height => writer.Height;
+        public IVideoWriter Writer => writer;
 
 
 
@@ -87,14 +87,14 @@ namespace projectFrameCut.Render.Rendering
         {
             outputPath = path;
             index = 0;
-            builder = PluginManager.CreateVideoWriter(encoder);
-            builder.Width = width;
-            builder.Height = height;
-            builder.FramePerSecond = framerate;
-            builder.PixelFormat = fmt;
-            builder.OutputPath = outputPath;
-            builder.CodecName = encoder;
-            builder.Initialize();
+            writer = PluginManager.CreateVideoWriter(encoder);
+            writer.Width = width;
+            writer.Height = height;
+            writer.FramePerSecond = framerate;
+            writer.PixelFormat = fmt;
+            writer.OutputPath = outputPath;
+            writer.CodecName = encoder;
+            writer.Initialize();
 
 
         }
@@ -135,6 +135,14 @@ namespace projectFrameCut.Render.Rendering
 
             Interlocked.Increment(ref _totalFramesCount);
 
+            if (!IPicture.AllowPixelModeDowngrade && writer.TargetPPB is IPicture.PicturePixelMode m)
+            {
+                if (frame.bitPerPixel < m) throw new InvalidOperationException($"Frame #{index}'s PicturePixelMode {(int)frame.bitPerPixel} is smaller than target's PicturePixelMode {(int)m}, and IPicture.AllowPixelModeDowngrade is false.")
+                {
+                    Data = { { "PictureObject", frame }, { "ProcessStack", PictureProcessStack.FormatProcessStackForLog(frame.ProcessStack) } }
+                };
+            }
+
             if (!BlockWrite)
             {
                 Cache.AddOrUpdate(index, frame,
@@ -146,7 +154,7 @@ namespace projectFrameCut.Render.Rendering
             }
             else
             {
-                builder.Append(frame);
+                writer.Append(frame);
                 if (LogStat) Log($"[VideoBuilder] Frame #{index} added.");
             }
 
@@ -173,7 +181,7 @@ namespace projectFrameCut.Render.Rendering
                 FramePendedToWrite.Clear();
             }
             catch { }
-            builder.Dispose();
+            writer.Dispose();
             GC.SuppressFinalize(this);
         }
 
@@ -225,7 +233,7 @@ namespace projectFrameCut.Render.Rendering
             {
                 if (Cache.ContainsKey(currentIndex))
                 {
-                    builder.Append(Cache.TryRemove(currentIndex, out var f) ? f : throw new KeyNotFoundException());
+                    writer.Append(Cache.TryRemove(currentIndex, out var f) ? f : throw new KeyNotFoundException());
                     Log($"[VideoBuilder] Frame #{currentIndex} added.");
                     currentIndex++;
                     continue;
@@ -251,7 +259,7 @@ namespace projectFrameCut.Render.Rendering
                         Log($"[VideoBuilder] WARN: Frames #{missingFrames[0]}-#{missingFrames[missingFrames.Count - 1]} not found, rebuilding {missingFrames.Count} frames...");
                         foreach (var frameIdx in missingFrames)
                         {
-                            builder.Append(regenerator(frameIdx));
+                            writer.Append(regenerator(frameIdx));
                         }
                         missingFrames.Clear();
                     }
@@ -267,7 +275,7 @@ namespace projectFrameCut.Render.Rendering
 
                     if (Cache.ContainsKey(frameToProcess))
                     {
-                        builder.Append(Cache.TryRemove(frameToProcess, out var f) ? f : throw new KeyNotFoundException());
+                        writer.Append(Cache.TryRemove(frameToProcess, out var f) ? f : throw new KeyNotFoundException());
                         Log($"[VideoBuilder] Rebuilt frame #{frameToProcess} added.");
 
                         if (frameToProcess == currentIndex)
@@ -287,7 +295,7 @@ namespace projectFrameCut.Render.Rendering
 
         public void Interrupt()
         {
-            Log("[VideoBuilder] Interrupt signal received. Stopping the video builder...");
+            Log("[VideoBuilder] Interrupt signal received. Stopping the video writer...");
             running = false;
 
             while (Cache.TryRemove(index, out var frame))
@@ -326,7 +334,7 @@ namespace projectFrameCut.Render.Rendering
 
         private void WriteFrame(uint frameIndex, IPicture frame, string? logMessage = null)
         {
-            builder.Append(frame);
+            writer.Append(frame);
             FramePendedToWrite[frameIndex] = true;
             Interlocked.Increment(ref _writtenFramesCount);
             if (frameIndex >= index)

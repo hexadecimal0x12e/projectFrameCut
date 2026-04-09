@@ -60,6 +60,7 @@ namespace projectFrameCut.DraftStuff
         private const string InternalResizeID = "__Internal_Resize__";
         private const string InternalRotationID = "__Internal_Rotation__";
         private const string InternalCropID = "__Internal_Crop__";
+        private static readonly Guid InternalCropBundleGuid = new("a3a744cc-53b7-4d5e-8dd5-4c66077d9401");
         private const string SolidColorOutputWidthKey = "SolidColorOutputWidth";
         private const string SolidColorOutputHeightKey = "SolidColorOutputHeight";
         private const string SolidColorUseFixedOutputSizeKey = "SolidColorUseFixedOutputSize";
@@ -104,6 +105,149 @@ namespace projectFrameCut.DraftStuff
             }
 
             return Math.Max(1, fallback);
+        }
+
+        private static int ReadIntValue(object? raw, int fallback)
+        {
+            if (raw is null)
+            {
+                return fallback;
+            }
+
+            if (raw is int i)
+            {
+                return i;
+            }
+
+            if (raw is long l)
+            {
+                return (int)Math.Clamp(l, int.MinValue, int.MaxValue);
+            }
+
+            if (raw is JsonElement je)
+            {
+                if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var parsedNumber))
+                {
+                    return parsedNumber;
+                }
+
+                if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var parsedString))
+                {
+                    return parsedString;
+                }
+            }
+
+            return int.TryParse(raw.ToString(), out var parsed) ? parsed : fallback;
+        }
+
+        private static float ReadFloatValue(object? raw, float fallback)
+        {
+            if (raw is null)
+            {
+                return fallback;
+            }
+
+            if (raw is float f)
+            {
+                return f;
+            }
+
+            if (raw is double d)
+            {
+                return (float)d;
+            }
+
+            if (raw is JsonElement je)
+            {
+                if (je.ValueKind == JsonValueKind.Number && je.TryGetSingle(out var parsedNumber))
+                {
+                    return parsedNumber;
+                }
+
+                if (je.ValueKind == JsonValueKind.String && float.TryParse(je.GetString(), out var parsedString))
+                {
+                    return parsedString;
+                }
+            }
+
+            return float.TryParse(raw.ToString(), out var parsed) ? parsed : fallback;
+        }
+
+        private static int ReadDictionaryIntValue(IReadOnlyDictionary<string, object>? values, string key, int fallback)
+            => values != null && values.TryGetValue(key, out var raw) ? ReadIntValue(raw, fallback) : fallback;
+
+        private static float ReadDictionaryFloatValue(IReadOnlyDictionary<string, object>? values, string key, float fallback)
+            => values != null && values.TryGetValue(key, out var raw) ? ReadFloatValue(raw, fallback) : fallback;
+
+        private static int ReadEffectIntParameter(IEffect effect, string key, int fallback)
+        {
+            ArgumentNullException.ThrowIfNull(effect);
+            return ReadDictionaryIntValue(effect.Parameters, key, fallback);
+        }
+
+        private static float ReadEffectFloatParameter(IEffect effect, string key, float fallback)
+        {
+            ArgumentNullException.ThrowIfNull(effect);
+            return ReadDictionaryFloatValue(effect.Parameters, key, fallback);
+        }
+
+        private static bool TryGetCropSize(IEffect effect, out int width, out int height)
+        {
+            width = Math.Max(0, ReadEffectIntParameter(effect, "Width", 0));
+            height = Math.Max(0, ReadEffectIntParameter(effect, "Height", 0));
+            return width > 0 && height > 0;
+        }
+
+        private static bool IsCropEffect(IEffect effect)
+            => string.Equals(effect.TypeName, "Crop", StringComparison.Ordinal);
+
+        private static bool TryFindInternalCropEffect(ClipElementUI clip, out IEffect effect)
+        {
+            effect = null!;
+            if (clip.Effects == null || clip.Effects.Count == 0)
+            {
+                return false;
+            }
+
+            if (clip.Effects.TryGetValue(InternalCropID, out var legacyCrop) && IsCropEffect(legacyCrop))
+            {
+                effect = legacyCrop;
+                return true;
+            }
+
+            var fromBundle = clip.Effects.Values.FirstOrDefault(e =>
+                IsCropEffect(e)
+                && string.Equals(e.BindedEffectGroupID, InternalCropBundleGuid.ToString(), StringComparison.Ordinal));
+            if (fromBundle != null)
+            {
+                effect = fromBundle;
+                return true;
+            }
+
+            var fromName = clip.Effects.Values.FirstOrDefault(e =>
+                IsCropEffect(e)
+                && string.Equals(e.Name, InternalCropID, StringComparison.Ordinal));
+            if (fromName != null)
+            {
+                effect = fromName;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static EffectImplementType ResolveConfiguredImplementType(IEffectFactory factory, EffectImplementType fallback)
+        {
+            var configured = EffectHelper.DefaultImplementsType.GetValueOrDefault(
+                $"{factory.FromPlugin}.{factory.TypeName}",
+                EffectImplementType.NotSpecified);
+
+            if (configured != EffectImplementType.NotSpecified && factory.SupportsImplementTypes.Contains(configured))
+            {
+                return configured;
+            }
+
+            return fallback;
         }
 
         private bool ShouldUseLegacyPlaceResizeEffects()
@@ -207,6 +351,16 @@ namespace projectFrameCut.DraftStuff
             if (clip.ClipType is not (ClipMode.VideoClip or ClipMode.PhotoClip))
             {
                 return false;
+            }
+
+            if (TryFindInternalCropEffect(clip, out var cropEffect))
+            {
+                if (TryGetCropSize(cropEffect, out var cropW, out var cropH))
+                {
+                    aspect = (double)cropW / cropH;
+                    return aspect > 0;
+                }
+                return false; // If there's a crop effect, we can't reliably get the source aspect ratio, so return false to let the caller handle it.
             }
 
             AssetItem? asset = null;
@@ -772,11 +926,64 @@ namespace projectFrameCut.DraftStuff
                 rotationDeg = rot.Angle;
             }
 
-            CropEffect_ImageSharp? existingCrop = null;
-            if (clip.Effects.TryGetValue(InternalCropID, out var cropEff) && cropEff is CropEffect_ImageSharp c)
+            IEffectBundle BuildDefaultCropBundle()
             {
-                existingCrop = c;
+                if (!EffectServices.GetAvailableEffectBundles().TryGetValue("Crop", out var cropBundleFactory))
+                {
+                    throw new KeyNotFoundException("Crop effect bundle factory not found.");
+                }
+
+                var bundle = cropBundleFactory();
+                bundle.Id = InternalCropBundleGuid;
+                bundle.Name = InternalCropID;
+                bundle.Enabled = false;
+                bundle.BindedInputId = IEffectBundle.InputAnchorGUID;
+                bundle.BindedOutputId = IEffectBundle.OutputAnchorGUID;
+                bundle.Parameters ??= new Dictionary<string, object>();
+                bundle.Parameters["StartX"] = 0;
+                bundle.Parameters["StartY"] = 0;
+                bundle.Parameters["Width"] = page.ProjectInfo.RelativeWidth;
+                bundle.Parameters["Height"] = page.ProjectInfo.RelativeHeight;
+                bundle.Parameters["Angle"] = 0f;
+                return bundle;
             }
+
+            IEffectBundle NormalizeCropBundle(IEffectBundle? source, IEffect? fallbackEffect)
+            {
+                var normalized = BuildDefaultCropBundle();
+
+                if (source != null && string.Equals(source.TypeName, "Crop", StringComparison.Ordinal))
+                {
+                    normalized.Enabled = source.Enabled;
+                    normalized.Parameters["StartX"] = Math.Max(0, ReadDictionaryIntValue(source.Parameters, "StartX", 0));
+                    normalized.Parameters["StartY"] = Math.Max(0, ReadDictionaryIntValue(source.Parameters, "StartY", 0));
+                    normalized.Parameters["Width"] = Math.Max(1, ReadDictionaryIntValue(source.Parameters, "Width", page.ProjectInfo.RelativeWidth));
+                    normalized.Parameters["Height"] = Math.Max(1, ReadDictionaryIntValue(source.Parameters, "Height", page.ProjectInfo.RelativeHeight));
+                    normalized.Parameters["Angle"] = ReadDictionaryFloatValue(source.Parameters, "Angle", 0f);
+                    return normalized;
+                }
+
+                if (fallbackEffect != null && IsCropEffect(fallbackEffect))
+                {
+                    normalized.Enabled = fallbackEffect.Enabled;
+                    normalized.Parameters["StartX"] = Math.Max(0, ReadEffectIntParameter(fallbackEffect, "StartX", 0));
+                    normalized.Parameters["StartY"] = Math.Max(0, ReadEffectIntParameter(fallbackEffect, "StartY", 0));
+                    normalized.Parameters["Width"] = Math.Max(1, ReadEffectIntParameter(fallbackEffect, "Width", page.ProjectInfo.RelativeWidth));
+                    normalized.Parameters["Height"] = Math.Max(1, ReadEffectIntParameter(fallbackEffect, "Height", page.ProjectInfo.RelativeHeight));
+                    normalized.Parameters["Angle"] = ReadEffectFloatParameter(fallbackEffect, "Angle", 0f);
+                }
+
+                return normalized;
+            }
+
+            IEffect? existingCropEffect = TryFindInternalCropEffect(clip, out var existingCropEffectValue)
+                ? existingCropEffectValue
+                : null;
+
+            clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+            clip.EffectBundles.TryGetValue(InternalCropBundleGuid, out var existingInternalCropBundle);
+            var currentCropBundle = NormalizeCropBundle(existingInternalCropBundle, existingCropEffect);
+            IEffectBundle previousCropPayload = currentCropBundle;
 
             var cropView = new ClipCropConfiguratorView
             {
@@ -785,20 +992,7 @@ namespace projectFrameCut.DraftStuff
                 Margin = new(8, 0, 8, 0),
             };
 
-            cropView.LoadFromEffect(existingCrop ?? new CropEffect_ImageSharp
-            {
-                Enabled = false,
-                StartX = 0,
-                StartY = 0,
-                Width = page.ProjectInfo.RelativeWidth,
-                Height = page.ProjectInfo.RelativeHeight,
-                RelativeWidth = page.ProjectInfo.RelativeWidth,
-                RelativeHeight = page.ProjectInfo.RelativeHeight,
-                Name = InternalCropID,
-                Id = InternalCropID,
-                Index = int.MinValue + 40,
-                ImplementType = EffectImplementType.ImageSharp
-            });
+            cropView.LoadFromBundle(currentCropBundle, existingCropEffect);
             cropView.RelativeWidth = page.ProjectInfo.RelativeWidth;
             cropView.RelativeHeight = page.ProjectInfo.RelativeHeight;
 
@@ -816,18 +1010,37 @@ namespace projectFrameCut.DraftStuff
                 .AddEntry("cropWidth", PPLocalizedResources._Width, cropView.CropWidth.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange)
                 .AddEntry("cropHeight", PPLocalizedResources._Height, cropView.CropHeight.ToString(), "1", e => e.Keyboard = Keyboard.Numeric, EntryUpdateEventCallMode.OnAnyTextChange);
 
-            cropView.ConfigurationChanged += (s, effect) =>
+            cropView.ConfigurationChanged += (s, bundle) =>
             {
                 clip.Effects ??= new Dictionary<string, IEffect>();
-                if (effect is CropEffect_ImageSharp crop)
+                clip.EffectBundles ??= new Dictionary<Guid, IEffectBundle>();
+
+                if (!string.Equals(bundle.TypeName, "Crop", StringComparison.Ordinal))
                 {
-                    crop.RelativeWidth = page.ProjectInfo.RelativeWidth;
-                    crop.RelativeHeight = page.ProjectInfo.RelativeHeight;
-                    clip.Effects[InternalCropID] = crop;
-                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("crop", crop, existingCrop));
-                    existingCrop = crop;
-                    SyncCropInputsFromView();
+                    return;
                 }
+
+                var normalized = NormalizeCropBundle(bundle, existingCropEffect);
+                clip.EffectBundles[InternalCropBundleGuid] = normalized;
+
+                // The internal crop now comes from bundle conversion to effect.
+                clip.Effects.Remove(InternalCropID);
+                RebuildAllEffects(clip);
+
+                if (TryFindInternalCropEffect(clip, out var rebuiltCrop))
+                {
+                    rebuiltCrop.RelativeWidth = page.ProjectInfo.RelativeWidth;
+                    rebuiltCrop.RelativeHeight = page.ProjectInfo.RelativeHeight;
+                    SyncOutputSizeFromCropIfNeeded(rebuiltCrop);
+                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("crop", rebuiltCrop, previousCropPayload));
+                }
+                else
+                {
+                    handler?.Invoke(s, new PropertyPanelPropertyChangedEventArgs("crop", normalized, previousCropPayload));
+                }
+
+                previousCropPayload = normalized;
+                SyncCropInputsFromView();
             };
 
             bool syncingCropInputs = false;
@@ -876,6 +1089,26 @@ namespace projectFrameCut.DraftStuff
                     Index = existingR?.Index ?? (int.MinValue + 50),
                     PreserveAspectRatio = existingR?.PreserveAspectRatio ?? !IsAllowFreeScaleResizeEnabled(clip)
                 };
+            }
+
+            void SyncOutputSizeFromCropIfNeeded(IEffect crop)
+            {
+                if (!crop.Enabled)
+                {
+                    return;
+                }
+
+                if (!TryGetCropSize(crop, out var cropW, out var cropH))
+                {
+                    return;
+                }
+
+                int croppedW = Math.Max(1, cropW);
+                int croppedH = Math.Max(1, cropH);
+
+                SetTransformEntryText("resizeW", croppedW);
+                SetTransformEntryText("resizeH", croppedH);
+                ApplyResizeToModelWithCurrentMode(croppedW, croppedH);
             }
 
             void SnapSizeBackToSourceAspectIfNeeded()
@@ -1815,16 +2048,18 @@ namespace projectFrameCut.DraftStuff
                 }
                 var bundleDict = sortedBundles.ToDictionary(b => b.Id, b => b);
                 var bundleParams = sortedBundles.ToDictionary(b => b.Id, bundleData => EffectArgsHelper.ConvertElementDictToObjectDict(bundleData.Parameters, bundleData.ParametersType));
-                var bundleFacts = sortedBundles.SelectMany(bundle => bundle.Create().Select(effect => (bundle, effect))).Select(c => (c.bundle.Id, c.effect));
-                var imps = EffectFactoryExtensions.DetermineEffectImplementTypes(bundleFacts.Select(c => c.effect).ToArray());
+                var bundleFacts = sortedBundles
+                    .SelectMany(bundle => bundle.Create().Select(effectFactory => (bundleId: bundle.Id, effectFactory)))
+                    .ToList();
+                var autoImps = EffectFactoryExtensions.DetermineEffectImplementTypes(bundleFacts.Select(c => c.effectFactory).ToArray());
                 var subIdxByBundle = new Dictionary<Guid, int>();
 
-                for (int i = 0; i < bundleFacts.Count(); i++)
+                for (int i = 0; i < bundleFacts.Count; i++)
                 {
-                    var bundleId = bundleFacts.ElementAt(i).Id;
-                    var fact = bundleFacts.ElementAt(i).effect;
+                    var bundleId = bundleFacts[i].bundleId;
+                    var fact = bundleFacts[i].effectFactory;
                     var bundleData = bundleDict[bundleId];
-                    var impType = imps[i];
+                    var impType = ResolveConfiguredImplementType(fact, autoImps[i]);
                     IEffect effect;
                     if (fact is IBindableEffectFactory be)
                     {
@@ -1837,10 +2072,23 @@ namespace projectFrameCut.DraftStuff
                     int subIdx = subIdxByBundle.ContainsKey(bundleId) ? subIdxByBundle[bundleId] : 0;
                     subIdxByBundle[bundleId] = subIdx + 1;
                     effect.Name = $"EffectBundle {bundleData.TypeName}({bundleData.Id}){Environment.NewLine} - Subeffect #{subIdx}";
-                    effect.Enabled = bundleData.BindedOutputId != IEffectBundle.NoConnectionGUID;
+                    effect.Enabled = bundleData.Enabled && bundleData.BindedOutputId != IEffectBundle.NoConnectionGUID;
                     effect.Index = globalIndex++;
                     effect.BindedEffectGroupID = bundleData.Id.ToString();
                     string key = $"{bundleData.Id}_{subIdx}";
+                    if (newEffects.TryGetValue(key, out var previousEffect))
+                    {
+                        if (effect.RelativeWidth <= 0 && previousEffect.RelativeWidth > 0)
+                        {
+                            effect.RelativeWidth = previousEffect.RelativeWidth;
+                        }
+
+                        if (effect.RelativeHeight <= 0 && previousEffect.RelativeHeight > 0)
+                        {
+                            effect.RelativeHeight = previousEffect.RelativeHeight;
+                        }
+                    }
+
                     if (effect is not IBindableArgumentEffect) effect.Id = Guid.NewGuid().ToString();
                     newEffects[key] = effect;
                 }

@@ -25,6 +25,8 @@ namespace projectFrameCut.LivePreview
         public uint TotalDuration;
         public string TempPath = string.Empty;
         public string? ProxyRoot;
+        public int ProjectRelativeWidth { get; set; }
+        public int ProjectRelativeHeight { get; set; }
         public event Action<double, TimeSpan>? OnProgressChanged;
 
         public bool IsFrameRendered(uint frameIndex)
@@ -52,8 +54,22 @@ namespace projectFrameCut.LivePreview
             {
                 LogDiagnostic($"[LiveRender] Generating frame #{frameIndex} ({frameHash})...");
             }
-            var layers = Timeline.GetFramesInOneFrame(Clips, frameIndex, targetWidth, targetHeight, true);
-            var pic = Timeline.MixtureLayers(layers, frameIndex, targetWidth, targetHeight, autoCenterImplicitClip: true);
+            var layers = Timeline.GetFramesInOneFrame(
+                Clips,
+                frameIndex,
+                targetWidth,
+                targetHeight,
+                forceResize: true,
+                projectRelativeWidth: ProjectRelativeWidth,
+                projectRelativeHeight: ProjectRelativeHeight);
+            var pic = Timeline.MixtureLayers(
+                layers,
+                frameIndex,
+                targetWidth,
+                targetHeight,
+                autoCenterImplicitClip: true,
+                projectRelativeWidth: ProjectRelativeWidth,
+                projectRelativeHeight: ProjectRelativeHeight);
             pic.SaveAsPng8bpp(destPath, encoder);
             return destPath;
         }
@@ -62,8 +78,22 @@ namespace projectFrameCut.LivePreview
         {
             ArgumentNullException.ThrowIfNull(Clips, "Clips");
             (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
-            var layers = Timeline.GetFramesInOneFrame(Clips, frameIndex, targetWidth, targetHeight, true);
-            var pic = Timeline.MixtureLayers(layers, frameIndex, targetWidth, targetHeight, autoCenterImplicitClip: true);
+            var layers = Timeline.GetFramesInOneFrame(
+                Clips,
+                frameIndex,
+                targetWidth,
+                targetHeight,
+                forceResize: true,
+                projectRelativeWidth: ProjectRelativeWidth,
+                projectRelativeHeight: ProjectRelativeHeight);
+            var pic = Timeline.MixtureLayers(
+                layers,
+                frameIndex,
+                targetWidth,
+                targetHeight,
+                autoCenterImplicitClip: true,
+                projectRelativeWidth: ProjectRelativeWidth,
+                projectRelativeHeight: ProjectRelativeHeight);
             return pic;
         }
 
@@ -217,6 +247,8 @@ namespace projectFrameCut.LivePreview
                 Use16Bit = false,
                 AutoCenterImplicitClip = true,
                 MaxThreads = 1,
+                ProjectRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : targetWidth,
+                ProjectRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : targetHeight,
 
             };
             renderer.PrepareRender(token);

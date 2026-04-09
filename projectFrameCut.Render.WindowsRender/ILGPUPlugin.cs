@@ -47,7 +47,9 @@ namespace projectFrameCut.Render.WindowsRender
             {
                 {"OverlayComputer", new(() => new OverlayComputer(accelerators,null)) },
                 {"RemoveColorComputer", new(() => new RemoveColorComputer(accelerators,null)) },
-                {"ResizeComputer", new(() => new ResizeComputer(accelerators,null)) }
+                {"ResizeComputer", new(() => new ResizeComputer(accelerators,null)) },
+                {"CropComputer", new(() => new CropComputer(accelerators,null)) },
+                {"PlaceComputer", new(() => new PlaceComputer(accelerators,null)) }
             };
 
 

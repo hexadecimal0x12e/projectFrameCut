@@ -22,6 +22,8 @@ namespace projectFrameCut.Render.Benchmark
 
         public uint DurationWritten => _index;
 
+        public IPicture.PicturePixelMode? TargetPPB => null;
+
         public event EventHandler<IPicture>? OnFrameWrite;
 
         public void Append(IPicture<ushort> picture)

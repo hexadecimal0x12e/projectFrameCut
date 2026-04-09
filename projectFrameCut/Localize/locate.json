@@ -21,6 +21,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "_Back",
+        "Value": "\u8FD4\u56DE",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "_Cancel",
         "Value": "\u53D6\u6D88",
         "Mode": "ConstString",
@@ -102,6 +110,14 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u7FFB\u8BD1\u65F6\uFF0C\u8BF7\u6309\u7167\u4E0B\u5217\u683C\u5F0F\u8F93\u51FA\u7ED3\u679C\uFF1A\r\u76EE\u6807\u8BED\u8A00\u5728\u76EE\u6807\u8BED\u8A00\u7684\u540D\u5B57 / \u76EE\u6807\u8BED\u8A00\u5728\u82F1\u8BED\uFF08\u82F1\u56FD\uFF09\u7684\u540D\u5B57\uFF0C\r\u6BD4\u5982\u5F53TargetLanguage\u662F\u0022ja-JP\u0022\u65F6\u8F93\u51FA \u201C\u65E5\u672C\u8A9E / Japanese\u201D\u3001\rTargetLanguage\u662F\u0022fr-FR\u0022\u65F6\u8F93\u51FA \u201CFran\u00E7ais / French\u201D\uFF0C\u4EE5\u6B64\u7C7B\u63A8\u3002",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "\u4E0B\u4E00\u6B65",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {
@@ -705,6 +721,212 @@
         "ArgsComment": [
           {
             "Key": "assetType",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipAdded",
+        "Value": "\u6DFB\u52A0\u4E86\u300C{clip}\u300D\u5230\u8F68\u9053\u4E0A",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipDeleted",
+        "Value": "\u5220\u9664\u4E86\u300C{clip}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipGrouped",
+        "Value": "\u7EC4\u5408\u4E86\u300C{clip}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipItselfMove",
+        "Value": "\u79FB\u52A8\u4E86\u300C{clip}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPasted",
+        "Value": "\u7C98\u8D34\u4E86\u300C{clip}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "\u4FEE\u6539\u4E86\u300C{clip}\u300D\u7684\u5927\u5C0F",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipResized",
+        "Value": "\u8C03\u8282\u4E86\u300C{clip}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipUngrouped",
+        "Value": "\u53D6\u6D88\u7EC4\u5408\u4E86\u300C{clip}\u300D",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_PropertyChanged",
+        "Value": "\u53D8\u66F4\u4E86\u300C{clip}\u300D\u7684\u300C{prop}\u300D\u5C5E\u6027",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          },
+          {
+            "Key": "string",
+            "Value": "prop"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          },
+          {
+            "Key": "prop",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_TrackAdd",
+        "Value": "\u6DFB\u52A0\u4E86\u8F68\u9053",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_Unknown",
+        "Value": "\u5BF9\u300C{clip}\u300D\u7684\u672A\u77E5\u64CD\u4F5C",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
             "Value": ""
           }
         ],
@@ -1868,6 +2090,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "\u914D\u7F6E\u9884\u89C8",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "DraftPage_MenuBar_Edit_Conform",
         "Value": "\u5B8C\u6210\u64CD\u4F5C",
         "Mode": "ConstString",
@@ -1910,6 +2140,14 @@
       {
         "Id": "DraftPage_MenuBar_Edit_Goto",
         "Value": "\u8F6C\u5230",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_History",
+        "Value": "\u5386\u53F2\u8BB0\u5F55",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4042,6 +4280,40 @@
         "DontTranslate": false
       },
       {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "\u5DF2\u5B8C\u6210 {p:p2}, \u9884\u8BA1\u8FD8\u5269 {eta}, \u5E73\u5747 {spf} \u79D2\u6BCF\u5E27",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "DontTranslate": false
+      },
+      {
         "Id": "RenderPage_MaxParallelThreadsCount",
         "Value": "\u5E76\u53D1\u6570: {num}",
         "Mode": "InterpolationString",
@@ -4614,6 +4886,22 @@
         "DontTranslate": false
       },
       {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "\u6B65\u9AA4 1/2\uFF1A\u9009\u62E9\u8981\u6316\u7A7A\u7684\u7247\u6BB5\u4E0E\u5176\u5B57\u6BB5",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "\u6B65\u9AA4 2\uFF1A\u914D\u7F6E\u6BCF\u4E2A\u6316\u7A7A\u53D8\u91CF\u7684\u5C5E\u6027",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "TemplateExtractPage_Stats_NoFieldSelected",
         "Value": "\u672A\u9009\u62E9\u5B57\u6BB5",
         "Mode": "ConstString",
@@ -4624,6 +4912,38 @@
       {
         "Id": "TemplateExtractPage_Title",
         "Value": "\u5BFC\u51FA JSON \u6A21\u677F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "\u53D8\u91CF\u63CF\u8FF0\uFF08\u53EF\u9009\uFF09",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "\u663E\u793A\u7ED9\u7528\u6237\u7684\u89E3\u91CA",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "\u663E\u793A\u540D\u79F0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "\u663E\u793A\u7ED9\u7528\u6237\u7684\u53CB\u597D\u540D\u79F0",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4910,217 +5230,19 @@
         "DontTranslate": false
       },
       {
-        "Id": "ClipUpdateReason_ClipItselfMove",
-        "Value": "\u79FB\u52A8\u4E86\u300C{clip}\u300D",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "clip"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "clip",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "ClipUpdateReason_ClipResized",
-        "Value": "\u8C03\u8282\u4E86\u300C{clip}\u300D",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "clip"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "clip",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "ClipUpdateReason_TrackAdd",
-        "Value": "\u6DFB\u52A0\u4E86\u8F68\u9053",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "clip"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "clip",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "ClipUpdateReason_ClipAdded",
-        "Value": "\u6DFB\u52A0\u4E86\u300C{clip}\u300D\u5230\u8F68\u9053\u4E0A",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "clip"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "clip",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "ClipUpdateReason_ClipDeleted",
-        "Value": "\u5220\u9664\u4E86\u300C{clip}\u300D",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "clip"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "clip",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "ClipUpdateReason_ClipPasted",
-        "Value": "\u7C98\u8D34\u4E86\u300C{clip}\u300D",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "clip"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "clip",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "ClipUpdateReason_ClipGrouped",
-        "Value": "\u7EC4\u5408\u4E86\u300C{clip}\u300D",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "clip"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "clip",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "ClipUpdateReason_ClipUngrouped",
-        "Value": "\u53D6\u6D88\u7EC4\u5408\u4E86\u300C{clip}\u300D",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "clip"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "clip",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "ClipUpdateReason_Unknown",
-        "Value": "\u5BF9\u300C{clip}\u300D\u7684\u672A\u77E5\u64CD\u4F5C",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "clip"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "clip",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "ClipUpdateReason_PropertyChanged",
-        "Value": "\u53D8\u66F4\u4E86\u300C{clip}\u300D\u7684\u300C{prop}\u300D\u5C5E\u6027",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "clip"
-          },
-          {
-            "Key": "string",
-            "Value": "prop"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "clip",
-            "Value": ""
-          },
-          {
-            "Key": "prop",
-            "Value": ""
-          }
-        ],
-        "DontTranslate": false
-      },
-      {
-        "Id": "DraftPage_MenuBar_Edit_History",
-        "Value": "\u5386\u53F2\u8BB0\u5F55",
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "\u5728\u4E0B\u9762\u9009\u62E9\u4E00\u4E2A\u6A21\u677F\uFF0C\u6765\u6DFB\u52A0\u5230\u9879\u76EE\u4E2D\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
       },
       {
-        "Id": "ClipUpdateReason_ClipPositionMoved",
-        "Value": "\u4FEE\u6539\u4E86\u300C{clip}\u300D\u7684\u5927\u5C0F",
-        "Mode": "InterpolationString",
-        "Args": [
-          {
-            "Key": "string",
-            "Value": "clip"
-          }
-        ],
-        "ArgsComment": [
-          {
-            "Key": "clip",
-            "Value": ""
-          }
-        ],
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "\u4E0D\u8981\u4F5C\u4E3A\u590D\u5408\u7247\u6BB5\u6DFB\u52A0",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       }
     ],
@@ -10682,6 +10804,159 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "Unset localization item:ClipUpdateReason_ClipPositionMoved(string clip: {clip})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "Unset localization item:TemplateExtractPage_Stage1()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "Unset localization item:TemplateExtractPage_Stage2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "Unset localization item:_Next()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Back",
+        "Value": "Unset localization item:_Back()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_ConfigurePreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "Unset localization item:RenderPage_LongStat_SecondPerFrame(double p: {p}, string eta: {eta}, string spf: {spf})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_NotAsGroup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "zh-TW": [
@@ -16236,6 +16511,159 @@
       {
         "Id": "DraftPage_MenuBar_Edit_History",
         "Value": "Unset localization item:DraftPage_MenuBar_Edit_History()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "Unset localization item:ClipUpdateReason_ClipPositionMoved(string clip: {clip})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "Unset localization item:TemplateExtractPage_Stage1()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "Unset localization item:TemplateExtractPage_Stage2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "Unset localization item:_Next()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Back",
+        "Value": "Unset localization item:_Back()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_ConfigurePreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "Unset localization item:RenderPage_LongStat_SecondPerFrame(double p: {p}, string eta: {eta}, string spf: {spf})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_NotAsGroup()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -21806,6 +22234,159 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "Unset localization item:ClipUpdateReason_ClipPositionMoved(string clip: {clip})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "Unset localization item:TemplateExtractPage_Stage1()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "Unset localization item:TemplateExtractPage_Stage2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "Unset localization item:_Next()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Back",
+        "Value": "Unset localization item:_Back()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_ConfigurePreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "Unset localization item:RenderPage_LongStat_SecondPerFrame(double p: {p}, string eta: {eta}, string spf: {spf})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_NotAsGroup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "ko-KR": [
@@ -27371,6 +27952,159 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "Unset localization item:ClipUpdateReason_ClipPositionMoved(string clip: {clip})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "Unset localization item:TemplateExtractPage_Stage1()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "Unset localization item:TemplateExtractPage_Stage2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "Unset localization item:_Next()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Back",
+        "Value": "Unset localization item:_Back()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_ConfigurePreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "Unset localization item:RenderPage_LongStat_SecondPerFrame(double p: {p}, string eta: {eta}, string spf: {spf})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_NotAsGroup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -32926,6 +33660,159 @@
       {
         "Id": "DraftPage_MenuBar_Edit_History",
         "Value": "Unset localization item:DraftPage_MenuBar_Edit_History()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "Unset localization item:ClipUpdateReason_ClipPositionMoved(string clip: {clip})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "Unset localization item:TemplateExtractPage_Stage1()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "Unset localization item:TemplateExtractPage_Stage2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "Unset localization item:_Next()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Back",
+        "Value": "Unset localization item:_Back()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_ConfigurePreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "Unset localization item:RenderPage_LongStat_SecondPerFrame(double p: {p}, string eta: {eta}, string spf: {spf})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_NotAsGroup()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -38489,6 +39376,159 @@
       {
         "Id": "DraftPage_MenuBar_Edit_History",
         "Value": "Unset localization item:DraftPage_MenuBar_Edit_History()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "Unset localization item:ClipUpdateReason_ClipPositionMoved(string clip: {clip})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "Unset localization item:TemplateExtractPage_Stage1()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "Unset localization item:TemplateExtractPage_Stage2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "Unset localization item:_Next()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Back",
+        "Value": "Unset localization item:_Back()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_ConfigurePreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "Unset localization item:RenderPage_LongStat_SecondPerFrame(double p: {p}, string eta: {eta}, string spf: {spf})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_NotAsGroup()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -44059,6 +45099,159 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "Unset localization item:ClipUpdateReason_ClipPositionMoved(string clip: {clip})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "Unset localization item:TemplateExtractPage_Stage1()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "Unset localization item:TemplateExtractPage_Stage2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "Unset localization item:_Next()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Back",
+        "Value": "Unset localization item:_Back()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_ConfigurePreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "Unset localization item:RenderPage_LongStat_SecondPerFrame(double p: {p}, string eta: {eta}, string spf: {spf})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_NotAsGroup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "de-DE": [
@@ -49619,6 +50812,159 @@
       {
         "Id": "DraftPage_MenuBar_Edit_History",
         "Value": "Unset localization item:DraftPage_MenuBar_Edit_History()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "Unset localization item:ClipUpdateReason_ClipPositionMoved(string clip: {clip})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "Unset localization item:TemplateExtractPage_Stage1()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "Unset localization item:TemplateExtractPage_Stage2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "Unset localization item:_Next()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Back",
+        "Value": "Unset localization item:_Back()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_ConfigurePreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "Unset localization item:RenderPage_LongStat_SecondPerFrame(double p: {p}, string eta: {eta}, string spf: {spf})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_NotAsGroup()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -55189,6 +56535,159 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "Unset localization item:ClipUpdateReason_ClipPositionMoved(string clip: {clip})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "Unset localization item:TemplateExtractPage_Stage1()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "Unset localization item:TemplateExtractPage_Stage2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "Unset localization item:_Next()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Back",
+        "Value": "Unset localization item:_Back()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_ConfigurePreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "Unset localization item:RenderPage_LongStat_SecondPerFrame(double p: {p}, string eta: {eta}, string spf: {spf})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_NotAsGroup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "it-IT": [
@@ -60749,6 +62248,159 @@
       {
         "Id": "DraftPage_MenuBar_Edit_History",
         "Value": "Unset localization item:DraftPage_MenuBar_Edit_History()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "Unset localization item:ClipUpdateReason_ClipPositionMoved(string clip: {clip})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "Unset localization item:TemplateExtractPage_Stage1()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "Unset localization item:TemplateExtractPage_Stage2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "Unset localization item:_Next()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Back",
+        "Value": "Unset localization item:_Back()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_ConfigurePreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "Unset localization item:RenderPage_LongStat_SecondPerFrame(double p: {p}, string eta: {eta}, string spf: {spf})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_NotAsGroup()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -66319,6 +67971,159 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "Unset localization item:ClipUpdateReason_ClipPositionMoved(string clip: {clip})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "Unset localization item:TemplateExtractPage_Stage1()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "Unset localization item:TemplateExtractPage_Stage2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "Unset localization item:_Next()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Back",
+        "Value": "Unset localization item:_Back()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_ConfigurePreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "Unset localization item:RenderPage_LongStat_SecondPerFrame(double p: {p}, string eta: {eta}, string spf: {spf})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_NotAsGroup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "pt-BR": [
@@ -71879,6 +73684,159 @@
       {
         "Id": "DraftPage_MenuBar_Edit_History",
         "Value": "Unset localization item:DraftPage_MenuBar_Edit_History()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "Unset localization item:ClipUpdateReason_ClipPositionMoved(string clip: {clip})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "Unset localization item:TemplateExtractPage_Stage1()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "Unset localization item:TemplateExtractPage_Stage2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "Unset localization item:_Next()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Back",
+        "Value": "Unset localization item:_Back()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_ConfigurePreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "Unset localization item:RenderPage_LongStat_SecondPerFrame(double p: {p}, string eta: {eta}, string spf: {spf})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_NotAsGroup()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -77449,6 +79407,159 @@
         "ArgsComment": [],
         "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "Unset localization item:ClipUpdateReason_ClipPositionMoved(string clip: {clip})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "Unset localization item:TemplateExtractPage_Stage1()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "Unset localization item:TemplateExtractPage_Stage2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "Unset localization item:_Next()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Back",
+        "Value": "Unset localization item:_Back()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_ConfigurePreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "Unset localization item:RenderPage_LongStat_SecondPerFrame(double p: {p}, string eta: {eta}, string spf: {spf})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_NotAsGroup()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -83009,6 +85120,159 @@
       {
         "Id": "DraftPage_MenuBar_Edit_History",
         "Value": "Unset localization item:DraftPage_MenuBar_Edit_History()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "ClipUpdateReason_ClipPositionMoved",
+        "Value": "Unset localization item:ClipUpdateReason_ClipPositionMoved(string clip: {clip})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "string",
+            "Value": "clip"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "clip",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage1",
+        "Value": "Unset localization item:TemplateExtractPage_Stage1()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_Stage2",
+        "Value": "Unset localization item:TemplateExtractPage_Stage2()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDisplayName_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDisplayName_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "TemplateExtractPage_VariableDesc_Sub",
+        "Value": "Unset localization item:TemplateExtractPage_VariableDesc_Sub()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Next",
+        "Value": "Unset localization item:_Next()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "_Back",
+        "Value": "Unset localization item:_Back()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_MenuBar_Edit_ConfigurePreview",
+        "Value": "Unset localization item:DraftPage_MenuBar_Edit_ConfigurePreview()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "RenderPage_LongStat_SecondPerFrame",
+        "Value": "Unset localization item:RenderPage_LongStat_SecondPerFrame(double p: {p}, string eta: {eta}, string spf: {spf})",
+        "Mode": "InterpolationString",
+        "Args": [
+          {
+            "Key": "double",
+            "Value": "p"
+          },
+          {
+            "Key": "string",
+            "Value": "eta"
+          },
+          {
+            "Key": "string",
+            "Value": "spf"
+          }
+        ],
+        "ArgsComment": [
+          {
+            "Key": "p",
+            "Value": ""
+          },
+          {
+            "Key": "eta",
+            "Value": ""
+          },
+          {
+            "Key": "fps",
+            "Value": ""
+          }
+        ],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_Hint",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_Hint()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
+      },
+      {
+        "Id": "DraftPage_AssetPanel_Templates_NotAsGroup",
+        "Value": "Unset localization item:DraftPage_AssetPanel_Templates_NotAsGroup()",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

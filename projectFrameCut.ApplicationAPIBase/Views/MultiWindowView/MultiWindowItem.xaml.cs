@@ -1167,20 +1167,20 @@ namespace projectFrameCut.ApplicationAPIBase.Views.MultiWindowView
             {
                 newWindow.Destroying += (s, e) =>
                 {
-                    CloseClicked.Invoke(s, new());
+                    CloseClicked?.Invoke(s, new());
                 };
             }
+#if WINDOWS
 
             newWindow.HandlerChanged += (s, e) =>
             {
-#if WINDOWS
                 var platformView = newWindow.Handler?.PlatformView;
                 if (platformView is Microsoft.UI.Xaml.Window nativeWindow)
                 {
                     nativeWindow.SystemBackdrop = new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop();
                 }
+        };
 #endif
-            };
 
             // 8. Open the window
             Application.Current?.OpenWindow(newWindow);

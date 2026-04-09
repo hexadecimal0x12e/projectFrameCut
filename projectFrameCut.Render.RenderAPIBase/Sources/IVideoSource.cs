@@ -117,6 +117,7 @@ namespace projectFrameCut.Render.RenderAPIBase.Sources
         public string CodecName { get; set; }
         public string PixelFormat { get; set; }
         public uint DurationWritten { get; }
+        public IPicture.PicturePixelMode? TargetPPB { get; }
 
         public void Initialize();
         public virtual bool TryInitialize()

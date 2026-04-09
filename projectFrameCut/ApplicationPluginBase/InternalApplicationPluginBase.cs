@@ -21,6 +21,7 @@ namespace projectFrameCut.ApplicationPluginBase
             { "Jitter", () => new Effect.JitterEffectBundle() },
             { "Movement", () => new Effect.MovementEffectBundle()  },
             { "Blur", () => new Effect.BlurEffectBundle() },
+            {"Crop", () => new Effect.CropEffectBundle() }
         };
 
         public int AppLevelPluginAPIVersion => IApplicationPluginBase.CurrentAppLevelPluginAPIVersion;

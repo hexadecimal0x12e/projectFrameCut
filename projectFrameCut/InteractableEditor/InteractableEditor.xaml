@@ -4,24 +4,43 @@
              x:Class="projectFrameCut.InteractableEditor.InteractableEditor"
              BackgroundColor="Transparent"
              InputTransparent="False">
-    <AbsoluteLayout x:Name="EditorCanvas" BackgroundColor="Transparent" InputTransparent="False" ZIndex="100">
-        <Border x:Name="RenderRectVisual"
-            IsVisible="False"
-            Stroke="#80ffffff"
-            Background="#000000"
-            StrokeThickness="2"
-            BackgroundColor="Transparent"
-            InputTransparent="True"
-            ZIndex="100"
-            AbsoluteLayout.LayoutFlags="None">
-        </Border>
+    <Grid BackgroundColor="Transparent"
+          InputTransparent="False">
+         <Image x:Name="PreviewOverlayImage"
+             x:FieldModifier="public"
+               BackgroundColor="#112233"
+               Aspect="AspectFit"
+               InputTransparent="True"
+               IsVisible="True"
+               HorizontalOptions="Fill"
+               VerticalOptions="Fill" />
 
-        <AbsoluteLayout x:Name="ClipStatesHost"
+        <ContentView x:Name="LivePreviewerHost"
+                x:FieldModifier="public"
+                     HorizontalOptions="Fill"
+                     VerticalOptions="Fill"
+                     BackgroundColor="Transparent"
+                     InputTransparent="True" />
+
+        <AbsoluteLayout x:Name="EditorCanvas" BackgroundColor="Transparent" InputTransparent="False" ZIndex="100">
+            <Border x:Name="RenderRectVisual"
+                IsVisible="False"
+                Stroke="#80ffffff"
+                Background="#000000"
+                StrokeThickness="2"
                 BackgroundColor="Transparent"
-                InputTransparent="False"
-                ZIndex="101"
-                AbsoluteLayout.LayoutFlags="None" />
-        
-        <Label x:Name="MeasurementLabel" IsVisible="True" Opacity="0" InputTransparent="True" LineBreakMode="NoWrap" HorizontalOptions="Start" VerticalOptions="Start"/>
-    </AbsoluteLayout>
+                InputTransparent="True"
+                ZIndex="100"
+                AbsoluteLayout.LayoutFlags="None">
+            </Border>
+
+            <AbsoluteLayout x:Name="ClipStatesHost"
+                    BackgroundColor="Transparent"
+                    InputTransparent="False"
+                    ZIndex="101"
+                    AbsoluteLayout.LayoutFlags="None" />
+
+            <Label x:Name="MeasurementLabel" IsVisible="True" Opacity="0" InputTransparent="True" LineBreakMode="NoWrap" HorizontalOptions="Start" VerticalOptions="Start"/>
+        </AbsoluteLayout>
+    </Grid>
 </ContentView>

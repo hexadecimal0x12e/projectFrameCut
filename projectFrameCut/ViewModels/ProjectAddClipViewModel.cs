@@ -116,6 +116,19 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         }
     } = false;
 
+    public bool NotAddTemplateAsGroup
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                OnPropertyChanged();
+            }
+        }
+    } = false;
+
     public string AIPrompt
     {
         get;

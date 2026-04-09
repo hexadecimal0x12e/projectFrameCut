@@ -116,10 +116,13 @@ namespace projectFrameCut.Helper
                         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
                         Application.EnableVisualStyles();
                         Application.SetCompatibleTextRenderingDefault(false);
-                        Application.Run(new CrashForm());
+                        Application.Run(new CrashForm(false));
                         return;
                     case "crashHandler":
-                        CrashHandler.CrashHandlerMain(args.Skip(1).ToArray());
+                        Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+                        Application.EnableVisualStyles();
+                        Application.SetCompatibleTextRenderingDefault(false);
+                        Application.Run(new CrashForm(true, args.Skip(1).ToArray()));
                         return;
                 }
             }

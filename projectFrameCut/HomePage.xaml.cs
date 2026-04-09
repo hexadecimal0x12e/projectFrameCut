@@ -852,7 +852,7 @@ public partial class HomePage : ContentPage
                                 {
                                     plugin.InjectUI(page);
                                     var name = plugin.ReadLocalizationItem("_PluginBase_Name_", Localized._LocaleId_) ?? plugin.Name;
-                                    var items = plugin.GetMenuItems(page.MainMultiWindowView);
+                                    var items = plugin.GetMenuItems(page);
                                     var sub = new MenuFlyoutSubItem { Text = name, IsEnabled = items.Any() };
                                     items.ForEach(c => sub.Add(c));
                                     page.ExtensionsMenuBar.Add(sub);
@@ -1138,7 +1138,7 @@ public partial class HomePage : ContentPage
             IPicture.DiagImagePath = null;
             PictureProcesser.SaveDiagResult = false;
         }
-
+        IPicture.AllowPixelModeDowngrade = !SettingsManager.IsBoolSettingTrue("render_DisallowPictureModeDowngrade");
         PictureProcesser.EnableLogProcessStack = !SettingsManager.IsSettingExists("diag_EnableProcessStack") || SettingsManager.IsBoolSettingTrue("diag_EnableProcessStack");
         PictureLifecycleTracker.Enabled = SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject");
 #if DEBUG

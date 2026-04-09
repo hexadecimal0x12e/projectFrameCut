@@ -1,6 +1,8 @@
+using projectFrameCut.ApplicationPluginBase.Effect;
 using projectFrameCut.Render.Effect;
 using projectFrameCut.Render.RenderAPIBase.EffectAndMixture;
 using projectFrameCut.Shared;
+using System.Text.Json;
 
 namespace projectFrameCut.InteractableEditor;
 
@@ -42,7 +44,8 @@ public partial class ClipCropConfiguratorView : ContentView
 	private static readonly TimeSpan DragNotifyInterval = TimeSpan.FromMilliseconds(50);
 
     private int _effectIndex;
-	private EffectImplementType _implementType = EffectImplementType.ImageSharp;
+	private EffectImplementType _implementType = EffectImplementType.NotSpecified;
+	private Guid _bundleId = Guid.NewGuid();
 
 	public static readonly BindableProperty EnabledProperty = BindableProperty.Create(
 		nameof(Enabled),
@@ -108,7 +111,7 @@ public partial class ClipCropConfiguratorView : ContentView
 		BindingMode.TwoWay,
 		propertyChanged: OnAnyBindablePropertyChanged);
 
-	public event EventHandler<IEffect>? ConfigurationChanged;
+	public event EventHandler<projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle>? ConfigurationChanged;
 
 	public bool Enabled
 	{
@@ -168,12 +171,120 @@ public partial class ClipCropConfiguratorView : ContentView
 		ValidateAndNotify();
 	}
 
-	public void LoadFromEffect(CropEffect_ImageSharp? effect)
+	private static int ReadIntValue(object? raw, int fallback)
+	{
+		if (raw is null)
+		{
+			return fallback;
+		}
+
+		if (raw is int i)
+		{
+			return i;
+		}
+
+		if (raw is long l)
+		{
+			return (int)Math.Clamp(l, int.MinValue, int.MaxValue);
+		}
+
+		if (raw is JsonElement je)
+		{
+			if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out var n))
+			{
+				return n;
+			}
+
+			if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out var parsedFromString))
+			{
+				return parsedFromString;
+			}
+		}
+
+		return int.TryParse(raw.ToString(), out var parsed) ? parsed : fallback;
+	}
+
+	private static float ReadFloatValue(object? raw, float fallback)
+	{
+		if (raw is null)
+		{
+			return fallback;
+		}
+
+		if (raw is float f)
+		{
+			return f;
+		}
+
+		if (raw is double d)
+		{
+			return (float)d;
+		}
+
+		if (raw is JsonElement je)
+		{
+			if (je.ValueKind == JsonValueKind.Number && je.TryGetSingle(out var n))
+			{
+				return n;
+			}
+
+			if (je.ValueKind == JsonValueKind.String && float.TryParse(je.GetString(), out var parsedFromString))
+			{
+				return parsedFromString;
+			}
+		}
+
+		return float.TryParse(raw.ToString(), out var parsed) ? parsed : fallback;
+	}
+
+	private static int ReadIntParameter(IReadOnlyDictionary<string, object>? parameters, string key, int fallback)
+	{
+		if (parameters != null && parameters.TryGetValue(key, out var raw))
+		{
+			return ReadIntValue(raw, fallback);
+		}
+
+		return fallback;
+	}
+
+	private static float ReadFloatParameter(IReadOnlyDictionary<string, object>? parameters, string key, float fallback)
+	{
+		if (parameters != null && parameters.TryGetValue(key, out var raw))
+		{
+			return ReadFloatValue(raw, fallback);
+		}
+
+		return fallback;
+	}
+
+	public void LoadFromBundle(projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle? bundle, IEffect? fallbackEffect = null)
+	{
+		if (bundle is null || !string.Equals(bundle.TypeName, "Crop", StringComparison.Ordinal))
+		{
+			LoadFromEffect(fallbackEffect);
+			return;
+		}
+
+		_bundleId = bundle.Id == Guid.Empty ? _bundleId : bundle.Id;
+		_effectIndex = fallbackEffect?.Index ?? 0;
+		_implementType = fallbackEffect?.ImplementType ?? EffectImplementType.NotSpecified;
+
+		Enabled = bundle.Enabled;
+		StartX = Math.Max(0, ReadIntParameter(bundle.Parameters, "StartX", 0));
+		StartY = Math.Max(0, ReadIntParameter(bundle.Parameters, "StartY", 0));
+		CropWidth = Math.Max(1, ReadIntParameter(bundle.Parameters, "Width", 1));
+		CropHeight = Math.Max(1, ReadIntParameter(bundle.Parameters, "Height", 1));
+		RelativeWidth = Math.Max(0, fallbackEffect?.RelativeWidth ?? RelativeWidth);
+		RelativeHeight = Math.Max(0, fallbackEffect?.RelativeHeight ?? RelativeHeight);
+		Angle = ReadFloatParameter(bundle.Parameters, "Angle", 0f);
+	}
+
+	public void LoadFromEffect(IEffect? effect)
 	{
 		if (effect is null)
 		{
 			_effectIndex = 0;
-			_implementType = EffectImplementType.ImageSharp;
+			_implementType = EffectImplementType.NotSpecified;
 			Enabled = true;
 			StartX = 0;
 			StartY = 0;
@@ -185,36 +296,70 @@ public partial class ClipCropConfiguratorView : ContentView
 			return;
 		}
 
+
+		if (!string.Equals(effect.TypeName, "Crop", StringComparison.Ordinal))
+		{
+			LoadFromEffect((IEffect?)null);
+			return;
+		}
+
 		_effectIndex = effect.Index;
 		_implementType = effect.ImplementType;
 
 		Enabled = effect.Enabled;
-		StartX = effect.StartX;
-		StartY = effect.StartY;
-		CropWidth = effect.Width;
-		CropHeight = effect.Height;
-		RelativeWidth = effect.RelativeWidth;
-		RelativeHeight = effect.RelativeHeight;
-		Angle = effect.Angle;
+		StartX = Math.Max(0, ReadIntParameter(effect.Parameters, "StartX", 0));
+		StartY = Math.Max(0, ReadIntParameter(effect.Parameters, "StartY", 0));
+		CropWidth = Math.Max(1, ReadIntParameter(effect.Parameters, "Width", 1));
+		CropHeight = Math.Max(1, ReadIntParameter(effect.Parameters, "Height", 1));
+		RelativeWidth = Math.Max(0, effect.RelativeWidth);
+		RelativeHeight = Math.Max(0, effect.RelativeHeight);
+		Angle = ReadFloatParameter(effect.Parameters, "Angle", 0f);
+	}
+
+	public void LoadFromEffect(CropEffect_ImageSharp? effect) => LoadFromEffect((IEffect?)effect);
+
+	public void LoadFromEffect(CropEffect_HwAccel? effect) => LoadFromEffect((IEffect?)effect);
+
+	public projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle BuildEffectBundle(Guid? bundleId = null)
+	{
+		_bundleId = bundleId ?? (_bundleId == Guid.Empty ? Guid.NewGuid() : _bundleId);
+		return new CropEffectBundle
+		{
+			Id = _bundleId,
+			Enabled = Enabled,
+			Name = InternalCropKey,
+			BindedInputId = projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle.InputAnchorGUID,
+			BindedOutputId = projectFrameCut.ApplicationAPIBase.Effect.IEffectBundle.OutputAnchorGUID,
+			Parameters = new Dictionary<string, object>
+			{
+				{ "StartX", Math.Max(0, StartX) },
+				{ "StartY", Math.Max(0, StartY) },
+				{ "Width", Math.Max(1, CropWidth) },
+				{ "Height", Math.Max(1, CropHeight) },
+				{ "Angle", Angle }
+			}
+		};
 	}
 
 	public IEffect BuildEffect(EffectImplementType? implementType = null)
 	{
-		return new CropEffect_ImageSharp
+		var bundle = BuildEffectBundle();
+		var factory = new CropEffectFactory();
+		var actualImplementType = implementType ?? _implementType;
+		if (actualImplementType != EffectImplementType.NotSpecified
+			&& Array.IndexOf(factory.SupportsImplementTypes, actualImplementType) < 0)
 		{
-			Enabled = Enabled,
-			StartX = Math.Max(0, StartX),
-			StartY = Math.Max(0, StartY),
-			Width = Math.Max(1, CropWidth),
-			Height = Math.Max(1, CropHeight),
-			RelativeWidth = Math.Max(0, RelativeWidth),
-			RelativeHeight = Math.Max(0, RelativeHeight),
-			Angle = Angle,
-			Name = InternalCropKey,
-			ImplementType = implementType ?? _implementType,
-			Index = _effectIndex,
-			Id = InternalCropKey
-        };
+			actualImplementType = EffectImplementType.NotSpecified;
+		}
+
+		var effect = factory.Build(actualImplementType, bundle.Parameters);
+		effect.Enabled = Enabled;
+		effect.RelativeWidth = Math.Max(0, RelativeWidth);
+		effect.RelativeHeight = Math.Max(0, RelativeHeight);
+		effect.Name = InternalCropKey;
+		effect.Index = _effectIndex;
+		effect.Id = InternalCropKey;
+		return effect;
 	}
 
 	private static void OnAnyBindablePropertyChanged(BindableObject bindable, object oldValue, object newValue)
@@ -278,7 +423,7 @@ public partial class ClipCropConfiguratorView : ContentView
             SummaryLabel.Text = $"({StartX}, {StartY}) {CropWidth} x {CropHeight}  {Angle:0.#}°";
         }
 
-		ConfigurationChanged?.Invoke(this, BuildEffect());
+		ConfigurationChanged?.Invoke(this, BuildEffectBundle());
 	}
 
 	private void EnabledSwitch_Toggled(object? sender, ToggledEventArgs e)

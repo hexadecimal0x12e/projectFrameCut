@@ -11,40 +11,6 @@ namespace projectFrameCut.Helper
         private static readonly object _handlerLock = new();
         private static string? _handlerProjectPath;
 
-        public static void CrashHandlerMain(string[] args)
-        {
-            if (!OperatingSystem.IsWindows()) return;
-            if (args.Length != 2) return;
-            if(!int.TryParse(args[0], out var parentPID)) return;
-            var launchTarget = args[1];
-            if (string.IsNullOrWhiteSpace(launchTarget)) return;
-            Log($"CrashHandler: parent {parentPID}, launch target {launchTarget}");
-            Process parent;
-            try
-            {
-                parent = Process.GetProcessById(parentPID);
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "CrashHandler: Cannot resolve parent process");
-                return;
-            }
-            Log($"CrashHandler: Start wait for parent crashing...");
-            try
-            {
-                parent.WaitForExit();
-                Log($"CrashHandler: Parent crashed. Try rebooting...");
-                new Thread(() => _ = HelperProgram.MessageBox(0, SimpleLocalizerBaseGeneratedHelper.Localized?.CrashForm_AutoRebootSoon() ?? $"projectFrameCut has crashed. Program will be automatically reboot soon. To disable this feature, go Settings-General-No reboot after crash.", "projectFrameCut", 0x00000040)).Start();
-                Process.Start(CreateRebootStartInfo(launchTarget));
-            }
-            catch (Exception ex)
-            {
-                Log(ex, "CrashHandler: Wait parent process exit failed");
-                return;
-            }
-
-        }
-
         public static void BootHandler(string workingProject, bool diag = false)
         {
             if (!OperatingSystem.IsWindows()) return;
@@ -96,7 +62,7 @@ namespace projectFrameCut.Helper
                 });
                 if (p is null)
                 {
-                    Log($"CrashHandler: Failed to start crash handler process!", "fatal");
+                    Log($"CrashHandler: Failed to start crash handler process", "fatal");
                     return;
                 }
 
@@ -114,7 +80,7 @@ namespace projectFrameCut.Helper
         {
             try
             {
-                var fileUri = new Uri(Path.Combine(projectPath,"project.pjfc"));
+                var fileUri = new Uri(Path.Combine(projectPath, "project.pjfc"));
                 var query = $"{Uri.EscapeDataString("--fromCrashHandler")}&{Uri.EscapeDataString("--noSplash")}";
                 return $"pjfc:{fileUri.AbsoluteUri}?{query}";
             }
@@ -125,7 +91,7 @@ namespace projectFrameCut.Helper
             }
         }
 
-        private static ProcessStartInfo CreateRebootStartInfo(string launchTarget)
+        public static ProcessStartInfo CreateRebootStartInfo(string launchTarget)
         {
             if (launchTarget.StartsWith("pjfc:", StringComparison.OrdinalIgnoreCase))
             {

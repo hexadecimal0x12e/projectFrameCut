@@ -27,7 +27,15 @@ namespace projectFrameCut.Render.Rendering
         public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture.GenerateSolidColor(w, h, 0, 0, 0, null);
 
 
-        public static IEnumerable<OneFrame> GetFramesInOneFrame(IClip[] video, uint targetFrame, int targetWidth, int targetHeight, bool forceResize = false, IPicture.PicturePixelMode? targetPPB = null)
+        public static IEnumerable<OneFrame> GetFramesInOneFrame(
+            IClip[] video,
+            uint targetFrame,
+            int targetWidth,
+            int targetHeight,
+            bool forceResize = false,
+            IPicture.PicturePixelMode? targetPPB = null,
+            int projectRelativeWidth = 0,
+            int projectRelativeHeight = 0)
         {
             var ppb = targetPPB ?? 8;
             List<OneFrame> result = new List<OneFrame>();
@@ -42,8 +50,8 @@ namespace projectFrameCut.Render.Rendering
                         //throw new InvalidDataException($"Two or more clips ({result.Where((c) => c.LayerIndex == clip.LayerIndex).Aggregate<OneFrame, string>(clip.FilePath ?? "Clip@" + clip.Id, (a, b) => $"{a},{b.ParentClip.FilePath}")}) in the same layer {clip.LayerIndex} are overlapping at frame {targetFrame}. Please fix the timeline data.");
                     }
                     IPicture frame = null!;
-                    int clipTargetWidth = ResolveClipOutputWidth(clip, targetWidth);
-                    int clipTargetHeight = ResolveClipOutputHeight(clip, targetHeight);
+                    int clipTargetWidth = ResolveClipOutputWidth(clip, targetWidth, projectRelativeWidth);
+                    int clipTargetHeight = ResolveClipOutputHeight(clip, targetHeight, projectRelativeHeight);
                     if (clip is TransformContainer c)
                     {
                         if (c.Transform == null) c.ReInit(ppb);
@@ -120,7 +128,16 @@ namespace projectFrameCut.Render.Rendering
         }
 
 
-        public static IPicture MixtureLayers(IEnumerable<OneFrame> frames, uint frameIndex, int targetWidth, int targetHeight, int targetPPB = 8, Action<IEffect, IPicture>? AfterEffect = null, bool autoCenterImplicitClip = false)
+        public static IPicture MixtureLayers(
+            IEnumerable<OneFrame> frames,
+            uint frameIndex,
+            int targetWidth,
+            int targetHeight,
+            int targetPPB = 8,
+            Action<IEffect, IPicture>? AfterEffect = null,
+            bool autoCenterImplicitClip = false,
+            int projectRelativeWidth = 0,
+            int projectRelativeHeight = 0)
         {
             try
             {
@@ -185,8 +202,8 @@ namespace projectFrameCut.Render.Rendering
                         steps.Clear();
                     }
 
-                    int clipX = srcFrame.ParentClip.TargetX;
-                    int clipY = srcFrame.ParentClip.TargetY;
+                    int clipX = ResolveClipOutputX(srcFrame.ParentClip, targetWidth, projectRelativeWidth);
+                    int clipY = ResolveClipOutputY(srcFrame.ParentClip, targetHeight, projectRelativeHeight);
                     if (autoCenterImplicitClip && ShouldAutoCenterImplicitClip(srcFrame.ParentClip) && clipY == 0 && effected.Height < targetHeight)
                     {
                         clipY += (targetHeight - effected.Height) / 2;
@@ -263,11 +280,61 @@ namespace projectFrameCut.Render.Rendering
             StartY = 0
         };
 
-        private static int ResolveClipOutputWidth(IClip clip, int fallbackWidth)
-            => clip.TargetWidth > 0 ? clip.TargetWidth : Math.Max(1, fallbackWidth);
+        private static int ResolveClipOutputWidth(IClip clip, int fallbackWidth, int projectRelativeWidth)
+        {
+            if (clip.TargetWidth > 0)
+            {
+                return ScaleDimensionToTarget(clip.TargetWidth, projectRelativeWidth, fallbackWidth);
+            }
 
-        private static int ResolveClipOutputHeight(IClip clip, int fallbackHeight)
-            => clip.TargetHeight > 0 ? clip.TargetHeight : Math.Max(1, fallbackHeight);
+            return Math.Max(1, fallbackWidth);
+        }
+
+        private static int ResolveClipOutputHeight(IClip clip, int fallbackHeight, int projectRelativeHeight)
+        {
+            if (clip.TargetHeight > 0)
+            {
+                return ScaleDimensionToTarget(clip.TargetHeight, projectRelativeHeight, fallbackHeight);
+            }
+
+            return Math.Max(1, fallbackHeight);
+        }
+
+        private static int ResolveClipOutputX(IClip clip, int targetWidth, int projectRelativeWidth)
+            => ScaleCoordinateToTarget(clip.TargetX, projectRelativeWidth, targetWidth);
+
+        private static int ResolveClipOutputY(IClip clip, int targetHeight, int projectRelativeHeight)
+            => ScaleCoordinateToTarget(clip.TargetY, projectRelativeHeight, targetHeight);
+
+        private static int ScaleDimensionToTarget(int value, int relativeValue, int targetValue)
+        {
+            if (value <= 0)
+            {
+                return 0;
+            }
+
+            if (relativeValue > 0 && targetValue > 0 && relativeValue != targetValue)
+            {
+                return Math.Max(1, (int)Math.Round((double)value * targetValue / relativeValue, MidpointRounding.AwayFromZero));
+            }
+
+            return Math.Max(1, value);
+        }
+
+        private static int ScaleCoordinateToTarget(int value, int relativeValue, int targetValue)
+        {
+            if (value == 0)
+            {
+                return 0;
+            }
+
+            if (relativeValue > 0 && targetValue > 0 && relativeValue != targetValue)
+            {
+                return (int)Math.Round((double)value * targetValue / relativeValue, MidpointRounding.AwayFromZero);
+            }
+
+            return value;
+        }
 
         private static bool ShouldAutoCenterImplicitClip(IClip clip)
         {

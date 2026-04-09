@@ -77,7 +77,7 @@ using Google.Android.Material.Chip;
 
 namespace projectFrameCut;
 
-public partial class DraftPage : ContentPage
+public partial class DraftPage : ContentPage, IDraftPage
 {
     #region const
     const int ClipHeight = 62;
@@ -105,6 +105,8 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region members
+
+    MultiWindowView IDraftPage.MainMultiWindowView => MainMultiWindowView;
 
     ConcurrentDictionary<string, double> HandleStartWidth = new();
 
@@ -160,6 +162,9 @@ public partial class DraftPage : ContentPage
     bool AlreadyDisappeared = false;
 
     ConcurrentDictionary<string, DraftTasks> RunningTasks = new();
+
+    private bool _historyNavigatedByUndoRedo = false;
+    private bool _hasResolvedInitialPreviewFrame = false;
 
 
     DateTime lastSyncTime = DateTime.MinValue;
@@ -318,10 +323,10 @@ public partial class DraftPage : ContentPage
         SetPlayPauseIconToPlay();
         SetStateBusy();
         SetStatusText(Localized.DraftPage_PleaseWait);
-        ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
+        ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = true, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill };
         DynamicPreviewProvider = new InteractableEditor.DynamicPreview { IsVisible = false, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill, InputTransparent = true };
         ClipEditorHost.Content = ClipEditor;
-        LivePreviewerHost.Content = EnsureRealtimePreviewHost();
+        ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
         ApplyClipEditorPreviewOverlayMode();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
@@ -332,7 +337,6 @@ public partial class DraftPage : ContentPage
 #if ANDROID
         OverlayLayer.InputTransparent = false;
 #endif
-        PreviewOverlayLayer.InputTransparent = false;
         ClipEditorHost.InputTransparent = false;
 
         TrackCalculator.HeightPerTrack = ClipHeight;
@@ -360,10 +364,10 @@ public partial class DraftPage : ContentPage
         SetPlayPauseIconToPlay();
         SetStateBusy();
         SetStatusText(Localized.DraftPage_PleaseWait);
-        ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = false, HeightRequest = 240, HorizontalOptions = LayoutOptions.Fill };
-        DynamicPreviewProvider = new InteractableEditor.DynamicPreview { IsVisible = false, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill, InputTransparent = true };
+        ClipEditor = new InteractableEditor.InteractableEditor { IsVisible = true, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill };
+        DynamicPreviewProvider = new InteractableEditor.DynamicPreview { IsVisible = true, HorizontalOptions = LayoutOptions.Fill, VerticalOptions = LayoutOptions.Fill, InputTransparent = true };
         ClipEditorHost.Content = ClipEditor;
-        LivePreviewerHost.Content = EnsureRealtimePreviewHost();
+        ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
         ApplyClipEditorPreviewOverlayMode();
         ClipEditor.Init(OnClipEditorUpdate, 1920, 1080);
         ClipEditor.ConfigurePreviewRefresh(RefreshPreviewFromCurrentProviderAsync);
@@ -418,9 +422,7 @@ public partial class DraftPage : ContentPage
 
     private void HookPreviewSurfaceSizeSync()
     {
-        PreviewOverlayLayer.SizeChanged += PreviewSurface_SizeChanged;
         ClipEditorHost.SizeChanged += PreviewSurface_SizeChanged;
-        LivePreviewerHost.SizeChanged += PreviewSurface_SizeChanged;
         SyncPreviewSurfaceSize();
     }
 
@@ -431,19 +433,13 @@ public partial class DraftPage : ContentPage
 
     private void SyncPreviewSurfaceSize()
     {
-        var width = PreviewOverlayLayer.Width;
-        var height = PreviewOverlayLayer.Height;
+        var width = ClipEditorHost.Width;
+        var height = ClipEditorHost.Height;
 
         if (width <= 0 || height <= 0)
         {
-            width = ClipEditorHost.Width;
-            height = ClipEditorHost.Height;
-        }
-
-        if (width <= 0 || height <= 0)
-        {
-            width = LivePreviewerHost.Width;
-            height = LivePreviewerHost.Height;
+            width = ClipEditor.Width;
+            height = ClipEditor.Height;
         }
 
         if (width <= 0 || height <= 0)
@@ -550,6 +546,8 @@ public partial class DraftPage : ContentPage
 
         previewWidth = ProjectInfo.RelativeWidth;
         previewHeight = ProjectInfo.RelativeHeight;
+        previewer.ProjectRelativeWidth = ProjectInfo.RelativeWidth;
+        previewer.ProjectRelativeHeight = ProjectInfo.RelativeHeight;
         ClipEditor.UpdateVideoResolution(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
 
         ProjectInfo.NormallyExited = false;
@@ -620,12 +618,10 @@ public partial class DraftPage : ContentPage
                 var heightString = SettingsManager.GetSetting("Edit_UpperContentHeight", "250");
                 var height = double.TryParse(heightString, out var h1) ? h1 : 250;
                 previewGrid.HeightRequest = height;
-                ClipEditor?.HeightRequest = height - 10;
             }
             else
             {
                 previewGrid.HeightRequest = PreviewAreaHeight;
-                ClipEditor?.HeightRequest = PreviewAreaHeight - 10;
             }
 
             // MultiWindowView uses translation + WidthRequest for window layout; forcing Grid columns
@@ -1151,7 +1147,7 @@ public partial class DraftPage : ContentPage
 
         c.Clip.IsVisible = c.ShouldDisplayInUI;
         Tracks[c.origTrack ?? 0].Children.Add(c.Clip);
-        UpdateAdjacencyForTrack();
+        _ = UpdateAdjacencyForTrack();
         UpdateTimelineWidth();
     }
 
@@ -3966,7 +3962,7 @@ public partial class DraftPage : ContentPage
 
         Clips[clip.Id] = clip;
 
-        OnClipChanged?.Invoke(this, new ClipUpdateEventArgs { Reason = ClipUpdateReason.PropertyChanged , SourceId = clip.Id, SourceName = clip.DisplayName, DetailInfo = e.Id, NoSave = false});
+        OnClipChanged?.Invoke(this, new ClipUpdateEventArgs { Reason = ClipUpdateReason.PropertyChanged, SourceId = clip.Id, SourceName = clip.DisplayName, DetailInfo = e.Id, NoSave = false });
         HistorySubWindow.Content = new DraftSettingPage(this).BuildHistoryTab();
 
 
@@ -4784,7 +4780,6 @@ public partial class DraftPage : ContentPage
                 if (pageHeight > 220 && h > pageHeight - 100) h = pageHeight - 100;
 
                 previewGrid.HeightRequest = h;
-                if (ClipEditor is not null) ClipEditor.HeightRequest = h - 10;
                 PreviewAreaHeight = h;
                 break;
             case GestureStatus.Completed:
@@ -5535,7 +5530,6 @@ public partial class DraftPage : ContentPage
                 break;
             case "history":
                 ToggleAssistantSubWindow(HistorySubWindow);
-
                 break;
             //case "preview":
             //    ActivateMultiWindowItem(PreviewSubwindow);
@@ -5573,7 +5567,6 @@ public partial class DraftPage : ContentPage
         if (UpperContent.Children[0] is Grid previewGrid)
         {
             previewGrid.HeightRequest = 250;
-            ClipEditor?.HeightRequest = 240;
             if (previewGrid is MultiWindowView)
             {
                 _hasAppliedDefaultMainMultiWindowLayout = false;
@@ -5818,8 +5811,9 @@ public partial class DraftPage : ContentPage
     private async Task<bool> RefreshDynamicPreviewOverlay()
     {
         DynamicPreviewProvider.SetPreferredClipId(_selected?.Id);
-        var targetWidth = Math.Max(1, previewWidth);
-        var targetHeight = Math.Max(1, previewHeight);
+        // Keep dynamic preview generation in project coordinate space so overlay rects stay aligned.
+        var targetWidth = Math.Max(1, ProjectInfo.RelativeWidth);
+        var targetHeight = Math.Max(1, ProjectInfo.RelativeHeight);
         var preparedPreviews = await DynamicPreviewProvider.PrepareFrameAsync((uint)_currentFrame, targetWidth, targetHeight);
         return await ClipEditor.ApplyPreparedPreviewsAsync(preparedPreviews);
     }
@@ -5845,9 +5839,9 @@ public partial class DraftPage : ContentPage
                 if (DynamicPreviewProvider.Clips is null) return;
                 await Dispatcher.DispatchAsync(() =>
                 {
-                    LivePreviewerHost.Content = EnsureRealtimePreviewHost();
+                    ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
                     LivePreviewPlayer.IsVisible = false;
-                    PreviewOverlayImage.IsVisible = false;
+                    ClipEditor.SetStaticPreviewVisible(false);
                 });
 
                 var realtimeRendered = await RefreshDynamicPreviewOverlay();
@@ -5861,10 +5855,10 @@ public partial class DraftPage : ContentPage
                         cts.Token.ThrowIfCancellationRequested();
                     }, cts.Token);
 
-                    await PreviewOverlayImage.ForceLoadPNGToAImage(fallbackPath);
+                    await ClipEditor.StaticPreviewOverlayImage.ForceLoadPNGToAImage(fallbackPath);
                     await Dispatcher.DispatchAsync(() =>
                     {
-                        PreviewOverlayImage.IsVisible = true;
+                        ClipEditor.SetStaticPreviewVisible(true);
                     });
                 }
             }
@@ -5873,7 +5867,7 @@ public partial class DraftPage : ContentPage
                 if (previewer.Clips is null) return;
                 await Dispatcher.DispatchAsync(() =>
                 {
-                    LivePreviewerHost.Content = EnsureRealtimePreviewHost();
+                    ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
                     LivePreviewPlayer.IsVisible = false;
                     DynamicPreviewProvider.IsVisible = false;
                 });
@@ -5886,10 +5880,10 @@ public partial class DraftPage : ContentPage
                     cts.Token.ThrowIfCancellationRequested();
                 }, cts.Token);
 
-                await PreviewOverlayImage.ForceLoadPNGToAImage(path);
+                await ClipEditor.StaticPreviewOverlayImage.ForceLoadPNGToAImage(path);
                 await Dispatcher.DispatchAsync(() =>
                 {
-                    PreviewOverlayImage.IsVisible = true;
+                    ClipEditor.SetStaticPreviewVisible(true);
                 });
             }
 
@@ -6078,8 +6072,8 @@ public partial class DraftPage : ContentPage
                 await Dispatcher.DispatchAsync(() =>
                 {
                     var host = EnsureRealtimePreviewHost();
-                    LivePreviewerHost.Content = host;
-                    PreviewOverlayImage.IsVisible = false;
+                    ClipEditor.SetRealtimePreviewContent(host);
+                    ClipEditor.SetStaticPreviewVisible(false);
                     LivePreviewPlayer.IsVisible = false;
                 });
 
@@ -6091,7 +6085,7 @@ public partial class DraftPage : ContentPage
 
             await Dispatcher.DispatchAsync(() =>
             {
-                LivePreviewerHost.Content = EnsureRealtimePreviewHost();
+                ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
                 LivePreviewPlayer.IsVisible = true;
                 DynamicPreviewProvider.IsVisible = false;
                 LivePreviewPlayer.Opacity = 1;
@@ -6099,7 +6093,7 @@ public partial class DraftPage : ContentPage
                 LivePreviewPlayer.WidthRequest = -1;
                 LivePreviewPlayer.InputTransparent = false;
                 LivePreviewPlayer.ShouldShowPlaybackControls = false;
-                PreviewOverlayImage.IsVisible = false;
+                ClipEditor.SetStaticPreviewVisible(false);
             });
 
 
@@ -6189,16 +6183,14 @@ public partial class DraftPage : ContentPage
             catch { }
             LivePreviewPlayer.IsVisible = false;
             // Keep preview elements inside a single host to avoid WinUI re-parent exceptions.
-            LivePreviewerHost.Content = EnsureRealtimePreviewHost();
+            ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
             DynamicPreviewProvider.IsVisible = UseRealtimePreview;
-            PreviewOverlayImage.IsVisible = true;
+            ClipEditor.SetStaticPreviewVisible(true);
             SetPlayPauseIconToPlay();
         });
 
         await RefreshPreviewFromCurrentProviderAsync();
-
-
-        _nextPlaybackPath = null;
+    _nextPlaybackPath = null;
         _isPreRendering = false;
 
         try
@@ -6305,6 +6297,43 @@ public partial class DraftPage : ContentPage
     #endregion
 
     #region handle changes
+    private void TryMoveToInitialPreviewFrame(DraftStructureJSON draft)
+    {
+        if (_hasResolvedInitialPreviewFrame)
+        {
+            return;
+        }
+
+        _hasResolvedInitialPreviewFrame = true;
+
+        if (_selected is not null || _selectedClipIds.Count > 0)
+        {
+            return;
+        }
+
+        if (_currentFrame > 0 || draft.Clips is null || draft.Clips.Length == 0)
+        {
+            return;
+        }
+
+        var firstVisualStartFrame = draft.Clips
+            .OfType<ClipDraftDTO>()
+            .Where(c => c.ShouldDisplayInUI && c.ClipType != ClipMode.AudioClip && c.ClipType != ClipMode.MarkingClip)
+            .Select(c => (double)c.StartFrame)
+            .DefaultIfEmpty(0)
+            .Min();
+
+        if (firstVisualStartFrame <= 0)
+        {
+            return;
+        }
+
+        _currentFrame = firstVisualStartFrame;
+        SyncClipEditorCurrentFrame();
+        UpdatePlayheadPosition();
+        CurrentPlayheadLabel.Text = $"{TimeSpan.FromSeconds(_currentFrame * SecondsPerFrame):mm\\:ss\\.ff} / {TimeSpan.FromSeconds(ProjectDuration * SecondsPerFrame):mm\\:ss}";
+    }
+
     private async void DraftChanged(object? sender, ClipUpdateEventArgs e)
     {
         if (AlreadyDisappeared) return;
@@ -6343,6 +6372,7 @@ public partial class DraftPage : ContentPage
         try
         {
             ProjectDuration = Math.Max(d.Duration, d.AudioDuration);
+            TryMoveToInitialPreviewFrame(d);
             await ClipEditor.UpdateClips(Clips);
             ClipEditor.SetCurrentFrame((uint)Math.Max(0, _currentFrame));
             await previewer.UpdateDraft(d);
@@ -6609,6 +6639,11 @@ public partial class DraftPage : ContentPage
         }
         else //avoid worst condition (crashes while saving)
         {
+            if (_historyNavigatedByUndoRedo)
+            {
+                PruneNewerSaveSlotsFromCurrent();
+            }
+
             if (CurrentSaveSlotIndex + 1 < MaximumSaveSlot)
             {
                 slot = $"slot_{CurrentSaveSlotIndex + 1}";
@@ -6643,6 +6678,8 @@ public partial class DraftPage : ContentPage
 
             }
 
+            _historyNavigatedByUndoRedo = false;
+
         }
 
         //SaveMainMultiWindowViewStateToProjectInfo();
@@ -6676,30 +6713,180 @@ public partial class DraftPage : ContentPage
 
     }
 
+    private sealed class SaveSlotMeta
+    {
+        public int SlotIndex { get; init; }
+        public DateTime SavedAtUtc { get; init; }
+    }
+
+    private List<SaveSlotMeta> GetSaveSlotsSortedByTime()
+    {
+        List<SaveSlotMeta> slots = [];
+        if (string.IsNullOrWhiteSpace(WorkingPath))
+        {
+            return slots;
+        }
+
+        var saveRoot = Path.Combine(WorkingPath, "saveSlots");
+        if (!Directory.Exists(saveRoot))
+        {
+            return slots;
+        }
+
+        foreach (var dir in Directory.GetDirectories(saveRoot, "slot_*"))
+        {
+            var folderName = Path.GetFileName(dir);
+            if (string.IsNullOrWhiteSpace(folderName) || !folderName.StartsWith("slot_"))
+            {
+                continue;
+            }
+
+            var indexText = folderName.Substring("slot_".Length);
+            if (!int.TryParse(indexText, out var slotIndex))
+            {
+                continue;
+            }
+
+            if (slotIndex < 0 || slotIndex >= MaximumSaveSlot)
+            {
+                continue;
+            }
+
+            var timelinePath = Path.Combine(dir, "timeline.json");
+            if (!File.Exists(timelinePath))
+            {
+                continue;
+            }
+
+            try
+            {
+                DateTime savedAtUtc;
+                var tml = File.ReadAllText(timelinePath);
+                var draft = JsonSerializer.Deserialize<DraftStructureJSON>(tml, savingOpts);
+                if (draft is null || draft.SavedAt == default)
+                {
+                    savedAtUtc = File.GetLastWriteTimeUtc(timelinePath);
+                }
+                else
+                {
+                    savedAtUtc = draft.SavedAt.Kind switch
+                    {
+                        DateTimeKind.Utc => draft.SavedAt,
+                        DateTimeKind.Local => draft.SavedAt.ToUniversalTime(),
+                        _ => DateTime.SpecifyKind(draft.SavedAt, DateTimeKind.Local).ToUniversalTime()
+                    };
+                }
+
+                slots.Add(new SaveSlotMeta
+                {
+                    SlotIndex = slotIndex,
+                    SavedAtUtc = savedAtUtc
+                });
+            }
+            catch
+            {
+                // Ignore broken slot data to keep undo/redo usable.
+            }
+        }
+
+        return slots
+            .OrderBy(x => x.SavedAtUtc)
+            .ThenBy(x => x.SlotIndex)
+            .ToList();
+    }
+
+    private SaveSlotMeta? GetPreviousSlotByTime()
+    {
+        var slots = GetSaveSlotsSortedByTime();
+        var current = slots.FirstOrDefault(x => x.SlotIndex == CurrentSaveSlotIndex);
+        if (current is null)
+        {
+            return null;
+        }
+
+        return slots.LastOrDefault(x =>
+            x.SavedAtUtc < current.SavedAtUtc
+            || (x.SavedAtUtc == current.SavedAtUtc && x.SlotIndex < current.SlotIndex));
+    }
+
+    private SaveSlotMeta? GetNextSlotByTime()
+    {
+        var slots = GetSaveSlotsSortedByTime();
+        var current = slots.FirstOrDefault(x => x.SlotIndex == CurrentSaveSlotIndex);
+        if (current is null)
+        {
+            return null;
+        }
+
+        return slots.FirstOrDefault(x =>
+            x.SavedAtUtc > current.SavedAtUtc
+            || (x.SavedAtUtc == current.SavedAtUtc && x.SlotIndex > current.SlotIndex));
+    }
+
+    private void PruneNewerSaveSlotsFromCurrent()
+    {
+        var slots = GetSaveSlotsSortedByTime();
+        var current = slots.FirstOrDefault(x => x.SlotIndex == CurrentSaveSlotIndex);
+        if (current is null)
+        {
+            return;
+        }
+
+        foreach (var slot in slots.Where(x =>
+                     x.SlotIndex != current.SlotIndex
+                     && (x.SavedAtUtc > current.SavedAtUtc
+                         || (x.SavedAtUtc == current.SavedAtUtc && x.SlotIndex > current.SlotIndex))))
+        {
+            try
+            {
+                var slotPath = Path.Combine(WorkingPath, "saveSlots", $"slot_{slot.SlotIndex}");
+                if (Directory.Exists(slotPath))
+                {
+                    Directory.Delete(slotPath, true);
+                    LogDiagnostic($"Pruned newer save slot: slot_{slot.SlotIndex}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Log(ex, $"prune save slot slot_{slot.SlotIndex}", this);
+            }
+        }
+    }
+
     private void RedoChanges()
     {
-        var nextSlot = CurrentSaveSlotIndex + 1;
-        if (nextSlot < 1 || nextSlot >= MaximumSaveSlot || !Directory.Exists(Path.Combine(WorkingPath, "saveSlots", $"slot_{nextSlot}")))
+        var nextSlot = GetNextSlotByTime();
+        if (nextSlot is null)
         {
             SetStateOK(Localized.DraftPage_RedoAndUndo_NoMoreSlots);
             return;
         }
         if (IsSyncCooldown()) return;
         SetSyncCooldown();
-        ApplySlot(nextSlot);
+        var oldSlot = CurrentSaveSlotIndex;
+        ApplySlot(nextSlot.SlotIndex);
+        if (CurrentSaveSlotIndex != oldSlot)
+        {
+            _historyNavigatedByUndoRedo = true;
+        }
     }
 
     private void UndoChanges()
     {
-        var nextSlot = CurrentSaveSlotIndex - 1;
-        if (nextSlot >= MaximumSaveSlot || !Directory.Exists(Path.Combine(WorkingPath, "saveSlots", $"slot_{nextSlot}")))
+        var nextSlot = GetPreviousSlotByTime();
+        if (nextSlot is null)
         {
             SetStateOK(Localized.DraftPage_RedoAndUndo_NoMoreSlots);
             return;
         }
         if (IsSyncCooldown()) return;
         SetSyncCooldown();
-        ApplySlot(nextSlot);
+        var oldSlot = CurrentSaveSlotIndex;
+        ApplySlot(nextSlot.SlotIndex);
+        if (CurrentSaveSlotIndex != oldSlot)
+        {
+            _historyNavigatedByUndoRedo = true;
+        }
     }
 
     public void ApplySlot(int slotIndex)
@@ -6740,7 +6927,8 @@ public partial class DraftPage : ContentPage
 
             EnsureContinuousTrackIndices();
             CurrentSaveSlotIndex = slotIndex;
-            DraftChanged(this, new() { NoSave = true });
+            HistorySubWindow.Content = new DraftSettingPage(this).BuildHistoryTab();
+            DraftChanged(this, new() { DetailInfo = "Sync changes", NoSave = true });
             SetStateOK(Localized.DraftPage_RedoAndUndo_Success(draftJson.SavedAt));
 
         }
@@ -6899,7 +7087,26 @@ public partial class DraftPage : ContentPage
                 Order = ToolbarItemOrder.Secondary,
                 Priority = 0,
                 Command = RedoCommand
+            });            
+            ToolbarItems.Add(new ToolbarItem
+            {
+                Text = Localized.DraftPage_MenuBar_Edit_History,
+                Order = ToolbarItemOrder.Secondary,
+                Priority = 0,
+                Command = ManageWindowCommand,
+                CommandParameter = "history"
+            });            
+            ToolbarItems.Add(new ToolbarItem
+            {
+                Text = Localized.DraftPage_MenuBar_Edit_ConfigurePreview,
+                Order = ToolbarItemOrder.Secondary,
+                Priority = 0,
+                Command = new Command(async () =>{
+                    var option = await DisplayActionSheetAsync(Localized.DraftPage_MenuBar_Edit_ConfigurePreview, Localized._Cancel, null,(ResolutionPicker.ItemsSource as List<string>)?.ToArray() ?? []);
+                    if(!string.IsNullOrWhiteSpace(option)) ResolutionPicker.SelectedItem = option;
+                })
             });
+            
             RunningTaskToolbarItem = new ToolbarItem
             {
                 Text = Localized.DraftPage_MenuBar_Jobs_ManageJobs,
@@ -7133,7 +7340,6 @@ public partial class DraftPage : ContentPage
                         SetStatusText(Localized.DraftPage_PrevResultion_Seted(w1, h1));
                         previewWidth = w1;
                         previewHeight = h1;
-                        ClipEditor.UpdateVideoResolution(w1, h1);
                     }
                     else
                     {
@@ -7152,18 +7358,20 @@ public partial class DraftPage : ContentPage
                 SetStatusText(Localized.DraftPage_PrevResultion_Seted(w, h));
                 previewWidth = w;
                 previewHeight = h;
-                ClipEditor.UpdateVideoResolution(w, h);
             }
         }
 
+        // Clip overlay coordinates are always stored in project resolution.
+        ClipEditor.UpdateVideoResolution(ProjectInfo.RelativeWidth, ProjectInfo.RelativeHeight);
+
         await Dispatcher.DispatchAsync(() =>
         {
-            LivePreviewerHost.Content = EnsureRealtimePreviewHost();
+            ClipEditor.SetRealtimePreviewContent(EnsureRealtimePreviewHost());
             LivePreviewPlayer.IsVisible = false;
             DynamicPreviewProvider.IsVisible = UseRealtimePreview;
             if (!UseRealtimePreview)
             {
-                PreviewOverlayImage.IsVisible = true;
+                ClipEditor.SetStaticPreviewVisible(true);
             }
         });
 
@@ -7522,6 +7730,80 @@ public partial class DraftPage : ContentPage
         });
         if (LogUIMessageToLogger) Log(text, "UI msg");
     }
+
+    #region IDraftPage adapters
+    IClipElementUI? IDraftPage.SelectedClip => SelectedClip;
+
+    private static ClipElementUI RequireConcreteClip(IClipElementUI clip, string paramName)
+    {
+        if (clip is ClipElementUI concrete)
+        {
+            return concrete;
+        }
+
+        throw new ArgumentException("Only ClipElementUI is supported by DraftPage.", paramName);
+    }
+
+    void IDraftPage.AddAClip(IClipElementUI c) => AddAClip(RequireConcreteClip(c, nameof(c)));
+
+    bool IDraftPage.AddTransformBetweenSelected(Func<Guid, Guid, ITransform> transformFactory, IClipElementUI center, bool left, bool right, Action<IClipElementUI>? elementSetter)
+    {
+        Action<ClipElementUI>? concreteSetter = null;
+        if (elementSetter is not null)
+        {
+            concreteSetter = clip => elementSetter(clip);
+        }
+
+        return AddTransformBetweenSelected(transformFactory, RequireConcreteClip(center, nameof(center)), left, right, concreteSetter);
+    }
+
+    void IDraftPage.BeginClipPlacement(Func<int, double, IClipElementUI> clipFactory, Predicate<int>? trackFilter, string? name)
+    {
+        BeginClipPlacement(
+            (track, start) => RequireConcreteClip(clipFactory(track, start), nameof(clipFactory)),
+            trackFilter,
+            name);
+    }
+
+    IClipElementUI IDraftPage.CreateAndAddClip(double startX, double width, int trackIndex, string? id, string? labelText, Brush? background, Border? prototype, bool resolveOverlap, uint relativeStart, uint maxFrames, IClipElementUI? sourceElement)
+    {
+        return CreateAndAddClip(
+            startX,
+            width,
+            trackIndex,
+            id,
+            labelText,
+            background,
+            prototype,
+            resolveOverlap,
+            relativeStart,
+            maxFrames,
+            sourceElement is null ? null : RequireConcreteClip(sourceElement, nameof(sourceElement)));
+    }
+
+    IClipElementUI IDraftPage.CreateFromAsset(AssetItem asset, int trackIndex, string fromPlugin, string? path)
+        => CreateFromAsset(asset, trackIndex, fromPlugin, path);
+
+    IClipElementUI IDraftPage.CreateFromAsset(AssetItem asset, int trackIndex, double startX, string fromPlugin, string? path)
+        => CreateFromAsset(asset, trackIndex, startX, fromPlugin, path);
+
+    (IClipElementUI? left, IClipElementUI? right) IDraftPage.FindNeighbors(IClipElementUI? clip)
+    {
+        var concrete = clip is null ? null : RequireConcreteClip(clip, nameof(clip));
+        var (left, right) = FindNeighbors(concrete);
+        return (left, right);
+    }
+
+    void IDraftPage.RefreshPropertyPanel(IClipElementUI clip) => RefreshPropertyPanel(RequireConcreteClip(clip, nameof(clip)));
+
+    void IDraftPage.RegisterClip(IClipElementUI element, bool resolveOverlap) => RegisterClip(RequireConcreteClip(element, nameof(element)), resolveOverlap);
+
+    Task IDraftPage.ShowAPopup(View? content, Border? border, IClipElementUI? clip, string mode)
+    {
+        var concrete = clip is null ? null : RequireConcreteClip(clip, nameof(clip));
+        return ShowAPopup(content, border, concrete, mode);
+    }
+    #endregion
     #endregion
 
 }

@@ -529,7 +529,7 @@ public partial class TemplateViewPage : ContentPage
             return true;
         }
 
-        private static List<TemplateItem> BuildTemplates() => Template.TemplateStore.Templates.Values.OfType<JSONBasedTemplateStructure>().Select(c => new TemplateItem(c)).ToList();
+        private static List<TemplateItem> BuildTemplates() => Template.TemplateStore.Templates.Values.OfType<JSONBasedTemplateStructure>().Select(c => new TemplateItem(c) { Tags = [Localized.TemplateViewPage_TemplateTag_Local] }).ToList();
 
     }
 
@@ -542,7 +542,7 @@ public partial class TemplateViewPage : ContentPage
         public string Category { get; }
         public string DurationText { get; }
         public string Description { get; }
-        public IReadOnlyList<string> Tags { get; }
+        public IReadOnlyList<string> Tags { get; set; }
         public int UsageCount { get; }
         public DateTime CreatedAt { get; }
         public Color AccentColor { get; }

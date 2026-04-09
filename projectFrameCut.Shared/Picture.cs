@@ -35,6 +35,10 @@ namespace projectFrameCut.Shared
         /// </summary>
         public static string? DiagImagePath { get; set; }
         /// <summary>
+        /// Allow convert a IPicture to a lower <see cref="bitPerPixel"/>.
+        /// </summary>
+        public static bool AllowPixelModeDowngrade = true;
+        /// <summary>
         /// Get how much bits in one pixel.
         /// Please refer to <see cref="PicturePixelMode"/> for more information.
         /// </summary>
@@ -756,6 +760,7 @@ namespace projectFrameCut.Shared
             }
             else if (bitPerPixel == PicturePixelMode.BytePicture)
             {
+                if (!AllowPixelModeDowngrade) throw new InvalidOperationException($"AllowPixelModeDowngrade is false, so you can't convert a Picture16bpp to Picture8bpp.") { Data = { { "ProcessStack", ProcessStack } } };
                 var sw = Stopwatch.StartNew();
                 var pic = new Picture8bpp(Width, Height)
                 {

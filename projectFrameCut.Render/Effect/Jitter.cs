@@ -34,8 +34,8 @@ namespace projectFrameCut.Render.Effect
         };
 
         public string FromPlugin => projectFrameCut.Render.Plugin.InternalPluginBase.InternalPluginBaseID;
-        public string? NeedComputer => null;
-        public bool YieldProcessStep => true;
+        public string? NeedComputer => ImplementType == EffectImplementType.HwAcceleration ? "PlaceComputer" : null;
+        public bool YieldProcessStep => ImplementType != EffectImplementType.HwAcceleration;
 
         public int StartPoint { get; set; }
         public int EndPoint { get; set; }
@@ -120,6 +120,11 @@ namespace projectFrameCut.Render.Effect
                 }
             }
 
+            if (ImplementType == EffectImplementType.HwAcceleration)
+            {
+                return PlaceEffect_HwAccel.RenderWithOffset(source, computer, offX, offY, targetWidth, targetHeight);
+            }
+
             return new PlaceProcessStep(offX, offY, targetWidth, targetHeight).Process(source);
         }
 
@@ -170,7 +175,7 @@ namespace projectFrameCut.Render.Effect
             {"Direction", "string"},
         };
 
-        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.IPicture };
+        public EffectImplementType[] SupportsImplementTypes => new[] { EffectImplementType.ImageSharp, EffectImplementType.HwAcceleration, EffectImplementType.IPicture };
 
         public IEffect Build(EffectImplementType implementType, Dictionary<string, object>? parameters = null)
         {
@@ -182,6 +187,7 @@ namespace projectFrameCut.Render.Effect
             return implementType switch
             {
                 EffectImplementType.ImageSharp => BuildWithType(implementType, parameters),
+                EffectImplementType.HwAcceleration => BuildWithType(implementType, parameters),
                 EffectImplementType.IPicture => BuildWithType(implementType, parameters),
                 _ => throw new NotSupportedException($"Effect '{TypeName}' does not support implement type '{implementType}'.")
             };

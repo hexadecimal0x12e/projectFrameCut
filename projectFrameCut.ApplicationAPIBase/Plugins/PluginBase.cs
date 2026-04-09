@@ -75,7 +75,7 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         /// This method will be called after Post-Init stage (The time when DraftPage is created in HomePage and PostInit() is called.)
         /// </remarks>
         /// <param name="draftPage"></param>
-        public virtual void InjectUI(Page draftPage)
+        public virtual void InjectUI(IDraftPage draftPage)
         {
 
         }
@@ -91,7 +91,7 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         /// The <see cref="MultiWindowView"/> of the showing page.
         /// </param>
         /// <return>The items.</return>
-        public virtual List<MenuFlyoutItem> GetMenuItems(MultiWindowView MainMWV)
+        public virtual List<MenuFlyoutItem> GetMenuItems(IDraftPage Page)
         {
             return [];
         }

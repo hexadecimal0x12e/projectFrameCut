@@ -204,8 +204,8 @@ namespace projectFrameCut.Render.Rendering
                     if (ClipNeedForFrame[idx].Contains(item, clipEquabilityComparer))
                     {
                         IPicture frame = null!;
-                        int clipTargetWidth = ResolveClipOutputWidth(item, TargetWidth);
-                        int clipTargetHeight = ResolveClipOutputHeight(item, TargetHeight);
+                        int clipTargetWidth = ResolveClipOutputWidth(item, TargetWidth, ProjectRelativeWidth);
+                        int clipTargetHeight = ResolveClipOutputHeight(item, TargetHeight, ProjectRelativeHeight);
                         if (item.ClipType == ClipMode.TransformClip && item is TransformContainer c)
                         {
                             if (c.Transform is not ITransform t) throw new NullReferenceException($"Transform for clip {c.Id} is null");
@@ -275,6 +275,8 @@ namespace projectFrameCut.Render.Rendering
             _ppb = Use16Bit ? 16 : 8;
             TargetWidth = builder.Width;
             TargetHeight = builder.Height;
+            ProjectRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
+            ProjectRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
 
             InitializeRenderCaches();
             if (ClipNeedForFrame.IsEmpty && BlankFrames.IsEmpty && Volatile.Read(ref TotalEnqueued) == 0)
@@ -513,6 +515,8 @@ namespace projectFrameCut.Render.Rendering
             _ppb = Use16Bit ? 16 : 8;
             TargetWidth = builder.Width;
             TargetHeight = builder.Height;
+            ProjectRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
+            ProjectRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
 
             BlankFrame = Use16Bit
                 ? Picture16bpp.GenerateSolidColor(builder.Width, builder.Height, 0, 0, 0, 0)
@@ -669,8 +673,8 @@ namespace projectFrameCut.Render.Rendering
             foreach (var clip in clipsNeed)
             {
                 IPicture frame = null!;
-                int clipTargetWidth = ResolveClipOutputWidth(clip, TargetWidth);
-                int clipTargetHeight = ResolveClipOutputHeight(clip, TargetHeight);
+                int clipTargetWidth = ResolveClipOutputWidth(clip, TargetWidth, ProjectRelativeWidth);
+                int clipTargetHeight = ResolveClipOutputHeight(clip, TargetHeight, ProjectRelativeHeight);
                 if (clip.ClipType == ClipMode.TransformClip && clip is TransformContainer c)
                 {
                     if (c.Transform == null)
@@ -738,6 +742,8 @@ namespace projectFrameCut.Render.Rendering
             Stopwatch sw = Stopwatch.StartNew();
             IPicture result = null!;
             Dictionary<string, object> frameLocalCache = new();
+            int layoutRelativeWidth = ProjectRelativeWidth > 0 ? ProjectRelativeWidth : TargetWidth;
+            int layoutRelativeHeight = ProjectRelativeHeight > 0 ? ProjectRelativeHeight : TargetHeight;
 
             foreach (var (clip, Frame) in clipsNeed)
             {
@@ -848,8 +854,8 @@ namespace projectFrameCut.Render.Rendering
                     } // end lock (clipLock)
                 }
 
-                int clipX = clip.TargetX;
-                int clipY = clip.TargetY;
+                int clipX = ResolveClipOutputX(clip, TargetWidth, layoutRelativeWidth);
+                int clipY = ResolveClipOutputY(clip, TargetHeight, layoutRelativeHeight);
                 if (AutoCenterImplicitClip && ShouldAutoCenterImplicitClip(clip) && clipY == 0 && frame.Height < TargetHeight)
                 {
                     clipY += (TargetHeight - frame.Height) / 2;
@@ -915,11 +921,61 @@ namespace projectFrameCut.Render.Rendering
 
         #region misc
 
-        private static int ResolveClipOutputWidth(IClip clip, int fallbackWidth)
-            => clip.TargetWidth > 0 ? clip.TargetWidth : Math.Max(1, fallbackWidth);
+        private static int ResolveClipOutputWidth(IClip clip, int fallbackWidth, int projectRelativeWidth)
+        {
+            if (clip.TargetWidth > 0)
+            {
+                return ScaleDimensionToTarget(clip.TargetWidth, projectRelativeWidth, fallbackWidth);
+            }
 
-        private static int ResolveClipOutputHeight(IClip clip, int fallbackHeight)
-            => clip.TargetHeight > 0 ? clip.TargetHeight : Math.Max(1, fallbackHeight);
+            return Math.Max(1, fallbackWidth);
+        }
+
+        private static int ResolveClipOutputHeight(IClip clip, int fallbackHeight, int projectRelativeHeight)
+        {
+            if (clip.TargetHeight > 0)
+            {
+                return ScaleDimensionToTarget(clip.TargetHeight, projectRelativeHeight, fallbackHeight);
+            }
+
+            return Math.Max(1, fallbackHeight);
+        }
+
+        private static int ResolveClipOutputX(IClip clip, int targetWidth, int projectRelativeWidth)
+            => ScaleCoordinateToTarget(clip.TargetX, projectRelativeWidth, targetWidth);
+
+        private static int ResolveClipOutputY(IClip clip, int targetHeight, int projectRelativeHeight)
+            => ScaleCoordinateToTarget(clip.TargetY, projectRelativeHeight, targetHeight);
+
+        private static int ScaleDimensionToTarget(int value, int relativeValue, int targetValue)
+        {
+            if (value <= 0)
+            {
+                return 0;
+            }
+
+            if (relativeValue > 0 && targetValue > 0 && relativeValue != targetValue)
+            {
+                return Math.Max(1, (int)Math.Round((double)value * targetValue / relativeValue, MidpointRounding.AwayFromZero));
+            }
+
+            return Math.Max(1, value);
+        }
+
+        private static int ScaleCoordinateToTarget(int value, int relativeValue, int targetValue)
+        {
+            if (value == 0)
+            {
+                return 0;
+            }
+
+            if (relativeValue > 0 && targetValue > 0 && relativeValue != targetValue)
+            {
+                return (int)Math.Round((double)value * targetValue / relativeValue, MidpointRounding.AwayFromZero);
+            }
+
+            return value;
+        }
 
         private static bool ShouldAutoCenterImplicitClip(IClip clip)
         {

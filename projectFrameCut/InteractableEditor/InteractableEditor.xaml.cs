@@ -100,6 +100,22 @@ namespace projectFrameCut.InteractableEditor
 
         private bool _showClipPreviewOverlays = true;
 
+        public ContentView RealtimePreviewHost => LivePreviewerHost;
+        public Image StaticPreviewOverlayImage => PreviewOverlayImage;
+
+        public void SetRealtimePreviewContent(View? content)
+        {
+            if (!ReferenceEquals(LivePreviewerHost.Content, content))
+            {
+                LivePreviewerHost.Content = content;
+            }
+        }
+
+        public void SetStaticPreviewVisible(bool isVisible)
+        {
+            PreviewOverlayImage.IsVisible = isVisible;
+        }
+
         public InteractableEditor()
         {
             InitializeComponent();
@@ -574,46 +590,11 @@ namespace projectFrameCut.InteractableEditor
             this.InputTransparent = false;
 
             _isTextClip = clip.ClipType == ClipMode.TextClip;
-            if (_isTextClip && clip.ExtraData.TryGetValue("TextEntries", out var entriesObj))
+            if (_isTextClip)
             {
-                List<TextClipEntry>? entries = null;
-                if (entriesObj is List<TextClipEntry> list)
+                if (TryResolveTextClipRect(clip, out var textX, out var textY, out var textW, out var textH))
                 {
-                    entries = list;
-                }
-                else if (entriesObj is JsonElement je)
-                {
-                    try
-                    {
-                        entries = JsonSerializer.Deserialize<List<TextClipEntry>>(je);
-                    }
-                    catch { }
-                }
-
-                if (entries != null && entries.Count > 0)
-                {
-                    var entry = entries[0];
-                    MeasurementLabel.Text = entry.text;
-                    // Scale font size: ImageSharp points (1/72 inch) vs MAUI DIPs (1/96 inch approx, but depends on platform)
-                    // 72 points = 1 inch. 96 DIPs = 1 inch.
-                    // So 72 points should be 96 DIPs.
-                    // Factor = 96/72 = 1.333
-                    MeasurementLabel.FontSize = entry.fontSize * (96.0 / 72.0);
-
-                    var size = MeasurementLabel.Measure(double.PositiveInfinity, double.PositiveInfinity);
-
-                    // If measure fails (returns 0), fallback to something visible
-                    double w = size.Width > 0 ? size.Width : 100;
-                    double h = size.Height > 0 ? size.Height : 50;
-
-                    // For text clips, position comes from TextEntries (not PlaceEffect_ImageSharp).
-                    _baseRect = new Rect(entry.x, entry.y, w, h);
-
-                    // Normalize storage to a mutable, strongly-typed list to simplify later edits.
-                    if (entriesObj is not List<TextClipEntry>)
-                    {
-                        clip.ExtraData["TextEntries"] = entries;
-                    }
+                    _baseRect = new Rect(textX, textY, textW, textH);
                 }
                 else
                 {
@@ -968,6 +949,15 @@ namespace projectFrameCut.InteractableEditor
 
             clipType = clip.ClipType;
 
+            if (clip.ClipType == ClipMode.TextClip && TryResolveTextClipRect(clip, out var textX, out var textY, out var textW, out var textH))
+            {
+                x = textX;
+                y = textY;
+                w = textW;
+                h = textH;
+                return true;
+            }
+
             if (HasExplicitTargetRect(clip))
             {
                 x = clip.TargetX;
@@ -1054,19 +1044,34 @@ namespace projectFrameCut.InteractableEditor
                 UpdateClipStateZIndex(state, clip.Id);
 
                 // 计算clip的位置和大小
-                double x = clip.TargetX;
-                double y = clip.TargetY;
-                double w = clip.TargetWidth > 0 ? clip.TargetWidth : _videoWidth;
-                double h = clip.TargetHeight > 0 ? clip.TargetHeight : _videoHeight;
+                double x;
+                double y;
+                double w;
+                double h;
 
-                // 从legacy effects补全缺失字段（兼容部分target字段的旧数据）
-                if (HasExplicitTargetRect(clip))
+                if (clip.ClipType == ClipMode.TextClip && TryResolveTextClipRect(clip, out var textX, out var textY, out var textW, out var textH))
                 {
-                    ApplyLegacyRectFallbackForMissingTargetFields(clip, ref x, ref y, ref w, ref h);
+                    x = textX;
+                    y = textY;
+                    w = textW;
+                    h = textH;
                 }
                 else
                 {
-                    TryReadRectFromLegacyEffects(clip, ref x, ref y, ref w, ref h);
+                    x = clip.TargetX;
+                    y = clip.TargetY;
+                    w = clip.TargetWidth > 0 ? clip.TargetWidth : _videoWidth;
+                    h = clip.TargetHeight > 0 ? clip.TargetHeight : _videoHeight;
+
+                    // 从legacy effects补全缺失字段（兼容部分target字段的旧数据）
+                    if (HasExplicitTargetRect(clip))
+                    {
+                        ApplyLegacyRectFallbackForMissingTargetFields(clip, ref x, ref y, ref w, ref h);
+                    }
+                    else
+                    {
+                        TryReadRectFromLegacyEffects(clip, ref x, ref y, ref w, ref h);
+                    }
                 }
 
                 // Clamp to keep UI stable.
@@ -1593,6 +1598,16 @@ namespace projectFrameCut.InteractableEditor
 
             if (_isTextClip)
             {
+                if (TryResolveTextClipRect(_currentClip, out var textX, out var textY, out var textW, out var textH))
+                {
+                    x = textX;
+                    y = textY;
+                    w = textW;
+                    h = textH;
+                    _baseRect = new Rect(textX, textY, textW, textH);
+                    return;
+                }
+
                 if (TryGetTextEntry(out var entry) && entry != null)
                 {
                     x = entry.x;
@@ -1656,30 +1671,242 @@ namespace projectFrameCut.InteractableEditor
         {
             entry = null;
             if (_currentClip == null) return false;
-            if (!_currentClip.ExtraData.TryGetValue("TextEntries", out var entriesObj)) return false;
+            if (!TryGetTextEntries(_currentClip, out var entries)) return false;
+            entry = entries[0];
+            return true;
+        }
 
-            List<TextClipEntry>? entries = null;
+        private bool TryGetTextEntries(ClipElementUI clip, out List<TextClipEntry> entries)
+        {
+            entries = null!;
+            if (clip.ExtraData == null || !clip.ExtraData.TryGetValue("TextEntries", out var entriesObj))
+            {
+                return false;
+            }
+
             if (entriesObj is List<TextClipEntry> list)
             {
+                if (list.Count == 0)
+                {
+                    return false;
+                }
+
                 entries = list;
+                return true;
             }
-            else if (entriesObj is JsonElement je)
+
+            if (entriesObj is JsonElement je)
             {
                 try
                 {
-                    entries = JsonSerializer.Deserialize<List<TextClipEntry>>(je);
+                    var parsed = JsonSerializer.Deserialize<List<TextClipEntry>>(je);
+                    if (parsed is { Count: > 0 })
+                    {
+                        clip.ExtraData["TextEntries"] = parsed;
+                        entries = parsed;
+                        return true;
+                    }
                 }
                 catch
                 {
                     return false;
                 }
-
-                if (entries != null)
-                    _currentClip.ExtraData["TextEntries"] = entries;
             }
 
-            if (entries == null || entries.Count == 0) return false;
-            entry = entries[0];
+            if (entriesObj is string json && !string.IsNullOrWhiteSpace(json))
+            {
+                try
+                {
+                    var parsed = JsonSerializer.Deserialize<List<TextClipEntry>>(json);
+                    if (parsed is { Count: > 0 })
+                    {
+                        clip.ExtraData["TextEntries"] = parsed;
+                        entries = parsed;
+                        return true;
+                    }
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryResolveTextClipRect(ClipElementUI clip, out double x, out double y, out double w, out double h)
+        {
+            x = 0;
+            y = 0;
+            w = 0;
+            h = 0;
+
+            if (!TryGetTextEntries(clip, out var entries))
+            {
+                return false;
+            }
+
+            var hasBounds = false;
+            double minX = 0;
+            double minY = 0;
+            double maxX = 0;
+            double maxY = 0;
+
+            foreach (var entry in entries)
+            {
+                if (!TryMeasureTextEntryRect(entry, out var entryX, out var entryY, out var entryW, out var entryH))
+                {
+                    continue;
+                }
+
+                var left = entryX;
+                var top = entryY;
+                var right = entryX + entryW;
+                var bottom = entryY + entryH;
+
+                if (!hasBounds)
+                {
+                    minX = left;
+                    minY = top;
+                    maxX = right;
+                    maxY = bottom;
+                    hasBounds = true;
+                }
+                else
+                {
+                    minX = Math.Min(minX, left);
+                    minY = Math.Min(minY, top);
+                    maxX = Math.Max(maxX, right);
+                    maxY = Math.Max(maxY, bottom);
+                }
+            }
+
+            if (!hasBounds)
+            {
+                return false;
+            }
+
+            x = minX;
+            y = minY;
+            w = Math.Max(MinSize, maxX - minX);
+            h = Math.Max(MinSize, maxY - minY);
+            return true;
+        }
+
+        private bool TryMeasureTextEntryRect(TextClipEntry entry, out double x, out double y, out double w, out double h)
+        {
+            x = entry.x;
+            y = entry.y;
+            w = MinSize;
+            h = MinSize;
+
+            var rawText = entry.text ?? string.Empty;
+            var textForMeasure = string.IsNullOrEmpty(rawText) ? " " : rawText;
+            var fontSize = Math.Max(1d, entry.fontSize * (96.0 / 72.0));
+            var strokeExtra = Math.Max(0d, entry.strokeWidth ?? 0f) * 2d;
+
+            if (entry.UseVerticalLayout)
+            {
+                var glyphCount = rawText.Count(c => c != '\n' && c != '\r');
+                if (glyphCount <= 0)
+                {
+                    glyphCount = 1;
+                }
+
+                var lineAdvance = fontSize * Math.Max(0.1d, entry.lineSpacing);
+                w = Math.Max(MinSize, fontSize + strokeExtra);
+                h = Math.Max(MinSize, glyphCount * lineAdvance + strokeExtra);
+            }
+            else
+            {
+                var previousText = MeasurementLabel.Text;
+                var previousFontFamily = MeasurementLabel.FontFamily;
+                var previousFontSize = MeasurementLabel.FontSize;
+                var previousFontAttributes = MeasurementLabel.FontAttributes;
+                var previousWidthRequest = MeasurementLabel.WidthRequest;
+                var previousLineBreakMode = MeasurementLabel.LineBreakMode;
+
+                try
+                {
+                    MeasurementLabel.Text = textForMeasure;
+                    MeasurementLabel.FontSize = fontSize;
+                    MeasurementLabel.FontFamily = string.IsNullOrWhiteSpace(entry.fontFamily) ? null : entry.fontFamily;
+                    MeasurementLabel.FontAttributes = entry.fontStyle switch
+                    {
+                        SixLabors.Fonts.FontStyle.Bold => FontAttributes.Bold,
+                        SixLabors.Fonts.FontStyle.Italic => FontAttributes.Italic,
+                        SixLabors.Fonts.FontStyle.BoldItalic => FontAttributes.Bold | FontAttributes.Italic,
+                        _ => FontAttributes.None
+                    };
+
+                    var wrappingWidth = entry.wrappingWidth.HasValue && entry.wrappingWidth.Value > 0
+                        ? entry.wrappingWidth.Value
+                        : 0f;
+
+                    if (wrappingWidth > 0)
+                    {
+                        MeasurementLabel.WidthRequest = wrappingWidth;
+                        MeasurementLabel.LineBreakMode = LineBreakMode.WordWrap;
+                        var wrappedSize = MeasurementLabel.Measure(wrappingWidth, double.PositiveInfinity);
+                        w = wrappedSize.Width;
+                        h = wrappedSize.Height;
+                    }
+                    else
+                    {
+                        MeasurementLabel.WidthRequest = -1;
+                        MeasurementLabel.LineBreakMode = LineBreakMode.NoWrap;
+                        var size = MeasurementLabel.Measure(double.PositiveInfinity, double.PositiveInfinity);
+                        w = size.Width;
+                        h = size.Height;
+                    }
+                }
+                catch
+                {
+                    var fallbackWidth = Math.Max(1, textForMeasure.Length) * fontSize * 0.6d;
+                    var fallbackHeight = fontSize * 1.2d;
+                    w = fallbackWidth;
+                    h = fallbackHeight;
+                }
+                finally
+                {
+                    MeasurementLabel.Text = previousText;
+                    MeasurementLabel.FontFamily = previousFontFamily;
+                    MeasurementLabel.FontSize = previousFontSize;
+                    MeasurementLabel.FontAttributes = previousFontAttributes;
+                    MeasurementLabel.WidthRequest = previousWidthRequest;
+                    MeasurementLabel.LineBreakMode = previousLineBreakMode;
+                }
+
+                w = Math.Max(MinSize, w + strokeExtra);
+                h = Math.Max(MinSize, h + strokeExtra);
+            }
+
+            if (Math.Abs(entry.rotation) > 0.0001f)
+            {
+                var radians = entry.rotation * Math.PI / 180d;
+                var cos = Math.Cos(radians);
+                var sin = Math.Sin(radians);
+
+                static (double rx, double ry) Rotate(double px, double py, double cosV, double sinV)
+                    => (px * cosV - py * sinV, px * sinV + py * cosV);
+
+                var p0 = Rotate(0, 0, cos, sin);
+                var p1 = Rotate(w, 0, cos, sin);
+                var p2 = Rotate(0, h, cos, sin);
+                var p3 = Rotate(w, h, cos, sin);
+
+                var minRx = Math.Min(Math.Min(p0.rx, p1.rx), Math.Min(p2.rx, p3.rx));
+                var minRy = Math.Min(Math.Min(p0.ry, p1.ry), Math.Min(p2.ry, p3.ry));
+                var maxRx = Math.Max(Math.Max(p0.rx, p1.rx), Math.Max(p2.rx, p3.rx));
+                var maxRy = Math.Max(Math.Max(p0.ry, p1.ry), Math.Max(p2.ry, p3.ry));
+
+                x = entry.x + minRx;
+                y = entry.y + minRy;
+                w = Math.Max(MinSize, maxRx - minRx);
+                h = Math.Max(MinSize, maxRy - minRy);
+                return true;
+            }
+
             return true;
         }
 

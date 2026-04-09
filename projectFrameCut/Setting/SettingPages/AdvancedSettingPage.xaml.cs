@@ -140,6 +140,7 @@ public partial class AdvancedSettingPage : ContentPage
         .AddSwitch("diag_TraceIPictureObject", SettingLocalizedResources.Advanced_TraceIPictureObject, SettingsManager.IsBoolSettingTrue("diag_TraceIPictureObject"))
         .AddSwitch("render_SaveCheckpoint", SettingLocalizedResources.Render_SaveCheckpoint, IsBoolSettingTrue("render_SaveCheckpoint"), null)
         .AddSwitch("render_DumpDiagData", SettingLocalizedResources.Render_DumpDiagData, IsBoolSettingTrue("render_DumpDiagData"), null)
+        .AddSwitch("render_DisallowPictureModeDowngrade", SettingLocalizedResources.Render_DisallowPictureModeDowngrade, IsBoolSettingTrue("render_DisallowPictureModeDowngrade"), null)
         .AddSeparator()
 
         .AddText(SettingLocalizedResources.Advanced_Globalization, fontSize: 20)

@@ -1243,6 +1243,8 @@ public partial class DraftEffectBindingView : ContentView
         Dictionary<string, object> localCache = new(), globalCache = new(); //for bindable effect
         var w = _page.previewWidth;
         var h = _page.previewHeight;
+        var projectRelativeWidth = Math.Max(1, _page.ProjectInfo.RelativeWidth);
+        var projectRelativeHeight = Math.Max(1, _page.ProjectInfo.RelativeHeight);
 
         try
         {
@@ -1288,7 +1290,9 @@ public partial class DraftEffectBindingView : ContentView
                     await _page.DisplayAlertAsync(Localized._Error, Localized.DraftPage_RenderFail(0, ex), Localized._OK);
 #endif
                 }
-            });
+            },
+            projectRelativeWidth: projectRelativeWidth,
+            projectRelativeHeight: projectRelativeHeight);
 
             if (_outputNode is not null)
             {

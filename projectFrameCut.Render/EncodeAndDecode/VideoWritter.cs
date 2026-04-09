@@ -100,6 +100,8 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         public uint DurationWritten => Index;
 
+        public IPicture.PicturePixelMode? TargetPPB => colorDepth;
+
         public static bool DetectCodec(string codec)
         {
             if (FFmpegHelper.CodecUtils.GetCodecsByType(AVMediaType.AVMEDIA_TYPE_VIDEO, true).Find(c => c.Name.Equals(codec, StringComparison.OrdinalIgnoreCase)) != null)

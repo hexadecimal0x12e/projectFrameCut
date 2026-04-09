@@ -78,7 +78,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 		var requests = ResolveRequests(frameIndex);
 		var canvasWidth = ResolveCanvasSize(_outputHost.Width, Width, _viewportWidth, targetWidth);
 		var canvasHeight = ResolveCanvasSize(_outputHost.Height, Height, _viewportHeight, targetHeight);
-		return await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex).ConfigureAwait(false);
+		return await PrepareRequestsAsync(requests, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: false).ConfigureAwait(false);
 	}
 
 	public async Task UpdateDraft(DraftStructureJSON json)
@@ -114,7 +114,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 		var requests = ResolveRequests(frameIndex);
 		var viewportWidth = ResolveCanvasSize(_outputHost.Width, Width, _viewportWidth, targetWidth);
 		var viewportHeight = ResolveCanvasSize(_outputHost.Height, Height, _viewportHeight, targetHeight);
-		var prepared = await PrepareRequestsAsync(requests, targetWidth, targetHeight, targetWidth, targetHeight, frameIndex).ConfigureAwait(false);
+		var prepared = await PrepareRequestsAsync(requests, targetWidth, targetHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout: true).ConfigureAwait(false);
 
 		if (Dispatcher.IsDispatchRequired)
 		{
@@ -131,7 +131,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 		_outputHost.Content = null;
 	}
 
-	private static async Task<IReadOnlyList<PreparedPreview>> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex)
+	private static async Task<IReadOnlyList<PreparedPreview>> PrepareRequestsAsync(IReadOnlyList<PreviewRequest> requests, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout)
 	{
 		if (requests.Count == 0)
 		{
@@ -140,7 +140,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 
 		var preparationTasks = requests
 			.Reverse()
-			.Select(request => Task.Run(() => GenerateClipPreviewPrepared(request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex)))
+			.Select(request => Task.Run(() => GenerateClipPreviewPrepared(request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, applyClipTargetLayout)))
 			.ToArray();
 
 		return await Task.WhenAll(preparationTasks).ConfigureAwait(false);
@@ -307,9 +307,9 @@ public sealed class DynamicPreview : ContentView, IDisposable
 		return new Rect(offX, offY, drawW, drawH);
 	}
 
-	private static PreparedPreview GenerateClipPreviewPrepared(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex)
+	private static PreparedPreview GenerateClipPreviewPrepared(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, bool applyClipTargetLayout)
 	{
-		var generatedView = GenerateClipPreview(request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, out var message);
+		var generatedView = GenerateClipPreview(request, canvasWidth, canvasHeight, targetWidth, targetHeight, frameIndex, out var message, applyClipTargetLayout);
 		return new PreparedPreview(request.Clip.Id, generatedView, message, request.Clip);
 	}
 
@@ -342,7 +342,7 @@ public sealed class DynamicPreview : ContentView, IDisposable
 			.ToArray();
 	}
 
-	private static View? GenerateClipPreview(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, out string? message)
+	private static View? GenerateClipPreview(PreviewRequest request, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint frameIndex, out string? message, bool applyClipTargetLayout)
 	{
 		message = null;
 		var clip = request.Clip;
@@ -388,13 +388,29 @@ public sealed class DynamicPreview : ContentView, IDisposable
 				.Where(e => e.Enabled)
 				.OrderBy(e => e.Index))
 			{
-				if (HasExplicitTargetRect(clip) && IsLegacyInternalLayoutEffect(effect))
+				var isLegacyLayoutEffect = IsLegacyInternalLayoutEffect(effect);
+				if (isLegacyLayoutEffect)
 				{
-					continue;
+					// In prepared-preview mode, InteractableEditor owns clip placement/size.
+					// Applying legacy internal place/resize here causes double layout scaling.
+					if (!applyClipTargetLayout)
+					{
+						continue;
+					}
+
+					if (HasExplicitTargetRect(clip))
+					{
+						continue;
+					}
 				}
 
 				generatedView = ApplyEffectPreview(generatedView, effect, canvasWidth, canvasHeight, frameIndex);
 			}
+		}
+
+		if (!applyClipTargetLayout)
+		{
+			return generatedView;
 		}
 
 		return ApplyClipTargetLayoutPreview(generatedView, clip, canvasWidth, canvasHeight);
@@ -414,8 +430,8 @@ public sealed class DynamicPreview : ContentView, IDisposable
 		input.HeightRequest = Math.Max(1, height);
 		input.HorizontalOptions = LayoutOptions.Start;
 		input.VerticalOptions = LayoutOptions.Start;
-		//input.TranslationX += clip.TargetX;
-		//input.TranslationY += clip.TargetY;
+		input.TranslationX = clip.TargetX;
+		input.TranslationY = clip.TargetY;
 		return input;
 	}
 
@@ -462,9 +478,13 @@ public sealed class DynamicPreview : ContentView, IDisposable
 			return true;
 		}
 
-		if (string.IsNullOrWhiteSpace(effect.Name)
-			&& (string.Equals(effect.TypeName, "Place", StringComparison.OrdinalIgnoreCase)
-				|| string.Equals(effect.TypeName, "Resize", StringComparison.OrdinalIgnoreCase)))
+		if (!string.Equals(effect.FromPlugin, InternalPluginBase.InternalPluginBaseID, StringComparison.Ordinal))
+		{
+			return false;
+		}
+
+		if (string.Equals(effect.TypeName, "Place", StringComparison.OrdinalIgnoreCase)
+			|| string.Equals(effect.TypeName, "Resize", StringComparison.OrdinalIgnoreCase))
 		{
 			return true;
 		}
