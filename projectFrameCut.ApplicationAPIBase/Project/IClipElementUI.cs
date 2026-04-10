@@ -6,7 +6,7 @@ using projectFrameCut.Shared;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace projectFrameCut.DraftStuff
+namespace projectFrameCut.ApplicationAPIBase.Project
 {
     /// <summary>
     /// Represents a timeline clip element with both UI handles and render/source metadata.
@@ -57,7 +57,7 @@ namespace projectFrameCut.DraftStuff
         uint relativeStartFrame { get; set; }
         float sourceSecondPerFrame { get; set; }
         float SecondPerFrameRatio { get; set; }
-        projectFrameCut.Shared.ClipMode ClipType { get; set; }
+        ClipMode ClipType { get; set; }
         /// <summary>
         /// Gets or sets source plugin id for this clip.
         /// </summary>

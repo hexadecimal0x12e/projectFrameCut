@@ -206,28 +206,29 @@ namespace projectFrameCut.Render.EncodeAndDecode
             if (targetFrame < _currentFrameNumber)
             {
                 // Try seeking for HTTP stream; might fail depending on protocol/server
-                if (ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD) >= 0)
+                int seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
+                if (seekRet < 0)
                 {
-                    ffmpeg.avcodec_flush_buffers(_codec);
-                    _currentFrameNumber = 0;
-                    _eof = false;
-                    flushSent = false;
+                    var msg = $"[HttpDecoderContext] Seek backward failed for {_url} (code {seekRet}). HTTP stream seek not supported.";
+                    Log(msg, "warn");
+                    // For HTTP streams, seek failure is often expected. Throw to prevent format context corruption.
+                    if (EnableLock) locker.Exit();
+                    throw new InvalidOperationException(msg);
                 }
-                else
-                {
-                    // Seeking failed, maybe try to reopen or just warn
-                    Log($"[HttpDecoderContext] Seek backward failed for {_url}. Continuing (might fail).", "warn");
-                }
+                ffmpeg.avcodec_flush_buffers(_codec);
+                _currentFrameNumber = 0;
+                _eof = false;
+                flushSent = false;
             }
 
             while (true)
             {
                 if (!_eof)
                 {
-                    if (ffmpeg.av_read_frame(_fmt, _pkt) < 0)
+                    int readRet = ffmpeg.av_read_frame(_fmt, _pkt);
+                    if (readRet < 0)
                     {
                         _eof = true;
-                        ffmpeg.av_packet_unref(_pkt);
                     }
                     else
                     {
@@ -285,7 +286,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
         not_found:
             if (EnableLock) locker.Exit();
-            if (Math.Abs(targetFrame - TotalFrames) < 5 && TotalFrames > 0)
+            if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
             {
                 Log($"[HttpDecoderContext] Frame {targetFrame} not found(may due to rounding), try getting frame {targetFrame - 1} instead.");
                 return GetFrame(targetFrame - 1, hasAlpha);

@@ -20,6 +20,12 @@ public partial class AssetPicker : ContentView
 		BindingMode.TwoWay,
 		propertyChanged: OnSelectedAssetChanged);
 
+	public static readonly BindableProperty IsDoubleTapPreviewEnabledProperty = BindableProperty.Create(
+		nameof(IsDoubleTapPreviewEnabled),
+		typeof(bool),
+		typeof(AssetPicker),
+		true);
+
 	private readonly AssetViewModel _viewModel = new();
 	private readonly int _itemSize = 200;
 	private readonly int _itemSpacing = 5;
@@ -31,6 +37,12 @@ public partial class AssetPicker : ContentView
 	{
 		get => (AssetItem?)GetValue(SelectedAssetProperty);
 		set => SetValue(SelectedAssetProperty, value);
+	}
+
+	public bool IsDoubleTapPreviewEnabled
+	{
+		get => (bool)GetValue(IsDoubleTapPreviewEnabledProperty);
+		set => SetValue(IsDoubleTapPreviewEnabledProperty, value);
 	}
 
 	public AssetPicker()
@@ -113,7 +125,10 @@ public partial class AssetPicker : ContentView
 		if (sender is Border border && border.BindingContext is AssetItem asset)
 		{
 			AssetDoubleTapped?.Invoke(this, asset);
-			await ShowPreviewAsync(asset);
+			if (IsDoubleTapPreviewEnabled)
+			{
+				await ShowPreviewAsync(asset);
+			}
 		}
 	}
 
@@ -122,7 +137,10 @@ public partial class AssetPicker : ContentView
 		if (sender is Image image && image.BindingContext is AssetItem asset)
 		{
 			AssetDoubleTapped?.Invoke(this, asset);
-			await ShowPreviewAsync(asset);
+			if (IsDoubleTapPreviewEnabled)
+			{
+				await ShowPreviewAsync(asset);
+			}
 		}
 	}
 

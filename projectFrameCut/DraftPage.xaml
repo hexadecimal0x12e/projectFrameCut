@@ -12,7 +12,6 @@
     <ContentPage.MenuBarItems>
         <MenuBarItem x:Name="ProjectNameMenuBarItem" Text="{l:Localized Key=DraftPage_MenuBar_Project}">
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_GoRender}"  Command="{Binding GoRenderCommand}" />
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Exit}" Command="{Binding ExitCommand}"/>
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Save}" Command="{Binding SaveCommand}">
                 <MenuFlyoutItem.KeyboardAccelerators>
@@ -20,6 +19,13 @@
                                 Key="S" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_History}" Command="{Binding ManageWindowCommand}" CommandParameter="history">
+                <MenuFlyoutItem.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
+                                Key="H" />
+                </MenuFlyoutItem.KeyboardAccelerators>
+            </MenuFlyoutItem>
+            <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_CleanRenderCache}" Command="{Binding CleanRenderCacheCommand}"/>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Option}" Command="{Binding SettingsCommand}"/>
             <!-- TODO
@@ -29,6 +35,7 @@
             -->
             <MenuFlyoutSeparator></MenuFlyoutSeparator>
             <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_ExitWithoutSave}" Command="{Binding ExitNoSaveCommand}"/>
+            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Project_Exit}" Command="{Binding ExitCommand}"/>
         </MenuBarItem>
 
         <MenuBarItem Text="{l:Localized Key=DraftPage_MenuBar_Edit}" >
@@ -66,12 +73,6 @@
                 <MenuFlyoutItem.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
                                 Key="Y" />
-                </MenuFlyoutItem.KeyboardAccelerators>
-            </MenuFlyoutItem>
-            <MenuFlyoutItem Text="{l:Localized Key=DraftPage_MenuBar_Edit_History}" Command="{Binding ManageWindowCommand}" CommandParameter="history">
-                <MenuFlyoutItem.KeyboardAccelerators>
-                    <KeyboardAccelerator Modifiers="{OnPlatform WinUI=Ctrl, MacCatalyst=Command}"
-                                Key="H" />
                 </MenuFlyoutItem.KeyboardAccelerators>
             </MenuFlyoutItem>
             <MenuFlyoutSeparator/>

@@ -17,7 +17,6 @@
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -26,7 +25,6 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -35,7 +33,14 @@
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
+        "DontTranslate": false
+      },
+      {
+        "Id": "CrashForm_AutoRebootSoon",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u5D29\u6E83\u4E86\u3002\r\u7A0B\u5E8F\u5C06\u81EA\u52A8\u91CD\u542F\uFF0C\u4F60\u7684\u9879\u76EE\u5C06\u4F1A\u88AB\u81EA\u52A8\u6062\u590D\u3002\r\u8981\u7981\u7528\u6B64\u529F\u80FD\uFF0C\u8BF7\u8F6C\u5230 \u8BBE\u7F6E-\u901A\u7528-\u5D29\u6E83\u540E\u4E0D\u91CD\u542F\u3002",
+        "Mode": "InterpolationString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {
@@ -44,7 +49,6 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -53,7 +57,6 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -62,7 +65,6 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -71,7 +73,6 @@
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -80,7 +81,6 @@
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -89,7 +89,6 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -98,7 +97,6 @@
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -107,7 +105,6 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -116,16 +113,6 @@
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -144,7 +131,6 @@
             "Value": ""
           }
         ],
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -153,7 +139,6 @@
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -162,7 +147,6 @@
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -171,16 +155,6 @@
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "CrashForm_AutoRebootSoon",
-        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u5D29\u6E83\u4E86\u3002\r\u7A0B\u5E8F\u5C06\u81EA\u52A8\u91CD\u542F\uFF0C\u4F60\u7684\u9879\u76EE\u5C06\u4F1A\u88AB\u81EA\u52A8\u6062\u590D\u3002\r\u8981\u7981\u7528\u6B64\u529F\u80FD\uFF0C\u8BF7\u8F6C\u5230 \u8BBE\u7F6E-\u901A\u7528-\u5D29\u6E83\u540E\u4E0D\u91CD\u542F\u3002",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "HasValidationErrors": false,
         "DontTranslate": false
       }
     ],
@@ -192,7 +166,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -202,7 +175,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -212,7 +184,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -222,7 +193,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -232,7 +202,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -242,17 +211,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -262,7 +220,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -272,7 +229,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -282,7 +238,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -302,7 +257,6 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -312,7 +266,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -322,7 +275,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -332,7 +284,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -342,7 +293,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -352,7 +302,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -362,17 +311,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
         "Id": "CrashForm_AutoRebootSoon",
-        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Value": "We\u0027re sorry, {HelperProgram.AppTitle} has crashed.\r\nThe program will restart automatically, and your projects will be automatically restored.\r\nTo disable this feature, go to Settings - General - Do not restart after crash.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
-        "HasValidationErrors": false,
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -384,7 +331,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -394,7 +340,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -404,7 +349,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -414,7 +358,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -424,7 +367,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -434,17 +376,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": "\u6388\u6B0A\u689D\u6B3E",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u7528\u65BC\u555F\u52D5\u756B\u9762\u6216\u95DC\u65BC\u8996\u7A97\u4E2D\u7684\u6388\u6B0A\u8CC7\u8A0A\u6A19\u984C\u3002\u539F\u59CB\u503C\u70BA\u7A7A\uFF0C\u6839\u64DA\u4E0A\u4E0B\u6587\u6DFB\u52A0\u4E86\u5408\u9069\u7684\u6A19\u7C64\u3002",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -454,7 +385,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -464,7 +394,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -474,7 +403,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -494,7 +422,6 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -504,7 +431,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -514,7 +440,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -524,7 +449,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -534,7 +458,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -544,7 +467,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -554,17 +476,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
         "Id": "CrashForm_AutoRebootSoon",
-        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C{HelperProgram.AppTitle} \u5D29\u6F70\u4E86\u3002\r\u7A0B\u5F0F\u5C07\u81EA\u52D5\u91CD\u65B0\u555F\u52D5\uFF0C\u4F60\u7684\u5C08\u6848\u6703\u81EA\u52D5\u6062\u5FA9\u3002\r\u8981\u505C\u7528\u6B64\u529F\u80FD\uFF0C\u8ACB\u524D\u5F80 \u8A2D\u5B9A-\u4E00\u822C-\u5D29\u6F70\u5F8C\u4E0D\u91CD\u65B0\u555F\u52D5\u3002",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
-        "HasValidationErrors": false,
+        "Comment": "\u5DF2\u8ABF\u6574\u7528\u8A5E\u4EE5\u7B26\u5408\u53F0\u7063\u7E41\u9AD4\u4E2D\u6587\u7FD2\u6163\uFF0C\u5982\u300C\u7A0B\u5E8F\u300D\u6539\u70BA\u300C\u7A0B\u5F0F\u300D\u3001\u300C\u9879\u76EE\u300D\u6539\u70BA\u300C\u5C08\u6848\u300D\u3001\u300C\u7981\u7528\u300D\u6539\u70BA\u300C\u505C\u7528\u300D\u3001\u300C\u8BBE\u7F6E-\u901A\u7528\u300D\u6539\u70BA\u300C\u8A2D\u5B9A-\u4E00\u822C\u300D\u3002",
         "DontTranslate": false
       }
     ],
@@ -576,7 +496,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -586,7 +505,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -596,7 +514,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -606,7 +523,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -616,7 +532,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -626,17 +541,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -646,7 +550,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -656,7 +559,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -666,7 +568,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -686,7 +587,6 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -696,7 +596,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -706,7 +605,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -716,7 +614,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -726,7 +623,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -736,7 +632,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -746,17 +641,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
         "Id": "CrashForm_AutoRebootSoon",
-        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Value": "\u7533\u3057\u8A33\u3054\u3056\u3044\u307E\u305B\u3093\u3001{HelperProgram.AppTitle} \u304C\u30AF\u30E9\u30C3\u30B7\u30E5\u3057\u307E\u3057\u305F\u3002\r\u30D7\u30ED\u30B0\u30E9\u30E0\u306F\u81EA\u52D5\u7684\u306B\u518D\u8D77\u52D5\u3057\u307E\u3059\u3002\u3042\u306A\u305F\u306E\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u306F\u81EA\u52D5\u7684\u306B\u5FA9\u5143\u3055\u308C\u307E\u3059\u3002\r\u3053\u306E\u6A5F\u80FD\u3092\u7121\u52B9\u306B\u3059\u308B\u306B\u306F\u3001[\u8A2D\u5B9A] - [\u4E00\u822C] - [\u30AF\u30E9\u30C3\u30B7\u30E5\u5F8C\u306B\u518D\u8D77\u52D5\u3057\u306A\u3044] \u306B\u79FB\u52D5\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
-        "HasValidationErrors": false,
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -768,7 +661,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -778,7 +670,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -788,7 +679,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -798,7 +688,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -808,7 +697,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -818,17 +706,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -838,7 +715,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -848,7 +724,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -858,7 +733,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -878,7 +752,6 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -888,7 +761,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -898,7 +770,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -908,7 +779,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -918,7 +788,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -928,7 +797,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -938,17 +806,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
         "Id": "CrashForm_AutoRebootSoon",
-        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Value": "\uC8C4\uC1A1\uD569\uB2C8\uB2E4. {HelperProgram.AppTitle}\uAC00 \uBE44\uC815\uC0C1 \uC885\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.\r\n\uD504\uB85C\uADF8\uB7A8\uC774 \uC790\uB3D9\uC73C\uB85C \uC7AC\uC2DC\uC791\uB418\uBA70, \uC791\uC5C5 \uC911\uC774\uB358 \uD504\uB85C\uC81D\uD2B8\uB294 \uC790\uB3D9\uC73C\uB85C \uBCF5\uC6D0\uB429\uB2C8\uB2E4.\r\n\uC774 \uAE30\uB2A5\uC744 \uBE44\uD65C\uC131\uD654\uD558\uB824\uBA74, \uC124\uC815 \u003E \uC77C\uBC18 \u003E \u0027\uBE44\uC815\uC0C1 \uC885\uB8CC \uD6C4 \uC7AC\uC2DC\uC791 \uC548 \uD568\u0027\uC73C\uB85C \uC774\uB3D9\uD558\uC138\uC694.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
-        "HasValidationErrors": false,
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -960,7 +826,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -970,7 +835,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -980,7 +844,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -990,7 +853,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1000,7 +862,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "Titre de la fen\u00EAtre de rapport de plantage de l\u0027application. Le nom de l\u0027application est ins\u00E9r\u00E9 via le param\u00E8tre.",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1010,17 +871,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1030,7 +880,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1040,7 +889,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1050,7 +898,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1070,7 +917,6 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1080,7 +926,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1090,7 +935,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1100,7 +944,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1110,7 +953,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1120,7 +962,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1130,17 +971,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
         "Id": "CrashForm_AutoRebootSoon",
-        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Value": "Je suis d\u00E9sol\u00E9, {HelperProgram.AppTitle} a plant\u00E9.\r\nLe programme va red\u00E9marrer automatiquement, et vos projets seront restaur\u00E9s automatiquement.\r\nPour d\u00E9sactiver cette fonctionnalit\u00E9, allez dans Param\u00E8tres -\u003E G\u00E9n\u00E9ral -\u003E Ne pas red\u00E9marrer apr\u00E8s un plantage.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
-        "HasValidationErrors": false,
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -1152,7 +991,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1162,7 +1000,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1172,7 +1009,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1182,7 +1018,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1192,7 +1027,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1202,7 +1036,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u5E94\u7528\u7A0B\u5E8F\u5D29\u6E83\u62A5\u544A\u4E4B\u6807\u9898",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1212,17 +1045,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u7559\u539F\u540D\u79F0\u53CA\u52A8\u6001\u5E74\u4EFD\u8868\u8FBE\u5F0F\u3002",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u6E90\u5B57\u7B26\u4E32\u4E3A\u7A7A\u683C\uFF0C\u5728\u6587\u8A00\u6587\u4E2D\u4FDD\u7559\u539F\u6837\u4EE5\u7EF4\u6301\u754C\u9762\u5E03\u5C40\u3002",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1242,7 +1064,6 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1252,7 +1073,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1262,7 +1082,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1272,7 +1091,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u6587\u8A00\u6587\u7248\u672C\u4E4B\u7CFB\u7EDF\u8981\u6C42\u63D0\u793A\uFF0C\u4FDD\u7559\u53C2\u6570\u5360\u4F4D\u7B26\uFF0C\u7528\u8BED\u53E4\u96C5\u800C\u660E\u6670\u3002",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1282,7 +1100,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1292,7 +1109,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1302,7 +1118,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1312,7 +1127,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1322,17 +1136,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u7A0B\u5E8F\u65E0\u54CD\u5E94\u4E4B\u63D0\u793A\uFF0C\u6587\u8A00\u8BD1\u6CD5\u6C42\u7B80\u96C5\uFF0C\u6280\u672F\u8BCD\u7A0D\u4F5C\u8F6C\u5316\u3002",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
         "Id": "CrashForm_AutoRebootSoon",
-        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Value": "\u6B49\u751A\uFF0C{HelperProgram.AppTitle} \u5D29\u574F\u77E3\u3002\r\u7A0B\u5F0F\u5C06\u81EA\u542F\uFF0C\u6C5D\u4E4B\u9879\u76EE\u5C06\u81EA\u590D\u3002\r\u6B32\u7981\u6B64\u80FD\uFF0C\u8BF7\u8F6C\u81F3 \u8BBE\u7F6E-\u901A\u7528-\u5D29\u540E\u4E0D\u542F\u3002",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
-        "HasValidationErrors": false,
+        "Comment": "\u5C06\u73B0\u4EE3\u4E2D\u6587\u5D29\u6E83\u63D0\u793A\u7FFB\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u4FDD\u6301\u6280\u672F\u542B\u4E49\u51C6\u786E\uFF0C\u7B26\u5408\u6587\u8A00\u6587\u7B80\u6D01\u98CE\u683C\u3002",
         "DontTranslate": false
       }
     ],
@@ -1344,7 +1156,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1354,7 +1165,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1364,7 +1174,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1374,7 +1183,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1384,7 +1192,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1394,7 +1201,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1404,17 +1210,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "The original value is a single space character, likely for layout purposes. Retained as is.",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1434,7 +1229,6 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1444,7 +1238,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1454,7 +1247,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1464,7 +1256,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1474,7 +1265,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1484,7 +1274,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1494,7 +1283,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1504,7 +1292,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1514,17 +1301,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
         "Id": "CrashForm_AutoRebootSoon",
-        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Value": "\u0639\u0630\u0631\u064B\u0627\u060C {HelperProgram.AppTitle} \u0642\u062F \u062A\u0639\u0637\u0644.\r\u0633\u064A\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C \u062A\u0644\u0642\u0627\u0626\u064A\u064B\u0627\u060C \u0648\u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0645\u0634\u0631\u0648\u0639\u0643 \u062A\u0644\u0642\u0627\u0626\u064A\u064B\u0627.\r\u0644\u062A\u0639\u0637\u064A\u0644 \u0647\u0630\u0647 \u0627\u0644\u0645\u064A\u0632\u0629\u060C \u0627\u0646\u062A\u0642\u0644 \u0625\u0644\u0649 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u003E \u0639\u0627\u0645 \u003E \u0639\u062F\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0628\u0639\u062F \u0627\u0644\u062A\u0639\u0637\u0644.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
-        "HasValidationErrors": false,
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -1536,7 +1321,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1546,7 +1330,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1556,7 +1339,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1566,7 +1348,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1576,7 +1357,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1586,7 +1366,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1596,17 +1375,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": "Lizenzinformationen",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Translated generic placeholder for license information on a splash screen, as the original value was a single space.",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1626,7 +1394,6 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1636,7 +1403,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1646,7 +1412,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1656,7 +1421,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1666,7 +1430,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1676,7 +1439,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1686,7 +1448,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1696,7 +1457,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1706,17 +1466,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
         "Id": "CrashForm_AutoRebootSoon",
-        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Value": "Es tut uns leid, {HelperProgram.AppTitle} ist abgest\u00FCrzt.\r\nDas Programm wird automatisch neu gestartet, Ihr Projekt wird automatisch wiederhergestellt.\r\nUm diese Funktion zu deaktivieren, gehen Sie bitte zu Einstellungen \u2192 Allgemein \u2192 Nach Absturz nicht neu starten.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
-        "HasValidationErrors": false,
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -1728,7 +1486,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1738,7 +1495,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1748,7 +1504,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1758,7 +1513,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1768,7 +1522,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1778,7 +1531,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1788,17 +1540,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Campo vac\u00EDo para el formulario de presentaci\u00F3n/licencia. Se mantiene como espacio en blanco.",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1818,7 +1559,6 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1828,7 +1568,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1838,7 +1577,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1848,7 +1586,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1858,7 +1595,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1868,7 +1604,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1878,7 +1613,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1888,7 +1622,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1898,17 +1631,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
         "Id": "CrashForm_AutoRebootSoon",
-        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Value": "Lo sentimos, {HelperProgram.AppTitle} ha fallado.\r\nEl programa se reiniciar\u00E1 autom\u00E1ticamente y tu proyecto se restaurar\u00E1.\r\nPara desactivar esta funci\u00F3n, ve a Configuraci\u00F3n - General - No reiniciar despu\u00E9s del fallo.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
-        "HasValidationErrors": false,
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -1920,7 +1651,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1930,7 +1660,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1940,7 +1669,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1950,7 +1678,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1960,7 +1687,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1970,7 +1696,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -1980,17 +1705,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Campo vuoto o spazio separatore, mantenuto invariato.",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2010,7 +1724,6 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2020,7 +1733,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2030,7 +1742,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2040,7 +1751,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2050,7 +1760,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2060,7 +1769,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2070,7 +1778,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2080,7 +1787,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2090,17 +1796,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u63D0\u793A\u7528\u6237\u5E94\u7528\u7A0B\u5E8F\u65E0\u54CD\u5E94\u65F6\u7684\u64CD\u4F5C\u9009\u9879",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
         "Id": "CrashForm_AutoRebootSoon",
-        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Value": "Ci dispiace, {HelperProgram.AppTitle} \u00E8 crashato.\r\nIl programma si riavvier\u00E0 automaticamente e i tuoi progetti verranno ripristinati automaticamente.\r\nPer disabilitare questa funzione, vai su Impostazioni \u2192 Generale \u2192 Non riavviare dopo il crash.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
-        "HasValidationErrors": false,
+        "Comment": "Messaggio di crash con funzionalit\u00E0 di riavvio automatico",
         "DontTranslate": false
       }
     ],
@@ -2112,7 +1816,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2122,7 +1825,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2132,7 +1834,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2142,7 +1843,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2152,7 +1852,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2162,7 +1861,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2172,17 +1870,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2202,7 +1889,6 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2212,7 +1898,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2222,7 +1907,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2232,7 +1916,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2242,7 +1925,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2252,7 +1934,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2262,7 +1943,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2272,7 +1952,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2282,17 +1961,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
         "Id": "CrashForm_AutoRebootSoon",
-        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Value": "Przepraszamy, {HelperProgram.AppTitle} uleg\u0142o awarii.\r\nProgram zostanie automatycznie uruchomiony ponownie, a Twoje projekty zostan\u0105 automatycznie przywr\u00F3cone.\r\nAby wy\u0142\u0105czy\u0107 t\u0119 funkcj\u0119, przejd\u017A do Ustawienia \u003E Og\u00F3lne \u003E Nie uruchamiaj ponownie po awarii.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
-        "HasValidationErrors": false,
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -2304,7 +1981,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2314,7 +1990,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2324,7 +1999,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2334,7 +2008,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2344,7 +2017,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2354,7 +2026,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2364,17 +2035,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "O valor original \u00E9 um espa\u00E7o em branco, mantido na tradu\u00E7\u00E3o.",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2394,7 +2054,6 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2404,7 +2063,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2414,7 +2072,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2424,7 +2081,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2434,7 +2090,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2444,7 +2099,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2454,7 +2108,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2464,7 +2117,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2474,17 +2126,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
         "Id": "CrashForm_AutoRebootSoon",
-        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Value": "Lamentamos, {HelperProgram.AppTitle} sofreu uma falha.\r\nO programa ser\u00E1 reiniciado automaticamente e seus projetos ser\u00E3o restaurados automaticamente.\r\nPara desativar esta fun\u00E7\u00E3o, v\u00E1 para Configura\u00E7\u00F5es - Geral - N\u00E3o reiniciar ap\u00F3s falha.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
-        "HasValidationErrors": false,
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -2496,7 +2146,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2506,7 +2155,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2516,7 +2164,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2526,7 +2173,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2536,7 +2182,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2546,7 +2191,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2556,17 +2200,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u041F\u0435\u0440\u0435\u0432\u043E\u0434 \u0441\u0442\u0440\u043E\u043A\u0438 \u043E\u0431 \u0430\u0432\u0442\u043E\u0440\u0441\u043A\u0438\u0445 \u043F\u0440\u0430\u0432\u0430\u0445. \u0418\u043C\u044F \u0027hexadecimal0x12e\u0027 \u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D\u043E \u0431\u0435\u0437 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0430, \u0442\u0430\u043A \u043A\u0430\u043A \u044D\u0442\u043E, \u0432\u0435\u0440\u043E\u044F\u0442\u043D\u043E, \u0438\u043C\u044F \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044F \u0438\u043B\u0438 \u043D\u0430\u0437\u0432\u0430\u043D\u0438\u0435.",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "\u0418\u0441\u0445\u043E\u0434\u043D\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435 \u043F\u0440\u0435\u0434\u0441\u0442\u0430\u0432\u043B\u044F\u0435\u0442 \u0441\u043E\u0431\u043E\u0439 \u043F\u0440\u043E\u0431\u0435\u043B. \u041F\u0435\u0440\u0435\u0432\u043E\u0434 \u043D\u0435 \u0442\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044F.",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2586,7 +2219,6 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2596,7 +2228,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2606,7 +2237,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2616,7 +2246,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2626,7 +2255,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2636,7 +2264,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2646,7 +2273,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2656,7 +2282,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2666,17 +2291,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
         "Id": "CrashForm_AutoRebootSoon",
-        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Value": "\u041A \u0441\u043E\u0436\u0430\u043B\u0435\u043D\u0438\u044E, {HelperProgram.AppTitle} \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u043B \u0440\u0430\u0431\u043E\u0442\u0443 \u0430\u0432\u0430\u0440\u0438\u0439\u043D\u043E.\r\n\u041F\u0440\u043E\u0433\u0440\u0430\u043C\u043C\u0430 \u0431\u0443\u0434\u0435\u0442 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0449\u0435\u043D\u0430, \u0438 \u0432\u0430\u0448\u0438 \u043F\u0440\u043E\u0435\u043A\u0442\u044B \u0431\u0443\u0434\u0443\u0442 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u044B.\r\n\u0427\u0442\u043E\u0431\u044B \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u044D\u0442\u0443 \u0444\u0443\u043D\u043A\u0446\u0438\u044E, \u043F\u0435\u0440\u0435\u0439\u0434\u0438\u0442\u0435 \u0432 \u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 - \u041E\u0431\u0449\u0438\u0435 - \u041D\u0435 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u043A\u0430\u0442\u044C \u043F\u043E\u0441\u043B\u0435 \u0441\u0431\u043E\u044F.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
-        "HasValidationErrors": false,
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -2688,7 +2311,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2698,7 +2320,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2708,7 +2329,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2718,7 +2338,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2728,7 +2347,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2738,7 +2356,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2748,17 +2365,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
-        "DontTranslate": false
-      },
-      {
-        "Id": "SplashForm_License",
-        "Value": " ",
-        "Mode": "InterpolationString",
-        "Args": [],
-        "ArgsComment": [],
-        "Comment": "Kaynak metin yaln\u0131zca bir bo\u015Fluk karakteri i\u00E7eriyor, \u00E7eviri gerektirmiyor.",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2778,7 +2384,6 @@
           }
         ],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2788,7 +2393,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2798,7 +2402,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2808,7 +2411,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2818,7 +2420,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2828,7 +2429,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2838,7 +2438,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2848,7 +2447,6 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
@@ -2858,17 +2456,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
-        "HasValidationErrors": false,
         "DontTranslate": false
       },
       {
         "Id": "CrashForm_AutoRebootSoon",
-        "Value": "Unset localization item:CrashForm_AutoRebootSoon()",
+        "Value": "\u00DCzg\u00FCn\u00FCz, {HelperProgram.AppTitle} \u00E7\u00F6kt\u00FC.\r\nProgram otomatik olarak yeniden ba\u015Flat\u0131lacak ve projeleriniz otomatik olarak kurtar\u0131lacakt\u0131r.\r\nBu \u00F6zelli\u011Fi devre d\u0131\u015F\u0131 b\u0131rakmak i\u00E7in l\u00FCtfen Ayarlar \u003E Genel \u003E \u00C7\u00F6kmeden sonra yeniden ba\u015Flatma se\u00E7ene\u011Fine gidin.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
-        "HasValidationErrors": false,
+        "Comment": "",
         "DontTranslate": false
       }
     ]

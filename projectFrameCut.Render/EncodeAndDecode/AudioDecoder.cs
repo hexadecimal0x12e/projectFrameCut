@@ -111,7 +111,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
             // Seek to start position
             double startTime = (double)startFrame / videoFramerate;
             long timestamp = (long)(startTime / ffmpeg.av_q2d(_fmt->streams[_audioStreamIndex]->time_base));
-            ffmpeg.av_seek_frame(_fmt, _audioStreamIndex, timestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
+            int seekRet = ffmpeg.av_seek_frame(_fmt, _audioStreamIndex, timestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
+            if (seekRet < 0)
+            {
+                LogDiagnostic($"[Float32bitAudioDecoder] Audio seek warning for frame {startFrame}: code {seekRet}. Continuing with seek-from-start.");
+            }
             
             // Flush codec buffers after seek
             ffmpeg.avcodec_flush_buffers(_codec);
@@ -243,7 +247,11 @@ namespace projectFrameCut.Render.EncodeAndDecode
             AVStream* stream = _fmt->streams[_audioStreamIndex];
             double startTime = (double)startIndex / targetSampleRate;
             long timestamp = (long)(startTime / ffmpeg.av_q2d(stream->time_base));
-            ffmpeg.av_seek_frame(_fmt, _audioStreamIndex, timestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
+            int seekRet = ffmpeg.av_seek_frame(_fmt, _audioStreamIndex, timestamp, ffmpeg.AVSEEK_FLAG_BACKWARD);
+            if (seekRet < 0)
+            {
+                LogDiagnostic($"[Float32bitAudioDecoder] Audio seek warning for sample index {startIndex}: code {seekRet}. Continuing with seek-from-start.");
+            }
             ffmpeg.avcodec_flush_buffers(_codec);
 
             if (_swr == null)

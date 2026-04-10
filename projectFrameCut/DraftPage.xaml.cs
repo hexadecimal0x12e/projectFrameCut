@@ -43,6 +43,8 @@ using projectFrameCut.Render.RenderAPIBase.Plugins;
 using System.Reflection;
 using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using System.Runtime.InteropServices;
+using projectFrameCut.ApplicationAPIBase.Project;
+
 
 
 
@@ -61,6 +63,7 @@ using UIKit;
 using projectFrameCut.iDevicesAPI;
 using MobileCoreServices;
 using projectFrameCut.MetalAccelerater;
+using projectFrameCut.ApplicationAPIBase.Project;
 
 
 #endif
@@ -72,6 +75,7 @@ using Microsoft.Maui.Platform;
 using Android.Content.Res;
 using CommunityToolkit.Maui.Extensions;
 using Google.Android.Material.Chip;
+using projectFrameCut.ApplicationAPIBase.Project;
 
 #endif
 
@@ -4157,6 +4161,50 @@ public partial class DraftPage : ContentPage, IDraftPage
     #endregion
 
     #region adjust track and clip
+    public async Task CombineClipsAsGroupAsync(IEnumerable<ClipElementUI> clips)
+    {
+        ArgumentNullException.ThrowIfNull(clips);
+
+        try
+        {
+            var clipIds = clips
+                .Select(c => c?.Id)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id!)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            if (clipIds.Length < 2)
+            {
+                return;
+            }
+
+            // Run on the next UI cycle so placement status/selection updates can finish first.
+            await Task.Yield();
+
+            ClearSelectionInternal();
+            foreach (var clipId in clipIds)
+            {
+                if (Clips.TryGetValue(clipId, out var clip) && clip.ShouldDisplayInUI)
+                {
+                    AddClipToSelection(clip);
+                }
+            }
+
+            if (_selectedClipIds.Count < 2)
+            {
+                await RefreshSelectionUiAsync();
+                return;
+            }
+
+            await CombineSelection();
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "CombineClipsAsGroupAsync", this);
+        }
+    }
+
     private async Task CombineSelection()
     {
         var selected = _selectedClipIds

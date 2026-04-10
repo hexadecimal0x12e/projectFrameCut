@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using projectFrameCut.ApplicationAPIBase.DynamicPreviewProvider;
+using projectFrameCut.ApplicationAPIBase.Project;
 
 
 namespace projectFrameCut.ApplicationAPIBase.Plugins
@@ -28,7 +29,7 @@ namespace projectFrameCut.ApplicationAPIBase.Plugins
         /// <summary>
         /// Get the current Application-level plugin API version.
         /// </summary>
-        public static int CurrentAppLevelPluginAPIVersion => 3;
+        public static int CurrentAppLevelPluginAPIVersion => 4;
 
         /// <summary>
         /// Get the version of the Application-level plugin.

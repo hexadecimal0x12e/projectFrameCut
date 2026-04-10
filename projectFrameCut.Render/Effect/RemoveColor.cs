@@ -155,7 +155,7 @@ namespace projectFrameCut.Render.Effect
             if (source is IPicture<ushort> p16_out)
             {
                 p16_out.SetAlpha(true);
-                var result = new Picture(p16_out)
+                var result = new Picture16bpp(p16_out)
                 {
                     r = p16_out.r,
                     g = p16_out.g,

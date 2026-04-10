@@ -677,6 +677,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
 
             ReplaceTemplatePlaceholders(draftNode, inputValues, templateDefaults, templateDefinitions);
             RemapAllTemplateIds(draftNode);
+            EnsurePackagedTemplateAssetsInProject(draftNode, jsonTemplate);
 
             var remappedDraft = draftNode.Deserialize<DraftStructureJSON>(DraftPage.DraftJSONOption);
             if (remappedDraft is null)
@@ -870,6 +871,7 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                 }
 
                 ClipElementUI? firstClip = null;
+                var placedTemplateClips = new List<ClipElementUI>();
                 foreach (var sourceClip in templateClips)
                 {
                     if (sourceClip.origTrack is not int sourceTrack)
@@ -894,7 +896,13 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
                     _draftPage.RegisterClip(sourceClip, true);
                     _draftPage.AddAClip(sourceClip);
 
+                    placedTemplateClips.Add(sourceClip);
                     firstClip ??= sourceClip;
+                }
+
+                if (!NotAddTemplateAsGroup && placedTemplateClips.Count > 1)
+                {
+                    _ = _draftPage.CombineClipsAsGroupAsync(placedTemplateClips);
                 }
 
                 _ = _draftPage.UpdateAdjacencyForTrack();
@@ -1105,6 +1113,196 @@ public partial class ProjectAddClipViewModel : INotifyPropertyChanged
         key = trimmed.Substring(2, trimmed.Length - 4).Trim();
         return !string.IsNullOrWhiteSpace(key);
     }
+
+    private void EnsurePackagedTemplateAssetsInProject(JsonNode draftNode, JSONBasedTemplateStructure template)
+    {
+        if (template.AssetHashTable is not { Count: > 0 })
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_draftPage.WorkingPath))
+        {
+            return;
+        }
+
+        var referencedAssetIds = CollectTemplateReferencedAssetIds(draftNode);
+        if (referencedAssetIds.Count == 0)
+        {
+            return;
+        }
+
+        var projectAssetsDir = Path.Combine(_draftPage.WorkingPath, "assets");
+        Directory.CreateDirectory(projectAssetsDir);
+
+        var resolvedAssetPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var assetId in referencedAssetIds)
+        {
+            if (!template.AssetHashTable.TryGetValue(assetId, out var packagedSourcePath)
+                || string.IsNullOrWhiteSpace(packagedSourcePath)
+                || !File.Exists(packagedSourcePath))
+            {
+                continue;
+            }
+
+            if (_draftPage.Assets.TryGetValue(assetId, out var existingProjectAsset)
+                && !string.IsNullOrWhiteSpace(existingProjectAsset.Path)
+                && File.Exists(existingProjectAsset.Path))
+            {
+                resolvedAssetPaths[assetId] = existingProjectAsset.Path;
+                continue;
+            }
+
+            var extension = Path.GetExtension(packagedSourcePath);
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                extension = ".bin";
+            }
+
+            var copiedPath = Path.Combine(projectAssetsDir, assetId + extension);
+            File.Copy(packagedSourcePath, copiedPath, overwrite: true);
+
+            var projectAsset = AssetDatabase.Assets.TryGetValue(assetId, out var sharedAsset)
+                ? JsonSerializer.Deserialize<AssetItem>(
+                    JsonSerializer.Serialize(sharedAsset, DraftPage.DraftJSONOption),
+                    DraftPage.DraftJSONOption)
+                : null;
+
+            projectAsset ??= new AssetItem();
+            projectAsset.AssetId = assetId;
+            projectAsset.Path = copiedPath;
+            if (projectAsset.AssetType == AssetType.Other)
+            {
+                projectAsset.AssetType = AssetItem.GetAssetType(copiedPath);
+            }
+
+            if (string.IsNullOrWhiteSpace(projectAsset.Name))
+            {
+                projectAsset.Name = Path.GetFileNameWithoutExtension(packagedSourcePath);
+                if (string.IsNullOrWhiteSpace(projectAsset.Name))
+                {
+                    projectAsset.Name = $"Asset@{assetId[..Math.Min(assetId.Length, 8)]}";
+                }
+            }
+
+            if (projectAsset.CreatedAt == default)
+            {
+                projectAsset.CreatedAt = DateTime.Now;
+            }
+
+            _draftPage.Assets[assetId] = projectAsset;
+            resolvedAssetPaths[assetId] = copiedPath;
+        }
+
+        ReplaceTemplateAssetReferencesWithPaths(draftNode, resolvedAssetPaths);
+    }
+
+    private static HashSet<string> CollectTemplateReferencedAssetIds(JsonNode? node)
+    {
+        var refs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        CollectTemplateReferencedAssetIds(node, refs);
+        return refs;
+    }
+
+    private static void CollectTemplateReferencedAssetIds(JsonNode? node, ISet<string> refs)
+    {
+        if (node is null)
+        {
+            return;
+        }
+
+        if (node is JsonObject obj)
+        {
+            foreach (var kv in obj)
+            {
+                CollectTemplateReferencedAssetIds(kv.Value, refs);
+            }
+            return;
+        }
+
+        if (node is JsonArray arr)
+        {
+            foreach (var item in arr)
+            {
+                CollectTemplateReferencedAssetIds(item, refs);
+            }
+            return;
+        }
+
+        if (node is JsonValue value
+            && value.TryGetValue<string>(out var text)
+            && TryParseTemplateAssetReference(text, out var assetId))
+        {
+            refs.Add(assetId);
+        }
+    }
+
+    private static bool TryParseTemplateAssetReference(string? value, out string assetId)
+    {
+        assetId = string.Empty;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim();
+        if (!trimmed.StartsWith('$') || trimmed.Length <= 1)
+        {
+            return false;
+        }
+
+        assetId = trimmed[1..].Trim();
+        return !string.IsNullOrWhiteSpace(assetId);
+    }
+
+    private static void ReplaceTemplateAssetReferencesWithPaths(JsonNode? node, IReadOnlyDictionary<string, string> resolvedAssetPaths)
+    {
+        if (node is null || resolvedAssetPaths.Count == 0)
+        {
+            return;
+        }
+
+        if (node is JsonObject obj)
+        {
+            foreach (var key in obj.Select(kv => kv.Key).ToArray())
+            {
+                var current = obj[key];
+                if (current is JsonValue jsonValue
+                    && jsonValue.TryGetValue<string>(out var text)
+                    && TryParseTemplateAssetReference(text, out var assetId)
+                    && resolvedAssetPaths.TryGetValue(assetId, out var resolvedPath))
+                {
+                    obj[key] = resolvedPath;
+                }
+                else
+                {
+                    ReplaceTemplateAssetReferencesWithPaths(current, resolvedAssetPaths);
+                }
+            }
+            return;
+        }
+
+        if (node is JsonArray arr)
+        {
+            for (int i = 0; i < arr.Count; i++)
+            {
+                var current = arr[i];
+                if (current is JsonValue jsonValue
+                    && jsonValue.TryGetValue<string>(out var text)
+                    && TryParseTemplateAssetReference(text, out var assetId)
+                    && resolvedAssetPaths.TryGetValue(assetId, out var resolvedPath))
+                {
+                    arr[i] = resolvedPath;
+                }
+                else
+                {
+                    ReplaceTemplateAssetReferencesWithPaths(current, resolvedAssetPaths);
+                }
+            }
+        }
+    }
+
     private void RemapAllTemplateIds(JsonNode root)
     {
         var idMap = new Dictionary<string, string>(StringComparer.Ordinal);

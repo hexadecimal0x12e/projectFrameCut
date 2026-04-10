@@ -25,49 +25,38 @@ namespace projectFrameCut.Render.Rendering
         #region opts
         public const int SubTrackOffset = 10000;
 
-
         public IClip[]? Clips;
-        Dictionary<Guid, IClip> IndexedClipList = new();
-        Dictionary<string, bool> IsClipGeneratedByAI = new();
-
         public uint Duration;
         public uint StartFrame = 0;
         public VideoBuilder? builder;
-        private int _maxThreads = (int)(Environment.ProcessorCount * 1.75);
-        public int MaxThreads
-        {
-            get => _maxThreads;
-            set => _maxThreads = value;
-        }
-        public bool LogState = false;
-        public int GCOption = 0;
-        public bool LogStatToLogger = false;
+
+        public bool LogRenderState = false;
+        public bool LogStaticsData = false;
         public bool LogProcessStack = false;
-        public bool Use16Bit { get; set; } = true;
         public bool AutoCenterImplicitClip { get; set; } = false;
+
+        public int MaxThreads { get => field > 0 ? field : (int)(Environment.ProcessorCount * 1.75); set; }
+        public int MaxRenderScheduleTimeout { get; set; } = 10;
+        public int MinSchedulePreparedFrames { get => field > 0 ? field : MaxThreads; set; } 
+        // Scheduler/worker launch controls for GoRender async mode.
+        public int RenderWorkerBootstrapDelayMs { get => field >= 0 ? field : 0; set; } = 50;
+        public int RenderWatchdogNoProgressTimeoutMs { get => field > 0 ? field : 60_000; set; } = 60_000;
+        public bool EnableRenderWatchdogForceStart { get; set; } = true;
+        public double RenderWorkerLaunchUtilizationThreshold { get => field > 0 ? field : 1.0; set; } = 1.0;
+        public int RenderSchedulerPreparePollDelayMs { get => field > 0 ? field : 5; set; } = 5;
+        public int RenderSchedulerIdleDelayMs { get => field > 0 ? field : 10; set; } = 10;
+        public int MinRemainingFramesForPreparedWait { get => field >= 0 ? field : Math.Max(0, MaxThreads / 2 - 2); set; } = -1;
+        public int GCOption = 0;
 
         public int ProjectRelativeWidth { get; set; }
         public int ProjectRelativeHeight { get; set; }
         public int TargetWidth { get; set; }
         public int TargetHeight { get; set; }
+        public bool Use16Bit { get; set; } = true;
 
         private bool IsAndroid => OperatingSystem.IsAndroid();
-        private int GetOptimalMaxThreads()
-        {
-            if (IsAndroid)
-            {
-                // Android OpenGL 受主线程限制，过多线程会排队等待主线程导致死锁
-                // 建议: 1-2 个线程，最多不超过 3
-                int optimal = Math.Min(2, Math.Max(1, Environment.ProcessorCount / 4));
-                Log($"[Renderer] Android 平台检测到，限制渲染线程数为 {optimal} (原: {_maxThreads}) 以避免主线程拥塞", "info");
-                return optimal;
-            }
-            return _maxThreads;
-        }
-
-        public bool IsPaused { get; set; } = false;
-        public long MemoryThresholdBytes { get; set; } = 0;
-        public Func<Renderer, Task>? OnLowMemory;
+        Dictionary<Guid, IClip> IndexedClipList = new();
+        Dictionary<string, bool> IsClipGeneratedByAI = new();
 
         public void ClearCaches()
         {
@@ -80,6 +69,7 @@ namespace projectFrameCut.Render.Rendering
         private double _currentFps = 0;
 
         public double CurrentFps => Interlocked.CompareExchange(ref _currentFps, 0, 0);
+        public double CurrentSecondPerFrame => 1 / CurrentFps;
 
         public ConcurrentBag<TimeSpan> EachElapsed = new(), EachElapsedForPreparing = new();
 
@@ -243,7 +233,7 @@ namespace projectFrameCut.Render.Rendering
                 sw.Stop();
                 EachElapsedForPreparing.Add(sw.Elapsed);
                 FramePrepareElapsed[idx] = sw.Elapsed;
-                if (LogState) Log($"[Preparer] Frame {idx} is ready to render, elapsed {sw.Elapsed}");
+                if (LogRenderState) Log($"[Preparer] Frame {idx} is ready to render, elapsed {sw.Elapsed}");
 
             }
             Log($"[Preparer] All frames are ready.");
@@ -291,7 +281,7 @@ namespace projectFrameCut.Render.Rendering
 
 
             running = true;
-            if (LogStatToLogger)
+            if (LogStaticsData)
             {
                 new Thread(() =>
                 {
@@ -354,7 +344,22 @@ namespace projectFrameCut.Render.Rendering
 
 
 
-            await Task.Delay(50, token);
+            if (RenderWorkerBootstrapDelayMs > 0)
+            {
+                await Task.Delay(RenderWorkerBootstrapDelayMs, token);
+            }
+
+            int watchdogTimeoutMs = RenderWatchdogNoProgressTimeoutMs > 0 ? RenderWatchdogNoProgressTimeoutMs : 60_000;
+            double launchUtilizationThreshold = RenderWorkerLaunchUtilizationThreshold;
+            if (double.IsNaN(launchUtilizationThreshold) || double.IsInfinity(launchUtilizationThreshold) || launchUtilizationThreshold <= 0)
+                launchUtilizationThreshold = 1.0;
+            if (launchUtilizationThreshold > 1.0)
+                launchUtilizationThreshold = 1.0;
+            int preparePollDelayMs = RenderSchedulerPreparePollDelayMs > 0 ? RenderSchedulerPreparePollDelayMs : 5;
+            int idleDelayMs = RenderSchedulerIdleDelayMs > 0 ? RenderSchedulerIdleDelayMs : 10;
+            int minRemainingFramesForPreparedWait = MinRemainingFramesForPreparedWait >= 0
+                ? MinRemainingFramesForPreparedWait
+                : Math.Max(0, MaxThreads / 2 - 2);
 
             Stopwatch lastActivity = Stopwatch.StartNew();
             int lastFinished = Volatile.Read(ref Finished);
@@ -380,15 +385,19 @@ namespace projectFrameCut.Render.Rendering
                     lastActivity.Restart();
                 }
 
-                bool forceStart = lastActivity.Elapsed.TotalMinutes >= 1;
+                bool forceStart = EnableRenderWatchdogForceStart
+                    && watchdogTimeoutMs > 0
+                    && lastActivity.ElapsedMilliseconds >= watchdogTimeoutMs;
+                bool underLaunchUtilizationThreshold = availableSlots > 0
+                    && (double)working / Math.Max(1, MaxThreads) < launchUtilizationThreshold;
 
-                if (preparedCount > 0 && (forceStart || (availableSlots > 0 && working * 0.65 < MaxThreads)))
+                if (preparedCount > 0 && (forceStart || underLaunchUtilizationThreshold))
                 {
                     int toStart = forceStart ? preparedCount : Math.Min(preparedCount, availableSlots);
 
                     if (forceStart)
                     {
-                        Log($"[Watchdog] No rendered frame progress for 1 minute. prepared={preparedCount}, working={working}/{MaxThreads}, finished={Volatile.Read(ref Finished)}/{Duration}.", "warn");
+                        Log($"[Watchdog] No rendered frame progress for {watchdogTimeoutMs} ms. prepared={preparedCount}, working={working}/{MaxThreads}, finished={Volatile.Read(ref Finished)}/{Duration}.", "warn");
                         if (availableSlots == 0)
                         {
                             Log($"[Watchdog] No available slots (all render threads busy). This often means a render thread is blocked (e.g. in effects/mixer) or the writer is stuck waiting for a missing frame index.", "warn");
@@ -397,15 +406,11 @@ namespace projectFrameCut.Render.Rendering
                     else
                     {
                         // Add timeout to avoid infinite wait when preparer is slow (e.g., on Android with OpenGL main-thread bottleneck)
-                        int waitIterations = 0;
-                        int maxWaitIterations = IsAndroid ? 100 : 200; // Android: ~0.5秒, 其他: ~1秒
-                        int minPreparedFrames = IsAndroid ? Math.Max(1, MaxThreads / 4) : MaxThreads / 2;
-
-                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > MaxThreads / 2 - 2 && PreparedFrames.Count < minPreparedFrames)
+                        Stopwatch waitElapsed = Stopwatch.StartNew();
+                        while (!PreparerFinished && Duration - Volatile.Read(ref Finished) > minRemainingFramesForPreparedWait && PreparedFrames.Count < MinSchedulePreparedFrames)
                         {
-                            await Task.Delay(5);
-                            waitIterations++;
-                            if (waitIterations >= maxWaitIterations)
+                            await Task.Delay(preparePollDelayMs, token);
+                            if (MaxRenderScheduleTimeout > 0 && waitElapsed.ElapsedMilliseconds >= MaxRenderScheduleTimeout)
                             {
                                 Log($"[Render] Wait timeout reached (platform: {(IsAndroid ? "Android" : "Other")}), proceeding with {PreparedFrames.Count} prepared frames.", "warn");
                                 break;
@@ -471,7 +476,7 @@ namespace projectFrameCut.Render.Rendering
                     {
                         FlushBlankFramesBefore(StartFrame + Duration, token);
                     }
-                    await Task.Delay(10, token);
+                    await Task.Delay(idleDelayMs, token);
                 }
 
 
@@ -528,7 +533,7 @@ namespace projectFrameCut.Render.Rendering
             running = true;
             InitializeRenderCaches();
 
-            if (LogStatToLogger)
+            if (LogStaticsData)
             {
                 new Thread(() =>
                 {
@@ -912,7 +917,7 @@ namespace projectFrameCut.Render.Rendering
                 FrameDirtyTime[targetFrame] = sw.Elapsed - TimeSpan.FromTicks(result.ProcessStack.Where(c => c.Elapsed is not null).Sum(c => c.Elapsed!.Value.Ticks));
             }
             InvokeProgress();
-            if (LogState) Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}, dirty time {FrameDirtyTime[targetFrame]}");
+            if (LogRenderState) Log($"[Render] Frame {targetFrame} render done, elapsed {sw.Elapsed}, dirty time {FrameDirtyTime[targetFrame]}");
             EachElapsed.Add(sw.Elapsed);
             FrameRenderElapsed[targetFrame] = sw.Elapsed;
         }
@@ -1026,6 +1031,13 @@ namespace projectFrameCut.Render.Rendering
         private void InitializeRenderCaches()
         {
             _ppb = Use16Bit ? 16 : 8;
+            if (MinSchedulePreparedFrames <= 0) MinSchedulePreparedFrames = MaxThreads;
+            int prepareThrottleThreshold = IsAndroid ? MaxThreads : MaxThreads * 4;
+            if (MinSchedulePreparedFrames > prepareThrottleThreshold)
+            {
+                Log($"[Preparer] MinSchedulePreparedFrames ({MinSchedulePreparedFrames}) exceeds prepare throttle threshold ({prepareThrottleThreshold}); clamped to avoid scheduler/preparer deadlock.", "warn");
+                MinSchedulePreparedFrames = prepareThrottleThreshold;
+            }
 
             EffectCache.Clear();
             foreach (var item in Clips ?? Array.Empty<IClip>())

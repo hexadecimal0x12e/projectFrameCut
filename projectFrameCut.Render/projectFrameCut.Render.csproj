@@ -8,15 +8,15 @@
     <Platforms>AnyCPU;x64</Platforms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
-		<AssemblyVersion>1.4.0.0</AssemblyVersion>
-		<FileVersion>1.4.0.0</FileVersion>
+		<AssemblyVersion>1.4.1.1</AssemblyVersion>
+		<FileVersion>1.4.1.1</FileVersion>
 		<Authors>hexadecimal0x12e</Authors>
-		<Product>projectFrameCut</Product>
+		<Product>projectFrameCut CRL</Product>
 		<Description>projectFrameCut's core render library</Description>
 		<AssemblyDescription>projectFrameCut's core render library</AssemblyDescription>
 		<AssemblyTitle>projectFrameCut's core render library</AssemblyTitle>
-		<Title>projectFrameCut's core render library</Title>
-		<Copyright>Copyright (c) hexadecimal0x12e 2026</Copyright>
+		<Title>projectFrameCut's CRL</Title>
+		<Copyright>Copyright (c) hexadecimal0x12e 2025-2026</Copyright>
 		<PackageProjectUrl>hexadecimal0x12e.com</PackageProjectUrl>
 	</PropertyGroup>
 
@@ -55,10 +55,6 @@
     </Using>
 		<Using Include="projectFrameCut.Shared" />
 	</ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Audio\" />
-  </ItemGroup>
 
 
 </Project>

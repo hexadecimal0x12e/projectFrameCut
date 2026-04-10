@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 		<AssemblyDescription>projectFrameCut's Windows/Linux standalone renderer</AssemblyDescription>
-		<Version>1.4.0.0</Version>
+		<Version>1.4.0.1</Version>
 	</PropertyGroup>
 
   <ItemGroup>

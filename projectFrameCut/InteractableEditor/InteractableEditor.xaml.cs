@@ -62,12 +62,14 @@ namespace projectFrameCut.InteractableEditor
         private int _hasPendingPreviewRefresh;
         private int _isCommitUpdateRunning;
         private int _hasPendingCommitUpdate;
+        private long _lastOverlayTapTick;
 
         private CancellationTokenSource? _commitUpdateDebounceCts;
         private readonly object _commitUpdateDebounceLock = new();
 
         private const int PreviewRefreshThrottleMs = 180;
         private const int CommitUpdateDebounceMs = 220;
+        private const int OverlayTapBlankSuppressMs = 180;
 
         public ConcurrentDictionary<string, ClipElementUI> Clips { get; private set; } = new();
 
@@ -445,6 +447,8 @@ namespace projectFrameCut.InteractableEditor
                 return;
             }
 
+            Interlocked.Exchange(ref _lastOverlayTapTick, Environment.TickCount64);
+
             _ = InvokeOverlayClipTappedAsync(callback, state.ClipId);
         }
 
@@ -452,6 +456,13 @@ namespace projectFrameCut.InteractableEditor
         {
             var callback = _blankAreaTappedCallback;
             if (callback is null)
+            {
+                return;
+            }
+
+            var nowTick = Environment.TickCount64;
+            var overlayTapTick = Interlocked.Read(ref _lastOverlayTapTick);
+            if (nowTick - overlayTapTick <= OverlayTapBlankSuppressMs)
             {
                 return;
             }

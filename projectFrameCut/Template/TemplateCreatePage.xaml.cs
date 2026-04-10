@@ -31,6 +31,7 @@ public partial class TemplateCreatePage : ContentView
     public TemplateCreatePage()
     {
         InitializeComponent();
+        InlineAssetPicker.IsDoubleTapPreviewEnabled = false;
         VariablesCollectionView.ItemsSource = _filteredVariables;
         WireInlineAssetPicker();
         ConfigureForProjectCreationMode();
@@ -40,6 +41,7 @@ public partial class TemplateCreatePage : ContentView
     public TemplateCreatePage(JSONBasedTemplateStructure template)
     {
         InitializeComponent();
+        InlineAssetPicker.IsDoubleTapPreviewEnabled = false;
         ImportControlGrid.IsVisible = false;
         VariablesCollectionView.ItemsSource = _filteredVariables;
         WireInlineAssetPicker();
@@ -88,10 +90,10 @@ public partial class TemplateCreatePage : ContentView
                 PickerTitle = "Select JSON file",
                 FileTypes = new FilePickerFileType(new Dictionary<DevicePlatform, IEnumerable<string>>
                 {
-                { DevicePlatform.WinUI, [".json"] },
-                { DevicePlatform.Android, ["application/json", "text/plain"] },
-                { DevicePlatform.iOS, ["public.json", "public.plain-text"] },
-                { DevicePlatform.MacCatalyst, ["public.json", "public.plain-text"] }
+                { DevicePlatform.WinUI, [".json", ".zip"] },
+                { DevicePlatform.Android, ["application/json", "text/plain", "application/zip", "application/x-zip-compressed"] },
+                { DevicePlatform.iOS, ["public.json", "public.plain-text", "public.zip-archive", "com.pkware.zip-archive"] },
+                { DevicePlatform.MacCatalyst, ["public.json", "public.plain-text", "public.zip-archive", "com.pkware.zip-archive"] }
                 })
             });
 
@@ -101,7 +103,11 @@ public partial class TemplateCreatePage : ContentView
             }
 
             SetBusy(true);
-            await LoadTemplateFromFileAsync(fileResult.FullPath);
+            var loadResult = await LoadTemplateFromFileAsync(fileResult.FullPath);
+            if (loadResult.ImportedAssetCount > 0)
+            {
+                await DisplayAlertAsync(Localized._Info, $"Imported assets: {loadResult.ImportedAssetCount}", Localized._OK);
+            }
         }
         catch (Exception ex)
         {
@@ -113,16 +119,15 @@ public partial class TemplateCreatePage : ContentView
         }
     }
 
-    private async Task LoadTemplateFromFileAsync(string path)
+    private async Task<TemplateLoadResult> LoadTemplateFromFileAsync(string path)
     {
-        var text = await File.ReadAllTextAsync(path);
-        var template = JsonSerializer.Deserialize<JSONBasedTemplateStructure>(text, DraftPage.DraftJSONOption);
-        if (template is null)
-        {
-            throw new InvalidOperationException(Localized.TemplateCreatePage_InvalidTemplate);
-        }
+        var loadResult = await TemplatePackageIO.LoadTemplateAsync(
+            path,
+            DraftPage.DraftJSONOption,
+            installPackagedAssets: false);
 
-        await LoadTemplateFromStructureAsync(template, Localized.TemplateCreatePage_TemplatePath(path));
+        await LoadTemplateFromStructureAsync(loadResult.Template, Localized.TemplateCreatePage_TemplatePath(path));
+        return loadResult;
     }
 
     public Task LoadTemplateFromStructureAsync(JSONBasedTemplateStructure template, string sourceLabel)
@@ -508,6 +513,11 @@ public partial class TemplateCreatePage : ContentView
             ReplacePlaceholders(projectClone, values, defaults, _variableDefinitions);
             ReplacePlaceholders(draftClone, values, defaults, _variableDefinitions);
 
+            var referencedAssetIds = CollectReferencedAssetIds(projectClone, draftClone);
+            var projectAssets = BuildProjectAssetList(referencedAssetIds, _template, projectDir, out var resolvedPackagedAssetPaths);
+            ReplaceAssetReferencesWithResolvedPaths(projectClone, resolvedPackagedAssetPaths);
+            ReplaceAssetReferencesWithResolvedPaths(draftClone, resolvedPackagedAssetPaths);
+
             var project = projectClone.Deserialize<ProjectJSONStructure>(DraftPage.DraftJSONOption)
             ?? throw new InvalidOperationException("Invalid Project structure。");
             var draft = draftClone.Deserialize<DraftStructureJSON>(DraftPage.DraftJSONOption)
@@ -526,7 +536,7 @@ public partial class TemplateCreatePage : ContentView
             Directory.CreateDirectory(projectDir);
             File.WriteAllText(Path.Combine(projectDir, "project.pjfc"), JsonSerializer.Serialize(project, DraftPage.DraftJSONOption));
             File.WriteAllText(Path.Combine(projectDir, "timeline.json"), JsonSerializer.Serialize(draft, DraftPage.DraftJSONOption));
-            File.WriteAllText(Path.Combine(projectDir, "assets.json"), JsonSerializer.Serialize(Array.Empty<AssetItem>(), DraftPage.DraftJSONOption));
+            File.WriteAllText(Path.Combine(projectDir, "assets.json"), JsonSerializer.Serialize(projectAssets, DraftPage.DraftJSONOption));
 
             await RequestCloseAsync();
         }
@@ -589,6 +599,185 @@ public partial class TemplateCreatePage : ContentView
             }
         }
         return dict;
+    }
+
+    private static HashSet<string> CollectReferencedAssetIds(JsonNode? projectNode, JsonNode? draftNode)
+    {
+        var refs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        CollectReferencedAssetIds(projectNode, refs);
+        CollectReferencedAssetIds(draftNode, refs);
+        return refs;
+    }
+
+    private static void CollectReferencedAssetIds(JsonNode? node, ISet<string> refs)
+    {
+        if (node is null)
+        {
+            return;
+        }
+
+        if (node is JsonObject obj)
+        {
+            foreach (var kv in obj)
+            {
+                CollectReferencedAssetIds(kv.Value, refs);
+            }
+            return;
+        }
+
+        if (node is JsonArray arr)
+        {
+            foreach (var child in arr)
+            {
+                CollectReferencedAssetIds(child, refs);
+            }
+            return;
+        }
+
+        if (node is JsonValue value
+            && value.TryGetValue<string>(out var str)
+            && TryParseAssetReference(str, out var assetId))
+        {
+            refs.Add(assetId);
+        }
+    }
+
+    private static bool TryParseAssetReference(string? value, out string assetId)
+    {
+        assetId = string.Empty;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim();
+        if (!trimmed.StartsWith('$') || trimmed.Length <= 1)
+        {
+            return false;
+        }
+
+        assetId = trimmed[1..].Trim();
+        return !string.IsNullOrWhiteSpace(assetId);
+    }
+
+    private static List<AssetItem> BuildProjectAssetList(
+        IEnumerable<string> assetIds,
+        JSONBasedTemplateStructure template,
+        string projectDir,
+        out Dictionary<string, string> resolvedPackagedAssetPaths)
+    {
+        resolvedPackagedAssetPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var assets = new List<AssetItem>();
+        var addedAssetIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var templateAssetMap = template.AssetHashTable;
+        var projectAssetsDir = Path.Combine(projectDir, "assets");
+        Directory.CreateDirectory(projectAssetsDir);
+
+        foreach (var assetId in assetIds)
+        {
+            if (string.IsNullOrWhiteSpace(assetId) || !addedAssetIds.Add(assetId))
+            {
+                continue;
+            }
+
+            if (!AssetDatabase.Assets.TryGetValue(assetId, out var asset))
+            {
+                if (templateAssetMap is null
+                    || !templateAssetMap.TryGetValue(assetId, out var packagedAssetPath)
+                    || string.IsNullOrWhiteSpace(packagedAssetPath)
+                    || !File.Exists(packagedAssetPath))
+                {
+                    continue;
+                }
+
+                var extension = Path.GetExtension(packagedAssetPath);
+                if (string.IsNullOrWhiteSpace(extension))
+                {
+                    extension = ".bin";
+                }
+
+                var copiedPath = Path.Combine(projectAssetsDir, assetId + extension);
+                File.Copy(packagedAssetPath, copiedPath, overwrite: true);
+
+                var packagedAsset = new AssetItem
+                {
+                    AssetId = assetId,
+                    Name = Path.GetFileNameWithoutExtension(packagedAssetPath),
+                    Path = copiedPath,
+                    AssetType = AssetItem.GetAssetType(copiedPath),
+                    CreatedAt = DateTime.Now
+                };
+                if (string.IsNullOrWhiteSpace(packagedAsset.Name))
+                {
+                    packagedAsset.Name = $"Asset@{assetId[..Math.Min(assetId.Length, 8)]}";
+                }
+
+                assets.Add(packagedAsset);
+                resolvedPackagedAssetPaths[assetId] = copiedPath;
+                continue;
+            }
+
+            var cloned = JsonSerializer.Deserialize<AssetItem>(
+                JsonSerializer.Serialize(asset, DraftPage.DraftJSONOption),
+                DraftPage.DraftJSONOption);
+            if (cloned is null)
+            {
+                continue;
+            }
+
+            assets.Add(cloned);
+        }
+
+        return assets;
+    }
+
+    private static void ReplaceAssetReferencesWithResolvedPaths(JsonNode? node, IReadOnlyDictionary<string, string> resolvedAssetPaths)
+    {
+        if (node is null || resolvedAssetPaths.Count == 0)
+        {
+            return;
+        }
+
+        if (node is JsonObject obj)
+        {
+            foreach (var key in obj.Select(kv => kv.Key).ToArray())
+            {
+                var current = obj[key];
+                if (current is JsonValue value
+                    && value.TryGetValue<string>(out var text)
+                    && TryParseAssetReference(text, out var assetId)
+                    && resolvedAssetPaths.TryGetValue(assetId, out var resolvedPath))
+                {
+                    obj[key] = resolvedPath;
+                }
+                else
+                {
+                    ReplaceAssetReferencesWithResolvedPaths(current, resolvedAssetPaths);
+                }
+            }
+
+            return;
+        }
+
+        if (node is JsonArray arr)
+        {
+            for (int i = 0; i < arr.Count; i++)
+            {
+                var current = arr[i];
+                if (current is JsonValue value
+                    && value.TryGetValue<string>(out var text)
+                    && TryParseAssetReference(text, out var assetId)
+                    && resolvedAssetPaths.TryGetValue(assetId, out var resolvedPath))
+                {
+                    arr[i] = resolvedPath;
+                }
+                else
+                {
+                    ReplaceAssetReferencesWithResolvedPaths(current, resolvedAssetPaths);
+                }
+            }
+        }
     }
 
     private static List<string> CollectMissingKeys(
@@ -871,11 +1060,11 @@ public partial class TemplateCreatePage : ContentView
     {
         private string _value = value;
 
-        public string Key { get; } = key;
-        public string Location { get; } = location;
-        public string PathsDisplay { get; } = string.IsNullOrWhiteSpace(pathsDisplay) ? firstPath : pathsDisplay;
-        public TemplateVariableType Type { get; } = type;
-        public string? DefaultValue { get; } = defaultValue;
+        public string Key => key;
+        public string Location => location;
+        public string PathsDisplay => string.IsNullOrWhiteSpace(pathsDisplay) ? firstPath : pathsDisplay;
+        public TemplateVariableType Type => type;
+        public string? DefaultValue => defaultValue;
         public string TypeDisplay => GetTypeDisplay(type);
         public bool IsFileType => type == TemplateVariableType.File;
         public Keyboard InputKeyboard => type switch

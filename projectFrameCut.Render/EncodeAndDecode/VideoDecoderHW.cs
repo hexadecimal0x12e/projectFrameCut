@@ -264,8 +264,14 @@ namespace projectFrameCut.Render.EncodeAndDecode
                 if (targetFrame < _currentFrameNumber)
                 {
                     int seekRet = ffmpeg.av_seek_frame(_fmt, _videoStreamIndex, 0, ffmpeg.AVSEEK_FLAG_BACKWARD);
-                    if (seekRet < 0 && StrictMode)
-                        throw new InvalidOperationException($"Failed to seek decoder for '{_path}' (code {seekRet}).");
+                    if (seekRet < 0)
+                    {
+                        var msg = $"Failed to seek decoder for '{_path}' (code {seekRet}).";
+                        if (StrictMode)
+                            throw new InvalidOperationException(msg);
+                        Log(msg, "warning");
+                        throw new InvalidOperationException(msg);
+                    }
                     ffmpeg.avcodec_flush_buffers(_codec);
                     _currentFrameNumber = 0;
                     _eof = false;
@@ -288,7 +294,6 @@ namespace projectFrameCut.Render.EncodeAndDecode
                         if (readRet < 0)
                         {
                             _eof = true;
-                            ffmpeg.av_packet_unref(_pkt);
                         }
                         else
                         {
@@ -347,7 +352,7 @@ namespace projectFrameCut.Render.EncodeAndDecode
 
                 if (!frameFound)
                 {
-                    if (Math.Abs(targetFrame - TotalFrames) < 5)
+                    if (_totalFrames > 0 && targetFrame > 0 && Math.Abs((long)targetFrame - _totalFrames) < 5)
                         return GetFrame(targetFrame - 1, hasAlpha);
 
                     double fps = _fps > 0 ? _fps : 1.0;

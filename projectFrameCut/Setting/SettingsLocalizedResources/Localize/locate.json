@@ -45,7 +45,7 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\u3002\u6240\u6709\u7684\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u5C06\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\r\u4F60\u786E\u8BA4\u5417\uFF1F\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u3002",
+        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\u3002\u6240\u6709\u7684\u9996\u9009\u9879\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u5C06\u4F1A\u6C38\u4E45\u7684\u6D88\u5931\u3002\r\r\u4F60\u786E\u8BA4\u5417\uFF1F\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -86,7 +86,7 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "\u8BB0\u5F55\u8BE6\u7EC6 IPicture \u5904\u7406\u65E5\u5FD7",
+        "Value": "\u8BB0\u5F55 IPicture \u5904\u7406\u5806\u6808",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -2037,6 +2037,14 @@
         "DontTranslate": false
       },
       {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "\u4E0D\u5141\u8BB8\u964D\u7EA7IPicture\u7684\u50CF\u7D20\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
         "Id": "Render_DumpDiagData",
         "Value": "\u4FDD\u5B58\u6E32\u67D3\u65F6\u7684\u8BE6\u7EC6\u8BCA\u65AD\u62A5\u544A",
         "Mode": "ConstString",
@@ -2237,14 +2245,6 @@
         "Args": [],
         "ArgsComment": [],
         "DontTranslate": false
-      },
-      {
-        "Id": "Render_DisallowPictureModeDowngrade",
-        "Value": "\u4E0D\u5141\u8BB8\u964D\u7EA7IPicture\u7684\u50CF\u7D20\u6A21\u5F0F",
-        "Mode": "ConstString",
-        "Args": [],
-        "ArgsComment": [],
-        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -2359,11 +2359,11 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "Project Editor - Personalization",
+        "Value": "Personalization",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Preferences for customizing the project editor interface",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -2495,7 +2495,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "Open user data directory ({path})",
+        "Value": "Open user data directory",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3478,7 +3478,7 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "Select GPU for hardware acceleration during editing",
+        "Value": "Select GPU for hardware acceleration during editing/preview.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3766,7 +3766,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "The migration operation finished successfully. The source folder can now be safely deleted.\rClick {Localized._OK} to delete it.",
+        "Value": "Successfully completed the migration operation.\rNow you can safely delete the source folder. Click {Localized._OK} to delete it.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -3784,7 +3784,7 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "Export Plugin",
+        "Value": "Export User Plugins",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -3802,7 +3802,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "If no app is open, open the file manager on your device and go to Internal Storage -\u003E Android -\u003E data -\u003E {pfm} to find the user data.",
+        "Value": "If no program is opened, you can open the file manager on your device, navigate to Internal Storage -\u003E Android -\u003E data -\u003E {pfm} to find the user data.\r\nIf you still cannot locate the user data, please refer to the support documentation.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3821,7 +3821,7 @@
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "Open the \u0022Files\u0022 app on the device, go to \u0027My {idiom}\u0027 -\u003E {Localized.AppBrand} to find user data.",
+        "Value": "Open the \u0027Files\u0027 app on your device, navigate to \u0027My {idiom} -\u003E {Localized.AppBrand}\u0027 to find the user data.\r\nIf you cannot find the \u0027Files\u0027 app, try downloading it from the App Store.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3912,7 +3912,7 @@
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "Miscellaneous Options",
+        "Value": "Other",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4573,7 +4573,7 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Enable detailed IPicture processing log",
+        "Value": "Record IPicture processing stack",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4636,7 +4636,7 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "This operation cannot be undone. All settings and securely stored content will be permanently lost.\r\nThis operation is irreversible. All platform preferences will be permanently lost.\r\n\r\nAre you sure? Type \u0022yes\u0022 to confirm.",
+        "Value": "This operation cannot be undone. All preferences and securely stored content will be permanently lost.\r\rAre you sure? Type \u0022yes\u0022 to confirm.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4681,20 +4681,29 @@
       },
       {
         "Id": "Edit_UseLegacyPlaceResizeEffects",
-        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Value": "Use the legacy (v1.4.0.0 or older) position processing system",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_NoRebootAfterCrash",
-        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Value": "Do not restart automatically after {Localized.AppBrand} crashes",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "Disallow downgrading the pixel mode of IPicture",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -4810,7 +4819,7 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "\u9805\u76EE\u7DE8\u8F2F\u5668 \uFF0D \u500B\u4EBA\u5316",
+        "Value": "\u500B\u4EBA\u5316",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -4946,7 +4955,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "\u958B\u555F\u7528\u6236\u8CC7\u6599\u76EE\u9304 ({path})",
+        "Value": "\u958B\u555F\u4F7F\u7528\u8005\u8CC7\u6599\u76EE\u9304",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -5928,11 +5937,11 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "\u9078\u64C7\u7528\u65BC\u7DE8\u8F2F\u6642\u786C\u9AD4\u52A0\u901F\u7684GPU",
+        "Value": "\u9078\u64C7\u7528\u65BC\u7DE8\u8F2F/\u9810\u89BD\u6642\uFF0C\u57F7\u884C\u786C\u9AD4\u52A0\u901F\u7684GPU",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u539F\u53E5\u300C\u7528\u4E8E\u786C\u4EF6\u52A0\u901F\u7684GPU\u300D\u5728\u8A9E\u5883\u4E2D\u610F\u6307\u300C\u57F7\u884C\u786C\u9AD4\u52A0\u901F\u4EFB\u52D9\u7684GPU\u300D\u3002\u8ABF\u6574\u8A9E\u5E8F\u4F7F\u8A9E\u610F\u66F4\u6E05\u6670\u901A\u9806\uFF0C\u7B26\u5408\u7E41\u9AD4\u4E2D\u6587\u8EDF\u9AD4\u4ECB\u9762\u7528\u8A9E\u3002",
         "DontTranslate": false
       },
       {
@@ -6217,7 +6226,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "\u5DF2\u6210\u529F\u5B8C\u6210\u9077\u79FB\u64CD\u4F5C\uFF0C\u6E90\u8CC7\u6599\u593E\u73FE\u5728\u53EF\u4EE5\u5B89\u5168\u522A\u9664\u3002\r\u9EDE\u64CA{Localized._OK}\u4F86\u522A\u9664\u5B83\u3002",
+        "Value": "\u6210\u529F\u5B8C\u6210\u9077\u79FB\u64CD\u4F5C\uFF0C\u73FE\u5728\u53EF\u4EE5\u5B89\u5168\u522A\u9664\u6E90\u8CC7\u6599\u593E\u3002\r\u9EDE\u64CA{Localized._OK}\u4F86\u522A\u9664\u5B83\u3002",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -6235,7 +6244,7 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "\u532F\u51FA\u5916\u639B\u7A0B\u5F0F",
+        "Value": "\u532F\u51FA\u4F7F\u7528\u8005\u5916\u639B\u7A0B\u5F0F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -6253,7 +6262,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "\u5982\u679C\u6C92\u6709\u4EFB\u4F55\u7A0B\u5F0F\u88AB\u958B\u555F\uFF0C\u4F60\u53EF\u4EE5\u958B\u555F\u88DD\u7F6E\u4E0A\u7684\u6A94\u6848\u7BA1\u7406\u54E1\uFF0C\u8F49\u5230 \u5167\u90E8\u5132\u5B58-\u003EAndroid-\u003Edata-\u003E{pfm}\uFF0C\u5373\u53EF\u627E\u5230\u4F7F\u7528\u8005\u8CC7\u6599\u3002",
+        "Value": "\u5982\u679C\u6C92\u6709\u4EFB\u4F55\u7A0B\u5F0F\u88AB\u958B\u555F\uFF0C\u4F60\u53EF\u4EE5\u958B\u555F\u88DD\u7F6E\u4E0A\u7684\u6A94\u6848\u7BA1\u7406\u54E1\uFF0C\u8F49\u5230 \u5167\u90E8\u5132\u5B58-\u003EAndroid-\u003Edata-\u003E{pfm}\uFF0C\u5373\u53EF\u627E\u5230\u4F7F\u7528\u8005\u8CC7\u6599\u3002\r\u5982\u679C\u4F60\u4ECD\u7136\u627E\u4E0D\u5230\u4F7F\u7528\u8005\u8CC7\u6599\uFF0C\u8ACB\u53C3\u95B1\u652F\u63F4\u6587\u4EF6\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -6272,7 +6281,7 @@
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "\u6253\u958B\u88DD\u7F6E\u4E0A\u7684\u300C\u6A94\u6848\u300D\u61C9\u7528\u7A0B\u5F0F\uFF0C\u8F49\u5230\u300C\u6211\u7684{idiom}\u300D-\u003E{Localized.AppBrand}\uFF0C\u5373\u53EF\u627E\u5230\u7528\u6236\u8CC7\u6599\u3002",
+        "Value": "\u6253\u958B\u88DD\u7F6E\u4E0A\u7684\u300C\u6A94\u6848\u300D\u61C9\u7528\u7A0B\u5F0F\uFF0C\u524D\u5F80\u300C\u6211\u7684{idiom}-\u003E{Localized.AppBrand}\u300D\uFF0C\u5373\u53EF\u627E\u5230\u7528\u6236\u8CC7\u6599\u3002\r\u5982\u679C\u4F60\u627E\u4E0D\u5230\u300C\u6A94\u6848\u300D\u61C9\u7528\u7A0B\u5F0F\uFF0C\u8ACB\u5617\u8A66\u5F9EApp Store\u4E0B\u8F09\u5B83\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -6363,7 +6372,7 @@
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "\u96DC\u9805\u9078\u9805",
+        "Value": "\u5176\u4ED6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7024,7 +7033,7 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "\u8A18\u9304\u8A73\u7D30 IPicture \u8655\u7406\u65E5\u8A8C",
+        "Value": "\u8A18\u9304 IPicture \u8655\u7406\u5806\u758A",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7087,7 +7096,7 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "\u6B64\u64CD\u4F5C\u7121\u6CD5\u64A4\u92B7\u3002\u6240\u6709\u7684\u8A2D\u5B9A\u3001\u5B89\u5168\u5132\u5B58\u5167\u5BB9\u5C07\u6703\u6C38\u4E45\u6D88\u5931\u3002\n\u6B64\u64CD\u4F5C\u7121\u6CD5\u88AB\u64A4\u92B7\uFF0C\u6240\u6709\u7684\u5E73\u53F0\u9996\u9078\u9805\u6703\u6C38\u4E45\u6D88\u5931\u3002\n\n\u4F60\u78BA\u8A8D\u55CE\uFF1F\u8F38\u5165\u300Cyes\u300D\u4F86\u78BA\u8A8D\u3002",
+        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u92B7\u3002\u6240\u6709\u7684\u9996\u9078\u9078\u9805\u3001\u5B89\u5168\u5132\u5B58\u5167\u5BB9\u5C07\u6703\u6C38\u4E45\u5730\u6D88\u5931\u3002\r\r\u4F60\u78BA\u8A8D\u55CE\uFF1F\u8F38\u5165\u201Cyes\u201D\u4F86\u78BA\u8A8D\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -7105,7 +7114,7 @@
       },
       {
         "Id": "Misc_ClearCache_Confirm",
-        "Value": "\u9019\u5C07\u522A\u9664\u7D04 {n} \u500B\u6A94\u6848\uFF0C\u7E3D\u8A08 {size} MB\u3002\r\u8981\u7E7C\u7E8C\u55CE\uFF1F",
+        "Value": "\u9019\u5C07\u522A\u9664\u5927\u7D04 {n} \u500B\u6A94\u6848\uFF0C\u5408\u8A08 {size} MB\u3002\r\u8981\u7E7C\u7E8C\u55CE\uFF1F",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -7132,20 +7141,29 @@
       },
       {
         "Id": "Edit_UseLegacyPlaceResizeEffects",
-        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Value": "\u4F7F\u7528\u820A\u7248\uFF08v1.4.0.0 \u6216\u66F4\u820A\uFF09\u7684\u4F4D\u7F6E\u8655\u7406\u7CFB\u7D71",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_NoRebootAfterCrash",
-        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Value": "\u5D29\u6F70\u5F8C\u4E0D\u81EA\u52D5\u91CD\u555F {Localized.AppBrand}",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "\u4E0D\u5141\u8A31\u964D\u7D1AIPicture\u7684\u50CF\u7D20\u6A21\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -7261,11 +7279,11 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8\u30A8\u30C7\u30A3\u30BF\u30FC - \u500B\u4EBA\u8A2D\u5B9A",
+        "Value": "\u30AB\u30B9\u30BF\u30DE\u30A4\u30BA",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Project editor personalization/preferences",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -7397,7 +7415,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u3092\u958B\u304F ({path})",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA\u3092\u958B\u304F",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -8380,11 +8398,11 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "\u7DE8\u96C6\u6642\u306E\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u306B\u4F7F\u7528\u3059\u308BGPU\u3092\u9078\u629E",
+        "Value": "\u7DE8\u96C6/\u30D7\u30EC\u30D3\u30E5\u30FC\u6642\u306E\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u306B\u4F7F\u7528\u3059\u308BGPU\u3092\u9078\u629E",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u8907\u6570\u306EGPU\u304C\u6709\u52B9\u306A\u5834\u5408\u3001\u7DE8\u96C6\u3084\u30D7\u30EC\u30D3\u30E5\u30FC\u8868\u793A\u306E\u30CF\u30FC\u30C9\u30A6\u30A7\u30A2\u30A2\u30AF\u30BB\u30E9\u30EC\u30FC\u30B7\u30E7\u30F3\u306B\u4F7F\u7528\u3059\u308BGPU\u3092\u6307\u5B9A\u3059\u308B\u8A2D\u5B9A\u9805\u76EE\u3067\u3059\u3002",
         "DontTranslate": false
       },
       {
@@ -8669,7 +8687,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "\u79FB\u884C\u64CD\u4F5C\u304C\u6B63\u5E38\u306B\u5B8C\u4E86\u3057\u307E\u3057\u305F\u3002\r\u5143\u306E\u30D5\u30A9\u30EB\u30C0\u306F\u5B89\u5168\u306B\u524A\u9664\u3067\u304D\u307E\u3059\u3002\r{Localized._OK}\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u524A\u9664\u3057\u307E\u3059\u3002",
+        "Value": "\u79FB\u884C\u64CD\u4F5C\u304C\u6B63\u5E38\u306B\u5B8C\u4E86\u3057\u307E\u3057\u305F\u3002\r\n\u3053\u308C\u3067\u30BD\u30FC\u30B9\u30D5\u30A9\u30EB\u30C0\u3092\u5B89\u5168\u306B\u524A\u9664\u3067\u304D\u307E\u3059\u3002\r\n{Localized._OK}\u3092\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u524A\u9664\u3057\u307E\u3059\u3002",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -8687,7 +8705,7 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8\u30D7\u30E9\u30B0\u30A4\u30F3",
+        "Value": "\u30E6\u30FC\u30B6\u30FC\u30D7\u30E9\u30B0\u30A4\u30F3\u306E\u30A8\u30AF\u30B9\u30DD\u30FC\u30C8",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -8705,7 +8723,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "\u30A2\u30D7\u30EA\u304C\u8D77\u52D5\u3057\u3066\u3044\u306A\u3044\u5834\u5408\u3001\u30C7\u30D0\u30A4\u30B9\u306E\u30D5\u30A1\u30A4\u30EB\u30DE\u30CD\u30FC\u30B8\u30E3\u30FC\u3092\u958B\u304D\u3001\u5185\u90E8\u30B9\u30C8\u30EC\u30FC\u30B8\u2192Android\u2192data\u2192{pfm}\u306B\u79FB\u52D5\u3059\u308B\u3068\u3001\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u3092\u898B\u3064\u3051\u308B\u3053\u3068\u304C\u3067\u304D\u307E\u3059\u3002",
+        "Value": "\u4F55\u3082\u30A2\u30D7\u30EA\u304C\u958B\u3044\u3066\u3044\u306A\u3044\u5834\u5408\u3001\u30C7\u30D0\u30A4\u30B9\u306E\u30D5\u30A1\u30A4\u30EB\u30DE\u30CD\u30FC\u30B8\u30E3\u30FC\u3092\u958B\u304D\u3001\u5185\u90E8\u30B9\u30C8\u30EC\u30FC\u30B8-\u003EAndroid-\u003Edata-\u003E{pfm}\u306B\u79FB\u52D5\u3059\u308B\u3068\u3001\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u3092\u898B\u3064\u3051\u308B\u3053\u3068\u304C\u3067\u304D\u307E\u3059\u3002\r\n\u305D\u308C\u3067\u3082\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u304C\u898B\u3064\u304B\u3089\u306A\u3044\u5834\u5408\u306F\u3001\u30B5\u30DD\u30FC\u30C8\u30C9\u30AD\u30E5\u30E1\u30F3\u30C8\u3092\u53C2\u7167\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -8724,7 +8742,7 @@
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "\u30C7\u30D0\u30A4\u30B9\u4E0A\u306E\u300C\u30D5\u30A1\u30A4\u30EB\u300D\u30A2\u30D7\u30EA\u3092\u958B\u304D\u3001\u0027\u30DE\u30A4{idiom}\u0027 -\u003E {Localized.AppBrand} \u306B\u79FB\u52D5\u3059\u308B\u3068\u3001\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u3092\u898B\u3064\u3051\u308B\u3053\u3068\u304C\u3067\u304D\u307E\u3059\u3002",
+        "Value": "\u30C7\u30D0\u30A4\u30B9\u4E0A\u306E\u300C\u30D5\u30A1\u30A4\u30EB\u300D\u30A2\u30D7\u30EA\u3092\u958B\u304D\u3001\u300E\u30DE\u30A4{idiom}\u2192{Localized.AppBrand}\u300F\u306B\u79FB\u52D5\u3059\u308B\u3068\u3001\u30E6\u30FC\u30B6\u30FC\u30C7\u30FC\u30BF\u3092\u898B\u3064\u3051\u308B\u3053\u3068\u304C\u3067\u304D\u307E\u3059\u3002\r\n\u300C\u30D5\u30A1\u30A4\u30EB\u300D\u30A2\u30D7\u30EA\u304C\u898B\u3064\u304B\u3089\u306A\u3044\u5834\u5408\u306F\u3001App Store\u304B\u3089\u30C0\u30A6\u30F3\u30ED\u30FC\u30C9\u3057\u3066\u307F\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -8815,7 +8833,7 @@
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "\u96D1\u9805",
+        "Value": "\u305D\u306E\u4ED6",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9476,7 +9494,7 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "\u8A73\u7D30\u306AIPicture\u51E6\u7406\u30ED\u30B0\u3092\u8A18\u9332",
+        "Value": "IPicture\u51E6\u7406\u30B9\u30BF\u30C3\u30AF\u3092\u8A18\u9332",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -9539,11 +9557,11 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002\u3059\u3079\u3066\u306E\u8A2D\u5B9A\u3068\u5B89\u5168\u306B\u4FDD\u5B58\u3055\u308C\u305F\u5185\u5BB9\u304C\u6C38\u4E45\u306B\u5931\u308F\u308C\u307E\u3059\u3002\r\n\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u305A\u3001\u3059\u3079\u3066\u306E\u30D7\u30E9\u30C3\u30C8\u30D5\u30A9\u30FC\u30E0\u306E\u512A\u5148\u8A2D\u5B9A\u304C\u6C38\u4E45\u306B\u5931\u308F\u308C\u307E\u3059\u3002\r\n\r\n\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F\u78BA\u8A8D\u3059\u308B\u306B\u306F\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        "Value": "\u3053\u306E\u64CD\u4F5C\u306F\u53D6\u308A\u6D88\u305B\u307E\u305B\u3093\u3002\u3059\u3079\u3066\u306E\u512A\u5148\u8A2D\u5B9A\u3068\u5B89\u5168\u306B\u4FDD\u5B58\u3055\u308C\u305F\u5185\u5BB9\u304C\u6C38\u4E45\u306B\u5931\u308F\u308C\u307E\u3059\u3002\r\r\u3088\u308D\u3057\u3044\u3067\u3059\u304B\uFF1F\u78BA\u8A8D\u3059\u308B\u306B\u306F\u300Cyes\u300D\u3068\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u30E6\u30FC\u30B6\u30FC\u304C\u5165\u529B\u3059\u308B\u300Cyes\u300D\u306F\u7FFB\u8A33\u3057\u306A\u3044",
         "DontTranslate": false
       },
       {
@@ -9557,7 +9575,7 @@
       },
       {
         "Id": "Misc_ClearCache_Confirm",
-        "Value": "\u3053\u308C\u306F\u7D04 {n} \u500B\u306E\u30D5\u30A1\u30A4\u30EB\u3092\u524A\u9664\u3057\u3001\u5408\u8A08 {size} MB\u306B\u306A\u308A\u307E\u3059\u3002\n\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F",
+        "Value": "\u3053\u308C\u306B\u3088\u308A\u7D04 {n} \u500B\u306E\u30D5\u30A1\u30A4\u30EB\uFF08\u5408\u8A08 {size} MB\uFF09\u304C\u524A\u9664\u3055\u308C\u307E\u3059\u3002\r\u7D9A\u884C\u3057\u307E\u3059\u304B\uFF1F",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -9584,20 +9602,29 @@
       },
       {
         "Id": "Edit_UseLegacyPlaceResizeEffects",
-        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Value": "\u65E7\u30D0\u30FC\u30B8\u30E7\u30F3\uFF08v1.4.0.0 \u4EE5\u524D\uFF09\u306E\u4F4D\u7F6E\u51E6\u7406\u30B7\u30B9\u30C6\u30E0\u3092\u4F7F\u7528\u3059\u308B",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_NoRebootAfterCrash",
-        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Value": "\u30AF\u30E9\u30C3\u30B7\u30E5\u5F8C {Localized.AppBrand} \u3092\u81EA\u52D5\u518D\u8D77\u52D5\u3057\u306A\u3044",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "IPicture\u306E\u30D4\u30AF\u30BB\u30EB\u30E2\u30FC\u30C9\u306E\u30C0\u30A6\u30F3\u30B0\u30EC\u30FC\u30C9\u306F\u8A31\u53EF\u3055\u308C\u3066\u3044\u307E\u305B\u3093",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -9713,11 +9740,11 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "\uD504\uB85C\uC81D\uD2B8 \uD3B8\uC9D1\uAE30 - \uB9DE\uCDA4 \uC124\uC815",
+        "Value": "\uAC1C\uC778\uD654",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\uD504\uB85C\uC81D\uD2B8 \uD3B8\uC9D1\uAE30\uC758 \uAC1C\uC778\uD654 \uC124\uC815\uC744 \uB098\uD0C0\uB0C4",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -9849,7 +9876,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uB514\uB809\uD1A0\uB9AC \uC5F4\uAE30 ({path})",
+        "Value": "\uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uB514\uB809\uD130\uB9AC \uC5F4\uAE30",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -9863,7 +9890,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Opens the user data directory",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -10832,7 +10859,7 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "\uD3B8\uC9D1 \uC2DC \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D\uC5D0 \uC0AC\uC6A9\uD560 GPU \uC120\uD0DD",
+        "Value": "\uD3B8\uC9D1/\uBBF8\uB9AC \uBCF4\uAE30 \uC2DC \uD558\uB4DC\uC6E8\uC5B4 \uAC00\uC18D\uC5D0 \uC0AC\uC6A9\uD560 GPU \uC120\uD0DD",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11121,11 +11148,11 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "\uC774\uB3D9 \uC791\uC5C5\uC774 \uC131\uACF5\uC801\uC73C\uB85C \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC6D0\uBCF8 \uD3F4\uB354\uB97C \uC548\uC804\uD558\uAC8C \uC0AD\uC81C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r\n{Localized._OK}\uB97C \uD074\uB9AD\uD558\uC5EC \uC0AD\uC81C\uD558\uC138\uC694.",
+        "Value": "\uB9C8\uC774\uADF8\uB808\uC774\uC158 \uC791\uC5C5\uC774 \uC131\uACF5\uC801\uC73C\uB85C \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC774\uC81C \uC6D0\uBCF8 \uD3F4\uB354\uB97C \uC548\uC804\uD558\uAC8C \uC0AD\uC81C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r{Localized._OK}\uB97C \uD074\uB9AD\uD558\uC5EC \uC0AD\uC81C\uD558\uC138\uC694.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "\uB9C8\uC774\uADF8\uB808\uC774\uC158 \uC791\uC5C5 \uC644\uB8CC \uD6C4 \uC6D0\uBCF8 \uD3F4\uB354 \uC0AD\uC81C\uB97C \uC548\uB0B4\uD558\uB294 \uBA54\uC2DC\uC9C0",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -11139,7 +11166,7 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "\uD50C\uB7EC\uADF8\uC778 \uB0B4\uBCF4\uB0B4\uAE30",
+        "Value": "\uC0AC\uC6A9\uC790 \uD50C\uB7EC\uADF8\uC778 \uB0B4\uBCF4\uB0B4\uAE30",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -11157,7 +11184,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "\uC5F4\uB824 \uC788\uB294 \uD504\uB85C\uADF8\uB7A8\uC774 \uC5C6\uB2E4\uBA74, \uAE30\uAE30\uC758 \uD30C\uC77C \uAD00\uB9AC\uC790\uB97C \uC5F4\uACE0 \uB0B4\uBD80 \uC800\uC7A5\uC18C-\u003EAndroid-\u003Edata-\u003E{pfm}\uC73C\uB85C \uC774\uB3D9\uD558\uC5EC \uC0AC\uC6A9\uC790 \uB370\uC774\uD130\uB97C \uCC3E\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Value": "\uC5B4\uB5A4 \uD504\uB85C\uADF8\uB7A8\uB3C4 \uC5F4\uB824 \uC788\uC9C0 \uC54A\uB2E4\uBA74, \uAE30\uAE30\uC758 \uD30C\uC77C \uAD00\uB9AC\uC790\uB97C \uC5F4\uACE0 \uB0B4\uBD80 \uC800\uC7A5\uC18C-\u003EAndroid-\u003Edata-\u003E{pfm}\uC73C\uB85C \uC774\uB3D9\uD558\uC5EC \uC0AC\uC6A9\uC790 \uB370\uC774\uD130\uB97C \uCC3E\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\r\uC5EC\uC804\uD788 \uC0AC\uC6A9\uC790 \uB370\uC774\uD130\uB97C \uCC3E\uC744 \uC218 \uC5C6\uB2E4\uBA74 \uC9C0\uC6D0 \uBB38\uC11C\uB97C \uCC38\uC870\uD558\uC2ED\uC2DC\uC624.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -11171,12 +11198,12 @@
             "Value": ""
           }
         ],
-        "Comment": "Android \uAE30\uAE30\uC5D0\uC11C \uC0AC\uC6A9\uC790 \uB370\uC774\uD130 \uB514\uB809\uD1A0\uB9AC\uB97C \uCC3E\uB294 \uBC29\uBC95\uC5D0 \uB300\uD55C \uC548\uB0B4\uBB38\uC785\uB2C8\uB2E4. \u0027pfm\u0027\uC740 \uD2B9\uC815 \uC560\uD50C\uB9AC\uCF00\uC774\uC158 \uD328\uD0A4\uC9C0 \uC774\uB984\uC744 \uB098\uD0C0\uB0B4\uB294 \uBCC0\uC218\uC785\uB2C8\uB2E4.",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "\uAE30\uAE30\uC5D0\uC11C \u0027\uD30C\uC77C\u0027 \uC571\uC744 \uC5F4\uACE0, \u0027\uB0B4 {idiom}\u0027-\u003E{Localized.AppBrand}\uB85C \uC774\uB3D9\uD558\uBA74 \uC0AC\uC6A9\uC790 \uB370\uC774\uD130\uB97C \uCC3E\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.",
+        "Value": "\uAE30\uAE30\uC5D0\uC11C \u2018\uD30C\uC77C\u2019 \uC571\uC744 \uC5F4\uACE0, \u2018\uB0B4 {idiom}-\u003E{Localized.AppBrand}\u2019\uB85C \uC774\uB3D9\uD558\uBA74 \uC0AC\uC6A9\uC790 \uB370\uC774\uD130\uB97C \uCC3E\uC744 \uC218 \uC788\uC2B5\uB2C8\uB2E4.\n\u2018\uD30C\uC77C\u2019 \uC571\uC744 \uCC3E\uC744 \uC218 \uC5C6\uB2E4\uBA74, App Store\uC5D0\uC11C \uB2E4\uC6B4\uB85C\uB4DC\uD574 \uBCF4\uC138\uC694.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -11928,11 +11955,11 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "\uC790\uC138\uD55C IPicture \uCC98\uB9AC \uB85C\uADF8 \uAE30\uB85D",
+        "Value": "IPicture \uCC98\uB9AC \uC2A4\uD0DD \uAE30\uB85D",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u0027IPicture\u0027\uB294 \uBC88\uC5ED\uD558\uC9C0 \uC54A\uC74C",
         "DontTranslate": false
       },
       {
@@ -11991,7 +12018,7 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uBAA8\uB4E0 \uC124\uC815\uACFC \uC548\uC804 \uC800\uC7A5 \uB0B4\uC6A9\uC774 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AC\uB77C\uC9D1\uB2C8\uB2E4.\r\n\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC73C\uBA70, \uBAA8\uB4E0 \uD50C\uB7AB\uD3FC \uAE30\uBCF8 \uC124\uC815\uC774 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AC\uB77C\uC9D1\uB2C8\uB2E4.\r\n\r\n\uD655\uC2E4\uD569\uB2C8\uAE4C? \uD655\uC778\uD558\uB824\uBA74 \u0022yes\u0022\uB97C \uC785\uB825\uD558\uC138\uC694.",
+        "Value": "\uC774 \uC791\uC5C5\uC740 \uCDE8\uC18C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uBAA8\uB4E0 \uAE30\uBCF8 \uC124\uC815\uACFC \uC548\uC804\uD558\uAC8C \uC800\uC7A5\uB41C \uB0B4\uC6A9\uC774 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AC\uB77C\uC9D1\uB2C8\uB2E4.\r\r\uD655\uC2E4\uD569\uB2C8\uAE4C? \u0022yes\u0022\uB97C \uC785\uB825\uD558\uC5EC \uD655\uC778\uD558\uC138\uC694.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -12009,7 +12036,7 @@
       },
       {
         "Id": "Misc_ClearCache_Confirm",
-        "Value": "\uC774 \uC791\uC5C5\uC73C\uB85C \uC57D {n}\uAC1C\uC758 \uD30C\uC77C\uC774 \uC0AD\uC81C\uB418\uBA70, \uCD1D {size} MB\uC785\uB2C8\uB2E4.\r\uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
+        "Value": "\uB300\uB7B5 {n}\uAC1C\uC758 \uD30C\uC77C\uC744 \uC0AD\uC81C\uD558\uBA70, \uCD1D {size} MB\uC785\uB2C8\uB2E4.\r\uACC4\uC18D\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -12036,20 +12063,29 @@
       },
       {
         "Id": "Edit_UseLegacyPlaceResizeEffects",
-        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Value": "\uAD6C\uBC84\uC804(v1.4.0.0 \uB610\uB294 \uC774\uC804)\uC758 \uC704\uCE58 \uCC98\uB9AC \uC2DC\uC2A4\uD15C \uC0AC\uC6A9",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_NoRebootAfterCrash",
-        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Value": "{Localized.AppBrand} \uCDA9\uB3CC \uD6C4 \uC790\uB3D9 \uC7AC\uC2DC\uC791\uD558\uC9C0 \uC54A\uC74C",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "IPicture \uD53D\uC140 \uBAA8\uB4DC \uB2E4\uC6B4\uADF8\uB808\uC774\uB4DC \uBD88\uAC00",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -12165,11 +12201,11 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "\u00C9diteur de projet - Personnalisation",
+        "Value": "Personnalisation",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Pr\u00E9f\u00E9rences de personnalisation de l\u0027\u00E9diteur de projet",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -12301,7 +12337,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "Ouvrir le r\u00E9pertoire des donn\u00E9es utilisateur ({path})",
+        "Value": "Ouvrir le r\u00E9pertoire des donn\u00E9es utilisateur",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -13284,7 +13320,7 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "S\u00E9lectionner le GPU pour l\u0027acc\u00E9l\u00E9ration mat\u00E9rielle lors de l\u0027\u00E9dition",
+        "Value": "S\u00E9lectionnez le GPU \u00E0 utiliser pour l\u0027acc\u00E9l\u00E9ration mat\u00E9rielle lors de l\u0027\u00E9dition/du pr\u00E9visualisation",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13573,7 +13609,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "La migration a \u00E9t\u00E9 effectu\u00E9e avec succ\u00E8s. Le dossier source peut maintenant \u00EAtre supprim\u00E9 en toute s\u00E9curit\u00E9.\r\nCliquez sur {Localized._OK} pour le supprimer.",
+        "Value": "L\u0027op\u00E9ration de migration a \u00E9t\u00E9 r\u00E9alis\u00E9e avec succ\u00E8s. Vous pouvez maintenant supprimer en toute s\u00E9curit\u00E9 le dossier source.\r\nCliquez sur {Localized._OK} pour le supprimer.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -13591,7 +13627,7 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "Exporter le plugin",
+        "Value": "Exporter les plugins utilisateur",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -13609,7 +13645,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "Si aucune application n\u0027est ouverte, vous pouvez ouvrir le gestionnaire de fichiers de l\u0027appareil, acc\u00E9der \u00E0 Stockage interne -\u003E Android -\u003E data -\u003E {pfm}, et vous trouverez les donn\u00E9es utilisateur.",
+        "Value": "Si aucune application n\u0027est ouverte, vous pouvez ouvrir le gestionnaire de fichiers sur votre appareil, acc\u00E9dez \u00E0 Stockage interne -\u003E Android -\u003E data -\u003E {pfm}, et vous trouverez les donn\u00E9es utilisateur.\r\nSi vous ne trouvez toujours pas les donn\u00E9es utilisateur, veuillez consulter la documentation d\u0027assistance.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -13623,12 +13659,12 @@
             "Value": ""
           }
         ],
-        "Comment": "",
+        "Comment": "Traduction des instructions pour localiser les donn\u00E9es utilisateur sur Android",
         "DontTranslate": false
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "Ouvrez l\u0027application \u00AB Fichiers \u00BB sur votre appareil, acc\u00E9dez \u00E0 \u00AB Mon {idiom} \u00BB -\u003E {Localized.AppBrand} pour trouver les donn\u00E9es utilisateur.",
+        "Value": "Ouvrez l\u0027application \u00AB Fichiers \u00BB sur votre appareil, acc\u00E9dez \u00E0 \u00AB Mon {idiom} -\u003E {Localized.AppBrand} \u00BB pour trouver les donn\u00E9es utilisateur.\r\nSi vous ne trouvez pas l\u0027application \u00AB Fichiers \u00BB, essayez de la t\u00E9l\u00E9charger depuis l\u0027App Store.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -13719,7 +13755,7 @@
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "Options diverses",
+        "Value": "Autre",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -14380,7 +14416,7 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Enregistrer les journaux de traitement d\u00E9taill\u00E9s IPicture",
+        "Value": "Enregistrer la pile de traitement IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -14443,11 +14479,11 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Cette action est irr\u00E9versible. Tous les param\u00E8tres et les contenus stock\u00E9s en s\u00E9curit\u00E9 seront d\u00E9finitivement perdus.\r\nCette op\u00E9ration ne peut pas \u00EAtre annul\u00E9e, toutes les options pr\u00E9f\u00E9r\u00E9es de la plateforme dispara\u00EEtront de fa\u00E7on permanente.\r\n\r\n\u00CAtes-vous s\u00FBr(e) ? Tapez \u0022yes\u0022 pour confirmer.",
+        "Value": "Cette op\u00E9ration est irr\u00E9versible. Tous les param\u00E8tres pr\u00E9f\u00E9r\u00E9s et le contenu stock\u00E9 en toute s\u00E9curit\u00E9 seront d\u00E9finitivement supprim\u00E9s.\r\r\u00CAtes-vous s\u00FBr(e) ? Tapez \u0022yes\u0022 pour confirmer.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Traduction de l\u0027avertissement de suppression des pr\u00E9f\u00E9rences. \u0027yes\u0027 n\u0027est pas traduit car c\u0027est ce que l\u0027utilisateur doit saisir.",
         "DontTranslate": false
       },
       {
@@ -14461,7 +14497,7 @@
       },
       {
         "Id": "Misc_ClearCache_Confirm",
-        "Value": "Cela supprimera environ {n} fichiers, pour un total de {size}\u202FMB.\rVoulez-vous continuer\u202F?",
+        "Value": "Cela supprimera environ {n} fichiers, soit {size} Mo au total.\rVoulez-vous continuer ?",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -14483,25 +14519,34 @@
             "Value": ""
           }
         ],
-        "Comment": "",
+        "Comment": "Confirmation de suppression du cache - environ X fichiers pour Y Mo",
         "DontTranslate": false
       },
       {
         "Id": "Edit_UseLegacyPlaceResizeEffects",
-        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Value": "Utiliser le syst\u00E8me de traitement de position de l\u0027ancienne version (v1.4.0.0 ou ant\u00E9rieure)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_NoRebootAfterCrash",
-        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Value": "{Localized.AppBrand} ne red\u00E9marre pas automatiquement apr\u00E8s un plantage",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "La d\u00E9gradation du mode de pixels IPicture n\u0027est pas autoris\u00E9e",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -14617,11 +14662,11 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "\u9879\u7A0B\u7F16\u4FEE\u5668 - \u5B9A\u5236",
+        "Value": "\u4E2A\u6027\u5316",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Interface title for editor customization section",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -14753,7 +14798,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "\u6253\u5F00\u7528\u6237\u6570\u636E\u76EE\u5F55 ({path})",
+        "Value": "\u542F\u7528\u6237\u6570\u636E\u4E4B\u76EE\u5F55",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -15736,7 +15781,7 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "\u62E9GPU\u4EE5\u52A9\u7F16\u7E82\u4E4B\u901F",
+        "Value": "\u62E9\u5B9A\u7F16\u4FEE\u9884\u89C8\u6240\u7528\u4E4B\u52A0\u901F\u56FE\u663E\u5668\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16025,7 +16070,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "\u8FC1\u79FB\u64CD\u4F5C\u5DF2\u6BD5\uFF0C\u6E90\u6587\u4EF6\u5939\u53EF\u5B89\u5168\u5220\u4E4B\u3002\u70B9\u51FB{Localized._OK}\u4EE5\u9664\u4E4B\u3002",
+        "Value": "\u8FC1\u79FB\u64CD\u4F5C\u5DF2\u6210\uFF0C\u4E0B\u8F7D\u6BD5\uFF0C\u53EF\u5B89\u5168\u5220\u9664\u6E90\u6587\u4EF6\u5939\u77E3\u3002\r\u70B9\u51FB{Localized._OK}\u4EE5\u5220\u4E4B\u3002",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -16043,11 +16088,11 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "\u5BFC\u51FA\u63D2\u4EF6",
+        "Value": "\u51FA\u7528\u8005\u8F85\u5177",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u5C06\u73B0\u4EE3\u8F6F\u4EF6\u6982\u5FF5\u0027\u7528\u6237\u63D2\u4EF6\u0027\u610F\u8BD1\u4E3A\u0027\u7528\u8005\u8F85\u5177\u0027\uFF0C\u0027\u5BFC\u51FA\u0027\u8BD1\u4E3A\u0027\u51FA\u0027\uFF0C\u529B\u6C42\u7B26\u5408\u6587\u8A00\u6587\u7B80\u6D01\u5178\u96C5\u4E4B\u98CE\u683C\u3002",
         "DontTranslate": false
       },
       {
@@ -16061,7 +16106,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "\u82E5\u65E0\u7A0B\u5F0F\u542F\uFF0C\u53EF\u542F\u8BBE\u5907\u4E4B\u6863\u518C\u53F8\uFF0C\u8F6C\u81F3\u5185\u50A8-\u003EAndroid-\u003Edata-\u003E{pfm}\uFF0C\u4E43\u5F97\u89C1\u7528\u6237\u6570\u636E\u3002",
+        "Value": "\u82E5\u65E0\u7A0B\u5E8F\u5F00\u542F\uFF0C\u53EF\u542F\u8BBE\u5907\u4E2D\u4E4B\u6587\u4EF6\u7BA1\u7406\u5668\uFF0C\u8F6C\u81F3\u5185\u90E8\u5B58\u50A8-\u003EAndroid-\u003Edata-\u003E{pfm}\uFF0C\u5373\u53EF\u5F97\u7528\u6237\u6570\u636E\u3002\r\u82E5\u4ECD\u4E0D\u53EF\u5F97\u7528\u6237\u6570\u636E\uFF0C\u8BF7\u53C2\u9605\u652F\u6301\u6587\u6863\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -16075,12 +16120,12 @@
             "Value": ""
           }
         ],
-        "Comment": "\u6307\u5BFC\u7528\u6237\u5BFB\u627E\u7528\u6237\u6570\u636E\u76EE\u5F55\u4E4B\u64CD\u4F5C\u6B65\u9AA4",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "\u542F\u8BBE\u5907\u4E4B\u2018\u6587\u4EF6\u2019\u5E94\u7528\uFF0C\u5F80\u2018\u543E\u4E4B{idiom}\u2019-\u003E{Localized.AppBrand}\uFF0C\u4E43\u5F97\u7528\u6237\u6570\u636E\u3002",
+        "Value": "\u542F\u8BBE\u5907\u4E2D\u4E4B\u0027\u6587\u4E66\u0027\u5E94\u7528\uFF0C\u81F3\u0027\u543E\u4E4B{idiom}-\u003E{Localized.AppBrand}\u0027\uFF0C\u4E43\u5F97\u7528\u6237\u6570\u636E\u3002\u82E5\u4E0D\u89C1\u0027\u6587\u4E66\u0027\u5E94\u7528\uFF0C\u53EF\u8BD5\u81EAApp Store\u4E0B\u8F7D\u4E4B\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -16094,7 +16139,7 @@
             "Value": ""
           }
         ],
-        "Comment": "\u6307\u5BFC\u7528\u6237\u4E8E\u8BBE\u5907\u4E2D\u5BFB\u7528\u6237\u6570\u636E\u4E4B\u6B65\u9AA4\uFF0C\u6587\u8A00\u8BD1\u4E4B\uFF0C\u529B\u6C42\u7B80\u96C5\u3002",
+        "Comment": "\u5C06\u73B0\u4EE3\u4E2D\u6587\u8BBE\u5907\u64CD\u4F5C\u8BF4\u660E\u8BD1\u4E3A\u6587\u8A00\u6587\uFF0C\u4FDD\u7559\u53C2\u6570\u53D8\u91CF\uFF0C\u8C03\u6574\u53E5\u5F0F\u7B26\u5408\u6587\u8A00\u7B80\u7EC3\u7279\u70B9\u3002",
         "DontTranslate": false
       },
       {
@@ -16171,7 +16216,7 @@
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "\u8BF8\u9879",
+        "Value": "\u5176\u4F59",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16832,7 +16877,7 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "\u8BE6\u5F55 IPicture \u7406\u65E5\u5FD7",
+        "Value": "\u5F55 IPicture \u7406\u6808",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16895,7 +16940,7 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u53EF\u590D\u3002\u51E1\u6240\u8BBE\u4E4B\u5236\u3001\u5B89\u5168\u50A8\u4E4B\u5BB9\uFF0C\u7686\u5C06\u6C38\u5931\u3002\r\n\u6B64\u64CD\u4F5C\u4E0D\u53EF\u9006\uFF0C\u51E1\u5E73\u53F0\u9996\u9009\u4E4B\u9879\uFF0C\u4EA6\u6C38\u901D\u77E3\u3002\r\n\r\n\u6C5D\u786E\u4E4E\uFF1F\u8BF7\u8F93\u5165\u201Cyes\u201D\u4EE5\u786E\u8BA4\u3002",
+        "Value": "\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\u3002\u6240\u6709\u9996\u9009\u8BBE\u7F6E\u3001\u5B89\u5168\u5B58\u50A8\u5185\u5BB9\u5C06\u6C38\u4E45\u6D88\u5931\u3002\r\r\u4F60\u786E\u8BA4\u5417\uFF1F\u8F93\u5165\u201Cyes\u201D\u4EE5\u786E\u8BA4\u3002",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16904,7 +16949,7 @@
       },
       {
         "Id": "Misc_ClearCache",
-        "Value": "\u6E05\u7A7A\u6682\u5B58",
+        "Value": "\u6E05\u9664\u7F13\u5B58",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -16913,7 +16958,7 @@
       },
       {
         "Id": "Misc_ClearCache_Confirm",
-        "Value": "\u6B64\u9664\u7EA6 {n} \u4EF6\uFF0C\u8BA1 {size} MB\u3002\u53EF\u7EED\u5426\uFF1F",
+        "Value": "\u6B64\u5C06\u5220\u7EA6 {n} \u6587\u4EF6\uFF0C\u5171 {size} MB\u3002\r\u6B32\u7EED\u4E4E\uFF1F",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -16935,25 +16980,34 @@
             "Value": ""
           }
         ],
-        "Comment": "",
+        "Comment": "\u6587\u8A00\u6587\u7FFB\u8BD1\uFF0C\u4FDD\u7559\u63D2\u503C\u53C2\u6570\u3002",
         "DontTranslate": false
       },
       {
         "Id": "Edit_UseLegacyPlaceResizeEffects",
-        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Value": "\u7528\u65E7\u7248\uFF08v1.4.0.0\u6216\u66F4\u65E7\uFF09\u4E4B\u4F4D\u5904\u6CD5",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_NoRebootAfterCrash",
-        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Value": "\u5D29\u6F70\u5F8C\u4E0D\u5FA9\u81EA\u555F {Localized.AppBrand}",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "\u7981\u964DIPicture\u50CF\u7D20\u4E4B\u5F0F",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "\u6587\u8A00\u6587\u8BD1\u6CD5\uFF0C\u4FDD\u6301\u6280\u672F\u672F\u8BED\u51C6\u786E\u6027",
         "DontTranslate": false
       }
     ],
@@ -17023,7 +17077,7 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "\u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0625\u0636\u0627\u0641\u0627\u062A",
+        "Value": "\u062A\u0635\u062F\u064A\u0631 \u0625\u0636\u0627\u0641\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17694,7 +17748,7 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "\u0645\u062D\u0631\u0631 \u0627\u0644\u0645\u0634\u0631\u0648\u0639 - \u0627\u0644\u062A\u062E\u0635\u064A\u0635",
+        "Value": "\u062A\u062E\u0635\u064A\u0635",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -17757,7 +17811,7 @@
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "\u062E\u064A\u0627\u0631\u0627\u062A \u0645\u062A\u0646\u0648\u0639\u0629",
+        "Value": "\u0623\u062E\u0631\u0649",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -18028,7 +18082,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "\u0641\u062A\u062D \u062F\u0644\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 ({path})",
+        "Value": "\u0641\u062A\u062D \u062F\u0644\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -18047,7 +18101,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "\u0625\u0630\u0627 \u0644\u0645 \u064A\u062A\u0645 \u0641\u062A\u062D \u0623\u064A \u062A\u0637\u0628\u064A\u0642\u060C \u064A\u0645\u0643\u0646\u0643 \u0641\u062A\u062D \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0644\u0641\u0627\u062A \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632\u060C \u062B\u0645 \u0627\u0644\u0627\u0646\u062A\u0642\u0627\u0644 \u0625\u0644\u0649 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u062F\u0627\u062E\u0644\u064A -\u003E Android -\u003E data -\u003E {pfm}\u060C \u0644\u062A\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645.",
+        "Value": "\u0625\u0630\u0627 \u0644\u0645 \u064A\u062A\u0645 \u0641\u062A\u062D \u0623\u064A \u062A\u0637\u0628\u064A\u0642\u060C \u064A\u0645\u0643\u0646\u0643 \u0641\u062A\u062D \u0645\u062F\u064A\u0631 \u0627\u0644\u0645\u0644\u0641\u0627\u062A \u0639\u0644\u0649 \u062C\u0647\u0627\u0632\u0643\u060C \u062B\u0645 \u0627\u0644\u0627\u0646\u062A\u0642\u0627\u0644 \u0625\u0644\u0649 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u062F\u0627\u062E\u0644\u064A -\u003E Android -\u003E data -\u003E {pfm}\u060C \u0644\u062A\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645.\r\u0625\u0630\u0627 \u0644\u0645 \u062A\u062A\u0645\u0643\u0646 \u0645\u0646 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u0631\u062C\u0648\u0639 \u0625\u0644\u0649 \u0648\u062B\u0627\u0626\u0642 \u0627\u0644\u062F\u0639\u0645.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -18066,7 +18120,7 @@
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "\u0627\u0641\u062A\u062D \u062A\u0637\u0628\u064A\u0642 \u0027\u0627\u0644\u0645\u0644\u0641\u0627\u062A\u0027 \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632\u060C \u062B\u0645 \u0627\u0646\u062A\u0642\u0644 \u0625\u0644\u0649 \u0027\u0627\u0644\u0640{idiom} \u0627\u0644\u062E\u0627\u0635 \u0628\u064A\u0027 -\u003E {Localized.AppBrand}\u060C \u0648\u0633\u062A\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0647\u0646\u0627\u0643.",
+        "Value": "\u0627\u0641\u062A\u062D \u062A\u0637\u0628\u064A\u0642 \u0022\u0627\u0644\u0645\u0644\u0641\u0627\u062A\u0022 \u0639\u0644\u0649 \u0627\u0644\u062C\u0647\u0627\u0632\u060C \u0648\u0627\u0646\u062A\u0642\u0644 \u0625\u0644\u0649 \u0027{idiom}-\u003E{Localized.AppBrand}\u0027\u060C \u0644\u062A\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645.\r\n\u0625\u0630\u0627 \u0644\u0645 \u062A\u062C\u062F \u062A\u0637\u0628\u064A\u0642 \u0022\u0627\u0644\u0645\u0644\u0641\u0627\u062A\u0022\u060C \u062D\u0627\u0648\u0644 \u062A\u0646\u0632\u064A\u0644\u0647 \u0645\u0646 \u0645\u062A\u062C\u0631 \u0627\u0644\u062A\u0637\u0628\u064A\u0642\u0627\u062A (App Store).",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -18140,7 +18194,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "\u062A\u0645 \u0625\u0643\u0645\u0627\u0644 \u0639\u0645\u0644\u064A\u0629 \u0627\u0644\u0646\u0642\u0644 \u0628\u0646\u062C\u0627\u062D\u060C \u0648\u064A\u0645\u0643\u0646 \u062D\u0630\u0641 \u0627\u0644\u0645\u062C\u0644\u062F \u0627\u0644\u0645\u0635\u062F\u0631 \u0628\u0623\u0645\u0627\u0646.\n\u0627\u0646\u0642\u0631 \u0641\u0648\u0642 {Localized._OK} \u0644\u062D\u0630\u0641\u0647.",
+        "Value": "\u062A\u0645 \u0625\u0646\u062C\u0627\u0632 \u0639\u0645\u0644\u064A\u0629 \u0627\u0644\u0646\u0642\u0644 \u0628\u0646\u062C\u0627\u062D\u060C \u064A\u0645\u0643\u0646\u0643 \u0627\u0644\u0622\u0646 \u062D\u0630\u0641 \u0627\u0644\u0645\u062C\u0644\u062F \u0627\u0644\u0645\u0635\u062F\u0631 \u0628\u0623\u0645\u0627\u0646.\r\u0627\u0646\u0642\u0631 \u0639\u0644\u0649 {Localized._OK} \u0644\u062D\u0630\u0641\u0647.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -19131,7 +19185,7 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "\u0627\u062E\u062A\u0631 \u0648\u062D\u062F\u0629 \u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u0631\u0633\u0648\u0645\u0627\u062A (GPU) \u0644\u062A\u0633\u0631\u064A\u0639 \u0627\u0644\u0623\u062C\u0647\u0632\u0629 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062A\u062D\u0631\u064A\u0631",
+        "Value": "\u062A\u062D\u062F\u064A\u062F GPU \u0644\u062A\u0633\u0631\u064A\u0639 \u0627\u0644\u0639\u062A\u0627\u062F \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062A\u0639\u062F\u064A\u0644/\u0627\u0644\u0645\u0639\u0627\u064A\u0646\u0629",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -19284,7 +19338,7 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "\u062A\u0633\u062C\u064A\u0644 \u0633\u062C\u0644 \u0645\u0639\u0627\u0644\u062C\u0629 IPicture \u0627\u0644\u062A\u0641\u0635\u064A\u0644\u064A\u0629",
+        "Value": "\u062A\u0633\u062C\u064A\u0644 \u0645\u0643\u062F\u0633 \u0645\u0639\u0627\u0644\u062C\u0629 IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -19347,11 +19401,11 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "\u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621. \u0633\u062A\u062E\u062A\u0641\u064A \u062C\u0645\u064A\u0639 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0648\u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u062E\u0632\u0646 \u0628\u0634\u0643\u0644 \u062F\u0627\u0626\u0645.\n\u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u060C \u0648\u0633\u062A\u062E\u062A\u0641\u064A \u062C\u0645\u064A\u0639 \u062A\u0641\u0636\u064A\u0644\u0627\u062A \u0627\u0644\u0645\u0646\u0635\u0629 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0628\u0634\u0643\u0644 \u062F\u0627\u0626\u0645.\n\n\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F\u061F \u0627\u0643\u062A\u0628 \u0022yes\u0022 \u0644\u0644\u062A\u0623\u0643\u064A\u062F.",
+        "Value": "\u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621. \u0633\u064A\u062A\u0645 \u062D\u0630\u0641 \u062C\u0645\u064A\u0639 \u0627\u0644\u062A\u0641\u0636\u064A\u0644\u0627\u062A \u0648\u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u062E\u0632\u0646 \u0628\u0634\u0643\u0644 \u062F\u0627\u0626\u0645.\r\r\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F\u061F \u0627\u0643\u062A\u0628 \u0022yes\u0022 \u0644\u0644\u062A\u0623\u0643\u064A\u062F.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u062A\u0645 \u0627\u0644\u062D\u0641\u0627\u0638 \u0639\u0644\u0649 \u0022yes\u0022 \u0643\u0645\u0627 \u0647\u064A \u0644\u0623\u0646\u0647\u0627 \u0645\u062F\u062E\u0644\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645.",
         "DontTranslate": false
       },
       {
@@ -19365,7 +19419,7 @@
       },
       {
         "Id": "Misc_ClearCache_Confirm",
-        "Value": "\u0633\u064A\u062A\u0645 \u062D\u0630\u0641 \u062D\u0648\u0627\u0644\u064A {n} \u0645\u0644\u0641\u064B\u0627 (\u0628\u0625\u062C\u0645\u0627\u0644\u064A {size} MB).\r\u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F",
+        "Value": "\u0633\u064A\u0624\u062F\u064A \u0647\u0630\u0627 \u0625\u0644\u0649 \u062D\u0630\u0641 \u062D\u0648\u0627\u0644\u064A {n} \u0645\u0644\u0641\u060C \u0628\u0625\u062C\u0645\u0627\u0644\u064A {size} \u0645\u064A\u063A\u0627\u0628\u0627\u064A\u062A.\r\u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -19392,20 +19446,29 @@
       },
       {
         "Id": "Edit_UseLegacyPlaceResizeEffects",
-        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Value": "\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0646\u0638\u0627\u0645 \u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u0645\u0648\u0627\u0636\u0639 \u0645\u0646 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u0642\u062F\u064A\u0645 (v1.4.0.0 \u0623\u0648 \u0623\u0642\u062F\u0645)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_NoRebootAfterCrash",
-        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Value": "\u0644\u0627 \u064A\u0639\u064A\u062F \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0628\u0639\u062F \u0627\u0644\u062A\u0639\u0637\u0644 {Localized.AppBrand}",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "\u0644\u0627 \u064A\u064F\u0633\u0645\u062D \u0628\u062A\u062E\u0641\u064A\u0636 \u0648\u0636\u0639 \u0627\u0644\u0628\u0643\u0633\u0644 \u0644\u0640 IPicture",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -19475,7 +19538,7 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "Export-Plugin",
+        "Value": "Benutzer-Plugin exportieren",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20146,7 +20209,7 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "Projekteditor - Personalisierung",
+        "Value": "Personalisierung",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -20480,7 +20543,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "Benutzerdatenverzeichnis \u00F6ffnen ({path})",
+        "Value": "Benutzerdatenverzeichnis \u00F6ffnen: {path}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -20499,7 +20562,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "Wenn keine App ge\u00F6ffnet ist, k\u00F6nnen Sie im Dateimanager Ihres Ger\u00E4ts zum Pfad Interner Speicher \u2192 Android \u2192 data \u2192 {pfm} navigieren, um die Benutzerdaten zu finden.",
+        "Value": "Wenn keine Anwendung ge\u00F6ffnet ist, kannst du den Dateimanager auf deinem Ger\u00E4t \u00F6ffnen, zu Interner Speicher -\u003E Android -\u003E data -\u003E {pfm} navigieren, um die Benutzerdaten zu finden.\r\nWenn du die Benutzerdaten immer noch nicht finden kannst, konsultiere bitte die Support-Dokumentation.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -20518,7 +20581,7 @@
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "\u00D6ffnen Sie die \u0027Dateien\u0027-App auf dem Ger\u00E4t, wechseln Sie zu \u0027Mein {idiom}\u0027 \u2192 {Localized.AppBrand}, um die Benutzerdaten zu finden.",
+        "Value": "\u00D6ffnen Sie die \u0022Dateien\u0022-App auf Ihrem Ger\u00E4t, navigieren Sie zu \u0027Mein {idiom}-\u003E{Localized.AppBrand}\u0027, und Sie finden die Benutzerdaten.\r\nWenn Sie die \u0022Dateien\u0022-App nicht finden k\u00F6nnen, versuchen Sie, sie aus dem App Store herunterzuladen.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -20532,7 +20595,7 @@
             "Value": ""
           }
         ],
-        "Comment": "",
+        "Comment": "\u5FB7\u8BED\u7FFB\u8BD1\uFF1A\u6307\u5BFC\u7528\u6237\u5728iOS\u8BBE\u5907\u4E0A\u627E\u5230\u7528\u6237\u6570\u636E\u3002\u4FDD\u7559\u4E86\u6240\u6709\u53D8\u91CF\u5360\u4F4D\u7B26\uFF0C\u4F7F\u7528\u4E86\u5FB7\u8BED\u4E2D\u5E38\u89C1\u7684\u5E94\u7528\u540D\u79F0\u0027Dateien\u0027\u8868\u793A\u6587\u4EF6\u5E94\u7528\u3002",
         "DontTranslate": false
       },
       {
@@ -20592,7 +20655,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "Die Migration wurde erfolgreich abgeschlossen. Der Quellordner kann nun sicher gel\u00F6scht werden.\rKlicken Sie auf {Localized._OK}, um ihn zu l\u00F6schen.",
+        "Value": "Die Migration wurde erfolgreich abgeschlossen.\rDie Quelldateien k\u00F6nnen nun sicher gel\u00F6scht werden.\rKlicken Sie auf {Localized._OK}, um sie zu l\u00F6schen.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -21583,7 +21646,7 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "GPU f\u00FCr Hardwarebeschleunigung beim Bearbeiten ausw\u00E4hlen",
+        "Value": "W\u00E4hlen Sie die GPU f\u00FCr Hardwarebeschleunigung bei Bearbeitung/Vorschau aus",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -21736,7 +21799,7 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Detaillierte IPicture-Verarbeitungsprotokollierung aktivieren",
+        "Value": "IPicture-Verarbeitungsstapel aufzeichnen",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -21799,11 +21862,11 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Diese Aktion kann nicht r\u00FCckg\u00E4ngig gemacht werden. Alle Einstellungen und sicher gespeicherten Inhalte werden dauerhaft gel\u00F6scht.\r\nDiese Aktion kann nicht r\u00FCckg\u00E4ngig gemacht werden. Alle plattformspezifischen Pr\u00E4ferenzen gehen dauerhaft verloren.\r\n\r\nBist du sicher? Gib \u0022yes\u0022 zur Best\u00E4tigung ein.",
+        "Value": "Dieser Vorgang kann nicht r\u00FCckg\u00E4ngig gemacht werden. Alle bevorzugten Einstellungen und sicher gespeicherte Inhalte werden dauerhaft gel\u00F6scht.\r\rSind Sie sicher? Geben Sie \u0022yes\u0022 ein, um zu best\u00E4tigen.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Hinweis: \u0022yes\u0022 nicht \u00FCbersetzen, da es eine vom Benutzer einzugebende Eingabeaufforderung ist.",
+        "Comment": "",
         "DontTranslate": false
       },
       {
@@ -21817,7 +21880,7 @@
       },
       {
         "Id": "Misc_ClearCache_Confirm",
-        "Value": "Dies l\u00F6scht etwa {n} Dateien, insgesamt {size} MB.\rM\u00F6chten Sie fortfahren?",
+        "Value": "Dadurch werden etwa {n} Dateien mit insgesamt {size} MB gel\u00F6scht.\r\nFortfahren?",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -21844,20 +21907,29 @@
       },
       {
         "Id": "Edit_UseLegacyPlaceResizeEffects",
-        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Value": "Verwenden Sie das alte Positionsverarbeitungssystem (v1.4.0.0 oder \u00E4lter)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_NoRebootAfterCrash",
-        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Value": "Nach Absturz nicht automatisch neu starten {Localized.AppBrand}",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "Herabstufen des Pixelmodus von IPicture nicht erlaubt",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -21927,7 +21999,7 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "Exportar complemento",
+        "Value": "Exportar complementos de usuario",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22598,7 +22670,7 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "Editor de proyectos - Personalizaci\u00F3n",
+        "Value": "Personalizaci\u00F3n",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22661,7 +22733,7 @@
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "Opciones varias",
+        "Value": "Otros",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -22932,7 +23004,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "Abrir directorio de datos del usuario ({path})",
+        "Value": "Abrir directorio de datos del usuario",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -22951,7 +23023,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "Si no se abre ninguna aplicaci\u00F3n, puedes abrir el administrador de archivos en tu dispositivo, ir a Almacenamiento interno -\u003E Android -\u003E data -\u003E {pfm}, y all\u00ED encontrar\u00E1s los datos del usuario.",
+        "Value": "Si no hay ninguna aplicaci\u00F3n abierta, puedes abrir el administrador de archivos en el dispositivo, ve a Almacenamiento interno -\u003E Android -\u003E data -\u003E {pfm} para encontrar los datos del usuario. Si a\u00FAn no puedes encontrarlos, consulta la documentaci\u00F3n de soporte.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -22970,7 +23042,7 @@
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "Abre la aplicaci\u00F3n \u0022Archivos\u0022 en tu dispositivo, ve a \u0027Mi {idiom}\u0027 -\u003E {Localized.AppBrand} y encontrar\u00E1s los datos del usuario.",
+        "Value": "Abre la aplicaci\u00F3n \u2018Archivos\u2019 en tu dispositivo, ve a \u2018Mi {idiom} -\u003E {Localized.AppBrand}\u2019 para encontrar los datos del usuario.\r\nSi no encuentras la aplicaci\u00F3n \u2018Archivos\u2019, intenta descargarla desde la App Store.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -23044,7 +23116,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "La operaci\u00F3n de migraci\u00F3n se ha completado con \u00E9xito, la carpeta de origen se puede eliminar de forma segura.\rHaga clic en {Localized._OK} para eliminarla.",
+        "Value": "La operaci\u00F3n de migraci\u00F3n se ha completado con \u00E9xito. Ahora puede eliminar de forma segura la carpeta de origen.\rHaga clic en {Localized._OK} para eliminarla.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -24035,7 +24107,7 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "Selecciona la GPU para la aceleraci\u00F3n por hardware durante la edici\u00F3n",
+        "Value": "Seleccionar GPU para aceleraci\u00F3n por hardware al editar/previsualizar",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -24188,7 +24260,7 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Registrar registro detallado de procesamiento IPicture",
+        "Value": "Registrar pila de procesamiento IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -24251,11 +24323,11 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Esta operaci\u00F3n no se puede deshacer. Toda la configuraci\u00F3n y el contenido almacenado de forma segura se perder\u00E1n permanentemente.\r\nEsta operaci\u00F3n es irreversible. Todas las opciones preferidas de la plataforma se perder\u00E1n permanentemente.\r\n\r\n\u00BFEst\u00E1s seguro? Escribe \u0022yes\u0022 para confirmar.",
+        "Value": "Esta operaci\u00F3n no se puede deshacer. Todas las preferencias, opciones guardadas y contenido de almacenamiento seguro se perder\u00E1n permanentemente.\r\r\u00BFEst\u00E1s seguro? Escribe \u0022yes\u0022 para confirmar.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "No traducir \u0022yes\u0022, es lo que el usuario debe escribir",
         "DontTranslate": false
       },
       {
@@ -24296,20 +24368,29 @@
       },
       {
         "Id": "Edit_UseLegacyPlaceResizeEffects",
-        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Value": "Usar el sistema de procesamiento de posici\u00F3n de la versi\u00F3n antigua (v1.4.0.0 o anterior)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_NoRebootAfterCrash",
-        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Value": "{Localized.AppBrand} no se reiniciar\u00E1 autom\u00E1ticamente despu\u00E9s del cierre inesperado",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "No se permite degradar el modo de p\u00EDxeles de IPicture",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -24379,7 +24460,7 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "Esporta plugin",
+        "Value": "Esporta plugin utente",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -25050,7 +25131,7 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "Editor di progetto - Personalizzazione",
+        "Value": "Personalizzazione",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -25113,7 +25194,7 @@
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "Opzioni varie",
+        "Value": "Altro",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -25384,7 +25465,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "Apri cartella dei dati utente ({path})",
+        "Value": "Apri la directory dei dati utente",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -25403,7 +25484,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "Se nessuna applicazione \u00E8 aperta, puoi aprire il gestore file sul dispositivo, andare in Memoria interna -\u003E Android -\u003E data -\u003E {pfm} per trovare i dati utente.",
+        "Value": "Se nessuna applicazione \u00E8 aperta, puoi aprire il gestore file sul dispositivo, navigare in Memoria interna \u2192 Android \u2192 data \u2192 {pfm} per trovare i dati utente.\r\nSe ancora non riesci a trovare i dati utente, consulta la documentazione di supporto.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -25422,7 +25503,7 @@
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "Apri l\u0027app \u0022File\u0022 sul tuo dispositivo, vai su \u0022Il mio {idiom}\u0022 -\u003E {Localized.AppBrand} per trovare i dati utente.",
+        "Value": "Apri l\u0027app \u0027File\u0027 sul tuo dispositivo, vai su \u0027Il mio {idiom} \u2192 {Localized.AppBrand}\u0027, e troverai i dati utente.\r\nSe non riesci a trovare l\u0027app \u0027File\u0027, prova a scaricarla dall\u0027App Store.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -25436,7 +25517,7 @@
             "Value": ""
           }
         ],
-        "Comment": "Traduzione delle istruzioni per trovare i dati utente. \u0027Il mio {idiom}\u0027 mantiene la struttura originale, presupponendo che \u0027idiom\u0027 possa essere sostituito con il tipo di dispositivo (es. iPhone, iPad) o un nome personalizzato.",
+        "Comment": "Traduzione delle istruzioni per trovare i dati utente attraverso l\u0027app File. Mantenuti i placeholder {idiom} e {Localized.AppBrand}.",
         "DontTranslate": false
       },
       {
@@ -25496,7 +25577,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "Operazione di trasferimento completata con successo. La cartella di origine pu\u00F2 ora essere eliminata in sicurezza.\rFai clic su {Localized._OK} per eliminarla.",
+        "Value": "Operazione di migrazione completata con successo, ora puoi eliminare in sicurezza la cartella di origine.\rFai clic su {Localized._OK} per eliminarla.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -26487,7 +26568,7 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "Seleziona la GPU per l\u0027accelerazione hardware durante la modifica",
+        "Value": "Seleziona la GPU da utilizzare per l\u0027accelerazione hardware durante la modifica/anteprima.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26640,7 +26721,7 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Registra il log dettagliato di elaborazione IPicture",
+        "Value": "Abilita registrazione stack di elaborazione IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -26703,11 +26784,11 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Questa operazione non pu\u00F2 essere annullata. Tutte le impostazioni e i contenuti memorizzati in modo sicuro andranno persi permanentemente.\r\nQuesta operazione \u00E8 irreversibile. Tutte le preferenze della piattaforma andranno perse per sempre.\r\n\r\nSei sicuro? Digita \u0022yes\u0022 per confermare.",
+        "Value": "Questa operazione non pu\u00F2 essere annullata. Tutte le preferenze e i contenuti memorizzati in modo sicuro scompariranno permanentemente.\r\rSei sicuro? Inserisci \u0022yes\u0022 per confermare.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "Mantiene \u0027yes\u0027 non tradotto come richiesto, poich\u00E9 \u00E8 l\u0027input dell\u0027utente.",
         "DontTranslate": false
       },
       {
@@ -26721,7 +26802,7 @@
       },
       {
         "Id": "Misc_ClearCache_Confirm",
-        "Value": "Questo eliminer\u00E0 circa {n} file, per un totale di {size} MB.\r\nVuoi continuare?",
+        "Value": "Questo eliminer\u00E0 circa {n} file, per un totale di {size} MB.\rProcedere?",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -26748,20 +26829,29 @@
       },
       {
         "Id": "Edit_UseLegacyPlaceResizeEffects",
-        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Value": "Usa il sistema di posizionamento della versione legacy (v1.4.0.0 o precedente)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_NoRebootAfterCrash",
-        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Value": "{Localized.AppBrand} non si riavvia automaticamente dopo un crash",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "Non \u00E8 consentito il downgrade della modalit\u00E0 pixel di IPicture",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -26831,7 +26921,7 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "Eksportuj wtyczk\u0119",
+        "Value": "Eksportuj wtyczki u\u017Cytkownika",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -27502,7 +27592,7 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "Edytor projektu - personalizacja",
+        "Value": "Personalizacja",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -27565,7 +27655,7 @@
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "R\u00F3\u017Cne opcje",
+        "Value": "Inne",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -27836,7 +27926,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "Otw\u00F3rz katalog danych u\u017Cytkownika ({path})",
+        "Value": "Otw\u00F3rz katalog danych u\u017Cytkownika",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -27855,7 +27945,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "Je\u015Bli \u017Cadna aplikacja nie jest uruchomiona, mo\u017Cesz otworzy\u0107 mened\u017Cer plik\u00F3w na urz\u0105dzeniu, przej\u015B\u0107 do Pami\u0119\u0107 wewn\u0119trzna -\u003E Android -\u003E data -\u003E {pfm}, aby znale\u017A\u0107 dane u\u017Cytkownika.",
+        "Value": "Je\u015Bli \u017Caden program nie jest otwarty, mo\u017Cesz otworzy\u0107 mened\u017Cer plik\u00F3w na urz\u0105dzeniu, przej\u015B\u0107 do Pami\u0119\u0107 wewn\u0119trzna-\u003EAndroid-\u003Edata-\u003E{pfm}, aby znale\u017A\u0107 dane u\u017Cytkownika.\rJe\u015Bli nadal nie mo\u017Cesz znale\u017A\u0107 danych u\u017Cytkownika, zapoznaj si\u0119 z dokumentacj\u0105 wsparcia.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -27874,7 +27964,7 @@
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "Otw\u00F3rz aplikacj\u0119 \u0027Pliki\u0027 na urz\u0105dzeniu, przejd\u017A do \u0027M\u00F3j {idiom}\u0027 -\u003E {Localized.AppBrand}, aby znale\u017A\u0107 dane u\u017Cytkownika.",
+        "Value": "Otw\u00F3rz aplikacj\u0119 \u0027Pliki\u0027 na urz\u0105dzeniu, przejd\u017A do \u0027M\u00F3j {idiom} -\u003E {Localized.AppBrand}\u0027, a znajdziesz dane u\u017Cytkownika.\r\nJe\u015Bli nie mo\u017Cesz znale\u017A\u0107 aplikacji \u0027Pliki\u0027, spr\u00F3buj pobra\u0107 j\u0105 z App Store.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -27948,7 +28038,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "Operacja migracji zosta\u0142a pomy\u015Blnie zako\u0144czona. Folder \u017Ar\u00F3d\u0142owy mo\u017Cna bezpiecznie usun\u0105\u0107.\r\nKliknij {Localized._OK}, aby go usun\u0105\u0107.",
+        "Value": "Operacja migracji zosta\u0142a pomy\u015Blnie zako\u0144czona. Mo\u017Cesz teraz bezpiecznie usun\u0105\u0107 folder \u017Ar\u00F3d\u0142owy.\rKliknij {Localized._OK}, aby go usun\u0105\u0107.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -28939,7 +29029,7 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "Wybierz GPU do przyspieszania sprz\u0119towego podczas edycji",
+        "Value": "Wybierz GPU do akceleracji sprz\u0119towej u\u017Cywane podczas edycji/podgl\u0105du",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -29092,7 +29182,7 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Rejestruj szczeg\u00F3\u0142owy dziennik przetwarzania IPicture",
+        "Value": "Zapis stosu przetwarzania IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -29155,7 +29245,7 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Tej operacji nie mo\u017Cna cofn\u0105\u0107. Wszystkie ustawienia i bezpiecznie przechowywane tre\u015Bci zostan\u0105 trwale usuni\u0119te.\r\nTej operacji nie mo\u017Cna cofn\u0105\u0107, wszystkie preferencje platformy zostan\u0105 trwale utracone.\r\n\r\nCzy na pewno? Wpisz \u201Eyes\u201D, aby potwierdzi\u0107.",
+        "Value": "Tej operacji nie mo\u017Cna cofn\u0105\u0107. Wszystkie preferencje i bezpiecznie przechowywane tre\u015Bci zostan\u0105 trwale usuni\u0119te.\r\rCzy na pewno? Wpisz \u0022yes\u0022, aby potwierdzi\u0107.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -29195,25 +29285,34 @@
             "Value": ""
           }
         ],
-        "Comment": "",
+        "Comment": "Potwierdzenie usuni\u0119cia pami\u0119ci podr\u0119cznej - pytanie o kontynuacj\u0119 operacji",
         "DontTranslate": false
       },
       {
         "Id": "Edit_UseLegacyPlaceResizeEffects",
-        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Value": "U\u017Cyj starszego systemu pozycjonowania (v1.4.0.0 lub starszego)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_NoRebootAfterCrash",
-        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Value": "{Localized.AppBrand} nie uruchamia si\u0119 automatycznie po awarii",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "Nie zezwalaj na obni\u017Cenie trybu pikseli IPicture",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -29283,7 +29382,7 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "Exportar Plugin",
+        "Value": "Exportar plugins do usu\u00E1rio",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -29954,7 +30053,7 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "Editor de Projetos - Personaliza\u00E7\u00E3o",
+        "Value": "Personaliza\u00E7\u00E3o",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -30017,7 +30116,7 @@
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "Op\u00E7\u00F5es Diversas",
+        "Value": "Outros",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -30288,7 +30387,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "Abrir diret\u00F3rio de dados do usu\u00E1rio ({path})",
+        "Value": "Abrir diret\u00F3rio de dados do usu\u00E1rio",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -30307,7 +30406,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "Se nenhum aplicativo for aberto, voc\u00EA pode abrir o gerenciador de arquivos no dispositivo, navegar at\u00E9 Armazenamento interno -\u003E Android -\u003E data -\u003E {pfm} para encontrar os dados do usu\u00E1rio.",
+        "Value": "Se nenhum aplicativo estiver aberto, voc\u00EA pode abrir o gerenciador de arquivos no dispositivo, ir para Armazenamento interno -\u003E Android -\u003E data -\u003E {pfm}, para encontrar os dados do usu\u00E1rio. Se ainda n\u00E3o conseguir encontrar os dados do usu\u00E1rio, consulte a documenta\u00E7\u00E3o de suporte.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -30326,7 +30425,7 @@
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "Abra o aplicativo \u0027Arquivos\u0027 no dispositivo, v\u00E1 para \u0027Meu {idiom}\u0027 -\u003E {Localized.AppBrand}, e voc\u00EA encontrar\u00E1 os dados do usu\u00E1rio.",
+        "Value": "Abra o aplicativo \u0027Arquivos\u0027 no seu dispositivo, v\u00E1 para \u0027Meu {idiom} -\u003E {Localized.AppBrand}\u0027 e voc\u00EA encontrar\u00E1 os dados do usu\u00E1rio.\r\nSe voc\u00EA n\u00E3o conseguir encontrar o aplicativo \u0027Arquivos\u0027, tente baix\u00E1-lo na App Store.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -30400,7 +30499,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "A opera\u00E7\u00E3o de migra\u00E7\u00E3o foi conclu\u00EDda com sucesso. A pasta de origem pode ser exclu\u00EDda com seguran\u00E7a.\rClique em {Localized._OK} para exclu\u00ED-la.",
+        "Value": "Opera\u00E7\u00E3o de migra\u00E7\u00E3o conclu\u00EDda com sucesso, agora voc\u00EA pode excluir com seguran\u00E7a a pasta de origem.\rClique em {Localized._OK} para exclu\u00ED-la.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -31391,7 +31490,7 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "Selecione a GPU para acelera\u00E7\u00E3o de hardware durante a edi\u00E7\u00E3o",
+        "Value": "Selecione a GPU a ser usada para acelera\u00E7\u00E3o de hardware durante edi\u00E7\u00E3o/visualiza\u00E7\u00E3o",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31544,7 +31643,7 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Registrar log detalhado de processamento IPicture",
+        "Value": "Registrar pilha de processamento IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31607,7 +31706,7 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Esta opera\u00E7\u00E3o n\u00E3o pode ser desfeita. Todas as configura\u00E7\u00F5es e conte\u00FAdos armazenados com seguran\u00E7a ser\u00E3o permanentemente perdidos.\r\nEsta opera\u00E7\u00E3o \u00E9 irrevers\u00EDvel. Todas as op\u00E7\u00F5es preferidas da plataforma ser\u00E3o permanentemente perdidas.\r\n\r\nTem certeza? Digite \u0022yes\u0022 para confirmar.",
+        "Value": "Esta opera\u00E7\u00E3o n\u00E3o pode ser desfeita. Todas as prefer\u00EAncias, op\u00E7\u00F5es salvas e conte\u00FAdos armazenados com seguran\u00E7a ser\u00E3o permanentemente perdidos.\r\rTem certeza? Digite \u0022yes\u0022 para confirmar.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -31625,7 +31724,7 @@
       },
       {
         "Id": "Misc_ClearCache_Confirm",
-        "Value": "Isso excluir\u00E1 aproximadamente {n} arquivos, totalizando {size} MB.\r\nDeseja continuar?",
+        "Value": "Isso excluir\u00E1 aproximadamente {n} arquivos, totalizando {size} MB.\r\nContinuar?",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -31652,20 +31751,29 @@
       },
       {
         "Id": "Edit_UseLegacyPlaceResizeEffects",
-        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Value": "Usar o sistema de processamento de posi\u00E7\u00E3o da vers\u00E3o antiga (v1.4.0.0 ou anterior)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_NoRebootAfterCrash",
-        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Value": "N\u00E3o reinicie automaticamente ap\u00F3s falha {Localized.AppBrand}",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "N\u00E3o \u00E9 permitido degradar o modo de pixel do IPicture",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -31735,7 +31843,7 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "\u042D\u043A\u0441\u043F\u043E\u0440\u0442 \u043F\u043B\u0430\u0433\u0438\u043D\u0430",
+        "Value": "\u042D\u043A\u0441\u043F\u043E\u0440\u0442 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0438\u0445 \u043F\u043B\u0430\u0433\u0438\u043D\u043E\u0432",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -32406,7 +32514,7 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "\u0420\u0435\u0434\u0430\u043A\u0442\u043E\u0440 \u043F\u0440\u043E\u0435\u043A\u0442\u0430 - \u041F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F",
+        "Value": "\u041F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u044F",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -32469,7 +32577,7 @@
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "\u0420\u0430\u0437\u043D\u043E\u0435",
+        "Value": "\u041F\u0440\u043E\u0447\u0435\u0435",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -32740,7 +32848,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u043A\u0430\u0442\u0430\u043B\u043E\u0433 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0438\u0445 \u0434\u0430\u043D\u043D\u044B\u0445 ({path})",
+        "Value": "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u043A\u0430\u0442\u0430\u043B\u043E\u0433 \u0434\u0430\u043D\u043D\u044B\u0445 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044F",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -32759,7 +32867,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "\u0415\u0441\u043B\u0438 \u043D\u0438 \u043E\u0434\u043D\u043E \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043D\u0435 \u043E\u0442\u043A\u0440\u044B\u0442\u043E, \u0432\u044B \u043C\u043E\u0436\u0435\u0442\u0435 \u043E\u0442\u043A\u0440\u044B\u0442\u044C \u0444\u0430\u0439\u043B\u043E\u0432\u044B\u0439 \u043C\u0435\u043D\u0435\u0434\u0436\u0435\u0440 \u043D\u0430 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0435, \u043F\u0435\u0440\u0435\u0439\u0442\u0438 \u0432 \u0440\u0430\u0437\u0434\u0435\u043B \u00AB\u0412\u043D\u0443\u0442\u0440\u0435\u043D\u043D\u044F\u044F \u043F\u0430\u043C\u044F\u0442\u044C\u00BB \u2192 \u00ABAndroid\u00BB \u2192 \u00ABdata\u00BB \u2192 {pfm}, \u0447\u0442\u043E\u0431\u044B \u043D\u0430\u0439\u0442\u0438 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0438\u0435 \u0434\u0430\u043D\u043D\u044B\u0435.",
+        "Value": "\u0415\u0441\u043B\u0438 \u043D\u0438 \u043E\u0434\u043D\u043E \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043D\u0435 \u043E\u0442\u043A\u0440\u044B\u0442\u043E, \u0432\u044B \u043C\u043E\u0436\u0435\u0442\u0435 \u043E\u0442\u043A\u0440\u044B\u0442\u044C \u0444\u0430\u0439\u043B\u043E\u0432\u044B\u0439 \u043C\u0435\u043D\u0435\u0434\u0436\u0435\u0440 \u043D\u0430 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0435, \u043F\u0435\u0440\u0435\u0439\u0442\u0438 \u0432 \u0412\u043D\u0443\u0442\u0440\u0435\u043D\u043D\u044F\u044F \u043F\u0430\u043C\u044F\u0442\u044C -\u003E Android -\u003E data -\u003E {pfm}, \u0447\u0442\u043E\u0431\u044B \u043D\u0430\u0439\u0442\u0438 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0438\u0435 \u0434\u0430\u043D\u043D\u044B\u0435.\r\n\u0415\u0441\u043B\u0438 \u0432\u044B \u0432\u0441\u0451 \u0435\u0449\u0451 \u043D\u0435 \u043C\u043E\u0436\u0435\u0442\u0435 \u043D\u0430\u0439\u0442\u0438 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0438\u0435 \u0434\u0430\u043D\u043D\u044B\u0435, \u043E\u0431\u0440\u0430\u0442\u0438\u0442\u0435\u0441\u044C \u043A \u0434\u043E\u043A\u0443\u043C\u0435\u043D\u0442\u0430\u0446\u0438\u0438 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0438.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -32778,7 +32886,7 @@
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "\u041E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u00AB\u0424\u0430\u0439\u043B\u044B\u00BB \u043D\u0430 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0435, \u043F\u0435\u0440\u0435\u0439\u0434\u0438\u0442\u0435 \u0432 \u00AB\u041D\u0430 \u044D\u0442\u043E\u043C {idiom}\u00BB -\u003E {Localized.AppBrand}, \u0447\u0442\u043E\u0431\u044B \u043D\u0430\u0439\u0442\u0438 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0438\u0435 \u0434\u0430\u043D\u043D\u044B\u0435.",
+        "Value": "\u041E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u00AB\u0424\u0430\u0439\u043B\u044B\u00BB \u043D\u0430 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0435, \u043F\u0435\u0440\u0435\u0439\u0434\u0438\u0442\u0435 \u0432 \u0440\u0430\u0437\u0434\u0435\u043B \u00AB\u041C\u043E\u0439 {idiom} \u2192 {Localized.AppBrand}\u00BB, \u0447\u0442\u043E\u0431\u044B \u043D\u0430\u0439\u0442\u0438 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C\u0441\u043A\u0438\u0435 \u0434\u0430\u043D\u043D\u044B\u0435.\r\u0415\u0441\u043B\u0438 \u0432\u044B \u043D\u0435 \u043C\u043E\u0436\u0435\u0442\u0435 \u043D\u0430\u0439\u0442\u0438 \u043F\u0440\u0438\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u00AB\u0424\u0430\u0439\u043B\u044B\u00BB, \u043F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0435\u0433\u043E \u0438\u0437 App Store.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -32852,7 +32960,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "\u041F\u0435\u0440\u0435\u043C\u0435\u0449\u0435\u043D\u0438\u0435 \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E, \u0438\u0441\u0445\u043E\u0434\u043D\u0443\u044E \u043F\u0430\u043F\u043A\u0443 \u0442\u0435\u043F\u0435\u0440\u044C \u043C\u043E\u0436\u043D\u043E \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E \u0443\u0434\u0430\u043B\u0438\u0442\u044C.\r\n\u041D\u0430\u0436\u043C\u0438\u0442\u0435 {Localized._OK}, \u0447\u0442\u043E\u0431\u044B \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0435\u0451.",
+        "Value": "\u041E\u043F\u0435\u0440\u0430\u0446\u0438\u044F \u043C\u0438\u0433\u0440\u0430\u0446\u0438\u0438 \u0443\u0441\u043F\u0435\u0448\u043D\u043E \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0430, \u0442\u0435\u043F\u0435\u0440\u044C \u043C\u043E\u0436\u043D\u043E \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0438\u0441\u0445\u043E\u0434\u043D\u0443\u044E \u043F\u0430\u043F\u043A\u0443.\r\n\u041D\u0430\u0436\u043C\u0438\u0442\u0435 {Localized._OK}, \u0447\u0442\u043E\u0431\u044B \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0435\u0451.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -33843,7 +33951,7 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0443 \u0434\u043B\u044F \u0430\u043F\u043F\u0430\u0440\u0430\u0442\u043D\u043E\u0433\u043E \u0443\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u044F \u043F\u0440\u0438 \u0440\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0438",
+        "Value": "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 GPU \u0434\u043B\u044F \u0430\u043F\u043F\u0430\u0440\u0430\u0442\u043D\u043E\u0433\u043E \u0443\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u044F \u043F\u0440\u0438 \u0440\u0435\u0434\u0430\u043A\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u0438/\u043F\u0440\u0435\u0434\u043F\u0440\u043E\u0441\u043C\u043E\u0442\u0440\u0435",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -33996,7 +34104,7 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "\u0412\u0435\u0441\u0442\u0438 \u043F\u043E\u0434\u0440\u043E\u0431\u043D\u044B\u0439 \u0436\u0443\u0440\u043D\u0430\u043B \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438 IPicture",
+        "Value": "\u0417\u0430\u043F\u0438\u0441\u044C \u0441\u0442\u0435\u043A\u0430 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438 IPicture",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -34059,11 +34167,11 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "\u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043D\u0435\u043B\u044C\u0437\u044F \u043E\u0442\u043C\u0435\u043D\u0438\u0442\u044C. \u0412\u0441\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0438 \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D\u043D\u044B\u0435 \u0434\u0430\u043D\u043D\u044B\u0435 \u0431\u0443\u0434\u0443\u0442 \u0443\u0434\u0430\u043B\u0435\u043D\u044B \u043D\u0430\u0432\u0441\u0435\u0433\u0434\u0430.\r\n\u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043D\u0435\u043E\u0431\u0440\u0430\u0442\u0438\u043C\u043E, \u0432\u0441\u0435 \u043F\u0440\u0435\u0434\u043F\u043E\u0447\u0442\u0435\u043D\u0438\u044F \u043F\u043B\u0430\u0442\u0444\u043E\u0440\u043C\u044B \u0431\u0443\u0434\u0443\u0442 \u0431\u0435\u0437\u0432\u043E\u0437\u0432\u0440\u0430\u0442\u043D\u043E \u0443\u0442\u0435\u0440\u044F\u043D\u044B.\r\n\r\n\u0412\u044B \u0443\u0432\u0435\u0440\u0435\u043D\u044B? \u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u00AByes\u00BB \u0434\u043B\u044F \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u044F.",
+        "Value": "\u042D\u0442\u043E \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043D\u0435\u043B\u044C\u0437\u044F \u043E\u0442\u043C\u0435\u043D\u0438\u0442\u044C. \u0412\u0441\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E \u0438 \u0441\u043E\u0434\u0435\u0440\u0436\u0438\u043C\u043E\u0435 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u043E\u0433\u043E \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0430 \u0431\u0443\u0434\u0443\u0442 \u0443\u0434\u0430\u043B\u0435\u043D\u044B \u043D\u0430\u0432\u0441\u0435\u0433\u0434\u0430.\r\r\u0412\u044B \u0443\u0432\u0435\u0440\u0435\u043D\u044B? \u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u00AByes\u00BB \u0434\u043B\u044F \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u044F.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "",
+        "Comment": "\u041D\u0435 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0438\u0442\u0435 \u00AByes\u00BB, \u044D\u0442\u043E \u0442\u043E, \u0447\u0442\u043E \u0434\u043E\u043B\u0436\u0435\u043D \u0432\u0432\u0435\u0441\u0442\u0438 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C",
         "DontTranslate": false
       },
       {
@@ -34077,7 +34185,7 @@
       },
       {
         "Id": "Misc_ClearCache_Confirm",
-        "Value": "\u0411\u0443\u0434\u0435\u0442 \u0443\u0434\u0430\u043B\u0435\u043D\u043E \u043F\u0440\u0438\u043C\u0435\u0440\u043D\u043E {n} \u0444\u0430\u0439\u043B\u043E\u0432, \u0432\u0441\u0435\u0433\u043E {size} \u041C\u0411.\r\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?",
+        "Value": "\u042D\u0442\u043E \u0443\u0434\u0430\u043B\u0438\u0442 \u043F\u0440\u0438\u043C\u0435\u0440\u043D\u043E {n} \u0444\u0430\u0439\u043B\u043E\u0432, \u0432\u0441\u0435\u0433\u043E {size} \u041C\u0411.\r\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C?",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -34099,25 +34207,34 @@
             "Value": ""
           }
         ],
-        "Comment": "\u041F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u0435 \u043E\u0447\u0438\u0441\u0442\u043A\u0438 \u043A\u044D\u0448\u0430. \u0423\u0434\u0430\u043B\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u0431\u043B\u0438\u0437\u0438\u0442\u0435\u043B\u044C\u043D\u043E n \u0444\u0430\u0439\u043B\u043E\u0432 \u043E\u0431\u0449\u0438\u043C \u0440\u0430\u0437\u043C\u0435\u0440\u043E\u043C size \u041C\u0411.",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "Edit_UseLegacyPlaceResizeEffects",
-        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Value": "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0441\u0438\u0441\u0442\u0435\u043C\u0443 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u043A\u0438 \u043F\u043E\u0437\u0438\u0446\u0438\u043E\u043D\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F \u0438\u0437 \u0441\u0442\u0430\u0440\u043E\u0439 \u0432\u0435\u0440\u0441\u0438\u0438 (v1.4.0.0 \u0438\u043B\u0438 \u0440\u0430\u043D\u0435\u0435)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_NoRebootAfterCrash",
-        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Value": "\u041D\u0435 \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0443\u0441\u043A\u0430\u0442\u044C {Localized.AppBrand} \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u043F\u043E\u0441\u043B\u0435 \u0441\u0431\u043E\u044F",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "\u0417\u0430\u043F\u0440\u0435\u0449\u0435\u043D\u043E \u043F\u043E\u043D\u0438\u0436\u0435\u043D\u0438\u0435 \u0440\u0435\u0436\u0438\u043C\u0430 \u043F\u0438\u043A\u0441\u0435\u043B\u0435\u0439 IPicture",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ],
@@ -34187,7 +34304,7 @@
       },
       {
         "Id": "Advanced_ExportPlugin",
-        "Value": "D\u0131\u015Fa Aktarma Eklentisi",
+        "Value": "Kullan\u0131c\u0131 Eklentilerini D\u0131\u015Fa Aktar",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -34858,7 +34975,7 @@
       },
       {
         "Id": "Edit_EditorPreference",
-        "Value": "Proje D\u00FCzenleyici - Ki\u015Fiselle\u015Ftirme",
+        "Value": "Ki\u015Fiselle\u015Ftirme",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -34921,7 +35038,7 @@
       },
       {
         "Id": "Edit_MiscOption",
-        "Value": "\u00C7e\u015Fitli Se\u00E7enekler",
+        "Value": "Di\u011Fer",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -35192,7 +35309,7 @@
       },
       {
         "Id": "General_UserData_Open",
-        "Value": "Kullan\u0131c\u0131 veri dizinini a\u00E7 ({path})",
+        "Value": "Kullan\u0131c\u0131 veri dizinini a\u00E7: {path}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -35211,7 +35328,7 @@
       },
       {
         "Id": "General_UserData_Open_Android",
-        "Value": "Hi\u00E7bir program a\u00E7\u0131k de\u011Filse, cihaz\u0131n\u0131zdaki dosya y\u00F6neticisini a\u00E7arak Dahili depolama-\u003EAndroid-\u003Edata-\u003E{pfm} klas\u00F6r\u00FCne giderek kullan\u0131c\u0131 verilerini bulabilirsiniz.",
+        "Value": "Hi\u00E7bir uygulama a\u00E7\u0131k de\u011Filse, cihaz\u0131n\u0131zdaki dosya y\u00F6neticisini a\u00E7arak Dahili depolama-\u003EAndroid-\u003Edata-\u003E{pfm} dizinine giderek kullan\u0131c\u0131 verilerini bulabilirsiniz.\rKullan\u0131c\u0131 verilerini h\u00E2l\u00E2 bulam\u0131yorsan\u0131z, l\u00FCtfen destek belgelerine ba\u015Fvurun.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -35230,7 +35347,7 @@
       },
       {
         "Id": "General_UserData_Open_iDevices",
-        "Value": "Cihaz\u0131n\u0131zdaki \u0027Dosyalar\u0027 uygulamas\u0131n\u0131 a\u00E7\u0131n, \u0027Benim {idiom}\u0027-\u003E{Localized.AppBrand} k\u0131sm\u0131na gidin, kullan\u0131c\u0131 verilerini bulabilirsiniz.",
+        "Value": "Cihaz\u0131n\u0131zdaki \u0027Dosyalar\u0027 uygulamas\u0131n\u0131 a\u00E7\u0131n, \u0027Benim {idiom} -\u003E {Localized.AppBrand}\u0027 b\u00F6l\u00FCm\u00FCne gidin, kullan\u0131c\u0131 verilerini bulabilirsiniz.\r\n\u0027Dosyalar\u0027 uygulamas\u0131n\u0131 bulamazsan\u0131z, App Store\u0027dan indirmeyi deneyin.",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -35304,7 +35421,7 @@
       },
       {
         "Id": "General_UserData_SelectFolder_FinishedNoConflict",
-        "Value": "Ta\u015F\u0131ma i\u015Flemi ba\u015Far\u0131yla tamamland\u0131, kaynak klas\u00F6r g\u00FCvenle silinebilir.\r{Localized._OK}\u0027a t\u0131klayarak silin.",
+        "Value": "Ta\u015F\u0131ma i\u015Flemi ba\u015Far\u0131yla tamamland\u0131, kaynak klas\u00F6r\u00FC g\u00FCvenle silinebilir.\rSilmek i\u00E7in {Localized._OK}\u0027a t\u0131klay\u0131n.",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
@@ -36295,7 +36412,7 @@
       },
       {
         "Id": "Render_SelectAccel_WhenMultiAccelEnabled",
-        "Value": "D\u00FCzenleme s\u0131ras\u0131nda donan\u0131m h\u0131zland\u0131rma i\u00E7in kullan\u0131lacak GPU\u0027yu se\u00E7in",
+        "Value": "D\u00FCzenleme/\u00D6nizleme s\u0131ras\u0131nda donan\u0131m h\u0131zland\u0131rmas\u0131 i\u00E7in kullan\u0131lacak GPU\u0027yu se\u00E7in",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36448,7 +36565,7 @@
       },
       {
         "Id": "Advanced_EnableProcessStack",
-        "Value": "Detayl\u0131 IPicture i\u015Fleme g\u00FCnl\u00FC\u011F\u00FCn\u00FC kaydet",
+        "Value": "IPicture i\u015Flem y\u0131\u011F\u0131n\u0131n\u0131 kaydet",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36511,7 +36628,7 @@
       },
       {
         "Id": "Advanced_ClearPrefs_Warn2",
-        "Value": "Bu i\u015Flem geri al\u0131namaz. T\u00FCm ayarlar, g\u00FCvenli depolama i\u00E7eri\u011Fi kal\u0131c\u0131 olarak kaybolacakt\u0131r.\rBu i\u015Flem geri al\u0131namaz, t\u00FCm platform tercihleri kal\u0131c\u0131 olarak kaybolacakt\u0131r.\r\rOnayl\u0131yor musunuz? Onaylamak i\u00E7in \u0022yes\u0022 yaz\u0131n.",
+        "Value": "Bu i\u015Flem geri al\u0131namaz. T\u00FCm tercihler ve g\u00FCvenli depolanan i\u00E7erik kal\u0131c\u0131 olarak kaybolacakt\u0131r.\r\rEmin misiniz? Onaylamak i\u00E7in \u0027yes\u0027 yaz\u0131n.",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
@@ -36529,7 +36646,7 @@
       },
       {
         "Id": "Misc_ClearCache_Confirm",
-        "Value": "Bu, yakla\u015F\u0131k {n} dosyay\u0131 siler, toplam {size} MB.\nDevam etmek istiyor musunuz?",
+        "Value": "Bu i\u015Flem yakla\u015F\u0131k {n} dosyay\u0131 siler, toplam {size} MB.\nDevam etmek istiyor musunuz?",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -36556,20 +36673,29 @@
       },
       {
         "Id": "Edit_UseLegacyPlaceResizeEffects",
-        "Value": "Unset localization item:Edit_UseLegacyPlaceResizeEffects()",
+        "Value": "Eski s\u00FCr\u00FCm\u00FCn (v1.4.0.0 veya daha eski) konum i\u015Fleme sistemini kullan",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
         "DontTranslate": false
       },
       {
         "Id": "General_NoRebootAfterCrash",
-        "Value": "Unset localization item:General_NoRebootAfterCrash()",
+        "Value": "{Localized.AppBrand} \u00E7\u00F6kt\u00FCkten sonra otomatik olarak yeniden ba\u015Flatma",
         "Mode": "InterpolationString",
         "Args": [],
         "ArgsComment": [],
-        "Comment": "Auto-generated missing localization item",
+        "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "Render_DisallowPictureModeDowngrade",
+        "Value": "IPicture piksel modunun d\u00FC\u015F\u00FCr\u00FClmesine izin verilmez",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "",
         "DontTranslate": false
       }
     ]

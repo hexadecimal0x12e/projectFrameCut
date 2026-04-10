@@ -713,11 +713,19 @@ public partial class RenderPage : ContentPage
                 ProjectRelativeHeight = Math.Max(1, _project.RelativeHeight),
                 Duration = duration,
                 MaxThreads = parallelThreadCount,
-                LogState = false,
-                LogStatToLogger = true,
+                LogRenderState = false,
+                LogStaticsData = true,
                 LogProcessStack = dumpDiagData,
                 GCOption = gcOption,
-                Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture
+                Use16Bit = bpp == IPicture.PicturePixelMode.UShortPicture,
+                EnableRenderWatchdogForceStart = !(DeviceInfo.Idiom == DeviceIdiom.Desktop || DeviceInfo.Idiom == DeviceIdiom.Tablet),
+                MaxRenderScheduleTimeout = DeviceInfo.Idiom switch
+                {
+                    var t when t == DeviceIdiom.Desktop => 60,
+                    var t when t == DeviceIdiom.Tablet => 30,
+                    _ => 15
+                },
+                MinSchedulePreparedFrames = parallelThreadCount / 4
             };
 
             renderer.OnProgressChanged += (p, etr) =>
@@ -727,7 +735,7 @@ public partial class RenderPage : ContentPage
                 Dispatcher.Dispatch(async () =>
                 {
                     await SubProgress.ProgressTo(p, 250, Easing.Linear);
-                    SubProgLabel.Text = $"{_currentSubProgText} ({(fps > 5 ? Localized.RenderPage_LongStat(p, timeStr, fpsStr) : Localized.RenderPage_LongStat_SecondPerFrame(p, timeStr, renderer.CurrentFps > 0 ? $"{(1 / renderer.CurrentFps):n2}" : "--"))})";
+                    SubProgLabel.Text = $"{_currentSubProgText} ({(renderer.CurrentSecondPerFrame <= 1.5 ? Localized.RenderPage_LongStat(p, timeStr, fpsStr) : Localized.RenderPage_LongStat_SecondPerFrame(p, timeStr, renderer.CurrentFps > 0 ? $"{(1 / renderer.CurrentFps):n2}" : "--"))})";
                     if (ScreenSaverOverlay.IsVisible)
                     {
                         HintLabel.Text = $"{Localized.RenderPage_ClickToShowUI}{Environment.NewLine}{Localized.RenderPage_Stat(p, timeStr)} | {fpsStr}fps";

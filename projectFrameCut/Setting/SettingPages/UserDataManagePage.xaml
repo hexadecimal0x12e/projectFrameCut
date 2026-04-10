@@ -88,7 +88,6 @@
                 <VerticalStackLayout Spacing="8">
                     <Label Text="{l:Localized Key=UserDataManagePage_CategoryPlugin}" FontSize="20" FontAttributes="Bold" />
                     <Label x:Name="PluginStatLabel" FontSize="13" TextColor="Gray" />
-                    <Label Text="{l:Localized Key=UserDataManagePage_ManageIndividually}" FontSize="13" TextColor="Gray" />
                     <VerticalStackLayout BindableLayout.ItemsSource="{Binding PluginItems}" Spacing="6">
                         <BindableLayout.ItemTemplate>
                             <DataTemplate>

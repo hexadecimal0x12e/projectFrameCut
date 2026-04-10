@@ -477,6 +477,7 @@ namespace projectFrameCut.StandaloneRender
                 Log("ERROR: assets.json not found in project directory.");
                 return 1;
             }
+            Environment.CurrentDirectory = workingPath;
             #endregion
 
             CancellationTokenSource cts = new();
@@ -503,17 +504,20 @@ namespace projectFrameCut.StandaloneRender
                     Duration = timeline.Duration,
                     MaxThreads = blockWrite ? 1 : maxParallelThreads,
                     LogProcessStack = !string.IsNullOrWhiteSpace(diagReportPath),
-                    LogState = (bool.TryParse(switches.TryGetValue("LogState", out var ls2) ? ls2 : "false", out var lsbool) && lsbool),
-                    LogStatToLogger = true,
+                    LogRenderState = (bool.TryParse(switches.TryGetValue("LogState", out var ls2) ? ls2 : "false", out var lsbool) && lsbool),
+                    LogStaticsData = true,
                     GCOption = GCOption,
                     Use16Bit = use16Bit,
+                    EnableRenderWatchdogForceStart = false,
+                    MaxRenderScheduleTimeout = 0,
+                    MinSchedulePreparedFrames = 1
                 };
 
                 if (!Environment.GetCommandLineArgs().Contains("--nolog"))
                 {
                     renderer.OnProgressChanged += (s, e) =>
                     {
-                        if(renderer.CurrentFps > 5)
+                        if(renderer.CurrentSecondPerFrame <= 1.5)
                         {
                             Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2} \r");
                         }

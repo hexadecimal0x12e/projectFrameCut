@@ -113,74 +113,135 @@
                     </CollectionView>
                 </VerticalStackLayout>
             </ScrollView>
-            <Grid x:Name="StepTwoPanel" IsVisible="False" RowDefinitions="Auto,*" RowSpacing="10">
-                <Label Grid.Row="0"
-                       Text="{l:Localized Key=TemplateExtractPage_Stage2}"
-                       FontAttributes="Bold"
-                       FontSize="14"
-                       Opacity="0.9" />
-                <CollectionView Grid.Row="1"
-                                x:Name="ConfigFieldsCollectionView"
-                                SelectionMode="None">
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate>
-                            <Border StrokeThickness="1"
-                                    Padding="8"
-                                    Margin="0,0,0,6">
-                                <VerticalStackLayout Spacing="6">
-                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                        <Label Text="{Binding PathDisplay}"
-                                               LineBreakMode="TailTruncation"
-                                               VerticalOptions="Center" />
-                                        <Label Grid.Column="1"
-                                               Text="{Binding Scope}"
-                                               FontSize="11"
-                                               Opacity="0.75"
-                                               VerticalOptions="Center" />
-                                    </Grid>
-                                    <Label Text="{Binding ValuePreview}"
+            <Grid x:Name="StepTwoPanel" IsVisible="False" RowSpacing="10">
+                <ScrollView >
+                    <VerticalStackLayout Spacing="10">
+                        <CollectionView x:Name="ConfigFieldsCollectionView"
+                                        SelectionMode="None">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border StrokeThickness="1"
+                                            Padding="8"
+                                            Margin="0,0,0,6">
+                                        <VerticalStackLayout Spacing="6">
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                <Label Text="{Binding PathDisplay}"
+                                                       LineBreakMode="TailTruncation"
+                                                       VerticalOptions="Center" />
+                                                <Label Grid.Column="1"
+                                                       Text="{Binding Scope}"
+                                                       FontSize="11"
+                                                       Opacity="0.75"
+                                                       VerticalOptions="Center" />
+                                            </Grid>
+                                            <Label Text="{Binding ValuePreview}"
+                                                   FontSize="12"
+                                                   Opacity="0.75"
+                                                   LineBreakMode="TailTruncation" />
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                <Label Text="{l:Localized Key=TemplateExtractPage_VariableName}"
+                                                       VerticalOptions="Center"
+                                                       FontSize="12" />
+                                                <Entry Grid.Column="1"
+                                                       Text="{Binding VariableKey}"
+                                                       Placeholder="{l:Localized Key=TemplateExtractPage_VariableName}" />
+                                            </Grid>
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                <Label Text="{l:Localized Key=TemplateExtractPage_VariableType}"
+                                                       VerticalOptions="Center"
+                                                       FontSize="12" />
+                                                <Picker Grid.Column="1"
+                                                        ItemsSource="{Binding VariableTypeOptions}"
+                                                        SelectedIndex="{Binding VariableTypeIndex}" />
+                                            </Grid>
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                <Label Text="{l:Localized Key=TemplateExtractPage_VariableDisplayName}" 
+                                                       VerticalOptions="Center"
+                                                       FontSize="12" />
+                                                <Entry Grid.Column="1"
+                                                       Text="{Binding UserFriendlyName}"
+                                                       Placeholder="{l:Localized Key=TemplateExtractPage_VariableDisplayName_Sub}" />
+                                            </Grid>
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                <Label Text="{l:Localized Key=TemplateExtractPage_VariableDesc}"
+                                                       VerticalOptions="Center"
+                                                       FontSize="12" />
+                                                <Editor Grid.Column="1"
+                                                        Text="{Binding Description}"
+                                                        AutoSize="TextChanges"
+                                                        Placeholder="{l:Localized Key=TemplateExtractPage_VariableDesc_Sub}"
+                                                        MinimumHeightRequest="56" />
+                                            </Grid>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Grid>
+            <Grid x:Name="StepThreePanel" IsVisible="False" RowSpacing="10">
+                <ScrollView>
+                    <VerticalStackLayout Spacing="10">
+                        <Border StrokeThickness="1" Padding="8">
+                            <VerticalStackLayout Spacing="8">
+                                <Label Text="{l:Localized Key=TemplateExtractPage_ExportAssets}"
+                                       FontAttributes="Bold"
+                                       FontSize="13" />
+                                <Label Text="{l:Localized Key=TemplateExtractPage_ExportAssets_Description}"
+                                       FontSize="12"
+                                       Opacity="0.75" />
+
+                                <Grid ColumnDefinitions="Auto,Auto,Auto,*" ColumnSpacing="8">
+                                    <Button x:Name="SelectReferencedAssetsButton"
+                                            Text="{l:Localized Key=TemplateExtractPage_SelectReferencedAssets}"
+                                            Clicked="SelectReferencedAssets_Clicked" />
+                                    <Button Grid.Column="1"
+                                            x:Name="ClearAssetSelectionButton"
+                                            Text="{l:Localized Key=TemplateExtractPage_ClearAssetSelection}"
+                                            Clicked="ClearAssetSelection_Clicked" />
+                                    <Button Grid.Column="2"
+                                            x:Name="AddExternalAssetButton"
+                                            Text="{l:Localized Key=TemplateExtractPage_AddExternalAsset}"
+                                            Clicked="AddExternalAsset_Clicked" />
+                                    <Label Grid.Column="3"
+                                           x:Name="AssetSelectionStatsLabel"
+                                           Text="{l:Localized Key=TemplateExtractPage_AssetSelectionStatsInitial}"
+                                           HorizontalOptions="End"
+                                           VerticalOptions="Center"
                                            FontSize="12"
-                                           Opacity="0.75"
-                                           LineBreakMode="TailTruncation" />
-                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                        <Label Text="{l:Localized Key=TemplateExtractPage_VariableName}"
-                                               VerticalOptions="Center"
-                                               FontSize="12" />
-                                        <Entry Grid.Column="1"
-                                               Text="{Binding VariableKey}"
-                                               Placeholder="{l:Localized Key=TemplateExtractPage_VariableName}" />
-                                    </Grid>
-                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                        <Label Text="{l:Localized Key=TemplateExtractPage_VariableType}"
-                                               VerticalOptions="Center"
-                                               FontSize="12" />
-                                        <Picker Grid.Column="1"
-                                                ItemsSource="{Binding VariableTypeOptions}"
-                                                SelectedIndex="{Binding VariableTypeIndex}" />
-                                    </Grid>
-                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                        <Label Text="{l:Localized Key=TemplateExtractPage_VariableDisplayName}" 
-                                               VerticalOptions="Center"
-                                               FontSize="12" />
-                                        <Entry Grid.Column="1"
-                                               Text="{Binding UserFriendlyName}"
-                                               Placeholder="{l:Localized Key=TemplateExtractPage_VariableDisplayName_Sub}" />
-                                    </Grid>
-                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                        <Label Text="{l:Localized Key=TemplateExtractPage_VariableDesc}"
-                                               VerticalOptions="Center"
-                                               FontSize="12" />
-                                        <Editor Grid.Column="1"
-                                                Text="{Binding Description}"
-                                                AutoSize="TextChanges"
-                                                Placeholder="{l:Localized Key=TemplateExtractPage_VariableDesc_Sub}"
-                                                MinimumHeightRequest="56" />
-                                    </Grid>
-                                </VerticalStackLayout>
-                            </Border>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                </CollectionView>
+                                           Opacity="0.75" />
+                                </Grid>
+
+                                <CollectionView x:Name="AssetsCollectionView"
+                                                SelectionMode="None"
+                                                HeightRequest="220">
+                                    <CollectionView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="Auto,*,Auto"
+                                                  ColumnSpacing="8"
+                                                  Padding="0,2">
+                                                <CheckBox IsChecked="{Binding IsSelected}" VerticalOptions="Center" />
+                                                <VerticalStackLayout Grid.Column="1" Spacing="0">
+                                                    <Label Text="{Binding DisplayName}" LineBreakMode="TailTruncation" />
+                                                    <Label Text="{Binding PathDisplay}"
+                                                           FontSize="11"
+                                                           Opacity="0.7"
+                                                           LineBreakMode="TailTruncation" />
+                                                </VerticalStackLayout>
+                                                <Label Grid.Column="2"
+                                                       Text="{Binding SourceDisplay}"
+                                                       FontSize="11"
+                                                       Opacity="0.75"
+                                                       VerticalOptions="Center" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </CollectionView.ItemTemplate>
+                                </CollectionView>
+                            </VerticalStackLayout>
+                        </Border>
+                    </VerticalStackLayout>
+                </ScrollView>
             </Grid>
         </Grid>
 

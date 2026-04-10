@@ -352,7 +352,7 @@ public partial class HomePage : ContentPage
         }
 
         draftSourcePath = Path.Combine(draftSourcePath, projName + ".pjfc");
-        if (Path.GetInvalidPathChars().Any(draftSourcePath.Contains) || Path.GetInvalidFileNameChars().Any(draftSourcePath.Contains) || draftSourcePath.Length > 65535)
+        if (Path.GetInvalidPathChars().Any(draftSourcePath.Contains) || draftSourcePath.Length > 65535)
         {
             await DisplayAlertAsync(Localized._Error, Localized.HomePage_CreateAProject_InvalidName, Localized._OK);
             return;

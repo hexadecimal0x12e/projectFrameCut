@@ -272,7 +272,7 @@ namespace projectFrameCut.Render.Compose
             }
             else
             {
-                result = new Picture(basePicture.Width, basePicture.Height)
+                result = new Picture16bpp(basePicture.Width, basePicture.Height)
                 {
                     r = ConvertToUShortChannel(outR![0]),
                     g = ConvertToUShortChannel(outG![0]),

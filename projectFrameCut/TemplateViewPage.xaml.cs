@@ -240,7 +240,8 @@ public partial class TemplateViewPage : ContentPage
         {
             Localized.AssetPage_ShowPreview,
             Localized.TemplateViewPage_CreateVideo,
-            Localized.TemplateViewPage_TemplateInfo
+            Localized.TemplateViewPage_TemplateInfo,
+            Localized.HomePage_ProjectContextMenu_Delete
         };
         var action = await DisplayActionSheetAsync(template.Name, Localized._Cancel, null, verbs.ToArray());
         switch (verbs.IndexOf(action))
@@ -257,6 +258,10 @@ public partial class TemplateViewPage : ContentPage
                 _viewModel.SelectedTemplate = template;
                 await DisplayAlertAsync(Localized._Info, template.Description, Localized._OK);
                 break;
+            case 3:
+                _viewModel.SelectedTemplate = template;
+                await DeleteTemplate(template);
+                break;
             default:
                 break;
         }
@@ -270,6 +275,11 @@ public partial class TemplateViewPage : ContentPage
     private async void CreateVideo_Clicked(object sender, EventArgs e)
     {
         await CreateVideoFromTemplate();
+    }
+
+    private async void DeleteTemplate_Clicked(object sender, EventArgs e)
+    {
+        await DeleteSelectedTemplate();
     }
 
     private async void ImportTemplateButton_Clicked(object sender, EventArgs e)
@@ -305,24 +315,30 @@ public partial class TemplateViewPage : ContentPage
 
             try
             {
-                await Task.Run(() =>
-                {
-                    // Read the template file
-                    var templateJson = File.ReadAllText(filePath);
+                var loadResult = await TemplatePackageIO.LoadTemplateAsync(
+                    filePath,
+                    DraftPage.DraftJSONOption,
+                    installPackagedAssets: false);
 
-                    // Deserialize the template
-                    var template = JSONBasedTemplateHelper.DeserializeTemplate(templateJson);
+                var template = loadResult.Template;
 
-                    // Add to TemplateStore
-                    TemplateStore.Templates[template.TemplateID] = template;
+                TemplateStore.Templates[template.TemplateID] = template;
 
-                    File.Copy(filePath, Path.Combine(MauiProgram.DataPath, "My Templates", $"{template.TemplateID}.json"));
-                });
+                var templateStorePath = Path.Combine(MauiProgram.DataPath, "My Templates", $"{template.TemplateID}.json");
+                await File.WriteAllTextAsync(
+                    templateStorePath,
+                    JsonSerializer.Serialize(template, DraftPage.DraftJSONOption));
 
                 // Reload the templates in the view
                 _viewModel.ReloadTemplates();
 
-                await DisplayAlertAsync(Localized._Info, SettingsManager.SettingLocalizedResources.Advanced_Success, Localized._OK);
+                var successMessage = SettingsManager.SettingLocalizedResources.Advanced_Success;
+                if (loadResult.ImportedAssetCount > 0)
+                {
+                    successMessage = $"{successMessage}{Environment.NewLine}Imported assets: {loadResult.ImportedAssetCount}";
+                }
+
+                await DisplayAlertAsync(Localized._Info, successMessage, Localized._OK);
             }
             finally
             {
@@ -366,6 +382,93 @@ public partial class TemplateViewPage : ContentPage
             Content = view
         });
         return;
+    }
+
+    private async Task DeleteSelectedTemplate()
+    {
+        if (_viewModel.SelectedTemplate is null)
+        {
+            await DisplayAlertAsync(Localized._Info, Localized.TemplateViewPage_SelectToContinue, Localized._OK);
+            return;
+        }
+
+        await DeleteTemplate(_viewModel.SelectedTemplate);
+    }
+
+    private async Task DeleteTemplate(TemplateItem template)
+    {
+        try
+        {
+            var confirm0 = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm0(template.Name), Localized._Confirm, Localized._Cancel);
+            if (!confirm0)
+            {
+                return;
+            }
+
+            var confirm1 = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm1(template.Name), Localized._Confirm, Localized._Cancel);
+            if (!confirm1)
+            {
+                return;
+            }
+
+            var confirm2 = await DisplayPromptAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm2Input(template.Name), Localized._Confirm, Localized._Cancel, "no");
+            if (confirm2 != "yes")
+            {
+                return;
+            }
+
+            if (!Guid.TryParse(template.TemplateId, out var templateGuid))
+            {
+                throw new InvalidOperationException($"Template id is invalid: {template.TemplateId}");
+            }
+
+            DeleteTemplateStorage(templateGuid);
+            TemplateStore.Templates.Remove(templateGuid);
+
+            _viewModel.SelectedTemplate = null;
+            _viewModel.ReloadTemplates();
+            TemplatesCollectionView.SelectedItem = null;
+
+            await DisplayAlertAsync(Localized._Info, Localized.HomePage_ProjectContextMenu_Delete_Deleted(template.Name), Localized._OK);
+        }
+        catch (Exception ex)
+        {
+            Log(ex, "delete template", this);
+            await DisplayAlertAsync(Localized._Error, Localized.HomePage_ProjectContextMenu_Delete_Fail(template.Name, ex), Localized._OK);
+        }
+    }
+
+    private static void DeleteTemplateStorage(Guid templateId)
+    {
+        var templateRootPath = Path.Combine(MauiProgram.DataPath, "My Templates");
+        if (!Directory.Exists(templateRootPath))
+        {
+            return;
+        }
+
+        foreach (var filePath in Directory.EnumerateFiles(templateRootPath, "*.json", SearchOption.AllDirectories))
+        {
+            var fileName = Path.GetFileNameWithoutExtension(filePath);
+            if (Guid.TryParse(fileName, out var fileGuid) && fileGuid == templateId)
+            {
+                File.Delete(filePath);
+            }
+        }
+
+        var packagedAssetsRootPath = Path.Combine(templateRootPath, ".packaged-assets");
+        if (!Directory.Exists(packagedAssetsRootPath))
+        {
+            return;
+        }
+
+        foreach (var directoryPath in Directory.EnumerateDirectories(packagedAssetsRootPath, "*", SearchOption.TopDirectoryOnly))
+        {
+            var directoryName = Path.GetFileName(directoryPath);
+            if (Guid.TryParse(directoryName, out var dirGuid) && dirGuid == templateId)
+            {
+                Directory.Delete(directoryPath, true);
+            }
+        }
     }
 
     private sealed class TemplatePageViewModel : INotifyPropertyChanged

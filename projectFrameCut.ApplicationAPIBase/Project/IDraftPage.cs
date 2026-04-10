@@ -1,9 +1,8 @@
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
-using projectFrameCut.DraftStuff;
 using projectFrameCut.Render.RenderAPIBase.Project;
 
-namespace projectFrameCut
+namespace projectFrameCut.ApplicationAPIBase.Project
 {
     /// <summary>
     /// Exposes timeline editing operations and host page capabilities to application plugins.

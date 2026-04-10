@@ -24,7 +24,7 @@ namespace projectFrameCut.Render.Rendering
     public static class Timeline
     {
         //public static ConcurrentDictionary<string, IComputer> ComputerCache = new();
-        public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture.GenerateSolidColor(w, h, 0, 0, 0, null);
+        public static Func<int, int, IPicture> FallBackImageGetter = (w, h) => Picture16bpp.GenerateSolidColor(w, h, 0, 0, 0, null);
 
 
         public static IEnumerable<OneFrame> GetFramesInOneFrame(
@@ -249,7 +249,7 @@ namespace projectFrameCut.Render.Rendering
                 }
                 else if (result is null)
                 {
-                    return Picture.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0);
+                    return Picture16bpp.GenerateSolidColor(targetWidth, targetHeight, 0, 0, 0, 0);
                 }
                 else
                 {
