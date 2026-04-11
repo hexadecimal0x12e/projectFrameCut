@@ -248,13 +248,12 @@
         <VerticalStackLayout Grid.Row="0" x:Name="UpperContent">
             <mw:MultiWindowView x:FieldModifier="public" x:Name="MainMultiWindowView" ZIndex="9999">
                 <mw:MultiWindowItem x:Name="PreviewSubwindow" Title="{l:Localized Key=AssetPage_ShowPreview}" IsNavigationVisible="False" IsClosable="False" IsPopOutVisible="True">
-                    <Grid x:Name="MainUpperContent" Padding="16">
                         <ContentView x:Name="ClipEditorHost"
+                            Padding="16"                            
                             BackgroundColor="Transparent"
                             InputTransparent="False"
                             HorizontalOptions="Fill"
                             VerticalOptions="Fill" />
-                    </Grid>
                 </mw:MultiWindowItem>
                 <mw:MultiWindowItem x:Name="PropertiesSubwindow" Title="{l:Localized Key=PropertyPanel}" IsClosable="False" IsPopOutVisible="True" HorizontalOptions="Fill" VerticalOptions="Fill">
                     <Border x:Name="RightContentBorder" StrokeThickness="0" HorizontalOptions="Fill" VerticalOptions="Fill" />
@@ -289,7 +288,7 @@
 
                 </HorizontalStackLayout>
 
-                <HorizontalStackLayout x:Name="PlayingControlLayout" Grid.Column="1" HorizontalOptions="Center" IsVisible="{Binding SelectedAnyClip, Converter={toolkit:InvertedBoolConverter}}">
+                <HorizontalStackLayout x:Name="PlayingControlLayout" Grid.Column="1" HorizontalOptions="Center">
                     <Button x:Name="PlayPauseButton" Text="&#xe037;" FontFamily="Icons" FontSize="20" Clicked="PlayPauseButton_Clicked"  />
                     <Label x:Name="CurrentPlayheadLabel" Text="00:00/??:??" Margin="8,0,0,0" VerticalOptions="Center"></Label>
                 </HorizontalStackLayout>

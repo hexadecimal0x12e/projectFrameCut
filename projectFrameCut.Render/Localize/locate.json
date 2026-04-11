@@ -983,6 +983,22 @@
           }
         ],
         "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "\u989C\u8272",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_SolidColor",
+        "Value": "\u8272\u5757\u914D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "DontTranslate": false
       }
     ],
     "en-US": [
@@ -2060,6 +2076,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "Unset localization item:General_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
     ],
@@ -3139,6 +3164,15 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "Unset localization item:General_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "ja-JP": [
@@ -4216,6 +4250,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "Unset localization item:General_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
     ],
@@ -5295,6 +5338,15 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "Unset localization item:General_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "fr-FR": [
@@ -6372,6 +6424,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "Unset localization item:General_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
     ],
@@ -7451,6 +7512,15 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "Unset localization item:General_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "ar-SA": [
@@ -8528,6 +8598,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "Unset localization item:General_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
     ],
@@ -9607,6 +9686,15 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "Unset localization item:General_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "es-ES": [
@@ -10684,6 +10772,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "Unset localization item:General_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
     ],
@@ -11763,6 +11860,15 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "Unset localization item:General_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "pl-PL": [
@@ -12840,6 +12946,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "Unset localization item:General_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
     ],
@@ -13919,6 +14034,15 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "Unset localization item:General_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "ru-RU": [
@@ -14997,6 +15121,15 @@
         "ArgsComment": [],
         "Comment": "",
         "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "Unset localization item:General_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
+        "DontTranslate": false
       }
     ],
     "tr-TR": [
@@ -16074,6 +16207,15 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "",
+        "DontTranslate": false
+      },
+      {
+        "Id": "General_Color",
+        "Value": "Unset localization item:General_Color()",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "Comment": "Auto-generated missing localization item",
         "DontTranslate": false
       }
     ]

@@ -47,9 +47,19 @@ namespace projectFrameCut.InteractableEditor
         private bool _isTextClip = false;
         private bool _isClipPanInProgress;
         private bool _isHandleResizeInProgress;
+        private int _activeTextEntryIndex = -1;
+        private Rect _textEntryStartRect;
+        private double _textEntryStartOriginX;
+        private double _textEntryStartOriginY;
+        private double _textEntryStartOffsetX;
+        private double _textEntryStartOffsetY;
+        private float _textEntryStartFontSize;
+        private float? _textEntryStartWrappingWidth;
+        private float? _textEntryStartStrokeWidth;
 
         private const double HandleSize = 15;
         private const double MinSize = 10;
+        private const float MinTextFontSize = 1f;
 
         private readonly Dictionary<string, ClipOverlayState> _clipStates = new(StringComparer.Ordinal);
         private readonly Dictionary<string, object> _previewSourceClips = new(StringComparer.Ordinal);
@@ -84,23 +94,36 @@ namespace projectFrameCut.InteractableEditor
         public bool ShowRenderRectOverlay { get; set; } = true;
         public bool ShowClipPreviewOverlays
         {
-            get => _showClipPreviewOverlays;
+            get;
             set
             {
-                if (_showClipPreviewOverlays == value)
+                if (field == value)
                 {
                     return;
                 }
 
-                _showClipPreviewOverlays = value;
+                field = value;
                 foreach (var state in _clipStates.Values)
                 {
                     state.RefreshPreviewVisibility();
                 }
             }
-        }
+        } = true;
 
-        private bool _showClipPreviewOverlays = true;
+        public bool ShowPreviewDebugOverlay
+        {
+            get;
+            set
+            {
+                if (field == value)
+                {
+                    return;
+                }
+
+                field = value;
+                UpdateVisuals();
+            }
+        } = false;
 
         public ContentView RealtimePreviewHost => LivePreviewerHost;
         public Image StaticPreviewOverlayImage => PreviewOverlayImage;
@@ -130,7 +153,157 @@ namespace projectFrameCut.InteractableEditor
 
         private sealed class ClipOverlayState
         {
+            private sealed class TextEntryOverlayState
+            {
+                private readonly InteractableEditor _owner;
+                private readonly ClipOverlayState _clipState;
+
+                public TextEntryOverlayState(InteractableEditor owner, ClipOverlayState clipState, int entryIndex)
+                {
+                    _owner = owner;
+                    _clipState = clipState;
+                    EntryIndex = entryIndex;
+
+                    Root = new AbsoluteLayout
+                    {
+                        InputTransparent = false,
+                        CascadeInputTransparent = false,
+                        IsVisible = false,
+                        BackgroundColor = Colors.Transparent,
+                        ZIndex = 4
+                    };
+
+                    Visual = new Border
+                    {
+                        Stroke = Colors.Lime,
+                        StrokeThickness = 1.5,
+                        BackgroundColor = Colors.Transparent,
+                        InputTransparent = false,
+                        ZIndex = 4
+                    };
+
+                    HandleTL = CreateHandle();
+                    HandleTR = CreateHandle();
+                    HandleBL = CreateHandle();
+                    HandleBR = CreateHandle();
+
+                    SizeLabel = new Label
+                    {
+                        IsVisible = false,
+                        Opacity = 0.95,
+                        InputTransparent = true,
+                        TextColor = Colors.White,
+                        BackgroundColor = Color.FromArgb("#88000000"),
+                        Padding = new Thickness(4, 2),
+                        FontSize = 10,
+                        LineBreakMode = LineBreakMode.NoWrap,
+                        HorizontalOptions = LayoutOptions.Start,
+                        VerticalOptions = LayoutOptions.Start,
+                        ZIndex = 5
+                    };
+
+                    Pan = new PanGestureRecognizer();
+                    Pan.PanUpdated += (_, e) => _owner.OnTextEntryPanUpdated(_clipState, EntryIndex, e);
+
+                    TlPan = new PanGestureRecognizer();
+                    TlPan.PanUpdated += (_, e) => _owner.OnTextEntryResizePanUpdated(_clipState, EntryIndex, ResizeHandle.TopLeft, e);
+
+                    TrPan = new PanGestureRecognizer();
+                    TrPan.PanUpdated += (_, e) => _owner.OnTextEntryResizePanUpdated(_clipState, EntryIndex, ResizeHandle.TopRight, e);
+
+                    BlPan = new PanGestureRecognizer();
+                    BlPan.PanUpdated += (_, e) => _owner.OnTextEntryResizePanUpdated(_clipState, EntryIndex, ResizeHandle.BottomLeft, e);
+
+                    BrPan = new PanGestureRecognizer();
+                    BrPan.PanUpdated += (_, e) => _owner.OnTextEntryResizePanUpdated(_clipState, EntryIndex, ResizeHandle.BottomRight, e);
+
+                    var rootTap = new TapGestureRecognizer();
+                    rootTap.Tapped += (_, _) => _owner.OnTextEntryOverlayTapped(_clipState, EntryIndex);
+                    Root.GestureRecognizers.Add(rootTap);
+
+                    Visual.GestureRecognizers.Add(Pan);
+                    HandleTL.GestureRecognizers.Add(TlPan);
+                    HandleTR.GestureRecognizers.Add(TrPan);
+                    HandleBL.GestureRecognizers.Add(BlPan);
+                    HandleBR.GestureRecognizers.Add(BrPan);
+
+                    Root.Children.Add(Visual);
+                    Root.Children.Add(HandleTL);
+                    Root.Children.Add(HandleTR);
+                    Root.Children.Add(HandleBL);
+                    Root.Children.Add(HandleBR);
+                    Root.Children.Add(SizeLabel);
+                }
+
+                public int EntryIndex { get; set; }
+                public AbsoluteLayout Root { get; }
+                public Border Visual { get; }
+                public BoxView HandleTL { get; }
+                public BoxView HandleTR { get; }
+                public BoxView HandleBL { get; }
+                public BoxView HandleBR { get; }
+                public Label SizeLabel { get; }
+                public PanGestureRecognizer Pan { get; }
+                public PanGestureRecognizer TlPan { get; }
+                public PanGestureRecognizer TrPan { get; }
+                public PanGestureRecognizer BlPan { get; }
+                public PanGestureRecognizer BrPan { get; }
+
+                public void RefreshGestureRecognizers()
+                {
+                    Visual.GestureRecognizers.Clear();
+                    HandleTL.GestureRecognizers.Clear();
+                    HandleTR.GestureRecognizers.Clear();
+                    HandleBL.GestureRecognizers.Clear();
+                    HandleBR.GestureRecognizers.Clear();
+
+                    Visual.GestureRecognizers.Add(Pan);
+                    HandleTL.GestureRecognizers.Add(TlPan);
+                    HandleTR.GestureRecognizers.Add(TrPan);
+                    HandleBL.GestureRecognizers.Add(BlPan);
+                    HandleBR.GestureRecognizers.Add(BrPan);
+                }
+
+                public void UpdateLayout(double x, double y, double w, double h, bool showHandles, bool showSizeLabel, string? sizeText)
+                {
+                    Root.IsVisible = true;
+                    AbsoluteLayout.SetLayoutBounds(Root, new Rect(x, y, w, h));
+                    AbsoluteLayout.SetLayoutBounds(Visual, new Rect(0, 0, w, h));
+                    Visual.IsVisible = true;
+
+                    var handleSize = HandleSize;
+                    AbsoluteLayout.SetLayoutBounds(HandleTL, new Rect(-handleSize / 2, -handleSize / 2, handleSize, handleSize));
+                    AbsoluteLayout.SetLayoutBounds(HandleTR, new Rect(w - handleSize / 2, -handleSize / 2, handleSize, handleSize));
+                    AbsoluteLayout.SetLayoutBounds(HandleBL, new Rect(-handleSize / 2, h - handleSize / 2, handleSize, handleSize));
+                    AbsoluteLayout.SetLayoutBounds(HandleBR, new Rect(w - handleSize / 2, h - handleSize / 2, handleSize, handleSize));
+
+                    HandleTL.IsVisible = showHandles;
+                    HandleTR.IsVisible = showHandles;
+                    HandleBL.IsVisible = showHandles;
+                    HandleBR.IsVisible = showHandles;
+
+                    if (showSizeLabel)
+                    {
+                        SizeLabel.Text = sizeText ?? string.Empty;
+                        SizeLabel.IsVisible = !string.IsNullOrWhiteSpace(SizeLabel.Text);
+                        AbsoluteLayout.SetLayoutBounds(SizeLabel, new Rect(2, 2, AbsoluteLayout.AutoSize, AbsoluteLayout.AutoSize));
+                    }
+                    else
+                    {
+                        SizeLabel.Text = string.Empty;
+                        SizeLabel.IsVisible = false;
+                    }
+                }
+
+                public void Hide()
+                {
+                    Root.IsVisible = false;
+                    SizeLabel.IsVisible = false;
+                }
+            }
+
             private readonly InteractableEditor _owner;
+            private readonly List<TextEntryOverlayState> _textEntryStates = new();
             public string ClipId { get; init; }
 
             public ClipOverlayState(InteractableEditor owner, string clipId)
@@ -186,6 +359,22 @@ namespace projectFrameCut.InteractableEditor
                     ZIndex = 3
                 };
 
+                DebugLabel = new Label
+                {
+                    IsVisible = false,
+                    Opacity = 0.95,
+                    InputTransparent = true,
+                    TextColor = Colors.Lime,
+                    BackgroundColor = Color.FromArgb("#66000000"),
+                    Padding = new Thickness(4, 2),
+                    FontSize = 8,
+                    LineBreakMode = LineBreakMode.WordWrap,
+                    MaxLines = 4,
+                    HorizontalOptions = LayoutOptions.Start,
+                    VerticalOptions = LayoutOptions.Start,
+                    ZIndex = 6
+                };
+
                 ClipPan = new PanGestureRecognizer();
                 ClipPan.PanUpdated += (_, e) => _owner.OnClipPanUpdated(this, e);
 
@@ -218,6 +407,7 @@ namespace projectFrameCut.InteractableEditor
                 Root.Children.Add(HandleBL);
                 Root.Children.Add(HandleBR);
                 Root.Children.Add(SizeLabel);
+                Root.Children.Add(DebugLabel);
 
             }
 
@@ -229,11 +419,26 @@ namespace projectFrameCut.InteractableEditor
             public BoxView HandleBL { get; }
             public BoxView HandleBR { get; }
             public Label SizeLabel { get; }
+            public Label DebugLabel { get; }
             public PanGestureRecognizer ClipPan { get; }
             public PanGestureRecognizer TlPan { get; }
             public PanGestureRecognizer TrPan { get; }
             public PanGestureRecognizer BlPan { get; }
             public PanGestureRecognizer BrPan { get; }
+
+            private TextEntryOverlayState GetOrCreateTextEntryState(int entryIndex)
+            {
+                while (_textEntryStates.Count <= entryIndex)
+                {
+                    var state = new TextEntryOverlayState(_owner, this, _textEntryStates.Count);
+                    _textEntryStates.Add(state);
+                    Root.Children.Add(state.Root);
+                }
+
+                var existing = _textEntryStates[entryIndex];
+                existing.EntryIndex = entryIndex;
+                return existing;
+            }
 
             private static BoxView CreateHandle()
             {
@@ -260,6 +465,57 @@ namespace projectFrameCut.InteractableEditor
                 HandleTR.GestureRecognizers.Add(TrPan);
                 HandleBL.GestureRecognizers.Add(BlPan);
                 HandleBR.GestureRecognizers.Add(BrPan);
+
+                foreach (var textEntryState in _textEntryStates)
+                {
+                    textEntryState.RefreshGestureRecognizers();
+                }
+            }
+
+            private bool HasVisibleTextEntryOverlay()
+            {
+                foreach (var textEntryState in _textEntryStates)
+                {
+                    if (textEntryState.Root.IsVisible)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            private void UpdateRootInputTransparency()
+            {
+                Root.InputTransparent = !_owner.ShouldAllowOverlayTapSelection(this)
+                    || (!ClipVisual.IsVisible && !PreviewHost.IsVisible && !HasVisibleTextEntryOverlay());
+            }
+
+            public void UpdateTextEntryLayout(int entryIndex, double x, double y, double w, double h, bool showHandles, bool showSizeLabel, string? sizeText)
+            {
+                var textEntryState = GetOrCreateTextEntryState(entryIndex);
+                textEntryState.UpdateLayout(x, y, w, h, showHandles, showSizeLabel, sizeText);
+                UpdateRootInputTransparency();
+            }
+
+            public void HideTextEntryOverlaysBeyond(int visibleCount)
+            {
+                if (visibleCount < 0)
+                {
+                    visibleCount = 0;
+                }
+
+                for (var i = visibleCount; i < _textEntryStates.Count; i++)
+                {
+                    _textEntryStates[i].Hide();
+                }
+
+                UpdateRootInputTransparency();
+            }
+
+            public void HideTextEntryOverlays()
+            {
+                HideTextEntryOverlaysBeyond(0);
             }
 
             public void UpdateLayout(double displayX, double displayY, double displayW, double displayH, double logicalW, double logicalH, bool showHandles, bool showSizeLabel, string? sizeText, bool showClipVisual)
@@ -269,8 +525,7 @@ namespace projectFrameCut.InteractableEditor
                 AbsoluteLayout.SetLayoutBounds(ClipVisual, new Rect(0, 0, displayW, displayH));
                 ClipVisual.IsVisible = showClipVisual;
                 UpdatePreviewHostLayout(displayW, displayH, logicalW, logicalH);
-                Root.InputTransparent = !_owner.ShouldAllowOverlayTapSelection(this)
-                    || (!ClipVisual.IsVisible && !PreviewHost.IsVisible);
+                UpdateRootInputTransparency();
 
                 double handleSize = HandleSize;
                 AbsoluteLayout.SetLayoutBounds(HandleTL, new Rect(-handleSize / 2, -handleSize / 2, handleSize, handleSize));
@@ -302,6 +557,23 @@ namespace projectFrameCut.InteractableEditor
                 PreviewHost.IsVisible = false;
                 PreviewHost.Content = null;
                 SizeLabel.IsVisible = false;
+                DebugLabel.IsVisible = false;
+                HideTextEntryOverlays();
+            }
+
+            public void UpdateDebugInfo(bool isVisible, string? text, double displayW, double displayH)
+            {
+                if (!isVisible || string.IsNullOrWhiteSpace(text))
+                {
+                    DebugLabel.Text = string.Empty;
+                    DebugLabel.IsVisible = false;
+                    return;
+                }
+
+                DebugLabel.Text = text;
+                DebugLabel.IsVisible = true;
+                var y = Math.Max(4d, displayH - 42d);
+                AbsoluteLayout.SetLayoutBounds(DebugLabel, new Rect(4, y, Math.Max(8d, displayW - 8d), AbsoluteLayout.AutoSize));
             }
 
             public bool HasPreviewView => PreviewHost.Content is not null;
@@ -347,6 +619,7 @@ namespace projectFrameCut.InteractableEditor
             private void UpdatePreviewHostVisibility()
             {
                 PreviewHost.IsVisible = _owner.ShouldShowPreviewHost(this) && PreviewHost.Content is not null;
+                UpdateRootInputTransparency();
             }
         }
 
@@ -452,6 +725,12 @@ namespace projectFrameCut.InteractableEditor
             _ = InvokeOverlayClipTappedAsync(callback, state.ClipId);
         }
 
+        private void OnTextEntryOverlayTapped(ClipOverlayState state, int entryIndex)
+        {
+            _activeTextEntryIndex = entryIndex;
+            OnClipOverlayTapped(state);
+        }
+
         private void OnEditorCanvasTapped(object? sender, TappedEventArgs e)
         {
             var callback = _blankAreaTappedCallback;
@@ -478,6 +757,7 @@ namespace projectFrameCut.InteractableEditor
                 return;
             }
 
+            _activeTextEntryIndex = -1;
             _ = InvokeBlankAreaTappedAsync(callback);
         }
 
@@ -557,6 +837,7 @@ namespace projectFrameCut.InteractableEditor
                 previous.HandleBL.IsVisible = false;
                 previous.HandleBR.IsVisible = false;
                 previous.SizeLabel.IsVisible = false;
+                previous.HideTextEntryOverlays();
             }
 
             _activeState = state;
@@ -588,6 +869,7 @@ namespace projectFrameCut.InteractableEditor
             _currentAsset = asset;
             _isClipPanInProgress = false;
             _isHandleResizeInProgress = false;
+            _activeTextEntryIndex = -1;
             if (clip == null)
             {
                 SetActiveState(null);
@@ -799,7 +1081,8 @@ namespace projectFrameCut.InteractableEditor
                 double displayW = w * scale;
                 double displayH = h * scale;
 
-                var showHandles = isCurrentClip && !_isTextClip;
+                var isCurrentTextClip = isCurrentClip && clipType == ClipMode.TextClip;
+                var showHandles = isCurrentClip && !isCurrentTextClip;
                 var showSizeLabel = isCurrentClip && _isHandleResizeInProgress;
 
                 state.UpdateLayout(
@@ -812,10 +1095,96 @@ namespace projectFrameCut.InteractableEditor
                     showHandles,
                     showSizeLabel,
                     showSizeLabel ? $"{Math.Round(w)} x {Math.Round(h)}" : null,
-                    isCurrentClip);
+                    isCurrentClip && !isCurrentTextClip);
+
+                UpdateTextEntryOverlays(
+                    state,
+                    isCurrentClip ? _currentClip : null,
+                    isCurrentClip,
+                    clipX: x,
+                    clipY: y,
+                    scale: scale);
+
+                UpdatePreviewDebugOverlay(state, clipId, w, h, displayW, displayH);
             }
 
             ReorderClipStateRootsByZIndex();
+        }
+
+        private void UpdateTextEntryOverlays(ClipOverlayState state, ClipElementUI? clip, bool isCurrentClip, double clipX, double clipY, double scale)
+        {
+            if (!isCurrentClip
+                || clip is null
+                || clip.ClipType != ClipMode.TextClip
+                || !TryGetTextEntries(clip, out var entries))
+            {
+                state.HideTextEntryOverlays();
+                return;
+            }
+
+            if (_activeTextEntryIndex >= entries.Count)
+            {
+                _activeTextEntryIndex = -1;
+            }
+
+            for (var i = 0; i < entries.Count; i++)
+            {
+                var entry = entries[i];
+                if (!TryMeasureTextEntryRect(entry, out var entryX, out var entryY, out var entryW, out var entryH))
+                {
+                    entryX = entry.x;
+                    entryY = entry.y;
+                    entryW = MinSize;
+                    entryH = MinSize;
+                }
+
+                entryW = Math.Clamp(entryW, MinSize, _videoWidth);
+                entryH = Math.Clamp(entryH, MinSize, _videoHeight);
+                entryX = Math.Clamp(entryX, 0, _videoWidth - entryW);
+                entryY = Math.Clamp(entryY, 0, _videoHeight - entryH);
+
+                var localX = (entryX - clipX) * scale;
+                var localY = (entryY - clipY) * scale;
+                var localW = Math.Max(1d, entryW * scale);
+                var localH = Math.Max(1d, entryH * scale);
+
+                var showSizeLabel = _isHandleResizeInProgress && _activeTextEntryIndex == i;
+                state.UpdateTextEntryLayout(
+                    i,
+                    localX,
+                    localY,
+                    localW,
+                    localH,
+                    showHandles: true,
+                    showSizeLabel: showSizeLabel,
+                    sizeText: showSizeLabel ? $"{Math.Round(entryW)} x {Math.Round(entryH)}" : null);
+            }
+
+            state.HideTextEntryOverlaysBeyond(entries.Count);
+        }
+
+        private void UpdatePreviewDebugOverlay(ClipOverlayState state, string clipId, double logicalW, double logicalH, double displayW, double displayH)
+        {
+            if (!ShowPreviewDebugOverlay)
+            {
+                state.UpdateDebugInfo(false, null, displayW, displayH);
+                return;
+            }
+
+            var content = state.PreviewHost.Content;
+            var contentType = content?.GetType().Name ?? "null";
+            var contentDebugTag = content?.AutomationId;
+            var shortClipId = clipId.Length > 8 ? clipId[..8] : clipId;
+            var info = $"dbg:{shortClipId} view:{state.HasPreviewView}/{state.PreviewHost.IsVisible} show:{ShouldShowPreviewHost(state)} sup:{ShouldSuppressPreviewForResize(clipId)}"
+                + Environment.NewLine
+                + $"L:{Math.Round(logicalW)}x{Math.Round(logicalH)} D:{Math.Round(displayW)}x{Math.Round(displayH)} T:{contentType}";
+
+            if (!string.IsNullOrWhiteSpace(contentDebugTag))
+            {
+                info += Environment.NewLine + contentDebugTag;
+            }
+
+            state.UpdateDebugInfo(true, info, displayW, displayH);
         }
 
         public async Task<bool> ApplyPreparedPreviewsAsync(IReadOnlyList<DynamicPreview.PreparedPreview> preparedPreviews)
@@ -1098,7 +1467,8 @@ namespace projectFrameCut.InteractableEditor
 
                 bool isCurrentClip = _currentClip is not null
                     && string.Equals(_currentClip.Id, clip.Id, StringComparison.Ordinal);
-                bool showHandles = isCurrentClip && !_isTextClip;
+                bool isCurrentTextClip = isCurrentClip && clip.ClipType == ClipMode.TextClip;
+                bool showHandles = isCurrentClip && !isCurrentTextClip;
                 bool showSizeLabel = isCurrentClip && _isHandleResizeInProgress;
 
                 state.UpdateLayout(
@@ -1111,7 +1481,17 @@ namespace projectFrameCut.InteractableEditor
                     showHandles: showHandles,
                     showSizeLabel: showSizeLabel,
                     sizeText: showSizeLabel ? $"{Math.Round(w)} x {Math.Round(h)}" : null,
-                    showClipVisual: isCurrentClip);
+                    showClipVisual: isCurrentClip && !isCurrentTextClip);
+
+                UpdateTextEntryOverlays(
+                    state,
+                    clip,
+                    isCurrentClip,
+                    clipX: x,
+                    clipY: y,
+                    scale: scale);
+
+                UpdatePreviewDebugOverlay(state, clip.Id, w, h, displayW, displayH);
             }
 
             // 隐藏不再活跃的clips
@@ -1158,7 +1538,7 @@ namespace projectFrameCut.InteractableEditor
             var subLayer = Math.Max(0, clip.SubLayerIndex);
             var composite = (long)layer * 10000L + Math.Min(9999, subLayer);
             var zIndex = composite >= int.MaxValue ? int.MinValue : -((int)composite);
-            LogDiagnostic($"For clip {clip.Id}/{clip.DisplayName}, track:{layer}, sub:{subLayer}, ZIndex is {zIndex}");
+            //LogDiagnostic($"For clip {clip.Id}/{clip.DisplayName}, track:{layer}, sub:{subLayer}, ZIndex is {zIndex}");
             return zIndex;
         }
 
@@ -1272,7 +1652,7 @@ namespace projectFrameCut.InteractableEditor
 
         private void OnClipPanUpdated(ClipOverlayState state, PanUpdatedEventArgs e)
         {
-            if (_currentClip == null || !ReferenceEquals(state, _activeState)) return;
+            if (_currentClip == null || !ReferenceEquals(state, _activeState) || _isTextClip) return;
 
             switch (e.StatusType)
             {
@@ -1299,14 +1679,7 @@ namespace projectFrameCut.InteractableEditor
                     double newVisualX = _startX + deltaX;
                     double newVisualY = _startY + deltaY;
 
-                    if (_isTextClip)
-                    {
-                        UpdateTextEntryPosition(newVisualX, newVisualY);
-                    }
-                    else
-                    {
-                        UpdateClipEffects(newVisualX, newVisualY, _startW, _startH);
-                    }
+                    UpdateClipEffects(newVisualX, newVisualY, _startW, _startH);
 
                     UpdateVisuals();
                     RequestInteractivePreviewRefreshIfMissing(state);
@@ -1320,6 +1693,282 @@ namespace projectFrameCut.InteractableEditor
                     RequestCommitUpdate();
                     break;
             }
+        }
+
+        private void OnTextEntryPanUpdated(ClipOverlayState state, int entryIndex, PanUpdatedEventArgs e)
+        {
+            if (_currentClip == null || !_isTextClip || !ReferenceEquals(state, _activeState)) return;
+
+            switch (e.StatusType)
+            {
+                case GestureStatus.Started:
+                    if (!TryPrepareTextEntryManipulation(entryIndex))
+                    {
+                        return;
+                    }
+
+                    _isClipPanInProgress = true;
+                    _isHandleResizeInProgress = false;
+                    LogDiagnostic($"[TextEntryPan] Started: entry={entryIndex}, Rect=({_textEntryStartRect.X:F1}, {_textEntryStartRect.Y:F1}, {_textEntryStartRect.Width:F1}, {_textEntryStartRect.Height:F1})");
+                    break;
+
+                case GestureStatus.Running:
+                    if (!_isClipPanInProgress || _activeTextEntryIndex != entryIndex)
+                    {
+                        break;
+                    }
+
+                    var renderRect = GetRenderRect();
+                    if (renderRect.Width <= 0 || renderRect.Height <= 0)
+                    {
+                        break;
+                    }
+
+                    var scale = Math.Max(renderRect.Width, 0.001) / _videoWidth;
+                    if (scale <= 0.001)
+                    {
+                        break;
+                    }
+
+                    var deltaX = e.TotalX / scale;
+                    var deltaY = e.TotalY / scale;
+                    if (!TryUpdateTextEntryPositionFromPan(entryIndex, deltaX, deltaY))
+                    {
+                        break;
+                    }
+
+                    UpdateVisuals();
+                    RequestInteractivePreviewRefreshIfMissing(state);
+                    break;
+
+                case GestureStatus.Completed:
+                case GestureStatus.Canceled:
+                    _isClipPanInProgress = false;
+                    RequestCommitUpdate();
+                    break;
+            }
+        }
+
+        private void OnTextEntryResizePanUpdated(ClipOverlayState state, int entryIndex, ResizeHandle handle, PanUpdatedEventArgs e)
+        {
+            if (_currentClip == null || !_isTextClip || !ReferenceEquals(state, _activeState)) return;
+
+            switch (e.StatusType)
+            {
+                case GestureStatus.Started:
+                    if (!TryPrepareTextEntryManipulation(entryIndex))
+                    {
+                        return;
+                    }
+
+                    _isClipPanInProgress = false;
+                    _isHandleResizeInProgress = true;
+                    LogDiagnostic($"[TextEntryResize] Started: entry={entryIndex}, Rect=({_textEntryStartRect.X:F1}, {_textEntryStartRect.Y:F1}, {_textEntryStartRect.Width:F1}, {_textEntryStartRect.Height:F1})");
+                    state.SetPreviewView(null);
+                    UpdateVisuals();
+                    break;
+
+                case GestureStatus.Running:
+                    if (!_isHandleResizeInProgress || _activeTextEntryIndex != entryIndex)
+                    {
+                        break;
+                    }
+
+                    var renderRect = GetRenderRect();
+                    if (renderRect.Width <= 0 || renderRect.Height <= 0)
+                    {
+                        break;
+                    }
+
+                    var scale = Math.Max(renderRect.Width, 0.001) / _videoWidth;
+                    if (scale <= 0.001)
+                    {
+                        break;
+                    }
+
+                    var deltaX = e.TotalX / scale;
+                    var deltaY = e.TotalY / scale;
+
+                    if (!TryScaleTextEntryFromResize(entryIndex, handle, deltaX, deltaY))
+                    {
+                        break;
+                    }
+
+                    UpdateVisuals();
+                    break;
+
+                case GestureStatus.Completed:
+                case GestureStatus.Canceled:
+                    _isHandleResizeInProgress = false;
+                    state.SetPreviewView(null);
+                    UpdateVisuals();
+                    RequestInteractivePreviewRefresh();
+                    RequestCommitUpdate();
+                    break;
+            }
+        }
+
+        private bool TryPrepareTextEntryManipulation(int entryIndex)
+        {
+            if (!TryGetCurrentTextEntry(entryIndex, out _, out var entry))
+            {
+                return false;
+            }
+
+            if (!TryMeasureTextEntryRect(entry, out var x, out var y, out var w, out var h))
+            {
+                x = entry.x;
+                y = entry.y;
+                w = MinSize;
+                h = MinSize;
+            }
+
+            _activeTextEntryIndex = entryIndex;
+            _textEntryStartRect = new Rect(
+                x,
+                y,
+                Math.Clamp(w, MinSize, _videoWidth),
+                Math.Clamp(h, MinSize, _videoHeight));
+            _textEntryStartOriginX = entry.x;
+            _textEntryStartOriginY = entry.y;
+            _textEntryStartOffsetX = _textEntryStartRect.X - _textEntryStartOriginX;
+            _textEntryStartOffsetY = _textEntryStartRect.Y - _textEntryStartOriginY;
+            _textEntryStartFontSize = Math.Max(MinTextFontSize, entry.fontSize);
+            _textEntryStartWrappingWidth = entry.wrappingWidth;
+            _textEntryStartStrokeWidth = entry.strokeWidth;
+            return true;
+        }
+
+        private bool TryUpdateTextEntryPositionFromPan(int entryIndex, double deltaX, double deltaY)
+        {
+            if (_currentClip == null || !TryGetCurrentTextEntry(entryIndex, out var entries, out var entry))
+            {
+                return false;
+            }
+
+            var rectW = Math.Clamp(_textEntryStartRect.Width, MinSize, _videoWidth);
+            var rectH = Math.Clamp(_textEntryStartRect.Height, MinSize, _videoHeight);
+            var minOriginX = -_textEntryStartOffsetX;
+            var minOriginY = -_textEntryStartOffsetY;
+            var maxOriginX = _videoWidth - rectW - _textEntryStartOffsetX;
+            var maxOriginY = _videoHeight - rectH - _textEntryStartOffsetY;
+
+            var nextOriginX = Math.Clamp(_textEntryStartOriginX + deltaX, minOriginX, maxOriginX);
+            var nextOriginY = Math.Clamp(_textEntryStartOriginY + deltaY, minOriginY, maxOriginY);
+
+            entries[entryIndex] = entry with
+            {
+                x = (int)Math.Round(nextOriginX, MidpointRounding.AwayFromZero),
+                y = (int)Math.Round(nextOriginY, MidpointRounding.AwayFromZero)
+            };
+
+            _currentClip.ExtraData["TextEntries"] = entries;
+            return true;
+        }
+
+        private bool TryScaleTextEntryFromResize(int entryIndex, ResizeHandle handle, double deltaX, double deltaY)
+        {
+            if (_currentClip == null || !TryGetCurrentTextEntry(entryIndex, out var entries, out var entry))
+            {
+                return false;
+            }
+
+            var startX = _textEntryStartRect.X;
+            var startY = _textEntryStartRect.Y;
+            var startW = _textEntryStartRect.Width;
+            var startH = _textEntryStartRect.Height;
+            if (startW <= 0 || startH <= 0)
+            {
+                return false;
+            }
+
+            var nextX = startX;
+            var nextY = startY;
+            var nextW = startW;
+            var nextH = startH;
+
+            switch (handle)
+            {
+                case ResizeHandle.TopLeft:
+                    nextW = Math.Max(MinSize, startW - deltaX);
+                    nextH = Math.Max(MinSize, startH - deltaY);
+                    nextX = startX + (startW - nextW);
+                    nextY = startY + (startH - nextH);
+                    break;
+                case ResizeHandle.TopRight:
+                    nextW = Math.Max(MinSize, startW + deltaX);
+                    nextH = Math.Max(MinSize, startH - deltaY);
+                    nextY = startY + (startH - nextH);
+                    break;
+                case ResizeHandle.BottomLeft:
+                    nextW = Math.Max(MinSize, startW - deltaX);
+                    nextH = Math.Max(MinSize, startH + deltaY);
+                    nextX = startX + (startW - nextW);
+                    break;
+                case ResizeHandle.BottomRight:
+                    nextW = Math.Max(MinSize, startW + deltaX);
+                    nextH = Math.Max(MinSize, startH + deltaY);
+                    break;
+            }
+
+            var aspect = startW / Math.Max(startH, 0.0001);
+            ApplyAspectLockedResize(handle, startX, startY, startW, startH, aspect, ref nextX, ref nextY, ref nextW, ref nextH);
+
+            nextW = Math.Clamp(nextW, MinSize, _videoWidth);
+            nextH = Math.Clamp(nextH, MinSize, _videoHeight);
+            nextX = Math.Clamp(nextX, 0, _videoWidth - nextW);
+            nextY = Math.Clamp(nextY, 0, _videoHeight - nextH);
+
+            var scale = nextW / Math.Max(startW, 0.0001);
+            var fontSize = Math.Max(MinTextFontSize, _textEntryStartFontSize * (float)scale);
+
+            float? wrappingWidth = _textEntryStartWrappingWidth;
+
+            float? strokeWidth = _textEntryStartStrokeWidth;
+
+            var nextOffsetX = _textEntryStartOffsetX;
+            var nextOffsetY = _textEntryStartOffsetY;
+            var nextOriginX = nextX - nextOffsetX;
+            var nextOriginY = nextY - nextOffsetY;
+
+            nextOriginX = Math.Clamp(nextOriginX, -nextOffsetX, _videoWidth - nextW - nextOffsetX);
+            nextOriginY = Math.Clamp(nextOriginY, -nextOffsetY, _videoHeight - nextH - nextOffsetY);
+
+            entries[entryIndex] = entry with
+            {
+                x = (int)Math.Round(nextOriginX, MidpointRounding.AwayFromZero),
+                y = (int)Math.Round(nextOriginY, MidpointRounding.AwayFromZero),
+                fontSize = fontSize,
+                wrappingWidth = wrappingWidth,
+                strokeWidth = strokeWidth
+            };
+
+            _currentClip.ExtraData["TextEntries"] = entries;
+            return true;
+        }
+
+        private bool TryGetCurrentTextEntry(int entryIndex, out List<TextClipEntry> entries, out TextClipEntry entry)
+        {
+            entries = null!;
+            entry = null!;
+
+            if (_currentClip == null || !_isTextClip)
+            {
+                return false;
+            }
+
+            if (!TryGetTextEntries(_currentClip, out entries))
+            {
+                return false;
+            }
+
+            if (entryIndex < 0 || entryIndex >= entries.Count)
+            {
+                return false;
+            }
+
+            entry = entries[entryIndex];
+            return true;
         }
 
         private void OnResizePanUpdated(ClipOverlayState state, ResizeHandle handle, PanUpdatedEventArgs e)
@@ -1437,30 +2086,59 @@ namespace projectFrameCut.InteractableEditor
                 return;
             }
 
-            var aspect = ResolveLockedResizeAspectRatio();
-            var relW = Math.Abs((w / Math.Max(_startW, 0.0001)) - 1d);
-            var relH = Math.Abs((h / Math.Max(_startH, 0.0001)) - 1d);
+            ApplyAspectLockedResize(
+                handle,
+                _startX,
+                _startY,
+                _startW,
+                _startH,
+                ResolveLockedResizeAspectRatio(),
+                ref x,
+                ref y,
+                ref w,
+                ref h);
+        }
+
+        private static void ApplyAspectLockedResize(
+            ResizeHandle handle,
+            double startX,
+            double startY,
+            double startW,
+            double startH,
+            double aspect,
+            ref double x,
+            ref double y,
+            ref double w,
+            ref double h)
+        {
+            if (startW <= 0 || startH <= 0)
+            {
+                return;
+            }
+
+            var relW = Math.Abs((w / Math.Max(startW, 0.0001)) - 1d);
+            var relH = Math.Abs((h / Math.Max(startH, 0.0001)) - 1d);
 
             if (relW >= relH)
             {
-                h = Math.Max(MinSize, w / aspect);
+                h = Math.Max(MinSize, w / Math.Max(0.0001, aspect));
             }
             else
             {
-                w = Math.Max(MinSize, h * aspect);
+                w = Math.Max(MinSize, h * Math.Max(0.0001, aspect));
             }
 
             switch (handle)
             {
                 case ResizeHandle.TopLeft:
-                    x = _startX + (_startW - w);
-                    y = _startY + (_startH - h);
+                    x = startX + (startW - w);
+                    y = startY + (startH - h);
                     break;
                 case ResizeHandle.TopRight:
-                    y = _startY + (_startH - h);
+                    y = startY + (startH - h);
                     break;
                 case ResizeHandle.BottomLeft:
-                    x = _startX + (_startW - w);
+                    x = startX + (startW - w);
                     break;
                 case ResizeHandle.BottomRight:
                 default:
@@ -1813,7 +2491,8 @@ namespace projectFrameCut.InteractableEditor
 
             var rawText = entry.text ?? string.Empty;
             var textForMeasure = string.IsNullOrEmpty(rawText) ? " " : rawText;
-            var fontSize = Math.Max(1d, entry.fontSize * (96.0 / 72.0));
+            var dpi = entry.dpi ?? 72d;
+            var fontSize = Math.Max(1d, entry.fontSize * (dpi / 72.0));
             var strokeExtra = Math.Max(0d, entry.strokeWidth ?? 0f) * 2d;
 
             if (entry.UseVerticalLayout)
@@ -1892,6 +2571,26 @@ namespace projectFrameCut.InteractableEditor
                 h = Math.Max(MinSize, h + strokeExtra);
             }
 
+            switch (entry.horizontalAlignment)
+            {
+                case SixLabors.Fonts.HorizontalAlignment.Center:
+                    x -= w / 2d;
+                    break;
+                case SixLabors.Fonts.HorizontalAlignment.Right:
+                    x -= w;
+                    break;
+            }
+
+            switch (entry.verticalAlignment)
+            {
+                case SixLabors.Fonts.VerticalAlignment.Center:
+                    y -= h / 2d;
+                    break;
+                case SixLabors.Fonts.VerticalAlignment.Bottom:
+                    y -= h;
+                    break;
+            }
+
             if (Math.Abs(entry.rotation) > 0.0001f)
             {
                 var radians = entry.rotation * Math.PI / 180d;
@@ -1919,23 +2618,6 @@ namespace projectFrameCut.InteractableEditor
             }
 
             return true;
-        }
-
-        private void UpdateTextEntryPosition(double desiredX, double desiredY)
-        {
-            if (_currentClip == null) return;
-            if (!_currentClip.ExtraData.TryGetValue("TextEntries", out var entriesObj)) return;
-            if (entriesObj is not List<TextClipEntry> entries || entries.Count == 0) return;
-
-            double w = _baseRect.Width > 0 ? _baseRect.Width : MinSize;
-            double h = _baseRect.Height > 0 ? _baseRect.Height : MinSize;
-
-            int newX = (int)Math.Round(Math.Clamp(desiredX, 0, _videoWidth - w));
-            int newY = (int)Math.Round(Math.Clamp(desiredY, 0, _videoHeight - h));
-
-            var old = entries[0];
-            entries[0] = old with { x = newX, y = newY };
-            _currentClip.ExtraData["TextEntries"] = entries;
         }
 
         private void UpdateClipEffects(double x, double y, double w, double h)
@@ -2121,6 +2803,8 @@ namespace projectFrameCut.InteractableEditor
 
         private static bool IsAllowFreeScaleResizeEnabled(ClipElementUI clip)
         {
+            if (clip.ClipType == ClipMode.SolidColorClip) return true;
+
             if (ReadBoolExtraData(clip.ExtraData, AllowFreeScaleResizeKey, out var allowFreeScale))
             {
                 return allowFreeScale;

@@ -191,6 +191,9 @@ namespace projectFrameCut.Render.ClipsAndTracks
         [JsonIgnore]
         public int EffectiveOutputHeight => ResolveConfiguredInt("SolidColorOutputHeight", OutputHeight > 0 ? OutputHeight : targetHeight);
 
+        [JsonIgnore]
+        public bool ShouldUseFixedOutputSize => EffectiveUseFixedOutputSize && TargetWidth <= 0 && TargetHeight <= 0;
+
         public int targetWidth { get; init; } = 1920;
         public int targetHeight { get; init; } = 1080;
         public int TargetWidth { get; set; }
@@ -200,15 +203,15 @@ namespace projectFrameCut.Render.ClipsAndTracks
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize)
         {
-            var width = EffectiveUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth);
-            var height = EffectiveUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight);
+            var width = ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth);
+            var height = ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight);
             return Picture16bpp.GenerateSolidColor(width, height, R, G, B, A);
         }
 
         public IPicture GetFrameRelativeToStartPointOfSource(uint targetFrame, int tWidth, int tHeight, bool forceResize, IPicture.PicturePixelMode targetPPB) => targetPPB.Value switch
         {
-            16 => Picture16bpp.GenerateSolidColor(EffectiveUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth), EffectiveUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight), R, G, B, A),
-            8 => Picture8bpp.GenerateSolidColor(EffectiveUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth), EffectiveUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight), (byte)(R / 257), (byte)(G / 257), (byte)(B / 257), A),
+            16 => Picture16bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight), R, G, B, A),
+            8 => Picture8bpp.GenerateSolidColor(ShouldUseFixedOutputSize ? EffectiveOutputWidth : Math.Max(1, tWidth), ShouldUseFixedOutputSize ? EffectiveOutputHeight : Math.Max(1, tHeight), (byte)(R / 257), (byte)(G / 257), (byte)(B / 257), A),
             _ => throw new NotSupportedException($"Unsupported target pixel mode {targetPPB}.")
         };
 

@@ -136,6 +136,54 @@
         "Args": [],
         "ArgsComment": [],
         "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Canceled",
+        "Value": "\u4EFB\u52A1\u5DF2\u53D6\u6D88",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Cancelling",
+        "Value": "\u5C1D\u8BD5\u53D6\u6D88\u4EFB\u52A1...",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Completed",
+        "Value": "\u4EFB\u52A1\u6210\u529F\u7684\u5B8C\u6210\u4E86",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Fail",
+        "Value": "\u4EFB\u52A1\u6267\u884C\u5931\u8D25",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Running",
+        "Value": "\u4EFB\u52A1\u6B63\u5728\u6267\u884C",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
+      },
+      {
+        "Id": "DraftPage_Tasks_Status_Unknown",
+        "Value": "\u4EFB\u52A1\u72B6\u6001\u4F4D\u7F6E",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
+        "HasValidationErrors": false
       }
     ]
   }

@@ -43,7 +43,8 @@ namespace projectFrameCut.LivePreview
             (targetWidth, targetHeight) = NormalizeTargetSize(targetWidth, targetHeight, requireEven: false);
             LogDiagnostic($"[LiveRender] RenderOne request: frame #{frameIndex}");
             var frameHash = Timeline.GetFrameHash(Clips, frameIndex);
-            var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{frameHash}.png");
+            var cacheKey = BuildFrameCacheKey(frameHash, targetWidth, targetHeight);
+            var destPath = Path.Combine(TempPath, $"projectFrameCut_Render_{cacheKey}.png");
             LogDiagnostic($"[LiveRender] FrameHash:{frameHash}");
             if (Path.Exists(destPath))
             {
@@ -303,5 +304,8 @@ namespace projectFrameCut.LivePreview
             normalizedHeight = Math.Max(2, normalizedHeight);
             return (normalizedWidth, normalizedHeight);
         }
+
+        private static string BuildFrameCacheKey(string frameHash, int width, int height)
+            => $"{frameHash}_{width}x{height}";
     }
 }

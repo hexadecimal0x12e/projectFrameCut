@@ -3633,7 +3633,7 @@
       },
       {
         "Id": "HomePage_ProjectContextMenu_Delete_Confirm1",
-        "Value": "\u4F60\u786E\u8BA4\u8981\u5220\u9664\u300C{name}\u300D\u5417\uFF1F\r\u6B64\u64CD\u4F5C\u65E0\u6CD5\u64A4\u9500\uFF01",
+        "Value": "\u4F60\u786E\u8BA4\u8981\u5220\u9664\u300C{name}\u300D\u5417\uFF1F\u4F60\u4E0D\u80FD\u64A4\u9500\u6B64\u64CD\u4F5C\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3651,7 +3651,7 @@
       },
       {
         "Id": "HomePage_ProjectContextMenu_Delete_Confirm2",
-        "Value": "\u4F60\u786E\u8BA4\u8981\u5220\u9664\u300C{name}\u300D\u5417\uFF1F{Environment.NewLine}\u6B64\u64CD\u4F5C\u65E0\u6CD5\u64A4\u9500\uFF01{Environment.NewLine}\u300C{name}\u300D\u7684\u6240\u6709\u6570\u636E\u5C06\u4F1A\u6C38\u8FDC\u5728\u4F60\u7684\u8BBE\u5907\u4E0A\u6D88\u5931\uFF01\uFF01\uFF01",
+        "Value": "\u4F60\u786E\u8BA4\u8981\u5220\u9664\u300C{name}\u300D\u5417\uFF1F\r\u6B64\u64CD\u4F5C\u65E0\u6CD5\u64A4\u9500\uFF01\r\u300C{name}\u300D\u7684\u6240\u6709\u6570\u636E\u5C06\u4F1A\u6C38\u8FDC\u5728\u4F60\u7684\u8BBE\u5907\u4E0A\u6D88\u5931\uFF01\uFF01\uFF01",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3669,7 +3669,7 @@
       },
       {
         "Id": "HomePage_ProjectContextMenu_Delete_Confirm2Input",
-        "Value": "\u4F60\u786E\u8BA4\u8981\u6C38\u4E45\u5220\u9664\u300C{name}\u300D\u5417\uFF1F\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF0C\u300C{name}\u300D\u7684\u6570\u636E\u5C06\u4F1A\u6C38\u4E45\u6D88\u5931\uFF01\r\r\u5728\u4E0B\u9762\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u4F60\u7684\u64CD\u4F5C\u3002",
+        "Value": "\u4F60\u786E\u8BA4\u8981\u6C38\u4E45\u5220\u9664\u300C{name}\u300D\u5417\uFF1F\r\u6B64\u64CD\u4F5C\u4E0D\u80FD\u64A4\u9500\uFF0C\u300C{name}\u300D\u5C06\u4F1A\u4ECE\u8FD9\u53F0\u8BBE\u5907\u6C38\u4E45\u6D88\u5931\uFF01\r\r\u5728\u4E0B\u9762\u8F93\u5165\u201Cyes\u201D\u6765\u786E\u8BA4\u4F60\u7684\u64CD\u4F5C\u3002",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3688,7 +3688,7 @@
       },
       {
         "Id": "HomePage_ProjectContextMenu_Delete_Confirm3",
-        "Value": "\u662F\u7684\uFF0C\u5220\u9664\u300C{name}\u300D",
+        "Value": "\u662F\u7684\uFF0C\u6211\u8981\u5220\u9664\u300C{name}\u300D",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -3724,7 +3724,7 @@
       },
       {
         "Id": "HomePage_ProjectContextMenu_Delete_Fail",
-        "Value": "\u5F88\u62B1\u6B49\uFF0C\u5220\u9664\u300C{name}\u300D\u7684\u65F6\u5019\u5931\u8D25\u4E86\u3002\u4F60\u53EF\u4EE5\u5C1D\u8BD5\u91CD\u542F\u7A0B\u5E8F\u540E\u518D\u8BD5\u4E00\u6B21\u3002\r\r{_ExceptionTemplate(ex)}",
+        "Value": "\u5F88\u62B1\u6B49\uFF0C\u5220\u9664\u300C{name}\u300D\u7684\u65F6\u5019\u5931\u8D25\u4E86\u3002\u4F60\u53EF\u4EE5\u8BD5\u8BD5\u770B\u5728\u91CD\u542F\u7A0B\u5E8F\u540E\u518D\u8BD5\u4E00\u6B21\u3002\r\r{_ExceptionTemplate(ex)}",
         "Mode": "InterpolationString",
         "Args": [
           {
@@ -5367,6 +5367,14 @@
         "Args": [],
         "ArgsComment": [],
         "Comment": "\u4E0D\u8981\u7FFB\u8BD1\u201CprojectFrameCut \u201D\uFF0C\u8FD9\u662F\u8F6F\u4EF6\u7684\u540D\u5B57",
+        "DontTranslate": false
+      },
+      {
+        "Id": "WelocmePage_NoAccel",
+        "Value": "\u4F60\u7684\u8BBE\u5907\u4E0A\u4F3C\u4E4E\u6CA1\u6709\u53D7\u652F\u6301\u7684\u786C\u4EF6\u52A0\u901F\u8BBE\u5907\u3002\r\u67E5\u770B\u6211\u4EEC\u7684\u652F\u6301\u6587\u7AE0\u6765\u4E86\u89E3\u8BE6\u60C5\u3002",
+        "Mode": "ConstString",
+        "Args": [],
+        "ArgsComment": [],
         "DontTranslate": false
       },
       {

@@ -499,6 +499,72 @@ namespace projectFrameCut.DraftStuff
         {
             string currentColorHex = clip.ClipColor ?? GetDefaultColorHex(clip.ClipType);
 
+            string ToArgbHex(Color color)
+            {
+                var a = (int)Math.Round(color.Alpha * 255);
+                var r = (int)Math.Round(color.Red * 255);
+                var g = (int)Math.Round(color.Green * 255);
+                var b = (int)Math.Round(color.Blue * 255);
+                return $"#{a:X2}{r:X2}{g:X2}{b:X2}";
+            }
+
+            Color ParseArgbOrFallback(string? value, Color fallback)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    return fallback;
+                }
+
+                try
+                {
+                    return Color.FromArgb(value);
+                }
+                catch
+                {
+                    return fallback;
+                }
+            }
+
+            object? GetSolidColorRawValue(string key)
+            {
+                if (clip.ExtraData == null)
+                {
+                    return null;
+                }
+
+                if (clip.ExtraData.TryGetValue(key, out var value))
+                {
+                    return value;
+                }
+
+                return clip.ExtraData.TryGetValue(key.ToLowerInvariant(), out var lowerValue)
+                    ? lowerValue
+                    : null;
+            }
+
+            Color ResolveSolidColorFromExtraData()
+            {
+                int r16 = Math.Clamp(ReadIntValue(GetSolidColorRawValue("R"), ushort.MaxValue), ushort.MinValue, ushort.MaxValue);
+                int g16 = Math.Clamp(ReadIntValue(GetSolidColorRawValue("G"), ushort.MaxValue), ushort.MinValue, ushort.MaxValue);
+                int b16 = Math.Clamp(ReadIntValue(GetSolidColorRawValue("B"), ushort.MaxValue), ushort.MinValue, ushort.MaxValue);
+                float a = Math.Clamp(ReadFloatValue(GetSolidColorRawValue("A"), 1f), 0f, 1f);
+
+                return Color.FromRgba(r16 / 65535.0, g16 / 65535.0, b16 / 65535.0, a);
+            }
+
+            void SaveSolidColorToExtraData(Color color)
+            {
+                clip.ExtraData ??= new Dictionary<string, object>();
+                clip.ExtraData["R"] = (ushort)Math.Clamp((int)Math.Round(color.Red * ushort.MaxValue), ushort.MinValue, ushort.MaxValue);
+                clip.ExtraData["G"] = (ushort)Math.Clamp((int)Math.Round(color.Green * ushort.MaxValue), ushort.MinValue, ushort.MaxValue);
+                clip.ExtraData["B"] = (ushort)Math.Clamp((int)Math.Round(color.Blue * ushort.MaxValue), ushort.MinValue, ushort.MaxValue);
+                clip.ExtraData["A"] = (float)Math.Clamp(color.Alpha, 0f, 1f);
+            }
+
+            string currentSolidColorHex = clip.ClipType == ClipMode.SolidColorClip
+                ? ToArgbHex(ResolveSolidColorFromExtraData())
+                : "#FFFFFFFF";
+
             int valX = 0, valY = 0;
             int valW = page.ProjectInfo.RelativeWidth;
             int valH = page.ProjectInfo.RelativeHeight;
@@ -542,21 +608,12 @@ namespace projectFrameCut.DraftStuff
             .AddEntry("displayName", Localized.PropertyPanel_General_DisplayName, clip.DisplayName, clip.DisplayName)
             .AddCustomChild(PPLocalizedResources.General_DisplayColor, (invoker) =>
             {
-                string ToArgbHex(Color color)
-                {
-                    var a = (int)Math.Round(color.Alpha * 255);
-                    var r = (int)Math.Round(color.Red * 255);
-                    var g = (int)Math.Round(color.Green * 255);
-                    var b = (int)Math.Round(color.Blue * 255);
-                    return $"#{a:X2}{r:X2}{g:X2}{b:X2}";
-                }
-
                 var colorPreview = new BoxView
                 {
                     WidthRequest = 30,
                     HeightRequest = 30,
                     CornerRadius = 5,
-                    Color = Color.FromArgb(currentColorHex),
+                    Color = ParseArgbOrFallback(currentColorHex, Color.FromArgb(GetDefaultColorHex(clip.ClipType))),
                     VerticalOptions = LayoutOptions.Center,
                     HorizontalOptions = LayoutOptions.Start
                 };
@@ -647,22 +704,102 @@ namespace projectFrameCut.DraftStuff
                 return layout;
             }, "clipColor", currentColorHex)
             .AddSeparator(null)
-                .AppendWhen(clip.ClipType == ClipMode.SolidColorClip,
-            (c) => c.AddText(new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 20))
-                    .AddEntry("placeX", PPLocalizedResources.General_LocationX, valX.ToString(), "0", null, default)
-                    .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
-                    .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
-                    .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default)
-                    .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, 0))
+            .AppendWhen(clip.ClipType == ClipMode.SolidColorClip,
+            (c) =>
+                c.AddText(new SingleLineLabel(PPLocalizedResources.General_SolidColor, 20))
+                .AddCustomChild(PPLocalizedResources.General_Color, (invoker) =>
+                {
+                    var colorPreview = new BoxView
+                    {
+                        WidthRequest = 30,
+                        HeightRequest = 30,
+                        CornerRadius = 5,
+                        Color = ParseArgbOrFallback(currentSolidColorHex, Colors.White),
+                        VerticalOptions = LayoutOptions.Center,
+                        HorizontalOptions = LayoutOptions.Start
+                    };
+
+                    var colorHexLabel = new Label
+                    {
+                        Text = currentSolidColorHex,
+                        WidthRequest = 108,
+                        VerticalOptions = LayoutOptions.Center,
+                        VerticalTextAlignment = TextAlignment.Center
+                    };
+
+                    bool isOpeningColorPicker = false;
+                    var openPickerTap = new TapGestureRecognizer();
+                    openPickerTap.Tapped += async (s, e) =>
+                    {
+                        if (isOpeningColorPicker)
+                        {
+                            return;
+                        }
+
+                        isOpeningColorPicker = true;
+                        try
+                        {
+                            var picker = new ColorPicker
+                            {
+                                SelectedColor = colorPreview.Color
+                            };
+
+                            picker.SelectedColorChanged += (sender, selectedColor) =>
+                            {
+                                var hex = ToArgbHex(selectedColor);
+                                colorPreview.Color = selectedColor;
+                                colorHexLabel.Text = hex;
+                                invoker(hex);
+                            };
+
+                            var popupView = new VerticalStackLayout
+                            {
+                                Spacing = 10,
+                                Padding = new Thickness(10, 0),
+                                Children =
+                                {
+                                    new Button
+                                    {
+                                        Text = Localized._Hide,
+                                        Command = new Command(async () => await page.HidePopup(true))
+                                    },
+                                    picker,
+
+                                }
+                            };
+
+                            await page.ShowAPopup(new ScrollView { Content = popupView }, mode: "dialog");
+                        }
+                        catch
+                        {
+                        }
+                        finally
+                        {
+                            isOpeningColorPicker = false;
+                        }
+                    };
+                    colorPreview.GestureRecognizers.Add(openPickerTap);
+
+                    var layout = new HorizontalStackLayout
+                    {
+                        Spacing = 8,
+                        Children = { colorPreview, colorHexLabel }
+                    };
+
+                    return layout;
+                }, "solidColor", currentSolidColorHex)
+                .AddText(new SingleLineLabel(PPLocalizedResources.General_LocationAndSize, 20))
+                .AddEntry("placeX", PPLocalizedResources.General_LocationX, valX.ToString(), "0", null, default)
+                .AddEntry("placeY", PPLocalizedResources.General_LocationY, valY.ToString(), "0", null, default)
+                .AddEntry("resizeW", PPLocalizedResources._Width, valW.ToString(), page.ProjectInfo.RelativeWidth.ToString(), null, default)
+                .AddEntry("resizeH", PPLocalizedResources._Height, valH.ToString(), page.ProjectInfo.RelativeHeight.ToString(), null, default)
+                .AddSlider("rotationDeg", PPLocalizedResources.General_Rotation, 0, 360, 0))
             .AppendWhen(clip.ClipType == ClipMode.AudioClip,
-            c => c.AddText(new SingleLineLabel(PPLocalizedResources.General_Audio, 20))
-                  .AddSlider("volume", PPLocalizedResources.General_Audio_Volume, clip.ExtraData.TryGetValue("Volume", out var volume) ? (double)volume : 1d, 0, 1)
-            )
+            (c) => 
+                c.AddText(new SingleLineLabel(PPLocalizedResources.General_Audio, 20))
+                 .AddSlider("volume", PPLocalizedResources.General_Audio_Volume, clip.ExtraData.TryGetValue("Volume", out var volume) ? (double)volume : 1d, 0, 1))
             .AppendWhen(clip.ClipType == ClipMode.MarkingClip,
-            c => c.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip))
-            );
-
-
+                c => c.AddButton(PPLocalizedResources.General_Unbind, async (s, e) => await page.UnbindGroupingMarkerAsync(clip)));
 
             ppb.PropertyChanged += async (s, e) =>
             {
@@ -678,6 +815,13 @@ namespace projectFrameCut.DraftStuff
                         clip.ClipColor = e.Value?.ToString();
                     }
                     clip.ApplyClipColor();
+                    handler?.Invoke(s, e);
+                    return;
+                }
+                if (e.Id == "solidColor" && clip.ClipType == ClipMode.SolidColorClip)
+                {
+                    var selectedColor = ParseArgbOrFallback(e.Value?.ToString(), Colors.White);
+                    SaveSolidColorToExtraData(selectedColor);
                     handler?.Invoke(s, e);
                     return;
                 }

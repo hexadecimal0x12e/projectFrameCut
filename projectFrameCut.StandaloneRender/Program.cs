@@ -433,7 +433,7 @@ namespace projectFrameCut.StandaloneRender
             bool hwAccelDecode = bool.TryParse(switches.GetOrAdd("preferHwAccelDecoder", "false"), out var hwAccelDecodeValue) && hwAccelDecodeValue;
             InternalPluginBase.HWAccelOptionGetter = new(() => hwAccelDecode);
 
-            bool trace = switches.ContainsKey("--trace");
+            bool trace = Environment.GetCommandLineArgs().Contains("--trace");
             PictureLifecycleTracker.Enabled = trace && !Renderer.IsProfilerAttached;
             PictureLifecycleTracker.TrackCollection = trace && !Renderer.IsProfilerAttached;
 
@@ -517,7 +517,7 @@ namespace projectFrameCut.StandaloneRender
                 {
                     renderer.OnProgressChanged += (s, e) =>
                     {
-                        if(renderer.CurrentSecondPerFrame <= 1.5)
+                        if (renderer.CurrentSecondPerFrame <= 1.5)
                         {
                             Console.Write($"Rendering finished {s:p0}, ETA:{e:hh\\:mm\\:ss}, FPS:{renderer.CurrentFps:n2} \r");
                         }
@@ -543,11 +543,11 @@ namespace projectFrameCut.StandaloneRender
                     {
                         await renderer.GoRender(cts.Token);
                     }
+                    Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
                 }
                 catch (TaskCanceledException)
                 {
                     Log("Render was canceled.");
-                    return;
                 }
                 catch (Exception ex)
                 {
@@ -555,7 +555,7 @@ namespace projectFrameCut.StandaloneRender
                     throw;
                 }
 
-                Log($"Render done,total elapsed {sw1}, avg elapsed {renderer.EachElapsedForPreparing.Average(t => t.TotalSeconds)} spf to prepare and {renderer.EachElapsed.Average(t => t.TotalSeconds)} spf to render");
+
 
                 if (!string.IsNullOrWhiteSpace(diagReportPath))
                 {
@@ -568,6 +568,8 @@ namespace projectFrameCut.StandaloneRender
                         Log(ex, "Export diagReportPath CSV");
                     }
                 }
+
+                if (cts.IsCancellationRequested) return;
 
                 Log("Finish writing video...");
                 builder?.Finish((i) => Timeline.MixtureLayers(Timeline.GetFramesInOneFrame(clips, i, width, height), i, width, height), timeline.Duration);

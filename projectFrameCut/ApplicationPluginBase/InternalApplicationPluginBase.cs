@@ -36,7 +36,7 @@ namespace projectFrameCut.ApplicationPluginBase
 
         public Dictionary<string, IEffectDynamicPreviewProvider> EffectDynamicPreviewProvider => new Dictionary<string, IEffectDynamicPreviewProvider>
         {
-            { "Blur", new BlurEffectDynamicPreviewProvider() },
+            //{ "Blur", new BlurEffectDynamicPreviewProvider() },
             { "Crop", new CropEffectDynamicPreviewProvider() },
             { "Jitter", new JitterEffectDynamicPreviewProvider() },
             { "Place", new PlaceEffectDynamicPreviewProvider() },

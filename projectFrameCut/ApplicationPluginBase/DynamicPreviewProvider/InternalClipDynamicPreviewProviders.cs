@@ -6,7 +6,9 @@ using projectFrameCut.Render.RenderAPIBase.ClipAndTrack;
 using System.Linq;
 using projectFrameCut.ApplicationAPIBase.Helpers;
 using projectFrameCut.Render.Effect;
+using projectFrameCut.Shared;
 using System.Collections.Concurrent;
+using System.Text.Json;
 using System.Threading;
 
 namespace projectFrameCut.ApplicationPluginBase.DynamicPreviewProvider;
@@ -301,22 +303,35 @@ internal sealed class SolidColorClipDynamicPreviewProvider : InternalClipDynamic
             return BuildFallbackLabel("Solid color clip is unavailable.");
         }
 
-        var previewWidth = Math.Min(canvasWidth, Math.Max(1, clip.EffectiveOutputWidth));
-        var previewHeight = Math.Min(canvasHeight, Math.Max(1, clip.EffectiveOutputHeight));
+        var resolvedWidth = clip.TargetWidth > 0 ? clip.TargetWidth : clip.EffectiveOutputWidth;
+        var resolvedHeight = clip.TargetHeight > 0 ? clip.TargetHeight : clip.EffectiveOutputHeight;
+
+        if (targetWidth > 0)
+        {
+            resolvedWidth = Math.Min(resolvedWidth, targetWidth);
+        }
+
+        if (targetHeight > 0)
+        {
+            resolvedHeight = Math.Min(resolvedHeight, targetHeight);
+        }
+
+        var previewWidth = Math.Max(1, resolvedWidth > 0 ? resolvedWidth : (targetWidth > 0 ? targetWidth : canvasWidth));
+        var previewHeight = Math.Max(1, resolvedHeight > 0 ? resolvedHeight : (targetHeight > 0 ? targetHeight : canvasHeight));
         var alpha = clip.A.HasValue ? Math.Clamp(clip.A.Value, 0f, 1f) : 1f;
         return new Grid
         {
-            HorizontalOptions = LayoutOptions.Fill,
-            VerticalOptions = LayoutOptions.Fill,
+            WidthRequest = previewWidth,
+            HeightRequest = previewHeight,
+            HorizontalOptions = LayoutOptions.Start,
+            VerticalOptions = LayoutOptions.Start,
             Children =
             {
                 new BoxView
                 {
-                    Color = Color.FromRgba((byte)(clip.R / 257), (byte)(clip.G / 257), (byte)(clip.B / 257), alpha),
-                    WidthRequest = previewWidth,
-                    HeightRequest = previewHeight,
-                    HorizontalOptions = LayoutOptions.Center,
-                    VerticalOptions = LayoutOptions.Center,
+                    Color = Color.FromRgba(clip.R / 65535f, clip.G / 65535f, clip.B / 65535f, alpha),
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Fill,
                 }
             }
         };
@@ -329,9 +344,18 @@ internal sealed class TextClipDynamicPreviewProvider : InternalClipDynamicPrevie
 
     public override bool IsAvailable(IClip target)
     {
-        return target is TextClip t
-            && target.FromPlugin == InternalPluginBase.InternalPluginBaseID
-            && !t.TextEntries.Any(c => c.UseVerticalLayout || c.applyKerning || c.strokeWidth > 0 || c.dpi is not null);
+        if (target is not TextClip t || target.FromPlugin != InternalPluginBase.InternalPluginBaseID)
+        {
+            return false;
+        }
+
+        var entries = ResolveTextEntriesForPreview(t);
+        if (entries.Count == 0)
+        {
+            return false;
+        }
+
+        return !entries.Any(c => c.UseVerticalLayout || (c.strokeWidth.HasValue && c.strokeWidth.Value > 0f));
     }
 
     public override View Generate(IClip target, int canvasWidth, int canvasHeight, int targetWidth, int targetHeight, uint targetFrame)
@@ -341,36 +365,274 @@ internal sealed class TextClipDynamicPreviewProvider : InternalClipDynamicPrevie
             return BuildFallbackLabel("Text clip is unavailable.");
         }
 
-        var entries = clip.TextEntries.Select(e => new Label
+        var root = new AbsoluteLayout
         {
-            Text = e.text,
-            TextColor = Color.FromRgba(e.r / 257, e.g / 257, e.b / 257, (double)(e.a ?? 1d)),
-            HorizontalTextAlignment = e.horizontalAlignment switch { SixLabors.Fonts.HorizontalAlignment.Left => TextAlignment.Start, SixLabors.Fonts.HorizontalAlignment.Right => TextAlignment.End, SixLabors.Fonts.HorizontalAlignment.Center => TextAlignment.Center, _ => TextAlignment.Center },
-            VerticalTextAlignment = e.verticalAlignment switch { SixLabors.Fonts.VerticalAlignment.Top => TextAlignment.Start, SixLabors.Fonts.VerticalAlignment.Bottom => TextAlignment.End, SixLabors.Fonts.VerticalAlignment.Center => TextAlignment.Center, _ => TextAlignment.Center },
+            WidthRequest = Math.Max(1, targetWidth),
+            HeightRequest = Math.Max(1, targetHeight),
             HorizontalOptions = LayoutOptions.Fill,
             VerticalOptions = LayoutOptions.Fill,
-            LineBreakMode = LineBreakMode.WordWrap,
-            FontAttributes = e.fontStyle switch
-            {
-                SixLabors.Fonts.FontStyle.Regular => FontAttributes.None,
-                SixLabors.Fonts.FontStyle.Bold => FontAttributes.Bold,
-                SixLabors.Fonts.FontStyle.Italic => FontAttributes.Italic,
-                SixLabors.Fonts.FontStyle.BoldItalic => FontAttributes.Bold | FontAttributes.Italic,
-                _ => FontAttributes.None,
-            },
-            Margin = new Thickness(12),
-            FontFamily = "UserFont_" + e.fontFamily,
-            CharacterSpacing = e.lineSpacing,
-            TranslationX = e.x,
-            TranslationY = e.y,
-            Rotation = e.rotation,
+            BackgroundColor = Colors.Transparent,
+        };
 
-        });
-        var g = new Grid();
-        foreach (var item in entries)
+        var entries = ResolveTextEntriesForPreview(clip);
+        foreach (var e in entries)
         {
-            g.Add(item);
+            var fontSize = Math.Max(1f, e.fontSize * ((e.dpi ?? 72f) / 72f));
+            var label = new Label
+            {
+                Text = e.text,
+                TextColor = Color.FromRgba(e.r / 257, e.g / 257, e.b / 257, (double)(e.a ?? 1d)),
+                HorizontalTextAlignment = e.horizontalAlignment switch { SixLabors.Fonts.HorizontalAlignment.Left => TextAlignment.Start, SixLabors.Fonts.HorizontalAlignment.Right => TextAlignment.End, SixLabors.Fonts.HorizontalAlignment.Center => TextAlignment.Center, _ => TextAlignment.Start },
+                VerticalTextAlignment = e.verticalAlignment switch { SixLabors.Fonts.VerticalAlignment.Top => TextAlignment.Start, SixLabors.Fonts.VerticalAlignment.Bottom => TextAlignment.End, SixLabors.Fonts.VerticalAlignment.Center => TextAlignment.Center, _ => TextAlignment.Start },
+                HorizontalOptions = LayoutOptions.Start,
+                VerticalOptions = LayoutOptions.Start,
+                LineBreakMode = e.wrappingWidth.HasValue && e.wrappingWidth.Value > 0 ? LineBreakMode.WordWrap : LineBreakMode.NoWrap,
+                FontAttributes = e.fontStyle switch
+                {
+                    SixLabors.Fonts.FontStyle.Regular => FontAttributes.None,
+                    SixLabors.Fonts.FontStyle.Bold => FontAttributes.Bold,
+                    SixLabors.Fonts.FontStyle.Italic => FontAttributes.Italic,
+                    SixLabors.Fonts.FontStyle.BoldItalic => FontAttributes.Bold | FontAttributes.Italic,
+                    _ => FontAttributes.None,
+                },
+                FontFamily = string.IsNullOrWhiteSpace(e.fontFamily) ? null : "UserFont_" + e.fontFamily,
+                FontSize = fontSize,
+                Margin = Thickness.Zero,
+                Padding = Thickness.Zero,
+                Rotation = e.rotation,
+            };
+
+            if (e.lineSpacing > 0)
+            {
+                label.LineHeight = e.lineSpacing;
+            }
+
+            if (e.wrappingWidth.HasValue && e.wrappingWidth.Value > 0)
+            {
+                label.WidthRequest = e.wrappingWidth.Value;
+            }
+
+            var (labelWidth, labelHeight) = MeasureLabelSizeWithFallback(label, e, fontSize);
+
+            var x = e.x;
+            var y = e.y;
+
+            switch (e.horizontalAlignment)
+            {
+                case SixLabors.Fonts.HorizontalAlignment.Center:
+                    x -= (int)(labelWidth / 2d);
+                    break;
+                case SixLabors.Fonts.HorizontalAlignment.Right:
+                    x -= (int)labelWidth;
+                    break;
+            }
+
+            switch (e.verticalAlignment)
+            {
+                case SixLabors.Fonts.VerticalAlignment.Center:
+                    y -= (int)(labelHeight / 2d);
+                    break;
+                case SixLabors.Fonts.VerticalAlignment.Bottom:
+                    y -= (int)labelHeight;
+                    break;
+            }
+
+            AbsoluteLayout.SetLayoutBounds(label, new Rect(x, y, labelWidth, labelHeight));
+            root.Children.Add(label);
         }
-        return g;
+
+        return root;
+    }
+
+    private static (double width, double height) MeasureLabelSizeWithFallback(Label label, TextClipEntry entry, double fontSize)
+    {
+        var measureWidth = entry.wrappingWidth.HasValue && entry.wrappingWidth.Value > 0
+            ? entry.wrappingWidth.Value
+            : double.PositiveInfinity;
+
+        double measuredWidth = 0d;
+        double measuredHeight = 0d;
+
+        try
+        {
+            var measuredSize = label.Measure(measureWidth, double.PositiveInfinity);
+            measuredWidth = measuredSize.Width;
+            measuredHeight = measuredSize.Height;
+        }
+        catch
+        {
+        }
+
+        if (measuredWidth <= 1d || measuredHeight <= 1d)
+        {
+            EstimateTextSize(entry, fontSize, out measuredWidth, out measuredHeight);
+        }
+
+        return (Math.Max(1d, measuredWidth), Math.Max(1d, measuredHeight));
+    }
+
+    private static void EstimateTextSize(TextClipEntry entry, double fontSize, out double width, out double height)
+    {
+        var text = string.IsNullOrEmpty(entry.text) ? " " : entry.text;
+        var strokeExtra = Math.Max(0d, entry.strokeWidth ?? 0f) * 2d;
+        var lineHeight = Math.Max(1d, fontSize * Math.Max(0.8d, entry.lineSpacing));
+
+        var lineCount = 1;
+        foreach (var c in text)
+        {
+            if (c == '\n')
+            {
+                lineCount++;
+            }
+        }
+
+        if (entry.wrappingWidth.HasValue && entry.wrappingWidth.Value > 0)
+        {
+            width = Math.Max(1d, entry.wrappingWidth.Value);
+
+            var approxCharWidth = Math.Max(1d, fontSize * 0.56d);
+            var maxCharsPerLine = Math.Max(1, (int)Math.Floor(width / approxCharWidth));
+            var visualLines = 0;
+            var charsInLine = 0;
+
+            foreach (var c in text)
+            {
+                if (c == '\r')
+                {
+                    continue;
+                }
+
+                if (c == '\n')
+                {
+                    visualLines++;
+                    charsInLine = 0;
+                    continue;
+                }
+
+                charsInLine++;
+                if (charsInLine >= maxCharsPerLine)
+                {
+                    visualLines++;
+                    charsInLine = 0;
+                }
+            }
+
+            if (charsInLine > 0 || visualLines == 0)
+            {
+                visualLines++;
+            }
+
+            height = Math.Max(lineCount, visualLines) * lineHeight;
+        }
+        else
+        {
+            var maxCharsInLine = 0;
+            var charsInLine = 0;
+
+            foreach (var c in text)
+            {
+                if (c == '\r')
+                {
+                    continue;
+                }
+
+                if (c == '\n')
+                {
+                    if (charsInLine > maxCharsInLine)
+                    {
+                        maxCharsInLine = charsInLine;
+                    }
+
+                    charsInLine = 0;
+                    continue;
+                }
+
+                charsInLine++;
+            }
+
+            if (charsInLine > maxCharsInLine)
+            {
+                maxCharsInLine = charsInLine;
+            }
+
+            if (maxCharsInLine <= 0)
+            {
+                maxCharsInLine = 1;
+            }
+
+            width = maxCharsInLine * fontSize * 0.56d;
+            height = lineCount * lineHeight;
+        }
+
+        width = Math.Max(1d, width + strokeExtra);
+        height = Math.Max(1d, height + strokeExtra);
+    }
+
+    private static IReadOnlyList<TextClipEntry> ResolveTextEntriesForPreview(TextClip clip)
+    {
+        List<TextClipEntry>? extraEntries = null;
+
+        if (clip.ExtraData?.TryGetValue("TextEntries", out var rawEntries) == true)
+        {
+            if (rawEntries is List<TextClipEntry> list && list.Count > 0)
+            {
+                extraEntries = list;
+            }
+
+            else if (rawEntries is JsonElement je)
+            {
+                try
+                {
+                    var parsed = je.Deserialize<List<TextClipEntry>>();
+                    if (parsed is { Count: > 0 })
+                    {
+                        clip.ExtraData["TextEntries"] = parsed;
+                        extraEntries = parsed;
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            else if (rawEntries is string json && !string.IsNullOrWhiteSpace(json))
+            {
+                try
+                {
+                    var parsed = JsonSerializer.Deserialize<List<TextClipEntry>>(json);
+                    if (parsed is { Count: > 0 })
+                    {
+                        clip.ExtraData["TextEntries"] = parsed;
+                        extraEntries = parsed;
+                    }
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        return PickBetterTextEntries(extraEntries, clip.TextEntries);
+    }
+
+    private static IReadOnlyList<TextClipEntry> PickBetterTextEntries(IReadOnlyList<TextClipEntry>? primary, IReadOnlyList<TextClipEntry>? fallback)
+    {
+        var p = primary ?? Array.Empty<TextClipEntry>();
+        var f = fallback ?? Array.Empty<TextClipEntry>();
+
+        var pHasVisibleText = p.Any(e => !string.IsNullOrWhiteSpace(e.text));
+        var fHasVisibleText = f.Any(e => !string.IsNullOrWhiteSpace(e.text));
+
+        if (pHasVisibleText && !fHasVisibleText)
+        {
+            return p;
+        }
+
+        if (fHasVisibleText && !pHasVisibleText)
+        {
+            return f;
+        }
+
+        return p.Count >= f.Count ? p : f;
     }
 }

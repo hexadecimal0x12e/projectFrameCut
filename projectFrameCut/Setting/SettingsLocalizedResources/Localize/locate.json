@@ -751,7 +751,7 @@
       },
       {
         "Id": "Edit_DefaultInfLengthClipLength",
-        "Value": "\u65E0\u6548\u957F\u5EA6\u7247\u6BB5\u7684\u9ED8\u8BA4\u957F\u5EA6 (\u5E27)",
+        "Value": "\u65E0\u9650\u957F\u5EA6\u7247\u6BB5\u7684\u9ED8\u8BA4\u957F\u5EA6 (\u5E27)",
         "Mode": "ConstString",
         "Args": [],
         "ArgsComment": [],

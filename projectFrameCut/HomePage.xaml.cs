@@ -189,7 +189,7 @@ public partial class HomePage : ContentPage
                         {
                             if (Directory.Exists(path))
                             {
-                                if(File.Exists(Path.Combine(path, "project.pjfc")))
+                                if (File.Exists(Path.Combine(path, "project.pjfc")))
                                 {
                                     path = Path.Combine(path, "project.pjfc");
                                 }
@@ -436,7 +436,7 @@ public partial class HomePage : ContentPage
             CopyDirectory(viewModel._projectPath, draftSourcePath);
 
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Log(ex, "clone draft", this);
             await DisplayAlertAsync(Localized._Error, $"{Localized.HomePage_CreateAProject_InvalidName}{Environment.NewLine}{Localized._ExceptionTemplate(ex)}", Localized._OK);
@@ -778,12 +778,9 @@ public partial class HomePage : ContentPage
 
                 if (!SettingsManager.IsSettingExists("Edit_PreferredPopupMode"))
                 {
-#if WINDOWS || MACCATALYST
-                    SettingsManager.WriteSetting("Edit_PreferredPopupMode", "right");
-#else
                     SettingsManager.WriteSetting("Edit_PreferredPopupMode", "bottom");
-#endif
                 }
+                if (!(SettingsManager.IsSettingExists("Edit_UseDynamicPreview") || SettingsManager.IsSettingExists("Edit_LiveVideoPreviewDefaultResolution"))) SettingsManager.WriteSetting("Edit_UseDynamicPreview", true.ToString());
                 {
                     int maxRetries = 5;
                     int attempt = 0;
@@ -1174,7 +1171,7 @@ public partial class HomePage : ContentPage
             if (!confirm0) return;
             var confirm1 = await DisplayAlertAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm1(pvm.Name), Localized._Confirm, Localized._Cancel);
             if (!confirm1) return;
-            var confirm2 = await DisplayPromptAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm2Input(pvm.Name), Localized._Confirm, Localized._Cancel, "no");
+            var confirm2 = await DisplayPromptAsync(Localized._Warn, Localized.HomePage_ProjectContextMenu_Delete_Confirm2Input(pvm.Name), Localized.HomePage_ProjectContextMenu_Delete_Confirm3(pvm.Name), Localized._Cancel, "no");
 
             if (confirm2 != "yes") return;
 

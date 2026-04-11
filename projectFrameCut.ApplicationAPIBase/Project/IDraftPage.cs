@@ -1,6 +1,7 @@
 using projectFrameCut.ApplicationAPIBase.Views.MultiWindowView;
 using projectFrameCut.ApplicationAPIBase.Views.PropertyPanelBuilders;
 using projectFrameCut.Render.RenderAPIBase.Project;
+using System.Collections.Concurrent;
 
 namespace projectFrameCut.ApplicationAPIBase.Project
 {
@@ -34,6 +35,11 @@ namespace projectFrameCut.ApplicationAPIBase.Project
         IClipElementUI? SelectedClip { get; }
         bool UnNullUseCompactLayout { get; }
         string WorkingPath { get; set; }
+
+        /// <summary>
+        /// Get the task system's task list.
+        /// </summary>
+        ConcurrentDictionary<string, DraftTasks> RunningTasks { get; }
 
         /// <summary>
         /// Adds a prepared clip instance into timeline visuals.
