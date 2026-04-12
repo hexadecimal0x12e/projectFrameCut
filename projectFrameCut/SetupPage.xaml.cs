@@ -23,20 +23,13 @@ public partial class SetupPage : ContentPage
         {
             try
             {
-                string exePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "pjfc.exe");
                 string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                 string shortcutPath = Path.Combine(desktopPath, "projectFrameCut.lnk");
-
-                dynamic shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell"));
-                dynamic shortcut = shell.CreateShortcut(shortcutPath);
-
-                shortcut.TargetPath = exePath;
-                shortcut.WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory;
-                shortcut.Description = "projectFrameCut";
-                shortcut.Save();
-
-                System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shortcut);
-                System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shell);
+                if(File.Exists(shortcutPath))
+                {
+                    File.Delete(shortcutPath);
+                }
+                File.Copy(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "projectFrameCut.lnk"), shortcutPath);
             }
             catch (Exception ex)
             {

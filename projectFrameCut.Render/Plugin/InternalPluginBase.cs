@@ -75,11 +75,6 @@ public class InternalPluginBase : IPluginBase
         {"Rotation", new RotationEffectFactory()},
     };
 
-    //public Dictionary<string, Func<IMixture>> MixtureProvider => new Dictionary<string, Func<IMixture>>
-    //{
-    //    {"Overlay", new(() => new OverlayMixture()) }
-    //};
-
     public Dictionary<string, Func<IComputer>> ComputerProvider => new Dictionary<string, Func<IComputer>>
     {
 

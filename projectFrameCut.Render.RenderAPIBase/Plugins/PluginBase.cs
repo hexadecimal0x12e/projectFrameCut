@@ -148,12 +148,6 @@ namespace projectFrameCut.Render.RenderAPIBase.Plugins
         public Dictionary<string, IEffectFactory> BindableArgumentEffectFactoryProvider { get; }
 
         /// <summary>
-        /// Create an IMixture instance from the given JSON structure.
-        /// </summary>
-        [Obsolete("We have no plan on custom type of mixturing, so this property is no longer used and it will be removed in next Plugin API version.", false)]
-        public virtual Dictionary<string, Func<IMixture>> MixtureProvider { get => new(); }
-
-        /// <summary>
         /// Create an IComputer instance from the given JSON structure.
         /// </summary>
         public Dictionary<string, Func<IComputer>> ComputerProvider { get; }

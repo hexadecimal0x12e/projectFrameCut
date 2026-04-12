@@ -425,9 +425,9 @@ Current directory: {Environment.CurrentDirectory}
         public static void RebootApp()
         {
             var proc = new Process();
-            proc.StartInfo.FileName = "pjfc.exe";
-            proc.StartInfo.UseShellExecute = false;
-            proc.StartInfo.CreateNoWindow = true;
+            proc.StartInfo.FileName = "pjfc:";
+            proc.StartInfo.UseShellExecute = true;
+            proc.StartInfo.CreateNoWindow = false;
             proc.Start();
         }
 

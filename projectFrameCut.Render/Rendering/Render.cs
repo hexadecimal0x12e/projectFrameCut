@@ -83,7 +83,6 @@ namespace projectFrameCut.Render.Rendering
 
         ConcurrentDictionary<string, ConcurrentDictionary<uint, IPicture>> FrameCache = new();
         ConcurrentDictionary<uint, IClip[]> ClipNeedForFrame = new();
-        //ConcurrentDictionary<MixtureMode, IMixture> MixtureCache = new();
         ConcurrentDictionary<string, IEffect[]> EffectCache = new();
         ConcurrentDictionary<string, object> BindableEffectResultCache = new();
         IComputer mixComputer = null!;
